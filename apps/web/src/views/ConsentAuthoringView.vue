@@ -413,7 +413,7 @@
                     text-align: center;
                   "
                 >{{ index + 1 }}.</span>
-                <input
+                <input aria-label="Input field"
                   v-model="editorForm.clauses[index]"
                   type="text"
                   placeholder="e.g. clause-risk-disclosure"

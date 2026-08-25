@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="codingStore.impactAnalysis.isOpen"
     class="drawer-overlay"
-    @click.self="close"
+    @click.self="close" @keydown.enter="close"
   >
     <div class="drawer-panel">
       <!-- Drawer Header -->

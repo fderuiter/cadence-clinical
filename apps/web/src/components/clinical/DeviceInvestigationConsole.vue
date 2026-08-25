@@ -438,7 +438,7 @@
                   <input v-model="deficForm.device_returned_to_sponsor" type="checkbox" />
                   <span>Device Impounded &amp; Returned to Sponsor for Technical Investigation</span>
                 </label>
-                <input
+                <input aria-label="Input field"
                   v-if="deficForm.device_returned_to_sponsor"
                   v-model="deficForm.return_tracking_number"
                   type="text"

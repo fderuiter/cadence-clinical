@@ -14,13 +14,13 @@
           id="btn-open-sign-modal"
           type="button"
           class="btn btn-secondary btn-sign"
-          @click="openSignatureModal"
+          @click="openSignatureModal" @keydown.enter="openSignatureModal"
         >
           ✍️ eConsent Sign-off
         </button>
         <button
           class="btn btn-primary btn-publish"
-          @click="showPublishModal = true"
+          @click="showPublishModal = true" @keydown.enter="showPublishModal = true"
         >
           🚀 Publish Version
         </button>
@@ -75,14 +75,14 @@
         <div class="outline-group">
           <h4>Modular Consent Clauses</h4>
           <ul id="consent-clauses-list">
-            <li
+            <li role="button" tabindex="0"
               v-for="(sec, sIdx) in econsentStore.sections"
               :key="sec.id"
               :class="[
                 'outline-item',
                 { active: activeSectionId === sec.id && !showQuiz },
               ]"
-              @click="selectSection(sec.id)"
+              @click="selectSection(sec.id)" @keydown.enter="selectSection(sec.id)"
             >
               <span class="item-icon">📄</span>
               <span class="item-title">{{ sec.title }}</span>
@@ -96,7 +96,7 @@
                   class="btn-clause-ctrl btn-move-up"
                   title="Move Up"
                   :disabled="sIdx === 0"
-                  @click="econsentStore.reorderSections(sIdx, sIdx - 1)"
+                  @click="econsentStore.reorderSections(sIdx, sIdx - 1)" @keydown.enter="econsentStore.reorderSections(sIdx, sIdx - 1)"
                 >
                   ▲
                 </button>
@@ -105,7 +105,7 @@
                   class="btn-clause-ctrl btn-move-down"
                   title="Move Down"
                   :disabled="sIdx === econsentStore.sections.length - 1"
-                  @click="econsentStore.reorderSections(sIdx, sIdx + 1)"
+                  @click="econsentStore.reorderSections(sIdx, sIdx + 1)" @keydown.enter="econsentStore.reorderSections(sIdx, sIdx + 1)"
                 >
                   ▼
                 </button>
@@ -113,7 +113,7 @@
                   type="button"
                   class="btn-clause-ctrl btn-delete-clause"
                   title="Remove Clause"
-                  @click="econsentStore.removeSection(sec.id)"
+                  @click="econsentStore.removeSection(sec.id)" @keydown.enter="econsentStore.removeSection(sec.id)"
                 >
                   ✕
                 </button>
@@ -123,7 +123,7 @@
 
           <!-- Add New Section form -->
           <div class="add-section-form">
-            <input
+            <input aria-label="Input field"
               v-model="newSectionTitle"
               type="text"
               placeholder="New Section Title..."
@@ -133,7 +133,7 @@
             <button
               type="button"
               class="btn btn-secondary btn-small"
-              @click="handleCreateSection"
+              @click="handleCreateSection" @keydown.enter="handleCreateSection"
             >
               Add Section
             </button>
@@ -143,9 +143,9 @@
         <div class="outline-group separator">
           <h4>Interactive Checks</h4>
           <ul>
-            <li
+            <li role="button" tabindex="0"
               :class="['outline-item', { active: showQuiz }]"
-              @click="selectQuiz"
+              @click="selectQuiz" @keydown.enter="selectQuiz"
             >
               <span class="item-icon">📝</span>
               <span class="item-title">Comprehension Quiz</span>
@@ -222,7 +222,7 @@
           <h3>21 CFR Part 11 Change Reason Capture</h3>
           <button
             class="close-btn"
-            @click="showPublishModal = false"
+            @click="showPublishModal = false" @keydown.enter="showPublishModal = false"
           >
             ✕
           </button>
@@ -254,14 +254,14 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="showPublishModal = false"
+            @click="showPublishModal = false" @keydown.enter="showPublishModal = false"
           >
             Cancel
           </button>
           <button
             type="button"
             class="btn btn-primary"
-            @click="handlePublish"
+            @click="handlePublish" @keydown.enter="handlePublish"
           >
             Confirm & Publish
           </button>

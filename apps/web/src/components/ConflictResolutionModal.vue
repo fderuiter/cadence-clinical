@@ -101,7 +101,7 @@
           class="form-group"
           style="margin-bottom: 16px"
         >
-          <label style="font-weight: 600; display: block; margin-bottom: 8px">Select Resolution Strategy:</label>
+          <span class="form-label" style="font-weight: 600; display: block; margin-bottom: 8px">Select Resolution Strategy:</span>
           <div style="display: flex; flex-direction: column; gap: 8px">
             <label
               class="touch-target-interactive"

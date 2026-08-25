@@ -73,9 +73,9 @@
 
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="activeTab = 'deviations'"
+        @click="activeTab = 'deviations'" @keydown.enter="activeTab = 'deviations'"
       >
         <div class="stat-icon alert-icon">
           ⚠️
@@ -90,9 +90,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="activeTab = 'capa'"
+        @click="activeTab = 'capa'" @keydown.enter="activeTab = 'capa'"
       >
         <div class="stat-icon capa-icon">
           🔄
@@ -106,9 +106,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="activeTab = 'rbqm'"
+        @click="activeTab = 'rbqm'" @keydown.enter="activeTab = 'rbqm'"
       >
         <div class="stat-icon rbqm-icon">
           🎯
@@ -122,9 +122,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="activeTab = 'rbqm'"
+        @click="activeTab = 'rbqm'" @keydown.enter="activeTab = 'rbqm'"
       >
         <div class="stat-icon qtl-icon">
           📊
@@ -138,9 +138,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="activeTab = 'serious-breaches'"
+        @click="activeTab = 'serious-breaches'" @keydown.enter="activeTab = 'serious-breaches'"
       >
         <div class="stat-icon breach-icon">
           🚨
@@ -166,9 +166,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="openDossierModal"
+        @click="openDossierModal" @keydown.enter="openDossierModal"
       >
         <div class="stat-icon seal-icon">
           🔒
@@ -524,7 +524,7 @@
             </p>
           </div>
           <div class="filter-group">
-            <select
+            <select aria-label="Input field"
               v-model="deviationSeverityFilter"
               class="form-select form-select-sm"
             >
@@ -1066,7 +1066,7 @@
             <div class="fishbone-grid">
               <div class="fishbone-branch">
                 <h5>👨 Man (Personnel / Human Factor)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.man"
                   class="form-textarea"
                   placeholder="Staffing, training gaps, fatigue..."
@@ -1074,7 +1074,7 @@
               </div>
               <div class="fishbone-branch">
                 <h5>⚙️ Machine (Equipment / Systems)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.machine"
                   class="form-textarea"
                   placeholder="Hardware faults, software bugs, EDC validation..."
@@ -1082,7 +1082,7 @@
               </div>
               <div class="fishbone-branch">
                 <h5>📦 Material (Investigational Product / Supplies)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.material"
                   class="form-textarea"
                   placeholder="IP batch quality, temperature logs, lab kits..."
@@ -1090,7 +1090,7 @@
               </div>
               <div class="fishbone-branch">
                 <h5>📜 Method (SOPs / Protocol Procedures)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.method"
                   class="form-textarea"
                   placeholder="Ambiguous study protocol, outdated SOPs..."
@@ -1098,7 +1098,7 @@
               </div>
               <div class="fishbone-branch">
                 <h5>📏 Measurement (Calibration / Metrics)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.measurement"
                   class="form-textarea"
                   placeholder="Thermometer calibration, lab precision..."
@@ -1106,7 +1106,7 @@
               </div>
               <div class="fishbone-branch">
                 <h5>🌍 Milieu (Environment / Clinic Context)</h5>
-                <textarea
+                <textarea aria-label="Input field"
                   v-model="rcaForm.fishbone.milieu"
                   class="form-textarea"
                   placeholder="Clinic layout, weather, regional transport..."
@@ -1116,8 +1116,8 @@
           </div>
 
           <div class="form-group mt-3">
-            <label class="form-label">Root Cause Summary Statement:</label>
-            <input
+            <label for="a11y-id-235" class="form-label">Root Cause Summary Statement:</label>
+            <input id="a11y-id-235"
               v-model="rcaForm.root_cause_summary"
               class="form-input"
               placeholder="Synthesized root cause finding"
@@ -1240,7 +1240,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <textarea
+          <textarea aria-label="Input field"
             readonly
             class="form-textarea"
             rows="10"
@@ -1287,16 +1287,16 @@
             {{ activeFindingToPromote?.condition }}
           </div>
           <div class="form-group mt-2">
-            <label class="form-label">Action Plan:</label>
-            <textarea
+            <label for="a11y-id-236" class="form-label">Action Plan:</label>
+            <textarea id="a11y-id-236"
               v-model="promoteForm.action_plan"
               class="form-textarea"
               placeholder="Corrective actions to remediate finding..."
             />
           </div>
           <div class="form-group mt-2">
-            <label class="form-label">Preventive Measures:</label>
-            <textarea
+            <label for="a11y-id-237" class="form-label">Preventive Measures:</label>
+            <textarea id="a11y-id-237"
               v-model="promoteForm.preventive_measures"
               class="form-textarea"
               placeholder="Systemic prevention measures..."

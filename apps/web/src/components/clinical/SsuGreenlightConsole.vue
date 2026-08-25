@@ -454,16 +454,16 @@
 
           <div class="signature-form">
             <div class="form-group">
-              <label>Full Legal Name:</label>
-              <input v-model="sigForm.name" type="text" class="text-input" placeholder="e.g. Dr. Jane Doe" />
+              <label for="a11y-id-134">Full Legal Name:</label>
+              <input id="a11y-id-134" v-model="sigForm.name" type="text" class="text-input" placeholder="e.g. Dr. Jane Doe" />
             </div>
             <div class="form-group">
-              <label>Professional Role / Title:</label>
-              <input v-model="sigForm.role" type="text" class="text-input" placeholder="e.g. Regulatory Affairs Director" />
+              <label for="a11y-id-135">Professional Role / Title:</label>
+              <input id="a11y-id-135" v-model="sigForm.role" type="text" class="text-input" placeholder="e.g. Regulatory Affairs Director" />
             </div>
             <div class="form-group">
-              <label>Electronic Signature Meaning:</label>
-              <input
+              <label for="a11y-id-136">Electronic Signature Meaning:</label>
+              <input id="a11y-id-136"
                 type="text"
                 class="text-input"
                 disabled
@@ -471,8 +471,8 @@
               />
             </div>
             <div class="form-group">
-              <label>Change Justification Reason:</label>
-              <input
+              <label for="a11y-id-137">Change Justification Reason:</label>
+              <input id="a11y-id-137"
                 v-model="sigForm.changeReason"
                 type="text"
                 class="text-input"
@@ -508,24 +508,24 @@
 
           <div class="signature-form">
             <div class="form-group">
-              <label>Sponsor Executive User ID:</label>
-              <input v-model="overrideForm.sponsorId" type="text" class="text-input" placeholder="e.g. sponsor-exec-01" />
+              <label for="a11y-id-138">Sponsor Executive User ID:</label>
+              <input id="a11y-id-138" v-model="overrideForm.sponsorId" type="text" class="text-input" placeholder="e.g. sponsor-exec-01" />
             </div>
             <div class="form-group">
-              <label>Sponsor Signature Hash / Key:</label>
-              <input v-model="overrideForm.sponsorSig" type="text" class="text-input" placeholder="Cryptographic Sponsor Signature" />
+              <label for="a11y-id-139">Sponsor Signature Hash / Key:</label>
+              <input id="a11y-id-139" v-model="overrideForm.sponsorSig" type="text" class="text-input" placeholder="Cryptographic Sponsor Signature" />
             </div>
             <div class="form-group">
-              <label>Medical Monitor User ID:</label>
-              <input v-model="overrideForm.medicalId" type="text" class="text-input" placeholder="e.g. med-monitor-02" />
+              <label for="a11y-id-140">Medical Monitor User ID:</label>
+              <input id="a11y-id-140" v-model="overrideForm.medicalId" type="text" class="text-input" placeholder="e.g. med-monitor-02" />
             </div>
             <div class="form-group">
-              <label>Medical Monitor Signature Hash / Key:</label>
-              <input v-model="overrideForm.medicalSig" type="text" class="text-input" placeholder="Cryptographic Medical Signature" />
+              <label for="a11y-id-141">Medical Monitor Signature Hash / Key:</label>
+              <input id="a11y-id-141" v-model="overrideForm.medicalSig" type="text" class="text-input" placeholder="Cryptographic Medical Signature" />
             </div>
             <div class="form-group">
-              <label>Mandatory Regulatory Justification (Min 10 characters):</label>
-              <textarea
+              <label for="a11y-id-142">Mandatory Regulatory Justification (Min 10 characters):</label>
+              <textarea id="a11y-id-142"
                 v-model="overrideForm.justification"
                 class="textarea-input"
                 rows="3"
@@ -557,8 +557,8 @@
         <div class="modal-body">
           <div class="signature-form">
             <div class="form-group">
-              <label>Document Type:</label>
-              <select v-model="docForm.type" class="select-input">
+              <label for="a11y-id-143">Document Type:</label>
+              <select id="a11y-id-143" v-model="docForm.type" class="select-input">
                 <option value="FDA_1572">Form FDA 1572 Statement of Investigator</option>
                 <option value="LOCAL_IRB_APPROVAL">Institutional Review Board (IRB) Approval</option>
                 <option value="EU_CTR_PART_I">EU CTR Part I Authorisation</option>
@@ -575,8 +575,8 @@
               </select>
             </div>
             <div class="form-group">
-              <label>File Name:</label>
-              <input v-model="docForm.fileName" type="text" class="text-input" placeholder="e.g. FDA_1572_Signed_Site101.pdf" />
+              <label for="a11y-id-144">File Name:</label>
+              <input id="a11y-id-144" v-model="docForm.fileName" type="text" class="text-input" placeholder="e.g. FDA_1572_Signed_Site101.pdf" />
             </div>
           </div>
         </div>

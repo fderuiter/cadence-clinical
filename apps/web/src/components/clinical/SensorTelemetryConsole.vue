@@ -358,7 +358,7 @@
     </div>
 
     <!-- MODAL: Acknowledge Safety Alert -->
-    <div v-if="showAckModal && selectedAlert" class="modal-backdrop" @click.self="showAckModal = false">
+    <div role="button" tabindex="0" v-if="showAckModal && selectedAlert" class="modal-backdrop" @click.self="showAckModal = false" @keydown.enter="showAckModal = false">
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">Acknowledge Safety Alert: {{ selectedAlert.alert_id }}</h3>
@@ -398,7 +398,7 @@
     </div>
 
     <!-- MODAL: Register Medical IoT Device -->
-    <div v-if="showRegisterModal" class="modal-backdrop" @click.self="showRegisterModal = false">
+    <div role="button" tabindex="0" v-if="showRegisterModal" class="modal-backdrop" @click.self="showRegisterModal = false" @keydown.enter="showRegisterModal = false">
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">Register Medical IoT Device</h3>
@@ -457,7 +457,7 @@
     </div>
 
     <!-- MODAL: Ingest Stream Batch Simulator -->
-    <div v-if="showSimulateModal" class="modal-backdrop" @click.self="showSimulateModal = false">
+    <div role="button" tabindex="0" v-if="showSimulateModal" class="modal-backdrop" @click.self="showSimulateModal = false" @keydown.enter="showSimulateModal = false">
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">Simulate Biometric Telemetry Ingestion</h3>

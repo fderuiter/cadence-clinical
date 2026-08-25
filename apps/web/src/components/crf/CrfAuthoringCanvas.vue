@@ -17,21 +17,21 @@
             <button
               class="btn-viewport btn-viewport-desktop"
               :class="{ active: designerStore.viewport === 'desktop' }"
-              @click="designerStore.setViewport('desktop')"
+              @click="designerStore.setViewport('desktop')" @keydown.enter="designerStore.setViewport('desktop')"
             >
               🖥️ <span>Desktop (12-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-tablet"
               :class="{ active: designerStore.viewport === 'tablet' }"
-              @click="designerStore.setViewport('tablet')"
+              @click="designerStore.setViewport('tablet')" @keydown.enter="designerStore.setViewport('tablet')"
             >
               📟 <span>Tablet (8-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-mobile"
               :class="{ active: designerStore.viewport === 'mobile' }"
-              @click="designerStore.setViewport('mobile')"
+              @click="designerStore.setViewport('mobile')" @keydown.enter="designerStore.setViewport('mobile')"
             >
               📱 <span>Mobile (4-Col)</span>
             </button>
@@ -103,7 +103,7 @@
             overflow-y: auto;
           "
         >
-          <div
+          <div role="button" tabindex="0"
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
             style="
@@ -113,7 +113,7 @@
               padding: 8px;
               cursor: pointer;
             "
-            @click="onSelectField(warning.fieldId)"
+            @click="onSelectField(warning.fieldId)" @keydown.enter="onSelectField(warning.fieldId)"
           >
             <div
               style="
@@ -220,7 +220,7 @@
           </div>
 
           <div class="inspector-field-group">
-            <label>Field Label</label>
+            <label for="inspect-field-label">Field Label</label>
             <input
               id="inspect-field-label"
               v-model="selectedFieldLabel"
@@ -230,7 +230,7 @@
           </div>
 
           <div class="inspector-field-group">
-            <label>Grid Span (1-12 Columns)</label>
+            <label for="inspect-field-span">Grid Span (1-12 Columns)</label>
             <select
               id="inspect-field-span"
               v-model="selectedFieldGridSpan"
@@ -254,8 +254,8 @@
           </div>
 
           <div class="inspector-field-group">
-            <label>Field Type</label>
-            <select
+            <label for="a11y-id-159">Field Type</label>
+            <select id="a11y-id-159"
               v-model="selectedFieldType"
               class="inspector-select"
             >
@@ -394,7 +394,7 @@
 
           <button
             class="btn-compile-schema btn-compile"
-            @click="compileForm"
+            @click="compileForm" @keydown.enter="compileForm"
           >
             Compile Form Schema
           </button>

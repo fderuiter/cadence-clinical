@@ -6,11 +6,11 @@
     }"
   >
     <!-- Section Header Card -->
-    <div
+    <div role="button" tabindex="0"
       v-keyboard-click="toggleCollapse"
       class="section-header-card section-header"
       :aria-expanded="!section.isCollapsed"
-      @click="toggleCollapse"
+      @click="toggleCollapse" @keydown.enter="toggleCollapse"
     >
       <div class="section-header-left">
         <!-- Drag Handle for Section Reordering -->
@@ -37,13 +37,13 @@
       >
         <button
           class="btn-add-field btn-add-item"
-          @click="addNewItem"
+          @click="addNewItem" @keydown.enter="addNewItem"
         >
           <span>➕</span> Add Field
         </button>
         <button
           class="btn-section-toggle"
-          @click="toggleCollapse"
+          @click="toggleCollapse" @keydown.enter="toggleCollapse"
         >
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
         </button>

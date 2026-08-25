@@ -186,12 +186,12 @@
           </div>
           <div class="raw-payload-box">
             <span class="raw-label">Encoded 2D Barcode Payload:</span>
-            <textarea readonly class="payload-textarea" :value="cocData.tamper_evident_barcode || ''" rows="3" />
+            <textarea aria-label="Input field" readonly class="payload-textarea" :value="cocData.tamper_evident_barcode || ''" rows="3" />
           </div>
         </div>
         <div class="barcode-scan-simulator">
           <h4 class="scan-title">Direct Scanner Verification</h4>
-          <input
+          <input aria-label="Input field"
             v-model="scanTestInput"
             type="text"
             placeholder="Scan / paste barcode payload here..."
@@ -279,36 +279,36 @@
         <form @submit.prevent="submitApheresis">
           <div class="form-grid">
             <div class="form-group">
-              <label>Study Protocol</label>
-              <input v-model="apheresisForm.study_id" type="text" required>
+              <label for="a11y-id-104">Study Protocol</label>
+              <input id="a11y-id-104" v-model="apheresisForm.study_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Site ID</label>
-              <input v-model="apheresisForm.site_id" type="text" required>
+              <label for="a11y-id-105">Site ID</label>
+              <input id="a11y-id-105" v-model="apheresisForm.site_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Subject UUID</label>
-              <input v-model="apheresisForm.subject_id" type="text" required>
+              <label for="a11y-id-106">Subject UUID</label>
+              <input id="a11y-id-106" v-model="apheresisForm.subject_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Donation ID (ISBT 128 DIN)</label>
-              <input v-model="apheresisForm.din" type="text" placeholder="Auto-generated if empty">
+              <label for="a11y-id-107">Donation ID (ISBT 128 DIN)</label>
+              <input id="a11y-id-107" v-model="apheresisForm.din" type="text" placeholder="Auto-generated if empty">
             </div>
             <div class="form-group">
-              <label>Collector User ID</label>
-              <input v-model="apheresisForm.collector_id" type="text" required>
+              <label for="a11y-id-108">Collector User ID</label>
+              <input id="a11y-id-108" v-model="apheresisForm.collector_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Collector Name</label>
-              <input v-model="apheresisForm.collector_name" type="text" required>
+              <label for="a11y-id-109">Collector Name</label>
+              <input id="a11y-id-109" v-model="apheresisForm.collector_name" type="text" required>
             </div>
             <div class="form-group">
-              <label>Initial Cryo Temp (°C)</label>
-              <input v-model.number="apheresisForm.initial_temp_celsius" type="number" step="0.1" required>
+              <label for="a11y-id-110">Initial Cryo Temp (°C)</label>
+              <input id="a11y-id-110" v-model.number="apheresisForm.initial_temp_celsius" type="number" step="0.1" required>
             </div>
             <div class="form-group">
-              <label>Dry Shipper / Dewar ID</label>
-              <input v-model="apheresisForm.dry_shipper_id" type="text" placeholder="e.g. MVE-LN2-9901">
+              <label for="a11y-id-111">Dry Shipper / Dewar ID</label>
+              <input id="a11y-id-111" v-model="apheresisForm.dry_shipper_id" type="text" placeholder="e.g. MVE-LN2-9901">
             </div>
           </div>
           <footer class="modal-footer">
@@ -333,28 +333,28 @@
 
           <div class="form-grid">
             <div class="form-group col-full">
-              <label>Scanned Patient Wristband Subject UUID</label>
-              <input v-model="bedsideForm.scanned_wristband_subject_id" type="text" required placeholder="Scan patient wristband barcode...">
+              <label for="a11y-id-112">Scanned Patient Wristband Subject UUID</label>
+              <input id="a11y-id-112" v-model="bedsideForm.scanned_wristband_subject_id" type="text" required placeholder="Scan patient wristband barcode...">
             </div>
             <div class="form-group col-full">
-              <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
-              <textarea v-model="bedsideForm.scanned_bag_barcode" rows="2" required placeholder="Scan infusion bag DataMatrix..." />
+              <label for="a11y-id-113">Scanned Cell Infusion Bag Cryptographic Barcode</label>
+              <textarea id="a11y-id-113" v-model="bedsideForm.scanned_bag_barcode" rows="2" required placeholder="Scan infusion bag DataMatrix..." />
             </div>
 
             <!-- Primary Verifier (Nurse) -->
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
               <div class="form-group">
-                <label>User ID</label>
-                <input v-model="bedsideForm.primary_verifier_id" type="text" required>
+                <label for="a11y-id-114">User ID</label>
+                <input id="a11y-id-114" v-model="bedsideForm.primary_verifier_id" type="text" required>
               </div>
               <div class="form-group">
-                <label>Full Name</label>
-                <input v-model="bedsideForm.primary_verifier_name" type="text" required>
+                <label for="a11y-id-115">Full Name</label>
+                <input id="a11y-id-115" v-model="bedsideForm.primary_verifier_name" type="text" required>
               </div>
               <div class="form-group">
-                <label>E-Signature Step-Up Token</label>
-                <input v-model="bedsideForm.primary_signature_token" type="password" required>
+                <label for="a11y-id-116">E-Signature Step-Up Token</label>
+                <input id="a11y-id-116" v-model="bedsideForm.primary_signature_token" type="password" required>
               </div>
             </div>
 
@@ -362,16 +362,16 @@
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Secondary Verifier (Principal Investigator)</h4>
               <div class="form-group">
-                <label>User ID</label>
-                <input v-model="bedsideForm.secondary_verifier_id" type="text" required>
+                <label for="a11y-id-117">User ID</label>
+                <input id="a11y-id-117" v-model="bedsideForm.secondary_verifier_id" type="text" required>
               </div>
               <div class="form-group">
-                <label>Full Name</label>
-                <input v-model="bedsideForm.secondary_verifier_name" type="text" required>
+                <label for="a11y-id-118">Full Name</label>
+                <input id="a11y-id-118" v-model="bedsideForm.secondary_verifier_name" type="text" required>
               </div>
               <div class="form-group">
-                <label>E-Signature Step-Up Token</label>
-                <input v-model="bedsideForm.secondary_signature_token" type="password" required>
+                <label for="a11y-id-119">E-Signature Step-Up Token</label>
+                <input id="a11y-id-119" v-model="bedsideForm.secondary_signature_token" type="password" required>
               </div>
             </div>
           </div>
@@ -394,28 +394,28 @@
         <form @submit.prevent="submitDestruction">
           <div class="form-grid">
             <div class="form-group">
-              <label>Study Protocol</label>
-              <input v-model="destructionForm.study_id" type="text" required>
+              <label for="a11y-id-120">Study Protocol</label>
+              <input id="a11y-id-120" v-model="destructionForm.study_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Site ID</label>
-              <input v-model="destructionForm.site_id" type="text" required>
+              <label for="a11y-id-121">Site ID</label>
+              <input id="a11y-id-121" v-model="destructionForm.site_id" type="text" required>
             </div>
             <div class="form-group">
-              <label>Lot Number</label>
-              <input v-model="destructionForm.lot_number" type="text" required>
+              <label for="a11y-id-122">Lot Number</label>
+              <input id="a11y-id-122" v-model="destructionForm.lot_number" type="text" required>
             </div>
             <div class="form-group">
-              <label>Kit Numbers (Comma-separated)</label>
-              <input v-model="destructionForm.kit_numbers_str" type="text" required placeholder="KIT-001, KIT-002">
+              <label for="a11y-id-123">Kit Numbers (Comma-separated)</label>
+              <input id="a11y-id-123" v-model="destructionForm.kit_numbers_str" type="text" required placeholder="KIT-001, KIT-002">
             </div>
             <div class="form-group">
-              <label>Vial Identifiers (Comma-separated)</label>
-              <input v-model="destructionForm.vial_identifiers_str" type="text" required placeholder="VIAL-A1, VIAL-A2">
+              <label for="a11y-id-124">Vial Identifiers (Comma-separated)</label>
+              <input id="a11y-id-124" v-model="destructionForm.vial_identifiers_str" type="text" required placeholder="VIAL-A1, VIAL-A2">
             </div>
             <div class="form-group">
-              <label>Destruction Method</label>
-              <select v-model="destructionForm.destruction_method" required>
+              <label for="a11y-id-125">Destruction Method</label>
+              <select id="a11y-id-125" v-model="destructionForm.destruction_method" required>
                 <option value="HIGH_TEMPERATURE_INCINERATION">High Temperature Incineration</option>
                 <option value="AUTOCLAVE_BIOHAZARD">Autoclave Biohazard Decontamination</option>
                 <option value="CHEMICAL_INACTIVATION">Chemical Inactivation</option>
@@ -423,28 +423,28 @@
               </select>
             </div>
             <div class="form-group col-full">
-              <label>Destruction Facility</label>
-              <input v-model="destructionForm.destruction_facility" type="text" required placeholder="e.g. Bio-Hazard Waste Center Alpha">
+              <label for="a11y-id-126">Destruction Facility</label>
+              <input id="a11y-id-126" v-model="destructionForm.destruction_facility" type="text" required placeholder="e.g. Bio-Hazard Waste Center Alpha">
             </div>
             <div class="form-group col-full">
-              <label>Destruction Reason</label>
-              <input v-model="destructionForm.destruction_reason" type="text" required placeholder="e.g. Residual post-infusion cellular product destruction per protocol.">
+              <label for="a11y-id-127">Destruction Reason</label>
+              <input id="a11y-id-127" v-model="destructionForm.destruction_reason" type="text" required placeholder="e.g. Residual post-infusion cellular product destruction per protocol.">
             </div>
 
             <!-- Witness 1 -->
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
               <div class="form-group">
-                <label>User ID</label>
-                <input v-model="destructionForm.witness_1_id" type="text" required>
+                <label for="a11y-id-128">User ID</label>
+                <input id="a11y-id-128" v-model="destructionForm.witness_1_id" type="text" required>
               </div>
               <div class="form-group">
-                <label>Full Name</label>
-                <input v-model="destructionForm.witness_1_name" type="text" required>
+                <label for="a11y-id-129">Full Name</label>
+                <input id="a11y-id-129" v-model="destructionForm.witness_1_name" type="text" required>
               </div>
               <div class="form-group">
-                <label>E-Signature Token</label>
-                <input v-model="destructionForm.witness_1_signature_token" type="password" required>
+                <label for="a11y-id-130">E-Signature Token</label>
+                <input id="a11y-id-130" v-model="destructionForm.witness_1_signature_token" type="password" required>
               </div>
             </div>
 
@@ -452,16 +452,16 @@
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Witness 2 (Principal Investigator / QA)</h4>
               <div class="form-group">
-                <label>User ID</label>
-                <input v-model="destructionForm.witness_2_id" type="text" required>
+                <label for="a11y-id-131">User ID</label>
+                <input id="a11y-id-131" v-model="destructionForm.witness_2_id" type="text" required>
               </div>
               <div class="form-group">
-                <label>Full Name</label>
-                <input v-model="destructionForm.witness_2_name" type="text" required>
+                <label for="a11y-id-132">Full Name</label>
+                <input id="a11y-id-132" v-model="destructionForm.witness_2_name" type="text" required>
               </div>
               <div class="form-group">
-                <label>E-Signature Token</label>
-                <input v-model="destructionForm.witness_2_signature_token" type="password" required>
+                <label for="a11y-id-133">E-Signature Token</label>
+                <input id="a11y-id-133" v-model="destructionForm.witness_2_signature_token" type="password" required>
               </div>
             </div>
           </div>

@@ -138,7 +138,7 @@
       class="add-comment-box"
       style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px"
     >
-      <textarea
+      <textarea aria-label="Input field"
         v-model="newComment"
         placeholder="Add review comment... Use @user to mention reviewers."
         style="

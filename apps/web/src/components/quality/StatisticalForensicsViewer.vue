@@ -81,10 +81,10 @@
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
-        @click="activeSubTab = 'overview'"
+        @click="activeSubTab = 'overview'" @keydown.enter="activeSubTab = 'overview'"
       >
         <div class="kpi-icon">
           🚨
@@ -99,9 +99,9 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
-        @click="activeSubTab = 'benford'"
+        @click="activeSubTab = 'benford'" @keydown.enter="activeSubTab = 'benford'"
       >
         <div class="kpi-icon">
           📊
@@ -116,9 +116,9 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
-        @click="activeSubTab = 'rounding'"
+        @click="activeSubTab = 'rounding'" @keydown.enter="activeSubTab = 'rounding'"
       >
         <div class="kpi-icon">
           🎯
@@ -133,9 +133,9 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
-        @click="activeSubTab = 'variance'"
+        @click="activeSubTab = 'variance'" @keydown.enter="activeSubTab = 'variance'"
       >
         <div class="kpi-icon">
           🔬
@@ -150,9 +150,9 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
-        @click="activeSubTab = 'mahalanobis'"
+        @click="activeSubTab = 'mahalanobis'" @keydown.enter="activeSubTab = 'mahalanobis'"
       >
         <div class="kpi-icon">
           🌐

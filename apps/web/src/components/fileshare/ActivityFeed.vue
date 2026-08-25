@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="activity-feed-overlay"
-    @click.self="$emit('close')"
+    @click.self="$emit('close')" @keydown.enter="$emit('close')"
   >
     <div
       ref="drawerRef"

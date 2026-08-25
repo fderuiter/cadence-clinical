@@ -26,7 +26,7 @@
         <button
           v-if="narrative.review_status !== 'APPROVED'"
           class="btn btn-primary"
-          @click="openSignatureModal"
+          @click="openSignatureModal" @keydown.enter="openSignatureModal"
           :disabled="isSubmitting"
         >
           <span class="icon">✍️</span> Part 11 Sign & Approve
@@ -34,7 +34,7 @@
         <button
           v-if="narrative.review_status === 'APPROVED'"
           class="btn btn-secondary"
-          @click="exportE2BXml"
+          @click="exportE2BXml" @keydown.enter="exportE2BXml"
           :disabled="isExporting"
         >
           <span class="icon">📄</span> Export E2B(R3) XML
@@ -104,6 +104,7 @@
                 <li
                   v-for="claim in section.grounded_claims"
                   :key="claim.claim_id"
+                  role="button"
                   tabindex="0"
                   :class="['claim-item', { 'is-active': activeClaimId === claim.claim_id }]"
                   @mouseenter="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
@@ -121,7 +122,7 @@
                       :key="evtId"
                       type="button"
                       class="grounded-evt-btn"
-                      @click.stop="scrollToEvent(evtId)"
+                      @click.stop="scrollToEvent(evtId)" @keydown.enter="scrollToEvent(evtId)"
                     >
                       {{ evtId }}
                     </button>
@@ -139,7 +140,7 @@
       <div class="modal-dialog">
         <header class="modal-header">
           <h3>21 CFR Part 11 Electronic Signature</h3>
-          <button type="button" class="btn-close" @click="closeSignatureModal">✕</button>
+          <button type="button" class="btn-close" @click="closeSignatureModal" @keydown.enter="closeSignatureModal">✕</button>
         </header>
         <div class="modal-body">
           <p class="cert-notice">
@@ -170,12 +171,12 @@
           <p v-if="signError" class="error-msg">{{ signError }}</p>
         </div>
         <footer class="modal-footer">
-          <button type="button" class="btn btn-text" @click="closeSignatureModal">Cancel</button>
+          <button type="button" class="btn btn-text" @click="closeSignatureModal" @keydown.enter="closeSignatureModal">Cancel</button>
           <button
             type="button"
             class="btn btn-primary"
             :disabled="!signForm.reason.trim() || isSubmitting"
-            @click="submitSignature"
+            @click="submitSignature" @keydown.enter="submitSignature"
           >
             {{ isSubmitting ? 'Signing...' : 'Sign Document' }}
           </button>

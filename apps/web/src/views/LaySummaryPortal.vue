@@ -21,7 +21,7 @@
         <button
           class="btn btn-secondary"
           :disabled="isLoading"
-          @click="loadSummaries"
+          @click="loadSummaries" @keydown.enter="loadSummaries"
         >
           <span class="btn-icon">🔄</span> Refresh Summaries
         </button>
@@ -65,28 +65,28 @@
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'reader' }"
-        @click="activeTab = 'reader'"
+        @click="activeTab = 'reader'" @keydown.enter="activeTab = 'reader'"
       >
         📖 Trial Results Reader &amp; Library ({{ summaries.length }})
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'confirm' }"
-        @click="activeTab = 'confirm'"
+        @click="activeTab = 'confirm'" @keydown.enter="activeTab = 'confirm'"
       >
         ✍️ Patient Comprehension &amp; Receipt Seal
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'studio' }"
-        @click="activeTab = 'studio'"
+        @click="activeTab = 'studio'" @keydown.enter="activeTab = 'studio'"
       >
         🛠️ Sponsor &amp; IRB Publishing Studio
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'audit' }"
-        @click="activeTab = 'audit'"
+        @click="activeTab = 'audit'" @keydown.enter="activeTab = 'audit'"
       >
         🗄️ Regulatory Confirmation Audit Ledger
       </button>
@@ -102,12 +102,12 @@
           </div>
           <div class="panel-body compact-body">
             <div class="summary-list">
-              <div
+              <div role="button" tabindex="0"
                 v-for="s in summaries"
                 :key="s.id"
                 class="summary-item-card"
                 :class="{ selected: selectedSummary?.id === s.id }"
-                @click="selectedSummary = s"
+                @click="selectedSummary = s" @keydown.enter="selectedSummary = s"
               >
                 <div class="item-badge-row">
                   <span class="badge badge-gxp">{{ s.trial_phase }}</span>
@@ -133,7 +133,7 @@
             </div>
             <button
               class="btn btn-sm btn-primary"
-              @click="prepareConfirmation(selectedSummary)"
+              @click="prepareConfirmation(selectedSummary)" @keydown.enter="prepareConfirmation(selectedSummary)"
             >
               ✍️ Acknowledge &amp; Confirm Receipt
             </button>
@@ -211,27 +211,27 @@
           </div>
           <div class="panel-body">
             <div class="form-group">
-              <label>Select Clinical Trial Lay Summary:</label>
-              <select v-model="confirmForm.summary_id" class="form-select" @change="onConfirmSummarySelect">
+              <label for="a11y-id-202">Select Clinical Trial Lay Summary:</label>
+              <select id="a11y-id-202" v-model="confirmForm.summary_id" class="form-select" @change="onConfirmSummarySelect">
                 <option v-for="s in summaries" :key="s.id" :value="s.id">
                   {{ s.study_id }}: {{ s.title }}
                 </option>
               </select>
             </div>
             <div class="form-group">
-              <label>Participant Subject ID / MRN:</label>
-              <input v-model="confirmForm.subject_id" class="form-input" />
+              <label for="a11y-id-203">Participant Subject ID / MRN:</label>
+              <input id="a11y-id-203" v-model="confirmForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Study Protocol ID:</label>
-              <input v-model="confirmForm.study_id" class="form-input" />
+              <label for="a11y-id-204">Study Protocol ID:</label>
+              <input id="a11y-id-204" v-model="confirmForm.study_id" class="form-input" />
             </div>
 
             <!-- 5-Star Comprehension Assessment -->
             <div class="form-group">
-              <label class="rating-label">
+              <span class="form-label rating-label">
                 How clear and understandable was this trial summary? (1 = Very Difficult, 5 = Very Clear)
-              </label>
+              </span>
               <div class="star-rating-box">
                 <button
                   v-for="star in [1, 2, 3, 4, 5]"
@@ -239,7 +239,7 @@
                   type="button"
                   class="star-btn"
                   :class="{ selected: confirmForm.comprehension_score >= star }"
-                  @click="confirmForm.comprehension_score = star"
+                  @click="confirmForm.comprehension_score = star" @keydown.enter="confirmForm.comprehension_score = star"
                 >
                   ★
                 </button>
@@ -248,8 +248,8 @@
             </div>
 
             <div class="form-group">
-              <label>Participant Feedback or Questions (Optional):</label>
-              <textarea
+              <label for="a11y-id-205">Participant Feedback or Questions (Optional):</label>
+              <textarea id="a11y-id-205"
                 v-model="confirmForm.comprehension_feedback"
                 class="form-textarea"
                 rows="3"
@@ -267,7 +267,7 @@
             <button
               class="btn btn-primary btn-block"
               :disabled="!confirmForm.agree || isSubmitting"
-              @click="submitConfirmationReceipt"
+              @click="submitConfirmationReceipt" @keydown.enter="submitConfirmationReceipt"
             >
               🔏 Generate Cryptographically Sealed Confirmation Receipt (SHA-256)
             </button>
@@ -318,14 +318,14 @@
         <div class="panel-body">
           <div class="form-row-2">
             <div class="form-group">
-              <label>Study Protocol ID:</label>
-              <input v-model="studioForm.study_id" class="form-input" />
+              <label for="a11y-id-206">Study Protocol ID:</label>
+              <input id="a11y-id-206" v-model="studioForm.study_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Protocol Code / Phase:</label>
+              <label for="a11y-id-207">Protocol Code / Phase:</label>
               <div class="form-row-2">
-                <input v-model="studioForm.protocol_id" class="form-input" placeholder="e.g. PROTOCOL-CAD-001" />
-                <select v-model="studioForm.trial_phase" class="form-select">
+                <input id="a11y-id-207" v-model="studioForm.protocol_id" class="form-input" placeholder="e.g. PROTOCOL-CAD-001" />
+                <select aria-label="Trial phase" v-model="studioForm.trial_phase" class="form-select">
                   <option value="Phase I">Phase I</option>
                   <option value="Phase II">Phase II</option>
                   <option value="Phase III">Phase III</option>
@@ -337,74 +337,74 @@
 
           <div class="form-row-2">
             <div class="form-group">
-              <label>Therapeutic Area / Indication:</label>
-              <input v-model="studioForm.therapeutic_area" class="form-input" />
+              <label for="a11y-id-208">Therapeutic Area / Indication:</label>
+              <input id="a11y-id-208" v-model="studioForm.therapeutic_area" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Sponsor Organization:</label>
-              <input v-model="studioForm.sponsor_name" class="form-input" />
+              <label for="a11y-id-209">Sponsor Organization:</label>
+              <input id="a11y-id-209" v-model="studioForm.sponsor_name" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
-            <label>Plain-Language Lay Summary Title:</label>
-            <input v-model="studioForm.title" class="form-input" />
+            <label for="a11y-id-210">Plain-Language Lay Summary Title:</label>
+            <input id="a11y-id-210" v-model="studioForm.title" class="form-input" />
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
-              <label>IRB/Ethics Committee Approval Number:</label>
-              <input v-model="studioForm.irb_approval_number" class="form-input" />
+              <label for="a11y-id-211">IRB/Ethics Committee Approval Number:</label>
+              <input id="a11y-id-211" v-model="studioForm.irb_approval_number" class="form-input" />
             </div>
             <div class="form-group">
-              <label>IRB Approval Date:</label>
-              <input v-model="studioForm.irb_approval_date" type="date" class="form-input" />
+              <label for="a11y-id-212">IRB Approval Date:</label>
+              <input id="a11y-id-212" v-model="studioForm.irb_approval_date" type="date" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
-            <label>Narrative Summary Overview:</label>
-            <textarea v-model="studioForm.summary_text" class="form-textarea" rows="3" />
+            <label for="a11y-id-213">Narrative Summary Overview:</label>
+            <textarea id="a11y-id-213" v-model="studioForm.summary_text" class="form-textarea" rows="3" />
           </div>
 
           <h4 class="studio-subheading">Plain Language Section Content</h4>
           <div class="form-row-2">
             <div class="form-group">
-              <label>1. Study Goal / Objective:</label>
-              <textarea v-model="studioForm.sections.objective" class="form-textarea" rows="2" />
+              <label for="a11y-id-214">1. Study Goal / Objective:</label>
+              <textarea id="a11y-id-214" v-model="studioForm.sections.objective" class="form-textarea" rows="2" />
             </div>
             <div class="form-group">
-              <label>2. Participant Demographics:</label>
-              <textarea v-model="studioForm.sections.participants" class="form-textarea" rows="2" />
-            </div>
-          </div>
-
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>3. Treatments Studied:</label>
-              <textarea v-model="studioForm.sections.treatments" class="form-textarea" rows="2" />
-            </div>
-            <div class="form-group">
-              <label>4. Key Results &amp; Findings:</label>
-              <textarea v-model="studioForm.sections.results" class="form-textarea" rows="2" />
+              <label for="a11y-id-215">2. Participant Demographics:</label>
+              <textarea id="a11y-id-215" v-model="studioForm.sections.participants" class="form-textarea" rows="2" />
             </div>
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
-              <label>5. Side Effects &amp; Safety Profile:</label>
-              <textarea v-model="studioForm.sections.side_effects" class="form-textarea" rows="2" />
+              <label for="a11y-id-216">3. Treatments Studied:</label>
+              <textarea id="a11y-id-216" v-model="studioForm.sections.treatments" class="form-textarea" rows="2" />
             </div>
             <div class="form-group">
-              <label>6. Future Plans &amp; Next Steps:</label>
-              <textarea v-model="studioForm.sections.future_plans" class="form-textarea" rows="2" />
+              <label for="a11y-id-217">4. Key Results &amp; Findings:</label>
+              <textarea id="a11y-id-217" v-model="studioForm.sections.results" class="form-textarea" rows="2" />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="a11y-id-218">5. Side Effects &amp; Safety Profile:</label>
+              <textarea id="a11y-id-218" v-model="studioForm.sections.side_effects" class="form-textarea" rows="2" />
+            </div>
+            <div class="form-group">
+              <label for="a11y-id-219">6. Future Plans &amp; Next Steps:</label>
+              <textarea id="a11y-id-219" v-model="studioForm.sections.future_plans" class="form-textarea" rows="2" />
             </div>
           </div>
 
           <button
             class="btn btn-primary"
             :disabled="isSubmitting"
-            @click="publishStudioSummary"
+            @click="publishStudioSummary" @keydown.enter="publishStudioSummary"
           >
             🚀 Publish IRB-Approved Lay Summary Live to Participants
           </button>

@@ -37,7 +37,7 @@
             class="btn btn-secondary badge"
             style="padding: 4px 8px; font-size: 11px; cursor: pointer"
             :disabled="integrity.loading"
-            @click="verifyExecutionIntegrity"
+            @click="verifyExecutionIntegrity" @keydown.enter="verifyExecutionIntegrity"
           >
             {{ integrity.loading ? "Verifying..." : "Verify Now" }}
           </button>
@@ -161,15 +161,15 @@
               class="form-group"
               style="margin-bottom: 0"
             >
-              <label
+              <span class="form-label"
                 style="
                   font-weight: 600;
                   font-size: 12px;
                   margin-bottom: 4px;
                   display: block;
                 "
-              >Study Reference ID</label>
-              <input
+              >Study Reference ID</span>
+              <input aria-label="Input field"
                 v-model="binderStudyId"
                 type="text"
                 placeholder="e.g. study_001"
@@ -207,7 +207,7 @@
               class="btn btn-primary"
               style="margin-top: 8px; padding: 10px; cursor: pointer"
               :disabled="exportingBinder || !binderStudyId.trim()"
-              @click="exportRegulatoryBinder"
+              @click="exportRegulatoryBinder" @keydown.enter="exportRegulatoryBinder"
             >
               {{
                 exportingBinder
@@ -336,7 +336,7 @@
               class="btn btn-primary btn-upload-doc-submit"
               style="margin-top: 8px; padding: 10px; cursor: pointer"
               :disabled="uploadingDoc || !selectedTmfFile"
-              @click="uploadTmfDocument"
+              @click="uploadTmfDocument" @keydown.enter="uploadTmfDocument"
             >
               {{ uploadingDoc ? "Uploading..." : "Upload & Ingest Document" }}
             </button>
@@ -356,7 +356,7 @@
           class="btn btn-secondary badge"
           style="padding: 4px 8px; font-size: 11px; cursor: pointer"
           :disabled="documentsLoading"
-          @click="fetchDocuments"
+          @click="fetchDocuments" @keydown.enter="fetchDocuments"
         >
           {{ documentsLoading ? "Loading..." : "Refresh List" }}
         </button>
@@ -487,7 +487,7 @@
                   class="btn btn-secondary btn-preview-doc"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
                   :aria-label="'Preview secure document ' + doc.filename"
-                  @click="previewDocument(doc)"
+                  @click="previewDocument(doc)" @keydown.enter="previewDocument(doc)"
                 >
                   Preview
                 </button>
@@ -498,7 +498,7 @@
                   :aria-label="
                     'Sign and manifestation seal document ' + doc.filename
                   "
-                  @click="openSignModal(doc)"
+                  @click="openSignModal(doc)" @keydown.enter="openSignModal(doc)"
                 >
                   Sign
                 </button>
@@ -508,7 +508,7 @@
                   :aria-label="
                     'Download secure watermarked copy of ' + doc.filename
                   "
-                  @click="downloadWatermarkedDoc(doc)"
+                  @click="downloadWatermarkedDoc(doc)" @keydown.enter="downloadWatermarkedDoc(doc)"
                 >
                   Download (Watermarked)
                 </button>
@@ -551,7 +551,7 @@
           <button
             class="btn btn-secondary btn-close-preview"
             style="padding: 2px 8px; font-size: 11px; cursor: pointer"
-            @click="closePreview"
+            @click="closePreview" @keydown.enter="closePreview"
           >
             Close Viewer
           </button>
@@ -698,7 +698,7 @@
             class="btn btn-secondary badge btn-refresh-logs"
             style="padding: 4px 8px; font-size: 11px; cursor: pointer"
             :disabled="auditLoading"
-            @click="fetchAuditLogs"
+            @click="fetchAuditLogs" @keydown.enter="fetchAuditLogs"
           >
             {{ auditLoading ? "Loading..." : "Refresh Logs" }}
           </button>
@@ -971,7 +971,7 @@
           <button
             class="btn btn-secondary btn-clear-filters"
             style="padding: 6px 12px; font-size: 12px; cursor: pointer"
-            @click="clearFilters"
+            @click="clearFilters" @keydown.enter="clearFilters"
           >
             Clear Filters
           </button>
@@ -979,7 +979,7 @@
             class="btn btn-primary btn-apply-filters"
             style="padding: 6px 12px; font-size: 12px; cursor: pointer"
             :disabled="auditLoading"
-            @click="applyFilters"
+            @click="applyFilters" @keydown.enter="applyFilters"
           >
             Apply Filters
           </button>
@@ -1052,7 +1052,7 @@
               <tr
                 style="border-bottom: 1px solid var(--border); cursor: pointer"
                 :style="{ background: isRowExpanded(log.id) ? 'rgba(0, 123, 255, 0.03)' : 'transparent' }"
-                @click="toggleRowDetails(log.id)"
+                @click="toggleRowDetails(log.id)" @keydown.enter="toggleRowDetails(log.id)"
               >
                 <td
                   style="
@@ -1092,7 +1092,7 @@
                     class="btn btn-secondary btn-inspect-row"
                     style="padding: 3px 8px; font-size: 11px; cursor: pointer"
                     :aria-label="'Inspect audit details for ' + log.id"
-                    @click.stop="toggleRowDetails(log.id)"
+                    @click.stop="toggleRowDetails(log.id)" @keydown.enter="toggleRowDetails(log.id)"
                   >
                     {{ isRowExpanded(log.id) ? "Hide" : "Inspect" }}
                   </button>
@@ -1301,7 +1301,7 @@
             class="btn btn-secondary btn-prev-page"
             style="padding: 4px 12px; font-size: 12px; cursor: pointer"
             :disabled="offset === 0 || auditLoading"
-            @click="prevPage"
+            @click="prevPage" @keydown.enter="prevPage"
           >
             Previous
           </button>
@@ -1309,7 +1309,7 @@
             class="btn btn-secondary btn-next-page"
             style="padding: 4px 12px; font-size: 12px; cursor: pointer"
             :disabled="offset + limit >= totalLogs || auditLoading"
-            @click="nextPage"
+            @click="nextPage" @keydown.enter="nextPage"
           >
             Next
           </button>
@@ -1328,7 +1328,7 @@
           class="btn btn-secondary badge btn-check-completeness"
           style="padding: 4px 8px; font-size: 11px; cursor: pointer"
           :disabled="completenessLoading"
-          @click="checkCompleteness"
+          @click="checkCompleteness" @keydown.enter="checkCompleteness"
         >
           {{ completenessLoading ? "Checking..." : "Re-Verify" }}
         </button>
@@ -1427,15 +1427,15 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
-          <label
+          <span class="form-label"
             style="
               font-size: 11px;
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
             "
-          >Site ID (Optional)</label>
-          <input
+          >Site ID (Optional)</span>
+          <input aria-label="Input field"
             v-model="completenessParams.site_id"
             type="text"
             placeholder="e.g. site_001"
@@ -1466,7 +1466,7 @@
             :disabled="
               completenessLoading || !completenessParams.study_id.trim()
             "
-            @click="checkCompleteness"
+            @click="checkCompleteness" @keydown.enter="checkCompleteness"
           >
             Run Completeness Analysis
           </button>

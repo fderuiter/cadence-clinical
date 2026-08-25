@@ -4,10 +4,11 @@
     id="re-auth-modal"
     ref="modalRef"
     class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
+    role="button"
+    tabindex="0"
     :aria-labelledby="'reauth-modal-title'"
     @click.self="handleCancel"
+    @keydown.enter="handleCancel"
   >
     <div
       class="modal-card reauth-modal-card"
@@ -25,7 +26,7 @@
           class="close-btn"
           aria-label="Close modal"
           :disabled="busy"
-          @click="handleCancel"
+          @click="handleCancel" @keydown.enter="handleCancel"
         >
           ×
         </button>
@@ -108,7 +109,7 @@
           type="button"
           class="btn btn-secondary"
           :disabled="busy"
-          @click="handleCancel"
+          @click="handleCancel" @keydown.enter="handleCancel"
         >
           Cancel
         </button>
@@ -116,7 +117,7 @@
           type="button"
           class="btn btn-primary"
           :disabled="busy || !credentialVal.trim()"
-          @click="handleConfirm"
+          @click="handleConfirm" @keydown.enter="handleConfirm"
         >
           {{ busy ? "Verifying & Signing..." : "Confirm & Sign" }}
         </button>

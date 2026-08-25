@@ -11,7 +11,7 @@
         type="button"
         class="toolbar-btn"
         title="Bold"
-        @click="formatDoc('bold')"
+        @click="formatDoc('bold')" @keydown.enter="formatDoc('bold')"
       >
         <strong>B</strong>
       </button>
@@ -19,7 +19,7 @@
         type="button"
         class="toolbar-btn"
         title="Italic"
-        @click="formatDoc('italic')"
+        @click="formatDoc('italic')" @keydown.enter="formatDoc('italic')"
       >
         <em>I</em>
       </button>
@@ -27,7 +27,7 @@
         type="button"
         class="toolbar-btn"
         title="Heading 2"
-        @click="formatHeading('h2')"
+        @click="formatHeading('h2')" @keydown.enter="formatHeading('h2')"
       >
         H2
       </button>
@@ -35,7 +35,7 @@
         type="button"
         class="toolbar-btn"
         title="Heading 3"
-        @click="formatHeading('h3')"
+        @click="formatHeading('h3')" @keydown.enter="formatHeading('h3')"
       >
         H3
       </button>
@@ -43,7 +43,7 @@
         type="button"
         class="toolbar-btn"
         title="Bullet List"
-        @click="formatDoc('insertUnorderedList')"
+        @click="formatDoc('insertUnorderedList')" @keydown.enter="formatDoc('insertUnorderedList')"
       >
         • List
       </button>
@@ -51,7 +51,7 @@
         type="button"
         class="toolbar-btn"
         title="Numbered List"
-        @click="formatDoc('insertOrderedList')"
+        @click="formatDoc('insertOrderedList')" @keydown.enter="formatDoc('insertOrderedList')"
       >
         1. List
       </button>
@@ -59,7 +59,7 @@
         type="button"
         class="toolbar-btn"
         title="Insert Table"
-        @click="insertTable"
+        @click="insertTable" @keydown.enter="insertTable"
       >
         📊 Table
       </button>
@@ -67,7 +67,7 @@
         type="button"
         class="toolbar-btn"
         title="Insert Image Embed"
-        @click="insertImage"
+        @click="insertImage" @keydown.enter="insertImage"
       >
         🖼️ Image
       </button>
@@ -75,7 +75,7 @@
         type="button"
         class="toolbar-btn glossary-btn"
         title="Annotate Glossary Term"
-        @click="promptGlossary"
+        @click="promptGlossary" @keydown.enter="promptGlossary"
       >
         🏷️ Glossary Term
       </button>
@@ -83,7 +83,7 @@
         type="button"
         class="toolbar-btn readability-btn"
         title="Harmonize Readability & Medical Jargon"
-        @click="showReadabilityDrawer = true"
+        @click="showReadabilityDrawer = true" @keydown.enter="showReadabilityDrawer = true"
       >
         📖 Readability Harmonizer
       </button>
@@ -100,6 +100,7 @@
       @input="handleInput"
       @blur="handleInput"
       @click="handleCanvasClick"
+      @keydown.enter="handleCanvasClick"
       @mouseover="handleCanvasMouseOver"
       @mouseout="handleCanvasMouseOut"
       @focusin="handleCanvasFocusIn"
@@ -131,14 +132,14 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="showGlossaryModal = false"
+            @click="showGlossaryModal = false" @keydown.enter="showGlossaryModal = false"
           >
             Cancel
           </button>
           <button
             type="button"
             class="btn btn-primary"
-            @click="applyGlossaryAnnotation"
+            @click="applyGlossaryAnnotation" @keydown.enter="applyGlossaryAnnotation"
           >
             Apply Annotation
           </button>

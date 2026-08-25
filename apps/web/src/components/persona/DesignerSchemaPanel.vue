@@ -29,7 +29,7 @@
           background-color: #f8fafc;
         "
       >
-        <input
+        <input aria-label="Input field"
           ref="fileInputRef"
           type="file"
           accept=".pdf,.docx"
@@ -199,8 +199,8 @@
               class="item-edit-section"
             >
               <div class="form-group">
-                <label style="font-size: 0.75rem">Modify Candidate Name/Label</label>
-                <input
+                <label for="a11y-id-171" style="font-size: 0.75rem">Modify Candidate Name/Label</label>
+                <input id="a11y-id-171"
                   :value="editItemValue"
                   type="text"
                   style="
@@ -215,8 +215,8 @@
                 >
               </div>
               <div class="form-group">
-                <label style="font-size: 0.75rem">Change Reason Justification (Mandatory)</label>
-                <input
+                <label for="a11y-id-172" style="font-size: 0.75rem">Change Reason Justification (Mandatory)</label>
+                <input id="a11y-id-172"
                   :value="editItemReason"
                   type="text"
                   placeholder="Enter mandatory reason..."
@@ -261,10 +261,10 @@
               class="item-reject-section"
             >
               <div class="form-group">
-                <label
+                <label for="a11y-id-173"
                   style="font-size: 0.75rem; color: #ef4444; font-weight: bold"
                 >Provide Rejection Reason (Mandatory)</label>
-                <input
+                <input id="a11y-id-173"
                   :value="rejectItemReason"
                   type="text"
                   placeholder="Provide justification for rejecting candidate..."

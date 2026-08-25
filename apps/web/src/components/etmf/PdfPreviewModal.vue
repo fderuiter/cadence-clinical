@@ -2,10 +2,11 @@
   <div
     ref="modalRef"
     class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
+    role="button"
+    tabindex="0"
     aria-label="Secure PDF Preview Modal"
     @click.self="$emit('close')"
+    @keydown.enter="$emit('close')"
   >
     <div class="modal-card pdf-preview-modal">
       <div class="modal-header">
@@ -26,7 +27,7 @@
         <button
           class="close-modal-btn"
           aria-label="Close modal"
-          @click="$emit('close')"
+          @click="$emit('close')" @keydown.enter="$emit('close')"
         >
           ×
         </button>

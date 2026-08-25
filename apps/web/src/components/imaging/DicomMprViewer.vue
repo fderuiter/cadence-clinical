@@ -41,7 +41,7 @@
           class="toolbar-btn"
           :class="{ active: isCrosshairEnabled }"
           title="Toggle Synchronized MPR Crosshairs"
-          @click="isCrosshairEnabled = !isCrosshairEnabled"
+          @click="isCrosshairEnabled = !isCrosshairEnabled" @keydown.enter="isCrosshairEnabled = !isCrosshairEnabled"
         >
           <span class="btn-icon">🎯</span> Crosshairs
         </button>
@@ -51,7 +51,7 @@
           class="toolbar-btn"
           :class="{ active: isInverted }"
           title="Invert Grayscale Color Map"
-          @click="isInverted = !isInverted"
+          @click="isInverted = !isInverted" @keydown.enter="isInverted = !isInverted"
         >
           <span class="btn-icon">🌓</span> Invert
         </button>
@@ -60,7 +60,7 @@
           type="button"
           class="toolbar-btn"
           title="Reset Zoom & Pan"
-          @click="resetView"
+          @click="resetView" @keydown.enter="resetView"
         >
           <span class="btn-icon">🔄</span> Reset
         </button>
@@ -72,7 +72,7 @@
           class="toolbar-btn"
           :class="{ active: isCinePlaying }"
           :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
-          @click="toggleCine"
+          @click="toggleCine" @keydown.enter="toggleCine"
         >
           <span class="btn-icon">{{ isCinePlaying ? '⏸️' : '▶️' }}</span> Cine
         </button>
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Viewports Canvas Grid -->
-    <div class="viewports-grid" :class="layoutMode">
+    <div class="viewports-grid layoutMode" :>
       <!-- Axial Viewport -->
       <div
         v-if="layoutMode === 'mpr-tri-view' || layoutMode === 'axial-only'"
@@ -91,9 +91,12 @@
           <span class="plane-badge axial-badge">AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span>
           <span class="slice-loc-label">Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span>
         </div>
-        <div class="canvas-wrapper">
+        <div role="button" tabindex="0" class="canvas-wrapper">
           <canvas
             ref="axialCanvasRef"
+            role="button"
+            tabindex="0"
+            aria-label="Axial DICOM Viewport"
             class="mpr-canvas"
             width="380"
             height="380"
@@ -101,6 +104,7 @@
             @mousemove="onCanvasMouseMove($event, 'AXIAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'AXIAL')"
+            @keydown.enter="stopPanOrMeasure"
           ></canvas>
         </div>
         <div class="slice-slider-box">
@@ -124,9 +128,12 @@
           <span class="plane-badge sagittal-badge">SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span>
           <span class="slice-loc-label">Reconstructed</span>
         </div>
-        <div class="canvas-wrapper">
+        <div role="button" tabindex="0" class="canvas-wrapper">
           <canvas
             ref="sagittalCanvasRef"
+            role="button"
+            tabindex="0"
+            aria-label="Sagittal DICOM Viewport"
             class="mpr-canvas"
             width="380"
             height="380"
@@ -134,6 +141,7 @@
             @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'SAGITTAL')"
+            @keydown.enter="stopPanOrMeasure"
           ></canvas>
         </div>
         <div class="slice-slider-box">
@@ -157,9 +165,12 @@
           <span class="plane-badge coronal-badge">CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span>
           <span class="slice-loc-label">Reconstructed</span>
         </div>
-        <div class="canvas-wrapper">
+        <div role="button" tabindex="0" class="canvas-wrapper">
           <canvas
             ref="coronalCanvasRef"
+            role="button"
+            tabindex="0"
+            aria-label="Coronal DICOM Viewport"
             class="mpr-canvas"
             width="380"
             height="380"
@@ -167,6 +178,7 @@
             @mousemove="onCanvasMouseMove($event, 'CORONAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'CORONAL')"
+            @keydown.enter="stopPanOrMeasure"
           ></canvas>
         </div>
         <div class="slice-slider-box">

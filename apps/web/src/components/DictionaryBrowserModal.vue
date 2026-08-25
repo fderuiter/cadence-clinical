@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="codingStore.browserModal.isOpen"
     class="modal-overlay"
-    @click.self="close"
+    @click.self="close" @keydown.enter="close"
   >
     <div class="modal dictionary-browser-modal">
       <!-- Modal Header -->
@@ -24,7 +24,7 @@
         <button
           type="button"
           class="btn-close"
-          @click="close"
+          @click="close" @keydown.enter="close"
         >
           ✕
         </button>
@@ -49,7 +49,7 @@
                 type="button"
                 class="btn btn-primary"
                 :disabled="!searchTerm.trim() || codingStore.isSearching"
-                @click="performSearch"
+                @click="performSearch" @keydown.enter="performSearch"
               >
                 {{ codingStore.isSearching ? "Searching..." : "Search" }}
               </button>
@@ -181,14 +181,14 @@
               v-else
               class="results-list"
             >
-              <div
+              <div role="button" tabindex="0"
                 v-for="(match, idx) in codingStore.dictionarySearchResults"
                 :key="idx"
                 class="result-item-card"
                 :class="{
                   'active-result': isMatchSelected(match, idx),
                 }"
-                @click="selectMatch(match, idx)"
+                @click="selectMatch(match, idx)" @keydown.enter="selectMatch(match, idx)"
               >
                 <div class="result-card-header">
                   <div class="result-term-name">
@@ -415,7 +415,7 @@
         <button
           type="button"
           class="btn btn-secondary"
-          @click="close"
+          @click="close" @keydown.enter="close"
         >
           Cancel
         </button>
@@ -423,7 +423,7 @@
           type="button"
           class="btn btn-primary"
           :disabled="!activeMatch || !gxpReason.trim() || isSubmitting"
-          @click="applySelectedCode"
+          @click="applySelectedCode" @keydown.enter="applySelectedCode"
         >
           {{ isSubmitting ? "Applying..." : "Assign & Commit Code" }}
         </button>

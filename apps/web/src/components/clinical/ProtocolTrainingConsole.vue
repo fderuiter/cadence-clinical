@@ -26,7 +26,7 @@
         <button
           class="btn btn-secondary"
           :disabled="loading"
-          @click="refreshData"
+          @click="refreshData" @keydown.enter="refreshData"
         >
           <span class="btn-icon">🔄</span> Refresh
         </button>
@@ -93,14 +93,14 @@
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'modules' }"
-          @click="activeTab = 'modules'"
+          @click="activeTab = 'modules'" @keydown.enter="activeTab = 'modules'"
         >
           📖 Procedural Modules ({{ activeCurriculum.modules?.length || 0 }})
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'quiz' }"
-          @click="activeTab = 'quiz'"
+          @click="activeTab = 'quiz'" @keydown.enter="activeTab = 'quiz'"
         >
           📝 Comprehension Quiz (&ge;80%)
         </button>
@@ -108,7 +108,7 @@
           class="tab-btn"
           :class="{ active: activeTab === 'certificate' }"
           :disabled="activeAssignment?.status !== 'COMPLETED'"
-          @click="activeTab = 'certificate'"
+          @click="activeTab = 'certificate'" @keydown.enter="activeTab = 'certificate'"
         >
           📜 21 CFR Part 11 Certificate
         </button>
@@ -124,12 +124,12 @@
             Curriculum Sections
           </h4>
           <ul class="module-list">
-            <li
+            <li role="button" tabindex="0"
               v-for="(mod, idx) in activeCurriculum.modules"
               :key="mod.id"
               class="module-item"
               :class="{ active: selectedModuleIndex === idx }"
-              @click="selectModule(idx)"
+              @click="selectModule(idx)" @keydown.enter="selectModule(idx)"
             >
               <span class="module-num">{{ idx + 1 }}</span>
               <div class="module-meta">
@@ -178,21 +178,21 @@
               <button
                 class="btn btn-secondary"
                 :disabled="selectedModuleIndex <= 0"
-                @click="selectModule(selectedModuleIndex - 1)"
+                @click="selectModule(selectedModuleIndex - 1)" @keydown.enter="selectModule(selectedModuleIndex - 1)"
               >
                 ⬅️ Previous Section
               </button>
               <button
                 v-if="selectedModuleIndex < (activeCurriculum.modules.length - 1)"
                 class="btn btn-primary"
-                @click="selectModule(selectedModuleIndex + 1)"
+                @click="selectModule(selectedModuleIndex + 1)" @keydown.enter="selectModule(selectedModuleIndex + 1)"
               >
                 Next Section ➡️
               </button>
               <button
                 v-else
                 class="btn btn-primary btn-proceed-quiz"
-                @click="activeTab = 'quiz'"
+                @click="activeTab = 'quiz'" @keydown.enter="activeTab = 'quiz'"
               >
                 Proceed to Comprehension Quiz 📝
               </button>
@@ -275,7 +275,7 @@
             v-if="activeAssignment?.status !== 'COMPLETED'"
             class="btn btn-primary btn-submit-quiz"
             :disabled="submittingQuiz || Object.keys(userAnswers).length < aggregatedQuestions.length"
-            @click="handleSubmitQuiz"
+            @click="handleSubmitQuiz" @keydown.enter="handleSubmitQuiz"
           >
             <span v-if="submittingQuiz">Scoring Assessment...</span>
             <span v-else>Submit Quiz for Evaluation 📊</span>
@@ -284,7 +284,7 @@
           <button
             v-if="quizResult?.passed && activeAssignment?.status !== 'COMPLETED'"
             class="btn btn-success btn-signoff"
-            @click="showSignModal = true"
+            @click="showSignModal = true" @keydown.enter="showSignModal = true"
           >
             ✍️ 21 CFR Part 11 Digital Sign-Off
           </button>
@@ -383,7 +383,7 @@
           <h3>21 CFR Part 11 Electronic Signature Sign-Off</h3>
           <button
             class="modal-close-btn"
-            @click="showSignModal = false"
+            @click="showSignModal = false" @keydown.enter="showSignModal = false"
           >
             ✕
           </button>
@@ -417,7 +417,7 @@
           </div>
 
           <div class="form-group">
-            <label>Legal Confirmation Statement:</label>
+            <span class="form-label">Legal Confirmation Statement:</span>
             <div class="statement-box">
               "I certify under penalty of law that I have reviewed, understood, and agree to execute clinical procedures in accordance with approved Protocol Version {{ activeCurriculum?.protocol_version }}."
             </div>
@@ -427,14 +427,14 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            @click="showSignModal = false"
+            @click="showSignModal = false" @keydown.enter="showSignModal = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-success"
             :disabled="signing || !signaturePayload.signerName"
-            @click="handleSignOff"
+            @click="handleSignOff" @keydown.enter="handleSignOff"
           >
             <span v-if="signing">Signing &amp; Sealing...</span>
             <span v-else>Confirm &amp; Execute Signature ✍️</span>

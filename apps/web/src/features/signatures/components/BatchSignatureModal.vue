@@ -220,6 +220,7 @@
               style="margin-bottom: 12px"
             >
               <label
+                for="batch-signature-meaning"
                 style="
                   display: block;
                   font-weight: 500;
@@ -231,6 +232,7 @@
                 Signature Meaning / Attestation
               </label>
               <select
+                id="batch-signature-meaning"
                 v-model="signatureMeaning"
                 class="signature-meaning-picker"
                 required

@@ -26,7 +26,7 @@
           id="btn-create-category"
           class="btn btn-secondary"
           title="Create New Knowledge Category"
-          @click="openCreateCategoryModal"
+          @click="openCreateCategoryModal" @keydown.enter="openCreateCategoryModal"
         >
           <span class="btn-icon">📁</span> New Category
         </button>
@@ -35,7 +35,7 @@
           id="btn-create-article"
           class="btn btn-primary"
           title="Author New Knowledge SOP Article"
-          @click="openCreateArticleModal"
+          @click="openCreateArticleModal" @keydown.enter="openCreateArticleModal"
         >
           <span class="btn-icon">➕</span> New Article
         </button>
@@ -44,10 +44,10 @@
 
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
-        @click="setStatusFilter('ALL')"
+        @click="setStatusFilter('ALL')" @keydown.enter="setStatusFilter('ALL')"
       >
         <div class="stat-icon alert-icon">
           📚
@@ -62,10 +62,10 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
-        @click="setStatusFilter('PUBLISHED')"
+        @click="setStatusFilter('PUBLISHED')" @keydown.enter="setStatusFilter('PUBLISHED')"
       >
         <div class="stat-icon capa-icon">
           ✅
@@ -80,10 +80,10 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
-        @click="setStatusFilter('IN_REVIEW')"
+        @click="setStatusFilter('IN_REVIEW')" @keydown.enter="setStatusFilter('IN_REVIEW')"
       >
         <div class="stat-icon rbqm-icon">
           🔍
@@ -98,10 +98,10 @@
         </div>
       </div>
 
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
-        @click="setStatusFilter('DRAFT')"
+        @click="setStatusFilter('DRAFT')" @keydown.enter="setStatusFilter('DRAFT')"
       >
         <div class="stat-icon breach-icon">
           📝
@@ -142,7 +142,7 @@
             type="button"
             class="category-item-btn"
             :class="{ active: selectedCategoryId === null }"
-            @click="selectCategory(null)"
+            @click="selectCategory(null)" @keydown.enter="selectCategory(null)"
           >
             <span class="category-icon">📂</span>
             <span class="category-title">All Categories</span>
@@ -155,7 +155,7 @@
             type="button"
             class="category-item-btn"
             :class="{ active: selectedCategoryId === cat.id }"
-            @click="selectCategory(cat.id)"
+            @click="selectCategory(cat.id)" @keydown.enter="selectCategory(cat.id)"
           >
             <span class="category-icon">{{ getCategoryIcon(cat.slug) }}</span>
             <div class="category-text-block">
@@ -232,7 +232,7 @@
               type="button"
               class="btn-clear-search"
               title="Clear search"
-              @click="clearSearch"
+              @click="clearSearch" @keydown.enter="clearSearch"
             >
               ✕
             </button>
@@ -249,7 +249,7 @@
               type="button"
               class="tag-chip"
               :class="{ 'tag-chip-active': selectedTag === tag }"
-              @click="toggleTag(tag)"
+              @click="toggleTag(tag)" @keydown.enter="toggleTag(tag)"
             >
               #{{ tag }}
             </button>
@@ -283,7 +283,7 @@
             v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'"
             type="button"
             class="btn btn-secondary btn-sm"
-            @click="resetFilters"
+            @click="resetFilters" @keydown.enter="resetFilters"
           >
             Reset Filters
           </button>
@@ -293,12 +293,12 @@
           v-else
           class="articles-stream"
         >
-          <div
+          <div role="button" tabindex="0"
             v-for="art in displayArticles"
             :key="art.id"
             class="article-card"
             :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
-            @click="selectArticle(art)"
+            @click="selectArticle(art)" @keydown.enter="selectArticle(art)"
           >
             <div class="article-card-header">
               <span
@@ -447,7 +447,7 @@
                   id="btn-edit-draft"
                   class="btn btn-secondary btn-sm"
                   title="Edit Working Markdown Draft"
-                  @click="openEditDraftModal"
+                  @click="openEditDraftModal" @keydown.enter="openEditDraftModal"
                 >
                   ✏️ Edit Draft
                 </button>
@@ -455,7 +455,7 @@
                   id="btn-submit-review"
                   class="btn btn-primary btn-sm"
                   title="Submit Draft for Peer Review (DRAFT -> IN_REVIEW)"
-                  @click="promptSubmitReview"
+                  @click="promptSubmitReview" @keydown.enter="promptSubmitReview"
                 >
                   📨 Submit for Review
                 </button>
@@ -467,7 +467,7 @@
                   id="btn-approve-article"
                   class="btn btn-success btn-sm"
                   title="Approve Article (Enforces Four-Eyes Principle)"
-                  @click="promptApproveArticle"
+                  @click="promptApproveArticle" @keydown.enter="promptApproveArticle"
                 >
                   ✓ Approve Article
                 </button>
@@ -475,14 +475,14 @@
                   id="btn-reject-article"
                   class="btn btn-danger btn-sm"
                   title="Reject Article Back to Author"
-                  @click="promptRejectArticle"
+                  @click="promptRejectArticle" @keydown.enter="promptRejectArticle"
                 >
                   ✕ Reject Draft
                 </button>
                 <button
                   class="btn btn-secondary btn-sm"
                   title="Edit Working Draft"
-                  @click="openEditDraftModal"
+                  @click="openEditDraftModal" @keydown.enter="openEditDraftModal"
                 >
                   ✏️ Edit Draft
                 </button>
@@ -494,14 +494,14 @@
                   id="btn-publish-article"
                   class="btn btn-primary btn-sm"
                   title="Publish Article (Auto-supersedes prior version)"
-                  @click="promptPublishArticle"
+                  @click="promptPublishArticle" @keydown.enter="promptPublishArticle"
                 >
                   🚀 Publish Live
                 </button>
                 <button
                   class="btn btn-secondary btn-sm"
                   title="Create New Revision Draft"
-                  @click="openEditDraftModal"
+                  @click="openEditDraftModal" @keydown.enter="openEditDraftModal"
                 >
                   📝 New Revision Draft
                 </button>
@@ -513,7 +513,7 @@
                   id="btn-new-revision"
                   class="btn btn-secondary btn-sm"
                   title="Start New Draft Revision"
-                  @click="openEditDraftModal"
+                  @click="openEditDraftModal" @keydown.enter="openEditDraftModal"
                 >
                   📝 Create Amendment Draft
                 </button>
@@ -521,7 +521,7 @@
                   id="btn-archive-article"
                   class="btn btn-danger btn-sm"
                   title="Archive SOP Document"
-                  @click="promptArchiveArticle"
+                  @click="promptArchiveArticle" @keydown.enter="promptArchiveArticle"
                 >
                   📦 Archive
                 </button>
@@ -535,7 +535,7 @@
               type="button"
               class="reader-tab-btn"
               :class="{ active: activeReaderTab === 'content' }"
-              @click="activeReaderTab = 'content'"
+              @click="activeReaderTab = 'content'" @keydown.enter="activeReaderTab = 'content'"
             >
               📄 SOP Guidance
             </button>
@@ -543,7 +543,7 @@
               type="button"
               class="reader-tab-btn"
               :class="{ active: activeReaderTab === 'versions' }"
-              @click="loadVersionHistory"
+              @click="loadVersionHistory" @keydown.enter="loadVersionHistory"
             >
               🕰️ Version History ({{ versionsList.length }})
             </button>
@@ -551,7 +551,7 @@
               type="button"
               class="reader-tab-btn"
               :class="{ active: activeReaderTab === 'audit' }"
-              @click="loadAuditTrail"
+              @click="loadAuditTrail" @keydown.enter="loadAuditTrail"
             >
               🔒 21 CFR Part 11 Audit Trail ({{ auditLogList.length }})
             </button>
@@ -746,10 +746,10 @@
     </div>
 
     <!-- Modal 1: Create New Article Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isCreateArticleModalOpen"
       class="modal-overlay"
-      @click.self="isCreateArticleModalOpen = false"
+      @click.self="isCreateArticleModalOpen = false" @keydown.enter="isCreateArticleModalOpen = false"
     >
       <div
         class="modal-card modal-lg"
@@ -764,7 +764,7 @@
           <button
             type="button"
             class="modal-close-btn"
-            @click="isCreateArticleModalOpen = false"
+            @click="isCreateArticleModalOpen = false" @keydown.enter="isCreateArticleModalOpen = false"
           >
             ✕
           </button>
@@ -868,7 +868,7 @@
             <button
               type="button"
               class="btn btn-secondary"
-              @click="isCreateArticleModalOpen = false"
+              @click="isCreateArticleModalOpen = false" @keydown.enter="isCreateArticleModalOpen = false"
             >
               Cancel
             </button>
@@ -884,10 +884,10 @@
     </div>
 
     <!-- Modal 2: Edit Working Draft Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isEditDraftModalOpen"
       class="modal-overlay"
-      @click.self="isEditDraftModalOpen = false"
+      @click.self="isEditDraftModalOpen = false" @keydown.enter="isEditDraftModalOpen = false"
     >
       <div
         class="modal-card modal-lg"
@@ -902,7 +902,7 @@
           <button
             type="button"
             class="modal-close-btn"
-            @click="isEditDraftModalOpen = false"
+            @click="isEditDraftModalOpen = false" @keydown.enter="isEditDraftModalOpen = false"
           >
             ✕
           </button>
@@ -955,7 +955,7 @@
                 <button
                   type="button"
                   class="btn-text-toggle"
-                  @click="isPreviewMode = !isPreviewMode"
+                  @click="isPreviewMode = !isPreviewMode" @keydown.enter="isPreviewMode = !isPreviewMode"
                 >
                   {{ isPreviewMode ? "👁️ Show Raw Markdown" : "🔍 Show Live Preview" }}
                 </button>
@@ -993,7 +993,7 @@
             <button
               type="button"
               class="btn btn-secondary"
-              @click="isEditDraftModalOpen = false"
+              @click="isEditDraftModalOpen = false" @keydown.enter="isEditDraftModalOpen = false"
             >
               Cancel
             </button>
@@ -1009,10 +1009,10 @@
     </div>
 
     <!-- Modal 3: Part 11 Action Justification / Reason Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isReasonModalOpen"
       class="modal-overlay"
-      @click.self="isReasonModalOpen = false"
+      @click.self="isReasonModalOpen = false" @keydown.enter="isReasonModalOpen = false"
     >
       <div
         class="modal-card"
@@ -1027,7 +1027,7 @@
           <button
             type="button"
             class="modal-close-btn"
-            @click="isReasonModalOpen = false"
+            @click="isReasonModalOpen = false" @keydown.enter="isReasonModalOpen = false"
           >
             ✕
           </button>
@@ -1071,7 +1071,7 @@
             <button
               type="button"
               class="btn btn-secondary"
-              @click="isReasonModalOpen = false"
+              @click="isReasonModalOpen = false" @keydown.enter="isReasonModalOpen = false"
             >
               Cancel
             </button>
@@ -1088,10 +1088,10 @@
     </div>
 
     <!-- Modal 4: Create Category Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isCreateCategoryModalOpen"
       class="modal-overlay"
-      @click.self="isCreateCategoryModalOpen = false"
+      @click.self="isCreateCategoryModalOpen = false" @keydown.enter="isCreateCategoryModalOpen = false"
     >
       <div
         class="modal-card"
@@ -1106,7 +1106,7 @@
           <button
             type="button"
             class="modal-close-btn"
-            @click="isCreateCategoryModalOpen = false"
+            @click="isCreateCategoryModalOpen = false" @keydown.enter="isCreateCategoryModalOpen = false"
           >
             ✕
           </button>
@@ -1151,7 +1151,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Persona Visibility (All by default if empty)</label>
+              <span class="form-label form-label">Persona Visibility (All by default if empty)</span>
               <div class="persona-checkbox-grid">
                 <label
                   v-for="p in PERSONA_PRESETS"
@@ -1173,7 +1173,7 @@
             <button
               type="button"
               class="btn btn-secondary"
-              @click="isCreateCategoryModalOpen = false"
+              @click="isCreateCategoryModalOpen = false" @keydown.enter="isCreateCategoryModalOpen = false"
             >
               Cancel
             </button>

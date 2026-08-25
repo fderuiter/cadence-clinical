@@ -15,15 +15,15 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <label
+          <span class="form-label"
             style="
               font-size: 11px;
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
             "
-          >User ID</label>
-          <input
+          >User ID</span>
+          <input aria-label="Input field"
             v-model="userIdInput"
             type="text"
             placeholder="Filter by User ID"
@@ -44,15 +44,15 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <label
+          <span class="form-label"
             style="
               font-size: 11px;
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
             "
-          >Action Type</label>
-          <select
+          >Action Type</span>
+          <select aria-label="Input field"
             v-model="actionInput"
             class="filter-action-type"
             style="
@@ -90,15 +90,15 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <label
+          <span class="form-label"
             style="
               font-size: 11px;
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
             "
-          >Start Date</label>
-          <input
+          >Start Date</span>
+          <input aria-label="Input field"
             v-model="startDateInput"
             type="date"
             class="filter-start-date"
@@ -118,15 +118,15 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <label
+          <span class="form-label"
             style="
               font-size: 11px;
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
             "
-          >End Date</label>
-          <input
+          >End Date</span>
+          <input aria-label="Input field"
             v-model="endDateInput"
             type="date"
             class="filter-end-date"

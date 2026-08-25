@@ -66,7 +66,7 @@
         <thead>
           <tr>
             <th class="col-checkbox">
-              <input
+              <input aria-label="Input field"
                 type="checkbox"
                 :checked="isAllSelected"
                 :indeterminate="isIndeterminate"
@@ -92,7 +92,7 @@
           >
             <!-- Checkbox -->
             <td class="col-checkbox">
-              <input
+              <input aria-label="Input field"
                 type="checkbox"
                 :checked="isSelected(item.id)"
                 @change="codingStore.toggleSelect(item.id)"
@@ -260,10 +260,10 @@
     </div>
 
     <!-- Inline Discrepancy Query Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isQueryModalOpen"
       class="modal-overlay"
-      @click.self="isQueryModalOpen = false"
+      @click.self="isQueryModalOpen = false" @keydown.enter="isQueryModalOpen = false"
     >
       <div class="modal query-dialog-card">
         <div class="modal-header">
@@ -327,10 +327,10 @@
     </div>
 
     <!-- Batch Code Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isBatchModalOpen"
       class="modal-overlay"
-      @click.self="isBatchModalOpen = false"
+      @click.self="isBatchModalOpen = false" @keydown.enter="isBatchModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">

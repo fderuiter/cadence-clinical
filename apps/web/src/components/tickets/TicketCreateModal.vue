@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="modal-backdrop"
-    @click.self="close"
+    @click.self="close" @keydown.enter="close"
   >
     <div
       class="modal-dialog ticket-create-modal"

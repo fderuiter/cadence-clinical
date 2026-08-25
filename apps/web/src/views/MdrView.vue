@@ -27,7 +27,7 @@
         class="btn tab-btn-soa"
         :class="activeTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
-        @click="activeTab = 'soa'"
+        @click="activeTab = 'soa'" @keydown.enter="activeTab = 'soa'"
       >
         📋 Schedule of Activities (SoA)
       </button>
@@ -36,7 +36,7 @@
         class="btn tab-btn-canvas"
         :class="activeTab === 'canvas' ? 'btn-primary' : 'btn-secondary'"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
-        @click="activeTab = 'canvas'"
+        @click="activeTab = 'canvas'" @keydown.enter="activeTab = 'canvas'"
       >
         🎨 eCRF Visual Form Designer
       </button>
@@ -44,7 +44,7 @@
         class="btn tab-btn-mdr"
         :class="activeTab === 'mdr' ? 'btn-primary' : 'btn-secondary'"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
-        @click="activeTab = 'mdr'"
+        @click="activeTab = 'mdr'" @keydown.enter="activeTab = 'mdr'"
       >
         🔍 NCI Concept Registry
       </button>
@@ -52,7 +52,7 @@
         class="btn tab-btn-diff"
         :class="activeTab === 'diff' ? 'btn-primary' : 'btn-secondary'"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
-        @click="activeTab = 'diff'"
+        @click="activeTab = 'diff'" @keydown.enter="activeTab = 'diff'"
       >
         ⚖️ Protocol Revision Alignment
       </button>
@@ -137,7 +137,7 @@
           <button
             class="btn btn-secondary"
             style="font-size: 0.78rem; padding: 4px 10px"
-            @click="synthesisResult = null"
+            @click="synthesisResult = null" @keydown.enter="synthesisResult = null"
           >
             Dismiss Metrics
           </button>
@@ -488,7 +488,7 @@
                 gap: 8px;
                 font-weight: 700;
               "
-              @click="openPromotionModal"
+              @click="openPromotionModal" @keydown.enter="openPromotionModal"
             >
               <span>🚀</span> Promote to Active EDC Study Build
             </button>
@@ -502,7 +502,7 @@
                 align-items: center;
                 gap: 6px;
               "
-              @click="navigateToCrf"
+              @click="navigateToCrf" @keydown.enter="navigateToCrf"
             >
               <span>🎨</span> Open eCRF Form Designer
             </button>
@@ -516,7 +516,7 @@
                 align-items: center;
                 gap: 6px;
               "
-              @click="navigateToSoa"
+              @click="navigateToSoa" @keydown.enter="navigateToSoa"
             >
               <span>📋</span> View SoA Matrix
             </button>
@@ -524,7 +524,7 @@
           <button
             class="btn btn-secondary"
             style="font-size: 0.82rem; padding: 6px 12px"
-            @click="openUsdmModal"
+            @click="openUsdmModal" @keydown.enter="openUsdmModal"
           >
             🔄 Ingest Another USDM Protocol
           </button>
@@ -551,7 +551,7 @@
           <button
             class="btn btn-builder-toggle"
             :class="builderMode ? 'btn-primary' : 'btn-secondary'"
-            @click="builderMode = !builderMode"
+            @click="builderMode = !builderMode" @keydown.enter="builderMode = !builderMode"
           >
             {{
               builderMode
@@ -660,7 +660,7 @@
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                   "
                 >
-                  <div
+                  <div role="button" tabindex="0"
                     v-for="sug in armSuggestions"
                     :key="sug.concept_code"
                     style="
@@ -668,7 +668,7 @@
                       cursor: pointer;
                       border-bottom: 1px solid rgba(241, 245, 249, 1);
                     "
-                    @click="selectArmConcept(sug)"
+                    @click="selectArmConcept(sug)" @keydown.enter="selectArmConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
                     {{ sug.preferred_name }}
@@ -678,7 +678,7 @@
               <button
                 class="btn btn-primary"
                 style="width: 100%"
-                @click="handleAddArm"
+                @click="handleAddArm" @keydown.enter="handleAddArm"
               >
                 Add Arm
               </button>
@@ -758,7 +758,7 @@
               <button
                 class="btn btn-primary"
                 style="width: 100%"
-                @click="handleAddEpoch"
+                @click="handleAddEpoch" @keydown.enter="handleAddEpoch"
               >
                 Add Epoch
               </button>
@@ -843,7 +843,7 @@
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                   "
                 >
-                  <div
+                  <div role="button" tabindex="0"
                     v-for="sug in encSuggestions"
                     :key="sug.concept_code"
                     style="
@@ -851,7 +851,7 @@
                       cursor: pointer;
                       border-bottom: 1px solid rgba(241, 245, 249, 1);
                     "
-                    @click="selectEncConcept(sug)"
+                    @click="selectEncConcept(sug)" @keydown.enter="selectEncConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
                     {{ sug.preferred_name }}
@@ -883,7 +883,7 @@
               <button
                 class="btn btn-primary"
                 style="width: 100%"
-                @click="handleAddEncounter"
+                @click="handleAddEncounter" @keydown.enter="handleAddEncounter"
               >
                 Add Visit
               </button>
@@ -929,7 +929,7 @@
               <button
                 class="btn btn-primary"
                 style="width: 100%"
-                @click="handleAddProcedure"
+                @click="handleAddProcedure" @keydown.enter="handleAddProcedure"
               >
                 Add Procedure
               </button>
@@ -1013,13 +1013,13 @@
               <button
                 class="btn"
                 style="background-color: var(--error); color: white"
-                @click="handleToggleApplicability(false)"
+                @click="handleToggleApplicability(false)" @keydown.enter="handleToggleApplicability(false)"
               >
                 Remove Applicability
               </button>
               <button
                 class="btn btn-primary"
-                @click="handleToggleApplicability(true)"
+                @click="handleToggleApplicability(true)" @keydown.enter="handleToggleApplicability(true)"
               >
                 Apply Applicability &amp; Timing
               </button>
@@ -1073,7 +1073,7 @@
                 gap: 6px;
                 font-weight: 700;
               "
-              @click="openUsdmModal"
+              @click="openUsdmModal" @keydown.enter="openUsdmModal"
             >
               <span>⚡</span> Ingest &amp; Synthesize USDM Protocol
             </button>
@@ -1088,14 +1088,14 @@
                 gap: 6px;
                 font-weight: 700;
               "
-              @click="exportUsdmJson"
+              @click="exportUsdmJson" @keydown.enter="exportUsdmJson"
             >
               <span>📥</span> Export USDM JSON
             </button>
             <button
               class="btn btn-secondary"
               style="font-size: 0.82rem; padding: 6px 12px"
-              @click="showUsdmJson = !showUsdmJson"
+              @click="showUsdmJson = !showUsdmJson" @keydown.enter="showUsdmJson = !showUsdmJson"
             >
               {{
                 showUsdmJson
@@ -1143,7 +1143,7 @@
               border: none;
               padding: 4px 8px;
             "
-            @click="resetUsdm"
+            @click="resetUsdm" @keydown.enter="resetUsdm"
           >
             Reset Mock JSON
           </button>
@@ -1171,7 +1171,7 @@
           <button
             id="btn-update-soa"
             class="btn btn-primary"
-            @click="updateSoa"
+            @click="updateSoa" @keydown.enter="updateSoa"
           >
             Update Visualizer
           </button>
@@ -1238,7 +1238,7 @@
               >
               <button
                 class="btn btn-primary"
-                @click="searchConcepts"
+                @click="searchConcepts" @keydown.enter="searchConcepts"
               >
                 Search
               </button>
@@ -1270,7 +1270,7 @@
                 gap: 8px;
               "
             >
-              <li
+              <li role="button" tabindex="0"
                 v-for="c in conceptResults"
                 :key="c.concept_code"
                 style="
@@ -1280,7 +1280,7 @@
                   cursor: pointer;
                   background-color: #f8fafc;
                 "
-                @click="selectConceptForEdit(c)"
+                @click="selectConceptForEdit(c)" @keydown.enter="selectConceptForEdit(c)"
               >
                 <div
                   style="
@@ -1376,13 +1376,13 @@
               <button
                 v-if="editingConceptCode"
                 class="btn btn-secondary"
-                @click="resetConceptForm"
+                @click="resetConceptForm" @keydown.enter="resetConceptForm"
               >
                 Cancel Edit
               </button>
               <button
                 class="btn btn-primary"
-                @click="handleSaveConcept"
+                @click="handleSaveConcept" @keydown.enter="handleSaveConcept"
               >
                 {{
                   editingConceptCode
@@ -1593,7 +1593,7 @@
               cursor: pointer;
             "
             aria-label="Close modal"
-            @click="closeUsdmModal"
+            @click="closeUsdmModal" @keydown.enter="closeUsdmModal"
           >
             &times;
           </button>
@@ -1616,7 +1616,7 @@
           </p>
 
           <!-- Dropzone Area -->
-          <div
+          <div role="button" tabindex="0"
             class="dropzone-area"
             :class="{ dragging: isDragging }"
             style="
@@ -1632,9 +1632,9 @@
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"
             @drop.prevent="handleFileDrop"
-            @click="triggerFileInput"
+            @click="triggerFileInput" @keydown.enter="triggerFileInput"
           >
-            <input
+            <input aria-label="Input field"
               ref="fileInputRef"
               type="file"
               accept=".json,application/json"
@@ -1683,7 +1683,7 @@
                 gap: 4px;
               "
               type="button"
-              @click="loadSampleUsdm"
+              @click="loadSampleUsdm" @keydown.enter="loadSampleUsdm"
             >
               <span>📥</span> Load Sample Phase II USDM Protocol
             </button>
@@ -1860,7 +1860,7 @@
           <button
             class="btn btn-secondary"
             type="button"
-            @click="closeUsdmModal"
+            @click="closeUsdmModal" @keydown.enter="closeUsdmModal"
           >
             Cancel
           </button>
@@ -1875,7 +1875,7 @@
               align-items: center;
               gap: 6px;
             "
-            @click="executeZeroClickBuild"
+            @click="executeZeroClickBuild" @keydown.enter="executeZeroClickBuild"
           >
             {{
               isSynthesizing

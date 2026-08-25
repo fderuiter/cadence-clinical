@@ -108,7 +108,7 @@
                 "
                 class="inline-edit-container"
               >
-                <select
+                <select aria-label="Input field"
                   ref="inlineSelectRef"
                   v-model="tempTaxonomyCode"
                   class="form-control inline-select"
@@ -330,7 +330,7 @@
             @keydown.enter="triggerFileSelect"
             @keydown.space.prevent="triggerFileSelect"
           >
-            <input
+            <input aria-label="Input field"
               ref="fileInputRef"
               type="file"
               class="hidden-file-input"
@@ -371,8 +371,8 @@
           >
             <div class="form-group-row">
               <div class="form-group">
-                <label>Target Study ID</label>
-                <input
+                <label for="a11y-id-160">Target Study ID</label>
+                <input id="a11y-id-160"
                   v-model="studyId"
                   type="text"
                   class="form-control"
@@ -380,8 +380,8 @@
                 >
               </div>
               <div class="form-group">
-                <label>Site ID (Optional)</label>
-                <input
+                <label for="a11y-id-161">Site ID (Optional)</label>
+                <input id="a11y-id-161"
                   v-model="siteId"
                   type="text"
                   placeholder="e.g. SITE-01"
@@ -392,8 +392,8 @@
 
             <div class="form-group-row">
               <div class="form-group">
-                <label>DIA TMF Artifact Code</label>
-                <input
+                <label for="a11y-id-162">DIA TMF Artifact Code</label>
+                <input id="a11y-id-162"
                   v-model="artifactCode"
                   type="text"
                   class="form-control"
@@ -401,8 +401,8 @@
                 >
               </div>
               <div class="form-group">
-                <label>Artifact Type (Label)</label>
-                <input
+                <label for="a11y-id-163">Artifact Type (Label)</label>
+                <input id="a11y-id-163"
                   v-model="artifactType"
                   type="text"
                   class="form-control"
@@ -413,10 +413,10 @@
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
-              <label class="required-label">
+              <label for="a11y-id-164" class="required-label">
                 Reason for Change / Upload Justification
               </label>
-              <textarea
+              <textarea id="a11y-id-164"
                 v-model="reasonForChange"
                 rows="3"
                 placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."

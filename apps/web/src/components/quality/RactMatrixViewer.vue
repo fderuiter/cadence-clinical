@@ -92,10 +92,10 @@
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
-      <div
+      <div role="button" tabindex="0"
         class="kpi-card"
         :class="{ 'kpi-card-active': selectedCategory === 'ALL' }"
-        @click="selectedCategory = 'ALL'"
+        @click="selectedCategory = 'ALL'" @keydown.enter="selectedCategory = 'ALL'"
       >
         <div class="kpi-icon icon-total">
           📊
@@ -214,7 +214,7 @@
       </div>
 
       <div class="view-filter-group">
-        <input
+        <input aria-label="Input field"
           v-model="searchQuery"
           type="text"
           class="ract-search-input"
@@ -569,8 +569,8 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group flex-1">
-              <label class="form-label">Protocol Risk Category *</label>
-              <select
+              <label for="a11y-id-174" class="form-label">Protocol Risk Category *</label>
+              <select id="a11y-id-174"
                 v-model="riskForm.category"
                 class="form-control"
                 :disabled="isEditing"
@@ -597,8 +597,8 @@
             </div>
 
             <div class="form-group flex-2">
-              <label class="form-label">Risk Topic / Title *</label>
-              <input
+              <label for="a11y-id-175" class="form-label">Risk Topic / Title *</label>
+              <input id="a11y-id-175"
                 v-model="riskForm.risk_topic"
                 type="text"
                 class="form-control"
@@ -608,8 +608,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Detailed Risk Description *</label>
-            <textarea
+            <label for="a11y-id-176" class="form-label">Detailed Risk Description *</label>
+            <textarea id="a11y-id-176"
               v-model="riskForm.risk_description"
               class="form-control textarea"
               rows="3"
@@ -624,8 +624,8 @@
             </h4>
             <div class="scoring-row">
               <div class="score-input-group">
-                <label class="score-label">Probability (1-3) *</label>
-                <select
+                <label for="a11y-id-177" class="score-label">Probability (1-3) *</label>
+                <select id="a11y-id-177"
                   v-model.number="riskForm.probability_score"
                   class="form-control"
                 >
@@ -642,8 +642,8 @@
               </div>
 
               <div class="score-input-group">
-                <label class="score-label">Impact (1-3) *</label>
-                <select
+                <label for="a11y-id-178" class="score-label">Impact (1-3) *</label>
+                <select id="a11y-id-178"
                   v-model.number="riskForm.impact_score"
                   class="form-control"
                 >
@@ -660,8 +660,8 @@
               </div>
 
               <div class="score-input-group">
-                <label class="score-label">Detectability (1-3) *</label>
-                <select
+                <label for="a11y-id-179" class="score-label">Detectability (1-3) *</label>
+                <select id="a11y-id-179"
                   v-model.number="riskForm.detectability_score"
                   class="form-control"
                 >
@@ -690,8 +690,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Mitigation Controls &amp; Operational Strategy *</label>
-            <textarea
+            <label for="a11y-id-180" class="form-label">Mitigation Controls &amp; Operational Strategy *</label>
+            <textarea id="a11y-id-180"
               v-model="riskForm.mitigation_strategy"
               class="form-control textarea"
               rows="2"
@@ -700,8 +700,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Link Directly to Automated KRI</label>
-            <select
+            <label for="a11y-id-181" class="form-label">Link Directly to Automated KRI</label>
+            <select id="a11y-id-181"
               v-model="riskForm.linked_kri_code"
               class="form-control"
             >
@@ -719,8 +719,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">21 CFR Part 11 Reason for Change *</label>
-            <input
+            <label for="a11y-id-182" class="form-label">21 CFR Part 11 Reason for Change *</label>
+            <input id="a11y-id-182"
               v-model="riskForm.reason_for_change"
               type="text"
               class="form-control"
@@ -780,8 +780,8 @@
 
             <div class="form-row">
               <div class="form-group flex-1">
-                <label class="form-label">Signer Full Legal Name *</label>
-                <input
+                <label for="a11y-id-183" class="form-label">Signer Full Legal Name *</label>
+                <input id="a11y-id-183"
                   v-model="dossierSigner.name"
                   type="text"
                   class="form-control"
@@ -789,8 +789,8 @@
                 >
               </div>
               <div class="form-group flex-1">
-                <label class="form-label">Signer Regulatory Role *</label>
-                <input
+                <label for="a11y-id-184" class="form-label">Signer Regulatory Role *</label>
+                <input id="a11y-id-184"
                   v-model="dossierSigner.role"
                   type="text"
                   class="form-control"
@@ -800,8 +800,8 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Custom Dossier Name (Optional)</label>
-              <input
+              <label for="a11y-id-185" class="form-label">Custom Dossier Name (Optional)</label>
+              <input id="a11y-id-185"
                 v-model="dossierSigner.customName"
                 type="text"
                 class="form-control"

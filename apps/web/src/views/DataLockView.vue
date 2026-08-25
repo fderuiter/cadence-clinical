@@ -25,7 +25,7 @@
         <button
           class="btn btn-secondary"
           :disabled="isLoading"
-          @click="refreshLocks"
+          @click="refreshLocks" @keydown.enter="refreshLocks"
         >
           <span class="btn-icon">🔄</span> Refresh Status
         </button>
@@ -97,7 +97,7 @@
             <span class="title-icon">🗂️</span> Clinical Scope Hierarchy
           </h3>
           <div class="tree-filter-box">
-            <input
+            <input aria-label="Input field"
               v-model="searchQuery"
               type="text"
               class="form-input search-tree-input"
@@ -121,15 +121,15 @@
           >
             <!-- Study Level Node -->
             <div class="tree-node study-node">
-              <div
+              <div role="button" tabindex="0"
                 class="node-row"
                 :class="{ selected: selectedNode?.id === studyTree.id }"
-                @click="selectNode(studyTree)"
+                @click="selectNode(studyTree)" @keydown.enter="selectNode(studyTree)"
               >
                 <button
                   type="button"
                   class="expand-btn"
-                  @click.stop="toggleExpand(studyTree)"
+                  @click.stop="toggleExpand(studyTree)" @keydown.enter="toggleExpand(studyTree)"
                 >
                   {{ studyTree.expanded ? "▼" : "▶" }}
                 </button>
@@ -146,7 +146,7 @@
                     v-if="studyTree.status === 'UNLOCKED'"
                     class="btn-mini btn-mini-freeze"
                     title="Freeze Study"
-                    @click.stop="openLockDialog(studyTree, 'FREEZE')"
+                    @click.stop="openLockDialog(studyTree, 'FREEZE')" @keydown.enter="openLockDialog(studyTree, 'FREEZE')"
                   >
                     ❄️
                   </button>
@@ -154,7 +154,7 @@
                     v-if="studyTree.status === 'UNLOCKED'"
                     class="btn-mini btn-mini-lock"
                     title="Hard Lock Study"
-                    @click.stop="openLockDialog(studyTree, 'HARD_LOCK')"
+                    @click.stop="openLockDialog(studyTree, 'HARD_LOCK')" @keydown.enter="openLockDialog(studyTree, 'HARD_LOCK')"
                   >
                     🔒
                   </button>
@@ -162,7 +162,7 @@
                     v-else
                     class="btn-mini btn-mini-unlock"
                     title="Unlock Study Override"
-                    @click.stop="openUnlockDialog(studyTree)"
+                    @click.stop="openUnlockDialog(studyTree)" @keydown.enter="openUnlockDialog(studyTree)"
                   >
                     🔓
                   </button>
@@ -179,15 +179,15 @@
                   :key="site.id"
                   class="tree-node site-node"
                 >
-                  <div
+                  <div role="button" tabindex="0"
                     class="node-row"
                     :class="{ selected: selectedNode?.id === site.id }"
-                    @click="selectNode(site)"
+                    @click="selectNode(site)" @keydown.enter="selectNode(site)"
                   >
                     <button
                       type="button"
                       class="expand-btn"
-                      @click.stop="toggleExpand(site)"
+                      @click.stop="toggleExpand(site)" @keydown.enter="toggleExpand(site)"
                     >
                       {{ site.expanded ? "▼" : "▶" }}
                     </button>
@@ -204,7 +204,7 @@
                         v-if="site.status === 'UNLOCKED'"
                         class="btn-mini btn-mini-freeze"
                         title="Freeze Site"
-                        @click.stop="openLockDialog(site, 'FREEZE')"
+                        @click.stop="openLockDialog(site, 'FREEZE')" @keydown.enter="openLockDialog(site, 'FREEZE')"
                       >
                         ❄️
                       </button>
@@ -212,7 +212,7 @@
                         v-if="site.status === 'UNLOCKED'"
                         class="btn-mini btn-mini-lock"
                         title="Hard Lock Site"
-                        @click.stop="openLockDialog(site, 'HARD_LOCK')"
+                        @click.stop="openLockDialog(site, 'HARD_LOCK')" @keydown.enter="openLockDialog(site, 'HARD_LOCK')"
                       >
                         🔒
                       </button>
@@ -220,7 +220,7 @@
                         v-else
                         class="btn-mini btn-mini-unlock"
                         title="Unlock Site"
-                        @click.stop="openUnlockDialog(site)"
+                        @click.stop="openUnlockDialog(site)" @keydown.enter="openUnlockDialog(site)"
                       >
                         🔓
                       </button>
@@ -237,15 +237,15 @@
                       :key="subject.id"
                       class="tree-node subject-node"
                     >
-                      <div
+                      <div role="button" tabindex="0"
                         class="node-row"
                         :class="{ selected: selectedNode?.id === subject.id }"
-                        @click="selectNode(subject)"
+                        @click="selectNode(subject)" @keydown.enter="selectNode(subject)"
                       >
                         <button
                           type="button"
                           class="expand-btn"
-                          @click.stop="toggleExpand(subject)"
+                          @click.stop="toggleExpand(subject)" @keydown.enter="toggleExpand(subject)"
                         >
                           {{ subject.expanded ? "▼" : "▶" }}
                         </button>
@@ -262,7 +262,7 @@
                             v-if="subject.status === 'UNLOCKED'"
                             class="btn-mini btn-mini-lock"
                             title="Hard Lock Subject"
-                            @click.stop="openLockDialog(subject, 'HARD_LOCK')"
+                            @click.stop="openLockDialog(subject, 'HARD_LOCK')" @keydown.enter="openLockDialog(subject, 'HARD_LOCK')"
                           >
                             🔒
                           </button>
@@ -270,7 +270,7 @@
                             v-else
                             class="btn-mini btn-mini-unlock"
                             title="Unlock Subject"
-                            @click.stop="openUnlockDialog(subject)"
+                            @click.stop="openUnlockDialog(subject)" @keydown.enter="openUnlockDialog(subject)"
                           >
                             🔓
                           </button>
@@ -287,15 +287,15 @@
                           :key="visit.id"
                           class="tree-node visit-node"
                         >
-                          <div
+                          <div role="button" tabindex="0"
                             class="node-row"
                             :class="{ selected: selectedNode?.id === visit.id }"
-                            @click="selectNode(visit)"
+                            @click="selectNode(visit)" @keydown.enter="selectNode(visit)"
                           >
                             <button
                               type="button"
                               class="expand-btn"
-                              @click.stop="toggleExpand(visit)"
+                              @click.stop="toggleExpand(visit)" @keydown.enter="toggleExpand(visit)"
                             >
                               {{ visit.expanded ? "▼" : "▶" }}
                             </button>
@@ -312,7 +312,7 @@
                                 v-if="visit.status === 'UNLOCKED'"
                                 class="btn-mini btn-mini-lock"
                                 title="Lock Visit"
-                                @click.stop="openLockDialog(visit, 'HARD_LOCK')"
+                                @click.stop="openLockDialog(visit, 'HARD_LOCK')" @keydown.enter="openLockDialog(visit, 'HARD_LOCK')"
                               >
                                 🔒
                               </button>
@@ -320,7 +320,7 @@
                                 v-else
                                 class="btn-mini btn-mini-unlock"
                                 title="Unlock Visit"
-                                @click.stop="openUnlockDialog(visit)"
+                                @click.stop="openUnlockDialog(visit)" @keydown.enter="openUnlockDialog(visit)"
                               >
                                 🔓
                               </button>
@@ -337,17 +337,17 @@
                               :key="form.id"
                               class="tree-node form-node"
                             >
-                              <div
+                              <div role="button" tabindex="0"
                                 class="node-row"
                                 :class="{
                                   selected: selectedNode?.id === form.id,
                                 }"
-                                @click="selectNode(form)"
+                                @click="selectNode(form)" @keydown.enter="selectNode(form)"
                               >
                                 <button
                                   type="button"
                                   class="expand-btn"
-                                  @click.stop="toggleExpand(form)"
+                                  @click.stop="toggleExpand(form)" @keydown.enter="toggleExpand(form)"
                                 >
                                   {{ form.expanded ? "▼" : "▶" }}
                                 </button>
@@ -374,7 +374,7 @@
                                     v-else
                                     class="btn-mini btn-mini-unlock"
                                     title="Unlock Form"
-                                    @click.stop="openUnlockDialog(form)"
+                                    @click.stop="openUnlockDialog(form)" @keydown.enter="openUnlockDialog(form)"
                                   >
                                     🔓
                                   </button>
@@ -391,12 +391,12 @@
                                   :key="field.id"
                                   class="tree-node field-node"
                                 >
-                                  <div
+                                  <div role="button" tabindex="0"
                                     class="node-row"
                                     :class="{
                                       selected: selectedNode?.id === field.id,
                                     }"
-                                    @click="selectNode(field)"
+                                    @click="selectNode(field)" @keydown.enter="selectNode(field)"
                                   >
                                     <span class="tree-leaf-spacer" />
                                     <span class="node-icon">🏷️</span>
@@ -424,7 +424,7 @@
                                         v-else
                                         class="btn-mini btn-mini-unlock"
                                         title="Unlock Field"
-                                        @click.stop="openUnlockDialog(field)"
+                                        @click.stop="openUnlockDialog(field)" @keydown.enter="openUnlockDialog(field)"
                                       >
                                         🔓
                                       </button>
@@ -525,21 +525,21 @@
               <button
                 v-if="selectedNode.status === 'UNLOCKED'"
                 class="btn btn-secondary"
-                @click="openLockDialog(selectedNode, 'FREEZE')"
+                @click="openLockDialog(selectedNode, 'FREEZE')" @keydown.enter="openLockDialog(selectedNode, 'FREEZE')"
               >
                 ❄️ Soft Freeze Data
               </button>
               <button
                 v-if="selectedNode.status === 'UNLOCKED'"
                 class="btn btn-primary"
-                @click="openLockDialog(selectedNode, 'HARD_LOCK')"
+                @click="openLockDialog(selectedNode, 'HARD_LOCK')" @keydown.enter="openLockDialog(selectedNode, 'HARD_LOCK')"
               >
                 🔒 Execute Hard Lock (Dual Sig)
               </button>
               <button
                 v-if="selectedNode.status !== 'UNLOCKED'"
                 class="btn btn-danger"
-                @click="openUnlockDialog(selectedNode)"
+                @click="openUnlockDialog(selectedNode)" @keydown.enter="openUnlockDialog(selectedNode)"
               >
                 🔓 Request Unlock Override (&ge;50 chars)
               </button>
@@ -604,10 +604,10 @@
     </div>
 
     <!-- Lock Action Modal Dialog -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isLockModalOpen"
       class="modal-overlay"
-      @click.self="isLockModalOpen = false"
+      @click.self="isLockModalOpen = false" @keydown.enter="isLockModalOpen = false"
     >
       <div class="modal-card">
         <div class="modal-header">
@@ -620,7 +620,7 @@
           </h3>
           <button
             class="modal-close-btn"
-            @click="isLockModalOpen = false"
+            @click="isLockModalOpen = false" @keydown.enter="isLockModalOpen = false"
           >
             &times;
           </button>
@@ -636,10 +636,10 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Lock Mode:</label>
+            <label for="a11y-id-196" class="form-label">Lock Mode:</label>
             <div class="radio-row">
               <label class="radio-label">
-                <input
+                <input id="a11y-id-196"
                   v-model="lockForm.action"
                   type="radio"
                   value="FREEZE"
@@ -661,8 +661,8 @@
             v-if="lockForm.action === 'HARD_LOCK'"
             class="form-group"
           >
-            <label class="form-label">Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label>
-            <input
+            <label for="a11y-id-197" class="form-label">Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label>
+            <input id="a11y-id-197"
               v-model="lockForm.sig_token"
               type="password"
               class="form-input"
@@ -674,9 +674,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Reason for Change:
+            <label for="a11y-id-198" class="form-label">GxP Reason for Change:
               <span class="required-star">*</span></label>
-            <textarea
+            <textarea id="a11y-id-198"
               v-model="lockForm.reason"
               class="form-textarea"
               rows="3"
@@ -687,14 +687,14 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            @click="isLockModalOpen = false"
+            @click="isLockModalOpen = false" @keydown.enter="isLockModalOpen = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-primary"
             :disabled="!lockForm.reason.trim() || isSubmitting"
-            @click="submitLock"
+            @click="submitLock" @keydown.enter="submitLock"
           >
             {{ isSubmitting ? "Locking..." : "Confirm Lock Operation" }}
           </button>
@@ -703,17 +703,17 @@
     </div>
 
     <!-- Unlock Justification Modal Dialog (Strict >= 50 Chars) -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isUnlockModalOpen"
       class="modal-overlay"
-      @click.self="isUnlockModalOpen = false"
+      @click.self="isUnlockModalOpen = false" @keydown.enter="isUnlockModalOpen = false"
     >
       <div class="modal-card unlock-modal">
         <div class="modal-header">
           <h3>🔓 GxP Unlock Override Justification</h3>
           <button
             class="modal-close-btn"
-            @click="isUnlockModalOpen = false"
+            @click="isUnlockModalOpen = false" @keydown.enter="isUnlockModalOpen = false"
           >
             &times;
           </button>
@@ -740,11 +740,11 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
+            <label for="a11y-id-199" class="form-label">
               Mandatory Unlock Justification (&ge; 50 Characters):
               <span class="required-star">*</span>
             </label>
-            <textarea
+            <textarea id="a11y-id-199"
               v-model="unlockForm.justification"
               class="form-textarea"
               :class="{
@@ -781,8 +781,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Reason for Change Code:</label>
-            <select
+            <label for="a11y-id-200" class="form-label">GxP Reason for Change Code:</label>
+            <select id="a11y-id-200"
               v-model="unlockForm.reason_code"
               class="form-select"
             >
@@ -804,14 +804,14 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            @click="isUnlockModalOpen = false"
+            @click="isUnlockModalOpen = false" @keydown.enter="isUnlockModalOpen = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-danger"
             :disabled="!isJustificationValid || isSubmitting"
-            @click="submitUnlock"
+            @click="submitUnlock" @keydown.enter="submitUnlock"
           >
             {{ isSubmitting ? "Unlocking..." : "Confirm Unlock Override" }}
           </button>

@@ -17,7 +17,7 @@
         <button
           type="button"
           class="btn btn-secondary"
-          @click="codingStore.openImpactDrawer()"
+          @click="codingStore.openImpactDrawer()" @keydown.enter="codingStore.openImpactDrawer()"
         >
           📈 Up-Versioning Impact
         </button>
@@ -25,7 +25,7 @@
           type="button"
           class="btn btn-primary"
           :disabled="codingStore.isLoading"
-          @click="refreshQueue"
+          @click="refreshQueue" @keydown.enter="refreshQueue"
         >
           🔄 Refresh Queue
         </button>
@@ -57,10 +57,10 @@
     >
       <!-- 5 Summary Stat Metric Cards -->
       <div class="stats-overview-grid">
-        <div
+        <div role="button" tabindex="0"
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          @click="setStatusFilter('ALL')"
+          @click="setStatusFilter('ALL')" @keydown.enter="setStatusFilter('ALL')"
         >
           <div class="stat-number">
             {{ codingStore.totalCount }}
@@ -70,10 +70,10 @@
           </div>
         </div>
 
-        <div
+        <div role="button" tabindex="0"
           class="stat-card stat-uncoded"
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
-          @click="setStatusFilter('UNCODED')"
+          @click="setStatusFilter('UNCODED')" @keydown.enter="setStatusFilter('UNCODED')"
         >
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
@@ -83,10 +83,10 @@
           </div>
         </div>
 
-        <div
+        <div role="button" tabindex="0"
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
-          @click="setStatusFilter('SUGGESTED')"
+          @click="setStatusFilter('SUGGESTED')" @keydown.enter="setStatusFilter('SUGGESTED')"
         >
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
@@ -96,10 +96,10 @@
           </div>
         </div>
 
-        <div
+        <div role="button" tabindex="0"
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
-          @click="setStatusFilter('CODED_ALL')"
+          @click="setStatusFilter('CODED_ALL')" @keydown.enter="setStatusFilter('CODED_ALL')"
         >
           <div class="stat-number">
             {{ codingStore.codedCount }}
@@ -109,12 +109,12 @@
           </div>
         </div>
 
-        <div
+        <div role="button" tabindex="0"
           class="stat-card stat-query"
           :class="{
             'stat-active': codingStore.filters.status === 'QUERY_PENDING',
           }"
-          @click="setStatusFilter('QUERY_PENDING')"
+          @click="setStatusFilter('QUERY_PENDING')" @keydown.enter="setStatusFilter('QUERY_PENDING')"
         >
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
@@ -134,7 +134,7 @@
               type="button"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'ALL' }"
-              @click="setStatusFilter('ALL')"
+              @click="setStatusFilter('ALL')" @keydown.enter="setStatusFilter('ALL')"
             >
               All Items
             </button>
@@ -142,7 +142,7 @@
               type="button"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'UNCODED' }"
-              @click="setStatusFilter('UNCODED')"
+              @click="setStatusFilter('UNCODED')" @keydown.enter="setStatusFilter('UNCODED')"
             >
               Uncoded ({{ codingStore.uncodedCount }})
             </button>
@@ -150,7 +150,7 @@
               type="button"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'SUGGESTED' }"
-              @click="setStatusFilter('SUGGESTED')"
+              @click="setStatusFilter('SUGGESTED')" @keydown.enter="setStatusFilter('SUGGESTED')"
             >
               Suggested ({{ codingStore.suggestedCount }})
             </button>
@@ -158,7 +158,7 @@
               type="button"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'CODED_ALL' }"
-              @click="setStatusFilter('CODED_ALL')"
+              @click="setStatusFilter('CODED_ALL')" @keydown.enter="setStatusFilter('CODED_ALL')"
             >
               Coded ({{ codingStore.codedCount }})
             </button>
@@ -168,7 +168,7 @@
               :class="{
                 active: codingStore.filters.status === 'QUERY_PENDING',
               }"
-              @click="setStatusFilter('QUERY_PENDING')"
+              @click="setStatusFilter('QUERY_PENDING')" @keydown.enter="setStatusFilter('QUERY_PENDING')"
             >
               Queries ({{ codingStore.queryPendingCount }})
             </button>
@@ -176,7 +176,7 @@
 
           <!-- Dictionary Filter -->
           <div class="dict-select-box">
-            <select
+            <select aria-label="Input field"
               v-model="codingStore.filters.dictionaryType"
               class="form-control-sm"
               title="Filter by dictionary system"
@@ -196,7 +196,7 @@
 
         <!-- Search Input -->
         <div class="search-box">
-          <input
+          <input aria-label="Input field"
             v-model="codingStore.filters.search"
             type="text"
             class="form-control-sm search-input"

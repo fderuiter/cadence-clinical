@@ -364,8 +364,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Signer Identity:</label>
-            <input
+            <label for="a11y-id-166" class="form-label">Signer Identity:</label>
+            <input id="a11y-id-166"
               type="text"
               class="form-input"
               value="Dr. Arthur Smith (Adjudication Committee Chair)"
@@ -374,8 +374,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Signing Reason:</label>
-            <input
+            <label for="a11y-id-167" class="form-label">Signing Reason:</label>
+            <input id="a11y-id-167"
               type="text"
               class="form-input"
               value="BLINDED_IRC_ADJUDICATION_SIGN_OFF"

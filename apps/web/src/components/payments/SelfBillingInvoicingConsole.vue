@@ -195,7 +195,7 @@
     </main>
 
     <!-- Detail Drawer / Modal for Selected Invoice -->
-    <div v-if="selectedInvoice" class="modal-overlay" @click.self="selectedInvoice = null">
+    <div role="button" tabindex="0" v-if="selectedInvoice" class="modal-overlay" @click.self="selectedInvoice = null" @keydown.enter="selectedInvoice = null">
       <div class="modal-card">
         <header class="modal-header">
           <div>
@@ -340,7 +340,7 @@
     </div>
 
     <!-- Modal: Compile Billing Cycle -->
-    <div v-if="showCompileModal" class="modal-overlay" @click.self="showCompileModal = false">
+    <div role="button" tabindex="0" v-if="showCompileModal" class="modal-overlay" @click.self="showCompileModal = false" @keydown.enter="showCompileModal = false">
       <div class="modal-card modal-sm">
         <header class="modal-header">
           <h3>Compile Site Billing Cycle</h3>
@@ -390,7 +390,7 @@
     </div>
 
     <!-- Modal: Part 11 Electronic Signature for Remittance Advice -->
-    <div v-if="showSignModal" class="modal-overlay" @click.self="showSignModal = false">
+    <div role="button" tabindex="0" v-if="showSignModal" class="modal-overlay" @click.self="showSignModal = false" @keydown.enter="showSignModal = false">
       <div class="modal-card modal-sm">
         <header class="modal-header">
           <h3>21 CFR Part 11 Electronic Signature</h3>
@@ -423,7 +423,7 @@
     </div>
 
     <!-- Modal: Interactive Settlement Reconciliation -->
-    <div v-if="showReconcileModal" class="modal-overlay" @click.self="showReconcileModal = false">
+    <div role="button" tabindex="0" v-if="showReconcileModal" class="modal-overlay" @click.self="showReconcileModal = false" @keydown.enter="showReconcileModal = false">
       <div class="modal-card modal-sm">
         <header class="modal-header">
           <h3>Reconcile Ledger Settlement</h3>

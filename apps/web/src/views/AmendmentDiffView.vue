@@ -14,7 +14,7 @@
       <span class="banner-message">{{ notificationBanner.message }}</span>
       <button
         class="banner-close"
-        @click="notificationBanner = null"
+        @click="notificationBanner = null" @keydown.enter="notificationBanner = null"
       >
         &times;
       </button>
@@ -41,7 +41,7 @@
         <button
           id="btn-create-amendment"
           class="btn btn-primary"
-          @click="openWizard"
+          @click="openWizard" @keydown.enter="openWizard"
         >
           <span class="btn-icon">🧙</span>
           <span>Launch Upversioning Wizard</span>
@@ -54,7 +54,7 @@
       <button
         class="mode-nav-btn"
         :class="{ active: activeMode === 'manager' }"
-        @click="activeMode = 'manager'"
+        @click="activeMode = 'manager'" @keydown.enter="activeMode = 'manager'"
       >
         <span class="nav-icon">📐</span>
         <span>Study Manager: Guided Wizard &amp; Semantic Diff</span>
@@ -62,7 +62,7 @@
       <button
         class="mode-nav-btn"
         :class="{ active: activeMode === 'coordinator' }"
-        @click="activeMode = 'coordinator'"
+        @click="activeMode = 'coordinator'" @keydown.enter="activeMode = 'coordinator'"
       >
         <span class="nav-icon">📋</span>
         <span>Site Coordinator: Bulk Re-Consent &amp; Migration Workspace</span>
@@ -148,21 +148,21 @@
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'dashboard' }"
-          @click="activeTab = 'dashboard'"
+          @click="activeTab = 'dashboard'" @keydown.enter="activeTab = 'dashboard'"
         >
           📊 Subject Impact Breakdown
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'graph' }"
-          @click="activeTab = 'graph'"
+          @click="activeTab = 'graph'" @keydown.enter="activeTab = 'graph'"
         >
           🔀 Graph Diff &amp; Target Rules
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'wizard' }"
-          @click="openWizard"
+          @click="openWizard" @keydown.enter="openWizard"
         >
           🧙 4-Step Upversioning Wizard
         </button>
@@ -181,7 +181,7 @@
             <button
               class="btn btn-sm btn-secondary"
               :disabled="isLoadingImpact"
-              @click="fetchSubjectImpact"
+              @click="fetchSubjectImpact" @keydown.enter="fetchSubjectImpact"
             >
               {{
                 isLoadingImpact ? "Refreshing API..." : "🔄 Refresh Impact Data"
@@ -311,7 +311,7 @@
                   <button
                     v-if="sub.isGated"
                     class="btn btn-sm btn-action"
-                    @click="openReconsentModal(sub)"
+                    @click="openReconsentModal(sub)" @keydown.enter="openReconsentModal(sub)"
                   >
                     Clear Re-Consent Gate
                   </button>
@@ -441,21 +441,21 @@
           <button
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'soa' }"
-            @click="activeDiffLayer = 'soa'"
+            @click="activeDiffLayer = 'soa'" @keydown.enter="activeDiffLayer = 'soa'"
           >
             🔀 USDM Graph &amp; SoA Matrix Diff
           </button>
           <button
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'eligibility' }"
-            @click="activeDiffLayer = 'eligibility'"
+            @click="activeDiffLayer = 'eligibility'" @keydown.enter="activeDiffLayer = 'eligibility'"
           >
             📋 Eligibility Criteria Diff
           </button>
           <button
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'ecrf' }"
-            @click="activeDiffLayer = 'ecrf'"
+            @click="activeDiffLayer = 'ecrf'" @keydown.enter="activeDiffLayer = 'ecrf'"
           >
             📝 eCRF Forms &amp; Data Capture Diff
           </button>
@@ -469,12 +469,12 @@
           <div class="layer-header">
             <h4>Side-by-Side Schedule of Activities &amp; Graph Structure</h4>
             <div class="legend-box">
-              <span class="legend-item"><span class="color-dot dot-green" /> + Added
+              <span class="legend-item color-dot dot-green"><span /> + Added
                 Encounter/Activity</span>
-              <span class="legend-item"><span class="color-dot dot-yellow" /> ~ Modified
+              <span class="legend-item color-dot dot-yellow"><span /> ~ Modified
                 Schedule/Assay</span>
-              <span class="legend-item"><span class="color-dot dot-red" /> - Removed Procedure</span>
-              <span class="legend-item"><span class="color-dot dot-gray" /> = Preserved Baseline</span>
+              <span class="legend-item color-dot dot-red"><span /> - Removed Procedure</span>
+              <span class="legend-item color-dot dot-gray"><span /> = Preserved Baseline</span>
             </div>
           </div>
 
@@ -852,7 +852,7 @@
                   <button
                     v-if="sub.isGated"
                     class="btn btn-sm btn-action"
-                    @click="openReconsentModal(sub)"
+                    @click="openReconsentModal(sub)" @keydown.enter="openReconsentModal(sub)"
                   >
                     Clear Re-Consent Gate
                   </button>
@@ -894,14 +894,14 @@
           <button
             id="btn-clear-selection"
             class="btn btn-sm btn-secondary"
-            @click="selectedSubjectIds = []"
+            @click="selectedSubjectIds = []" @keydown.enter="selectedSubjectIds = []"
           >
             Deselect All
           </button>
           <button
             id="btn-batch-reconsent"
             class="btn btn-primary btn-batch-action"
-            @click="openBulkReconsentModal"
+            @click="openBulkReconsentModal" @keydown.enter="openBulkReconsentModal"
           >
             ✍️ Execute Bulk Re-Consent &amp; Sign (21 CFR Part 11)
           </button>
@@ -910,10 +910,10 @@
     </div>
 
     <!-- 4-Step Guided Upversioning Wizard Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="showCreateModal"
       class="modal-overlay"
-      @click.self="closeWizard"
+      @click.self="closeWizard" @keydown.enter="closeWizard"
     >
       <div class="modal-card wizard-modal-card">
         <!-- Wizard Header & Stepper -->
@@ -929,7 +929,7 @@
           </div>
           <button
             class="modal-close"
-            @click="closeWizard"
+            @click="closeWizard" @keydown.enter="closeWizard"
           >
             &times;
           </button>
@@ -937,10 +937,10 @@
 
         <!-- Wizard Stepper Indicators -->
         <div class="wizard-stepper">
-          <div
+          <div role="button" tabindex="0"
             class="step-item"
             :class="{ active: wizardStep === 1, completed: wizardStep > 1 }"
-            @click="wizardStep = 1"
+            @click="wizardStep = 1" @keydown.enter="wizardStep = 1"
           >
             <div class="step-number">
               1
@@ -950,10 +950,10 @@
             </div>
           </div>
           <div class="step-divider" />
-          <div
+          <div role="button" tabindex="0"
             class="step-item"
             :class="{ active: wizardStep === 2, completed: wizardStep > 2 }"
-            @click="wizardStep = 2"
+            @click="wizardStep = 2" @keydown.enter="wizardStep = 2"
           >
             <div class="step-number">
               2
@@ -963,10 +963,10 @@
             </div>
           </div>
           <div class="step-divider" />
-          <div
+          <div role="button" tabindex="0"
             class="step-item"
             :class="{ active: wizardStep === 3, completed: wizardStep > 3 }"
-            @click="goToWizardStep(3)"
+            @click="goToWizardStep(3)" @keydown.enter="goToWizardStep(3)"
           >
             <div class="step-number">
               3
@@ -976,10 +976,10 @@
             </div>
           </div>
           <div class="step-divider" />
-          <div
+          <div role="button" tabindex="0"
             class="step-item"
             :class="{ active: wizardStep === 4, completed: wizardStep > 4 }"
-            @click="goToWizardStep(4)"
+            @click="goToWizardStep(4)" @keydown.enter="goToWizardStep(4)"
           >
             <div class="step-number">
               4
@@ -1003,8 +1003,8 @@
             </p>
 
             <div class="form-group">
-              <label class="form-label">Amendment Classification Type:</label>
-              <select
+              <label for="a11y-id-188" class="form-label">Amendment Classification Type:</label>
+              <select id="a11y-id-188"
                 v-model="newAmendment.amendment_type"
                 class="form-select"
               >
@@ -1033,8 +1033,8 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">GxP Justification &amp; Change Reason:</label>
-              <textarea
+              <label for="a11y-id-189" class="form-label">GxP Justification &amp; Change Reason:</label>
+              <textarea id="a11y-id-189"
                 v-model="newAmendment.change_reason"
                 class="form-control text-area"
                 placeholder="e.g. Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules..."
@@ -1055,8 +1055,8 @@
             </p>
 
             <div class="form-group">
-              <label class="form-label">Target Study ID:</label>
-              <input
+              <label for="a11y-id-190" class="form-label">Target Study ID:</label>
+              <input id="a11y-id-190"
                 v-model="selectedStudyId"
                 type="text"
                 class="form-control"
@@ -1065,8 +1065,8 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Base Frozen Version:</label>
-              <input
+              <label for="a11y-id-191" class="form-label">Base Frozen Version:</label>
+              <input id="a11y-id-191"
                 type="text"
                 class="form-control"
                 value="v1.0.0 (Approved / Locked Snapshot)"
@@ -1075,8 +1075,8 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">New Target Version Tag:</label>
-              <input
+              <label for="a11y-id-192" class="form-label">New Target Version Tag:</label>
+              <input id="a11y-id-192"
                 v-model="newAmendment.target_version"
                 type="text"
                 class="form-control"
@@ -1186,13 +1186,13 @@
             v-if="wizardStep > 1"
             class="btn btn-secondary"
             :disabled="isSubmitting"
-            @click="wizardStep--"
+            @click="wizardStep--" @keydown.enter="wizardStep--"
           >
             ← Back
           </button>
           <button
             class="btn btn-secondary"
-            @click="closeWizard"
+            @click="closeWizard" @keydown.enter="closeWizard"
           >
             Cancel
           </button>
@@ -1200,7 +1200,7 @@
             v-if="wizardStep < 4"
             class="btn btn-primary"
             :disabled="wizardStep === 1 && !newAmendment.change_reason.trim()"
-            @click="goToWizardStep(wizardStep + 1)"
+            @click="goToWizardStep(wizardStep + 1)" @keydown.enter="goToWizardStep(wizardStep + 1)"
           >
             Next Step →
           </button>
@@ -1209,7 +1209,7 @@
             id="btn-publish-amendment"
             class="btn btn-primary"
             :disabled="isSubmitting"
-            @click="submitCreateAmendment"
+            @click="submitCreateAmendment" @keydown.enter="submitCreateAmendment"
           >
             {{
               isSubmitting
@@ -1222,11 +1222,11 @@
     </div>
 
     <!-- 21 CFR Part 11 Bulk Signature Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="showBulkReconsentModal"
       id="bulk-reconsent-modal"
       class="modal-overlay"
-      @click.self="showBulkReconsentModal = false"
+      @click.self="showBulkReconsentModal = false" @keydown.enter="showBulkReconsentModal = false"
     >
       <div class="modal-card bulk-reconsent-card">
         <div class="modal-header">
@@ -1235,7 +1235,7 @@
           </h3>
           <button
             class="modal-close"
-            @click="showBulkReconsentModal = false"
+            @click="showBulkReconsentModal = false" @keydown.enter="showBulkReconsentModal = false"
           >
             &times;
           </button>
@@ -1251,22 +1251,22 @@
           </p>
 
           <div class="reconsent-options">
-            <div
+            <div role="button" tabindex="0"
               class="option-card"
               :class="{
                 selected: bulkReconsentForm.signature_type === 'ECONSENT',
               }"
-              @click="bulkReconsentForm.signature_type = 'ECONSENT'"
+              @click="bulkReconsentForm.signature_type = 'ECONSENT'" @keydown.enter="bulkReconsentForm.signature_type = 'ECONSENT'"
             >
               <h4>✍️ Electronic Consent (eConsent)</h4>
               <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
             </div>
-            <div
+            <div role="button" tabindex="0"
               class="option-card"
               :class="{
                 selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD',
               }"
-              @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
+              @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'" @keydown.enter="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
             >
               <h4>📄 Verified Paper ICF Upload</h4>
               <p>
@@ -1277,8 +1277,8 @@
           </div>
 
           <div class="form-group margin-top-md">
-            <label class="form-label">Site Staff Signer Name / User ID:</label>
-            <input
+            <label for="a11y-id-193" class="form-label">Site Staff Signer Name / User ID:</label>
+            <input id="a11y-id-193"
               v-model="bulkReconsentForm.signer_name"
               type="text"
               class="form-control"
@@ -1287,8 +1287,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Re-authentication Password / PIN:</label>
-            <input
+            <label for="a11y-id-194" class="form-label">Re-authentication Password / PIN:</label>
+            <input id="a11y-id-194"
               v-model="bulkReconsentForm.signer_pin"
               type="password"
               class="form-control"
@@ -1297,8 +1297,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Audit Justification &amp; Change Reason:</label>
-            <input
+            <label for="a11y-id-195" class="form-label">GxP Audit Justification &amp; Change Reason:</label>
+            <input id="a11y-id-195"
               v-model="bulkReconsentForm.reason_for_change"
               type="text"
               class="form-control"
@@ -1310,7 +1310,7 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            @click="showBulkReconsentModal = false"
+            @click="showBulkReconsentModal = false" @keydown.enter="showBulkReconsentModal = false"
           >
             Cancel
           </button>
@@ -1318,7 +1318,7 @@
             id="btn-submit-bulk-signature"
             class="btn btn-primary"
             :disabled="!bulkReconsentForm.signer_name.trim() || isSubmitting"
-            @click="executeBulkReconsent"
+            @click="executeBulkReconsent" @keydown.enter="executeBulkReconsent"
           >
             {{
               isSubmitting
@@ -1331,10 +1331,10 @@
     </div>
 
     <!-- Single Subject Re-Consent Resolution Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="showReconsentModal"
       class="modal-overlay"
-      @click.self="showReconsentModal = false"
+      @click.self="showReconsentModal = false" @keydown.enter="showReconsentModal = false"
     >
       <div class="modal-card">
         <div class="modal-header">
@@ -1343,7 +1343,7 @@
           </h3>
           <button
             class="modal-close"
-            @click="showReconsentModal = false"
+            @click="showReconsentModal = false" @keydown.enter="showReconsentModal = false"
           >
             &times;
           </button>
@@ -1355,10 +1355,10 @@
             <strong>v{{ selectedAmendedVersion }}</strong>.
           </p>
           <div class="reconsent-options">
-            <div
+            <div role="button" tabindex="0"
               class="option-card"
               :class="{ selected: reconsentMode === 'ECONSENT' }"
-              @click="reconsentMode = 'ECONSENT'"
+              @click="reconsentMode = 'ECONSENT'" @keydown.enter="reconsentMode = 'ECONSENT'"
             >
               <h4>✍️ Execute eConsent</h4>
               <p>
@@ -1366,10 +1366,10 @@
                 cryptographic seal.
               </p>
             </div>
-            <div
+            <div role="button" tabindex="0"
               class="option-card"
               :class="{ selected: reconsentMode === 'PAPER' }"
-              @click="reconsentMode = 'PAPER'"
+              @click="reconsentMode = 'PAPER'" @keydown.enter="reconsentMode = 'PAPER'"
             >
               <h4>📄 Upload Signed Paper ICF</h4>
               <p>
@@ -1382,14 +1382,14 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            @click="showReconsentModal = false"
+            @click="showReconsentModal = false" @keydown.enter="showReconsentModal = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-primary"
             :disabled="isSubmitting"
-            @click="submitReconsent"
+            @click="submitReconsent" @keydown.enter="submitReconsent"
           >
             {{
               isSubmitting

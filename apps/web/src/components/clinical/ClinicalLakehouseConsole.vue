@@ -243,7 +243,7 @@
           </div>
 
           <div class="filter-controls">
-            <select v-model="filterDomain" class="form-select">
+            <select aria-label="Filterdomain" v-model="filterDomain" class="form-select">
               <option value="">All Domains</option>
               <option value="VS">VS - Vital Signs</option>
               <option value="LB">LB - Laboratory</option>
@@ -255,7 +255,7 @@
               <option value="EX">EX - Exposure</option>
             </select>
 
-            <select v-model="filterStream" class="form-select">
+            <select aria-label="Filterstream" v-model="filterStream" class="form-select">
               <option value="">All Streams</option>
               <option value="EDC_ECRF">EDC eCRFs</option>
               <option value="EPRO_ECOA">ePRO / eCOA</option>
@@ -266,7 +266,7 @@
               <option value="MEDICAL_IMAGING">Medical Imaging</option>
             </select>
 
-            <input
+            <input aria-label="Input field"
               type="text"
               v-model="filterSubject"
               class="form-input search-input"
@@ -413,7 +413,7 @@
     </div>
 
     <!-- Create Version-Pinned Snapshot Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+    <div role="button" tabindex="0" v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false" @keydown.enter="showCreateModal = false">
       <div class="modal-card">
         <div class="modal-header">
           <h3>📸 Create Version-Pinned Clinical Snapshot Pool</h3>

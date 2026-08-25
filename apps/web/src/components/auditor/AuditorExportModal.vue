@@ -48,7 +48,7 @@
             cursor: pointer;
             color: var(--text);
           "
-          @click="$emit('close')"
+          @click="$emit('close')" @keydown.enter="$emit('close')"
         >
           ×
         </button>
@@ -58,14 +58,14 @@
         class="form-group"
         style="margin-bottom: 16px"
       >
-        <label
+        <span class="form-label"
           style="
             font-size: 12px;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
           "
-        >Export Format</label>
+        >Export Format</span>
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
             class="touch-target-interactive"
@@ -122,28 +122,28 @@
         class="form-group"
         style="margin-bottom: 16px"
       >
-        <label
+        <span class="form-label"
           style="
             font-size: 12px;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
           "
-        >Date Range Bounds</label>
+        >Date Range Bounds</span>
         <div
           class="grid-2-responsive"
           style="margin-top: 8px"
         >
           <div>
-            <label
+            <span class="form-label"
               style="
                 font-size: 11px;
                 color: var(--text-muted);
                 display: block;
                 margin-bottom: 4px;
               "
-            >Start Date</label>
-            <input
+            >Start Date</span>
+            <input aria-label="Input field"
               v-model="startDate"
               type="date"
               class="export-start-date touch-target-interactive"
@@ -159,15 +159,15 @@
             >
           </div>
           <div>
-            <label
+            <span class="form-label"
               style="
                 font-size: 11px;
                 color: var(--text-muted);
                 display: block;
                 margin-bottom: 4px;
               "
-            >End Date</label>
-            <input
+            >End Date</span>
+            <input aria-label="Input field"
               v-model="endDate"
               type="date"
               class="export-end-date touch-target-interactive"
@@ -195,14 +195,14 @@
       >
         <button
           class="btn btn-secondary touch-target-interactive"
-          @click="$emit('close')"
+          @click="$emit('close')" @keydown.enter="$emit('close')"
         >
           Cancel
         </button>
         <button
           class="btn btn-primary touch-target-interactive"
           :disabled="exporting"
-          @click="handleExport"
+          @click="handleExport" @keydown.enter="handleExport"
         >
           {{ exporting ? "Exporting..." : "Download Export" }}
         </button>

@@ -1,11 +1,11 @@
 <template>
   <div>
     <!-- Contextual Help Slide-Out Drawer -->
-    <div
+    <div role="button" tabindex="0"
       v-if="knowledgeStore.isOpen"
       id="contextual-help-drawer-overlay"
       class="drawer-overlay"
-      @click.self="knowledgeStore.closeDrawer()"
+      @click.self="knowledgeStore.closeDrawer()" @keydown.enter="knowledgeStore.closeDrawer()"
     >
       <div
         id="contextual-help-drawer"
@@ -50,7 +50,7 @@
                 class="btn-icon-toggle"
                 :class="{ active: isSearchOpen }"
                 title="Toggle Search SOPs"
-                @click="toggleSearch"
+                @click="toggleSearch" @keydown.enter="toggleSearch"
               >
                 🔍
               </button>
@@ -58,7 +58,7 @@
                 type="button"
                 class="btn-close"
                 aria-label="Close Help Drawer"
-                @click="knowledgeStore.closeDrawer()"
+                @click="knowledgeStore.closeDrawer()" @keydown.enter="knowledgeStore.closeDrawer()"
               >
                 ✕
               </button>
@@ -82,7 +82,7 @@
               v-if="searchInput"
               type="button"
               class="btn-clear-search"
-              @click="clearSearch"
+              @click="clearSearch" @keydown.enter="clearSearch"
             >
               ✕
             </button>
@@ -110,7 +110,7 @@
               <button
                 v-if="knowledgeStore.selectedArticle"
                 class="btn-link"
-                @click="knowledgeStore.backToPrimary()"
+                @click="knowledgeStore.backToPrimary()" @keydown.enter="knowledgeStore.backToPrimary()"
               >
                 ← Back to Matched SOP
               </button>
@@ -127,14 +127,14 @@
               v-else
               class="search-items-list"
             >
-              <div
+              <div role="button" tabindex="0"
                 v-for="item in knowledgeStore.searchResults"
                 :key="item.id"
                 class="search-result-card"
                 :class="{
                   active: knowledgeStore.displayedArticle?.id === item.id,
                 }"
-                @click="selectSearchResult(item)"
+                @click="selectSearchResult(item)" @keydown.enter="selectSearchResult(item)"
               >
                 <div class="result-card-header">
                   <h5 class="result-title">
@@ -175,7 +175,7 @@
             >
               <button
                 class="btn-back"
-                @click="knowledgeStore.backToPrimary()"
+                @click="knowledgeStore.backToPrimary()" @keydown.enter="knowledgeStore.backToPrimary()"
               >
                 ← Return to Route Spotlight SOP
               </button>
@@ -237,7 +237,7 @@
                 <button
                   type="button"
                   class="btn-toggle-body"
-                  @click="knowledgeStore.toggleArticleBody()"
+                  @click="knowledgeStore.toggleArticleBody()" @keydown.enter="knowledgeStore.toggleArticleBody()"
                 >
                   {{
                     knowledgeStore.isArticleBodyExpanded
@@ -279,11 +279,11 @@
                 }})
               </h5>
               <div class="related-list">
-                <div
+                <div role="button" tabindex="0"
                   v-for="rel in knowledgeStore.relatedArticles"
                   :key="rel.id"
                   class="related-card"
-                  @click="knowledgeStore.selectArticle(rel)"
+                  @click="knowledgeStore.selectArticle(rel)" @keydown.enter="knowledgeStore.selectArticle(rel)"
                 >
                   <div class="related-card-top">
                     <span class="related-card-title">{{ rel.title }}</span>
@@ -328,7 +328,7 @@
             <div class="empty-actions">
               <button
                 class="btn btn-secondary"
-                @click="openSearchWithFallback"
+                @click="openSearchWithFallback" @keydown.enter="openSearchWithFallback"
               >
                 🔍 Search Knowledge Hub
               </button>
@@ -342,7 +342,7 @@
             type="button"
             class="btn btn-escalate"
             title="Log Support Ticket pre-populated with current route context"
-            @click="handleEscalate"
+            @click="handleEscalate" @keydown.enter="handleEscalate"
           >
             <span class="btn-icon">🎫</span>
             Escalate to Support Ticket
@@ -350,7 +350,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="knowledgeStore.closeDrawer()"
+            @click="knowledgeStore.closeDrawer()" @keydown.enter="knowledgeStore.closeDrawer()"
           >
             Close
           </button>

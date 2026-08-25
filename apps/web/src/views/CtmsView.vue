@@ -1917,7 +1917,7 @@
           </div>
 
           <div class="form-group">
-            <label>Delegated Duty Task Codes</label>
+            <span class="form-label">Delegated Duty Task Codes</span>
             <div
               style="
                 display: flex;

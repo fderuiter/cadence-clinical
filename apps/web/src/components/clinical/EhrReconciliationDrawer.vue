@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="drawer-backdrop"
-    @click.self="closeDrawer"
+    @click.self="closeDrawer" @keydown.enter="closeDrawer"
   >
     <aside
       class="ehr-reconciliation-drawer"
@@ -291,7 +291,7 @@
       </main>
 
       <!-- MODAL 1: Reject with Reason Dialog -->
-      <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
+      <div role="button" tabindex="0" v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal" @keydown.enter="closeRejectModal">
         <div class="modal-card" role="dialog" aria-labelledby="reject-modal-title">
           <div class="modal-header">
             <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
@@ -332,7 +332,7 @@
       </div>
 
       <!-- MODAL 2: Raise Clinical Query Dialog -->
-      <div v-if="showQueryModal" class="modal-backdrop" @click.self="closeQueryModal">
+      <div role="button" tabindex="0" v-if="showQueryModal" class="modal-backdrop" @click.self="closeQueryModal" @keydown.enter="closeQueryModal">
         <div class="modal-card" role="dialog" aria-labelledby="query-modal-title">
           <div class="modal-header">
             <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
@@ -374,7 +374,7 @@
       </div>
 
       <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
-      <div v-if="showProvenanceModal" class="modal-backdrop" @click.self="closeProvenanceModal">
+      <div role="button" tabindex="0" v-if="showProvenanceModal" class="modal-backdrop" @click.self="closeProvenanceModal" @keydown.enter="closeProvenanceModal">
         <div class="modal-card modal-lg" role="dialog" aria-labelledby="prov-modal-title">
           <div class="modal-header">
             <h3 id="prov-modal-title">FHIR Resource Provenance & Audit Trail</h3>

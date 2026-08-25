@@ -45,7 +45,7 @@
               border-radius: 4px;
               cursor: pointer;
             "
-            @click="showEnrollModal = true"
+            @click="showEnrollModal = true" @keydown.enter="showEnrollModal = true"
           >
             <span>➕</span> Enroll New Subject
           </button>
@@ -185,7 +185,7 @@
                 border-radius: 4px;
                 cursor: pointer;
               "
-              @click="navigate"
+              @click="navigate" @keydown.enter="navigate"
             >
               Complete Training Now ➡️
             </button>
@@ -247,7 +247,7 @@
               border: none;
               cursor: pointer;
             "
-            @click="$emit('open-econsent-modal')"
+            @click="$emit('open-econsent-modal')" @keydown.enter="$emit('open-econsent-modal')"
           >
             ✍️ Open eConsent Form
           </button>
@@ -265,7 +265,7 @@
               border-radius: 6px;
               cursor: pointer;
             "
-            @click="$emit('open-paper-icf-modal')"
+            @click="$emit('open-paper-icf-modal')" @keydown.enter="$emit('open-paper-icf-modal')"
           >
             📄 Upload Signed Paper ICF
           </button>
@@ -341,10 +341,13 @@
         class="clinical-form responsive-grid"
         @submit.prevent
       >
-        <fieldset
+        <div
+          role="button"
+          tabindex="0"
           :disabled="isReconsentGated"
           style="border: none; padding: 0; margin: 0; display: contents"
           @click="handleFieldsetInteraction"
+          @keydown.enter="handleFieldsetInteraction"
         >
           <template
             v-for="field in renderedFields"
@@ -435,7 +438,7 @@
                       cursor: pointer;
                       color: inherit;
                     "
-                    @click="raiseQueryForAlert(field.id, alert.message)"
+                    @click="raiseQueryForAlert(field.id, alert.message)" @keydown.enter="raiseQueryForAlert(field.id, alert.message)"
                   >
                     Raise Query
                   </button>
@@ -519,7 +522,7 @@
               </div>
             </div>
           </template>
-        </fieldset>
+        </div>
       </form>
 
       <div class="form-actions">
@@ -527,7 +530,7 @@
           id="btn-clear-ecrf"
           class="btn"
           :disabled="isReconsentGated"
-          @click="$emit('clear-form')"
+          @click="$emit('clear-form')" @keydown.enter="$emit('clear-form')"
         >
           Clear Form
         </button>
@@ -538,7 +541,7 @@
             backgroundColor: isReconsentGated ? '#dc2626' : undefined,
             opacity: isReconsentGated ? 0.9 : 1,
           }"
-          @click="handleSubmitClick"
+          @click="handleSubmitClick" @keydown.enter="handleSubmitClick"
         >
           {{
             isReconsentGated
@@ -708,7 +711,7 @@
           <button
             id="btn-cancel-enroll"
             class="btn btn-secondary"
-            @click="showEnrollModal = false"
+            @click="showEnrollModal = false" @keydown.enter="showEnrollModal = false"
           >
             Cancel
           </button>
@@ -717,7 +720,7 @@
             class="btn btn-primary"
             style="background-color: #2563eb; color: white"
             :disabled="!enrollForm.subjectId.trim()"
-            @click="handleEnrollSubmit"
+            @click="handleEnrollSubmit" @keydown.enter="handleEnrollSubmit"
           >
             Enroll Subject
           </button>
@@ -769,7 +772,7 @@
         >
           <button
             class="btn btn-secondary"
-            @click="showReconsentGateModal = false"
+            @click="showReconsentGateModal = false" @keydown.enter="showReconsentGateModal = false"
           >
             Close
           </button>
@@ -823,8 +826,8 @@
             class="form-group"
             style="margin-bottom: 12px"
           >
-            <label style="font-size: 0.85rem; font-weight: 600">Signer Printed Name:</label>
-            <input
+            <label for="a11y-id-168" style="font-size: 0.85rem; font-weight: 600">Signer Printed Name:</label>
+            <input id="a11y-id-168"
               :value="econsentSignerName"
               type="text"
               class="form-control"
@@ -843,7 +846,7 @@
             class="form-group"
             style="margin-bottom: 12px"
           >
-            <label style="font-size: 0.85rem; font-weight: 600">Consent Declaration:</label>
+            <span class="form-label" style="font-size: 0.85rem; font-weight: 600">Consent Declaration:</span>
             <div
               style="
                 background: #f8fafc;
@@ -870,7 +873,7 @@
         >
           <button
             class="btn btn-secondary"
-            @click="$emit('update:showEconsentModal', false)"
+            @click="$emit('update:showEconsentModal', false)" @keydown.enter="$emit('update:showEconsentModal', false)"
           >
             Cancel
           </button>
@@ -878,7 +881,7 @@
             class="btn btn-primary"
             style="background-color: #2563eb; color: white"
             :disabled="!econsentSignerName.trim() || reconsentSubmitting"
-            @click="$emit('handle-complete-reconsent', 'ECONSENT')"
+            @click="$emit('handle-complete-reconsent', 'ECONSENT')" @keydown.enter="$emit('handle-complete-reconsent', 'ECONSENT')"
           >
             {{
               reconsentSubmitting ? "Signing..." : "Confirm & Sign ICF v2.0.0"
@@ -911,8 +914,8 @@
             class="form-group"
             style="margin-bottom: 12px"
           >
-            <label style="font-size: 0.85rem; font-weight: 600">Date ICF Signed by Subject:</label>
-            <input
+            <label for="a11y-id-169" style="font-size: 0.85rem; font-weight: 600">Date ICF Signed by Subject:</label>
+            <input id="a11y-id-169"
               :value="paperIcfDate"
               type="date"
               class="form-control"
@@ -930,8 +933,8 @@
             class="form-group"
             style="margin-bottom: 12px"
           >
-            <label style="font-size: 0.85rem; font-weight: 600">Investigator Verification Note:</label>
-            <input
+            <label for="a11y-id-170" style="font-size: 0.85rem; font-weight: 600">Investigator Verification Note:</label>
+            <input id="a11y-id-170"
               :value="paperIcfNote"
               type="text"
               class="form-control"
@@ -958,7 +961,7 @@
         >
           <button
             class="btn btn-secondary"
-            @click="$emit('update:showPaperIcfModal', false)"
+            @click="$emit('update:showPaperIcfModal', false)" @keydown.enter="$emit('update:showPaperIcfModal', false)"
           >
             Cancel
           </button>
@@ -966,7 +969,7 @@
             class="btn btn-primary"
             style="background-color: #2563eb; color: white"
             :disabled="reconsentSubmitting"
-            @click="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')"
+            @click="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')" @keydown.enter="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')"
           >
             {{ reconsentSubmitting ? "Uploading..." : "Verify & Unlock eCRF" }}
           </button>

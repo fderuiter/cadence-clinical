@@ -308,15 +308,15 @@
 
             <div class="disburse-action-bar">
               <div class="disburse-input-group">
-                <label>Payout Method:</label>
-                <select v-model="disburseForm.type" class="form-select">
+                <label for="a11y-id-220">Payout Method:</label>
+                <select id="a11y-id-220" v-model="disburseForm.type" class="form-select">
                   <option value="VIRTUAL_CARD">Instant Reloadable Debit Card</option>
                   <option value="DIRECT_ACH">Direct Bank ACH Transfer</option>
                 </select>
               </div>
               <div class="disburse-input-group">
-                <label>Amount ($):</label>
-                <input
+                <label for="a11y-id-221">Amount ($):</label>
+                <input id="a11y-id-221"
                   v-model.number="disburseForm.amount"
                   type="number"
                   step="0.01"
@@ -391,20 +391,20 @@
               the SoA protocol rule automatically credits the subject's wallet and updates IRS 1099 tax counters.
             </p>
             <div class="form-group">
-              <label>Study Protocol:</label>
-              <input v-model="visitEventForm.study_id" class="form-input" />
+              <label for="a11y-id-222">Study Protocol:</label>
+              <input id="a11y-id-222" v-model="visitEventForm.study_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Site ID:</label>
-              <input v-model="visitEventForm.site_id" class="form-input" />
+              <label for="a11y-id-223">Site ID:</label>
+              <input id="a11y-id-223" v-model="visitEventForm.site_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Subject ID / MRN:</label>
-              <input v-model="visitEventForm.subject_id" class="form-input" />
+              <label for="a11y-id-224">Subject ID / MRN:</label>
+              <input id="a11y-id-224" v-model="visitEventForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Completed Visit:</label>
-              <select v-model="visitEventForm.visit_code" class="form-select">
+              <label for="a11y-id-225">Completed Visit:</label>
+              <select id="a11y-id-225" v-model="visitEventForm.visit_code" class="form-select">
                 <option v-for="r in stipendRules" :key="r.id" :value="r.visit_code">
                   {{ r.visit_name }} ({{ r.visit_code }}) - ${{ r.amount.toFixed(2) }} {{ r.taxable ? '[Taxable]' : '' }}
                 </option>
@@ -435,7 +435,7 @@
             <span class="badge badge-regulatory">Automated Parser</span>
           </div>
           <div class="panel-body">
-            <div class="ocr-dropzone" @click="simulateReceiptUpload">
+            <div role="button" tabindex="0" class="ocr-dropzone" @click="simulateReceiptUpload" @keydown.enter="simulateReceiptUpload">
               <div class="dropzone-icon">📷</div>
               <div class="dropzone-text">
                 <strong>Click to Upload Receipt Image / Sample OCR</strong>
@@ -482,19 +482,19 @@
           </div>
           <div class="panel-body">
             <div class="form-group">
-              <label>Participant Subject ID:</label>
-              <input v-model="expenseForm.subject_id" class="form-input" />
+              <label for="a11y-id-226">Participant Subject ID:</label>
+              <input id="a11y-id-226" v-model="expenseForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Study ID / Site ID:</label>
+              <label for="a11y-id-227">Study ID / Site ID:</label>
               <div class="form-row-2">
-                <input v-model="expenseForm.study_id" class="form-input" />
+                <input id="a11y-id-227" v-model="expenseForm.study_id" class="form-input" />
                 <input v-model="expenseForm.site_id" class="form-input" />
               </div>
             </div>
             <div class="form-group">
-              <label>Category:</label>
-              <select v-model="expenseForm.category" class="form-select">
+              <label for="a11y-id-228">Category:</label>
+              <select id="a11y-id-228" v-model="expenseForm.category" class="form-select">
                 <option value="MILEAGE">Mileage / Fuel</option>
                 <option value="PARKING">Parking Fee / Garage</option>
                 <option value="TRANSIT">Public Transit / Taxi / Uber</option>
@@ -504,17 +504,17 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Merchant / Vendor Name:</label>
-              <input v-model="expenseForm.merchant_name" class="form-input" />
+              <label for="a11y-id-229">Merchant / Vendor Name:</label>
+              <input id="a11y-id-229" v-model="expenseForm.merchant_name" class="form-input" />
             </div>
             <div class="form-row-2">
               <div class="form-group">
-                <label>Gross Amount ($):</label>
-                <input v-model.number="expenseForm.gross_amount" type="number" step="0.01" class="form-input" />
+                <label for="a11y-id-230">Gross Amount ($):</label>
+                <input id="a11y-id-230" v-model.number="expenseForm.gross_amount" type="number" step="0.01" class="form-input" />
               </div>
               <div class="form-group">
-                <label>Expense Date:</label>
-                <input v-model="expenseForm.expense_date" type="date" class="form-input" />
+                <label for="a11y-id-231">Expense Date:</label>
+                <input id="a11y-id-231" v-model="expenseForm.expense_date" type="date" class="form-input" />
               </div>
             </div>
             <div v-if="expenseForm.category === 'MEAL'" class="form-group">
@@ -655,7 +655,7 @@
     </div>
 
     <!-- Modal: Form W-9 Taxpayer Certification -->
-    <div v-if="showW9Modal" class="modal-backdrop" @click.self="showW9Modal = false">
+    <div role="button" tabindex="0" v-if="showW9Modal" class="modal-backdrop" @click.self="showW9Modal = false" @keydown.enter="showW9Modal = false">
       <div class="modal-card">
         <div class="modal-header">
           <h3>IRS Form W-9 Taxpayer Certification</h3>
@@ -666,16 +666,16 @@
             Under penalties of perjury, certify that the Taxpayer Identification Number (TIN) provided below is accurate.
           </p>
           <div class="form-group">
-            <label>Legal Taxpayer Name:</label>
-            <input v-model="w9Form.full_legal_name" class="form-input" placeholder="e.g. Jane Doe" />
+            <label for="a11y-id-232">Legal Taxpayer Name:</label>
+            <input id="a11y-id-232" v-model="w9Form.full_legal_name" class="form-input" placeholder="e.g. Jane Doe" />
           </div>
           <div class="form-group">
-            <label>Last 4 Digits of SSN / ITIN:</label>
-            <input v-model="w9Form.tax_id_last_four" maxlength="4" class="form-input" placeholder="e.g. 1234" />
+            <label for="a11y-id-233">Last 4 Digits of SSN / ITIN:</label>
+            <input id="a11y-id-233" v-model="w9Form.tax_id_last_four" maxlength="4" class="form-input" placeholder="e.g. 1234" />
           </div>
           <div class="form-group">
-            <label>Mailing Address:</label>
-            <input v-model="w9Form.address" class="form-input" placeholder="123 Clinical Way, City, State" />
+            <label for="a11y-id-234">Mailing Address:</label>
+            <input id="a11y-id-234" v-model="w9Form.address" class="form-input" placeholder="123 Clinical Way, City, State" />
           </div>
           <div class="form-group">
             <label class="checkbox-label">

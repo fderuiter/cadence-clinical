@@ -511,20 +511,20 @@
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitScheduleSession">
             <div class="form-group">
-              <label class="form-label">Study ID *</label>
-              <input v-model="newSessionForm.study_id" class="form-control" required />
+              <label for="a11y-id-145" class="form-label">Study ID *</label>
+              <input id="a11y-id-145" v-model="newSessionForm.study_id" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Subject ID *</label>
-              <input v-model="newSessionForm.subject_id" class="form-control" required />
+              <label for="a11y-id-146" class="form-label">Subject ID *</label>
+              <input id="a11y-id-146" v-model="newSessionForm.subject_id" class="form-control" required />
             </div>
             <div class="form-group span-2">
-              <label class="form-label">Consultation Title *</label>
-              <input v-model="newSessionForm.title" class="form-control" required />
+              <label for="a11y-id-147" class="form-label">Consultation Title *</label>
+              <input id="a11y-id-147" v-model="newSessionForm.title" class="form-control" required />
             </div>
             <div class="form-group span-2">
-              <label class="form-label">Scheduled Start (UTC) *</label>
-              <input v-model="newSessionForm.scheduled_start_utc" type="datetime-local" class="form-control" required />
+              <label for="a11y-id-148" class="form-label">Scheduled Start (UTC) *</label>
+              <input id="a11y-id-148" v-model="newSessionForm.scheduled_start_utc" type="datetime-local" class="form-control" required />
             </div>
             <div class="modal-footer span-2">
               <button type="button" class="btn btn-secondary" @click="isScheduleSessionModalOpen = false">Cancel</button>
@@ -545,28 +545,28 @@
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitDispatchDtp">
             <div class="form-group">
-              <label class="form-label">Study ID *</label>
-              <input v-model="newShipmentForm.study_id" class="form-control" required />
+              <label for="a11y-id-149" class="form-label">Study ID *</label>
+              <input id="a11y-id-149" v-model="newShipmentForm.study_id" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Site ID *</label>
-              <input v-model="newShipmentForm.site_id" class="form-control" required />
+              <label for="a11y-id-150" class="form-label">Site ID *</label>
+              <input id="a11y-id-150" v-model="newShipmentForm.site_id" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Subject Pseudonym *</label>
-              <input v-model="newShipmentForm.subject_pseudonym_id" class="form-control" required />
+              <label for="a11y-id-151" class="form-label">Subject Pseudonym *</label>
+              <input id="a11y-id-151" v-model="newShipmentForm.subject_pseudonym_id" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Destination Address Pseudonym *</label>
-              <input v-model="newShipmentForm.destination_address_pseudonym" class="form-control" required />
+              <label for="a11y-id-152" class="form-label">Destination Address Pseudonym *</label>
+              <input id="a11y-id-152" v-model="newShipmentForm.destination_address_pseudonym" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Specialty Courier *</label>
-              <input v-model="newShipmentForm.courier_name" class="form-control" required />
+              <label for="a11y-id-153" class="form-label">Specialty Courier *</label>
+              <input id="a11y-id-153" v-model="newShipmentForm.courier_name" class="form-control" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Temperature Zone *</label>
-              <select v-model="newShipmentForm.temperature_zone" class="form-control" required>
+              <label for="a11y-id-154" class="form-label">Temperature Zone *</label>
+              <select id="a11y-id-154" v-model="newShipmentForm.temperature_zone" class="form-control" required>
                 <option value="REFRIGERATED">REFRIGERATED (2°C to 8°C)</option>
                 <option value="CONTROLLED_AMBIENT">CONTROLLED_AMBIENT (15°C to 25°C)</option>
                 <option value="FROZEN">FROZEN (-25°C to -15°C)</option>
@@ -575,12 +575,12 @@
               </select>
             </div>
             <div class="form-group span-2">
-              <label class="form-label">Kit Serials (Comma-separated) *</label>
-              <input v-model="newShipmentForm.kit_serials_input" class="form-control" required placeholder="KIT-LOT99-001, KIT-LOT99-002" />
+              <label for="a11y-id-155" class="form-label">Kit Serials (Comma-separated) *</label>
+              <input id="a11y-id-155" v-model="newShipmentForm.kit_serials_input" class="form-control" required placeholder="KIT-LOT99-001, KIT-LOT99-002" />
             </div>
             <div class="form-group span-2">
-              <label class="form-label">Tamper-Evident RFID Seal ID *</label>
-              <input v-model="newShipmentForm.tamper_seal_id" class="form-control" required />
+              <label for="a11y-id-156" class="form-label">Tamper-Evident RFID Seal ID *</label>
+              <input id="a11y-id-156" v-model="newShipmentForm.tamper_seal_id" class="form-control" required />
             </div>
             <div class="modal-footer span-2">
               <button type="button" class="btn btn-secondary" @click="isDispatchDtpModalOpen = false">Cancel</button>

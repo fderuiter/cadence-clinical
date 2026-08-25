@@ -88,7 +88,7 @@
               :class="{ active: recordLockFilter === 'all' }"
               style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
               :style="{ background: recordLockFilter === 'all' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'all' ? '#fff' : 'var(--text)' }"
-              @click="recordLockFilter = 'all'"
+              @click="recordLockFilter = 'all'" @keydown.enter="recordLockFilter = 'all'"
             >
               All Records
             </button>
@@ -98,7 +98,7 @@
               :class="{ active: recordLockFilter === 'locked_only' }"
               style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
               :style="{ background: recordLockFilter === 'locked_only' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'locked_only' ? '#fff' : 'var(--text)' }"
-              @click="recordLockFilter = 'locked_only'"
+              @click="recordLockFilter = 'locked_only'" @keydown.enter="recordLockFilter = 'locked_only'"
             >
               🔒 Locked Only
             </button>
@@ -108,7 +108,7 @@
               :class="{ active: recordLockFilter === 'unlocked_only' }"
               style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
               :style="{ background: recordLockFilter === 'unlocked_only' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'unlocked_only' ? '#fff' : 'var(--text)' }"
-              @click="recordLockFilter = 'unlocked_only'"
+              @click="recordLockFilter = 'unlocked_only'" @keydown.enter="recordLockFilter = 'unlocked_only'"
             >
               🔓 Unlocked Only
             </button>
@@ -122,7 +122,7 @@
             class="btn btn-primary btn-fast-export-odm"
             style="padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;"
             :disabled="isFastExporting"
-            @click="fastExportOdmXml"
+            @click="fastExportOdmXml" @keydown.enter="fastExportOdmXml"
           >
             <span>📦</span> 1-Click CDISC ODM XML
           </button>
@@ -131,7 +131,7 @@
             class="btn btn-secondary btn-fast-export-csv"
             style="padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;"
             :disabled="isFastExporting"
-            @click="fastExportCsv"
+            @click="fastExportCsv" @keydown.enter="fastExportCsv"
           >
             <span>📊</span> 1-Click CSV Datasets
           </button>
@@ -144,7 +144,7 @@
       class="stepper-nav"
       aria-label="Export Wizard Steps"
     >
-      <div
+      <div role="button" tabindex="0"
         v-for="step in STEPS"
         :key="step.number"
         class="step-item"
@@ -152,7 +152,7 @@
           active: currentStep === step.number,
           completed: currentStep > step.number,
         }"
-        @click="goToStep(step.number)"
+        @click="goToStep(step.number)" @keydown.enter="goToStep(step.number)"
       >
         <div class="step-badge">
           <span v-if="currentStep > step.number">✓</span>
@@ -182,12 +182,12 @@
         </p>
 
         <div class="format-grid">
-          <div
+          <div role="button" tabindex="0"
             v-for="fmt in FORMAT_OPTIONS"
             :key="fmt.id"
             class="format-card"
             :class="{ selected: selectedFormat === fmt.id }"
-            @click="selectedFormat = fmt.id"
+            @click="selectedFormat = fmt.id" @keydown.enter="selectedFormat = fmt.id"
           >
             <div class="format-card-header">
               <span class="format-icon">{{ fmt.icon }}</span>
@@ -226,28 +226,28 @@
             <button
               type="button"
               class="btn btn-sm"
-              @click="selectAllDomains"
+              @click="selectAllDomains" @keydown.enter="selectAllDomains"
             >
               Select All
             </button>
             <button
               type="button"
               class="btn btn-sm"
-              @click="selectSdtmOnly"
+              @click="selectSdtmOnly" @keydown.enter="selectSdtmOnly"
             >
               SDTM Only
             </button>
             <button
               type="button"
               class="btn btn-sm"
-              @click="selectAdamOnly"
+              @click="selectAdamOnly" @keydown.enter="selectAdamOnly"
             >
               ADaM Only
             </button>
             <button
               type="button"
               class="btn btn-sm btn-outline"
-              @click="clearAllDomains"
+              @click="clearAllDomains" @keydown.enter="clearAllDomains"
             >
               Clear
             </button>
@@ -342,7 +342,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Trial Investigative Sites</label>
+            <span class="form-label form-label">Trial Investigative Sites</span>
             <div class="site-chips-container">
               <button
                 v-for="site in AVAILABLE_SITES"
@@ -350,7 +350,7 @@
                 type="button"
                 class="site-chip"
                 :class="{ active: selectedSites.includes(site.id) }"
-                @click="toggleSite(site.id)"
+                @click="toggleSite(site.id)" @keydown.enter="toggleSite(site.id)"
               >
                 {{ site.name }} ({{ site.id }})
               </button>
@@ -358,7 +358,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Treatment Arms / Cohorts</label>
+            <span class="form-label form-label">Treatment Arms / Cohorts</span>
             <div class="site-chips-container">
               <button
                 v-for="arm in AVAILABLE_COHORTS"
@@ -366,7 +366,7 @@
                 type="button"
                 class="site-chip"
                 :class="{ active: selectedCohorts.includes(arm) }"
-                @click="toggleCohort(arm)"
+                @click="toggleCohort(arm)" @keydown.enter="toggleCohort(arm)"
               >
                 {{ arm }}
               </button>
@@ -374,10 +374,10 @@
           </div>
 
           <div class="form-group full-width">
-            <label class="form-label">Record Locking Status Filter</label>
+            <label for="a11y-id-201" class="form-label">Record Locking Status Filter</label>
             <div style="display: flex; gap: 10px; margin-top: 4px;">
               <label class="radio-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                <input
+                <input id="a11y-id-201"
                   v-model="recordLockFilter"
                   type="radio"
                   value="all"
@@ -433,12 +433,12 @@
         </p>
 
         <div class="privacy-profiles-grid">
-          <div
+          <div role="button" tabindex="0"
             v-for="p in PRIVACY_PROFILES"
             :key="p.id"
             class="privacy-profile-card"
             :class="{ selected: privacyProfile === p.id }"
-            @click="privacyProfile = p.id"
+            @click="privacyProfile = p.id" @keydown.enter="privacyProfile = p.id"
           >
             <div class="privacy-header">
               <span class="privacy-title">{{ p.name }}</span>
@@ -563,7 +563,7 @@
               type="button"
               class="btn btn-primary btn-lg"
               :disabled="totalSelectedCount === 0"
-              @click="startExportPipeline"
+              @click="startExportPipeline" @keydown.enter="startExportPipeline"
             >
               🚀 Generate &amp; Download Export Package
             </button>
@@ -615,14 +615,14 @@
               <button
                 type="button"
                 class="btn btn-primary"
-                @click="triggerFileDownload"
+                @click="triggerFileDownload" @keydown.enter="triggerFileDownload"
               >
                 📥 Download {{ downloadFileName }}
               </button>
               <button
                 type="button"
                 class="btn btn-outline"
-                @click="resetExport"
+                @click="resetExport" @keydown.enter="resetExport"
               >
                 🔄 Create New Export
               </button>
@@ -645,7 +645,7 @@
             <button
               type="button"
               class="btn btn-primary mt-3"
-              @click="startExportPipeline"
+              @click="startExportPipeline" @keydown.enter="startExportPipeline"
             >
               Retry Export
             </button>
@@ -660,7 +660,7 @@
         v-if="currentStep > 1"
         type="button"
         class="btn btn-outline"
-        @click="currentStep--"
+        @click="currentStep--" @keydown.enter="currentStep--"
       >
         ← Previous Step
       </button>
@@ -669,7 +669,7 @@
         v-if="currentStep < 5"
         type="button"
         class="btn btn-primary"
-        @click="currentStep++"
+        @click="currentStep++" @keydown.enter="currentStep++"
       >
         Next Step →
       </button>

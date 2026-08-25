@@ -54,7 +54,10 @@
     <div
       class="global-drawer-overlay"
       :class="{ active: state.isSyncDrawerOpen }"
+      role="button"
+      tabindex="0"
       @click="toggleSyncDrawer"
+      @keydown.enter="toggleSyncDrawer"
     />
 
     <div
@@ -1156,10 +1159,9 @@
       v-if="state.reconsentModalOpen"
       id="portal-reconsent-modal"
       class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="portal-reconsent-modal-title"
-      tabindex="-1"
+      role="button"
+      tabindex="0"
+      @click.self="closeReconsentModal"
       @keydown="handleReconsentModalKeyDown"
     >
       <div
@@ -1297,10 +1299,9 @@
       v-if="state.pinSetup.isOpen"
       id="portal-pin-setup-modal"
       class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pin-setup-title"
-      tabindex="-1"
+      role="button"
+      tabindex="0"
+      @click.self="closeSetupModal"
       @keydown="handleSetupModalKeyDown"
     >
       <div class="modal">
@@ -1377,10 +1378,9 @@
       v-if="state.pinUnlock.isOpen"
       id="portal-pin-unlock-modal"
       class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pin-unlock-title"
-      tabindex="-1"
+      role="button"
+      tabindex="0"
+      @click.self="closeUnlockModal"
       @keydown="handleUnlockModalKeyDown"
     >
       <div class="modal">

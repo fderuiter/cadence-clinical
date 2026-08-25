@@ -27,21 +27,21 @@
         <button
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail CSV"
-          @click="exportAuditTrail('csv')"
+          @click="exportAuditTrail('csv')" @keydown.enter="exportAuditTrail('csv')"
         >
           <span class="btn-icon">📊</span> Export CSV
         </button>
         <button
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail JSON"
-          @click="exportAuditTrail('json')"
+          @click="exportAuditTrail('json')" @keydown.enter="exportAuditTrail('json')"
         >
           <span class="btn-icon">📄</span> Export JSON
         </button>
         <button
           class="btn btn-primary"
           title="Log New Clinical Issue"
-          @click="isCreateModalOpen = true"
+          @click="isCreateModalOpen = true" @keydown.enter="isCreateModalOpen = true"
         >
           <span class="btn-icon">➕</span> Log Issue
         </button>
@@ -50,9 +50,9 @@
 
     <!-- KRI Metric Cards Grid -->
     <div class="stats-grid">
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="filterStatus = 'ALL'"
+        @click="filterStatus = 'ALL'" @keydown.enter="filterStatus = 'ALL'"
       >
         <div class="stat-icon alert-icon">
           🎫
@@ -66,9 +66,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="filterSeverity = 'CRITICAL'"
+        @click="filterSeverity = 'CRITICAL'" @keydown.enter="filterSeverity = 'CRITICAL'"
       >
         <div class="stat-icon capa-icon">
           🚨
@@ -111,9 +111,9 @@
           </div>
         </div>
       </div>
-      <div
+      <div role="button" tabindex="0"
         class="stat-card"
-        @click="filterStatus = 'WAITING_ON_SITE'"
+        @click="filterStatus = 'WAITING_ON_SITE'" @keydown.enter="filterStatus = 'WAITING_ON_SITE'"
       >
         <div class="stat-icon breach-icon">
           ⏸
@@ -133,7 +133,7 @@
     <div class="controls-card">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input
+        <input aria-label="Input field"
           v-model="searchQuery"
           type="text"
           class="search-input"
@@ -142,7 +142,7 @@
       </div>
 
       <div class="filter-group">
-        <select
+        <select aria-label="Input field"
           v-model="filterCategory"
           class="filter-select"
         >
@@ -172,7 +172,7 @@
           </option>
         </select>
 
-        <select
+        <select aria-label="Input field"
           v-model="filterSeverity"
           class="filter-select"
         >
@@ -190,7 +190,7 @@
           </option>
         </select>
 
-        <select
+        <select aria-label="Input field"
           v-model="filterStatus"
           class="filter-select"
         >
@@ -223,7 +223,7 @@
           class="view-toggle-btn"
           :class="{ active: viewMode === 'kanban' }"
           title="Switch to Kanban Board"
-          @click="viewMode = 'kanban'"
+          @click="viewMode = 'kanban'" @keydown.enter="viewMode = 'kanban'"
         >
           📋 Kanban
         </button>
@@ -231,7 +231,7 @@
           class="view-toggle-btn"
           :class="{ active: viewMode === 'table' }"
           title="Switch to Density Table"
-          @click="viewMode = 'table'"
+          @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'"
         >
           📄 Table
         </button>
@@ -255,11 +255,11 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <div
+          <div role="button" tabindex="0"
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
             class="ticket-card"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -301,11 +301,11 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <div
+          <div role="button" tabindex="0"
             v-for="t in getColumnTickets('IN_PROGRESS')"
             :key="t.id"
             class="ticket-card"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -351,7 +351,7 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <div
+          <div role="button" tabindex="0"
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
               'WAITING_ON_SPONSOR',
@@ -359,7 +359,7 @@
             ])"
             :key="t.id"
             class="ticket-card paused-card"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -396,11 +396,11 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <div
+          <div role="button" tabindex="0"
             v-for="t in getColumnTickets('RESOLVED')"
             :key="t.id"
             class="ticket-card resolved-card"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -442,11 +442,11 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <div
+          <div role="button" tabindex="0"
             v-for="t in getColumnTickets('CLOSED')"
             :key="t.id"
             class="ticket-card closed-card"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -492,7 +492,7 @@
             v-for="t in filteredTickets"
             :key="t.id"
             class="table-row"
-            @click="openTicketDetail(t)"
+            @click="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
           >
             <td class="ref-cell font-mono">
               {{ t.reference || `#${t.id?.substring(0, 8)}` }}
@@ -554,7 +554,7 @@
             <td>
               <button
                 class="btn btn-xs btn-secondary"
-                @click.stop="openTicketDetail(t)"
+                @click.stop="openTicketDetail(t)" @keydown.enter="openTicketDetail(t)"
               >
                 Inspect
               </button>

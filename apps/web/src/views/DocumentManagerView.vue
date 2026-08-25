@@ -16,10 +16,10 @@
     </main>
 
     <!-- Document Metadata Inspection Drawer -->
-    <div
+    <div role="button" tabindex="0"
       v-if="inspectedDoc"
       class="metadata-drawer-overlay"
-      @click.self="inspectedDoc = null"
+      @click.self="inspectedDoc = null" @keydown.enter="inspectedDoc = null"
     >
       <div class="metadata-drawer">
         <div class="drawer-header">

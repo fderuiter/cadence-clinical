@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="modal-backdrop"
-    @click.self="close"
+    @click.self="close" @keydown.enter="close"
   >
     <div
       class="modal-dialog ticket-sign-modal"
@@ -44,8 +44,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Signer Identity</label>
-          <input
+          <label for="a11y-id-186" class="form-label">Signer Identity</label>
+          <input id="a11y-id-186"
             type="text"
             class="form-control"
             :value="currentUser"
@@ -55,8 +55,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Active Role</label>
-          <input
+          <label for="a11y-id-187" class="form-label">Active Role</label>
+          <input id="a11y-id-187"
             type="text"
             class="form-control"
             :value="currentRole"

@@ -218,6 +218,8 @@
 
                   <!-- Visit Node Circle -->
                   <circle
+                    role="button"
+                    tabindex="0"
                     :cx="
                       getVisitX(
                         getEpochForLane(arm.arm_id, seq).epoch_id,
@@ -234,7 +236,7 @@
                       cursor: pointer;
                       filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
                     "
-                    @click="openEditModal(visit)"
+                    @click="openEditModal(visit)" @keydown.enter="openEditModal(visit)"
                   />
 
                   <!-- Sequence Number Inside Circle -->
@@ -352,10 +354,10 @@
     </div>
 
     <!-- timing properties Popover/Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isModalOpen"
       class="gantt-modal-backdrop"
-      @click.self="closeModal"
+      @click.self="closeModal" @keydown.enter="closeModal"
     >
       <div
         class="gantt-modal-content card"
@@ -395,7 +397,7 @@
           <button
             style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #94a3b8; hover:color:#475569"
             aria-label="Close modal"
-            @click="closeModal"
+            @click="closeModal" @keydown.enter="closeModal"
           >
             &times;
           </button>
@@ -430,7 +432,7 @@
         <div style="display: flex; flex-direction: column; gap: 14px">
           <!-- Target / Planned Day -->
           <div class="form-group">
-            <label
+            <span class="form-label"
               style="
                 font-weight: 600;
                 display: block;
@@ -440,8 +442,8 @@
               "
             >
               Target Day Offset
-            </label>
-            <input
+            </span>
+            <input aria-label="Input field"
               v-model.number="form.planned_day"
               type="number"
               min="0"
@@ -459,7 +461,7 @@
           <!-- Min/Max Offsets -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
             <div class="form-group">
-              <label
+              <span class="form-label"
                 style="
                   font-weight: 600;
                   display: block;
@@ -469,8 +471,8 @@
                 "
               >
                 Min Offset (Days)
-              </label>
-              <input
+              </span>
+              <input aria-label="Input field"
                 v-model.number="form.min_offset"
                 type="number"
                 min="0"
@@ -485,7 +487,7 @@
               >
             </div>
             <div class="form-group">
-              <label
+              <span class="form-label"
                 style="
                   font-weight: 600;
                   display: block;
@@ -495,8 +497,8 @@
                 "
               >
                 Max Offset (Days)
-              </label>
-              <input
+              </span>
+              <input aria-label="Input field"
                 v-model.number="form.max_offset"
                 type="number"
                 min="0"
@@ -514,7 +516,7 @@
 
           <!-- Anchor Reference -->
           <div class="form-group">
-            <label
+            <span class="form-label"
               style="
                 font-weight: 600;
                 display: block;
@@ -524,8 +526,8 @@
               "
             >
               Anchor Reference Milestone
-            </label>
-            <input
+            </span>
+            <input aria-label="Input field"
               v-model="form.anchor_reference"
               type="text"
               style="
@@ -548,7 +550,7 @@
               margin-top: 4px;
             "
           >
-            <label
+            <span class="form-label"
               style="
                 font-weight: bold;
                 display: block;
@@ -558,8 +560,8 @@
               "
             >
               Compliance Change Justification *
-            </label>
-            <textarea
+            </span>
+            <textarea aria-label="Input field"
               v-model="form.justification"
               rows="2.5"
               style="
@@ -612,7 +614,7 @@
             <button
               class="btn btn-secondary"
               style="padding: 8px 14px; font-size: 0.85rem"
-              @click="closeModal"
+              @click="closeModal" @keydown.enter="closeModal"
             >
               Cancel
             </button>
@@ -626,7 +628,7 @@
                 align-items: center;
                 gap: 6px;
               "
-              @click="saveTiming"
+              @click="saveTiming" @keydown.enter="saveTiming"
             >
               💾 Save Changes
             </button>

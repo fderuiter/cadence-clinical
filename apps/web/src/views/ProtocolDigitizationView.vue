@@ -23,10 +23,10 @@
 
     <!-- Stepper Navigation -->
     <div class="wizard-stepper">
-      <div
+      <div role="button" tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 1, completed: currentStep > 1 }"
-        @click="goToStep(1)"
+        @click="goToStep(1)" @keydown.enter="goToStep(1)"
       >
         <div class="step-circle">
           1
@@ -39,10 +39,10 @@
         class="step-divider"
         :class="{ completed: currentStep > 1 }"
       />
-      <div
+      <div role="button" tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 2, completed: currentStep > 2 }"
-        @click="goToStep(2)"
+        @click="goToStep(2)" @keydown.enter="goToStep(2)"
       >
         <div class="step-circle">
           2
@@ -55,10 +55,10 @@
         class="step-divider"
         :class="{ completed: currentStep > 2 }"
       />
-      <div
+      <div role="button" tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 3, completed: currentStep > 3 }"
-        @click="goToStep(3)"
+        @click="goToStep(3)" @keydown.enter="goToStep(3)"
       >
         <div class="step-circle">
           3
@@ -71,10 +71,10 @@
         class="step-divider"
         :class="{ completed: currentStep > 3 }"
       />
-      <div
+      <div role="button" tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 4, completed: committed }"
-        @click="goToStep(4)"
+        @click="goToStep(4)" @keydown.enter="goToStep(4)"
       >
         <div class="step-circle">
           4
@@ -91,13 +91,13 @@
       class="wizard-pane"
     >
       <div class="card upload-card">
-        <div
+        <div role="button" tabindex="0"
           class="dropzone"
           :class="{ dragging: isDragging }"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleFileDrop"
-          @click="triggerFileInput"
+          @click="triggerFileInput" @keydown.enter="triggerFileInput"
         >
           <input
             id="protocol-file-input"
@@ -138,7 +138,7 @@
             <button
               type="button"
               class="btn btn-secondary btn-sm"
-              @click="clearSelectedFile"
+              @click="clearSelectedFile" @keydown.enter="clearSelectedFile"
             >
               Remove
             </button>
@@ -157,7 +157,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="loadSampleProtocol"
+            @click="loadSampleProtocol" @keydown.enter="loadSampleProtocol"
           >
             🧪 Load Sample Protocol (NSCLC Phase II)
           </button>
@@ -165,7 +165,7 @@
             type="button"
             class="btn btn-primary"
             :disabled="!selectedFile && !rawExtractionData"
-            @click="startExtraction"
+            @click="startExtraction" @keydown.enter="startExtraction"
           >
             Start USDM Extraction ➜
           </button>
@@ -256,7 +256,7 @@
             type="button"
             class="btn btn-primary"
             :disabled="extractionProgress < 100"
-            @click="goToStep(3)"
+            @click="goToStep(3)" @keydown.enter="goToStep(3)"
           >
             Review &amp; Verify USDM Model ➜
           </button>
@@ -303,7 +303,7 @@
           type="button"
           class="btn"
           :class="reviewTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
-          @click="reviewTab = 'soa'"
+          @click="reviewTab = 'soa'" @keydown.enter="reviewTab = 'soa'"
         >
           📋 Schedule of Activities (SoA) Matrix
         </button>
@@ -311,7 +311,7 @@
           type="button"
           class="btn"
           :class="reviewTab === 'arms' ? 'btn-primary' : 'btn-secondary'"
-          @click="reviewTab = 'arms'"
+          @click="reviewTab = 'arms'" @keydown.enter="reviewTab = 'arms'"
         >
           🗺️ Arms &amp; Epoch Timeline Visualizer
         </button>
@@ -319,7 +319,7 @@
           type="button"
           class="btn"
           :class="reviewTab === 'criteria' ? 'btn-primary' : 'btn-secondary'"
-          @click="reviewTab = 'criteria'"
+          @click="reviewTab = 'criteria'" @keydown.enter="reviewTab = 'criteria'"
         >
           ⚖️ Inclusion / Exclusion Criteria
         </button>
@@ -327,7 +327,7 @@
           type="button"
           class="btn"
           :class="reviewTab === 'json' ? 'btn-primary' : 'btn-secondary'"
-          @click="reviewTab = 'json'"
+          @click="reviewTab = 'json'" @keydown.enter="reviewTab = 'json'"
         >
           { } Raw USDM v4.0 JSON
         </button>
@@ -373,14 +373,14 @@
         <button
           type="button"
           class="btn btn-secondary"
-          @click="goToStep(1)"
+          @click="goToStep(1)" @keydown.enter="goToStep(1)"
         >
           ⮌ Ingest Another Protocol
         </button>
         <button
           type="button"
           class="btn btn-primary"
-          @click="goToStep(4)"
+          @click="goToStep(4)" @keydown.enter="goToStep(4)"
         >
           Proceed to eCRF Synthesis &amp; Commit ➜
         </button>
@@ -471,7 +471,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="goToStep(3)"
+            @click="goToStep(3)" @keydown.enter="goToStep(3)"
           >
             ⮌ Back to Review
           </button>
@@ -479,7 +479,7 @@
             type="button"
             class="btn btn-primary btn-commit-edc"
             :disabled="isCommitting || !changeReason.trim()"
-            @click="commitAndActivateEDC"
+            @click="commitAndActivateEDC" @keydown.enter="commitAndActivateEDC"
           >
             <span
               v-if="isCommitting"

@@ -90,7 +90,7 @@
               <span class="version-tag">Version: {{ selectedProgram?.version || '1.0.0' }}</span>
             </div>
             <div class="header-right">
-              <select v-model="selectedProgramId" class="form-select program-selector" @change="onProgramSelected">
+              <select aria-label="Selectedprogramid" v-model="selectedProgramId" class="form-select program-selector" @change="onProgramSelected">
                 <option value="">-- Select or Template Program --</option>
                 <option v-for="prog in programs" :key="prog.program_id" :value="prog.program_id">
                   [{{ prog.language }}] {{ prog.name }} - {{ prog.title }}
@@ -145,7 +145,7 @@
               <span class="editor-filename">📝 {{ scriptName || 'untitled_analysis.py' }}</span>
               <span class="code-digest-preview" v-if="computedCodeHash">SHA-256: <code>{{ computedCodeHash.slice(0, 16) }}...</code></span>
             </div>
-            <textarea
+            <textarea aria-label="Input field"
               v-model="sourceCode"
               class="code-textarea"
               placeholder="# Author validated statistical analysis code here..."

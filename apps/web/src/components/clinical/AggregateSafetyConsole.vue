@@ -263,7 +263,7 @@
       <section v-if="activeTab === 'tabulations'" class="tab-pane" aria-labelledby="tab-tabulations">
         <div class="table-toolbar">
           <div class="search-box">
-            <input
+            <input aria-label="Input field"
               v-model="tabulationSearchTerm"
               type="text"
               placeholder="Search MedDRA PT or SOC..."
@@ -429,7 +429,7 @@
         <div class="section-card">
           <h3 class="section-title">Executive Benefit-Risk Assessment &amp; Conclusions</h3>
           <div class="narrative-editor">
-            <textarea
+            <textarea aria-label="Input field"
               v-model="benefitRiskNarrative"
               rows="6"
               class="textarea-control"
@@ -635,10 +635,10 @@
             </div>
 
             <div class="sim-column">
-              <label class="form-label-header">Seriousness Criteria (ICH E2A § II.B):</label>
+              <label for="a11y-id-100" class="form-label-header">Seriousness Criteria (ICH E2A § II.B):</label>
               <div class="checkbox-group-grid">
                 <label class="checkbox-label">
-                  <input v-model="simSeriousnessDeath" type="checkbox" />
+                  <input id="a11y-id-100" v-model="simSeriousnessDeath" type="checkbox" />
                   <strong>Results in Death (7-Day Fatal)</strong>
                 </label>
                 <label class="checkbox-label">

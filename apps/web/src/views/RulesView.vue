@@ -287,9 +287,9 @@
             "
           >
             <!-- Reusable Rule Editor Widget -->
-            <div
+            <div role="button" tabindex="0"
               class="rule-editor-wrapper"
-              @click="handleEditorClick"
+              @click="handleEditorClick" @keydown.enter="handleEditorClick"
               @change="handleEditorChange"
               @input="handleEditorInput"
               v-html="ruleEditorHtml"

@@ -27,7 +27,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm --filter subject-portal dev",
     url: "http://localhost:5174/subject-portal/",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120000,
   },
 });

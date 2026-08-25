@@ -73,12 +73,12 @@
           <span class="panel-heading">Series Envelope</span>
         </div>
         <div class="series-list">
-          <div
+          <div role="button" tabindex="0"
             v-for="s in availableSeries"
             :key="s.seriesUid"
             class="series-item"
             :class="{ active: activeSeriesUid === s.seriesUid }"
-            @click="activeSeriesUid = s.seriesUid"
+            @click="activeSeriesUid = s.seriesUid" @keydown.enter="activeSeriesUid = s.seriesUid"
           >
             <div class="series-thumb">🖼️</div>
             <div class="series-meta">

@@ -2,10 +2,11 @@
   <div
     ref="modalRef"
     class="modal-backdrop"
-    role="dialog"
-    aria-modal="true"
+    role="button"
+    tabindex="0"
     :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
     @click.self="$emit('close')"
+    @keydown.enter="$emit('close')"
   >
     <div
       class="modal-card media-preview-modal"
@@ -63,7 +64,7 @@
             class="btn btn-sm btn-success btn-approve"
             data-testid="approve-doc-btn"
             title="Approve this document with 21 CFR Part 11 Electronic Signature"
-            @click="openReAuthModal"
+            @click="openReAuthModal" @keydown.enter="openReAuthModal"
           >
             ✍️ Approve this document
           </button>
@@ -72,14 +73,14 @@
             class="btn btn-sm btn-outline-primary btn-download"
             title="Download Original File"
             :aria-label="'Download ' + fileRecord?.filename"
-            @click="handleDownload"
+            @click="handleDownload" @keydown.enter="handleDownload"
           >
             📥 Download
           </button>
           <button
             class="close-modal-btn"
             aria-label="Close preview modal"
-            @click="$emit('close')"
+            @click="$emit('close')" @keydown.enter="$emit('close')"
           >
             ×
           </button>
@@ -265,7 +266,7 @@
                 </p>
                 <button
                   class="btn btn-sm btn-outline-light"
-                  @click="retryTranscodeCheck"
+                  @click="retryTranscodeCheck" @keydown.enter="retryTranscodeCheck"
                 >
                   🔄 Check Again
                 </button>
@@ -284,7 +285,7 @@
                 </p>
                 <button
                   class="btn btn-sm btn-outline-light"
-                  @click="retryTranscodeCheck"
+                  @click="retryTranscodeCheck" @keydown.enter="retryTranscodeCheck"
                 >
                   🔄 Retry
                 </button>

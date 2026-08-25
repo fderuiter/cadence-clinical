@@ -91,7 +91,7 @@
         role="tab"
         :aria-selected="activeMainTab === 'dossiers'"
         :class="['tab-btn', { active: activeMainTab === 'dossiers' }]"
-        @click="activeMainTab = 'dossiers'"
+        @click="activeMainTab = 'dossiers'" @keydown.enter="activeMainTab = 'dossiers'"
       >
         📑 Event Dossiers &amp; Blinded Review ({{ dossiers.length }})
       </button>
@@ -99,7 +99,7 @@
         role="tab"
         :aria-selected="activeMainTab === 'chair_tiebreaker'"
         :class="['tab-btn', { active: activeMainTab === 'chair_tiebreaker' }]"
-        @click="activeMainTab = 'chair_tiebreaker'"
+        @click="activeMainTab = 'chair_tiebreaker'" @keydown.enter="activeMainTab = 'chair_tiebreaker'"
       >
         ⚖️ Chair Tie-Breaker &amp; Consensus Panel
         <span v-if="discordantCount > 0" class="badge-count">{{ discordantCount }}</span>
@@ -108,7 +108,7 @@
         role="tab"
         :aria-selected="activeMainTab === 'charter_quorum'"
         :class="['tab-btn', { active: activeMainTab === 'charter_quorum' }]"
-        @click="activeMainTab = 'charter_quorum'"
+        @click="activeMainTab = 'charter_quorum'" @keydown.enter="activeMainTab = 'charter_quorum'"
       >
         📜 Charter Governance &amp; Quorum Tracker
       </button>
@@ -116,7 +116,7 @@
         role="tab"
         :aria-selected="activeMainTab === 'sdtm_ce'"
         :class="['tab-btn', { active: activeMainTab === 'sdtm_ce' }]"
-        @click="activeMainTab = 'sdtm_ce'"
+        @click="activeMainTab = 'sdtm_ce'" @keydown.enter="activeMainTab = 'sdtm_ce'"
       >
         📊 CDISC SDTM CE &amp; EDC Casebook Sync
       </button>
@@ -133,7 +133,7 @@
           </div>
 
           <div class="filter-toolbar">
-            <input
+            <input aria-label="Input field"
               v-model="searchQuery"
               type="text"
               placeholder="Search event, term, or subject..."
@@ -144,7 +144,7 @@
                 v-for="st in ['ALL', 'PENDING', 'DISCORDANT', 'FINALIZED']"
                 :key="st"
                 :class="['chip-btn', { active: filterStatus === st }]"
-                @click="filterStatus = st"
+                @click="filterStatus = st" @keydown.enter="filterStatus = st"
               >
                 {{ st }}
               </button>
@@ -155,9 +155,11 @@
             <div
               v-for="item in filteredDossiers"
               :key="item.dossier_id"
-              role="listitem"
+              role="button"
+              tabindex="0"
               :class="['dossier-card', { active: selectedDossierId === item.dossier_id }]"
               @click="selectDossier(item.dossier_id)"
+              @keydown.enter="selectDossier(item.dossier_id)"
             >
               <div class="card-top">
                 <span class="category-tag">{{ item.candidate_event_type }}</span>
@@ -201,7 +203,7 @@
             </div>
 
             <div class="banner-actions">
-              <button class="btn btn-secondary" @click="activeMainTab = 'chair_tiebreaker'">
+              <button class="btn btn-secondary" @click="activeMainTab = 'chair_tiebreaker'" @keydown.enter="activeMainTab = 'chair_tiebreaker'">
                 ⚖️ Open Adjudication Panel
               </button>
             </div>
@@ -352,7 +354,7 @@
                     </div>
                   </div>
                   <div class="att-action">
-                    <button class="btn btn-sm btn-secondary" @click="viewAttachment(att)">
+                    <button class="btn btn-sm btn-secondary" @click="viewAttachment(att)" @keydown.enter="viewAttachment(att)">
                       👁️ View Document
                     </button>
                   </div>
@@ -382,7 +384,7 @@
 
                   <div v-if="currentRole === 'READER_1' || currentRole === 'CHAIR' || currentRole === 'DATA_MANAGER' || activeDossier.workflow_status === 'FINALIZED_CONCORDANT' || activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'">
                     <div v-if="activeDossier.reader_1_assessment" class="assessment-details">
-                      <div class="det-row"><strong>Classification:</strong> <span class="badge-class">{{ activeDossier.reader_1_assessment.classification }}</span></div>
+                      <div class="det-row badge-class"><strong>Classification:</strong> <span>{{ activeDossier.reader_1_assessment.classification }}</span></div>
                       <div class="det-row" v-if="activeDossier.reader_1_assessment.subtype"><strong>Subtype:</strong> {{ activeDossier.reader_1_assessment.subtype }}</div>
                       <div class="det-row"><strong>Adjudicated Onset:</strong> {{ activeDossier.reader_1_assessment.adjudicated_onset_date || 'N/A' }}</div>
                       <div class="det-row"><strong>Confidence:</strong> {{ activeDossier.reader_1_assessment.confidence_score }} / 5</div>
@@ -396,7 +398,7 @@
                     </div>
                     <div v-else class="pending-reader-box">
                       <p>Reader 1 assessment is pending.</p>
-                      <button v-if="currentRole === 'READER_1'" class="btn btn-primary" @click="openReaderForm('READER_1')">
+                      <button v-if="currentRole === 'READER_1'" class="btn btn-primary" @click="openReaderForm('READER_1')" @keydown.enter="openReaderForm('READER_1')">
                         ✍️ Complete Reader 1 Assessment
                       </button>
                     </div>
@@ -418,7 +420,7 @@
 
                   <div v-if="currentRole === 'READER_2' || currentRole === 'CHAIR' || currentRole === 'DATA_MANAGER' || activeDossier.workflow_status === 'FINALIZED_CONCORDANT' || activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'">
                     <div v-if="activeDossier.reader_2_assessment" class="assessment-details">
-                      <div class="det-row"><strong>Classification:</strong> <span class="badge-class">{{ activeDossier.reader_2_assessment.classification }}</span></div>
+                      <div class="det-row badge-class"><strong>Classification:</strong> <span>{{ activeDossier.reader_2_assessment.classification }}</span></div>
                       <div class="det-row" v-if="activeDossier.reader_2_assessment.subtype"><strong>Subtype:</strong> {{ activeDossier.reader_2_assessment.subtype }}</div>
                       <div class="det-row"><strong>Adjudicated Onset:</strong> {{ activeDossier.reader_2_assessment.adjudicated_onset_date || 'N/A' }}</div>
                       <div class="det-row"><strong>Confidence:</strong> {{ activeDossier.reader_2_assessment.confidence_score }} / 5</div>
@@ -432,7 +434,7 @@
                     </div>
                     <div v-else class="pending-reader-box">
                       <p>Reader 2 assessment is pending.</p>
-                      <button v-if="currentRole === 'READER_2'" class="btn btn-primary" @click="openReaderForm('READER_2')">
+                      <button v-if="currentRole === 'READER_2'" class="btn btn-primary" @click="openReaderForm('READER_2')" @keydown.enter="openReaderForm('READER_2')">
                         ✍️ Complete Reader 2 Assessment
                       </button>
                     </div>
@@ -531,10 +533,10 @@
 
             <!-- Criteria Checklist -->
             <div class="form-group">
-              <label>Confirmed Diagnostic Criteria Checklist:</label>
+              <label for="a11y-id-101">Confirmed Diagnostic Criteria Checklist:</label>
               <div class="criteria-checkbox-list">
                 <label v-for="(crit, idx) in availableCriteria" :key="idx" class="checkbox-item">
-                  <input type="checkbox" :value="crit" v-model="chairForm.criteria_confirmed" />
+                  <input id="a11y-id-101" type="checkbox" :value="crit" v-model="chairForm.criteria_confirmed" />
                   <span>{{ crit }}</span>
                 </label>
               </div>
@@ -564,7 +566,7 @@
                   <input id="chair-password" v-model="chairForm.password" type="password" class="text-input" placeholder="Confirm password to seal decision" />
                 </div>
               </div>
-              <button class="btn btn-primary btn-lg" :disabled="isSubmitting" @click="submitChairAdjudication">
+              <button class="btn btn-primary btn-lg" :disabled="isSubmitting" @click="submitChairAdjudication" @keydown.enter="submitChairAdjudication">
                 🖋️ Sign &amp; Finalize Tie-Breaker Adjudication
               </button>
             </div>
@@ -613,10 +615,10 @@
                 <input id="meeting-date-input" v-model="meetingForm.meeting_date" type="datetime-local" class="text-input" />
               </div>
               <div class="form-group">
-                <label>Attendance Checklist (Live Quorum Calc):</label>
+                <label for="a11y-id-102">Attendance Checklist (Live Quorum Calc):</label>
                 <div class="attendee-checkbox-list">
                   <label v-for="mem in activeCharter.eligible_members" :key="mem.member_id" class="checkbox-item">
-                    <input type="checkbox" :value="mem.member_id" v-model="meetingForm.selected_member_ids" />
+                    <input id="a11y-id-102" type="checkbox" :value="mem.member_id" v-model="meetingForm.selected_member_ids" />
                     <span>{{ mem.member_name }} ({{ mem.role }})</span>
                   </label>
                 </div>
@@ -639,7 +641,7 @@
               <textarea id="meeting-minutes-input" v-model="meetingForm.meeting_minutes" class="textarea-input" rows="3" placeholder="Record consensus discussions and formal committee votes..."></textarea>
             </div>
 
-            <button class="btn btn-primary" :disabled="!isQuorumMet || isSubmitting" @click="recordMeetingSession">
+            <button class="btn btn-primary" :disabled="!isQuorumMet || isSubmitting" @click="recordMeetingSession" @keydown.enter="recordMeetingSession">
               📝 Record Quorum &amp; Cryptographically Seal Minutes
             </button>
           </div>
@@ -656,10 +658,10 @@
             <p class="pane-sub">Compiled regulatory dataset mapped directly from validated consensus adjudication decisions.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-secondary" @click="compileSdtmCe">
+            <button class="btn btn-secondary" @click="compileSdtmCe" @keydown.enter="compileSdtmCe">
               🔄 Re-Compile SDTM CE
             </button>
-            <button class="btn btn-primary" @click="exportSdtmJson">
+            <button class="btn btn-primary" @click="exportSdtmJson" @keydown.enter="exportSdtmJson">
               💾 Export Dataset-JSON
             </button>
           </div>
@@ -712,11 +714,11 @@
     </section>
 
     <!-- Modal: Reader Assessment Input -->
-    <div v-if="showReaderModal" class="modal-backdrop" @click.self="showReaderModal = false">
+    <div role="button" tabindex="0" v-if="showReaderModal" class="modal-backdrop" @click.self="showReaderModal = false" @keydown.enter="showReaderModal = false">
       <div class="modal-dialog">
         <div class="modal-header">
           <h4 class="modal-title">Submit {{ activeReaderTarget }} Blinded Assessment</h4>
-          <button class="btn-close" @click="showReaderModal = false">&times;</button>
+          <button class="btn-close" @click="showReaderModal = false" @keydown.enter="showReaderModal = false">&times;</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -744,10 +746,10 @@
           </div>
 
           <div class="form-group">
-            <label>Diagnostic Criteria Satisfied:</label>
+            <label for="a11y-id-103">Diagnostic Criteria Satisfied:</label>
             <div class="criteria-checkbox-list">
               <label v-for="(crit, idx) in availableCriteria" :key="idx" class="checkbox-item">
-                <input type="checkbox" :value="crit" v-model="readerForm.criteria_met" />
+                <input id="a11y-id-103" type="checkbox" :value="crit" v-model="readerForm.criteria_met" />
                 <span>{{ crit }}</span>
               </label>
             </div>
@@ -764,8 +766,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showReaderModal = false">Cancel</button>
-          <button class="btn btn-primary" :disabled="isSubmitting" @click="submitReaderForm">
+          <button class="btn btn-secondary" @click="showReaderModal = false" @keydown.enter="showReaderModal = false">Cancel</button>
+          <button class="btn btn-primary" :disabled="isSubmitting" @click="submitReaderForm" @keydown.enter="submitReaderForm">
             Submit Blinded Assessment
           </button>
         </div>

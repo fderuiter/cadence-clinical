@@ -2,14 +2,14 @@
   <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
     <div class="tree-search-bar">
-      <input
+      <input aria-label="Input field"
         v-model="searchQuery"
         type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       >
       <div class="filter-controls">
-        <select
+        <select aria-label="Input field"
           v-model="selectedZoneFilter"
           class="zone-filter-select"
         >

@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="share-drawer-overlay"
-    @click.self="$emit('close')"
+    @click.self="$emit('close')" @keydown.enter="$emit('close')"
   >
     <div
       ref="drawerRef"
@@ -30,7 +30,7 @@
         <button
           class="close-drawer-btn"
           aria-label="Close share drawer"
-          @click="$emit('close')"
+          @click="$emit('close')" @keydown.enter="$emit('close')"
         >
           ✕
         </button>
@@ -41,7 +41,7 @@
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'internal' }"
-          @click="activeTab = 'internal'"
+          @click="activeTab = 'internal'" @keydown.enter="activeTab = 'internal'"
         >
           👥 Internal Share
         </button>
@@ -49,7 +49,7 @@
           v-if="!isBulk"
           class="tab-btn"
           :class="{ active: activeTab === 'guest' }"
-          @click="activeTab = 'guest'"
+          @click="activeTab = 'guest'" @keydown.enter="activeTab = 'guest'"
         >
           🌐 External Guest Link
         </button>
@@ -57,7 +57,7 @@
           v-if="!isBulk"
           class="tab-btn"
           :class="{ active: activeTab === 'active_grants' }"
-          @click="activeTab = 'active_grants'"
+          @click="activeTab = 'active_grants'" @keydown.enter="activeTab = 'active_grants'"
         >
           🛡️ Active Grants ({{ activeGrantsList.length }})
         </button>
@@ -93,11 +93,11 @@
                   v-if="showUserSuggestions && userSuggestions.length > 0"
                   class="suggestions-dropdown"
                 >
-                  <div
+                  <div role="button" tabindex="0"
                     v-for="sugg in userSuggestions"
                     :key="sugg.value"
                     class="suggestion-item"
-                    @click="selectSuggestion(sugg)"
+                    @click="selectSuggestion(sugg)" @keydown.enter="selectSuggestion(sugg)"
                   >
                     <span class="sugg-label">{{ sugg.label }}</span>
                     <span class="sugg-type">{{ sugg.type }}</span>
@@ -178,7 +178,7 @@
                 >
                 <span>Set Time-Bounded Expiration Date</span>
               </label>
-              <input
+              <input aria-label="Input field"
                 v-if="hasExpiry"
                 v-model="expiresAt"
                 type="datetime-local"
@@ -217,7 +217,7 @@
               <button
                 type="button"
                 class="btn btn-outline-secondary"
-                @click="$emit('close')"
+                @click="$emit('close')" @keydown.enter="$emit('close')"
               >
                 Cancel
               </button>
@@ -294,7 +294,7 @@
               <button
                 type="button"
                 class="btn btn-outline-secondary"
-                @click="$emit('close')"
+                @click="$emit('close')" @keydown.enter="$emit('close')"
               >
                 Cancel
               </button>
@@ -319,7 +319,7 @@
               <span class="expires-text">Expires in {{ guestExpiryHours }}h</span>
             </div>
             <div class="url-copy-box">
-              <input
+              <input aria-label="Input field"
                 type="text"
                 :value="generatedGuestUrl"
                 readonly
@@ -328,7 +328,7 @@
               <button
                 type="button"
                 class="btn btn-primary btn-copy-link"
-                @click="copyGuestUrl"
+                @click="copyGuestUrl" @keydown.enter="copyGuestUrl"
               >
                 {{ isCopied ? "✓ Copied!" : "📋 Copy Link" }}
               </button>
@@ -339,7 +339,7 @@
             <button
               type="button"
               class="btn btn-sm btn-outline-secondary mt-3"
-              @click="generatedGuestUrl = ''"
+              @click="generatedGuestUrl = ''" @keydown.enter="generatedGuestUrl = ''"
             >
               + Create Another Link
             </button>
@@ -386,7 +386,7 @@
                 <button
                   class="btn btn-sm btn-outline-danger btn-revoke-grant"
                   title="Revoke this grant"
-                  @click="initiateRevoke(grant)"
+                  @click="initiateRevoke(grant)" @keydown.enter="initiateRevoke(grant)"
                 >
                   Revoke
                 </button>
@@ -402,8 +402,8 @@
             <h4>Revoke Access Delegation</h4>
             <p>Are you sure you want to revoke access for <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?</p>
             <div class="form-group">
-              <label class="form-label required">Revocation Reason (21 CFR Part 11):</label>
-              <input
+              <label for="a11y-id-165" class="form-label required">Revocation Reason (21 CFR Part 11):</label>
+              <input id="a11y-id-165"
                 v-model="revokeReason"
                 type="text"
                 class="form-control"
@@ -415,7 +415,7 @@
               <button
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
-                @click="grantToRevoke = null"
+                @click="grantToRevoke = null" @keydown.enter="grantToRevoke = null"
               >
                 Cancel
               </button>
@@ -423,7 +423,7 @@
                 type="button"
                 class="btn btn-sm btn-danger btn-confirm-revoke"
                 :disabled="!revokeReason.trim()"
-                @click="confirmRevoke"
+                @click="confirmRevoke" @keydown.enter="confirmRevoke"
               >
                 Confirm Revocation
               </button>

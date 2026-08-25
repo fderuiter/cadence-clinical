@@ -34,13 +34,13 @@ export default defineConfig({
     {
       command: "pnpm --filter web dev",
       url: "http://localhost:3000/cadence-clinical/",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120000,
     },
     {
       command: "pnpm --filter subject-portal dev",
       url: "http://localhost:5174/subject-portal/",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120000,
     },
   ],

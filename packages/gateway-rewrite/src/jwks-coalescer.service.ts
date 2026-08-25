@@ -54,7 +54,7 @@ export class JwksCoalescerService implements OnModuleInit {
           });
           this.publicKeyCache.set(key, publicKey);
         }
-      } catch (e) {
+      } catch {
         // Ignore parsing errors (e.g. if the value is not a valid JWK or during reset/clearing)
       }
       return res;
@@ -271,7 +271,8 @@ export class JwksCoalescerService implements OnModuleInit {
         `Dynamic JWKS fetch failed for kid "${kid}": ${error.message}`
       );
       throw new Error(
-        `Failed to fetch public key for kid "${kid}": ${error.message}`
+        `Failed to fetch public key for kid "${kid}": ${error.message}`,
+        { cause: error }
       );
     } finally {
       this.inFlightFetches.delete(kid);
@@ -308,7 +309,7 @@ export class JwksCoalescerService implements OnModuleInit {
     try {
       header = JSON.parse(Buffer.from(headerB64, "base64url").toString("utf8"));
     } catch (e: any) {
-      throw new Error(`Invalid token header: ${e.message}`);
+      throw new Error(`Invalid token header: ${e.message}`, { cause: e });
     }
 
     const kid = header.kid;
@@ -337,7 +338,7 @@ export class JwksCoalescerService implements OnModuleInit {
         throw new Error("Cryptographic token signature verification failed.");
       }
     } catch (err: any) {
-      throw new Error(`Signature verification failed: ${err.message}`);
+      throw new Error(`Signature verification failed: ${err.message}`, { cause: err });
     }
 
     // 4. Decode payload and check expiration
@@ -347,7 +348,7 @@ export class JwksCoalescerService implements OnModuleInit {
         Buffer.from(payloadB64, "base64url").toString("utf8")
       );
     } catch (e: any) {
-      throw new Error(`Invalid token payload: ${e.message}`);
+      throw new Error(`Invalid token payload: ${e.message}`, { cause: e });
     }
 
     if (payload.exp && Date.now() / 1000 > payload.exp) {

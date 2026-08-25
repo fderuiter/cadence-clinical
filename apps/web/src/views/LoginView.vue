@@ -64,7 +64,7 @@
           <button
             class="btn btn-primary"
             style="padding: 10px 24px; font-weight: 600; cursor: pointer"
-            @click="goToLanding"
+            @click="goToLanding" @keydown.enter="goToLanding"
           >
             Go to My Workspace
           </button>
@@ -92,7 +92,7 @@
           </p>
 
           <div style="margin-bottom: 16px">
-            <label
+            <span class="form-label"
               style="
                 display: block;
                 font-size: 0.875rem;
@@ -102,8 +102,8 @@
               "
             >
               Create 4-to-6 Digit PIN:
-            </label>
-            <input
+            </span>
+            <input aria-label="Input field"
               v-model="pinInput"
               type="password"
               maxlength="6"
@@ -124,7 +124,7 @@
           </div>
 
           <div style="margin-bottom: 20px">
-            <label
+            <span class="form-label"
               style="
                 display: block;
                 font-size: 0.875rem;
@@ -134,8 +134,8 @@
               "
             >
               Confirm Recovery PIN:
-            </label>
-            <input
+            </span>
+            <input aria-label="Input field"
               v-model="pinConfirmInput"
               type="password"
               maxlength="6"
@@ -180,7 +180,7 @@
                 color: #475569;
                 border-radius: 4px;
               "
-              @click="cancelPinFlow"
+              @click="cancelPinFlow" @keydown.enter="cancelPinFlow"
             >
               Cancel
             </button>
@@ -193,7 +193,7 @@
                 font-weight: 600;
                 border-radius: 4px;
               "
-              @click="submitPinSetup"
+              @click="submitPinSetup" @keydown.enter="submitPinSetup"
             >
               Confirm & Save
             </button>
@@ -221,7 +221,7 @@
           </p>
 
           <div style="margin-bottom: 16px">
-            <label
+            <span class="form-label"
               style="
                 display: block;
                 font-size: 0.875rem;
@@ -231,8 +231,8 @@
               "
             >
               Select Local User Profile:
-            </label>
-            <select
+            </span>
+            <select aria-label="Input field"
               v-model="selectedUserToUnlock"
               class="form-control"
               style="
@@ -255,7 +255,7 @@
           </div>
 
           <div style="margin-bottom: 20px">
-            <label
+            <span class="form-label"
               style="
                 display: block;
                 font-size: 0.875rem;
@@ -265,8 +265,8 @@
               "
             >
               Enter 4-to-6 Digit PIN:
-            </label>
-            <input
+            </span>
+            <input aria-label="Input field"
               v-model="unlockPin"
               type="password"
               maxlength="6"
@@ -311,7 +311,7 @@
                 cursor: pointer;
                 border-radius: 4px;
               "
-              @click="submitPinUnlock"
+              @click="submitPinUnlock" @keydown.enter="submitPinUnlock"
             >
               Unlock Queue & Sync
             </button>
@@ -327,7 +327,7 @@
                 color: #475569;
                 border-radius: 4px;
               "
-              @click="cancelPinFlow"
+              @click="cancelPinFlow" @keydown.enter="cancelPinFlow"
             >
               Back to Main Login
             </button>
@@ -345,7 +345,7 @@
                 border-radius: 4px;
                 margin-top: 10px;
               "
-              @click="purgeUserEscrow"
+              @click="purgeUserEscrow" @keydown.enter="purgeUserEscrow"
             >
               Purge User Escrow Key (Discard Queue)
             </button>
@@ -385,7 +385,7 @@
                 cursor: pointer;
                 border-radius: 4px;
               "
-              @click="initiateLoginFlow('keycloak')"
+              @click="initiateLoginFlow('keycloak')" @keydown.enter="initiateLoginFlow('keycloak')"
             >
               🔐 Authenticate via Keycloak
             </button>
@@ -403,7 +403,7 @@
                 cursor: pointer;
                 border-radius: 4px;
               "
-              @click="initiateLoginFlow('demo')"
+              @click="initiateLoginFlow('demo')" @keydown.enter="initiateLoginFlow('demo')"
             >
               💻 Access via Offline Demo Mode
             </button>
@@ -422,7 +422,7 @@
                 cursor: pointer;
                 border-radius: 4px;
               "
-              @click="showPinUnlock = true"
+              @click="showPinUnlock = true" @keydown.enter="showPinUnlock = true"
             >
               🔑 Restore Dormant Queue ({{ existingUsers.length }} Cached)
             </button>

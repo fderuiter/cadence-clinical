@@ -1,12 +1,12 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-keyboard-click="selectField"
     class="canvas-field-widget"
     :class="{
       'is-selected': isSelected,
       'has-warning': hasWarning,
     }"
-    @click="selectField"
+    @click="selectField" @keydown.enter="selectField"
   >
     <!-- Field Header / Metadata -->
     <div class="field-widget-top">
@@ -38,12 +38,12 @@
     </div>
 
     <!-- Interactive Field Preview -->
-    <div
+    <div role="button" tabindex="0"
       class="field-preview-container"
-      @click.stop="selectField"
+      @click.stop="selectField" @keydown.enter="selectField"
     >
       <template v-if="field.type === 'text'">
-        <input
+        <input aria-label="Input field"
           type="text"
           disabled
           class="field-preview-input"
@@ -55,7 +55,7 @@
       </template>
 
       <template v-else-if="field.type === 'numeric'">
-        <input
+        <input aria-label="Input field"
           type="number"
           disabled
           class="field-preview-input"
@@ -67,7 +67,7 @@
       </template>
 
       <template v-else-if="field.type === 'date'">
-        <input
+        <input aria-label="Input field"
           type="date"
           disabled
           class="field-preview-input"
@@ -78,7 +78,7 @@
       </template>
 
       <template v-else-if="field.type === 'select'">
-        <select
+        <select aria-label="Input field"
           disabled
           class="field-preview-input"
           :class="{
@@ -238,7 +238,7 @@
           padding: 2px 4px;
         "
         title="Duplicate Field"
-        @click.stop="$emit('duplicate-field', field.id)"
+        @click.stop="$emit('duplicate-field', field.id)" @keydown.enter="$emit('duplicate-field', field.id)"
       >
         Duplicate
       </button>
@@ -253,7 +253,7 @@
           padding: 2px 4px;
         "
         title="Inspect Properties"
-        @click.stop="$emit('select-field', field.id)"
+        @click.stop="$emit('select-field', field.id)" @keydown.enter="$emit('select-field', field.id)"
       >
         Inspect
       </button>
@@ -268,7 +268,7 @@
           padding: 2px 4px;
         "
         title="Delete Field"
-        @click.stop="$emit('delete-field', field.id)"
+        @click.stop="$emit('delete-field', field.id)" @keydown.enter="$emit('delete-field', field.id)"
       >
         Delete
       </button>

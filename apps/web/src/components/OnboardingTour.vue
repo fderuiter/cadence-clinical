@@ -5,7 +5,7 @@
     style="position: relative; z-index: 1000"
   >
     <!-- Translucent backdrop only on steps 1 and 5 to highlight onboarding introduction/completion without blocking interaction during edits -->
-    <div
+    <div role="button" tabindex="0"
       v-if="currentStep === 1 || currentStep === 5"
       class="onboarding-backdrop"
       style="
@@ -17,7 +17,7 @@
         background-color: rgba(0, 0, 0, 0.4);
         z-index: 998;
       "
-      @click="onboardingStore.dismissTour()"
+      @click="onboardingStore.dismissTour()" @keydown.enter="onboardingStore.dismissTour()"
     />
 
     <!-- The Popover Box -->
@@ -125,7 +125,7 @@
               cursor: pointer;
               background: white;
             "
-            @click="onboardingStore.dismissTour()"
+            @click="onboardingStore.dismissTour()" @keydown.enter="onboardingStore.dismissTour()"
           >
             Dismiss
           </button>
@@ -140,7 +140,7 @@
               cursor: pointer;
               background: white;
             "
-            @click="onboardingStore.prevStep()"
+            @click="onboardingStore.prevStep()" @keydown.enter="onboardingStore.prevStep()"
           >
             Back
           </button>
@@ -159,7 +159,7 @@
               cursor: pointer;
               text-decoration: underline;
             "
-            @click="onboardingStore.disableTour()"
+            @click="onboardingStore.disableTour()" @keydown.enter="onboardingStore.disableTour()"
           >
             Don't show again
           </button>
@@ -177,7 +177,7 @@
               cursor: pointer;
               font-weight: 600;
             "
-            @click="handleNext"
+            @click="handleNext" @keydown.enter="handleNext"
           >
             Next
           </button>
@@ -194,7 +194,7 @@
               cursor: pointer;
               font-weight: 600;
             "
-            @click="handleComplete"
+            @click="handleComplete" @keydown.enter="handleComplete"
           >
             Complete
           </button>

@@ -1,8 +1,8 @@
 <template>
-  <div
+  <div role="button" tabindex="0"
     v-if="isOpen"
     class="drawer-backdrop"
-    @click.self="close"
+    @click.self="close" @keydown.enter="close"
   >
     <div
       class="drawer-panel"
@@ -458,14 +458,14 @@
                 <span>🔒 Internal Sponsor Note</span>
               </label>
             </div>
-            <textarea
+            <textarea aria-label="Input field"
               v-model="newCommentContent"
               rows="3"
               class="form-control"
               placeholder="Add a clinical note, investigator response, or internal audit review..."
             />
             <div class="comment-submit-row">
-              <input
+              <input aria-label="Input field"
                 v-model="newCommentReason"
                 type="text"
                 class="form-control flex-1"
@@ -500,13 +500,13 @@
               CFR Part 11 &amp; DEID scanned).
             </p>
             <div class="upload-inputs">
-              <input
+              <input aria-label="Input field"
                 ref="fileInput"
                 type="file"
                 class="file-input"
                 @change="onFileSelected"
               >
-              <input
+              <input aria-label="Input field"
                 v-model="attachmentReason"
                 type="text"
                 class="form-control"
@@ -666,10 +666,10 @@
     </div>
 
     <!-- Protocol Document Viewer Modal -->
-    <div
+    <div role="button" tabindex="0"
       v-if="isCitationViewerOpen && activeCitation"
       class="citation-modal-backdrop"
-      @click.self="closeCitationViewer"
+      @click.self="closeCitationViewer" @keydown.enter="closeCitationViewer"
     >
       <div
         class="citation-modal-panel"

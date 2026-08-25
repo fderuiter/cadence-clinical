@@ -101,21 +101,21 @@
 
           <!-- Choices/Options Builder -->
           <div class="options-builder">
-            <label>Answer Choices (Select the radio button for the correct
-              choice):</label>
+            <span class="form-label">Answer Choices (Select the radio button for the correct
+              choice):</span>
             <div
               v-for="(opt, optIndex) in q.options"
               :key="optIndex"
               class="option-row"
             >
-              <input
+              <input aria-label="Input field"
                 type="radio"
                 :name="'correct-opt-' + q.id"
                 :checked="q.correctAnswerIndex === optIndex"
                 title="Mark as correct answer"
                 @change="q.correctAnswerIndex = optIndex"
               >
-              <input
+              <input aria-label="Input field"
                 v-model="q.options[optIndex]"
                 type="text"
                 :placeholder="'Option ' + (optIndex + 1)"
