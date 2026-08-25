@@ -10,6 +10,7 @@ Validates:
 6. Stateless microservice execution with caller-managed execution state context.
 """
 
+import os
 import time
 
 from fastapi.testclient import TestClient
@@ -20,7 +21,9 @@ from packages.security.signing import generate_gateway_signature
 
 client = TestClient(app)
 
-GATEWAY_SECRET = b"internal-gateway-secret-12345"
+GATEWAY_SECRET = (
+    os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+).encode()
 
 
 def build_auth_headers(
