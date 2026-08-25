@@ -10,6 +10,9 @@ from apps.designer.domain.synthesis.crf_synthesizer import (
     synthesize_crf_layout_from_usdm,
     synthesize_domain_rules,
 )
+from apps.designer.domain.synthesis.faithfulness import (
+    evaluate_synthesis_faithfulness,
+)
 from apps.designer.domain.synthesis.soa_compiler import (
     SoACompiler,
     compile_soa_matrix_payload,
@@ -23,6 +26,7 @@ __all__ = [
     "SynthesizedField",
     "SynthesizedRule",
     "compile_soa_matrix_payload",
+    "evaluate_synthesis_faithfulness",
     "resolve_widget_representation",
     "synthesize_crf_layout_from_usdm",
     "synthesize_domain_rules",

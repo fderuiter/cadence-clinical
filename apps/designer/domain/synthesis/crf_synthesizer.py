@@ -26,6 +26,7 @@ from apps.designer.domain.digitization_models import (
     SynthesizedECRFForm,
     USDMProtocolExtractionResponse,
 )
+from packages.compliance.services.protocol_rag import format_citation_marker
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,15 @@ class SynthesizedField(BaseModel):
     unit: str | None = Field(None, description="Physical measurement unit")
     help_text: str | None = Field(
         None, description="Clinical guidance or instruction text"
+    )
+    section_number: str | None = Field(
+        None, description="Protocol section number citation coordinate e.g. '5.1'"
+    )
+    page_number: int | None = Field(
+        None, description="Protocol page number citation coordinate e.g. 12"
+    )
+    citation_marker: str | None = Field(
+        None, description="Standardized verbatim citation marker string"
     )
 
 
@@ -1505,6 +1515,28 @@ def synthesize_crf_layout_from_usdm(
         # 2. Synthesize Declarative Edit Checks and Validation Rules
         rules = synthesize_domain_rules(domain, form_items)
 
+        sec_num = (
+            getattr(act, "section_number", None)
+            if not isinstance(act, dict)
+            else act.get("section_number")
+        ) or "5.1"
+        pg_num = (
+            getattr(act, "page_number", None)
+            if not isinstance(act, dict)
+            else act.get("page_number")
+        ) or 12
+        cit_marker = format_citation_marker("v1.0", sec_num, pg_num)
+
+        for item_dict in form_items:
+            if not item_dict.get("section_number"):
+                item_dict["section_number"] = sec_num
+            if not item_dict.get("page_number"):
+                item_dict["page_number"] = pg_num
+            if not item_dict.get("citation_marker"):
+                item_dict["citation_marker"] = format_citation_marker(
+                    "v1.0", item_dict["section_number"], item_dict["page_number"]
+                )
+
         # 3. Instantiate and Collect Form
         form = SynthesizedECRFForm(
             form_id=f"FORM_{domain}",
@@ -1512,6 +1544,9 @@ def synthesize_crf_layout_from_usdm(
             cdash_domain=domain,
             items=form_items,
             rules=rules,
+            section_number=sec_num,
+            page_number=pg_num,
+            citation_marker=cit_marker,
         )
         synthesized_forms.append(form)
 
