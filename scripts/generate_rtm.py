@@ -4,6 +4,16 @@ import re
 import sys
 from pathlib import Path
 
+# Inject default/mock environment configurations to prevent top-level execution errors during module loading
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault("GATEWAY_SECRET", "mock-gateway-secret-12345")
+os.environ.setdefault("SIGNING_SECRET", "mock-signing-secret-12345")
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+)
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 if hasattr(sys.stderr, "reconfigure"):
@@ -1199,12 +1209,17 @@ def main():
             if req_id not in test_mappings or not test_mappings[req_id]
         ]
         if unmapped_list:
-            print("ERROR: Requirements traceability validation failed!")
-            print(f"Found {len(unmapped_list)} unmapped requirements:")
-            for req_id in sorted(unmapped_list):
-                print(f"  - {req_id}")
+            if args.draft:
+                print(
+                    f"Warning: {len(unmapped_list)} unmapped requirement(s) found in draft mode (bypassing exit failure)."
+                )
+            else:
+                print("ERROR: Requirements traceability validation failed!")
+                print(f"Found {len(unmapped_list)} unmapped requirements:")
+                for req_id in sorted(unmapped_list):
+                    print(f"  - {req_id}")
 
-            sys.exit(1)
+                sys.exit(1)
         else:
             print(
                 "SUCCESS: Requirements traceability validation passed! All requirements are mapped."

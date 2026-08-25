@@ -193,6 +193,7 @@ ALLOWED_ROOT_FILES = {
     "TEST_INFRA.md",
     "CONTEXT.md",
     "REPORT.md",
+    "SECURITY.md",
     ".env.example",
 }
 

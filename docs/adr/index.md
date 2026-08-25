@@ -401,3 +401,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-23: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite](2026-08-23-clinical-endpoint-adjudication-committee-cec-dossier-and-2plus1-blinded-review-suite.md)
 - [2026-08-24: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails](2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
 - [2026-08-24: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
+- [2026-08-25: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer](2026-08-25-standardize-microservice-domain-exceptions-rfc-7807-handlers-and-repository-layer.md)
