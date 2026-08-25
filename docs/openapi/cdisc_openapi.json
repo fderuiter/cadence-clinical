@@ -1012,6 +1012,90 @@
         }
       }
     },
+    "/ai_gateway/api/v1/ai/reasoning/multi-step": {
+      "post": {
+        "tags": [
+          "Clinical Reasoning"
+        ],
+        "summary": "Execute multi-step clinical reasoning planning loop with grounded citations",
+        "description": "Executes a multi-step clinical reasoning workflow for protocol synthesis and patient data.\n\nEnforces:\n- Multi-step planning loops breaking down trial queries into discrete steps\n- In-flight PHI masking using temporary surrogate tokens for intermediate steps\n- Evaluation of protocol citations and 85% confidence threshold gate (fail-closed)\n- Stateless persistence with caller-managed execution state context\n- Staging generated clinical records into draft state requiring human e-signature\n- Mandatory tenant and audit context validation",
+        "operationId": "Ai_gateway_execute_multi_step_reasoning_api_v1_ai_reasoning_multi_step_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ai_gateway_ClinicalReasoningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_ClinicalReasoningResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/api/v1/ai/reasoning/plan": {
+      "post": {
+        "tags": [
+          "Clinical Reasoning"
+        ],
+        "summary": "Initialize or advance a caller-managed multi-step clinical reasoning plan",
+        "description": "Initialize or advance a multi-step clinical reasoning loop statelessly.",
+        "operationId": "Ai_gateway_plan_clinical_reasoning_api_v1_ai_reasoning_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ai_gateway_ClinicalReasoningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_ClinicalReasoningResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ai_gateway/healthz": {
       "get": {
         "summary": "Health Check",
@@ -55430,6 +55514,271 @@
         "title": "ChatMessageDTO",
         "description": "Chat message transfer object."
       },
+      "Ai_gateway_ClinicalReasoningRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query",
+            "description": "Complex clinical trial reasoning query."
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Mandatory tenant isolation identifier."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Target study identifier."
+          },
+          "protocol_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Protocol Chunks",
+            "description": "Clinical trial protocol chunks for citation verification."
+          },
+          "patient_records": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Records",
+            "description": "Patient records or clinical context containing sensitive identifiers."
+          },
+          "execution_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Ai_gateway_ExecutionStateContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Caller-managed execution state context for stateless continuation."
+          },
+          "min_citation_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Citation Confidence",
+            "description": "Minimum required citation confidence score (default 0.85).",
+            "default": 0.85
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          },
+          "esignature_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Context",
+            "description": "Electronic signature & audit context passed across execution steps."
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "tenant_id"
+        ],
+        "title": "ClinicalReasoningRequest",
+        "description": "Inbound request for multi-step clinical trial reasoning."
+      },
+      "Ai_gateway_ClinicalReasoningResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Execution status ('DRAFT_STAGED', 'REJECTED_LOW_CONFIDENCE', 'COMPLETED', 'ERROR')."
+          },
+          "draft_record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Ai_gateway_DraftClinicalRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Staged draft clinical record (None if rejected or low confidence)."
+          },
+          "reasoning_chain": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ReasoningStepState"
+            },
+            "type": "array",
+            "title": "Reasoning Chain",
+            "description": "Discrete multi-step planning loop execution history."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Extracted & verified protocol citations."
+          },
+          "overall_faithfulness_score": {
+            "type": "number",
+            "title": "Overall Faithfulness Score",
+            "description": "Overall citation confidence score (0.0 to 1.0)."
+          },
+          "is_citation_verified": {
+            "type": "boolean",
+            "title": "Is Citation Verified",
+            "description": "True if overall faithfulness >= min_citation_confidence."
+          },
+          "phi_masking_applied": {
+            "type": "boolean",
+            "title": "Phi Masking Applied",
+            "description": "True if PHI masking was applied to intermediate steps."
+          },
+          "phi_tokens_masked": {
+            "type": "integer",
+            "title": "Phi Tokens Masked",
+            "description": "Total surrogate PHI tokens masked during execution."
+          },
+          "execution_state": {
+            "$ref": "#/components/schemas/Ai_gateway_ExecutionStateContext",
+            "description": "Updated caller-managed execution state context."
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used",
+            "description": "AI model used.",
+            "default": "tier-3-frontier-reasoning"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Latency in milliseconds.",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "overall_faithfulness_score",
+          "is_citation_verified",
+          "phi_masking_applied",
+          "phi_tokens_masked",
+          "execution_state"
+        ],
+        "title": "ClinicalReasoningResponse",
+        "description": "Outbound response containing staged draft record, reasoning chain, and telemetry."
+      },
+      "Ai_gateway_DraftClinicalRecord": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Unique draft record identifier."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Draft clinical record title."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Associated study ID."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Draft state status requiring explicit human review/signature before release.",
+            "default": "DRAFT_STAGED"
+          },
+          "synthesized_guidelines": {
+            "type": "string",
+            "title": "Synthesized Guidelines",
+            "description": "Synthesized clinical guidelines and protocol analysis."
+          },
+          "eligibility_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Eligibility Criteria",
+            "description": "Extracted eligibility criteria."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Grounded verbatim protocol citations."
+          },
+          "requires_esignature": {
+            "type": "boolean",
+            "title": "Requires Esignature",
+            "description": "Mandates explicit human review and e-signature authorization.",
+            "default": true
+          },
+          "created_by_agent": {
+            "type": "string",
+            "title": "Created By Agent",
+            "description": "Agent version identifier.",
+            "default": "HybridClinicalReasoningAgent/v1"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 creation timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "title",
+          "synthesized_guidelines",
+          "created_at"
+        ],
+        "title": "DraftClinicalRecord",
+        "description": "Generated clinical trial record staged in draft state requiring human review."
+      },
       "Ai_gateway_EmbeddingRequestDTO": {
         "properties": {
           "input_texts": {
@@ -55558,6 +55907,73 @@
         ],
         "title": "EmbeddingResponseDTO",
         "description": "Outbound DTO containing generated float vector embeddings."
+      },
+      "Ai_gateway_ExecutionStateContext": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique reasoning session correlation identifier."
+          },
+          "current_step_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Current Step Index",
+            "description": "Index of the active reasoning step.",
+            "default": 0
+          },
+          "total_steps": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Total Steps",
+            "description": "Total planned steps in the reasoning workflow.",
+            "default": 5
+          },
+          "completed_steps": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ReasoningStepState"
+            },
+            "type": "array",
+            "title": "Completed Steps",
+            "description": "List of previously completed reasoning steps."
+          },
+          "patient_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Context",
+            "description": "Optional raw or masked patient record context."
+          },
+          "protocol_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Protocol Chunks",
+            "description": "Target clinical protocol context chunks."
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Arbitrary caller-supplied execution metadata."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "ExecutionStateContext",
+        "description": "Caller-managed execution state context enabling stateless microservice persistence."
       },
       "Ai_gateway_GenerationRequestDTO": {
         "properties": {
@@ -56026,6 +56442,91 @@
         ],
         "title": "ProtocolRAGResponse",
         "description": "Outbound response containing grounded answer, citations, and faithfulness telemetry."
+      },
+      "Ai_gateway_ReasoningStepState": {
+        "properties": {
+          "step_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Step Index",
+            "description": "0-indexed step number in reasoning loop."
+          },
+          "step_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Ai_gateway_ReasoningStepType"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Step Type",
+            "description": "Category/type of reasoning step."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Human-readable title of step."
+          },
+          "input_summary": {
+            "type": "string",
+            "title": "Input Summary",
+            "description": "Summary of inputs passed into step."
+          },
+          "output_text": {
+            "type": "string",
+            "title": "Output Text",
+            "description": "Output generated during this reasoning step."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Execution status ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED').",
+            "default": "COMPLETED"
+          },
+          "has_phi_masked": {
+            "type": "boolean",
+            "title": "Has Phi Masked",
+            "description": "True if patient identifiers were masked in this step.",
+            "default": false
+          },
+          "masked_tokens_count": {
+            "type": "integer",
+            "title": "Masked Tokens Count",
+            "description": "Count of surrogate tokens replaced during step execution.",
+            "default": 0
+          },
+          "step_citations": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ParsedCitation"
+            },
+            "type": "array",
+            "title": "Step Citations",
+            "description": "Protocol citations extracted/verified in this step."
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_index",
+          "step_type",
+          "title",
+          "input_summary",
+          "output_text"
+        ],
+        "title": "ReasoningStepState",
+        "description": "Representation of an individual step in the multi-step planning loop."
+      },
+      "Ai_gateway_ReasoningStepType": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "extraction",
+          "synthesis",
+          "verification",
+          "draft_staging"
+        ],
+        "title": "ReasoningStepType",
+        "description": "Types of steps in a multi-step clinical reasoning planning loop."
       },
       "Ai_gateway_TierInfoDTO": {
         "properties": {
