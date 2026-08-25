@@ -40,6 +40,7 @@ from apps.tickets.presentation.routers.tickets import (
     router as tickets_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -59,6 +60,8 @@ app = FastAPI(
         shutdown_hooks=[stop_background_ticket_escalation],
     ),
 )
+
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)

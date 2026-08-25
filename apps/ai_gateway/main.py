@@ -25,6 +25,7 @@ from apps.ai_gateway.presentation.routers.rag import (
 from apps.ai_gateway.presentation.routers.reasoning import (
     router as reasoning_router,
 )
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -37,6 +38,8 @@ app = FastAPI(
     description="Centralized AI routing, tier management, structured output extraction, and embeddings.",
     version="0.1.0",
 )
+
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway HMAC authentication middleware
 app.add_middleware(GatewayAuthMiddleware)

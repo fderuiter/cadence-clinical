@@ -26,6 +26,7 @@ from apps.fileshare.workers.transcode_worker import (
     stop_transcode_worker,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -45,6 +46,8 @@ app = FastAPI(
         shutdown_hooks=[stop_transcode_worker],
     ),
 )
+
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)

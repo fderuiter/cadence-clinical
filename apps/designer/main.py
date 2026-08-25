@@ -177,6 +177,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.driver = None
 
 
+from packages.hexagonal import register_rfc7807_handlers
+
 validate_branding("designer")
 app = FastAPI(
     title=f"{BRAND_NAME} - Designer (MDR/SDR)",
@@ -184,6 +186,7 @@ app = FastAPI(
     lifespan=lifespan,
     dependencies=[Depends(gxp_audit_enforcement_filter)],
 )
+register_rfc7807_handlers(app)
 
 app.add_middleware(GatewayAuthMiddleware)
 

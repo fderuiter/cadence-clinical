@@ -320,26 +320,23 @@ async def add_fee_schedule(
 ) -> FeeScheduleResponse:
     """Adds a procedure reimbursement rate item to the contract fee schedule."""
     check_financial_write_access(principal)
-    try:
-        schedule = await engine.add_fee_schedule(
-            contract_id=contract_id,
-            visit_code=payload.visit_code,
-            procedure_code=payload.procedure_code,
-            procedure_name=payload.procedure_name,
-            base_amount=payload.base_amount,
-            activity_id=payload.activity_id,
-            form_id=payload.form_id,
-            overhead_percentage=payload.overhead_percentage,
-            withholding_percentage=payload.withholding_percentage,
-            patient_stipend=payload.patient_stipend,
-            travel_reimbursement=payload.travel_reimbursement,
-            requires_sdv=payload.requires_sdv,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Fee schedule addition",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    schedule = await engine.add_fee_schedule(
+        contract_id=contract_id,
+        visit_code=payload.visit_code,
+        procedure_code=payload.procedure_code,
+        procedure_name=payload.procedure_name,
+        base_amount=payload.base_amount,
+        activity_id=payload.activity_id,
+        form_id=payload.form_id,
+        overhead_percentage=payload.overhead_percentage,
+        withholding_percentage=payload.withholding_percentage,
+        patient_stipend=payload.patient_stipend,
+        travel_reimbursement=payload.travel_reimbursement,
+        requires_sdv=payload.requires_sdv,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Fee schedule addition",
+    )
 
     return map_fee_schedule_response(schedule)
 
@@ -385,16 +382,13 @@ async def configure_split_payees(
 ) -> list[SplitPayeeConfigResponse]:
     """Configures multi-party split payee allocation percentages (must sum to 100%)."""
     check_financial_write_access(principal)
-    try:
-        payees = await engine.configure_split_payees(
-            contract_id=contract_id,
-            payees=payload.payees,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Configured split payees",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    payees = await engine.configure_split_payees(
+        contract_id=contract_id,
+        payees=payload.payees,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Configured split payees",
+    )
 
     return [map_split_payee_response(p) for p in payees]
 
@@ -433,22 +427,19 @@ async def ingest_ecrf_submission_event(
     principal: Principal = Depends(get_principal),
 ) -> list[PayableResponse]:
     """Real-time event listener ingesting eCRF submission to trigger payables."""
-    try:
-        payables = await engine.process_ecrf_submission_event(
-            study_id=event.study_id,
-            site_id=event.site_id,
-            subject_id=event.subject_id,
-            visit_code=event.visit_code,
-            form_id=event.form_id,
-            event_id=event.event_id,
-            timestamp=event.timestamp,
-            actor_id=event.actor_id,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "EDC eCRF Submission Trigger",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    payables = await engine.process_ecrf_submission_event(
+        study_id=event.study_id,
+        site_id=event.site_id,
+        subject_id=event.subject_id,
+        visit_code=event.visit_code,
+        form_id=event.form_id,
+        event_id=event.event_id,
+        timestamp=event.timestamp,
+        actor_id=event.actor_id,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "EDC eCRF Submission Trigger",
+    )
 
     return [map_payable_response(p) for p in payables]
 
@@ -464,22 +455,19 @@ async def ingest_cra_sdv_verification_event(
     principal: Principal = Depends(get_principal),
 ) -> PayableResponse | None:
     """Real-time event listener ingesting CRA SDV verification to unlock payables."""
-    try:
-        payable = await engine.process_cra_sdv_verification_event(
-            study_id=event.study_id,
-            site_id=event.site_id,
-            subject_id=event.subject_id,
-            visit_code=event.visit_code,
-            verified_by=event.verified_by,
-            event_id=event.event_id,
-            form_id=event.form_id,
-            timestamp=event.timestamp,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "CRA SDV Verification Trigger",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    payable = await engine.process_cra_sdv_verification_event(
+        study_id=event.study_id,
+        site_id=event.site_id,
+        subject_id=event.subject_id,
+        visit_code=event.visit_code,
+        verified_by=event.verified_by,
+        event_id=event.event_id,
+        form_id=event.form_id,
+        timestamp=event.timestamp,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "CRA SDV Verification Trigger",
+    )
 
     return map_payable_response(payable) if payable else None
 
@@ -495,22 +483,19 @@ async def ingest_milestone_completion_event(
     principal: Principal = Depends(get_principal),
 ) -> PayableResponse:
     """Real-time event listener ingesting CTMS milestone completion."""
-    try:
-        payable = await engine.process_milestone_completion_event(
-            study_id=event.study_id,
-            site_id=event.site_id,
-            milestone_code=event.milestone_code,
-            milestone_name=event.milestone_name,
-            amount=event.amount,
-            verified_by=event.verified_by,
-            event_id=event.event_id,
-            timestamp=event.timestamp,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Milestone Trigger",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    payable = await engine.process_milestone_completion_event(
+        study_id=event.study_id,
+        site_id=event.site_id,
+        milestone_code=event.milestone_code,
+        milestone_name=event.milestone_name,
+        amount=event.amount,
+        verified_by=event.verified_by,
+        event_id=event.event_id,
+        timestamp=event.timestamp,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Milestone Trigger",
+    )
 
     return map_payable_response(payable)
 
@@ -640,15 +625,12 @@ async def approve_payable(
 ) -> PayableResponse:
     """Approves a payable for disbursement."""
     check_financial_write_access(principal)
-    try:
-        payable = await engine.approve_payable(
-            payable_id=payable_id,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Approved payable",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    payable = await engine.approve_payable(
+        payable_id=payable_id,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Approved payable",
+    )
 
     return map_payable_response(payable)
 
@@ -682,20 +664,17 @@ async def release_holdback_reserves(
 ) -> HoldbackReleaseResponse:
     """Releases holdback retention reserves with dual DM and Quality oversight sign-offs."""
     check_financial_write_access(principal)
-    try:
-        res = await engine.release_holdback_reserves(
-            study_id=payload.study_id,
-            site_id=payload.site_id,
-            release_reason=payload.release_reason,
-            dm_signoff_by=payload.dm_signoff_by,
-            quality_signoff_by=payload.quality_signoff_by,
-            holdback_ids=payload.holdback_ids,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or payload.release_reason,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    res = await engine.release_holdback_reserves(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        release_reason=payload.release_reason,
+        dm_signoff_by=payload.dm_signoff_by,
+        quality_signoff_by=payload.quality_signoff_by,
+        holdback_ids=payload.holdback_ids,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or payload.release_reason,
+    )
 
     return HoldbackReleaseResponse(
         study_id=res["study_id"],

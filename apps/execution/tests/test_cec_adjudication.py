@@ -156,7 +156,7 @@ async def test_cec_custom_chair_determination_workflow():
             adjudication_rationale="Clinical presentation indeterminate between prolonged TIA and aborted minor stroke without neuroimaging confirmation.",
             signer_name="Dr. Evelyn Reed, MD, Chair",
             signature_meaning="I confirm this clinical endpoint adjudication determination is final, complete, and accurate per charter guidelines",
-            password="ChairSecurePassword123!",
+            password="ChairSecurePassword123!",  # pragma: allowlist secret
         )
         await session.commit()
         await session.refresh(record)

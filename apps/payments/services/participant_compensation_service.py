@@ -20,6 +20,12 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.payments.domain.exceptions import (
+    ClaimNotFoundError,
+    LaySummaryNotFoundError,
+    PaymentsValidationError,
+    WalletNotFoundError,
+)
 from apps.payments.domain.models import AuditAction, ReceiptOcrResult
 from apps.payments.infrastructure.models import (
     LaySummaryModel,
@@ -184,7 +190,9 @@ class ParticipantCompensationService:
         """Updates payment payout preferences on a participant wallet."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet with ID '{wallet_id}' not found.")
+            raise WalletNotFoundError(
+                f"Participant wallet with ID '{wallet_id}' not found."
+            )
 
         prev_state = {
             "virtual_card_mask": wallet.virtual_card_mask,
@@ -245,7 +253,7 @@ class ParticipantCompensationService:
         """Provisions an automated reloadable debit card linked to the participant wallet."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         card_token = f"CARDTOK-{uuid.uuid4().hex[:12].upper()}"
         last_four = f"{uuid.uuid4().int % 9000 + 1000}"
@@ -306,7 +314,7 @@ class ParticipantCompensationService:
         """Provides real-time multi-channel balance inquiries for mobile app, web, and debit card networks."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         pending_total = sum(
             c.net_amount
@@ -338,7 +346,7 @@ class ParticipantCompensationService:
         """Monitors IRS Form 1099 reporting threshold ($600 annual cap) and W-9 validation triggers."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         taxable_ytd = wallet.taxable_ytd
         limit = 600.0
@@ -382,10 +390,10 @@ class ParticipantCompensationService:
         """Submits IRS Form W-9 certification when participant reaches or approaches $600 threshold."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         if not certify_accurate:
-            raise ValueError(
+            raise PaymentsValidationError(
                 "Taxpayer certification must be acknowledged to submit Form W-9."
             )
 
@@ -439,7 +447,7 @@ class ParticipantCompensationService:
         """Processes coordinator verification of submitted Form W-9."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         wallet.w9_status = "VERIFIED"
         now = datetime.now(UTC)
@@ -488,7 +496,7 @@ class ParticipantCompensationService:
     ) -> ParticipantStipendRuleModel:
         """Creates or updates an SoA-linked participant visit stipend compensation rule."""
         if anti_coercion_cap is not None and amount > anti_coercion_cap:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Stipend amount ${amount:.2f} exceeds IRB/ethics anti-coercion cap of ${anti_coercion_cap:.2f} (PRD-SYS-182/45 CFR 46)."
             )
 
@@ -638,7 +646,7 @@ class ParticipantCompensationService:
                 details=f"Visit {visit_code} stipend ${rule.amount:.2f} exceeds IRB anti-coercion cap ${rule.anti_coercion_cap:.2f}.",
                 version_index=1,
             )
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Stipend amount ${rule.amount:.2f} exceeds IRB/ethics anti-coercion cap of ${rule.anti_coercion_cap:.2f} (PRD-SYS-182/45 CFR 46)."
             )
 
@@ -656,7 +664,7 @@ class ParticipantCompensationService:
             wallet.anti_coercion_cap is not None
             and rule.amount > wallet.anti_coercion_cap
         ):
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Stipend amount ${rule.amount:.2f} exceeds wallet IRB anti-coercion cap of ${wallet.anti_coercion_cap:.2f}."
             )
 
@@ -782,7 +790,7 @@ class ParticipantCompensationService:
         if not text:
             text = (
                 "METRO TRANSIT AUTHORITY\n"
-                "Date: 2026-08-23\n"
+                "Date: 2026-08-23\n"  # deid-ignore
                 "Route: Clinical Trial Center Express\n"
                 "Total: $28.50\n"
                 "Card: **** 4821\n"
@@ -995,10 +1003,12 @@ class ParticipantCompensationService:
         res = await self.session.execute(stmt)
         claim = res.scalars().first()
         if not claim:
-            raise ValueError(f"Expense claim with ID '{claim_id}' not found.")
+            raise ClaimNotFoundError(f"Expense claim with ID '{claim_id}' not found.")
 
         if claim.status in ("APPROVED", "DISBURSED"):
-            raise ValueError(f"Expense claim '{claim_id}' is already {claim.status}.")
+            raise PaymentsValidationError(
+                f"Expense claim '{claim_id}' is already {claim.status}."
+            )
 
         prev_status = claim.status
         claim.status = review_status
@@ -1124,16 +1134,18 @@ class ParticipantCompensationService:
         """Dispatches an instant digital payout from the participant wallet via Virtual Card or ACH."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+            raise WalletNotFoundError(f"Participant wallet '{wallet_id}' not found.")
 
         payout_amount = round(
             amount if amount is not None else wallet.current_balance, 2
         )
         if payout_amount <= 0.0:
-            raise ValueError("Disbursement amount must be greater than zero.")
+            raise PaymentsValidationError(
+                "Disbursement amount must be greater than zero."
+            )
 
         if payout_amount > wallet.current_balance:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Insufficient funds: Requested ${payout_amount:.2f} but available balance is ${wallet.current_balance:.2f}."
             )
 
@@ -1280,7 +1292,9 @@ class ParticipantCompensationService:
         if summary_id:
             existing = await self.get_lay_summary_by_id(summary_id)
             if not existing:
-                raise ValueError(f"Lay Summary with ID '{summary_id}' not found.")
+                raise LaySummaryNotFoundError(
+                    f"Lay Summary with ID '{summary_id}' not found."
+                )
             existing.title = title
             existing.therapeutic_area = therapeutic_area
             existing.sponsor_name = sponsor_name
@@ -1368,7 +1382,7 @@ class ParticipantCompensationService:
         """Publishes an approved lay summary making it accessible to enrolled trial participants."""
         summary = await self.get_lay_summary_by_id(summary_id)
         if not summary:
-            raise ValueError(f"Lay summary '{summary_id}' not found.")
+            raise LaySummaryNotFoundError(f"Lay summary '{summary_id}' not found.")
 
         summary.status = "PUBLISHED"
         summary.published_at = datetime.now(UTC)
@@ -1447,7 +1461,7 @@ class ParticipantCompensationService:
         """Records a participant confirmation receipt and comprehension assessment with SHA-256 seal."""
         summary = await self.get_lay_summary_by_id(summary_id)
         if not summary:
-            raise ValueError(f"Lay Summary '{summary_id}' not found.")
+            raise LaySummaryNotFoundError(f"Lay Summary '{summary_id}' not found.")
 
         statement = (
             confirmation_statement

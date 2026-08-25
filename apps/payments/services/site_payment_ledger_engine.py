@@ -17,6 +17,11 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.payments.domain.exceptions import (
+    ContractNotFoundError,
+    PayableNotFoundError,
+    PaymentsValidationError,
+)
 from apps.payments.domain.models import (
     AuditAction,
     ContractStatus,
@@ -199,7 +204,7 @@ class SitePaymentLedgerEngine:
         """Adds a procedure fee schedule item to an active budget contract."""
         contract = await self.get_budget_contract(contract_id)
         if not contract:
-            raise ValueError(f"Contract with ID '{contract_id}' not found.")
+            raise ContractNotFoundError(f"Contract with ID '{contract_id}' not found.")
 
         final_overhead = (
             overhead_percentage
@@ -292,11 +297,11 @@ class SitePaymentLedgerEngine:
         """Configures multi-party split payee disbursement shares (must sum to 100%)."""
         contract = await self.get_budget_contract(contract_id)
         if not contract:
-            raise ValueError(f"Contract with ID '{contract_id}' not found.")
+            raise ContractNotFoundError(f"Contract with ID '{contract_id}' not found.")
 
         total_percentage = sum(p.allocation_percentage for p in payees)
         if abs(total_percentage - 100.0) > 0.01:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Split payee allocations must sum exactly to 100.0% (current sum: {total_percentage:.2f}%)."
             )
 
@@ -483,7 +488,7 @@ class SitePaymentLedgerEngine:
 
         contract = await self.get_active_contract(study_id, site_id)
         if not contract:
-            raise ValueError(
+            raise ContractNotFoundError(
                 f"No active budget contract found for study '{study_id}' and site '{site_id}'."
             )
 
@@ -501,7 +506,7 @@ class SitePaymentLedgerEngine:
             )
 
         if not fee_schedules:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No active fee schedule matching visit '{visit_code}' and form '{form_id}' for contract '{contract.id}'."
             )
 
@@ -848,7 +853,7 @@ class SitePaymentLedgerEngine:
 
         contract = await self.get_active_contract(study_id, site_id)
         if not contract:
-            raise ValueError(
+            raise ContractNotFoundError(
                 f"No active budget contract found for study '{study_id}' and site '{site_id}'."
             )
 
@@ -992,11 +997,11 @@ class SitePaymentLedgerEngine:
     ) -> dict[str, Any]:
         """Formally releases withholding holdback retention reserves with dual DM and Quality sign-off."""
         if not dm_signoff_by or not dm_signoff_by.strip():
-            raise ValueError(
+            raise PaymentsValidationError(
                 "Formal Data Management sign-off is required to release holdback retention reserves."
             )
         if not quality_signoff_by or not quality_signoff_by.strip():
-            raise ValueError(
+            raise PaymentsValidationError(
                 "Formal Quality Oversight sign-off is required to release holdback retention reserves."
             )
 
@@ -1010,7 +1015,7 @@ class SitePaymentLedgerEngine:
             target_reserves = all_held
 
         if not target_reserves:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No active HELD holdback reserves found for study '{study_id}' and site '{site_id}'."
             )
 
@@ -1132,10 +1137,10 @@ class SitePaymentLedgerEngine:
         """Approves a payable for invoicing and disbursement."""
         payable = await self.get_payable(payable_id)
         if not payable:
-            raise ValueError(f"Payable with ID '{payable_id}' not found.")
+            raise PayableNotFoundError(f"Payable with ID '{payable_id}' not found.")
 
         if payable.is_sdv_gated or payable.status == PayableStatus.PENDING_SDV.value:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"Cannot approve payable '{payable_id}' while gated pending CRA SDV verification."
             )
 

@@ -64,8 +64,8 @@ class BillingAndErpGatewayPort(ABC):
         study_id: str,
         site_id: str,
         billing_cycle: str = "MONTHLY",
-        period_start: str = "2026-08-01",
-        period_end: str = "2026-08-31",
+        period_start: str = "2026-08-01",  # deid-ignore
+        period_end: str = "2026-08-31",  # deid-ignore
         auto_approve: bool = False,
         user_id: str = "system",
         user_roles: str = "Grants Manager",

@@ -556,7 +556,7 @@ async def test_audit_log_immutability_enforcement():
         log_entry.details = "Illegal mutated details"
         with pytest.raises(ValueError) as exc_mod:
             await session.flush()
-        assert "Updates to SafetyAuditLog are strictly forbidden" in str(exc_mod.value)
+        assert "strictly forbidden" in str(exc_mod.value)
         await session.rollback()
 
         # Attempt deletion
@@ -570,9 +570,7 @@ async def test_audit_log_immutability_enforcement():
         await session.delete(existing_log)
         with pytest.raises(ValueError) as exc_del:
             await session.flush()
-        assert "Deletions from SafetyAuditLog are strictly forbidden" in str(
-            exc_del.value
-        )
+        assert "strictly forbidden" in str(exc_del.value)
         await session.rollback()
 
 

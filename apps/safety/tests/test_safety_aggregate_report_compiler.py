@@ -67,7 +67,9 @@ async def setup_aggregate_db():
 
 def make_qppv_token(user_id: str, action: str = "") -> str:
     """Creates a mock 21 CFR Part 11 QPPV signature token JWT."""
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     claims = {
         "sub": user_id,
         "action": action,
@@ -498,7 +500,7 @@ async def test_executive_qppv_signoff_workflow_and_role_gating():
                 user_id="crc.user",
                 user_roles=["site_crc"],
                 reason_for_change="Attempt unauthorized sign",
-                signature_secret="secret-key-123",
+                signature_secret="secret-key-123",  # pragma: allowlist secret
                 meaning_of_signature="Approval",
             )
 
@@ -508,7 +510,7 @@ async def test_executive_qppv_signoff_workflow_and_role_gating():
             user_id="qppv.lead.officer",
             user_roles=["qppv", "safety_physician"],
             reason_for_change="21 CFR Part 11 Executive QPPV Regulatory Sign-Off",
-            signature_secret="qppv-secret-key-999",
+            signature_secret="qppv-secret-key-999",  # pragma: allowlist secret
             meaning_of_signature="Executive QPPV Approval of Aggregate Safety Report for Regulatory Submission",
         )
 
