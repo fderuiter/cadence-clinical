@@ -1,5 +1,7 @@
 import os
 
+from scripts.runtime_guard import enforce_python_runtime
+
 os.environ.setdefault(
     "AUDIT_LOG_SECRET_KEY", "dev-audit-secret-key-cadence-2026-secure-32b"
 )
@@ -10,20 +12,22 @@ os.environ.setdefault(
 )
 os.environ.setdefault("SAFETY_SALT", "internal-safety-salt-12345")
 
-import typer
+enforce_python_runtime(script_name="cadence")
 
-from packages.cli.commands.cdisc import cdisc_app
-from packages.cli.commands.check import check_app
-from packages.cli.commands.db import db_app
-from packages.cli.commands.dev import dev_app
-from packages.cli.commands.doctor import doctor_app
-from packages.cli.commands.fix import fix_app
-from packages.cli.commands.gxp import gxp_app
-from packages.cli.commands.record import record_app
-from packages.cli.commands.scaffold import scaffold_app
-from packages.cli.commands.setup import setup_app
-from packages.cli.commands.test import test_app
-from packages.cli.mcp.server import CadenceMcpServer
+import typer  # noqa: E402
+
+from packages.cli.commands.cdisc import cdisc_app  # noqa: E402
+from packages.cli.commands.check import check_app  # noqa: E402
+from packages.cli.commands.db import db_app  # noqa: E402
+from packages.cli.commands.dev import dev_app  # noqa: E402
+from packages.cli.commands.doctor import doctor_app  # noqa: E402
+from packages.cli.commands.fix import fix_app  # noqa: E402
+from packages.cli.commands.gxp import gxp_app  # noqa: E402
+from packages.cli.commands.record import record_app  # noqa: E402
+from packages.cli.commands.scaffold import scaffold_app  # noqa: E402
+from packages.cli.commands.setup import setup_app  # noqa: E402
+from packages.cli.commands.test import test_app  # noqa: E402
+from packages.cli.mcp.server import CadenceMcpServer  # noqa: E402
 
 app = typer.Typer(
     name="cadence",

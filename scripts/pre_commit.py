@@ -15,6 +15,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from scripts.runtime_guard import enforce_python_runtime
+
+enforce_python_runtime()
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -65,7 +69,7 @@ def run_tier1_staged_checks(
 
     # 1. Run ruff check --fix on staged python files
     res_check = subprocess.run(
-        ["uv", "run", "ruff", "check", "--fix", *py_files],
+        ["uv", "run", "--python", "3.14", "ruff", "check", "--fix", *py_files],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -76,7 +80,7 @@ def run_tier1_staged_checks(
 
     # 2. Run ruff format on staged python files
     res_fmt = subprocess.run(
-        ["uv", "run", "ruff", "format", *py_files],
+        ["uv", "run", "--python", "3.14", "ruff", "format", *py_files],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -114,7 +118,7 @@ def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
 
     # Fast import boundaries check
     res_imp = subprocess.run(
-        ["uv", "run", "python", "scripts/validate_imports.py"],
+        ["uv", "run", "--python", "3.14", "python", "scripts/validate_imports.py"],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -150,7 +154,7 @@ def install_pre_commit_hook(repo_root: Path | None = None) -> tuple[bool, str]:
     hook_content = (
         "#!/bin/sh\n"
         "# Cadence Clinical Pre-Commit Hook\n"
-        'exec uv run python scripts/pre_commit.py "$@"\n'
+        'exec uv run --python 3.14 python scripts/pre_commit.py "$@"\n'
     )
 
     try:

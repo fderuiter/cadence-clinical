@@ -48,48 +48,48 @@ repos:
 
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
-        entry: uv run python scripts/clean_secrets_baseline.py
+        entry: uv run --python 3.14 python scripts/clean_secrets_baseline.py
         language: system
         files: \.secrets\.baseline$
         pass_filenames: false
 
       - id: detect-code-duplication
         name: Detect Code Duplication
-        entry: uv run python scripts/detect_duplication.py
+        entry: uv run --python 3.14 python scripts/detect_duplication.py
         language: system
         files: \.(py|js|vue|css)$
         pass_filenames: true
 
       - id: validate-adrs
         name: Validate ADRs
-        entry: uv run python scripts/validate_adrs.py
+        entry: uv run --python 3.14 python scripts/validate_adrs.py
         language: system
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
       - id: validate-architecture-drift
         name: Validate Architecture Drift
-        entry: uv run python scripts/validate_architecture_drift.py
+        entry: uv run --python 3.14 python scripts/validate_architecture_drift.py
         language: system
         files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
         pass_filenames: false
 
       - id: validate-markdown
         name: Validate Custom Markdown
-        entry: uv run python scripts/validate_markdown.py
+        entry: uv run --python 3.14 python scripts/validate_markdown.py
         language: system
         files: \.md$
 
       - id: validate-imports
         name: Cross-Service Import Validator
-        entry: uv run python scripts/validate_imports.py
+        entry: uv run --python 3.14 python scripts/validate_imports.py
         language: system
         files: ^(apps/|packages/|scripts/validate_imports\.py)
         pass_filenames: false
 
       - id: audit-security
         name: Security Audit & Hardcoded Secret Scanner
-        entry: uv run python scripts/audit_security.py
+        entry: uv run --python 3.14 python scripts/audit_security.py
         language: system
         files: \.(py|js|ts|tsx|jsx|json|md|log|txt|yaml|yml|sh|toml|ini|env|conf|properties)$
         pass_filenames: true
@@ -97,34 +97,34 @@ repos:
 
       - id: deid-compliance-scan
         name: DEID Compliance Scan
-        entry: uv run python -m packages.deid.cli
+        entry: uv run --python 3.14 python -m packages.deid.cli
         language: system
         files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
         pass_filenames: true
 
       - id: auto-stage-openapi
         name: Auto-Stage OpenAPI Schemas
-        entry: uv run python scripts/pre_commit_openapi.py
+        entry: uv run --python 3.14 python scripts/pre_commit_openapi.py
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
       - id: validate-path-patterns
         name: Lightweight Path-Pattern Boundary Linter
-        entry: uv run python scripts/validate_path_patterns.py
+        entry: uv run --python 3.14 python scripts/validate_path_patterns.py
         language: system
         pass_filenames: true
 
       - id: backend-static-verify
         name: Backend Port Contract Static Verification
-        entry: uv run python scripts/verify_contracts.py
+        entry: uv run --python 3.14 python scripts/verify_contracts.py
         language: system
         files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/infrastructure/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
         pass_filenames: false
 
       - id: query-style-linter
         name: Pre-Commit Query Style Linter
-        entry: uv run python scripts/pre_commit_query_linter.py
+        entry: uv run --python 3.14 python scripts/pre_commit_query_linter.py
         language: system
         files: \.py$
         exclude: ^(tests/|scripts/)
@@ -132,14 +132,14 @@ repos:
 
       - id: validate-vulnerabilities
         name: GxP Dependency Vulnerability Audit
-        entry: uv run python scripts/validate_vulnerabilities.py
+        entry: uv run --python 3.14 python scripts/validate_vulnerabilities.py
         language: system
         files: ^(pyproject\.toml|uv\.lock|pnpm-lock\.yaml|package\.json)$
         pass_filenames: false
 
       - id: validate-dependencies
         name: Frontend Dependency Cryptographic Check
-        entry: uv run python scripts/validate_dependencies.py
+        entry: uv run --python 3.14 python scripts/validate_dependencies.py
         language: system
         files: package\.json$
         pass_filenames: false
@@ -159,7 +159,7 @@ repos:
       # -----------------------------------------------------------------------
       - id: gxp-rtm-validate
         name: GxP RTM Staleness Check
-        entry: uv run python scripts/generate_rtm.py --validate
+        entry: uv run --python 3.14 python scripts/generate_rtm.py --validate
         language: system
         pass_filenames: false
         stages: [pre-push]
