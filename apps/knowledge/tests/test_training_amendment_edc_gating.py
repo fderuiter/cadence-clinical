@@ -71,7 +71,7 @@ async def test_protocol_amendment_delta_curriculum_generation(
 ):
     """Test generating delta-training curriculum and procedural modules from amendment diffs.
 
-    Requirements: PRD-TRN-001
+    @req:PRD-TRN-001
     """
     service = TrainingService()
     baseline = {
@@ -153,7 +153,7 @@ async def test_time_tracking_and_quiz_scoring_threshold(
 ):
     """Test interactive time-on-page tracking and strict >= 80% comprehension quiz evaluation.
 
-    Requirements: PRD-TRN-003
+    @req:PRD-TRN-003
     """
     service = TrainingService()
     baseline = {"study_id": "STUDY-101", "version": "1.0", "activities": []}
@@ -236,7 +236,8 @@ async def test_part11_signature_certificate_and_vault_routing(
 ):
     """Test 21 CFR Part 11 electronic signature sign-off, SHA-256 seal, PDF certificate, and eTMF/eISF routing.
 
-    Requirements: PRD-TRN-003, PRD-TRN-004
+    @req:PRD-TRN-003
+    @req:PRD-TRN-004
     """
     service = TrainingService()
     baseline = {"study_id": "STUDY-CARDIO-01", "version": "1.0", "activities": []}
@@ -325,7 +326,7 @@ async def test_edc_write_qualification_gating_lifecycle(
 ):
     """Test automated EDC qualification gating: blocked while training is pending, instantly cleared upon completion.
 
-    Requirements: PRD-TRN-002
+    @req:PRD-TRN-002
     """
     service = TrainingService()
     baseline = {"study_id": "STUDY-IMMUNO-99", "version": "1.0", "activities": []}
@@ -415,7 +416,10 @@ async def test_edc_write_qualification_gating_lifecycle(
 async def test_rest_api_training_endpoints(client: AsyncClient):
     """Test full REST API lifecycle for training curricula, quizzes, and certificates.
 
-    Requirements: PRD-TRN-001, PRD-TRN-002, PRD-TRN-003, PRD-TRN-004
+    @req:PRD-TRN-001
+    @req:PRD-TRN-002
+    @req:PRD-TRN-003
+    @req:PRD-TRN-004
     """
     # 1. Generate delta curriculum via API
     gen_res = await client.post(

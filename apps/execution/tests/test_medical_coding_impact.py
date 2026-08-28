@@ -384,7 +384,8 @@ async def seed_test_dictionaries():
 async def test_impact_analysis_meddra_and_whodrug_lifecycle():
     """Verify medical coding up-versioning impact analysis lifecycle.
 
-    Requirements: PRD-SYS-045
+    @req:PRD-SYS-045
+    @req:PRD-PVG-005
     """
     await seed_test_dictionaries()
 

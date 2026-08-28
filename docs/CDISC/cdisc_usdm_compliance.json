@@ -30532,6 +30532,57 @@
                     "gxp_audited": true,
                     "immutable": false
                   }
+                },
+                {
+                  "id": "prop_eisf_isf_audit_logs_tenant_id",
+                  "name": "tenant_id",
+                  "label": "tenant_id (VARCHAR(255))",
+                  "cdashVariable": "TENANT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "eisf",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_eisf_isf_audit_logs_previous_digest",
+                  "name": "previous_digest",
+                  "label": "previous_digest (VARCHAR(64))",
+                  "cdashVariable": "PREVIOUS_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "eisf",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_eisf_isf_audit_logs_sha256_digest",
+                  "name": "sha256_digest",
+                  "label": "sha256_digest (VARCHAR(64))",
+                  "cdashVariable": "SHA256_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "eisf",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
                 }
               ]
             },
@@ -31412,6 +31463,57 @@
                     "primary_key": false,
                     "foreign_keys": [],
                     "gxp_highlight": true,
+                    "service": "econsent",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_econsent_consent_audit_logs_tenant_id",
+                  "name": "tenant_id",
+                  "label": "tenant_id (VARCHAR(255))",
+                  "cdashVariable": "TENANT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "econsent",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_econsent_consent_audit_logs_previous_digest",
+                  "name": "previous_digest",
+                  "label": "previous_digest (VARCHAR(64))",
+                  "cdashVariable": "PREVIOUS_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "econsent",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_econsent_consent_audit_logs_sha256_digest",
+                  "name": "sha256_digest",
+                  "label": "sha256_digest (VARCHAR(64))",
+                  "cdashVariable": "SHA256_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
                     "service": "econsent",
                     "db_type": "PostgreSQL (SQLAlchemy)",
                     "gxp_audited": true,
@@ -40464,7 +40566,7 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 },
@@ -40481,7 +40583,7 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 },
@@ -40498,7 +40600,7 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 },
@@ -40515,7 +40617,7 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 },
@@ -40532,7 +40634,7 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 },
@@ -40549,7 +40651,75 @@
                     "gxp_highlight": false,
                     "service": "ctms",
                     "db_type": "PostgreSQL (SQLAlchemy)",
-                    "gxp_audited": false,
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_ctms_ctms_audit_logs_tenant_id",
+                  "name": "tenant_id",
+                  "label": "tenant_id (VARCHAR(255))",
+                  "cdashVariable": "TENANT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "ctms",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_ctms_ctms_audit_logs_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (VARCHAR(1000))",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "ctms",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_ctms_ctms_audit_logs_previous_digest",
+                  "name": "previous_digest",
+                  "label": "previous_digest (VARCHAR(64))",
+                  "cdashVariable": "PREVIOUS_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "ctms",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_ctms_ctms_audit_logs_sha256_digest",
+                  "name": "sha256_digest",
+                  "label": "sha256_digest (VARCHAR(64))",
+                  "cdashVariable": "SHA256_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "ctms",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
                     "immutable": false
                   }
                 }
@@ -86615,6 +86785,57 @@
                 "gxp_audited": true,
                 "immutable": false
               }
+            },
+            {
+              "id": "prop_eisf_isf_audit_logs_tenant_id",
+              "name": "tenant_id",
+              "label": "tenant_id (VARCHAR(255))",
+              "cdashVariable": "TENANT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "eisf",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_eisf_isf_audit_logs_previous_digest",
+              "name": "previous_digest",
+              "label": "previous_digest (VARCHAR(64))",
+              "cdashVariable": "PREVIOUS_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "eisf",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_eisf_isf_audit_logs_sha256_digest",
+              "name": "sha256_digest",
+              "label": "sha256_digest (VARCHAR(64))",
+              "cdashVariable": "SHA256_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "eisf",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
             }
           ]
         },
@@ -87495,6 +87716,57 @@
                 "primary_key": false,
                 "foreign_keys": [],
                 "gxp_highlight": true,
+                "service": "econsent",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_econsent_consent_audit_logs_tenant_id",
+              "name": "tenant_id",
+              "label": "tenant_id (VARCHAR(255))",
+              "cdashVariable": "TENANT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "econsent",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_econsent_consent_audit_logs_previous_digest",
+              "name": "previous_digest",
+              "label": "previous_digest (VARCHAR(64))",
+              "cdashVariable": "PREVIOUS_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "econsent",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_econsent_consent_audit_logs_sha256_digest",
+              "name": "sha256_digest",
+              "label": "sha256_digest (VARCHAR(64))",
+              "cdashVariable": "SHA256_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
                 "service": "econsent",
                 "db_type": "PostgreSQL (SQLAlchemy)",
                 "gxp_audited": true,
@@ -96547,7 +96819,7 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
                 "immutable": false
               }
             },
@@ -96564,7 +96836,7 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
                 "immutable": false
               }
             },
@@ -96581,7 +96853,7 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
                 "immutable": false
               }
             },
@@ -96598,7 +96870,7 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
                 "immutable": false
               }
             },
@@ -96615,7 +96887,7 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
                 "immutable": false
               }
             },
@@ -96632,7 +96904,75 @@
                 "gxp_highlight": false,
                 "service": "ctms",
                 "db_type": "PostgreSQL (SQLAlchemy)",
-                "gxp_audited": false,
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_ctms_ctms_audit_logs_tenant_id",
+              "name": "tenant_id",
+              "label": "tenant_id (VARCHAR(255))",
+              "cdashVariable": "TENANT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "ctms",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_ctms_ctms_audit_logs_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (VARCHAR(1000))",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "ctms",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_ctms_ctms_audit_logs_previous_digest",
+              "name": "previous_digest",
+              "label": "previous_digest (VARCHAR(64))",
+              "cdashVariable": "PREVIOUS_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "ctms",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_ctms_ctms_audit_logs_sha256_digest",
+              "name": "sha256_digest",
+              "label": "sha256_digest (VARCHAR(64))",
+              "cdashVariable": "SHA256_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "ctms",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
                 "immutable": false
               }
             }
@@ -142687,6 +143027,57 @@
             "gxp_audited": true,
             "immutable": false
           }
+        },
+        {
+          "id": "prop_eisf_isf_audit_logs_tenant_id",
+          "name": "tenant_id",
+          "label": "tenant_id (VARCHAR(255))",
+          "cdashVariable": "TENANT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "eisf",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_eisf_isf_audit_logs_previous_digest",
+          "name": "previous_digest",
+          "label": "previous_digest (VARCHAR(64))",
+          "cdashVariable": "PREVIOUS_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "eisf",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_eisf_isf_audit_logs_sha256_digest",
+          "name": "sha256_digest",
+          "label": "sha256_digest (VARCHAR(64))",
+          "cdashVariable": "SHA256_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "eisf",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
         }
       ]
     },
@@ -143567,6 +143958,57 @@
             "primary_key": false,
             "foreign_keys": [],
             "gxp_highlight": true,
+            "service": "econsent",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_econsent_consent_audit_logs_tenant_id",
+          "name": "tenant_id",
+          "label": "tenant_id (VARCHAR(255))",
+          "cdashVariable": "TENANT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "econsent",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_econsent_consent_audit_logs_previous_digest",
+          "name": "previous_digest",
+          "label": "previous_digest (VARCHAR(64))",
+          "cdashVariable": "PREVIOUS_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "econsent",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_econsent_consent_audit_logs_sha256_digest",
+          "name": "sha256_digest",
+          "label": "sha256_digest (VARCHAR(64))",
+          "cdashVariable": "SHA256_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
             "service": "econsent",
             "db_type": "PostgreSQL (SQLAlchemy)",
             "gxp_audited": true,
@@ -152619,7 +153061,7 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
             "immutable": false
           }
         },
@@ -152636,7 +153078,7 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
             "immutable": false
           }
         },
@@ -152653,7 +153095,7 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
             "immutable": false
           }
         },
@@ -152670,7 +153112,7 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
             "immutable": false
           }
         },
@@ -152687,7 +153129,7 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
             "immutable": false
           }
         },
@@ -152704,7 +153146,75 @@
             "gxp_highlight": false,
             "service": "ctms",
             "db_type": "PostgreSQL (SQLAlchemy)",
-            "gxp_audited": false,
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_ctms_ctms_audit_logs_tenant_id",
+          "name": "tenant_id",
+          "label": "tenant_id (VARCHAR(255))",
+          "cdashVariable": "TENANT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "ctms",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_ctms_ctms_audit_logs_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (VARCHAR(1000))",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "ctms",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_ctms_ctms_audit_logs_previous_digest",
+          "name": "previous_digest",
+          "label": "previous_digest (VARCHAR(64))",
+          "cdashVariable": "PREVIOUS_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "ctms",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_ctms_ctms_audit_logs_sha256_digest",
+          "name": "sha256_digest",
+          "label": "sha256_digest (VARCHAR(64))",
+          "cdashVariable": "SHA256_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "ctms",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
             "immutable": false
           }
         }

@@ -49,6 +49,7 @@ def test_pure_python_transition_guard():
     """Verify that only documented transitions are allowed by the pure-Python guard.
 
     @req:PRD-SYS-184
+    @req:PRD-SUB-001
     """
     # Screen fails and screen passes
     guard_subject_transition("SCREENING", "SCREEN_FAILED")

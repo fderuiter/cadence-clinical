@@ -36,6 +36,14 @@ class CTMSAuditLog(Base):
     user_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="tenant_default"
+    )
+    reason_for_change: Mapped[str] = mapped_column(
+        String(1000), nullable=False, default="CTMS Action"
+    )
+    previous_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sha256_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class CTMSStudy(Base):

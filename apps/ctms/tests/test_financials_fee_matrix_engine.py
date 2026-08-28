@@ -72,7 +72,9 @@ def get_auth_headers(
 def test_multi_tier_budget_templates():
     """Validate multi-tier budget template creation, schema properties, and retrieval.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -166,7 +168,9 @@ def test_multi_tier_budget_templates():
 def test_template_application_and_fee_matrix_grid():
     """Validate applying budget template to investigator grant and procedure linkages.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -276,7 +280,9 @@ def test_template_application_and_fee_matrix_grid():
 def test_visit_payable_calculation_with_overhead_and_stipends():
     """Validate visit payable calculation with base fees, institutional overhead, patient stipends, and withholdings.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -346,7 +352,9 @@ def test_visit_payable_calculation_with_overhead_and_stipends():
 def test_contract_amendments_and_historical_fee_schedule_preservation():
     """Validate contract amendments incrementing version_index and preserving historical fee schedules.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -463,7 +471,9 @@ def test_contract_amendments_and_historical_fee_schedule_preservation():
 def test_multi_currency_exchange_rates_and_conversion():
     """Validate foreign exchange rate table setup, currency conversion, and visit payable conversion.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="Grants Manager", change_reason="Set FX Rates")
@@ -532,7 +542,9 @@ def test_multi_currency_exchange_rates_and_conversion():
 def test_budget_adjustments_passthrough_and_penalties():
     """Validate passthrough expense reimbursements, deviation penalties, and approval workflow.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -613,7 +625,9 @@ def test_budget_adjustments_passthrough_and_penalties():
 def test_rbac_access_control():
     """Validate role-based access control denies unauthorized write operations.
 
-    @req:ADR-2200, PRD-PAY-001, PRD-PAY-005
+    @req:ADR-2200
+    @req:PRD-PAY-001
+    @req:PRD-PAY-005
     """
     client = TestClient(app)
     unauthorized_headers = get_auth_headers(

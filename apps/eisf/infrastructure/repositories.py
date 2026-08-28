@@ -1,4 +1,6 @@
+import uuid
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.eisf.domain.ports import EISFRepositoryPort
 from apps.eisf.infrastructure.database import db_manager, get_session
 from apps.eisf.infrastructure.models import ISFAuditLog, ISFDocument
+from packages.compliance.audit import compute_audit_digest
 from packages.database import map_database_exceptions
 
 
@@ -60,6 +63,44 @@ class SQLEISFRepository(EISFRepositoryPort):
 
     @map_database_exceptions
     async def save_audit_log(self, log: ISFAuditLog) -> ISFAuditLog:
+        stmt = (
+            select(ISFAuditLog)
+            .order_by(ISFAuditLog.timestamp.desc(), ISFAuditLog.id.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        last_log = res.scalars().first()
+        prev_digest = (
+            last_log.sha256_digest
+            if last_log and last_log.sha256_digest
+            else "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        event_id = log.id or str(uuid.uuid4())
+        log.id = event_id
+        ts = log.timestamp or datetime.now(UTC).replace(tzinfo=None)
+        log.timestamp = ts
+        ts_str = ts.isoformat()
+        reason = log.reason_for_change or "eISF Audit Action"
+        tenant_id = getattr(log, "tenant_id", "tenant_default") or "tenant_default"
+        log.tenant_id = tenant_id
+        log.reason_for_change = reason
+        log.previous_digest = prev_digest
+
+        digest = compute_audit_digest(
+            event_id=event_id,
+            service_name="apps/eisf",
+            action_type=log.action,
+            entity_name="ISFAuditLog",
+            entity_id=log.document_id or event_id,
+            user_id=log.actor_id,
+            tenant_id=tenant_id,
+            reason_for_change=reason,
+            timestamp=ts_str,
+            previous_digest=prev_digest,
+        )
+        log.sha256_digest = digest
+
         self.session.add(log)
         await self.session.flush()
         return log
@@ -67,6 +108,46 @@ class SQLEISFRepository(EISFRepositoryPort):
     @map_database_exceptions
     async def save_security_alert_out_of_band(self, alert: ISFAuditLog) -> None:
         async with db_manager.get_session_maker()() as audit_session:
+            stmt = (
+                select(ISFAuditLog)
+                .order_by(ISFAuditLog.timestamp.desc(), ISFAuditLog.id.desc())
+                .limit(1)
+            )
+            res = await audit_session.execute(stmt)
+            last_log = res.scalars().first()
+            prev_digest = (
+                last_log.sha256_digest
+                if last_log and last_log.sha256_digest
+                else "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
+            )
+
+            event_id = alert.id or str(uuid.uuid4())
+            alert.id = event_id
+            ts = alert.timestamp or datetime.now(UTC).replace(tzinfo=None)
+            alert.timestamp = ts
+            ts_str = ts.isoformat()
+            reason = alert.reason_for_change or "Security Alert"
+            tenant_id = (
+                getattr(alert, "tenant_id", "tenant_default") or "tenant_default"
+            )
+            alert.tenant_id = tenant_id
+            alert.reason_for_change = reason
+            alert.previous_digest = prev_digest
+
+            digest = compute_audit_digest(
+                event_id=event_id,
+                service_name="apps/eisf",
+                action_type=alert.action,
+                entity_name="ISFAuditLog",
+                entity_id=alert.document_id or event_id,
+                user_id=alert.actor_id,
+                tenant_id=tenant_id,
+                reason_for_change=reason,
+                timestamp=ts_str,
+                previous_digest=prev_digest,
+            )
+            alert.sha256_digest = digest
+
             audit_session.add(alert)
             await audit_session.commit()
 

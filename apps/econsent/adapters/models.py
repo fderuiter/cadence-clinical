@@ -309,6 +309,11 @@ class ConsentAuditLog(Base):
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="tenant_default"
+    )
+    previous_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sha256_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class ConsentTranslation(Base):

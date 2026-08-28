@@ -140,6 +140,7 @@ def test_parse_udi_gs1_128_parentheses():
 
     @req:PRD-SYS-187
     @req:PRD-SYS-053
+    @req:PRD-DEV-001
     """
     raw = "(01)00840123456786(17)280630(10)LOT-ALPHA-99(21)SN-4410-001(8012)v2.4.0"
     parsed = parse_udi_barcode(raw)
@@ -403,6 +404,7 @@ async def test_report_deficiency_triggers_serial_quarantine_and_sade():
 
     @req:PRD-SYS-187
     @req:PRD-SYS-053
+    @req:PRD-DEV-002
     """
     async with db_manager.session_maker() as session:
         # 1. Register device

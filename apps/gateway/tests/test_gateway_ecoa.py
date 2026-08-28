@@ -117,7 +117,8 @@ def test_submit_epro_entry_authorized(
 ) -> None:
     """Validate authorized subject submit returns 201 Created and forwards successfully.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
+    @req:PRD-DCT-001
     """
     mock_request = AsyncMock()
     mock_request.return_value = httpx.Response(

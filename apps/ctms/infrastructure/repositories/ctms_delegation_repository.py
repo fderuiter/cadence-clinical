@@ -1,3 +1,6 @@
+import uuid
+from datetime import UTC, datetime
+
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +9,7 @@ from apps.ctms.database import db_manager
 from apps.ctms.domain.models import CTMSAuditLogEntity, CTMSDelegationEntity
 from apps.ctms.domain.ports import ICTMSDelegationRepository
 from apps.ctms.models import CTMSAuditLog, CTMSDelegation
+from packages.compliance.audit import compute_audit_digest
 from packages.database import DatabaseSessionDependency, map_database_exceptions
 
 get_db_session = DatabaseSessionDependency(db_manager)
@@ -69,11 +73,49 @@ class SQLAlchemyCTMSDelegationRepository(ICTMSDelegationRepository):
 
     @map_database_exceptions
     async def save_audit_log(self, audit: CTMSAuditLogEntity) -> None:
+        stmt = (
+            select(CTMSAuditLog)
+            .order_by(CTMSAuditLog.timestamp.desc(), CTMSAuditLog.id.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        last_log = res.scalars().first()
+        prev_digest = (
+            last_log.sha256_digest
+            if last_log and last_log.sha256_digest
+            else "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        event_id = audit.id or str(uuid.uuid4())
+        ts = datetime.now(UTC).replace(tzinfo=None)
+        ts_str = ts.isoformat()
+        reason = audit.reason_for_change or "CTMS Action"
+        tenant_id = audit.tenant_id or "tenant_default"
+
+        digest = compute_audit_digest(
+            event_id=event_id,
+            service_name="apps/ctms",
+            action_type=audit.action,
+            entity_name="CTMSAuditLog",
+            entity_id=event_id,
+            user_id=audit.user_id,
+            tenant_id=tenant_id,
+            reason_for_change=reason,
+            timestamp=ts_str,
+            previous_digest=prev_digest,
+        )
+
         model = CTMSAuditLog(
+            id=event_id,
+            timestamp=ts,
             user_id=audit.user_id,
             user_role=audit.user_role,
             action=audit.action,
             details=audit.details,
+            tenant_id=tenant_id,
+            reason_for_change=reason,
+            previous_digest=prev_digest,
+            sha256_digest=digest,
         )
         self.session.add(model)
         await self.session.flush()
@@ -98,6 +140,10 @@ class SQLAlchemyCTMSDelegationRepository(ICTMSDelegationRepository):
                         action=m.action,
                         details=m.details,
                         timestamp=m.timestamp.isoformat(),
+                        tenant_id=m.tenant_id,
+                        reason_for_change=m.reason_for_change,
+                        previous_digest=m.previous_digest,
+                        sha256_digest=m.sha256_digest,
                     )
                 )
         return entities

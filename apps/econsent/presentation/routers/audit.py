@@ -42,6 +42,9 @@ async def list_audit_logs(
             document_id=r.document_id,
             details=r.details,
             reason_for_change=r.reason_for_change,
+            tenant_id=r.tenant_id,
+            previous_digest=r.previous_digest,
+            sha256_digest=r.sha256_digest,
         )
         for r in rows
     ]

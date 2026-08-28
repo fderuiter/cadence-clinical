@@ -15643,6 +15643,30 @@
               "nullable": false,
               "foreign_keys": [],
               "gxp_highlight": true
+            },
+            {
+              "name": "tenant_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "previous_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sha256_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
             }
           ]
         },
@@ -16086,6 +16110,30 @@
               "nullable": false,
               "foreign_keys": [],
               "gxp_highlight": true
+            },
+            {
+              "name": "tenant_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "previous_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sha256_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
             }
           ]
         },
@@ -20546,7 +20594,7 @@
           "class_name": "CTMSAuditLog",
           "description": "Represents an immutable, chronological record of all actions performed\non the CTMS platform, in compliance with 21 CFR Part 11.",
           "service": "ctms",
-          "gxp": false,
+          "gxp": true,
           "immutable": false,
           "columns": [
             {
@@ -20594,6 +20642,38 @@
               "type": "VARCHAR(1000)",
               "primary_key": false,
               "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "tenant_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "reason_for_change",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "previous_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sha256_digest",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             }

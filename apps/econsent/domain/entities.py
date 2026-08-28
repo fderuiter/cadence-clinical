@@ -280,3 +280,6 @@ class ConsentAuditLogEntity:
     document_id: str | None
     details: str
     reason_for_change: str
+    tenant_id: str = "tenant_default"
+    previous_digest: str | None = None
+    sha256_digest: str | None = None

@@ -291,6 +291,7 @@ async def test_successful_dispensation_endpoint():
     """Verify successful kit dispensation decrements inventory, creates a KitDispensation, and commits atomically.
 
     @req:PRD-SYS-184
+    @req:PRD-SCM-007
     """
     # Setup initial inventory Catalog
     async with db_manager.get_session_maker()() as session:

@@ -68,7 +68,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_trial_lock_writes_outbox() -> None:
-    """Verify that locking the trial writes an outbox record inside the same relational transaction."""
+    """Verify that locking the trial writes an outbox record inside the same relational transaction.
+
+    @req:PRD-EVT-001
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -614,7 +617,10 @@ async def test_commit_clinical_change_without_reason_fails() -> None:
 
 @pytest.mark.asyncio
 async def test_parallel_workers_do_not_deliver_duplicate_events() -> None:
-    """AC3: Verify that parallel background workers do not deliver the same outbox event multiple times."""
+    """AC3: Verify that parallel background workers do not deliver the same outbox event multiple times.
+
+    @req:PRD-EVT-002
+    """
     # Populate 5 pending outbox records
     async with db_manager.get_session_maker()() as session:
         for i in range(5):

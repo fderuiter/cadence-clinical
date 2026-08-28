@@ -3,6 +3,9 @@
 Complies with 21 CFR Part 11 auditing and GxP boolean filter standards (.is_(True)/.is_(False)).
 """
 
+import uuid
+from datetime import UTC, datetime
+
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +50,7 @@ from apps.econsent.domain.ports import (
     IReconsentRepository,
     ISubjectConsentRepository,
 )
+from packages.compliance.audit import compute_audit_digest
 from packages.database import map_database_exceptions
 
 
@@ -933,15 +937,50 @@ class SQLConsentAuditRepository(IConsentAuditRepository):
 
     @map_database_exceptions
     async def save(self, entity: ConsentAuditLogEntity) -> ConsentAuditLogEntity:
+        stmt = (
+            select(ConsentAuditLog)
+            .order_by(ConsentAuditLog.timestamp.desc(), ConsentAuditLog.id.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        last_log = res.scalars().first()
+        prev_digest = (
+            last_log.sha256_digest
+            if last_log and last_log.sha256_digest
+            else "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        event_id = entity.id or str(uuid.uuid4())
+        ts = entity.timestamp or datetime.now(UTC)
+        ts_str = ts.isoformat()
+        reason = entity.reason_for_change or "eConsent Audit Action"
+        tenant_id = getattr(entity, "tenant_id", "tenant_default") or "tenant_default"
+
+        digest = compute_audit_digest(
+            event_id=event_id,
+            service_name="apps/econsent",
+            action_type=entity.action,
+            entity_name="ConsentAuditLog",
+            entity_id=entity.document_id or event_id,
+            user_id=entity.actor_id,
+            tenant_id=tenant_id,
+            reason_for_change=reason,
+            timestamp=ts_str,
+            previous_digest=prev_digest,
+        )
+
         log_entry = ConsentAuditLog(
-            id=entity.id,
-            timestamp=entity.timestamp,
+            id=event_id,
+            timestamp=ts,
             actor_id=entity.actor_id,
             actor_role=entity.actor_role,
             action=entity.action,
             document_id=entity.document_id,
             details=entity.details,
-            reason_for_change=entity.reason_for_change,
+            reason_for_change=reason,
+            tenant_id=tenant_id,
+            previous_digest=prev_digest,
+            sha256_digest=digest,
         )
         self.session.add(log_entry)
         await self.session.flush()
@@ -957,13 +996,50 @@ class SQLConsentAuditRepository(IConsentAuditRepository):
         details: str,
         reason_for_change: str,
     ) -> ConsentAuditLogEntity:
+        stmt = (
+            select(ConsentAuditLog)
+            .order_by(ConsentAuditLog.timestamp.desc(), ConsentAuditLog.id.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        last_log = res.scalars().first()
+        prev_digest = (
+            last_log.sha256_digest
+            if last_log and last_log.sha256_digest
+            else "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        event_id = str(uuid.uuid4())
+        ts = datetime.now(UTC)
+        ts_str = ts.isoformat()
+        reason = reason_for_change or "eConsent Audit Action"
+        tenant_id = "tenant_default"
+
+        digest = compute_audit_digest(
+            event_id=event_id,
+            service_name="apps/econsent",
+            action_type=action,
+            entity_name="ConsentAuditLog",
+            entity_id=document_id or event_id,
+            user_id=actor_id,
+            tenant_id=tenant_id,
+            reason_for_change=reason,
+            timestamp=ts_str,
+            previous_digest=prev_digest,
+        )
+
         log_entry = ConsentAuditLog(
+            id=event_id,
+            timestamp=ts,
             actor_id=actor_id,
             actor_role=actor_role,
             action=action,
             document_id=document_id,
             details=details,
-            reason_for_change=reason_for_change,
+            reason_for_change=reason,
+            tenant_id=tenant_id,
+            previous_digest=prev_digest,
+            sha256_digest=digest,
         )
         self.session.add(log_entry)
         await self.session.flush()
@@ -996,4 +1072,7 @@ class SQLConsentAuditRepository(IConsentAuditRepository):
             document_id=row.document_id,
             details=row.details,
             reason_for_change=row.reason_for_change,
+            tenant_id=row.tenant_id,
+            previous_digest=row.previous_digest,
+            sha256_digest=row.sha256_digest,
         )

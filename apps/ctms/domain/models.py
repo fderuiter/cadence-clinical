@@ -23,7 +23,11 @@ class CTMSAuditLogEntity(BaseModel):
     user_role: str
     action: str
     details: str
-    timestamp: str  # ISO string
+    timestamp: str | None = None  # ISO string
+    tenant_id: str = "tenant_default"
+    reason_for_change: str = "CTMS Action"
+    previous_digest: str | None = None
+    sha256_digest: str | None = None
 
 
 # ==========================================

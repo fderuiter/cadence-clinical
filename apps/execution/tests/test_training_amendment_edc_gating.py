@@ -109,7 +109,7 @@ async def setup_test_db() -> AsyncGenerator[None]:
 async def test_publish_amendment_triggers_delta_training_generation():
     """Publishing a protocol amendment returns summary of changes and activates delta workflow.
 
-    Requirements: PRD-TRN-001
+    @req:PRD-TRN-001
     """
     headers = _make_auth_headers(
         user_id="designer_lead_01",
@@ -156,7 +156,7 @@ async def test_publish_amendment_triggers_delta_training_generation():
 async def test_edc_write_gating_blocks_unqualified_users():
     """EDC write and signature endpoints block with HTTP 403 TrainingRequiredError when mandatory training is incomplete.
 
-    Requirements: PRD-TRN-002
+    @req:PRD-TRN-002
     """
     study_id = "STUDY-GATE-01"
     proto_ver = "2.0.0"
@@ -251,7 +251,9 @@ async def test_edc_write_gating_blocks_unqualified_users():
 async def test_edc_write_unlocked_immediately_after_training_completion():
     """EDC write permissions are immediately unlocked in real-time once training is completed and signed.
 
-    Requirements: PRD-TRN-002, PRD-TRN-003, PRD-TRN-004
+    @req:PRD-TRN-002
+    @req:PRD-TRN-003
+    @req:PRD-TRN-004
     """
     user_id = "site_investigator_cleared"
     study_id = "STUDY-UNLOCK-01"
@@ -337,7 +339,7 @@ async def test_edc_write_unlocked_immediately_after_training_completion():
 async def test_execution_verify_training_gate_api_endpoint():
     """Verify programmatic training gating check endpoint /api/v1/execution/amendments/verify-training-gate.
 
-    Requirements: PRD-TRN-002
+    @req:PRD-TRN-002
     """
     study_id = "STUDY-GATE-CHECK"
     proto_ver = "2.0.0"
