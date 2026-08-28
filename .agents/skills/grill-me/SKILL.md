@@ -1,10 +1,45 @@
 ---
 name: grill-me
-description: "A relentless interview to sharpen a plan or design."
+description: "Grill the user relentlessly about a plan, decision, or architecture. Use when the user wants to stress-test their thinking or uses any 'grill' trigger phrase."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-Call the Skill tool with "grilling".
+# Cadence Grilling Protocol
+
+Interview the user relentlessly until reaching a shared, unambiguous understanding using Antigravity search, interactive questioning (`ask_question`), and session artifacts. Map this as a **design tree**: every decision branches into the decisions that depend on it.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Fact Finding** | `grep_search` / `find_by_name` | Query files across `apps/` & `packages/` | Look up facts and constraints autonomously |
+| **Frontier Decision** | `ask_question` | `questions=[{"question": "...", "options": [...]}]` | Prompt user with interactive multi-choice when appropriate |
+| **Design Synthesis** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/grill_summary.md` | Emit structured design tree and settled decisions |
+
+---
+
+## The Grilling Loop
+
+1. **Rounds & The Frontier**:
+   - The **frontier** contains every decision whose prerequisites are settled.
+   - Ask the entire frontier in one round.
+   - Number each question and provide your recommended answer.
+   - When interactive selection is preferred, call `ask_question`.
+
+2. **Formatting**:
+   ```
+   ❓ **Q1** - **<question title>**: <question body with clear trade-offs and options>
+
+   ➡️ <your recommended answer>
+   ```
+
+3. **Autonomous Fact-Finding**:
+   - Facts are the agent's job. When a question requires repo, file, or schema facts, use `grep_search` and `find_by_name`. Never ask the user for information available in the environment.
+
+4. **Iterate**:
+   - Each round of user answers settles decisions and advances the frontier outward.
+   - The session ends when the frontier is empty and no unspoken assumptions remain.
+

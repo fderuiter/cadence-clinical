@@ -28,8 +28,8 @@ Executes an interactive design-tree interview (`grilling`) combined with live do
 1. Read [`CONTEXT.md`](../../../../CONTEXT.md) and relevant ADRs in [`docs/adr/`](../../../../docs/adr/) to anchor domain concepts.
 2. Initialize the **Design Tree**: Map the root goal into branching prerequisite and downstream decisions.
 3. Compute the **Frontier**: Identify all questions whose prerequisites are settled.
-4. **Interactive Decision Invocations (`ask_question`)**:
-   When a decision presents discrete choices or requires structured user sign-off, invoke `ask_question`:
+4. **MANDATORY TOOL INVOCATION (`ask_question`)**:
+   You **MUST** call the `ask_question` tool to present frontier questions to the user. **Do NOT print questions as plain markdown text.**
    ```json
    {
      "questions": [
@@ -44,16 +44,15 @@ Executes an interactive design-tree interview (`grilling`) combined with live do
      ]
    }
    ```
-   - **Rules**: Phrased as user direct response, recommended option listed first prefixed with `(Recommended)`, no duplicate "Other" options (provided by UI).
-5. For open-ended conceptual exploration, format questions in markdown:
-   ```
-   ❓ **Q1** - **<question title>**: <body with trade-offs and options>
+   - **Rules**:
+     - Format options as the user's direct response (e.g. *"Use PostgreSQL JSONB for eCRF observations"* rather than *"I will configure JSONB"*).
+     - Prefix the recommended answer with `(Recommended)` and list it first.
+     - Never add a manual "Other" option (provided by UI).
+     - Set `is_multi_select: true` if multiple options can be chosen together.
+5. Perform fact-finding autonomously using `grep_search` and `view_file` before asking questions; never ask the user for information you can look up yourself.
+6. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
+7. When significant architectural trade-offs are settled, scaffold an ADR (`uv run cadence scaffold adr "Title"`).
+8. Conclude only when the frontier is empty and the user confirms shared understanding.
 
-   ➡️ <recommended answer>
-   ```
-6. Perform fact-finding autonomously using `grep_search` and `view_file` without asking the user for facts you can look up yourself.
-7. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
-8. When significant architectural trade-offs are settled, scaffold an ADR (`uv run cadence scaffold adr "Title"`).
-9. Conclude only when the frontier is empty and the user confirms shared understanding.
 
 

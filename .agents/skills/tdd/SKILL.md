@@ -1,42 +1,100 @@
 ---
 name: tdd
-description: "Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions \"red-green-refactor\", or wants integration tests."
+description: "Execute Test-Driven Development (TDD) for Cadence clinical features and bug fixes. Use when building features test-first, doing red-green-refactor loops, or adding unit and integration tests."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-# Test-Driven Development
+# Cadence Test-Driven Development (TDD)
 
-TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle: consult them before and during the loop, not after.
+TDD in Cadence follows a strict, rapid red → green → refactor loop anchored to domain seams, in-memory test doubles, and 21 CFR Part 11 requirements traceability using Antigravity code and execution tools.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
+## Antigravity Tool Execution Matrix
 
-## What a good test is
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Seam Discovery** | `find_by_name` / `view_file` | Read target service and test suite via `AbsolutePath` | Inspect existing domain seams and test doubles |
+| **Red (Failing Test)** | `replace_file_content` / `write_to_file` | Author new test case with `@req:PRD-SYS-xxx` | Add failing test case testing public interface |
+| **Test Execution** | `run_command` | `CommandLine="uv run cadence test --fast -k <test_name>"`, `WaitMsBeforeAsync=5000` | Execute sub-second unit test verification |
+| **Green (Implementation)**| `replace_file_content` | Target: production code, single contiguous edit | Write minimal production code to pass test |
+| **Quality Sentinel** | `run_command` | `CommandLine="uv run cadence fix --all && uv run cadence check --parallel"` | Format, sort imports, and run 10 quality gates |
+| **Compliance Sync** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"` | Regenerate and stage GxP Traceability Matrix |
 
-Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification: "user can checkout with valid cart" tells you exactly what capability exists, and it survives refactors because it doesn't care about internal structure.
+---
 
-See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
+## Centralized Test Infrastructure (`packages/testing`)
 
-## Seams: where tests go
+Always use the shared test infrastructure instead of ad-hoc mocks or raw dictionaries:
 
-A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
+1. **Entity Factories**: `SubjectFactory`, `ProtocolDefinitionFactory`, `ClinicalObservationFactory`, `QueryDiscrepancyFactory`, `ConsentRecordFactory`, `AuditLogFactory` from `packages.testing.factories`.
+2. **In-Memory Fakes**: `InMemoryRepository[T]` from `packages.testing.fakes` to test use cases without hitting live databases.
+3. **Gateway Security Context**: `create_test_auth_headers`, `create_test_security_context`, `create_test_token` from `packages.testing.security`.
 
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. No test is written at an unconfirmed seam. You can't test everything, so agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
+---
 
-Ask: "What's the public interface, and which seams should we test?"
+## GxP Requirement Docstrings (`@req:`)
 
-When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), call the Skill tool with "codebase-design" for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
+Every single test method **must** declare its traceability requirement tag in its Google-style docstring:
 
-## Anti-patterns
+```python
+import pytest
+from packages.testing.factories import SubjectFactory
+from packages.testing.fakes import InMemoryRepository
 
-- **Implementation-coupled**: mocks internal collaborators, tests private methods, or verifies through a side channel (querying the database instead of using the interface). The tell: the test breaks when you refactor but behavior hasn't changed.
-- **Tautological**: the assertion recomputes the expected value the way the code does (`expect(add(a, b)).toBe(a + b)`, a snapshot derived by hand the same way, a constant asserted equal to itself), so it passes by construction and can never disagree with the code. Expected values must come from an independent source of truth: a known-good literal, a worked example, the spec.
-- **Horizontal slicing**: writing all tests first, then all implementation. Bulk tests verify _imagined_ behavior: you test the _shape_ of things rather than user-facing behavior, the tests go insensitive to real changes, and you commit to test structure before understanding the implementation. Work in **vertical slices** instead: one test → one implementation → repeat, each test a **tracer bullet** that responds to what the last cycle taught you.
 
-## Rules of the loop
+@pytest.mark.asyncio
+async def test_subject_enrollment_state_transition():
+    """Validate subject state machine advances on enrollment trigger.
 
-- **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
-- **One slice at a time.** One seam, one test, one minimal implementation per cycle.
-- **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.
+    @req:PRD-SYS-042
+    """
+    repo = InMemoryRepository()
+    subject = SubjectFactory.create(site_id="SITE-101", status="SCREENED")
+    ...
+```
+
+---
+
+## The TDD Execution Loop
+
+### 1. Seam Agreement
+Agree on the public interface boundary before authoring tests:
+- Ask: "What is the public interface and which seams are we testing?"
+- Never test internal/private methods or reach into ORM internals directly.
+
+### 2. Red: Author Failing Test
+- Use `replace_file_content` or `write_to_file` to author a minimal failing test at the agreed seam.
+- Include the `@req:PRD-SYS-xxx` docstring tag.
+- Execute with sub-second fast test runner:
+  ```bash
+  uv run cadence test --fast -k test_subject_enrollment
+  ```
+- Confirm the test fails for the expected reason (red).
+
+### 3. Green: Minimal Implementation
+- Use `replace_file_content` to write only enough production code to make the test pass.
+- Adhere strictly to Cadence conventions:
+  - Boolean ORM filters: `.is_(True)` / `.is_(False)` (E712).
+  - Alphabetical import sorting (I001).
+  - PEP 695 type parameters for generics: `class Service[T]: ...` (UP046).
+- Re-run the test:
+  ```bash
+  uv run cadence test --fast -k test_subject_enrollment
+  ```
+- Confirm the test passes (green).
+
+### 4. Refactor & Lint
+- Clean up the implementation without altering public behavior.
+- Format and auto-fix lints:
+  ```bash
+  uv run cadence fix --all
+  ```
+
+### 5. Compliance Sync
+When the slice is complete and all tests pass:
+```bash
+uv run python scripts/sync_gxp.py
+```
+

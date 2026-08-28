@@ -1,74 +1,77 @@
 ---
 name: improve-codebase-architecture
-description: "Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick."
+description: "Scan the Cadence codebase for shallow interfaces, boundary leaks, or architectural deepening opportunities, and generate a visual inspection report as an Antigravity artifact. Use when refactoring, auditing module depth, or planning architecture enhancements."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-# Improve Codebase Architecture
+# Cadence Architecture Improvement Scanner
 
-Surface architectural friction and propose **deepening opportunities**: refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
+Scans modules across `apps/` and `packages/` to identify shallow abstractions, leaky boundaries, and high-leverage deepening opportunities using Antigravity subagents, visual diagrams, and session artifacts.
 
-This command is _informed_ by the project's domain model and built on a shared design vocabulary:
+## Antigravity Tool Execution Matrix
 
-- Call the Skill tool with "codebase-design" for the architecture vocabulary (**module**, **interface**, **depth**, **seam**, **adapter**, **leverage**, **locality**) and its principles (the deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two = real"). Use these terms exactly in every suggestion, and don't drift into "component," "service," "API," or "boundary."
-- The domain language in `CONTEXT.md` gives names to good seams; ADRs in `docs/adr/` record decisions this command should not re-litigate.
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Boundary Scan** | `find_by_name` / `grep_search` | Search module directories under `apps/` and `packages/` | Identify multi-file clusters and shallow wrappers |
+| **Deep Inspection** | `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Deep Module Inspector", "Model": "flash"}]` | Launch fast research subagent for structural audit |
+| **Structural Analysis**| `invoke_subagent` | `Subagents=[{"Role": "Architecture Sentinel", "Model": "pro"}]` | Deep reasoning on complex decoupling refactors |
+| **Architecture Diagram**| `generate_image` | `Prompt="Hexagonal architecture boundary diagram showing deep domain core for ..."`, `AspectRatio="16:9"` | Generate visual architecture diagram |
+| **Opportunity Select**| `ask_question` | `questions=[{"question": "Select Deepening Opportunity to Refactor", ...}]` | Prompt user with interactive selection modal |
+| **Audit Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/architecture_audit.md` | Emit structured architecture report with Mermaid diagrams |
 
-## Process
+---
 
-### 1. Explore
+## 1. Dispatch Architecture Scanner Subagent
 
-**Scope before you scan: YAGNI.** Deepening a module pays off by making future changes to it easier, so put extra weight on the parts of the codebase that have recently changed. Decide *where* to look before you look:
+Launch a fast `flash` tier research subagent to audit the target domain:
 
-- If the user named a direction (a module, a subsystem, a pain point), take it, and skip the inference below.
-- Otherwise, walk back a good stretch of the commit history (`git log --oneline`) to find the codebase's hot spots, the files and areas that keep coming up, and let those paths pull your attention first. If the changes are scattered with no clear hot spot, widen the net.
+```json
+{
+  "Subagents": [
+    {
+      "TypeName": "research",
+      "Role": "Deep Module Inspector",
+      "Model": "flash",
+      "Workspace": "inherit",
+      "Prompt": "Analyze the codebase under <target-dir> (e.g. apps/execution, apps/designer, apps/tickets) for architectural depth:\n\n1. Identify shallow modules: files/classes with large surface areas but minimal encapsulated logic.\n2. Identify leaky abstractions: direct sibling database imports, unencapsulated ORM queries in routers, or raw graph walks.\n3. Identify high-leverage deepening opportunities: where multiple related helpers can be unified behind a deep domain interface.\n\nCite exact files with line ranges. Under 500 words."
+    }
+  ]
+}
+```
 
-Read the project's domain glossary (`CONTEXT.md`) and any ADRs in the area you're touching first.
+---
 
-Then spawn a sub-agent to walk the codebase. Don't follow rigid heuristics; explore organically and note where you experience friction:
+## 2. Compile Architecture Report Artifact
 
-- Where does understanding one concept require bouncing between many small modules?
-- Where are modules **shallow**, with an interface nearly as complex as the implementation?
-- Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
-- Where do tightly-coupled modules leak across their seams?
-- Which parts of the codebase are untested, or hard to test through their current interface?
+Write findings to `<appDataDir>/brain/<conversation-id>/architecture_audit.md` via `write_to_file`:
 
-Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
+- **Executive Summary**: Overview of architectural health and identified seams.
+- **Deepening Opportunities Table**: Module path, current vs. proposed interface surface area, and leverage rationale.
+- **Visual & Mermaid Diagrams**: Visual architecture layout and Mermaid boundary diagrams.
+- **Actionable Next Steps**: Candidate ADRs or refactoring tickets.
 
-### 2. Present candidates as an HTML report
+---
 
-Write a self-contained HTML file to the OS temp directory so nothing lands in the repo. Resolve the temp dir from `$TMPDIR`, falling back to `/tmp` (or `%TEMP%` on Windows), and write to `<tmpdir>/architecture-review-<timestamp>.html` so each run gets a fresh file. Open it for the user (`xdg-open <path>` on Linux, `open <path>` on macOS, `start <path>` on Windows) and tell them the absolute path.
+## 3. Interactive Drill-Down
+Present the opportunities to the user using `ask_question`:
+```json
+{
+  "questions": [
+    {
+      "question": "Which architectural deepening opportunity would you like to drill into?",
+      "options": [
+        "(Recommended) Unify <Service> behind a deep domain port and collapse pass-through helpers",
+        "Refactor <Router> to eliminate direct SQLModel queries via repository seam",
+        "Scaffold an ADR under docs/adr/ and defer code refactoring to next cycle"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+Follow up on the selected choice using [`grill-with-docs`](../grill-with-docs/SKILL.md) or [`tdd`](../tdd/SKILL.md).
 
-The report uses **Tailwind via CDN** for layout and styling, and **Mermaid via CDN** for diagrams where a graph/flow/sequence reliably communicates the structure. Mix Mermaid with hand-crafted CSS/SVG visuals: use Mermaid when relationships are graph-shaped (call graphs, dependencies, sequences), and hand-built divs/SVG when you want something more editorial (mass diagrams, cross-sections, collapse animations). Each candidate gets a **before/after visualisation**. Be visual.
 
-For each candidate, render a card with:
-
-- **Files**: which files/modules are involved
-- **Problem**: why the current architecture is causing friction
-- **Solution**: plain English description of what would change
-- **Benefits**: explained in terms of locality and leverage, and how tests would improve
-- **Before / After diagram**: side-by-side, custom-drawn, illustrating the shallowness and the deepening
-- **Recommendation strength**: one of `Strong`, `Worth exploring`, `Speculative`, rendered as a badge
-
-End the report with a **Top recommendation** section: which candidate you'd tackle first and why.
-
-**Use CONTEXT.md vocabulary for the domain, and the `/codebase-design` vocabulary for the architecture.** If `CONTEXT.md` defines "Order," talk about "the Order intake module," not "the FooBarHandler," and not "the Order service."
-
-**ADR conflicts**: if a candidate contradicts an existing ADR, only surface it when the friction is real enough to warrant revisiting the ADR. Mark it clearly in the card (e.g. a warning callout: _"contradicts ADR-0007, but worth reopening because…"_). Don't list every theoretical refactor an ADR forbids.
-
-See [HTML-REPORT.md](HTML-REPORT.md) for the full HTML scaffold, diagram patterns, and styling guidance.
-
-Do NOT propose interfaces yet. After the file is written, ask the user: "Which of these would you like to explore?"
-
-### 3. Grilling loop
-
-Once the user picks a candidate, call the Skill tool with "grilling" to walk the decision tree with them: constraints, dependencies, the shape of the deepened module, what sits behind the seam, what tests survive.
-
-Side effects happen inline as decisions crystallize; call the Skill tool with "domain-modeling" to keep the domain model current as you go:
-
-- **Naming a deepened module after a concept not in `CONTEXT.md`?** Add the term to `CONTEXT.md`. Create the file lazily if it doesn't exist.
-- **Sharpening a fuzzy term during the conversation?** Update `CONTEXT.md` right there.
-- **User rejects the candidate with a load-bearing reason?** Offer an ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Only offer when the reason would actually be needed by a future explorer to avoid re-suggesting the same thing; skip ephemeral reasons ("not worth it right now") and self-evident ones.
-- **Want to explore alternative interfaces for the deepened module?** Call the Skill tool with "codebase-design" and use its design-it-twice parallel sub-agent pattern.

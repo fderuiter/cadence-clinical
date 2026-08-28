@@ -1,91 +1,98 @@
 ---
 name: code-review
-description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
+description: "Perform a parallel two-axis review of git changes against Cadence GxP standards and specification requirements using Antigravity subagents and artifacts. Use when reviewing a PR, branch diff, or uncommitted changes."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
+# Cadence Two-Axis Code Review
 
-- **Standards**: does the code conform to this repo's documented coding standards?
-- **Spec**: does the code faithfully implement the originating issue / spec?
+Reviews changes along two distinct, decoupled axes to ensure full standards adherence and specification faithfulness without masking findings using Antigravity parallel subagents and session artifacts.
 
-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
+## Antigravity Tool Execution Matrix
 
-The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Diff Inspection** | `run_command` | `CommandLine="git diff <fixed-point>...HEAD"`, `WaitMsBeforeAsync=5000` | Fetch exact unified diff range |
+| **Parallel Review** | `invoke_subagent` | `Subagents=[{"Role": "Standards & GxP Auditor", "Model": "pro"}, {"Role": "Spec Verifier", "Model": "pro"}]` | Launch concurrent decoupled review subagents |
+| **Inter-Agent Comms**| `send_message` | `Recipient="<conversationId>"`, `Message="..."` | Communicate clarifying instructions to subagents |
+| **Remediation Gate** | `ask_question` | `questions=[{"question": "Select Remediation Approach for Critical Review Findings", ...}]` | Present user with interactive choices for high-severity issues |
+| **Artifact Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/code_review.md` | Emit side-by-side review report with alerts and file links |
 
-## Process
+---
 
-### 1. Pin the fixed point
+## Review Process
 
-Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
+### 1. Identify the Fixed Point & Diff
+Determine the target diff:
+- For a branch or PR: `git diff <fixed-point>...HEAD`
+- For working tree changes: `git diff HEAD`
+- Check the commit list: `git log <fixed-point>..HEAD --oneline`
+- Confirm the ref resolves (`git rev-parse <fixed-point>`) before launching subagents.
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+### 2. Identify Spec & Standards Sources
+1. **Spec Source**:
+   - Issue reference or PR description
+   - Requirement IDs (`PRD-SYS-xxx`, `Trace-x`)
+   - `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md`
+2. **Standards Source**:
+   - `AGENTS.md` (root guidelines)
+   - Fowler smell baseline (Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest).
 
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+### 3. Launch Parallel Subagents via `invoke_subagent`
 
-### 2. Identify the spec source
+Call `invoke_subagent` using the `pro` model tier for deep reasoning and GxP compliance checking:
 
-Look for the originating spec, in this order:
+```json
+{
+  "Subagents": [
+    {
+      "TypeName": "self",
+      "Role": "Standards & GxP Auditor",
+      "Model": "pro",
+      "Workspace": "inherit",
+      "Prompt": "Perform the Standards & GxP axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\n\nStandards sources: AGENTS.md, GxP 21 CFR Part 11 requirements, Fowler code smells.\n\nStrictly check: E712 boolean filter `.is_(True/False)`, I001 alphabetical imports, PEP 695 generics, Part 11 audit fields, and Fowler smells.\n\nOutput your findings grouped by file with line references. Under 400 words."
+    },
+    {
+      "TypeName": "self",
+      "Role": "Spec & Requirement Verifier",
+      "Model": "pro",
+      "Workspace": "inherit",
+      "Prompt": "Perform the Spec Compliance axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\nSpec source: <spec-path-or-issue>\n\nReport:\n1. Missing or partial requirements.\n2. Scope creep (unrequested behavior).\n3. Misimplemented requirements with exact spec quotes.\n\nOutput your findings with line references. Under 400 words."
+    }
+  ]
+}
+```
 
-1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in `docs/agents/issue-tracker.md`.
-2. A path the user passed as an argument.
-3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
-4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
+Stop calling tools to await subagent completion. The Antigravity messaging system will automatically resume execution when both subagents finish.
 
-### 3. Identify the standards sources
+### 4. Synthesize into Antigravity Artifact
 
-Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+Write the consolidated review to `<appDataDir>/brain/<conversation-id>/code_review.md` using `write_to_file` with `ArtifactMetadata`:
 
-On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
+- Header with reviewed commit/diff range and spec source.
+- `## Standards & GxP Compliance` section with file links and line numbers.
+- `## Specification Alignment` section citing exact requirement IDs (`@req:PRD-SYS-xxx`).
+- Summary alert box (`[!IMPORTANT]` / `[!TIP]`) with the single most critical finding per axis.
 
-- **The repo overrides.** A documented repo standard always wins; where it endorses something the baseline would flag, suppress the smell.
-- **Always a judgement call.** Each smell is a labelled heuristic ("possible Feature Envy"), never a hard violation. Like any standard here, skip anything tooling already enforces.
+### 5. Interactive Remediation & Summary
+If critical GxP or spec deviations are detected, prompt the user with `ask_question` to determine whether to auto-remediate with `implement` or branch into a refactoring ticket:
+```json
+{
+  "questions": [
+    {
+      "question": "How would you like to address the critical review findings in <component>?",
+      "options": [
+        "(Recommended) Auto-remediate immediately via implement skill and sync GxP compliance",
+        "Scaffold a dedicated refactoring ticket under docs/SDLC/ and defer non-blocking items"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+In your final chat response, provide a high-level 2-sentence summary and point the user to the generated `code_review.md` artifact.
 
-Each smell reads *what it is* → *how to fix*; match it against the diff:
 
-- **Mysterious Name**: a function, variable, or type whose name doesn't reveal what it does or holds. → rename it; if no honest name comes, the design's murky.
-- **Duplicated Code**: the same logic shape appears in more than one hunk or file in the change. → extract the shared shape, call it from both.
-- **Feature Envy**: a method that reaches into another object's data more than its own. → move the method onto the data it envies.
-- **Data Clumps**: the same few fields or params keep travelling together (a type wanting to be born). → bundle them into one type, pass that.
-- **Primitive Obsession**: a primitive or string standing in for a domain concept that deserves its own type. → give the concept its own small type.
-- **Repeated Switches**: the same `switch`/`if`-cascade on the same type recurs across the change. → replace with polymorphism, or one map both sites share.
-- **Shotgun Surgery**: one logical change forces scattered edits across many files in the diff. → gather what changes together into one module.
-- **Divergent Change**: one file or module is edited for several unrelated reasons. → split so each module changes for one reason.
-- **Speculative Generality**: abstraction, parameters, or hooks added for needs the spec doesn't have. → delete it; inline back until a real need shows.
-- **Message Chains**: long `a.b().c().d()` navigation the caller shouldn't depend on. → hide the walk behind one method on the first object.
-- **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
-- **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
-
-### 4. Spawn both sub-agents in parallel
-
-**Standards sub-agent prompt** should include:
-
-- The full diff command and commit list.
-- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
-- The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
-
-**Spec sub-agent prompt** should include:
-
-- The diff command and commit list.
-- The path or fetched contents of the spec.
-- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
-
-If the spec is missing, skip the Spec sub-agent and note this in the final report.
-
-### 5. Aggregate
-
-Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
-
-End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
-
-## Why two axes
-
-A change can pass one axis and fail the other:
-
-- Code that follows every standard but implements the wrong thing → **Standards pass, Spec fail.**
-- Code that does exactly what the issue asked but breaks the project's conventions → **Spec pass, Standards fail.**
-
-Reporting them separately stops one axis from masking the other.

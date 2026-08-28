@@ -574,4 +574,43 @@ _Avoid_: Asking trivial binary yes/no questions via modal, hardcoding duplicate 
 A filesystem sandboxing architecture for Antigravity subagents providing three operational isolation modes: `inherit` for direct in-place workspace access, `share` for isolated git worktree branching sharing underlying repo storage, and `branch` for complete ephemeral workspace isolation during throwaway prototyping.
 _Avoid_: Mutating production workspace branches during exploratory throwaway prototyping
 
+### Tenant Provisioning Engine
+
+An automated schema provisioning and tenant isolation lifecycle pattern in `apps/execution` that provisions dedicated schemas, executes baseline migrations, and initialises 21 CFR Part 11 audit ledgers for new clinical sponsor accounts.
+_Avoid_: Unisolated multi-tenant databases, manual SQL provisioning scripts
+
+### E2B(R3) WHODrug Hierarchy Validator
+
+An automated pharmacovigilance validation check in `apps/safety` that evaluates suspect and concomitant medicinal product codes against WHODrug active ingredient hierarchies and ATC classifications prior to AS2 regulatory transmission.
+_Avoid_: Unverified free-text drug submissions in E2B(R3) XML packages
+
+### Automated eTMF QC Lifecycle Engine
+
+An asynchronous document lifecycle state engine in `apps/etmf` that automatically transitions ingested documents through quality control stages (`DRAFT` → `TECHNICAL_QC` → `CLINICAL_QC` → `APPROVED`) upon successful OCR, DIA classification, and signature verification.
+_Avoid_: Stalled un-transitioned document states after indexing completion
+
+### Demo Mode Client Gating
+
+A runtime feature-toggling pattern in `apps/web` and `apps/subject-portal` that isolates client-side mock datasets and offline demo states behind an explicit `VITE_DEMO_MODE=true` environment flag, ensuring live and staging environments raise visible RFC 7807 error toasts on network or API failures.
+_Avoid_: Silent catch-and-fallback to mock data masking production network errors
+
+### Self-Signed Trust Store Gating
+
+A 21 CFR Part 11 security pattern where trusted root and intermediate X.509 digital certificates are pre-loaded into an immutable cryptographic trust store during application startup, strictly prohibiting dynamic or in-flight self-registration of untrusted certificates during electronic signature verification.
+_Avoid_: Dynamic self-registration of certificates from request payloads
+
+### 2D Matrix Grid Navigation (WCAG 2.1)
+
+An accessible keyboard navigation pattern for high-density clinical Schedule of Activities (SoA) matrices implementing WAI-ARIA `role="grid"` / `role="row"` / `role="gridcell"`, two-dimensional arrow key navigation (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`), cell status announcements (`aria-label`), and spacebar toggling.
+_Avoid_: Non-standard static table cells without keyboard focus or grid semantics
+
+### Gateway Dispatch Routing Matrix
+
+A centralized reverse-proxy topology in `apps/gateway` that maps all 18 microservice domain prefixes (`/api/v1/designer/*`, `/api/v1/execution/*`, `/api/v1/imaging/*`, `/api/v1/payments/*`, `/api/v1/ai/*`, etc.) to authenticated downstream service ports with canonical HMAC gateway signatures.
+_Avoid_: Fallthrough catch-all routes masking missing microservice proxy endpoints
+
+### Cryptographic Audit Chain Synchronization
+
+An enterprise GxP data integrity standard enforcing monotonic SHA-256 HMAC digest chaining (`previous_digest -> sha256_digest`) and mandatory `reason_for_change` across all domain audit log entities (CTMS, EDC, eConsent, eISF, eTMF, Safety, Payments, Quality).
+_Avoid_: Unchained, un-hashed plain text audit tables lacking reason for change
 
