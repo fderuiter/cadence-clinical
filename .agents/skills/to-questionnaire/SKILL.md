@@ -28,9 +28,28 @@ Group questions by domain area and provide clear context:
 3. **Recommended Default**: What the engineering team recommends.
 4. **Impact of Delay**: How this blocks downstream development.
 
+### MANDATORY TOOL INVOCATION (`ask_question`)
+
+When administering the questionnaire interactively, you **MUST** call `ask_question`:
+```json
+{
+  "questions": [
+    {
+      "question": "<Domain Decision Question>",
+      "options": [
+        "(Recommended) Option A: Preferred approach",
+        "Option B: Alternative option"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
 ---
 
 ## 2. Output as Antigravity Artifact
 
-Write the questionnaire to `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
+Write the full questionnaire document to `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
+
 

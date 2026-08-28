@@ -45,3 +45,23 @@ Categorizes incoming issues, bug reports, and clinical inquiries, mapping them t
 - **High (P1)**: Protocol amendment block, unhandled runtime exception, or CI gate failure. Initial response < 1 hr.
 - **Normal (P2)**: Standard feature enhancement, refactoring, or minor UI fix. Initial response < 24 hr.
 
+### MANDATORY TOOL INVOCATION (`ask_question`)
+
+You **MUST** call `ask_question` when confirming triage classification:
+```json
+{
+  "questions": [
+    {
+      "question": "Confirm Domain Queue and Priority for Issue",
+      "options": [
+        "(Recommended) Route to DATA_CAPTURE_ECRF queue with High (P1) SLA",
+        "Route to REGULATORY_COMPLIANCE queue with Critical (P0) SLA",
+        "Mark as needs-info and request CRA reproducer steps"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
+

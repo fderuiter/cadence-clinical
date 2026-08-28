@@ -63,38 +63,40 @@ async def test_subject_enrollment_state_transition():
 Agree on the public interface boundary before authoring tests:
 - Ask: "What is the public interface and which seams are we testing?"
 - Never test internal/private methods or reach into ORM internals directly.
+- If the interface seam is ambiguous, invoke `ask_question` to confirm the boundary.
 
-### 2. Red: Author Failing Test
+### 2. Red: Author Failing Test (MANDATORY TOOL: `replace_file_content` / `write_to_file`)
 - Use `replace_file_content` or `write_to_file` to author a minimal failing test at the agreed seam.
 - Include the `@req:PRD-SYS-xxx` docstring tag.
-- Execute with sub-second fast test runner:
+- Execute with sub-second fast test runner via `run_command`:
   ```bash
   uv run cadence test --fast -k test_subject_enrollment
   ```
 - Confirm the test fails for the expected reason (red).
 
-### 3. Green: Minimal Implementation
-- Use `replace_file_content` to write only enough production code to make the test pass.
+### 3. Green: Minimal Implementation (MANDATORY TOOL: `replace_file_content`)
+- Use `replace_file_content` for surgical edits (never full-file overwrite) to write only enough production code to make the test pass.
 - Adhere strictly to Cadence conventions:
   - Boolean ORM filters: `.is_(True)` / `.is_(False)` (E712).
   - Alphabetical import sorting (I001).
   - PEP 695 type parameters for generics: `class Service[T]: ...` (UP046).
-- Re-run the test:
+- Re-run the test via `run_command`:
   ```bash
   uv run cadence test --fast -k test_subject_enrollment
   ```
 - Confirm the test passes (green).
 
-### 4. Refactor & Lint
+### 4. Refactor & Lint (MANDATORY TOOL: `run_command`)
 - Clean up the implementation without altering public behavior.
 - Format and auto-fix lints:
   ```bash
   uv run cadence fix --all
   ```
 
-### 5. Compliance Sync
+### 5. Compliance Sync (MANDATORY TOOL: `run_command`)
 When the slice is complete and all tests pass:
 ```bash
 uv run python scripts/sync_gxp.py
 ```
+
 

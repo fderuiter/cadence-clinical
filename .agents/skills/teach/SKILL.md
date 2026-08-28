@@ -23,5 +23,23 @@ Teach a technical or clinical concept using concrete mental models, worked examp
 1. State the core mental model in 1 sentence.
 2. Provide a concrete before/after code or clinical scenario.
 3. Highlight the common pitfalls and why they occur.
-4. Ask a quick check-for-understanding question using `ask_question`.
+
+### MANDATORY TOOL INVOCATION (`ask_question`)
+
+You **MUST** call `ask_question` to test comprehension interactively:
+```json
+{
+  "questions": [
+    {
+      "question": "<Comprehension Check Question>",
+      "options": [
+        "(Recommended) Option A: Correct conceptual application",
+        "Option B: Common anti-pattern or misconception"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
 

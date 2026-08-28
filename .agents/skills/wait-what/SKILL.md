@@ -25,6 +25,23 @@ Do not defend the previous response or double down on complexity.
 ## 2. Strip the Noise
 Reframe the core problem in plain, direct language in 1-2 paragraphs.
 
-## 3. Ask a Direct Question
-Use `ask_question` or present a concrete choice in chat to realign immediately.
+## 3. Mandatory Realignment Invocation (`ask_question`)
+
+You **MUST** call `ask_question` to reset and confirm user intent interactively:
+```json
+{
+  "questions": [
+    {
+      "question": "How would you prefer to proceed?",
+      "options": [
+        "(Recommended) Simplify and take the direct implementation approach",
+        "Take a step back to align on architecture using /grill-with-docs",
+        "Explain the underlying domain concept from scratch"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
 

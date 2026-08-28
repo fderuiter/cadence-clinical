@@ -47,6 +47,26 @@ When creating or modifying study entities in `apps/designer`:
 - Use `generate_image` to create visual SoA diagrams and visit schedule timelines for clinical operations reviews.
 - Run protocol quality sentinels: circular dependency detection, burden scoring, and synthetic cohort eligibility feasibility.
 
+### MANDATORY TOOL INVOCATION (`ask_question`)
+
+When confirming protocol design choices or arm branching, you **MUST** call `ask_question`:
+```json
+{
+  "questions": [
+    {
+      "question": "Select Study Arm & Epoch Configuration",
+      "options": [
+        "(Recommended) 2-Arm Parallel Active-Controlled with 4-Week Screening Epoch",
+        "Single-Arm Open-Label Dose Escalation with Sentinel Dosing Cohort",
+        "Crossover 2x2 Factorial Design with 2-Week Washout Window"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
+
 ### 3. Schema & API Contract Synchronization
 After adding or updating USDM routes or models in `apps/designer`:
 ```bash

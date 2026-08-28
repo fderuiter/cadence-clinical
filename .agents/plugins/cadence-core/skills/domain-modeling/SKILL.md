@@ -37,14 +37,15 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
    Propose precise clinical terms. Avoid vague abstractions like "data item", "form event", or "manager". Use canonical terms: `Encounter`, `Activity`, `BiomedicalConcept`, `eCRF Submission`, `Query Discrepancy`.
 
 3. **Stress-test with concrete clinical scenarios**:
-   Probe edge cases (e.g. protocol amendment re-consent with in-flight visit submissions, adverse event emergency unblinding during database lock).
+   Probe edge cases (e.g. protocol amendment re-consent with in-flight visit submissions, adverse event emergency unblinding during database lock). If conceptual conflicts arise, invoke `ask_question`.
 
-4. **Update `CONTEXT.md` inline**:
+4. **Update `CONTEXT.md` inline (MANDATORY TOOL: `replace_file_content`)**:
    When a new term crystallizes, use `replace_file_content` to add it immediately to `CONTEXT.md` under `# Clinical Domain Glossary` with an exact definition and `_Avoid_` hints where appropriate.
 
-5. **Scaffold ADRs for High-Stakes Decisions**:
+5. **Scaffold ADRs for High-Stakes Decisions (MANDATORY TOOL: `run_command`)**:
    When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
    ```bash
    uv run python scripts/create_adr.py --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
    ```
+
 

@@ -41,17 +41,21 @@ Executes code implementation tasks with strict adherence to repository standards
 ---
 
 ## 2. Implementation Execution
-- Make surgical, cohesive edits using `replace_file_content` or `write_to_file`.
+
+### MANDATORY TOOL INVOCATION (`replace_file_content` / `write_to_file`)
+- Make surgical, cohesive edits using `replace_file_content` (never full-file overwrite for existing files).
+- Use `write_to_file` only when creating brand new modules or session artifacts.
 - Follow critical patterns:
   - **E712 Boolean Filters**: Always use `.is_(True)` / `.is_(False)` in SQLAlchemy queries.
   - **I001 Import Ordering**: Standard library → third-party → first-party, strictly sorted alphabetically.
   - **PEP 695 Generics**: Use native syntax (`class Repository[T]: ...`).
   - **Frontend Tokens**: Use semantic CSS variables (`var(--primary)`, `var(--surface)`).
   - **@req: Docstrings**: Add requirement tags (`@req:PRD-SYS-xxx`) to all new/modified test functions.
+- If scope trade-offs or breaking changes arise during implementation, pause and invoke `ask_question`.
 
 ---
 
-## 3. Mandatory Quality Gate Sequence
+## 3. Mandatory Quality Gate Sequence (MANDATORY TOOL: `run_command`)
 
 Before concluding any implementation turn, execute the four quality gates:
 
@@ -71,10 +75,11 @@ uv run python scripts/sync_gxp.py
 
 ---
 
-## 4. Produce Antigravity Walkthrough Artifact
+## 4. Produce Antigravity Walkthrough Artifact (MANDATORY TOOL: `write_to_file`)
 
 Record changes in `<appDataDir>/brain/<conversation-id>/walkthrough.md` via `write_to_file`:
 - Multi-component summary of files created/modified with clickable `[basename](file:///path/to/file)` links.
 - Verification results table showing test outcomes and sentinel checks.
 - Key GxP requirement IDs satisfied.
+
 

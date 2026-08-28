@@ -35,8 +35,27 @@ Generate a comprehensive specification with the following sections:
 
 ---
 
-## 2. Output as Antigravity Artifact
+## 2. Ambiguity Resolution & Spec Emission
+
+### MANDATORY TOOL INVOCATION (`ask_question`)
+
+If any regulatory boundaries, SLA targets, or data contracts remain ambiguous, you **MUST** invoke `ask_question` before finalizing the spec:
+```json
+{
+  "questions": [
+    {
+      "question": "Which compliance boundary governs <Requirement>?",
+      "options": [
+        "(Recommended) 21 CFR Part 11 electronic signature with step-up HMAC verification",
+        "Standard session authentication with audit log capture"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
 
 Write the specification to `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
 If long-term documentation is needed, also write to `docs/specs/<feature-name>.md`.
+
 

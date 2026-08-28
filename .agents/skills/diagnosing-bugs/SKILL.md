@@ -72,18 +72,20 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 
 ## 4. Fix & Verify
 
-1. Apply the minimal root-cause fix using `replace_file_content`.
-2. Verify the reproducing test turns green:
+### MANDATORY TOOL INVOCATIONS
+1. **Root-Cause Fix (`replace_file_content`)**: Apply the minimal surgical fix to production code (never full overwrite).
+2. **Regression Verification (`run_command`)**:
    ```bash
    uv run cadence test --fast -k "test_name"
    ```
-3. Run full quality sentinels:
+3. **Quality Sentinels (`run_command`)**:
    ```bash
    uv run cadence check --parallel
    ```
-4. Sync GxP compliance documentation:
+4. **Compliance Sync (`run_command`)**:
    ```bash
    uv run python scripts/sync_gxp.py
    ```
-5. Emit diagnosis report artifact to `<appDataDir>/brain/<conversation-id>/bug_diagnosis.md` via `write_to_file`.
+5. **Diagnostic Report (`write_to_file`)**: Emit diagnosis report artifact to `<appDataDir>/brain/<conversation-id>/bug_diagnosis.md`.
+
 

@@ -23,20 +23,36 @@ Interview the user relentlessly until you reach a shared understanding using Ant
 
 ## The Grilling Loop
 
-Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round.
 
-Each question should be formatted like so:
+### MANDATORY TOOL INVOCATION (`ask_question`)
 
+You **MUST** call the `ask_question` tool for asking questions to the user. **Do NOT print multiple-choice questions as plain markdown text.**
+
+```json
+{
+  "questions": [
+    {
+      "question": "Which design approach should govern <Topic>?",
+      "options": [
+        "(Recommended) Option A: Concrete recommended decision with rationale",
+        "Option B: Alternative approach with trade-offs"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
 ```
-❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
 
-➡️ <your recommended answer>
-```
-*(Or present via `ask_question` for direct modal selection).*
+- **Option Formatting**: Phrased as user direct response.
+- **Recommended First**: Prefix recommended answer with `(Recommended)` and list it first.
+- **No Manual Other**: Never add an 'Other' option to questions (provided by UI).
+- **Multi-Select**: Set `is_multi_select: true` when multiple options can be chosen simultaneously.
 
 Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 
 Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), use `grep_search` or `find_by_name`; don't ask the user for anything you could look up yourself. Don't block on it: ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
+
 

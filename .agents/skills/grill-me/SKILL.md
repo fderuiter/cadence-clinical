@@ -25,21 +25,37 @@ Interview the user relentlessly until reaching a shared, unambiguous understandi
 
 1. **Rounds & The Frontier**:
    - The **frontier** contains every decision whose prerequisites are settled.
-   - Ask the entire frontier in one round.
-   - Number each question and provide your recommended answer.
-   - When interactive selection is preferred, call `ask_question`.
+   - You must evaluate the entire frontier in rounds.
+   - For each decision, perform autonomous fact-finding first using `grep_search` and `find_by_name`.
 
-2. **Formatting**:
-   ```
-   ❓ **Q1** - **<question title>**: <question body with clear trade-offs and options>
+2. **MANDATORY TOOL INVOCATION (`ask_question`)**:
+   - You **MUST** call the `ask_question` tool to present frontier questions to the user. **Do NOT print multiple-choice questions as plain markdown text in chat.**
+   - Format options from the user's perspective (e.g. *"Use PostgreSQL JSONB"*).
+   - Place the recommended option first, prefixed with `(Recommended)`.
+   - Never add a manual "Other" option (provided by UI).
+   - Set `is_multi_select: true` when multiple orthogonal choices can be selected simultaneously.
 
-   ➡️ <your recommended answer>
+   ```json
+   {
+     "questions": [
+       {
+         "question": "Which design approach should govern <Topic>?",
+         "options": [
+           "(Recommended) Option A: Concrete recommended decision with rationale",
+           "Option B: Alternative approach with trade-offs"
+         ],
+         "is_multi_select": false
+       }
+     ]
+   }
    ```
 
 3. **Autonomous Fact-Finding**:
-   - Facts are the agent's job. When a question requires repo, file, or schema facts, use `grep_search` and `find_by_name`. Never ask the user for information available in the environment.
+   - Facts are the agent's job. When a question requires repo, file, or schema facts, look them up or dispatch a subagent. Never ask the user for information available in the environment.
 
-4. **Iterate**:
+4. **Iterate & Conclude**:
    - Each round of user answers settles decisions and advances the frontier outward.
+   - Emit a summary artifact to `<appDataDir>/brain/<conversation-id>/grill_summary.md` via `write_to_file`.
    - The session ends when the frontier is empty and no unspoken assumptions remain.
+
 
