@@ -624,4 +624,14 @@ _Avoid_: Missing service definitions in unified API specifications, colliding sc
 An enterprise GxP data integrity standard enforcing monotonic SHA-256 HMAC digest chaining (`previous_digest -> sha256_digest`) and mandatory `reason_for_change` across all domain audit log entities (CTMS, EDC, eConsent, eISF, eTMF, Safety, Payments, Quality).
 _Avoid_: Unchained, un-hashed plain text audit tables lacking reason for change
 
+### Active Pre-Release Sandbox
+
+A development and evaluation posture for the Cadence Clinical monorepo prior to v1.0 General Availability (GA), providing containerized sandbox environments with realistic clinical test datasets for stakeholder demonstration, integration testing, and developer iteration while maintaining strict 21 CFR Part 11 cryptographic architecture.
+_Avoid_: Promoting pre-release development environments as production-qualified GxP systems without formal qualification
+
+### Digital Data Flow (DDF) Pipeline
+
+The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol graphs in Neo4j to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
+_Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
+
 
