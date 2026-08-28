@@ -33,13 +33,13 @@ The repository features a unified CLI (`uv run cadence`) designed to maximize de
 
 ### 1. Interactive Dev TUI Cockpit (`cadence dev --tui`)
 
-Runs and monitors all 15 active microservices (`gateway`, `designer`, `execution`, `etmf`, `ctms`, `interop`, etc.) in an interactive terminal cockpit with live health monitoring and log streaming:
+Runs and monitors all 20+ active microservices (`gateway`, `designer`, `execution`, `etmf`, `ctms`, `interop`, etc.) in an interactive terminal cockpit with live health monitoring and log streaming:
 
 - `[r]`: Restart all services
 - `[g]`: Hot-restart Gateway API (`8000`)
 - `[e]`: Hot-restart Execution Engine (`8002`)
 - `[d]`: Hot-restart Designer MDR (`8001`)
-- `[c]`: Hot-restart CTMS (`8007`)
+- `[c]`: Hot-restart CTMS (`8005`)
 - `[q]`: Gracefully exit and terminate processes
 
 ### 2. Smart Test Watcher (`cadence test --watch` & `--fast`)

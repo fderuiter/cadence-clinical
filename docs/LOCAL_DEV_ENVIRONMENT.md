@@ -1,6 +1,6 @@
 # Local Sandbox Development Environment Guide
 
-Welcome to the Cadence Clinical Platform. This guide walks you through the step-by-step local configuration of your developer environment, maps our local containerized microservice cluster, and details our unified validation workflows.
+Welcome to the Cadence Clinical Platform. This guide walks you through the step-by-step local configuration of your developer environment, maps our local containerized microservice cluster, and details our unified validation workflows using the Cadence CLI (`uv run cadence`).
 
 ---
 
@@ -8,249 +8,135 @@ Welcome to the Cadence Clinical Platform. This guide walks you through the step-
 
 To prevent local verification and testing failures, a newly onboarded developer machine must meet the following system dependencies. These instructions apply to **macOS**, **Linux**, and **Windows WSL2** environments.
 
-### Step 1: Install Git & Pre-commit
+### Step 1: Install Git & Package Managers
 
-Ensure Git is installed on your host system:
+Ensure Git and Node.js (v20+ LTS) are installed on your host system:
 
-- **macOS:** `brew install git`
-- **Linux (Ubuntu/Debian):** `sudo apt update && sudo apt install -y git`
-- **Windows (WSL2):** `sudo apt update && sudo apt install -y git`
+- **macOS:** `brew install git node pnpm`
+- **Linux (Ubuntu/Debian):** `sudo apt update && sudo apt install -y git nodejs npm && npm install -g pnpm`
+- **Windows (WSL2):** `sudo apt update && sudo apt install -y git nodejs npm && npm install -g pnpm`
 
-Once Git is installed, install `pre-commit` locally to handle our pre-commit hook triggers:
+### Step 2: Install Python 3.14 & `uv`
 
-```bash
-# We will initialize pre-commit in Step 4 once Python/uv is set up
-```
-
-### Step 2: Install Node.js (LTS) & pnpm
-
-The frontend portals and monorepo workspace configurations depend on Node.js and `pnpm`.
-
-1. Install Node.js LTS (v20+ recommended) using your favorite package manager (e.g., `nvm` or Homebrew).
-2. Install `pnpm` globally:
-   ```bash
-   npm install -g pnpm
-   ```
-3. Install the workspace dependencies from the root directory to set up local workspace linkages (`apps/web` referencing `packages/ui`):
-   ```bash
-   pnpm install
-   ```
-
-### Step 3: Install Native Graphics & PDF Layout Libraries (Pango & Cairo)
-
-The clinical PDF generation engine (`weasyprint`) relies on system C-libraries:
-
-- **macOS:**
-  ```bash
-  brew install pango
-  ```
-- **Linux (Ubuntu/Debian):**
-  ```bash
-  sudo apt update && sudo apt install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b
-  ```
-- **Windows (WSL2):**
-  ```bash
-  sudo apt update && sudo apt install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b
-  ```
-
-### Step 4: Install Python 3.14 & Run Single-Command Setup (`pnpm setup:dev`)
-
-
-Our backend systems are written in Python 3.14 and utilize `uv` for package management. Python version `3.14` is pinned via `.python-version`.
-
-1. Install `uv` Package Manager:
-   - **macOS/Linux/WSL:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
-   - **Windows (PowerShell):** `powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-
-2. Run the single-command local setup script from the root directory:
-   ```bash
-   pnpm setup:dev
-   ```
-   _This single command automatically provisions Python 3.14 with `--all-extras` (`pytest`, `ruff`, `bandit`, `playwright`, `weasyprint`), downloads required Playwright browser engines, and links workspace dependencies._
-
-### Step 5: Install & Configure Git Pre-commit Hooks
-
-Register the pre-commit configuration with Git to run automatic linting, formatting, and link validations before staging commits:
+Cadence Clinical runs on **Python 3.14+** managed via `uv`:
 
 ```bash
-pre-commit install
+# Install uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install project dependencies
+uv sync --all-extras
 ```
 
-You can run the checks manually on all files in the repository at any time:
+### Step 3: Run Diagnostic Auto-Healing (`cadence doctor --auto-fix`)
+
+Verify system prerequisites, port availability, and automatically provision all local SQLite databases:
 
 ```bash
-uv run pre-commit run --all-files
+uv run cadence doctor --auto-fix
 ```
 
-### Step 6: Parallel Developer Productivity Utilities
-
-The codebase provides built-in utilities to simplify parallel feature development across branches:
-
-- **Microservice Port Allocation Diagnostics**:
-
-  ```bash
-  pnpm ports:check
-  ```
-
-  _Detects active port listeners on ports 8000–8012 before launching local servers or tests, avoiding `address already in use` crashes._
-
-- **Ultra-Fast Parallel Testing**:
-
-  ```bash
-  uv run pytest -n auto
-  ```
-
-  _Leverages isolated in-memory test database workers (`PYTEST_XDIST_WORKER`) to run all 1,200+ unit and integration tests in parallel (~20 seconds total)._
-
-- **Offline OpenAPI Contract Exporting**:
-  ```bash
-  pnpm openapi:export
-  ```
-  _Exports compiled OpenAPI JSON schemas for all 10 microservices to `docs/openapi/` for offline frontend API mocking and client generation._
+_This command checks Python runtime, Docker daemon, node/pnpm, and auto-initializes all local schema files (`econsent.db`, `eisf.db`, `interop.db`, `notifications.db`, `safety.db`, `tickets.db`, `payments.db`, `fileshare.db`)._
 
 ---
 
-## 2. Monorepo Service Catalog & Port Allocations
+## 2. Monorepo Service Catalog & Port Allocations (8000–8019)
 
-The local containerized cluster orchestrates **14 primary services** defined in `docker/docker-compose.yml`.
+The Cadence Clinical platform orchestrates **20+ specialized microservices**, supporting discrete clinical trial domains:
 
-| Service Name         | Port Mapping (Host:Container)            | Sub-directory                       | Primary Database / Storage                         | Purpose & Operational Description                                                                                              |
-| :------------------- | :--------------------------------------- | :---------------------------------- | :------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| **`postgres`**       | `5432:5432`                              | N/A (Docker volume `postgres_data`) | PostgreSQL                                         | Global relational storage for active operational data, clinical subject records, and audit logs.                               |
-| **`neo4j`**          | `7474:7474` (HTTP)<br>`7687:7687` (Bolt) | N/A (Docker volume `neo4j_data`)    | Neo4j Graph DB                                     | Powering the Metadata Repository (MDR). Models CDISC USDM study design entities and path branching.                            |
-| **`keycloak`**       | `8080:8080`                              | `docker/` (config)                  | Relational (internal)                              | Identity and Access Management (IAM). Restores realm role definitions (e.g., Sponsor Admin, Sponsor Designer, Auditor, CRA).   |
-| **`designer`**       | `8001:8001`                              | `apps/designer/`                    | Connected to `neo4j`                               | Core Python service (FastAPI) responsible for clinical trial structure and CDISC schema definition.                            |
-| **`execution`**      | `8002:8002`                              | `apps/execution/`                   | Connected to `postgres`                            | Electronic Data Capture (EDC) engine overseeing trial workflows, subject progression, and database-level audits.               |
-| **`etmf`**           | `8003:8003`                              | `apps/etmf/`                        | Shared workspace: `/app/tmf.db` (SQLite)           | Electronic Trial Master File system managing GCP document structures, files, metadata taxonomy, and workflows.                 |
-| **`ctms`**           | `8007:8007`                              | `apps/ctms/`                        | Shared workspace: `/app/ctms.db` (SQLite)          | Clinical Trial Management System tracking trial sites, CRA monitoring, and visit scheduling.                                   |
-| **`quality`**        | `8005:8005`                              | `apps/quality/`                     | Shared workspace: `/app/quality.db` (SQLite)       | Clinical quality, deviations, root-cause analyses, and CAPA logging.                                                           |
-| **`interop`**        | `8004:8004`                              | `apps/interop/`                     | Shared workspace: `/app/interop.db` (SQLite)       | Interoperability gateway for integrations like external patient registries and mobile ePRO ingestion.                          |
-| **`tickets`**        | `8009:8009`                              | `apps/tickets/`                     | Shared workspace: `/app/tickets.db` (SQLite)       | Communication and query tickets workflow between sites, monitors, and data managers.                                           |
-| **`notifications`**  | `8006:8006`                              | `apps/notifications/`               | Shared workspace: `/app/notifications.db` (SQLite) | Dispatches emails/alerts, maps notification templates, and provides webhook relays.                                            |
-| **`safety`**         | `8008:8008`                              | `apps/safety/`                      | Shared workspace: `/app/safety.db` (SQLite)        | Serious Adverse Event (SAE) processing, E2B intake, and clinical safety reconciliation.                                        |
-| **`org`**            | `8012:8012`                              | `apps/org/`                         | Connected to `postgres`                            | Organization Directory service managing personnel assignments, site registration, and study relationships.                     |
-| **`eisf`**           | `8010:8010`                              | `apps/eisf/`                        | Shared workspace: `/app/eisf.db` (SQLite)          | Electronic Investigator Site File (eISF) system for site-level document and investigator binder compliance.                    |
-| **`econsent`**       | `8011:8011`                              | `apps/econsent/`                    | Shared workspace: `/app/econsent.db` (SQLite)      | Electronic Consent (eConsent) service managing patient information sheets, translated consent forms, and signature compliance. |
-| **`gateway`**        | `8000:8000`                              | `apps/gateway/`                     | N/A                                                | Central routing reverse-proxy exposing unified endpoint routing to individual backend APIs.                                    |
-| **`subject-portal`** | `5174:5174`                              | `apps/subject-portal/`              | N/A                                                | Patient-facing SPA (Vue and Node.js) for completing diaries, surveys, and reviewing profile metrics.                           |
-
-### Keycloak Local Demo Accounts
-
-To facilitate local development, the following demo account is pre-seeded into Keycloak:
-
-| Username        | Password   | Realm Roles        | Description                                        |
-| :-------------- | :--------- | :----------------- | :------------------------------------------------- |
-| `designer_demo` | `password` | `Sponsor Designer` | Demo user with clinical study designer privileges. |
+| Service Name | Port | Sub-directory | Primary Database | Domain & Operational Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **`gateway`** | `8000` | `apps/gateway/` | Stateless / JWT | Central Reverse Proxy with Keycloak OIDC authentication & HMAC signature injection |
+| **`designer`** | `8001` | `apps/designer/` | Neo4j (`7687`) | MDR/SDR Protocol Designer & CDISC USDM v3/v4 study graph modeling |
+| **`execution`** | `8002` | `apps/execution/` | PostgreSQL (`5432`) | EDC Runtime Engine, dynamic subject eCRFs, real-time edit checks, & Dataset-JSON |
+| **`etmf`** | `8004` | `apps/etmf/` | PostgreSQL / SQLite | DIA TMF Reference Model v3.2.0 document classification & completeness tracking |
+| **`ctms`** | `8005` | `apps/ctms/` | PostgreSQL / SQLite | Clinical Trial Management, CRA monitoring visit reports, & 6-facet site greenlight |
+| **`quality`** | `8006` | `apps/quality/` | PostgreSQL / SQLite | Quality Assurance, CAPA workflows, CSM Benford forensics, & pHash image checks |
+| **`interop`** | `8007` | `apps/interop/` | PostgreSQL / SQLite | SMART on FHIR USCDI EHR ingestion & Open mHealth biometric streaming |
+| **`org`** | `8008` | `apps/org/` | PostgreSQL / SQLite | Organization Directory, clinical trial sites, staff credentials, & PI DOA logs |
+| **`safety`** | `8009` | `apps/safety/` | PostgreSQL / SQLite | ICH E2B(R3) ICSR safety XML compilation, CTCAE grading, & AS2 S/MIME EDI gateway |
+| **`notifications`** | `8010` | `apps/notifications/` | PostgreSQL / SQLite | Multi-channel GxP alerts (SMTP Email, SMS, Webhooks, In-App inbox) |
+| **`knowledge`** | `8011` | `apps/knowledge/` | PostgreSQL / SQLite | Clinical SOP hub, contextual help drawer routing, & versioned guidance |
+| **`tickets`** | `8012` | `apps/tickets/` | PostgreSQL / SQLite | Clinical query escalation, data discrepancy tracking, & dual-target SLA timers |
+| **`ai_gateway`** | `8013` | `apps/ai_gateway/` | Ephemeral / REST | Model tiering (Tier 1–3), PII/PHI de-id air-gap, & 21 CFR Part 11 AI draft ledgers |
+| **`payments`** | `8014` | `apps/payments/` | PostgreSQL / SQLite | Investigator grant budgets, procedure fees, multi-payee splits, & participant wallet |
+| **`imaging`** | `8015` | `apps/imaging/` | PostgreSQL / SQLite | Zero-footprint WebGL MPR DICOM viewer & blinded dual-reader RECIST 1.1 adjudication |
+| **`eisf`** | `8016` | `apps/eisf/` | PostgreSQL / SQLite | Electronic Investigator Site Files (eISF) site binders & PI certification manifests |
+| **`econsent`** | `8017` | `apps/econsent/` | PostgreSQL / SQLite | Digital Informed Consent, amendment re-consent gating, & cryptographic sealing |
+| **`fileshare`** | `8018` | `apps/fileshare/` | MinIO (`9000`) + SQL | StoragePort S3 abstraction, presigned transfer URLs, & Part 11 document envelopes |
+| **`compliance`** | `8019` | `apps/compliance/` | Pytest + Audit Logs | Automated qualification testing, IQ/OQ/PQ assertions, & GxP sync engine |
+| **`web`** | `5173` | `apps/web/` | Vite SPA Client | Vue 3 Unified Clinical Workspace (Multi-Persona Switcher) |
+| **`subject-portal`** | `5174` | `apps/subject-portal/` | IndexedDB PWA | Offline-First Participant-Facing eCOA/ePRO Progressive Web App |
 
 ---
 
-## 3. Launching the Local Sandbox
+## 3. Primary CLI Workflows (`cadence`)
 
-To spin up the containerized database and backend stack, run the following command from the repository root:
+The repository features the unified **Cadence CLI** (`uv run cadence`) designed to streamline developer orchestration:
+
+### 1. Interactive Dev TUI Cockpit (`cadence dev --tui`)
+
+Runs and monitors all backend microservices in a Rich terminal cockpit with live health monitoring and hotkey restarts:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+uv run cadence dev --tui
 ```
 
-### Modular Orchestration via Subsystem Profiles
+- `[r]`: Restart all services
+- `[g]`: Hot-restart Gateway API (`8000`)
+- `[e]`: Hot-restart Execution Engine (`8002`)
+- `[d]`: Hot-restart Designer MDR (`8001`)
+- `[c]`: Hot-restart CTMS (`8005`)
+- `[q]`: Gracefully exit and terminate processes
 
-To conserve workstation resources (RAM/CPU), services are grouped into subsystem profiles (`designer`, `execution`, `operations`). You can boot isolated subsystem profiles natively using Docker Compose or the CLI helper `scripts/dev_orchestrator.py`:
+### 2. Multi-Engine Scenario Seeding (`cadence db seed --tier full`)
 
-- **Designer Profile:** Launches `designer` microservice and `neo4j` database alongside core auth and gateway infrastructure.
-  ```bash
-  python scripts/dev_orchestrator.py designer
-  ```
-- **Execution Profile:** Launches `execution` EDC microservice and primary `postgres` database.
-  ```bash
-  python scripts/dev_orchestrator.py execution
-  ```
-- **Operations Profile:** Launches operational domain microservices (`ctms`, `etmf`, `quality`, `org`, `eisf`, `tickets`, `safety`, `notifications`, `econsent`, `interop`) and domain databases.
-  ```bash
-  python scripts/dev_orchestrator.py operations
-  ```
-- **All Profiles:**
-  ```bash
-  python scripts/dev_orchestrator.py all
-  ```
-
-### DB Migrations & Database Initialization
-
-On container startup, the automated database migration script (`apps/execution/database/migrate.py`) executes inside the execution service container to automatically build out relational structures, register GxP-protected write triggers, and seed Keycloak configurations without manual developer intervention.
-
-### Hot Reloading
-
-The workspace source files (`apps/`, `packages/`, `tests/`) are mounted directly into containers as volumes. All Python backends run under `uvicorn --reload`, meaning **any backend code adjustments made on your host will immediately hot-reload the sandbox containers**.
-
----
-
-## 4. Running the Portals & Interfaces
-
-Our environment features two web-based user interfaces:
-
-### A. Patient-facing Subject Portal (`apps/subject-portal`)
-
-- **Execution:** Executed automatically inside the containerized stack using Docker Compose.
-- **Port:** Accessible on Port `5174` ([http://localhost:5174](http://localhost:5174)).
-- **Purpose:** Provides a patient-centric UI optimized for diaries, surveys, and task queues.
-
-### B. Administrative Web Client (`apps/web`)
-
-- **Execution:** **NOT** containerized in Docker Compose. It must be launched natively on your host machine to allow developer-first styling, components caching, and active debugging.
-- **Port:** Runs strictly on **Port 3000** (`strictPort: true` configured in `vite.config.js`).
-- **Base Path:** `/cadence-clinical/`
-- **Local Shared UI Component Resolution:** Imports elements from the local package `packages/ui` linked by the workspace. Ensure you run `pnpm install` in the root first.
-- **Launch Commands:**
-  From the repository root:
-  ```bash
-  pnpm --filter web dev
-  ```
-  Or change directories and launch directly:
-  ```bash
-  cd apps/web
-  pnpm dev
-  ```
-- **Testing & Linting the Administrative UI:**
-  ```bash
-  pnpm --filter web test  # Launches Vitest unit/integration tests
-  pnpm --filter web lint  # Validates UI code style with ESLint
-  ```
-
----
-
-## 5. Unified Local Quality Verification Command
-
-Before creating a commit or opening a pull request, verify that all systems meet architectural drift, styling, and security boundaries.
-
-Run our single parallelized workspace validation runner from the repository root:
+Seeds realistic clinical test protocols, randomized subjects, eCRFs, deviations, and TMF documents across Neo4j, PostgreSQL, and SQLite:
 
 ```bash
-pnpm check
+uv run cadence db seed --tier full
 ```
 
-This invokes `concurrently` to run **7 concurrent quality pipelines**:
+### 3. Smart Test Watcher (`cadence test --watch`)
 
-1. **`pnpm format`**: Standardizes style across JavaScript, Vue templates (Prettier), and Python files (`uv run ruff format .`).
-2. **`pnpm lint`**: Inspects frontend structures (ESLint) and Python syntaxes (`uv run ruff check .`).
-3. **`pnpm test`**: Parallel execution of Vitest UI unit/component tests and Pytest Python backend checks (`uv run pytest`).
-4. **`node scripts/check-links.js`**: Scans relative file/directory references in all markdown documentation files to ensure 100% valid relative references.
-5. **`uv run python scripts/validate_adrs.py`**: Verifies numbering consistency, structure, and detects architectural changes lacking required Architecture Decision Records.
-6. **`uv run python scripts/validate_markdown.py`**: A custom validation utility parsing markdown files to check CLI option patterns, Python AST function signature match validity, and Pydantic-based JSON blocks.
-7. **`uv run bandit`**: Deep security scanner identifying common security hazards inside `apps/` and `packages/` utilizing configurations in `pyproject.toml`.
+Monitors source files across `apps/`, `packages/`, and `tests/` and re-executes tests upon save:
+
+```bash
+uv run cadence test --watch
+```
+
+For ultra-fast iteration bypassing coverage calculations:
+
+```bash
+uv run cadence test --fast
+```
 
 ---
 
-## 6. Manual & Granular Executions
+## 4. Quality Gates & Sentinels (`cadence check --parallel`)
 
-If you wish to invoke tools individually on the host system:
+Before committing changes or opening a pull request, run all 10 architecture sentinels concurrently:
 
 ```bash
-# Apply automatic Python format and lint corrections
-uv run ruff format .
-uv run ruff check --fix .
-
-# Execute python unit tests with coverage
-uv run pytest tests/test_audit.py
-
-# Run database schema or state resets
-uv run python scripts/reset_db.py
+uv run cadence check --parallel
 ```
+
+### Automated Remediation (`cadence fix --all`)
+
+Auto-remediates linting issues, formats code, auto-indexes ADRs, and regenerates API documentation:
+
+```bash
+uv run cadence fix --all
+```
+
+---
+
+## 5. GxP Compliance Synchronization (`cadence gxp sync`)
+
+Whenever test functions are added, modified, or requirement tags (`@req:PRD-SYS-xxx`) are updated, run:
+
+```bash
+uv run cadence gxp sync
+```
+
+This executes the test suite, generates the updated Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`), and stages the compliance documents for Git commit.

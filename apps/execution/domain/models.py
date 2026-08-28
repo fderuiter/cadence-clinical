@@ -243,6 +243,50 @@ class ConsentFormRecordDomain:
         raise ValueError("Cannot delete consent records")
 
 
+class SubjectConsentDomain:
+    """Pure Python subject consent domain model with 21 CFR Part 11 metadata."""
+
+    def __init__(
+        self,
+        id: str | None = None,
+        subject_id: str | None = None,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        version_tag: str = "1.0",
+        version_index: int = 1,
+        protocol_version: str | None = None,
+        status: str = "SIGNED",
+        icf_signed: bool = False,
+        icf_signed_date: datetime | None = None,
+        requires_reconsent: bool = False,
+        is_paper_override: bool = False,
+        version: int = 1,
+        is_deleted: bool = False,
+        created_at: datetime | None = None,
+        created_by: str | None = None,
+        updated_at: datetime | None = None,
+        updated_by: str | None = None,
+    ):
+        self.id = id or str(uuid.uuid4())
+        self.subject_id = subject_id
+        self.study_id = study_id
+        self.site_id = site_id
+        self.version_tag = version_tag
+        self.version_index = version_index
+        self.protocol_version = protocol_version
+        self.status = status
+        self.icf_signed = icf_signed
+        self.icf_signed_date = icf_signed_date
+        self.requires_reconsent = requires_reconsent
+        self.is_paper_override = is_paper_override
+        self.version = version
+        self.is_deleted = is_deleted
+        self.created_at = created_at or datetime.now()
+        self.created_by = created_by
+        self.updated_at = updated_at
+        self.updated_by = updated_by
+
+
 class AuditLogDomain:
     """Pure Python safety audit log domain model with GxP immutability."""
 

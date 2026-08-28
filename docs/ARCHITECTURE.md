@@ -89,114 +89,180 @@ Traditional clinical trial builds require manual, error-prone translation of pro
 ### I. Quality & CAPA Management Service (`apps/quality`)
 
 - **Role:** Isolated Quality Assurance & Compliance Workspace.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
+- **Datastore:** Neo4j Graph Database 5.0+.
 - **Core Responsibilities:**
-  - Secure, relational protocol deviation tracking linked directly to systematic root causes and corrective/preventive action models.
-  - Integration with Keycloak OIDC authentication via standard headers proxying through the secure API gateway.
-  - Full 21 CFR Part 11 compliant mutable record auditing with mandatory `version_index` incrementing, standard creation/traceability metadata, and a non-empty change reason header (`X-Change-Reason`).
-  - Immutable, append-only, chronological quality logs (`QualityAuditLog`) of all viewed records, updates, and transitions.
-  - Restricts access to read-only roles (`auditor`, `inspector`, `regulatory_inspector`) from all mutating operations, gates general write access, and authorizes terminal CAPA approvals or closures only to Quality Oversight roles (`quality_manager`, `qa_lead`, `quality_oversight`, `admin`).
+  - Protocol structure authoring (Study Arms, Epochs, Encounters, Activities, and Biomedical Concepts).
+  - High-density Schedule of Activities (SoA) matrix generation.
+  - Official CDISC USDM v3.0/v4.0 export and validation.
+  - Immutable graph branching and semantic protocol amendment diffing.
 
-### J. Interoperability & Sync Gateway Service (`apps/interop`)
-
-- **Role:** EHR FHIR Data Adapter & ePRO Submission Sync Gateway.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
+#### 2. Knowledge & SOP Service (`apps/knowledge` — Port 8011)
+- **Role:** Clinical SOP Hub & Dynamic Help Drawer Dispatcher.
+- **Datastore:** PostgreSQL / SQLite.
 - **Core Responsibilities:**
-  - Ingests HL7 FHIR bundles, performs PII stripping and pseudonymization, and CDASH mappings to pre-fill observations.
-  - Receives single or bulk ePRO/eCOA submissions from active study subjects.
-  - Implements multi-strategy offline reconciliation (`CLIENT_WINS`, `SERVER_WINS`, `MERGE`) and isolates/logs conflict details in `EPROSubmissionDefeated`.
-  - Triggers auditable open clinical queries automatically for submissions with structural mismatches.
-  - Computes subject compliance schedules and triggers async background notifications (EMAIL, SMS, WEBHOOK, IN_APP).
-  - Exposes secure least-privilege APIs for patient self-service (instrument details, assignments, compliance, and notification lists) and notification acknowledgement.
+  - Contextual SOP delivery mapped to active user persona and frontend route patterns.
+  - Hierarchical specificity scoring for clinical guidance lookup.
+  - Two-tier controlled document versioning (`KnowledgeArticle` and `KnowledgeArticleVersion`).
 
-### K. Patient/Subject Portal (`apps/subject-portal`)
-
-- **Role:** Standalone Patient-Facing ePRO Web Application.
+#### 3. Clinical AI Gateway (`apps/ai_gateway` — Port 8013)
+- **Role:** Intelligent Medical Coding & De-Identification Proxy.
+- **Datastore:** Ephemeral in-memory caching / External REST.
 - **Core Responsibilities:**
-  - Serves as an isolated, secure Progressive Web App (PWA) client optimized for mobile environments.
-  - Integrates with Keycloak OIDC for authenticated login under the strict `Subject` role.
-  - Implements offline-first caching via service workers and queues signed submissions chronologically inside IndexedDB.
-  - Provides a visual Sync Queue Panel allowing subjects to view transmission logs and online reconciliation decisions.
-  - Supports read capabilities (assigned instruments, compliance rates, assignments, and notification inbox) and interactive notification acknowledgement alongside diary submit and sync operations.
-
-### L. eISF Module (`apps/eisf`)
-
-- **Role:** Electronic Investigator Site File (eISF) Repository.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Ingests, taxonomy-classifies, and versions clinical trial site documents mapped to binder structures.
-  - Enforces rigid site-scoped role authorization and site-isolation boundaries via `enforce_site_isolation` centrally.
-  - Computes site-level completeness checks matching present versus required classifications inside standard binder sections.
-  - Restricts write mutations to CRC/Investigator roles, and blocks read-only Auditor/Inspector roles from modifying files.
-  - Maintains a 21 CFR Part 11 compliant audit trail (`ISFAuditLog`) capturing user contexts, timestamps, and justifications for all site operations.
-  - Supports bidirectional offline sync with automated conflict reconciliation strategies and deduplication mechanisms.
-  - Integrated on host port `8010` and aggregated into the gateway's unified OpenAPI specification.
-
-### M. Controlled Terminology & NCI Thesaurus Subsystem (`apps/designer`, `packages/ui`, `apps/gateway`)
-
-- **Role:** Real-time CDISC CT / NCI Thesaurus integration and live field validation.
-- **Core Responsibilities & Flow:**
-  - **EVS Client (`apps/designer/evs_client.py`):** Establishes an asynchronous client hitting the external NCI EVS REST API, providing robust lookup, search, and type-safe error handling.
-  - **Terminology Cache (`TerminologyCache`):** Combines database/in-memory cache-aside lookup with a thread-safe TTL and automatic fallback to mock/offline datasets on transport or service degradation.
-  - **Routing & Security:** The API Gateway (`apps/gateway/main.py`) performs HMAC-signed proxying and strips prefixes to route external `/api/v1/terminology` traffic directly to the Designer service (ADR-058).
-  - **Signed Web Client:** The frontend client (`apps/web/src/api/terminologyClient.js`) interacts securely via standard in-transit signature verification (ADR-067).
-  - **Consolidated UI Components:** `packages/ui` provides the shared `debounce` utility and `createClinicalLookupInput` helper function, which are consumed by Vue interfaces like `EcrfView.vue` and `MdrView.vue` to achieve responsive typing validation, stale response guards, and accessible ARIA live-region feedback (ADR-065).
-  - **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity in accordance with GxP and 21 CFR Part 11 requirements.
-
-### N. Electronic Consent Service (`apps/econsent`)
-
-- **Role:** Electronic signature capture, patient enrollment consent, and regulatory signature storage.
-- **Datastore:** local `sqlite_econsent` (`econsent.db`) in local development.
-- **Core Responsibilities:**
-  - Enforce Keyclock OIDC authenticated routing via the API Gateway.
-  - Manage secure electronic signatures in accordance with Part 11.
-  - Generate digitally sealed consent logs for audit trials.
-
-### O. Notifications & Webhooks Dispatcher (`apps/notifications`)
-
-- **Role:** Centralized clinical event-driven background alerting and delivery system.
-- **Datastore:** local `sqlite_notifications` (`notifications.db`) in local development.
-- **Core Responsibilities:**
-  - Ingest notification triggers from external microservices (such as eTMF sync events or compliance notifications).
-  - Dispatch payloads across channels including `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
-  - Maintain an immutable, chronologically logged database of dispatch attempts and delivery statuses.
-
-### P. Randomization Trial Supply Management (RTSM) Module (`apps/execution`)
-
-- **Role:** Blinded kit randomization, treatment allocation, and trial supply dispensing logic.
-- **Datastore:** PostgreSQL (sharing/leveraging the execution engine's transactional database).
-- **Core Responsibilities:**
-  - Exposure of treatment allocation endpoints, specifically `/api/v1/execution/rtsm/dispense`.
-  - Enforcement of strict execution validation gates, specifically throwing a `PermissionError` and an HTTP 403 Forbidden status if a subject allocation request is made for a subject not in the `ENROLLED` state.
-  - Preservation of trial blinding integrity during randomized treatment allocation.
-
-### Q. Fileshare & Media Storage Service (`apps/fileshare`)
-
-- **Role:** GxP-compliant binary payload storage, pre-signed URL broker, and direct client transfer manager.
-- **Datastore:** SQLite / PostgreSQL Relational Database (`fileshare.db` in local development) & S3/MinIO Object Storage (`minio`).
-- **Core Responsibilities:**
-  - Implements the Hexagonal `StoragePort[T]` protocol for tenant-isolated object storage operations (`/{tenant_id}/{study_id}/{doc_id}`).
-  - Generates secure, short-lived presigned upload and download URLs for direct browser transfer, bypassing application memory.
-  - Enforces mandatory SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
-  - Manages internal file sharing grants, time-bounded guest access links with cryptographic token validation, and legal retention holds.
-  - Maintains a 21 CFR Part 11 compliant audit trail (`FileshareAuditLog`) capturing all transfer requests, link creations, and document mutations.
+  - Three-tier model routing (Tier 1 Local SLMs, Tier 2 Fast Cloud LLMs, Tier 3 Frontier Models).
+  - Outbound PII/PHI de-identification air-gap with surrogate tokenization.
+  - Hybrid semantic medical coding against MedDRA and WHODrug dictionaries.
+  - 21 CFR Part 11 dual-attribution AI draft ledgers (`DRAFT_AI`).
 
 ---
 
-## 2.2 Local Developer Runtime Topology
+### B. Clinical Operations & Execution Layer
 
-Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, multi-AZ PostgreSQL clusters, Redis distributed caching tiers, and Neo4j graph clusters), the developer-centric local environment runs as a lightweight, single-host orchestration configuration using Docker Compose.
+#### 4. EDC Execution Engine (`apps/execution` — Port 8002)
+- **Role:** Downstream Electronic Data Capture (EDC) Runtime.
+- **Datastore:** PostgreSQL 14+ Relational Database.
+- **Core Responsibilities:**
+  - Dynamic subject eCRF schema projection based on subject-specific protocol version tags.
+  - Subject enrollment lifecycle state machines and visit scheduling.
+  - Real-time edit check execution during site data entry.
+  - Medical coding review, central/local laboratory reference range governance, and CTCAE toxicity grading.
+  - CDISC Dataset-JSON 1.0.0 biostatistical export (SDTM / ADaM).
 
-### Local Configuration Details:
+#### 5. CTMS Operations Service (`apps/ctms` — Port 8005)
+- **Role:** Clinical Trial Management & Site Operational Governance.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Trial and site milestone tracking, CRA workload balancing, and Monitoring Visit Reports (MVR).
+  - 6-Facet Site Greenlight Engine evaluating IRB approvals, CTA contracts, essential regulatory documents, DOA logs, staff training certifications, and investigational product release.
+  - Append-only `CTMSAuditLog` tracking all operational transactions with Part 11 metadata.
 
-- **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`). Dedicated PostgreSQL containers (`postgres-etmf`, `postgres-ctms`, and `postgres-quality`) are used for `etmf`, `ctms`, and `quality` respectively.
-- **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
-- **Object Storage:** A local MinIO container (`minio`) is utilized for S3-compatible binary payload storage and presigned direct client uploads for the fileshare service (`fileshare`).
-- **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), Notifications Dispatcher (`notifications`), and Fileshare & Media (`fileshare`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
-- **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
+#### 6. Organization Directory (`apps/org` — Port 8008)
+- **Role:** Multi-Tenant Organization & Site Directory.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Master directory of Sponsor, CRO, and Site organizations and personnel.
+  - Principal Investigator Electronic Delegation of Authority (DOA) log with electronic signature step-up tokens.
+  - Role-based site scoping and investigator qualification management.
 
-The diagram below represents the local development runtime and mapping of all 24 active local services:
+#### 7. Clinical Issue Hub (`apps/tickets` — Port 8012)
+- **Role:** Query Discrepancy Escalation & Support SLA Management.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Multi-tier module-based routing across functional clinical queues.
+  - Dual-target SLA tracking (acknowledgment SLA vs. clinical resolution SLA) with automated escalation.
+  - Controlled reopening window enforcement accompanied by mandatory 21 CFR Part 11 change reasons.
+
+#### 8. Site Payments & Participant Compensation (`apps/payments` — Port 8014)
+- **Role:** Investigator Grant Budgets & Participant Financial Wallet.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Procedure-fee rule engine triggered by eCRF visit completion and CRA Source Data Verification (SDV).
+  - Multi-party payee grant split calculations and 10% statutory closeout holdback escrows.
+  - Participant stipend management, mobile receipt OCR reimbursement approval, and IRS 1099 threshold tracking.
+
+---
+
+### C. Patient Engagement & Interoperability Layer
+
+#### 9. Subject Portal (`apps/subject-portal` — Port 5174)
+- **Role:** Offline-First Patient-Facing eCOA/ePRO PWA.
+- **Technology:** Vite + Vue 3 Progressive Web App.
+- **Core Responsibilities:**
+  - Isolated patient-facing interface running under the strict `Subject` role.
+  - IndexedDB offline queue caching ePRO diary submissions during network disconnects.
+  - Visual sync reconciliation queue with collision-free replay strategies.
+
+#### 10. Electronic Consent Service (`apps/econsent` — Port 8017)
+- **Role:** Digital Informed Consent (eConsent) & Re-Consent Engine.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Interactive ICF document compilation with Flesch-Kincaid readability scoring.
+  - Dynamic protocol amendment re-consent gating blocking downstream visit data capture upon protocol revisions.
+  - Minor-to-adult age-of-majority transition tracking.
+  - 21 CFR Part 11 compliant cryptographic signature manifests.
+
+#### 11. Notifications Dispatcher (`apps/notifications` — Port 8010)
+- **Role:** Multi-Channel Clinical Alert & Compliance Messenger.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Asynchronous dispatch across SMTP Email (Jinja2 templates), SMS, HMAC-signed Outbound Webhooks, and In-App inbox.
+  - Mandatory GxP notification policy bypassing user opt-out preferences for safety-critical alerts.
+  - Deterministic notification idempotency keys preventing duplicate alerts across retries.
+
+#### 12. FHIR & eSource Gateway (`apps/interop` — Port 8007)
+- **Role:** EHR Interoperability & Biometric Sensor Streaming.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - SMART on FHIR USCDI clinical data ingestion from hospital EHR systems.
+  - Split-screen CRC review drawer with 1-click clinical acceptance into draft eCRFs.
+  - Open mHealth continuous time-series biometric sensor stream adapter.
+
+---
+
+### D. Safety, Quality & Governance Layer
+
+#### 13. Safety & Pharmacovigilance (`apps/safety` — Port 8009)
+- **Role:** Pharmacovigilance Gateway & Regulatory Safety Transmissions.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - ICH E2B(R3) Individual Case Safety Reports (ICSR) ISO 27953-2 XML compilation.
+  - Automated NCI-CTCAE v5.0 laboratory toxicity grading and WHODrug active ingredient hierarchy verification.
+  - B2B AS2 EDI gateway with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
+
+#### 14. Quality & CAPA Management (`apps/quality` — Port 8006)
+- **Role:** Quality Assurance, Centralized Statistical Monitoring & Forensic Auditing.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Protocol deviation management linked to Root Cause Analysis (RCA) and CAPA corrective workflows.
+  - Integration with Keycloak OIDC authentication via standard headers proxying through the secure API gateway.
+  - Full 21 CFR Part 11 compliant mutable record auditing with mandatory `version_index` incrementing, standard creation/traceability metadata, and a non-empty change reason header (`X-Change-Reason`).
+  - Immutable, append-only, chronological quality logs (`QualityAuditLog`) of all viewed records, updates, and transitions.
+  - Restricts access to read-only roles (`auditor`, `inspector`, `regulatory_inspector`) from all mutating operations, gates general write access, and authorizes terminal CAPA approvals or closures only to Quality Oversight roles (`quality_manager`, `qa_lead`).
+
+#### 15. Blinded DICOM Adjudication (`apps/imaging` — Port 8015)
+- **Role:** Clinical Oncology Imaging & RECIST 1.1 Adjudication.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Zero-footprint WebGL Multi-Planar Reconstruction (MPR) axial/sagittal/coronal viewer.
+  - Blinded dual-reader RECIST 1.1 / Lugano oncology evaluations.
+  - Automated 20% Sum of Diameters (SOD) discordance trigger with Chair step-up sign-off.
+
+#### 16. Electronic Trial Master File (`apps/etmf` — Port 8004)
+- **Role:** Regulatory Document Ingestion & Completeness Repository.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - DIA TMF Reference Model v3.2.0 taxonomy classification across 10 canonical zones.
+  - Expected Document Lists (EDLs) and dynamic milestone completeness scoring.
+  - Automated QC lifecycle state engine (`DRAFT` $\rightarrow$ `TECHNICAL_QC` $\rightarrow$ `CLINICAL_QC` $\rightarrow$ `APPROVED`).
+
+#### 17. Electronic Investigator Site Files (`apps/eisf` — Port 8016)
+- **Role:** Site-Scoped Regulatory Binder Repository.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Site-isolated regulatory binder management inheriting DIA eISF taxonomy structures.
+  - Bidirectional synchronization with Sponsor eTMF artifacts.
+  - Principal Investigator certification audit manifests.
+
+#### 18. FileShare & StoragePort Gateway (`apps/fileshare` — Port 8018)
+- **Role:** Binary Blob Storage & Presigned Transfer URL Broker.
+- **Datastore:** MinIO / S3 Object Storage + PostgreSQL Envelope Metadata.
+- **Core Responsibilities:**
+  - Hexagonal `StoragePort[T]` protocol isolating tenant binary payloads (`/{tenant_id}/{study_id}/{doc_id}`).
+  - Secure short-lived presigned upload and download URLs for direct browser transfer.
+  - SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
+
+#### 19. Compliance Engine (`apps/compliance` — Port 8019)
+- **Role:** Centralized Regulatory Verification & Qualification.
+- **Datastore:** Pytest + Audit Ledgers.
+- **Core Responsibilities:**
+  - Full automated qualification test execution (IQ/OQ/PQ suites).
+  - 100% GxP Requirements Traceability Matrix (RTM) synchronization.
+  - 21 CFR Part 11 audit trail assertion gates.
+
+---
+
+## 3. Local Developer Runtime Topology
+
+The developer runtime is containerized using Docker Compose to orchestrate relational databases, graph engines, identity providers, and object storage in a lightweight, single-host configuration.
 
 ```mermaid
 flowchart TD
@@ -288,27 +354,33 @@ flowchart TD
 
 ---
 
-## 3. Data Transformation Flow
+## 4. Digital Data Flow (DDF) Compilation & Execution Pipeline
 
 ```mermaid
 flowchart TD
-    A[Study Designer Authors Protocol] --> B[(Saved to Neo4j Graph - USDM)]
-    B --> C[DDF Event: "Study Published"]
-    C --> D[Transformer: USDM ──► ODM/XForm]
-    D --> E[(Provisioned into PostgreSQL EDC)]
+    A[Protocol Authoring: Designer Neo4j] -->|USDM v3/v4 Graph| B[DDF Ingestion & AST Parser]
+    B --> C[DDF Intermediate Representation - IR]
+    C --> D[XPath Rule Compiler]
+    D --> E[CDISC ODM XML & OpenRosa XForms]
+    E --> F[(PostgreSQL EDC Execution Engine)]
 
-    E --> F[eCOA Instrument Definition Assigned]
-    E --> G[Live Site Data Entry & Audit Log]
-
-    F --> H[Patient Completes ePRO Assessment - PWA]
-
-    G --> I[CDASH Extractor: SDTM Domains]
-    H --> I
-
-    I --> J[Analysis Derivation: ADaM Datasets]
-    J --> K[Serializer: CDISC Dataset-JSON 1.0]
-    K --> L{Validator: Conformance Verification}
-
-    L -->|If Valid| M[Log SUCCESS in BiostatExport]
-    L -->|If Invalid| N[Log FAILED & Raise HTTP 422]
+    F --> G[Dynamic Subject Schema Projection]
+    G --> H[Site CRC / Subject eCRF Entry]
+    H --> I[Real-Time Edit Checks & GxP Audit Log]
+    I --> J[Dataset-JSON Serializer: SDTM & ADaM]
+    J --> K{Validation Sentinel Gate}
+    K -->|Valid| L[Commit Biostatistical Export Snapshot]
+    K -->|Invalid| M[Log Discrepancy Query & Block Export]
 ```
+
+---
+
+## 5. Security Architecture & 21 CFR Part 11 Compliance
+
+Cadence enforces rigorous regulatory controls across all transactions:
+
+1. **Centralized OIDC RBAC**: Keycloak validates JWT tokens, enforcing fine-grained persona permissions (`sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`).
+2. **HMAC-SHA256 Inter-Service Gateway Signatures**: Downstream services reject unauthenticated internal requests lacking valid `X-Gateway-Signature` headers.
+3. **60-Second Signature Step-Up Re-Authentication**: High-stakes mutations (PI batch sign-offs, subject randomization, unblinding) require re-entering password + TOTP to receive a short-lived `sig_token`.
+4. **Monotonic SHA-256 Audit Chaining**: Every mutating transaction records `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic hash digest chained to its predecessor.
+5. **Strict Boolean Filters (E712)**: Prevents SQL emission discrepancies on nullable boolean columns via `.is_(True)` and `.is_(False)`.

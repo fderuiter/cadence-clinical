@@ -20,8 +20,14 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 
+from apps.execution.adapters.repositories import (
+    get_subject_lifecycle_service,
+)
+from apps.execution.application.services import (
+    SubjectLifecycleService,
+)
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.coding import match_verbatim_term
 from apps.execution.database.context import (
@@ -65,6 +71,9 @@ from apps.execution.demographics import (
 from apps.execution.dependencies import verify_change_justification
 from apps.execution.domain.acl.protocol_version_ref_dto import (
     ProtocolVersionRefDTO,
+)
+from apps.execution.domain.exceptions import (
+    SubjectNotFoundError,
 )
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
@@ -1035,11 +1044,13 @@ class MigrationRuleResponse(BaseModel):
 async def create_subject(
     payload: SubjectCreate,
     roles: list[str] = Depends(verify_not_auditor),
+    lifecycle_service: SubjectLifecycleService = Depends(get_subject_lifecycle_service),
 ) -> SubjectResponse:
     """Create a new clinical subject pseudonymously."""
     # Enforce sovereign site execution gate (PRD-SYS-121, PRD-SSU-003, ADR-2202)
+    u_id = current_user_id.get() or "system"
+    reason = current_change_reason.get() or "Initial Subject Creation"
     if payload.study_id and payload.site_id:
-        u_id = current_user_id.get() or "system"
         await require_site_mutation_authorization(
             site_id=payload.site_id,
             user_id=u_id,
@@ -1047,45 +1058,32 @@ async def create_subject(
             study_id=payload.study_id,
         )
 
-    encrypted_demo = None
-    if payload.demographics is not None:
-        encrypted_demo = encrypt_demographics(
-            payload.demographics.model_dump(exclude_none=True)
-        )
+    demo_dict = (
+        payload.demographics.model_dump(exclude_none=True)
+        if payload.demographics is not None
+        else None
+    )
 
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Query max enrollment_index for the study inside the active transaction
-            stmt_max = select(func.max(ClinicalSubject.enrollment_index)).where(
-                ClinicalSubject.study_id == payload.study_id
-            )
-            res_max = await session.execute(stmt_max)
-            max_idx = res_max.scalar()
-            new_idx = 0 if max_idx is None else max_idx + 1
+    subj = await lifecycle_service.enroll_subject(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        subject_id=payload.subject_id,
+        arm_id=payload.arm_id,
+        demographics=demo_dict,
+        user_id=u_id,
+        reason=reason,
+    )
 
-            subj = ClinicalSubject(
-                subject_id=payload.subject_id,
-                study_id=payload.study_id,
-                site_id=payload.site_id,
-                treatment_group=payload.arm_id,
-                encrypted_demographics=encrypted_demo,
-                enrollment_index=new_idx,
-            )
-            session.add(subj)
-
-        stmt = select(ClinicalSubject).where(ClinicalSubject.id == subj.id)
-        res = await session.execute(stmt)
-        subj_db = res.scalar_one()
-        return SubjectResponse(
-            id=subj_db.id,
-            subject_id=subj_db.subject_id,
-            study_id=subj_db.study_id,
-            site_id=subj_db.site_id,
-            treatment_group=subj_db.treatment_group,
-            status=subj_db.status,
-            active_protocol_version=subj_db.active_protocol_version,
-            encrypted_demographics=subj_db.encrypted_demographics,
-        )
+    return SubjectResponse(
+        id=subj.id,
+        subject_id=subj.subject_id,
+        study_id=subj.study_id,
+        site_id=subj.site_id,
+        treatment_group=subj.treatment_group,
+        status=subj.status,
+        active_protocol_version=getattr(subj, "active_protocol_version", None),
+        encrypted_demographics=subj.encrypted_demographics,
+    )
 
 
 @app.post(
@@ -1100,74 +1098,41 @@ async def record_subject_consent_endpoint(
     subject_id: str,
     payload: SubjectConsentRequest,
     roles: list[str] = Depends(verify_not_auditor),
+    lifecycle_service: SubjectLifecycleService = Depends(get_subject_lifecycle_service),
 ) -> SubjectConsentResponse:
     """Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            study_id = payload.protocol_version.study_id
-            version_tag = payload.protocol_version.version_tag
-            version_index = payload.protocol_version.version_index
+    u_id = current_user_id.get() or "system"
+    reason = current_change_reason.get() or "Record Subject Consent"
+    study_id = payload.protocol_version.study_id
+    version_tag = payload.protocol_version.version_tag
+    version_index = payload.protocol_version.version_index
 
-            stmt = select(SubjectConsent).where(
-                SubjectConsent.subject_id == subject_id,
-                SubjectConsent.study_id == study_id,
-                SubjectConsent.version_index == version_index,
-            )
-            existing = (await session.execute(stmt)).scalars().first()
-            if existing:
-                existing.version_tag = version_tag
-                existing.icf_signed = payload.icf_signed
-                if payload.icf_signed_date:
-                    existing.icf_signed_date = payload.icf_signed_date
-                elif not existing.icf_signed_date:
-                    existing.icf_signed_date = datetime.now(UTC)
-                existing.requires_reconsent = payload.requires_reconsent
-                existing.is_paper_override = payload.is_paper_override
-                consent_db = existing
-            else:
-                consent_db = SubjectConsent(
-                    subject_id=subject_id,
-                    study_id=study_id,
-                    version_tag=version_tag,
-                    version_index=version_index,
-                    icf_signed=payload.icf_signed,
-                    icf_signed_date=payload.icf_signed_date or datetime.now(UTC),
-                    requires_reconsent=payload.requires_reconsent,
-                    is_paper_override=payload.is_paper_override,
-                )
-                session.add(consent_db)
+    saved = await lifecycle_service.record_consent(
+        subject_id=subject_id,
+        study_id=study_id,
+        site_id=None,
+        version_tag=version_tag,
+        version_index=version_index,
+        icf_signed=payload.icf_signed,
+        icf_signed_date=payload.icf_signed_date,
+        requires_reconsent=payload.requires_reconsent,
+        is_paper_override=payload.is_paper_override,
+        user_id=u_id,
+        reason=reason,
+    )
 
-            # If this consent is signed and does not require re-consent,
-            # clear requires_reconsent for any other/older consents of this subject
-            if (
-                payload.icf_signed or payload.is_paper_override
-            ) and not payload.requires_reconsent:
-                stmt_others = select(SubjectConsent).where(
-                    SubjectConsent.subject_id == subject_id,
-                    SubjectConsent.study_id == study_id,
-                )
-                others = (await session.execute(stmt_others)).scalars().all()
-                for other in others:
-                    other.requires_reconsent = False
-
-            await session.flush()
-
-        stmt_ref = select(SubjectConsent).where(SubjectConsent.id == consent_db.id)
-        res_ref = await session.execute(stmt_ref)
-        saved = res_ref.scalar_one()
-
-        return SubjectConsentResponse(
-            id=saved.id,
-            subject_id=saved.subject_id,
-            study_id=saved.study_id,
-            version_tag=saved.version_tag,
-            version_index=saved.version_index,
-            icf_signed=saved.icf_signed,
-            icf_signed_date=saved.icf_signed_date,
-            requires_reconsent=saved.requires_reconsent,
-            is_paper_override=saved.is_paper_override,
-            version=saved.version,
-        )
+    return SubjectConsentResponse(
+        id=saved.id,
+        subject_id=saved.subject_id,
+        study_id=saved.study_id,
+        version_tag=saved.version_tag,
+        version_index=saved.version_index,
+        icf_signed=saved.icf_signed,
+        icf_signed_date=saved.icf_signed_date,
+        requires_reconsent=saved.requires_reconsent,
+        is_paper_override=saved.is_paper_override,
+        version=saved.version,
+    )
 
 
 async def check_site_compliance_for_enrollment(
@@ -1497,6 +1462,7 @@ async def update_subject_state_endpoint(
     payload: SubjectStateUpdateRequest,
     request: Request,
     principal: Principal = Depends(get_principal),
+    lifecycle_service: SubjectLifecycleService = Depends(get_subject_lifecycle_service),
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
@@ -1507,62 +1473,58 @@ async def update_subject_state_endpoint(
             status_code=400, detail="Either status or state must be provided."
         )
 
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            stmt = select(ClinicalSubject).where(
-                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+    u_id = principal.user_id if principal else (current_user_id.get() or "system")
+    reason = current_change_reason.get() or f"Transition to {target_state}"
+
+    # Check site compliance if transitioning to ENROLLED
+    if target_state == "ENROLLED":
+        subj_obj = await lifecycle_service.subject_repo.get_by_id(id)
+        if not subj_obj:
+            subj_obj = await lifecycle_service.subject_repo.get_by_subject_code(id)
+        if not subj_obj:
+            raise HTTPException(status_code=404, detail="Subject not found")
+
+        async with db_manager.get_session_maker()() as session:
+            is_compliant = await check_site_compliance_for_enrollment(
+                session, subj_obj.study_id, subj_obj.site_id
             )
-            result = await session.execute(stmt)
-            subject = result.scalars().first()
-            if not subject:
-                raise HTTPException(status_code=404, detail="Subject not found")
-
-            # Try to transition state
-            try:
-                if target_state == "ENROLLED":
-                    # Check site compliance from local cache
-                    is_compliant = await check_site_compliance_for_enrollment(
-                        session, subject.study_id, subject.site_id
-                    )
-                    if not is_compliant:
-                        # Log blocked transition attempt to execution audit trail in separate session
-                        async with db_manager.get_session_maker()() as audit_session:
-                            async with audit_session.begin():
-                                blocked_audit = AuditLog(
-                                    table_name="clinical_subjects",
-                                    record_id=subject.id,
-                                    action="BLOCKED_ENROLLMENT",
-                                    user_id=principal.user_id
-                                    if principal
-                                    else "system",
-                                    change_reason=f"Blocked enrollment of subject {id} due to non-compliant site {subject.site_id} in study {subject.study_id}.",
-                                )
-                                audit_session.add(blocked_audit)
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Subject enrollment blocked: Site {subject.site_id} is not compliant.",
+            if not is_compliant:
+                # Log blocked transition attempt to execution audit trail in separate session
+                async with db_manager.get_session_maker()() as audit_session:
+                    async with audit_session.begin():
+                        blocked_audit = AuditLog(
+                            table_name="clinical_subjects",
+                            record_id=subj_obj.id,
+                            action="BLOCKED_ENROLLMENT",
+                            user_id=u_id,
+                            change_reason=f"Blocked enrollment of subject {id} due to non-compliant site {subj_obj.site_id} in study {subj_obj.study_id}.",
                         )
+                        audit_session.add(blocked_audit)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Subject enrollment blocked: Site {subj_obj.site_id} is not compliant.",
+                )
 
-                subject.status = target_state
-            except HTTPException:
-                raise
-            except InvalidStateTransitionError:
-                raise HTTPException(status_code=400, detail="INVALID_STATE_TRANSITION")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=str(e))
-
-            session.add(subject)
-
-        # Retrieve and return updated subject
-        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
-        res_ref = await session.execute(stmt_ref)
-        subj_db = res_ref.scalar_one()
-        return SubjectResponse(
-            id=subj_db.id,
-            subject_id=subj_db.subject_id,
-            study_id=subj_db.study_id,
-            encrypted_demographics=subj_db.encrypted_demographics,
+    try:
+        updated = await lifecycle_service.advance_subject_state(
+            subject_id=id,
+            target_state=target_state,
+            user_id=u_id,
+            reason=reason,
         )
+    except SubjectNotFoundError:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    except InvalidStateTransitionError:
+        raise HTTPException(status_code=400, detail="INVALID_STATE_TRANSITION")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return SubjectResponse(
+        id=updated.id,
+        subject_id=updated.subject_id,
+        study_id=updated.study_id,
+        encrypted_demographics=updated.encrypted_demographics,
+    )
 
 
 @app.put(

@@ -634,4 +634,25 @@ _Avoid_: Promoting pre-release development environments as production-qualified 
 The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol graphs in Neo4j to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
 _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
+### Programmatic API Documentation Engine
+
+An automated static analysis pipeline that inspects OpenAPI 3.1.0 schemas and FastAPI route metadata across all monorepo microservices (`apps/*`), compiling rich, searchable VitePress Markdown reference documents (`docs/api/*`) with request/response schema tables, GxP role authorizations, RFC 7807 problem detail models, and step-up signature parameters without requiring live runtime databases.
+_Avoid_: Out-of-sync manual API endpoint documentation, unstructured raw JSON dumps
+
+### Real-Time Protocol Eligibility Screening (I/E Engine)
+
+An automated clinical evaluation mechanism in `apps/execution` and `apps/web` where subject demographic, observational, and laboratory parameters are evaluated against machine-readable CDISC USDM inclusion/exclusion criteria expressions in real time (`POST /api/v1/execution/subjects/{id}/screening`), outputting deterministic eligibility verdicts (`ELIGIBLE`, `INELIGIBLE`, `INDETERMINATE`) with itemized criteria attribution (`failed_criteria`, `indeterminate_criteria`) and append-only 21 CFR Part 11 audit blocks without exposing Protected Health Information (PHI).
+_Avoid_: Client-only un-audited eligibility assertions, exposing raw PHI in screening responses
+
+### Decoupled Persona Workspace Pattern
+
+A frontend architectural pattern in `apps/web` where high-density clinical views (such as `EcrfView.vue`) delegate persona-specific orchestration, event handling, and data synchronization to dedicated, strongly-typed Vue composables (`useSubjectEnrollment`, `usePiSignoff`, `useCrcWorkspace`), eliminating monolithic component coupling and isolating CRC data entry from CRA monitoring and PI sign-off lifecycles.
+_Avoid_: Monolithic multi-thousand-line Vue views mixing multiple persona lifecycles in local scope
+
+### Capability-Based Clinical RBAC
+
+A centralized role-based access control architecture in `apps/web/src/stores/auth.js` and `packages/security` that maps clinical personas and Keycloak OIDC roles to granular functional capabilities (e.g. `SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`), eliminating brittle hardcoded string comparisons and ensuring consistent authorization across production and interactive demo modes.
+_Avoid_: Scattering ad-hoc role string comparisons (`activeRole === 'site_investigator'`) across component templates
+
+
 

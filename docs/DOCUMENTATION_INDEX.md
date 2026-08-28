@@ -6,20 +6,22 @@ Welcome to the **Cadence Clinical Platform** master documentation index. This po
 
 ## Documentation Architecture & Taxonomy
 
-Cadence Clinical documentation is organized into a 5-layer hierarchy to maintain traceability across clinical requirements, architectural design decisions, and GxP compliance ledgers:
+Cadence Clinical documentation is organized into a 6-layer hierarchy to maintain traceability across clinical requirements, architectural design decisions, API contracts, and GxP compliance ledgers:
 
 ```mermaid
 graph TD
     Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md)"]
-    Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, API Specs)"]
-    Layer3["3. Decision Records<br/>(docs/adr/ Domain Categories)"]
-    Layer4["4. Developer & Operational Guides<br/>(AGENTS.md, CONTRIBUTING.md, Dev Env)"]
-    Layer5["5. Validation & GxP Traceability<br/>(RTM.md, Audit Specs, QA Plan)"]
+    Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, Blueprint)"]
+    Layer3["3. REST API Contract Reference<br/>(docs/api/* Microservice Catalogs)"]
+    Layer4["4. Decision Records<br/>(docs/adr/ Domain Categories)"]
+    Layer5["5. Developer & Operational Guides<br/>(AGENTS.md, CONTRIBUTING.md, CLI Guide)"]
+    Layer6["6. Validation & GxP Traceability<br/>(RTM.md, Audit Specs, QA Plan)"]
 
     Layer1 --> Layer2
     Layer2 --> Layer3
-    Layer3 --> Layer5
-    Layer4 --> Layer2
+    Layer2 --> Layer4
+    Layer4 --> Layer6
+    Layer5 --> Layer2
 ```
 
 ---
@@ -44,7 +46,22 @@ Deep technical design specifications, database models, and service boundary defi
 
 ---
 
-## 3. Architectural Decision Records (ADRs)
+## 3. Programmatic REST API Contract Reference
+
+Comprehensive, statically extracted OpenAPI 3.1.0 specifications across all 20+ microservices with GxP role gates, step-up tokens, and code snippets.
+
+- **[Master REST API Reference](api/index.md)** (`docs/api/index.md`): Master catalog, gateway proxy topology, Keycloak OIDC headers, and RFC 7807 problem detail models.
+- **[Study Designer & USDM API](api/designer.md)** (`docs/api/designer.md`): CDISC USDM protocol authoring, SoA matrix, and Biomedical Concept endpoints.
+- **[EDC Execution API](api/execution.md)** (`docs/api/execution.md`): Dynamic eCRF schema projection, subject progression, and Dataset-JSON exports.
+- **[CTMS Operations API](api/ctms.md)** (`docs/api/ctms.md`): Monitoring visit reports, site milestones, and 6-facet greenlight activation.
+- **[Safety & Pharmacovigilance API](api/safety.md)** (`docs/api/safety.md`): ICH E2B(R3) ICSR XML, CTCAE grading, and AS2 S/MIME EDI gateway.
+- **[Quality & CAPA API](api/quality.md)** (`docs/api/quality.md`): Protocol deviations, root-cause analyses, Benford CSM forensics, and pHash image duplicate checks.
+- **[Site Payments & Grants API](api/payments.md)** (`docs/api/payments.md`): Procedure fee schedules, multi-payee splits, and participant expense claims.
+- **[Blinded Imaging Adjudication API](api/imaging.md)** (`docs/api/imaging.md`): Blinded dual-reader RECIST 1.1 evaluations and 20% discordance triggers.
+
+---
+
+## 4. Architectural Decision Records (ADRs)
 
 Immutable chronological records of key architectural and technical decisions made throughout system evolution. All ADRs are categorized into 7 functional domains:
 
@@ -59,7 +76,7 @@ Immutable chronological records of key architectural and technical decisions mad
 
 ---
 
-## 4. Developer Experience & Operations
+## 5. Developer Experience & Operations
 
 Guidelines for setting up, building, running, and contributing code to Cadence Clinical.
 
@@ -73,7 +90,7 @@ Guidelines for setting up, building, running, and contributing code to Cadence C
 
 ---
 
-## 5. Validation & GxP Compliance Ledger
+## 6. Validation & GxP Compliance Ledger
 
 GxP audit readiness, requirement traceability, and automated verification reports.
 

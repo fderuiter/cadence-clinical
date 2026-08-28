@@ -551,6 +551,30 @@ When authoring scripts, CLI subcommands, or quality gates that parse Python synt
 
 Running a single test file (e.g. `uv run pytest scripts/tests/test_pr_comment.py`) invokes the monorepo root `pyproject.toml` configuration with `--cov-fail-under=80`, which will fail because global monorepo coverage cannot be reached from an isolated test file. When executing targeted test runs, always append `--no-cov` (or use `uv run cadence test --fast` / `uv run cadence test --target <path>`).
 
+### 21. VitePress Markdown-It Header Anchor Protection
+
+When generating or authoring Markdown documentation containing API endpoints or URLs with route parameters (e.g. `{id}`, `{study_id}`, `{token}`), always wrap the path in backticks:
+
+```markdown
+<!-- ✘ WRONG — markdown-it treats trailing {id} as a custom header ID, causing VitePress build errors -->
+### `GET` /api/v1/resource/{id}
+
+<!-- ✔ CORRECT — backticks prevent custom ID extraction and ensure clean slug generation -->
+### `GET` `/api/v1/resource/{id}`
+```
+
+### 22. Markdown Table Cell Delimiter Formatting
+
+To ensure compatibility with AST-based markdown link scanners (`validate_markdown.py`), always maintain whitespace between inline code backticks and table pipe delimiters:
+
+```markdown
+<!-- ✘ WRONG — causes scanner reference extraction failure -->
+| **`notifications`**| `8010` | `apps/notifications/`| PostgreSQL / SQLite |
+
+<!-- ✔ CORRECT -->
+| **`notifications`** | `8010` | `apps/notifications/` | PostgreSQL / SQLite |
+```
+
 ---
 
 ## GxP & HIPAA Compliance Scan Protocol

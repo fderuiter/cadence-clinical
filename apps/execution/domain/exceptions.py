@@ -13,5 +13,13 @@ class ExecutionStaffNotFoundError(EntityNotFoundError, ExecutionDomainError):
     pass
 
 
+class SubjectNotFoundError(EntityNotFoundError, ExecutionDomainError):
+    pass
+
+
+class SubjectConsentNotFoundError(EntityNotFoundError, ExecutionDomainError):
+    pass
+
+
 class ExecutionValidationError(ValidationError, ExecutionDomainError):
     pass

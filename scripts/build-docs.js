@@ -284,6 +284,7 @@ try {
   runCommand("uv run python scripts/validate_adrs.py");
   runCommand("uv run python scripts/validate_markdown.py");
   runCommand("uv run python scripts/generate_schema_documentation.py");
+  runCommand("uv run python scripts/generate_api_docs.py");
 
   // 2. Run compliance compiler
   console.log("--- Step 2: Running Compliance Tracer ---");

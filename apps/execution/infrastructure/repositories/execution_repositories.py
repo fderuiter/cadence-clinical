@@ -1,9 +1,10 @@
 import copy
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.execution.application.services import SubjectLifecycleService
 from apps.execution.database import db_manager
 from apps.execution.database.models import (
     AuditLog,
@@ -13,6 +14,7 @@ from apps.execution.database.models import (
     DOAAuditLog,
     DOADelegationRecord,
     SiteStaffMember,
+    SubjectConsent,
 )
 from apps.execution.domain.models import (
     AuditLogDomain,
@@ -22,6 +24,7 @@ from apps.execution.domain.models import (
     ExecutionAuditLogEntity,
     ExecutionDelegationEntity,
     ExecutionStaffEntity,
+    SubjectConsentDomain,
 )
 from apps.execution.domain.ports import (
     IAuditRepository,
@@ -256,16 +259,23 @@ async def get_audit_repository(
     return SQLAlchemyAuditRepository(session)
 
 
+async def get_subject_lifecycle_service(
+    subject_repo: SQLAlchemySubjectRepository = Depends(get_subject_repository),
+    consent_repo: SQLAlchemyConsentRepository = Depends(get_consent_repository),
+    audit_repo: SQLAlchemyAuditRepository = Depends(get_audit_repository),
+) -> SubjectLifecycleService:
+    return SubjectLifecycleService(
+        subject_repo=subject_repo,
+        consent_repo=consent_repo,
+        audit_repo=audit_repo,
+    )
+
+
 class SQLAlchemySubjectRepository(ISubjectRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, entity_id: str) -> ClinicalSubjectDomain | None:
-        stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity_id)
-        result = await self.session.execute(stmt)
-        db_obj = result.scalars().first()
-        if not db_obj:
-            return None
+    def _to_domain(self, db_obj: ClinicalSubject) -> ClinicalSubjectDomain:
         return ClinicalSubjectDomain(
             id=db_obj.id,
             subject_id=db_obj.subject_id,
@@ -290,6 +300,54 @@ class SQLAlchemySubjectRepository(ISubjectRepository):
             version=db_obj.version,
             is_deleted=db_obj.is_deleted,
         )
+
+    async def get_by_id(self, entity_id: str) -> ClinicalSubjectDomain | None:
+        stmt = select(ClinicalSubject).where(
+            ClinicalSubject.id == entity_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        result = await self.session.execute(stmt)
+        db_obj = result.scalars().first()
+        if not db_obj:
+            return None
+        return self._to_domain(db_obj)
+
+    async def get_by_subject_code(
+        self, subject_id: str, study_id: str | None = None
+    ) -> ClinicalSubjectDomain | None:
+        stmt = select(ClinicalSubject).where(
+            (ClinicalSubject.subject_id == subject_id)
+            | (ClinicalSubject.id == subject_id),
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        if study_id:
+            stmt = stmt.where(ClinicalSubject.study_id == study_id)
+        result = await self.session.execute(stmt)
+        db_obj = result.scalars().first()
+        if not db_obj:
+            return None
+        return self._to_domain(db_obj)
+
+    async def get_max_enrollment_index(self, study_id: str) -> int:
+        stmt = select(func.max(ClinicalSubject.enrollment_index)).where(
+            ClinicalSubject.study_id == study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        result = await self.session.execute(stmt)
+        max_idx = result.scalar()
+        return -1 if max_idx is None else max_idx
+
+    async def list_by_study(
+        self, study_id: str, site_id: str | None = None
+    ) -> list[ClinicalSubjectDomain]:
+        stmt = select(ClinicalSubject).where(
+            ClinicalSubject.study_id == study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        if site_id:
+            stmt = stmt.where(ClinicalSubject.site_id == site_id)
+        result = await self.session.execute(stmt)
+        return [self._to_domain(db_obj) for db_obj in result.scalars().all()]
 
     async def save(self, entity: ClinicalSubjectDomain) -> ClinicalSubjectDomain:
         stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity.id)
@@ -338,7 +396,10 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     async def get_signature_by_id(
         self, record_id: str
     ) -> ConsentSignatureDomain | None:
-        stmt = select(ConsentSignature).where(ConsentSignature.id == record_id)
+        stmt = select(ConsentSignature).where(
+            ConsentSignature.id == record_id,
+            ConsentSignature.is_deleted.is_(False),
+        )
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -397,7 +458,10 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     async def get_form_record_by_id(
         self, record_id: str
     ) -> ConsentFormRecordDomain | None:
-        stmt = select(ConsentFormRecord).where(ConsentFormRecord.id == record_id)
+        stmt = select(ConsentFormRecord).where(
+            ConsentFormRecord.id == record_id,
+            ConsentFormRecord.is_deleted.is_(False),
+        )
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -442,6 +506,99 @@ class SQLAlchemyConsentRepository(IConsentRepository):
         db_obj.is_deleted = record.is_deleted
         await self.session.flush()
         return record
+
+    async def get_subject_consent(
+        self, subject_id: str, study_id: str, version_index: int
+    ) -> SubjectConsentDomain | None:
+        stmt = select(SubjectConsent).where(
+            SubjectConsent.subject_id == subject_id,
+            SubjectConsent.study_id == study_id,
+            SubjectConsent.version_index == version_index,
+            SubjectConsent.is_deleted.is_(False),
+        )
+        result = await self.session.execute(stmt)
+        db_obj = result.scalars().first()
+        if not db_obj:
+            return None
+        return SubjectConsentDomain(
+            id=db_obj.id,
+            subject_id=db_obj.subject_id,
+            study_id=db_obj.study_id,
+            site_id=db_obj.site_id,
+            version_tag=db_obj.version_tag,
+            version_index=db_obj.version_index,
+            protocol_version=db_obj.protocol_version,
+            status=db_obj.status,
+            icf_signed=db_obj.icf_signed,
+            icf_signed_date=db_obj.icf_signed_date,
+            requires_reconsent=db_obj.requires_reconsent,
+            is_paper_override=db_obj.is_paper_override,
+            version=db_obj.version,
+            is_deleted=db_obj.is_deleted,
+            created_at=getattr(db_obj, "created_at", None),
+            created_by=getattr(db_obj, "created_by", None),
+            updated_at=getattr(db_obj, "updated_at", None),
+            updated_by=getattr(db_obj, "updated_by", None),
+        )
+
+    async def save_subject_consent(
+        self, consent: SubjectConsentDomain
+    ) -> SubjectConsentDomain:
+        stmt = select(SubjectConsent).where(SubjectConsent.id == consent.id)
+        result = await self.session.execute(stmt)
+        db_obj = result.scalars().first()
+        if not db_obj:
+            db_obj = SubjectConsent(id=consent.id)
+            self.session.add(db_obj)
+
+        db_obj.subject_id = consent.subject_id
+        db_obj.study_id = consent.study_id
+        db_obj.site_id = consent.site_id
+        db_obj.version_tag = consent.version_tag
+        db_obj.version_index = consent.version_index
+        db_obj.protocol_version = consent.protocol_version
+        db_obj.status = consent.status
+        db_obj.icf_signed = consent.icf_signed
+        db_obj.icf_signed_date = consent.icf_signed_date
+        db_obj.requires_reconsent = consent.requires_reconsent
+        db_obj.is_paper_override = consent.is_paper_override
+        db_obj.version = consent.version
+        db_obj.is_deleted = consent.is_deleted
+        await self.session.flush()
+        return consent
+
+    async def list_subject_consents(
+        self, subject_id: str, study_id: str
+    ) -> list[SubjectConsentDomain]:
+        stmt = select(SubjectConsent).where(
+            SubjectConsent.subject_id == subject_id,
+            SubjectConsent.study_id == study_id,
+            SubjectConsent.is_deleted.is_(False),
+        )
+        result = await self.session.execute(stmt)
+        return [
+            SubjectConsentDomain(
+                id=db_obj.id,
+                subject_id=db_obj.subject_id,
+                study_id=db_obj.study_id,
+                site_id=db_obj.site_id,
+                version_tag=db_obj.version_tag,
+                version_index=db_obj.version_index,
+                protocol_version=db_obj.protocol_version,
+                status=db_obj.status,
+                icf_signed=db_obj.icf_signed,
+                icf_signed_date=db_obj.icf_signed_date,
+                requires_reconsent=db_obj.requires_reconsent,
+                is_paper_override=db_obj.is_paper_override,
+                version=db_obj.version,
+                is_deleted=db_obj.is_deleted,
+                created_at=getattr(db_obj, "created_at", None),
+                created_by=getattr(db_obj, "created_by", None),
+                updated_at=getattr(db_obj, "updated_at", None),
+                updated_by=getattr(db_obj, "updated_by", None),
+            )
+            for db_obj in result.scalars().all()
+        ]
 
 
 class SQLAlchemyAuditRepository(IAuditRepository):
@@ -491,6 +648,30 @@ class SQLAlchemyAuditRepository(IAuditRepository):
         await self.session.flush()
         return entity
 
+    async def save_audit_log(self, audit: AuditLogDomain) -> AuditLogDomain:
+        return await self.save(audit)
+
+    async def get_all_audit_logs(self) -> list[AuditLogDomain]:
+        stmt = select(AuditLog).order_by(AuditLog.timestamp.desc())
+        result = await self.session.execute(stmt)
+        return [
+            AuditLogDomain(
+                id=db_obj.id,
+                table_name=db_obj.table_name,
+                record_id=db_obj.record_id,
+                action=db_obj.action,
+                user_id=db_obj.user_id,
+                ip_address=db_obj.ip_address,
+                timestamp=db_obj.timestamp,
+                old_values=copy.deepcopy(db_obj.old_values),
+                new_values=copy.deepcopy(db_obj.new_values),
+                version_index=db_obj.version_index,
+                change_reason=db_obj.change_reason,
+                cryptographic_seal=db_obj.cryptographic_seal,
+            )
+            for db_obj in result.scalars().all()
+        ]
+
 
 class InMemorySubjectRepository(ISubjectRepository):
     def __init__(self):
@@ -498,9 +679,40 @@ class InMemorySubjectRepository(ISubjectRepository):
 
     async def get_by_id(self, entity_id: str) -> ClinicalSubjectDomain | None:
         subject = self.store.get(entity_id)
-        if not subject:
+        if not subject or getattr(subject, "is_deleted", False):
             return None
         return copy.deepcopy(subject)
+
+    async def get_by_subject_code(
+        self, subject_id: str, study_id: str | None = None
+    ) -> ClinicalSubjectDomain | None:
+        for s in self.store.values():
+            if (s.subject_id == subject_id or s.id == subject_id) and not getattr(
+                s, "is_deleted", False
+            ):
+                if study_id is None or s.study_id == study_id:
+                    return copy.deepcopy(s)
+        return None
+
+    async def get_max_enrollment_index(self, study_id: str) -> int:
+        indices = [
+            s.enrollment_index
+            for s in self.store.values()
+            if s.study_id == study_id
+            and s.enrollment_index is not None
+            and not getattr(s, "is_deleted", False)
+        ]
+        return max(indices) if indices else -1
+
+    async def list_by_study(
+        self, study_id: str, site_id: str | None = None
+    ) -> list[ClinicalSubjectDomain]:
+        results = []
+        for s in self.store.values():
+            if s.study_id == study_id and not getattr(s, "is_deleted", False):
+                if site_id is None or s.site_id == site_id:
+                    results.append(copy.deepcopy(s))
+        return results
 
     async def save(self, entity: ClinicalSubjectDomain) -> ClinicalSubjectDomain:
         self.store[entity.id] = copy.deepcopy(entity)
@@ -511,6 +723,7 @@ class InMemoryConsentRepository(IConsentRepository):
     def __init__(self):
         self.signatures = {}
         self.form_records = {}
+        self.subject_consents = {}
 
     async def get_by_id(self, entity_id: str) -> ConsentSignatureDomain | None:
         return await self.get_signature_by_id(entity_id)
@@ -553,6 +766,36 @@ class InMemoryConsentRepository(IConsentRepository):
     async def delete_form_record(self, record: ConsentFormRecordDomain) -> None:
         raise ValueError("Cannot delete consent records")
 
+    async def get_subject_consent(
+        self, subject_id: str, study_id: str, version_index: int
+    ) -> SubjectConsentDomain | None:
+        for c in self.subject_consents.values():
+            if (
+                c.subject_id == subject_id
+                and c.study_id == study_id
+                and c.version_index == version_index
+                and not getattr(c, "is_deleted", False)
+            ):
+                return copy.deepcopy(c)
+        return None
+
+    async def save_subject_consent(
+        self, consent: SubjectConsentDomain
+    ) -> SubjectConsentDomain:
+        self.subject_consents[consent.id] = copy.deepcopy(consent)
+        return consent
+
+    async def list_subject_consents(
+        self, subject_id: str, study_id: str
+    ) -> list[SubjectConsentDomain]:
+        return [
+            copy.deepcopy(c)
+            for c in self.subject_consents.values()
+            if c.subject_id == subject_id
+            and c.study_id == study_id
+            and not getattr(c, "is_deleted", False)
+        ]
+
 
 class InMemoryAuditRepository(IAuditRepository):
     def __init__(self):
@@ -567,6 +810,13 @@ class InMemoryAuditRepository(IAuditRepository):
     async def save(self, entity: AuditLogDomain) -> AuditLogDomain:
         self.logs[entity.id] = copy.deepcopy(entity)
         return entity
+
+    async def save_audit_log(self, audit: AuditLogDomain) -> AuditLogDomain:
+        self.logs[audit.id] = copy.deepcopy(audit)
+        return audit
+
+    async def get_all_audit_logs(self) -> list[AuditLogDomain]:
+        return [copy.deepcopy(log) for log in self.logs.values()]
 
     async def delete(self, log: AuditLogDomain) -> None:
         raise ValueError(

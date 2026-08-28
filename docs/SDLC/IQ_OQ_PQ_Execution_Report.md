@@ -11,8 +11,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3845
-- **Passed:** 3806 🟢
+- **Total Automated Test Cases Run:** 3849
+- **Passed:** 3810 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 39 ⚪
 - **Overall Operational Pass Rate:** 98.99%
@@ -2042,6 +2042,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gatekeeper_service_accounts_undergo_verified_delegation_log_checks` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
 | `test_gatekeeper_system_service_account_bypass` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
 | `test_protocol_capture_and_reconciliation_lifecycle` | `apps.execution.tests.test_study_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_enroll_subject_success` | `apps.execution.tests.test_subject_lifecycle_service` | PRD-SUB-001, PRD-SYS-001, PRD-SYS-042 | 🟢 PASSED | < 1s |
+| `test_record_consent_and_clear_reconsent` | `apps.execution.tests.test_subject_lifecycle_service` | PRD-SUB-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_subject_state_transitions` | `apps.execution.tests.test_subject_lifecycle_service` | PRD-SUB-001, PRD-SYS-042 | 🟢 PASSED | < 1s |
+| `test_update_demographics` | `apps.execution.tests.test_subject_lifecycle_service` | PRD-SUB-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_db_migration_cloning_and_sealing` | `apps.execution.tests.test_subject_migration` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_migrate_subject_submissions_field_remapping` | `apps.execution.tests.test_subject_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pure_python_transition_guard` | `apps.execution.tests.test_subject_randomization_lifecycle` | PRD-SUB-001, PRD-SYS-184 | 🟢 PASSED | < 1s |
@@ -4141,28 +4145,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** e04e6149ef37a994f02beeadfc882705076b42390bb55ef5b9ecd4a48fa5dcd6
+- **Cryptographic Hash (SHA-256):** bf32966cf5d53edf369e833d6e8cde1bd199192ac85234a9db3e509c81bb4adb
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUeA68lPE4PcSl3vieXpk2dMCCI5QwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUb52Glw4mX9+H0N2YwKrPZxnl+7cwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-NzE5MTIwMVoXDTI3MDgyODE5MTIwMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+NzIwMzA1MloXDTI3MDgyODIwMzA1MlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnewb
-hNHl54Jt4RoGLtxjR2m7uS1Nadm6uKUc8/StpfaUQxj6rrC07kypi06OUyxgP7jq
-eknf0RTeZ8b2Q1sgnrYeZu0vms4wGNxpNK2mj+6rwXl++s6SDmjPfevy4uTgTfsa
-fymm8lky2dp0UkWy9d8I6u16yt8OEk4xh/MbO7hGnXRh3oApfbRNIuABKmdfb4t3
-Ko9hQqHl1ge2f+OCsVBAq8uUNMusJrQZH0+EmWDCllNlYoVGSm+x8zQnsuk+SrFH
-z7DQrh6XAXAVhmaAlrad1LdGyIdvl1QUd5/nVv0HS8uU5zUoZjwCtNRfSVb3MDC8
-LZQwDDC9Cy916Ydn5wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBMcJjKWF0HTkq/
-mCSZYB+oHhXwnAhvV7nXotzpgbAGuhLPO7bm7CyRWZ6AenUt8BOrCOVciTGeDcEU
-fB72wlBL8zUNA4iIb8+dEEhaCYCOxcAdK0xsGz9Voa8DLs1wffVA4C8oxM7QoBHV
-+/ksGMt3yHeHK7CykoEQJen4C8dXO1tykV+7kOu8SOEoRT/tD/VQetJSPAzHTt8O
-AJskQ/Il8qg2XuxOKlAt8L5osrORM03rZ8imYToIPQYw52TZlLpssWNRa90XdEwT
-OhmnEa7Q8GkEO78flyaZSdg1zxvi9Rve1C1bYgB59RAO4Foe943ZIT9UonmWkstH
-2p64dm4U
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6qvD
+3aknQACOE87D3XHccl9bLd3JM9rsMXpocGOdP3P7L2J8Z/VYTV1YrO5lSsrPzbe5
+ir6rhTRHA7t/eoCcSyriu7cMrux6fmC0b5Fxm+1qhsraTTYk/V8IpZifmgn9ogFl
+Qd8wCRdWU61+s/MRcYuQek52vXGxqnxhsvk70Ly2558utrLhXdLO3z2/tuRtcpgG
+/B63HOk4ajga00hSeJKSsxx8BvSN69A/lbwjo2gRtb198WMsiHkBDm0m0gx3FGkR
+PSGXWBKKB0xUcJI6tDXbkapRYI6bPuIbHgk98xEs2/V13mX+pZEZVFipcMEPyDt6
+fsClFlFZpfSI/3W10wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCYYvUOzZeNcaMm
+FOSfUM71+OP03Rzd3NLLKsY11y2F8xYQieeK6VcO9nXWyNyuaPmFRobpUP9ySsux
+gHO+3U34eiGyW7W8sVJihkd3VrpteWFtDKJiUNNzxQhAG2959/QgASzWwPStVw0K
+goJbrewHB8Vm5dmRMJVIifDqd72I+kGUJWyDSD1cU3e8QUhRc9O8x1iByeXdyvQa
+zeTVMLh8Gr8mzoSkp0iW9xURAreRWLv7kYzCHZJUHNLio3lesdVF9jngB3hPSI71
+69WE7CmOY2pcqa1scm1RLZHzydWi4OCVqTdyXMwYtwHoGCLdherqohZG4ukLh2en
+dbglpm4k
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-hp6Ilt1Qxgy/HCr+mi7mRZA7o8vXTiVXI1I85yBBAAVMnKEvby2puYfm4BtWXPdcdX3V04XWR/5DOQA6fSzg8ToV+rm5cTB6L1ac/9+14WCVEGIr63SV8wPPvpe7R2+DtkiCqsSIvHEWu44wURU/aBpK5s08eGKmu7n7xw2USQdZoSc/d8gkac8vhtvWVQwjBvyztFzu+0UrWFQyfcnujawg/+7GUYjZ2O85e01YZKqBQMSssFEK4xRLt7xtYa3+qrlAGuoBZ97+66wXBGjoAKeu71EZ5CzHMa1perbj7UJh1pxh4vfvtDvjHtFKqxMiuu07WwryzQ0yZlKFIpWzsA==
+w0F07Owu3ch0pdyNm5aWwfj/n6n2KVV3ywrai96sEfFIdjcL1iEqGTFJPPuWVH1YcByepGZz0br8Moce8yexvAcotkFm4b2gPoBjKyeqkmhforx+05ASH23pfj+vN5Oa1v4rQ1te5Xt/h8Okmtwgs4cXSJ6RyM8ppwKAdB3eesu7+4zOT1X9yIA35KzFEgdRS+O/uQmVhd6TM5t/yMxU56QCjCoFhAFueufMivAMup/uui8NL7N96HVdt17bLUriKG10xRLFcyHzzOybacrOsYuFJ9oub6uKO6S4nzv3VOs3oP+ShnpmpMLjH2/bLHjUzu6GtlFfPxf9WyVv+c+yBQ==
 -----END SIGNATURE-----

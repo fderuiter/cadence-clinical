@@ -11,3 +11,4 @@ These guidelines are automatically applied when the `cadence-core` plugin is act
 - Centralized test infrastructure via `packages.testing` (factories, in-memory repository fakes, security headers).
 - Unified Cadence CLI (`uv run cadence ...`) for all dev, test, and diagnostic tasks.
 - Mandatory 21 CFR Part 11 traceability: `@req:PRD-SYS-xxx` tags in test docstrings, synced via `uv run python scripts/sync_gxp.py`.
+- Markdown & API Docs formatting: Wrap endpoint paths containing route parameters in code backticks in headings (`### `GET` `/api/v1/resource/{id}``) to prevent VitePress `markdown-it-anchor` custom ID collisions.

@@ -87,6 +87,68 @@ function getSdlcSidebar() {
     });
 }
 
+/**
+ * Builds sidebar entries for programmatically generated API Reference documentation.
+ * @return {Array<{text: string, link?: string, collapsed?: boolean, items?: Array<{text: string, link: string}>}>}
+ */
+function getApiSidebarGroups() {
+  return [
+    {
+      text: "API Overview & Architecture",
+      link: "/api/index",
+    },
+    {
+      text: "Protocol & Study Design",
+      collapsed: false,
+      items: [
+        { text: "Designer / USDM (8001)", link: "/api/designer" },
+        { text: "Knowledge & SOPs (8011)", link: "/api/knowledge" },
+        { text: "AI Gateway (8013)", link: "/api/ai_gateway" },
+      ],
+    },
+    {
+      text: "Clinical Operations & Execution",
+      collapsed: false,
+      items: [
+        { text: "EDC Execution (8002)", link: "/api/execution" },
+        { text: "CTMS Operations (8005)", link: "/api/ctms" },
+        { text: "Organization Directory (8008)", link: "/api/org" },
+        { text: "Clinical Issue Hub (8012)", link: "/api/tickets" },
+        { text: "Payments & Grants (8014)", link: "/api/payments" },
+      ],
+    },
+    {
+      text: "Patient & Interoperability",
+      collapsed: false,
+      items: [
+        { text: "FHIR & eSource Gateway (8007)", link: "/api/interop" },
+        { text: "Notifications Dispatcher (8010)", link: "/api/notifications" },
+        { text: "Electronic Consent (8017)", link: "/api/econsent" },
+      ],
+    },
+    {
+      text: "Safety, Quality & Governance",
+      collapsed: false,
+      items: [
+        { text: "Safety & Pharmacovigilance (8009)", link: "/api/safety" },
+        { text: "Quality & CAPA (8006)", link: "/api/quality" },
+        { text: "Blinded Imaging Adjudication (8015)", link: "/api/imaging" },
+        { text: "eTMF Document Archive (8004)", link: "/api/etmf" },
+        { text: "eISF Site Binders (8016)", link: "/api/eisf" },
+        { text: "FileShare & StoragePort (8018)", link: "/api/fileshare" },
+      ],
+    },
+    {
+      text: "Gateway & Platform Infrastructure",
+      collapsed: false,
+      items: [
+        { text: "API Gateway Proxy (8000)", link: "/api/gateway" },
+        { text: "Compliance Engine (8019)", link: "/api/compliance" },
+      ],
+    },
+  ];
+}
+
 export default withMermaid(
   defineConfig({
     title: "Cadence Clinical Portal",
@@ -109,6 +171,7 @@ export default withMermaid(
         { text: "Home", link: "/" },
         { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
         { text: "Architecture", link: "/ARCHITECTURE" },
+        { text: "API Reference", link: "/api/index" },
         { text: "CLI Reference", link: "/cli" },
         { text: "UI Components", link: "/components/index" },
         { text: "Agents", link: "/AGENTS" },
@@ -127,6 +190,10 @@ export default withMermaid(
             { text: "Developer CLI (`cadence`)", link: "/cli" },
             { text: "AI Agents & Instructions", link: "/AGENTS" },
           ],
+        },
+        {
+          text: "REST API Reference",
+          items: getApiSidebarGroups(),
         },
         {
           text: "Enterprise UI Components",
