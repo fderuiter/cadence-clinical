@@ -17,7 +17,7 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 | :--- | :--- | :--- | :--- |
 | **Seam Discovery** | `find_by_name` / `view_file` | Read target service and test suite via `AbsolutePath` | Inspect existing domain seams and test doubles |
 | **Red (Failing Test)** | `replace_file_content` / `write_to_file` | Author new test case with `@req:PRD-SYS-xxx` | Add failing test case testing public interface |
-| **Test Execution** | `run_command` | `CommandLine="uv run cadence test --fast -k <test_name>"`, `WaitMsBeforeAsync=5000` | Execute sub-second unit test verification |
+| **Test Execution** | `run_command` | `CommandLine="uv run pytest --no-cov <test_path> -k <test_name>"`, `WaitMsBeforeAsync=5000` | Execute sub-second unit test verification |
 | **Green (Implementation)**| `replace_file_content` | Target: production code, single contiguous edit | Write minimal production code to pass test |
 | **Quality Sentinel** | `run_command` | `CommandLine="uv run cadence fix --all && uv run cadence check --parallel"` | Format, sort imports, and run 10 quality gates |
 | **Compliance Sync** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"` | Regenerate and stage GxP Traceability Matrix |
@@ -70,7 +70,7 @@ Agree on the public interface boundary before authoring tests:
 - Include the `@req:PRD-SYS-xxx` docstring tag.
 - Execute with sub-second fast test runner via `run_command`:
   ```bash
-  uv run cadence test --fast -k test_subject_enrollment
+  uv run pytest --no-cov apps/execution/tests/test_subject_lifecycle_service.py -k test_subject_enrollment
   ```
 - Confirm the test fails for the expected reason (red).
 
@@ -82,7 +82,7 @@ Agree on the public interface boundary before authoring tests:
   - PEP 695 type parameters for generics: `class Service[T]: ...` (UP046).
 - Re-run the test via `run_command`:
   ```bash
-  uv run cadence test --fast -k test_subject_enrollment
+  uv run pytest --no-cov apps/execution/tests/test_subject_lifecycle_service.py -k test_subject_enrollment
   ```
 - Confirm the test passes (green).
 

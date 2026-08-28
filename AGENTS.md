@@ -575,6 +575,24 @@ To ensure compatibility with AST-based markdown link scanners (`validate_markdow
 | **`notifications`** | `8010` | `apps/notifications/` | PostgreSQL / SQLite |
 ```
 
+### 23. Safe ORM-to-Domain Mapping for Audited Models
+
+When mapping SQLAlchemy/SQLModel database entities (inheriting from `AuditedModel`) to pure domain models, do not assume optional timestamp/user audit fields (`created_at`, `created_by`, `updated_at`, `updated_by`) are present as columns on every model. Use `getattr(db_obj, "field", None)` for optional audit attributes:
+
+```python
+# ✔ CORRECT — safe mapping with defaults
+SubjectConsentDomain(
+    id=db_obj.id,
+    subject_id=db_obj.subject_id,
+    created_at=getattr(db_obj, "created_at", None),
+    created_by=getattr(db_obj, "created_by", None),
+)
+```
+
+### 24. Artifact Metadata Tool Boundary
+
+When using `write_to_file`, `ArtifactMetadata` is **strictly required** for artifacts in `<appDataDir>/brain/<conversation-id>/` and **strictly forbidden** for repository codebase files (e.g. under `apps/` or `packages/`).
+
 ---
 
 ## GxP & HIPAA Compliance Scan Protocol

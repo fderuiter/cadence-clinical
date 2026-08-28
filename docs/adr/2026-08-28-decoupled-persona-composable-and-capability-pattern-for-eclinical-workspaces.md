@@ -56,12 +56,11 @@ We separate persona business logic into dedicated composables:
 
 * **Modified Files**:
   - `apps/web/src/views/EcrfView.vue`
-  - `apps/web/src/composables/useSubjectEnrollment.ts`
-  - `apps/web/src/composables/usePiSignoff.js` / `usePiSignoff.ts`
+  - `apps/web/src/composables/useConsentGating.js`
+  - `apps/web/src/composables/usePiSignoff.js`
   - `apps/web/src/stores/auth.js` & `apps/web/src/stores/clinical.ts`
 * **Verification Suite**:
   - `apps/web/tests/components/SubjectEnrollmentForm.spec.ts`
-  - `apps/web/tests/stores/clinical_screening.spec.ts`
   - `apps/web/tests/pi_signoff.test.js`
   - GxP requirement traceability synced via `uv run python scripts/sync_gxp.py` for `@req:PRD-SYS-050`.
 

@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-28: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md)
 - [2026-08-28: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md)
 - [2026-08-28: Programmatic VitePress API Documentation Engine](2026-08-28-programmatic-vitepress-api-documentation-engine.md)
 - [2026-08-28: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries](2026-08-28-gateway-proxy-dispatch-routing-and-rfc-7807-error-boundaries.md)
