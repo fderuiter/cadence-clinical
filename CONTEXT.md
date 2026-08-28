@@ -606,11 +606,22 @@ _Avoid_: Non-standard static table cells without keyboard focus or grid semantic
 
 ### Gateway Dispatch Routing Matrix
 
-A centralized reverse-proxy topology in `apps/gateway` that maps all 18 microservice domain prefixes (`/api/v1/designer/*`, `/api/v1/execution/*`, `/api/v1/imaging/*`, `/api/v1/payments/*`, `/api/v1/ai/*`, etc.) to authenticated downstream service ports with canonical HMAC gateway signatures.
+A centralized reverse-proxy topology in `apps/gateway` that maps all microservice domain prefixes (including `/api/v1/imaging/*`, `/api/v1/payments/*`, `/api/v1/ai/*`, `/api/v1/designer/*`, `/api/v1/execution/*`, and legacy direct service paths) to dedicated downstream service ports with canonical HMAC gateway signatures, tenant isolation gating, and step-up signature verification.
 _Avoid_: Fallthrough catch-all routes masking missing microservice proxy endpoints
+
+### RFC 7807 Gateway Error Boundary
+
+An enterprise API error handling standard where all API Gateway synthetic and transport-level failures (400 Bad Request, 401 Unauthorized, 403 Forbidden, 429 Rate Limit Exceeded, 500 Internal Server Error, 502 Bad Gateway, 504 Gateway Timeout) are emitted as standardized `application/problem+json` ProblemDetails structures containing canonical type URIs (`https://cadence.clinical/errors/*`), descriptive titles, HTTP status codes, detail strings, and request instance paths, while preserving downstream payload transparency and mapping network connection failures to 502 and timeouts to 504.
+_Avoid_: Unformatted 502 HTML pages, plain-text stack trace leakages, or non-RFC 7807 ad-hoc error bodies
+
+### Unified OpenAPI Schema Aggregation
+
+An automated schema composition engine in `apps/gateway` that dynamically fetches and merges OpenAPI 3.1.0 specifications from all downstream microservices (`apps/*`), rewriting component schemas with isolated service prefixes (`Imaging_`, `Payments_`, `AiGateway_`, `Designer_`, `Execution_`) and qualifying path operation IDs to eliminate naming collisions and present a unified interactive Swagger UI at `/docs`.
+_Avoid_: Missing service definitions in unified API specifications, colliding schema names across microservices
 
 ### Cryptographic Audit Chain Synchronization
 
 An enterprise GxP data integrity standard enforcing monotonic SHA-256 HMAC digest chaining (`previous_digest -> sha256_digest`) and mandatory `reason_for_change` across all domain audit log entities (CTMS, EDC, eConsent, eISF, eTMF, Safety, Payments, Quality).
 _Avoid_: Unchained, un-hashed plain text audit tables lacking reason for change
+
 

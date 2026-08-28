@@ -21,7 +21,7 @@ import packages  # noqa: F401
 from apps.gateway.presentation.routers.cdisc import router as cdisc_router
 from apps.gateway.presentation.routers.ecoa import router as ecoa_router
 from apps.gateway.presentation.routers.usdm import router as usdm_router
-from packages.hexagonal import register_rfc7807_handlers
+from packages.hexagonal import ProblemDetails, register_rfc7807_handlers
 from packages.security import validate_branding
 
 
@@ -397,6 +397,30 @@ rate_limiter = RateLimiter(
 )
 
 
+def problem_response(
+    status_code: int,
+    title: str,
+    detail: str,
+    type_slug: str,
+    instance: str | None = None,
+    extensions: dict[str, Any] | None = None,
+) -> JSONResponse:
+    """Construct an RFC 7807 problem details JSON response."""
+    problem = ProblemDetails(
+        type=f"https://cadence.clinical/errors/{type_slug}",
+        title=title,
+        status=status_code,
+        detail=detail,
+        instance=instance,
+        extensions=extensions or {},
+    )
+    return JSONResponse(
+        status_code=status_code,
+        content=problem.to_dict(),
+        media_type="application/problem+json",
+    )
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware to enforce rate limiting on incoming API Gateway requests.
@@ -423,9 +447,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pass
 
         if rate_limiter.is_rate_limited(key):
-            return JSONResponse(
+            return problem_response(
                 status_code=429,
-                content={"detail": "Too Many Requests. Rate limit exceeded."},
+                title="Too Many Requests",
+                detail="Too Many Requests. Rate limit exceeded.",
+                type_slug="rate-limit-exceeded",
+                instance=request.url.path,
             )
         return await call_next(request)
 
@@ -455,6 +482,8 @@ SERVICES = {
     "fileshare": os.getenv("FILESHARE_URL", "http://localhost:8013"),
     "imaging": os.getenv("IMAGING_URL", "http://localhost:8014"),
     "knowledge": os.getenv("KNOWLEDGE_URL", "http://localhost:8015"),
+    "payments": os.getenv("PAYMENTS_URL", "http://localhost:8016"),
+    "ai_gateway": os.getenv("AI_GATEWAY_URL", "http://localhost:8017"),
 }
 
 
@@ -804,6 +833,10 @@ async def get_openapi_json() -> Response:
         eisf_spec,
         econsent_spec,
         fileshare_spec,
+        imaging_spec,
+        payments_spec,
+        ai_gateway_spec,
+        knowledge_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -818,7 +851,67 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["eisf"]),
         fetch_service_openapi(SERVICES["econsent"]),
         fetch_service_openapi(SERVICES["fileshare"]),
+        fetch_service_openapi(SERVICES["imaging"]),
+        fetch_service_openapi(SERVICES["payments"]),
+        fetch_service_openapi(SERVICES["ai_gateway"]),
+        fetch_service_openapi(SERVICES["knowledge"]),
     )
+
+    if imaging_spec and is_valid_openapi_spec(imaging_spec):
+        try:
+            imaging_spec = rewrite_references(imaging_spec, "Imaging_")
+            imaging_paths = rewrite_paths(imaging_spec.get("paths", {}), "Imaging_")
+            for path_str, path_item in imaging_paths.items():
+                merged["paths"][f"/imaging{path_str}"] = path_item
+            for schema_name, schema_val in (
+                imaging_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Imaging_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    if payments_spec and is_valid_openapi_spec(payments_spec):
+        try:
+            payments_spec = rewrite_references(payments_spec, "Payments_")
+            payments_paths = rewrite_paths(payments_spec.get("paths", {}), "Payments_")
+            for path_str, path_item in payments_paths.items():
+                merged["paths"][f"/payments{path_str}"] = path_item
+            for schema_name, schema_val in (
+                payments_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Payments_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    if ai_gateway_spec and is_valid_openapi_spec(ai_gateway_spec):
+        try:
+            ai_gateway_spec = rewrite_references(ai_gateway_spec, "AiGateway_")
+            ai_gateway_paths = rewrite_paths(
+                ai_gateway_spec.get("paths", {}), "AiGateway_"
+            )
+            for path_str, path_item in ai_gateway_paths.items():
+                merged["paths"][f"/ai{path_str}"] = path_item
+            for schema_name, schema_val in (
+                ai_gateway_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"AiGateway_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    if knowledge_spec and is_valid_openapi_spec(knowledge_spec):
+        try:
+            knowledge_spec = rewrite_references(knowledge_spec, "Knowledge_")
+            knowledge_paths = rewrite_paths(
+                knowledge_spec.get("paths", {}), "Knowledge_"
+            )
+            for path_str, path_item in knowledge_paths.items():
+                merged["paths"][f"/knowledge{path_str}"] = path_item
+            for schema_name, schema_val in (
+                knowledge_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Knowledge_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
     if fileshare_spec and is_valid_openapi_spec(fileshare_spec):
         try:
@@ -1014,6 +1107,11 @@ async def get_openapi_json() -> Response:
             org_spec,
             eisf_spec,
             econsent_spec,
+            fileshare_spec,
+            imaging_spec,
+            payments_spec,
+            ai_gateway_spec,
+            knowledge_spec,
         ]
     ):
         try:
@@ -1335,9 +1433,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
         try:
             body: bytes = await request.body()
             if http_client is None:
-                return JSONResponse(
+                return problem_response(
                     status_code=500,
-                    content={"detail": "Gateway HTTP client not initialized"},
+                    title="Internal Server Error",
+                    detail="Gateway HTTP client not initialized",
+                    type_slug="internal-server-error",
+                    instance=request.url.path,
                 )
 
             req = http_client.build_request(
@@ -1359,16 +1460,31 @@ async def proxy_requests(request: Request, path: str) -> Response:
                 status_code=response.status_code,
                 headers=resp_headers,
             )
+        except httpx.TimeoutException as e:
+            return problem_response(
+                status_code=504,
+                title="Gateway Timeout",
+                detail=f"Downstream request timed out: {str(e)}",
+                type_slug="gateway-timeout",
+                instance=request.url.path,
+            )
         except httpx.RequestError as e:
-            return JSONResponse(
-                status_code=502, content={"detail": f"Bad Gateway: {str(e)}"}
+            return problem_response(
+                status_code=502,
+                title="Bad Gateway",
+                detail=f"Bad Gateway: {str(e)}",
+                type_slug="bad-gateway",
+                instance=request.url.path,
             )
 
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        return JSONResponse(
+        return problem_response(
             status_code=401,
-            content={"detail": "Missing or invalid Authorization header"},
+            title="Unauthorized",
+            detail="Missing or invalid Authorization header",
+            type_slug="unauthorized",
+            instance=request.url.path,
         )
 
     token = auth_header.split(" ")[1]
@@ -1376,7 +1492,15 @@ async def proxy_requests(request: Request, path: str) -> Response:
     try:
         payload = await verify_token(token)
     except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        return problem_response(
+            status_code=e.status_code,
+            title="Unauthorized" if e.status_code == 401 else "Authentication Error",
+            detail=str(e.detail),
+            type_slug="unauthorized"
+            if e.status_code == 401
+            else "authentication-error",
+            instance=request.url.path,
+        )
 
     user_id = payload.get("sub", "")
 
@@ -1415,27 +1539,30 @@ async def proxy_requests(request: Request, path: str) -> Response:
             expected_semantic_action=resolved_action.value if resolved_action else None,
         )
         if not success:
-            return JSONResponse(
+            return problem_response(
                 status_code=401,
-                content={
-                    "detail": "REAUTHENTICATION_REQUIRED",
+                title="Reauthentication Required",
+                detail="REAUTHENTICATION_REQUIRED",
+                type_slug="reauthentication-required",
+                instance=request.url.path,
+                extensions={
                     "error": "REAUTHENTICATION_REQUIRED",
                     "message": str(result),
                 },
             )
 
     roles_set = set()
-    realm_access = payload.get("realm_access", {})
+    realm_access = payload.get("realm_access")
     if isinstance(realm_access, dict):
         for r in realm_access.get("roles", []):
             roles_set.add(str(r))
-    else:
-        roles_list = payload.get("roles", [])
-        if isinstance(roles_list, list):
-            for r in roles_list:
-                roles_set.add(str(r))
-        elif roles_list:
-            roles_set.add(str(roles_list))
+
+    roles_list = payload.get("roles", [])
+    if isinstance(roles_list, list):
+        for r in roles_list:
+            roles_set.add(str(r))
+    elif roles_list:
+        roles_set.add(str(roles_list))
 
     resource_access = payload.get("resource_access", {})
     if isinstance(resource_access, dict):
@@ -1520,11 +1647,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
                 is_allowed = True
 
         if not is_allowed:
-            return JSONResponse(
+            return problem_response(
                 status_code=403,
-                content={
-                    "detail": "Access denied: Subject principal is not authorized to access this route"
-                },
+                title="Forbidden",
+                detail="Access denied: Subject principal is not authorized to access this route",
+                type_slug="forbidden",
+                instance=request.url.path,
             )
 
     if path.startswith("designer/"):
@@ -1547,16 +1675,39 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['tickets']}/{path[len('tickets/') :]}"
     elif path.startswith("eisf/"):
         target_url = f"{SERVICES['eisf']}/{path[len('eisf/') :]}"
-    elif path.startswith("api/v1/terminology"):
-        target_url = f"{SERVICES['designer']}/{path}"
-    elif path.startswith("terminology/"):
-        target_url = f"{SERVICES['designer']}/{path[len('terminology/') :]}"
+    elif path.startswith("econsent/"):
+        target_url = f"{SERVICES['econsent']}/{path[len('econsent/') :]}"
+    elif path.startswith("fileshare/"):
+        target_url = f"{SERVICES['fileshare']}/{path[len('fileshare/') :]}"
+    elif path.startswith("org/"):
+        target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
+    elif path.startswith("knowledge/"):
+        target_url = f"{SERVICES['knowledge']}/{path[len('knowledge/') :]}"
+    elif path.startswith("imaging/"):
+        target_url = f"{SERVICES['imaging']}/{path[len('imaging/') :]}"
+    elif path.startswith("payments/"):
+        target_url = f"{SERVICES['payments']}/{path[len('payments/') :]}"
+    elif (
+        path.startswith("ai/")
+        or path.startswith("ai_gateway/")
+        or path.startswith("ai-gateway/")
+    ):
+        if path.startswith("ai/"):
+            target_url = f"{SERVICES['ai_gateway']}/{path[len('ai/') :]}"
+        elif path.startswith("ai_gateway/"):
+            target_url = f"{SERVICES['ai_gateway']}/{path[len('ai_gateway/') :]}"
+        else:
+            target_url = f"{SERVICES['ai_gateway']}/{path[len('ai-gateway/') :]}"
+    elif path.startswith("api/v1/terminology") or path.startswith("terminology/"):
+        target_url = (
+            f"{SERVICES['designer']}/{path[len('terminology/') :]}"
+            if path.startswith("terminology/")
+            else f"{SERVICES['designer']}/{path}"
+        )
     elif path.startswith("api/v1/studies") or path.startswith("api/v2/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("api/v1/execution") or path.startswith("dictionary/"):
         target_url = f"{SERVICES['execution']}/{path}"
-    elif path.startswith("econsent/"):
-        target_url = f"{SERVICES['econsent']}/{path[len('econsent/') :]}"
     elif path.startswith("api/v1/econsent"):
         target_url = f"{SERVICES['econsent']}/{path}"
     elif path.startswith("api/v1/eisf"):
@@ -1573,20 +1724,20 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['quality']}/{path}"
     elif path.startswith("api/v1/safety"):
         target_url = f"{SERVICES['safety']}/{path}"
-    elif path.startswith("org/"):
-        target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
     elif path.startswith("api/v1/org"):
         target_url = f"{SERVICES['org']}/{path}"
-    elif path.startswith("fileshare/"):
-        target_url = f"{SERVICES['fileshare']}/{path[len('fileshare/') :]}"
     elif path.startswith("api/v1/fileshare"):
         target_url = f"{SERVICES['fileshare']}/{path}"
     elif path.startswith("api/v1/compliance") or path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
-    elif path.startswith("knowledge/"):
-        target_url = f"{SERVICES['knowledge']}/{path[len('knowledge/') :]}"
     elif path.startswith("api/v1/knowledge") or path.startswith("api/v1/training"):
         target_url = f"{SERVICES['knowledge']}/{path}"
+    elif path.startswith("api/v1/imaging"):
+        target_url = f"{SERVICES['imaging']}/{path}"
+    elif path.startswith("api/v1/payments"):
+        target_url = f"{SERVICES['payments']}/{path}"
+    elif path.startswith("api/v1/ai"):
+        target_url = f"{SERVICES['ai_gateway']}/{path}"
     elif path == "events/publish":
         target_url = f"{SERVICES['eisf']}/events/publish"
     else:
@@ -1615,9 +1766,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
     change_reason = request.headers.get("x-change-reason")
     if change_reason is not None:
         if len(change_reason) > 255:
-            return JSONResponse(
+            return problem_response(
                 status_code=400,
-                content={"detail": "Change reason exceeds 255 characters"},
+                title="Bad Request",
+                detail="Change reason exceeds 255 characters",
+                type_slug="bad-request",
+                instance=request.url.path,
             )
         headers["X-Change-Reason"] = change_reason
 
@@ -1664,11 +1818,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
             logger.error(
                 f"ACCESS VIOLATION: Sandbox token attempted to access non-sandbox tenant resource scope: {tenant_id_val}"
             )
-            return JSONResponse(
+            return problem_response(
                 status_code=403,
-                content={
-                    "detail": "Access denied: Sandbox token cannot access non-sandbox resources"
-                },
+                title="Forbidden",
+                detail="Access denied: Sandbox token cannot access non-sandbox resources",
+                type_slug="forbidden",
+                instance=request.url.path,
             )
 
         req_tenant = request.query_params.get("tenant_id") or request.query_params.get(
@@ -1679,11 +1834,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
             logger.error(
                 f"ACCESS VIOLATION: Sandbox token attempted to access non-sandbox tenant: {req_tenant}"
             )
-            return JSONResponse(
+            return problem_response(
                 status_code=403,
-                content={
-                    "detail": "Access denied: Sandbox token cannot access non-sandbox resources"
-                },
+                title="Forbidden",
+                detail="Access denied: Sandbox token cannot access non-sandbox resources",
+                type_slug="forbidden",
+                instance=request.url.path,
             )
 
     timestamp = str(time.time())
@@ -1718,9 +1874,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
     try:
         body: bytes = await request.body()
         if http_client is None:
-            return JSONResponse(
+            return problem_response(
                 status_code=500,
-                content={"detail": "Gateway HTTP client not initialized"},
+                title="Internal Server Error",
+                detail="Gateway HTTP client not initialized",
+                type_slug="internal-server-error",
+                instance=request.url.path,
             )
 
         req = http_client.build_request(
@@ -1742,7 +1901,19 @@ async def proxy_requests(request: Request, path: str) -> Response:
             status_code=response.status_code,
             headers=resp_headers,
         )
+    except httpx.TimeoutException as e:
+        return problem_response(
+            status_code=504,
+            title="Gateway Timeout",
+            detail=f"Downstream request timed out: {str(e)}",
+            type_slug="gateway-timeout",
+            instance=request.url.path,
+        )
     except httpx.RequestError as e:
-        return JSONResponse(
-            status_code=502, content={"detail": f"Bad Gateway: {str(e)}"}
+        return problem_response(
+            status_code=502,
+            title="Bad Gateway",
+            detail=f"Bad Gateway: {str(e)}",
+            type_slug="bad-gateway",
+            instance=request.url.path,
         )

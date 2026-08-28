@@ -59,6 +59,10 @@ STATIC_DEFAULTS: dict[str, list[dict[str, Any]]] = {
         {"name": "eConsent Service", "ports": [8011], "service_key": "econsent"},
         {"name": "Organization Service", "ports": [8012], "service_key": "org"},
         {"name": "Fileshare Service", "ports": [8013], "service_key": "fileshare"},
+        {"name": "Imaging Service", "ports": [8014], "service_key": "imaging"},
+        {"name": "Knowledge Service", "ports": [8015], "service_key": "knowledge"},
+        {"name": "Payments Service", "ports": [8016], "service_key": "payments"},
+        {"name": "AI Gateway Service", "ports": [8017], "service_key": "ai_gateway"},
     ],
 }
 
@@ -77,6 +81,10 @@ DEFAULT_PORTS: dict[str, int] = {
     "eConsent Service": 8011,
     "Organization Service": 8012,
     "Fileshare Service": 8013,
+    "Imaging Service": 8014,
+    "Knowledge Service": 8015,
+    "Payments Service": 8016,
+    "AI Gateway Service": 8017,
 }
 
 SERVICE_KEY_DEFAULTS: dict[str, int] = {
@@ -94,6 +102,11 @@ SERVICE_KEY_DEFAULTS: dict[str, int] = {
     "econsent": 8011,
     "org": 8012,
     "fileshare": 8013,
+    "imaging": 8014,
+    "knowledge": 8015,
+    "payments": 8016,
+    "ai_gateway": 8017,
+    "ai-gateway": 8017,
     "web": 3000,
     "subject-portal": 5174,
     "keycloak": 8080,
@@ -128,6 +141,11 @@ COMPOSE_SERVICE_MAPPING: dict[str, tuple[str, str]] = {
     "econsent": ("Application Services", "eConsent Service"),
     "org": ("Application Services", "Organization Service"),
     "fileshare": ("Application Services", "Fileshare Service"),
+    "imaging": ("Application Services", "Imaging Service"),
+    "knowledge": ("Application Services", "Knowledge Service"),
+    "payments": ("Application Services", "Payments Service"),
+    "ai_gateway": ("Application Services", "AI Gateway Service"),
+    "ai-gateway": ("Application Services", "AI Gateway Service"),
     "subject-portal": ("Frontends", "Subject Portal"),
 }
 

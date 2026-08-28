@@ -11,11 +11,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3840
-- **Passed:** 3801 🟢
+- **Total Automated Test Cases Run:** 3845
+- **Passed:** 3806 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 39 ⚪
-- **Overall Operational Pass Rate:** 98.98%
+- **Overall Operational Pass Rate:** 98.99%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2189,6 +2189,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_notifications_header_enforcement_and_spoofing_prevention` | `apps.gateway.tests.test_gateway` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_gateway_proxy_eisf_headers_propagation` | `apps.gateway.tests.test_gateway` | Trace-18 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `apps.gateway.tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_gateway_rfc7807_error_boundary_bad_gateway_and_timeout` | `apps.gateway.tests.test_gateway` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_gateway_rfc7807_error_boundary_forbidden_and_bad_request` | `apps.gateway.tests.test_gateway` | PRD-SYS-001, PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_gateway_rfc7807_error_boundary_rate_limit` | `apps.gateway.tests.test_gateway` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_gateway_rfc7807_error_boundary_unauthorized` | `apps.gateway.tests.test_gateway` | PRD-SYS-001, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_gateway_scope_extraction_and_verification_integrity` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_semantic_action_issuance_and_enforcement` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_sponsor_claim_extraction` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2215,6 +2219,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_keycloak_token_valid_audience_array` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_keycloak_token_valid_audience_string` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_change_reason_too_long` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_imaging_payments_ai_gateway` | `apps.gateway.tests.test_gateway` | PRD-AI-001, PRD-IMG-001, PRD-PAY-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_proxy_requests_invalid_auth` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_no_auth` | `apps.gateway.tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_proxy_requests_paths` | `apps.gateway.tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -4136,28 +4141,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 0badc941479de672907afbab694e4aa805f6c61e06891a8fbc9185b9a37f272c
+- **Cryptographic Hash (SHA-256):** e04e6149ef37a994f02beeadfc882705076b42390bb55ef5b9ecd4a48fa5dcd6
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIURQfYPBkAByl6iz12S6ld4H/Qu9MwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUeA68lPE4PcSl3vieXpk2dMCCI5QwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-NzE4NDk0M1oXDTI3MDgyODE4NDk0M1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+NzE5MTIwMVoXDTI3MDgyODE5MTIwMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsEo7
-Zu7Y18MTVPN17yuY4LV3jWQpd0NqC151LRYvyvbcwC0KrmFmFP4vXd9+l457EQ31
-5PWWSjD8VedHr1qLs5ckG0Mz5nG+KQSGFgbNmerVCctloWC0f3Yz+GLu2gtEKliF
-SB+8qVOwiw234tbedrWGGdfprzV+bJeERcZFQhxNwWZ/G1t8Y0ZlYGMIFc5nVgZm
-OnTCXPyiNcRXxda4tacfKJYwfk0Z2VAdx059ix4qR5AC9gyztbafpKZAo7cX1+Wk
-CaMGQ5YK0VjcbNA8c/aDN2dy/akRzwtlgixYGB/k4XhaoMW9R3Mf937gMJQpQU/K
-AW72o+5CIRn6vfotEQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAbvpzRrN47utVm
-u7sMXSFpPxOluZ5+PxVz6YwgC8QmQ9HLEHqCF9pOT4CDnNOAR1uHeC2YPrITOf71
-2QN8lGbPU3gVJJjFlg8baTQzBRdDYVAmIGg3dWK2V/JJQi2SAme9dF2Yc4mn4LXD
-omyqvl9CkKpaXvdnizjrIItt+C9AWseuomNnLGV/yhKQdBGAKKxCYjPevDgN73Sv
-snNhrVdzuqOme5lXGfpUtW1IcZwPZBXorVp2sdAi/Bw7v8iyIv1jfY9XjinloCo2
-Q0Qw4nFJvQyVLex1kb4D42Pj86IBkfrZSBQToanDIztuCatt7WpkF4WqKSjagLiY
-cC2Je2Ql
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnewb
+hNHl54Jt4RoGLtxjR2m7uS1Nadm6uKUc8/StpfaUQxj6rrC07kypi06OUyxgP7jq
+eknf0RTeZ8b2Q1sgnrYeZu0vms4wGNxpNK2mj+6rwXl++s6SDmjPfevy4uTgTfsa
+fymm8lky2dp0UkWy9d8I6u16yt8OEk4xh/MbO7hGnXRh3oApfbRNIuABKmdfb4t3
+Ko9hQqHl1ge2f+OCsVBAq8uUNMusJrQZH0+EmWDCllNlYoVGSm+x8zQnsuk+SrFH
+z7DQrh6XAXAVhmaAlrad1LdGyIdvl1QUd5/nVv0HS8uU5zUoZjwCtNRfSVb3MDC8
+LZQwDDC9Cy916Ydn5wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBMcJjKWF0HTkq/
+mCSZYB+oHhXwnAhvV7nXotzpgbAGuhLPO7bm7CyRWZ6AenUt8BOrCOVciTGeDcEU
+fB72wlBL8zUNA4iIb8+dEEhaCYCOxcAdK0xsGz9Voa8DLs1wffVA4C8oxM7QoBHV
++/ksGMt3yHeHK7CykoEQJen4C8dXO1tykV+7kOu8SOEoRT/tD/VQetJSPAzHTt8O
+AJskQ/Il8qg2XuxOKlAt8L5osrORM03rZ8imYToIPQYw52TZlLpssWNRa90XdEwT
+OhmnEa7Q8GkEO78flyaZSdg1zxvi9Rve1C1bYgB59RAO4Foe943ZIT9UonmWkstH
+2p64dm4U
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-ok0Yx1ZXsLRt8VrgBtOPTvGe/E+q9bAaZxGPgSzuI61gnwcR6UtlK5jcPclUmFVOn73QAlL7UZw4/xrOIH3lm+/2a26Z+Ni6lm/GHLgQ35l+sEQTmuofjR04y/vBhrc9nfBNyrNVxe024ANIUlS4vt+9JPcCa395DO+vDnY+ie5iIOMWAzX7OhClrTRdbbmZcotemya20SvwCMxjwwoFmNFVi2tmUk8i+s7oUveWmSlvNiwo04qImHu+U0Mc9a47OjKvDf1nEgXWz8b8cJeYUj2KgheQ9USnRuT0eS+Nd05Y3EArGTQQjIzW6RkWiLE/vh6Czz+uizSAurGJwTHkFQ==
+hp6Ilt1Qxgy/HCr+mi7mRZA7o8vXTiVXI1I85yBBAAVMnKEvby2puYfm4BtWXPdcdX3V04XWR/5DOQA6fSzg8ToV+rm5cTB6L1ac/9+14WCVEGIr63SV8wPPvpe7R2+DtkiCqsSIvHEWu44wURU/aBpK5s08eGKmu7n7xw2USQdZoSc/d8gkac8vhtvWVQwjBvyztFzu+0UrWFQyfcnujawg/+7GUYjZ2O85e01YZKqBQMSssFEK4xRLt7xtYa3+qrlAGuoBZ97+66wXBGjoAKeu71EZ5CzHMa1perbj7UJh1pxh4vfvtDvjHtFKqxMiuu07WwryzQ0yZlKFIpWzsA==
 -----END SIGNATURE-----

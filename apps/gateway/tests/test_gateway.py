@@ -111,6 +111,10 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "/eisf/test" in data["paths"]
         assert "/tickets/test" in data["paths"]
         assert "/econsent/test" in data["paths"]
+        assert "/imaging/test" in data["paths"]
+        assert "/payments/test" in data["paths"]
+        assert "/ai/test" in data["paths"]
+        assert "/knowledge/test" in data["paths"]
         assert "Designer_TestModel" in data["components"]["schemas"]
         assert "Execution_TestModel" in data["components"]["schemas"]
         assert "Ctms_TestModel" in data["components"]["schemas"]
@@ -120,6 +124,10 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "Eisf_TestModel" in data["components"]["schemas"]
         assert "Tickets_TestModel" in data["components"]["schemas"]
         assert "Econsent_TestModel" in data["components"]["schemas"]
+        assert "Imaging_TestModel" in data["components"]["schemas"]
+        assert "Payments_TestModel" in data["components"]["schemas"]
+        assert "AiGateway_TestModel" in data["components"]["schemas"]
+        assert "Knowledge_TestModel" in data["components"]["schemas"]
 
 
 def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -320,6 +328,246 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         assert (
             str(mock_send.call_args.args[0].url) == "http://localhost:8001/unknown/path"
         )
+
+
+def test_proxy_requests_imaging_payments_ai_gateway(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate proxy dispatch routing for imaging, payments, and ai-gateway services.
+
+    @req:PRD-SYS-001
+    @req:PRD-IMG-001
+    @req:PRD-PAY-002
+    @req:PRD-AI-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 1. Imaging routes
+        res_img_direct = client.get("/imaging/studies", headers=headers)
+        assert res_img_direct.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8014/studies"
+
+        res_img_v1 = client.get("/api/v1/imaging/studies", headers=headers)
+        assert res_img_v1.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8014/api/v1/imaging/studies"
+        )
+
+        # 2. Payments routes
+        res_pay_direct = client.get("/payments/ledger", headers=headers)
+        assert res_pay_direct.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8016/ledger"
+
+        res_pay_v1 = client.get("/api/v1/payments/ledger", headers=headers)
+        assert res_pay_v1.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8016/api/v1/payments/ledger"
+        )
+
+        # 3. AI Gateway routes
+        res_ai_direct = client.get("/ai/generate", headers=headers)
+        assert res_ai_direct.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8017/generate"
+
+        res_ai_gw = client.get("/ai_gateway/generate", headers=headers)
+        assert res_ai_gw.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8017/generate"
+
+        res_ai_dash = client.get("/ai-gateway/generate", headers=headers)
+        assert res_ai_dash.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8017/generate"
+
+        res_ai_v1 = client.get("/api/v1/ai/generate", headers=headers)
+        assert res_ai_v1.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8017/api/v1/ai/generate"
+        )
+
+
+def test_gateway_rfc7807_error_boundary_unauthorized() -> None:
+    """Validate RFC 7807 problem details response on 401 Unauthorized errors.
+
+    @req:PRD-SYS-001
+    @req:PRD-SYS-003
+    """
+    with TestClient(app) as client:
+        # Case 1: Missing token
+        res_missing = client.get("/api/v1/studies/study_1")
+        assert res_missing.status_code == 401
+        assert res_missing.headers.get("content-type") == "application/problem+json"
+        data_missing = res_missing.json()
+        assert data_missing["type"] == "https://cadence.clinical/errors/unauthorized"
+        assert data_missing["title"] == "Unauthorized"
+        assert data_missing["status"] == 401
+        assert "Authorization" in data_missing["detail"]
+
+        # Case 2: Invalid token
+        res_invalid = client.get(
+            "/api/v1/studies/study_1", headers={"Authorization": "Bearer invalid_token"}
+        )
+        assert res_invalid.status_code == 401
+        assert res_invalid.headers.get("content-type") == "application/problem+json"
+        data_invalid = res_invalid.json()
+        assert data_invalid["type"] == "https://cadence.clinical/errors/unauthorized"
+        assert data_invalid["status"] == 401
+
+
+def test_gateway_rfc7807_error_boundary_bad_gateway_and_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate RFC 7807 problem details response on 502 Bad Gateway and 504 Timeout errors.
+
+    @req:PRD-SYS-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Case 1: Connection error -> 502 Bad Gateway
+    async def mock_connect_error(*args: Any, **kwargs: Any) -> None:
+        raise httpx.ConnectError("Connection refused by downstream microservice")
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_connect_error)
+
+    with TestClient(app) as client:
+        res_502 = client.get("/api/v1/payments/ledger", headers=headers)
+        assert res_502.status_code == 502
+        assert res_502.headers.get("content-type") == "application/problem+json"
+        data_502 = res_502.json()
+        assert data_502["type"] == "https://cadence.clinical/errors/bad-gateway"
+        assert data_502["title"] == "Bad Gateway"
+        assert data_502["status"] == 502
+        assert "Connection refused" in data_502["detail"]
+
+    # Case 2: Timeout error -> 504 Gateway Timeout
+    async def mock_timeout_error(*args: Any, **kwargs: Any) -> None:
+        raise httpx.TimeoutException("Request timed out after 5.0 seconds")
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_timeout_error)
+
+    with TestClient(app) as client:
+        res_504 = client.get("/api/v1/imaging/studies", headers=headers)
+        assert res_504.status_code == 504
+        assert res_504.headers.get("content-type") == "application/problem+json"
+        data_504 = res_504.json()
+        assert data_504["type"] == "https://cadence.clinical/errors/gateway-timeout"
+        assert data_504["title"] == "Gateway Timeout"
+        assert data_504["status"] == 504
+        assert "timed out" in data_504["detail"]
+
+
+def test_gateway_rfc7807_error_boundary_rate_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate RFC 7807 problem details response on 429 Rate Limit Exceeded errors.
+
+    @req:PRD-SYS-001
+    """
+    from apps.gateway.main import rate_limiter
+
+    # Lower rate limit to test easily
+    monkeypatch.setattr(rate_limiter, "max_requests", 2)
+    monkeypatch.setattr(rate_limiter, "window_seconds", 60.0)
+    rate_limiter.requests.clear()
+
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user_rl", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        r1 = client.get("/api/v1/studies/study_1", headers=headers)
+        assert r1.status_code == 200
+
+        r2 = client.get("/api/v1/studies/study_1", headers=headers)
+        assert r2.status_code == 200
+
+        # Third request should be rate-limited
+        r3 = client.get("/api/v1/studies/study_1", headers=headers)
+        assert r3.status_code == 429
+        assert r3.headers.get("content-type") == "application/problem+json"
+        data_429 = r3.json()
+        assert data_429["type"] == "https://cadence.clinical/errors/rate-limit-exceeded"
+        assert data_429["title"] == "Too Many Requests"
+        assert data_429["status"] == 429
+        assert "Rate limit exceeded" in data_429["detail"]
+
+
+def test_gateway_rfc7807_error_boundary_forbidden_and_bad_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate RFC 7807 problem details response on 403 Forbidden and 400 Bad Request errors.
+
+    @req:PRD-SYS-001
+    @req:PRD-SYS-003
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # 1. Subject forbidden from accessing unauthorized route
+    subject_token = jwt.encode(
+        {"sub": "patient_001", "roles": ["subject"]}, "test_secret", algorithm="HS256"
+    )
+
+    with TestClient(app) as client:
+        res_403 = client.get(
+            "/api/v1/execution/form-submissions",
+            headers={"Authorization": f"Bearer {subject_token}"},
+        )
+        assert res_403.status_code == 403
+        assert res_403.headers.get("content-type") == "application/problem+json"
+        data_403 = res_403.json()
+        assert data_403["type"] == "https://cadence.clinical/errors/forbidden"
+        assert data_403["title"] == "Forbidden"
+        assert data_403["status"] == 403
+        assert "Access denied" in data_403["detail"]
+
+        # 2. Change reason exceeds 255 chars -> 400 Bad Request ProblemDetails
+        admin_token = jwt.encode(
+            {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+        )
+        long_reason = "X" * 300
+        res_400 = client.post(
+            "/api/v1/studies/study_1",
+            headers={
+                "Authorization": f"Bearer {admin_token}",
+                "X-Change-Reason": long_reason,
+            },
+        )
+        assert res_400.status_code == 400
+        assert res_400.headers.get("content-type") == "application/problem+json"
+        data_400 = res_400.json()
+        assert data_400["type"] == "https://cadence.clinical/errors/bad-request"
+        assert data_400["title"] == "Bad Request"
+        assert data_400["status"] == 400
+        assert "exceeds 255 characters" in data_400["detail"]
 
 
 def test_generate_signature_v2() -> None:

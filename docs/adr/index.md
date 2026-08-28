@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-28: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries](2026-08-28-gateway-proxy-dispatch-routing-and-rfc-7807-error-boundaries.md)
 - [2026-08-28: Antigravity Workspace Plugin and Skill Architecture](2026-08-28-antigravity-workspace-plugin-and-skill-architecture.md)
 - [2026-08-25: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md)
 - [2026-08-24: Dynamic Consent Engine Re-Consent Gating and Lifecycle](2026-08-24-dynamic-consent-engine-re-consent-gating-and-lifecycle.md)
