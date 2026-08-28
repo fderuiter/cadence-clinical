@@ -654,5 +654,26 @@ _Avoid_: Monolithic multi-thousand-line Vue views mixing multiple persona lifecy
 A centralized role-based access control architecture in `apps/web/src/stores/auth.js` and `packages/security` that maps clinical personas and Keycloak OIDC roles to granular functional capabilities (e.g. `SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`), eliminating brittle hardcoded string comparisons and ensuring consistent authorization across production and interactive demo modes.
 _Avoid_: Scattering ad-hoc role string comparisons (`activeRole === 'site_investigator'`) across component templates
 
+### Metadata-Driven Engine Architecture (The Engine Triad)
+
+An enterprise architectural standard where clinical domain rules across all microservices are configured through low-code Builder interfaces, compiled into validated Domain-Specific Language (DSL) Schemas, and executed at runtime by stateless, pure Evaluators, transforming business configurations into version-pinned, auditable 21 CFR Part 11 records.
+_Avoid_: Hardcoded Python if/else statements for protocol-specific rules, ad-hoc unvalidated JSON blobs
+
+### Universal Rules & Expression Engine (UREE)
+
+A sandboxed, AST-based expression evaluation engine for cross-form edit checks, dynamic skip logic, and protocol feasibility without executing arbitrary un-sandboxed code.
+_Avoid_: Unsafe Python eval() or exec() calls in clinical data pipelines
+
+### Vector-Based Clinical Timeline Engine
+
+A mathematical scheduling engine that computes clinical encounter visit dates, permissible protocol windows, and automated out-of-window deviation flags dynamically from relative anchor event offsets.
+_Avoid_: Hardcoded calendar date math scattered across frontend views
+
+### Deterministic Domain-Specific Language (DSL)
+
+A declarative, JSON/YAML-serialized specification language governing domain rules (financial fee matrices, PV decision rules, laboratory toxicity grades, ETL schema mappings, agent DAG pipelines) with immutable version indices and 21 CFR Part 11 electronic signature publication gates.
+_Avoid_: Unversioned mutable configurations mutating locked historical clinical data
+
+
 
 
