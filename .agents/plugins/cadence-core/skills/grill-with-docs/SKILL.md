@@ -9,11 +9,23 @@ metadata:
 
 # Cadence Grill-with-Docs
 
-Executes an interactive design-tree interview (`grilling`) combined with live domain glossary and ADR generation (`domain-modeling`).
+Executes an interactive design-tree interview (`grilling`) combined with live domain glossary and ADR generation (`domain-modeling`) using Antigravity search, interactive questioning, and editing tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Fact Finding** | `grep_search` / `find_by_name` | Autonomous queries across `apps/` & `packages/` | Look up facts, models, and constraints before asking user |
+| **Domain Anchor** | `view_file` | Read `CONTEXT.md` and `docs/adr/` via relative paths | Anchor discussions to established ubiquitous language |
+| **Frontier Query** | `ask_question` | `questions=[{"question": "...", "options": [...]}]` | Prompt user with interactive multi-choice when useful |
+| **Glossary Update** | `replace_file_content` | Target: `CONTEXT.md`, surgical section update | Add or refine terms under `# Clinical Domain Glossary` |
+| **ADR Creation** | `run_command` | `CommandLine="uv run cadence scaffold adr '<Title>'"` | Scaffold dated ADR for high-stakes decisions |
+
+---
 
 ## Execution Protocol
 
-1. Read `CONTEXT.md` and relevant ADRs in `docs/adr/` to anchor domain concepts.
+1. Read [`CONTEXT.md`](../../../../CONTEXT.md) and relevant ADRs in [`docs/adr/`](../../../../docs/adr/) to anchor domain concepts.
 2. Initialize the **Design Tree**: Map the root goal into branching prerequisite and downstream decisions.
 3. Compute the **Frontier**: Identify all questions whose prerequisites are settled.
 4. Format all frontier questions in the round:
@@ -22,7 +34,9 @@ Executes an interactive design-tree interview (`grilling`) combined with live do
 
    ➡️ <recommended answer>
    ```
-5. Perform fact-finding autonomously (using file tools / subagents) without asking the user for facts you can look up yourself.
-6. When terms crystallize, update `CONTEXT.md` inline immediately.
+   *(Or present via `ask_question` for direct modal response).*
+5. Perform fact-finding autonomously using `grep_search` and `view_file` without asking the user for facts you can look up yourself.
+6. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
 7. When significant architectural trade-offs are settled, scaffold an ADR (`uv run cadence scaffold adr "Title"`).
 8. Conclude only when the frontier is empty and the user confirms shared understanding.
+

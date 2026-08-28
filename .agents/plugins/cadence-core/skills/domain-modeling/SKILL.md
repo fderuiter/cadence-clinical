@@ -9,7 +9,17 @@ metadata:
 
 # Cadence Domain Modeling
 
-Actively build and sharpen the project's domain model as you design. Maintain absolute fidelity to CDISC, GxP, and Cadence clinical architecture terminology.
+Actively build, sharpen, and maintain the project's domain model, ubiquitous language, and architectural taxonomy in [`CONTEXT.md`](../../../../CONTEXT.md) and [`docs/adr/`](../../../../docs/adr/) using Antigravity inspection and editing tools.
+
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Terminology Audit** | `grep_search` | `Query="<term>"`, `SearchPath="apps/"` | Scan codebase for usage of conflicting or legacy terminology |
+| **Glossary Inspection**| `view_file` | `AbsolutePath=".../CONTEXT.md"` | Read current canonical definitions and domain boundaries |
+| **Live Glossary Edit** | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit | Add or update terms under `# Clinical Domain Glossary` |
+| **ADR Scaffolding** | `run_command` | `CommandLine="uv run python scripts/create_adr.py ..."` | Scaffold formal decision record when architectural models change |
 
 ---
 
@@ -30,10 +40,11 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
    Probe edge cases (e.g. protocol amendment re-consent with in-flight visit submissions, adverse event emergency unblinding during database lock).
 
 4. **Update `CONTEXT.md` inline**:
-   When a new term crystallizes, add it immediately to `CONTEXT.md` under `# Clinical Domain Glossary` with an exact definition and `_Avoid_` hints where appropriate.
+   When a new term crystallizes, use `replace_file_content` to add it immediately to `CONTEXT.md` under `# Clinical Domain Glossary` with an exact definition and `_Avoid_` hints where appropriate.
 
 5. **Scaffold ADRs for High-Stakes Decisions**:
    When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
    ```bash
    uv run python scripts/create_adr.py --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
    ```
+

@@ -9,13 +9,28 @@ metadata:
 
 # Cadence Implementation Workflow
 
-Executes code implementation tasks with strict adherence to repository standards, 21 CFR Part 11 requirements, and Antigravity artifact reporting.
+Executes code implementation tasks with strict adherence to repository standards, 21 CFR Part 11 requirements, and Antigravity artifact reporting using Antigravity code, task, and verification tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Context Review** | `find_by_name` / `view_file` | Read relevant spec, models, and tests via `AbsolutePath` | Map dependencies and domain invariants |
+| **Surgical Editing** | `replace_file_content` | Target: production file, single contiguous chunk | Implement changes with strict typing and E712/I001 compliance |
+| **File Creation** | `write_to_file` | Target: new module/test, with complete contents | Scaffold new services, endpoints, or test suites |
+| **Quality Remediation**| `run_command` | `CommandLine="uv run cadence fix --all"`, `WaitMsBeforeAsync=5000` | Auto-format and sort imports |
+| **Fast Verification** | `run_command` | `CommandLine="uv run cadence test --fast"`, `WaitMsBeforeAsync=10000` | Run unit tests across 10 workers |
+| **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Track long-running test execution |
+| **Sentinels Check** | `run_command` | `CommandLine="uv run cadence check --parallel"` | Concurrently run all 10 quality gates |
+| **Compliance Sync** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"` | Sync RTM and IQ/OQ/PQ execution reports |
+| **Walkthrough Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md` | Emit structured completion artifact with file links |
 
 ---
 
 ## 1. Pre-Implementation Review
 - Read the relevant spec, ticket, or plan.
-- Check `CONTEXT.md` for canonical domain terminology.
+- Check [`CONTEXT.md`](../../../../CONTEXT.md) for canonical domain terminology.
+
 - Identify the target directories:
   - `apps/designer/`: Study authoring / MDR / Neo4j logic.
   - `apps/execution/`: Data capture / eCRF / PostgreSQL logic.
@@ -58,7 +73,8 @@ uv run python scripts/sync_gxp.py
 
 ## 4. Produce Antigravity Walkthrough Artifact
 
-Record changes in `<appDataDir>/brain/<conversation-id>/walkthrough.md`:
+Record changes in `<appDataDir>/brain/<conversation-id>/walkthrough.md` via `write_to_file`:
 - Multi-component summary of files created/modified with clickable `[basename](file:///path/to/file)` links.
 - Verification results table showing test outcomes and sentinel checks.
 - Key GxP requirement IDs satisfied.
+

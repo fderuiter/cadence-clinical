@@ -9,7 +9,19 @@ metadata:
 
 # Cadence Systematic Bug Diagnosis
 
-A structured diagnosis loop for isolating root causes in multi-service clinical backends, Neo4j graphs, PostgreSQL databases, and Vue 3 frontend components.
+A structured diagnosis loop for isolating root causes in multi-service clinical backends, Neo4j graphs, PostgreSQL databases, and Vue 3 frontend components using Antigravity debugging, task, and inspection tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Error Localization** | `grep_search` | `Query="<exception_or_symbol>"`, `SearchPath="apps/"` | Locate error sites, callers, and exception stack traces |
+| **System Diagnostics** | `run_command` | `CommandLine="uv run cadence doctor --auto-fix"`, `WaitMsBeforeAsync=5000` | Verify environment, schemas, and dependencies |
+| **Isolated Repro** | `run_command` | `CommandLine="uv run pytest <test_file> -v -k '<test>'"` | Run targeted minimal reproduction test |
+| **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Inspect logs and stderr from background test tasks |
+| **Watchdog Timer** | `schedule` | `DurationSeconds=60`, `TimerCondition=<task-id>` | Guard against hanging database locks or workers |
+| **Root-Cause Fix** | `replace_file_content` | Target: source file, single contiguous fix | Apply surgical minimal fix to production code |
+| **Diagnostic Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/bug_diagnosis.md` | Emit root-cause analysis and verification artifact |
 
 ---
 
@@ -27,6 +39,7 @@ uv run cadence doctor --auto-fix
 
 Always construct or run a minimal reproducing test case rather than diagnosing via exploratory mutations:
 
+- Use `grep_search` and `find_by_name` to pinpoint relevant test files.
 - Run the failing test in isolation:
   ```bash
   uv run pytest apps/<service>/tests/test_failing_case.py -v -k "test_name"
@@ -59,7 +72,7 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 
 ## 4. Fix & Verify
 
-1. Apply the minimal root-cause fix.
+1. Apply the minimal root-cause fix using `replace_file_content`.
 2. Verify the reproducing test turns green:
    ```bash
    uv run cadence test --fast -k "test_name"
@@ -72,3 +85,5 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
    ```bash
    uv run python scripts/sync_gxp.py
    ```
+5. Emit diagnosis report artifact to `<appDataDir>/brain/<conversation-id>/bug_diagnosis.md` via `write_to_file`.
+

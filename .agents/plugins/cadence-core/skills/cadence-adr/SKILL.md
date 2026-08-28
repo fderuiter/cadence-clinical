@@ -9,7 +9,16 @@ metadata:
 
 # Cadence Architecture Decision Records (ADR)
 
-Records significant, hard-to-reverse architectural decisions with clear rationale, context, and consequences.
+Records significant, hard-to-reverse architectural decisions with clear rationale, context, and consequences using Antigravity scaffolding and editing tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Scaffolding** | `run_command` | `CommandLine="uv run python scripts/create_adr.py --title '...' --domain '...' --req 'PRD-SYS-xxx'"` | Generate dated ADR template and auto-index in `docs/adr/index.md` |
+| **Inspection** | `view_file` | `AbsolutePath=".../docs/adr/YYYY-MM-DD-slug.md"` | Inspect scaffolded sections and template comments |
+| **Authoring** | `replace_file_content` | Target: `docs/adr/YYYY-MM-DD-slug.md`, contiguous section edits | Populate Problem Statement, Options, Outcome, and Trade-offs |
+| **Validation** | `run_command` | `CommandLine="uv run python scripts/validate_adrs.py"` | Verify format, frontmatter, and requirement ID traceability |
 
 ## When an ADR is Required
 
@@ -31,14 +40,19 @@ uv run python scripts/create_adr.py --title "Descriptive Title" --domain "core-p
 ```
 *(Or via Cadence CLI: `uv run cadence scaffold adr "Descriptive Title"`)*
 
-This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically updates the index table in `docs/adr/index.md`.
+This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically updates the index table in [`docs/adr/index.md`](../../../../docs/adr/index.md).
 
-## ADR Structure
 
-1. **Title**: Short noun phrase describing the decision.
-2. **Status**: `PROPOSED`, `ACCEPTED`, `SUPERSEDED`, or `DEPRECATED`.
-3. **Context & Problem Statement**: The forces, requirements, and constraints at play.
-4. **Considered Options**: Concrete alternatives evaluated with pros/cons.
-5. **Decision Outcome**: The chosen solution and explicit justification.
-6. **Consequences**: Positive effects, negative trade-offs, and compliance/GxP impacts.
-7. **Traceability**: Linked requirement IDs (`PRD-SYS-xxx`).
+## ADR Authoring Protocol
+
+1. **Scaffold**: Execute `create_adr.py` with valid `--domain` and `--req` parameters.
+2. **Author Sections**: Use `replace_file_content` to fill in:
+   - **Title**: Short noun phrase.
+   - **Status**: `PROPOSED`, `ACCEPTED`, `SUPERSEDED`, or `DEPRECATED`.
+   - **Context & Problem Statement**: The forces, requirements, and constraints.
+   - **Options Considered**: Specific alternatives with pros/cons.
+   - **Decision Outcome**: Selected option with justification.
+   - **Consequences**: Positive, negative, and GxP/compliance impacts.
+   - **Traceability**: Valid system requirement IDs (`PRD-SYS-xxx`).
+3. **Verify Compliance**: Run `uv run python scripts/validate_adrs.py` to confirm index alignment.
+

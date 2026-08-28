@@ -9,7 +9,14 @@ metadata:
 
 # Cadence Ticket Decomposition
 
-Decomposes specifications into vertical slice (tracer-bullet) tickets mapped to Cadence clinical module queues.
+Decomposes specifications into vertical slice (tracer-bullet) tickets mapped to Cadence clinical module queues using Antigravity artifact and inspection tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Dependency Analysis**| `find_by_name` / `grep_search` | Query existing domain services and routers | Identify dependencies and blocking edges |
+| **Ticket Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/tickets.md` | Emit structured ticket backlog with domain queues |
 
 ---
 
@@ -39,3 +46,4 @@ Each ticket should be a vertical tracer-bullet:
 ## 3. Output as Antigravity Artifact
 
 Write the ticket backlog to `<appDataDir>/brain/<conversation-id>/tickets.md` with `ArtifactMetadata` (`UserFacing: true`).
+

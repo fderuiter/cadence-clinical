@@ -9,7 +9,15 @@ metadata:
 
 # Cadence Issue & Ticket Triage
 
-Categorizes incoming issues, bug reports, and clinical inquiries, mapping them to functional domain queues and SLA tracking models.
+Categorizes incoming issues, bug reports, and clinical inquiries, mapping them to functional domain queues and SLA tracking models using Antigravity search, interactive questioning, and artifact generation.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Context & Dupe Check**| `grep_search` / `find_by_name` | Search issues and codebase for related tickets | Detect duplicate reports or known failure sites |
+| **Priority Assignment** | `ask_question` | `questions=[{"question": "Assign Issue Priority", ...}]` | Interactively confirm severity and queue routing |
+| **Triage Brief** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/triage_brief.md` | Emit structured triage brief for agent or human execution |
 
 ---
 
@@ -36,3 +44,4 @@ Categorizes incoming issues, bug reports, and clinical inquiries, mapping them t
 - **Critical (P0)**: Patient safety impact, audit trail failure, or data loss risk. Initial response < 15 min.
 - **High (P1)**: Protocol amendment block, unhandled runtime exception, or CI gate failure. Initial response < 1 hr.
 - **Normal (P2)**: Standard feature enhancement, refactoring, or minor UI fix. Initial response < 24 hr.
+

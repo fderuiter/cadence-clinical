@@ -9,12 +9,16 @@ metadata:
 
 # Cadence Two-Axis Code Review
 
-Reviews changes along two distinct, decoupled axes to ensure full standards adherence and specification faithfulness without masking findings:
+Reviews changes along two distinct, decoupled axes to ensure full standards adherence and specification faithfulness without masking findings using Antigravity parallel subagents and session artifacts.
 
-- **Standards & GxP Axis**: Checks compliance with repository standards (`AGENTS.md`, E712 boolean `.is_()`, I001 sorted imports, PEP 695 generics, 21 CFR Part 11 audit fields, REST boundaries) and the Fowler code smell baseline.
-- **Spec Compliance Axis**: Checks whether the implementation matches the PRD/SRS requirements or originating issue without scope creep or missed edge cases.
+## Antigravity Tool Execution Matrix
 
-Both axes run as **parallel sub-agents** using Antigravity's `invoke_subagent` and report results to an Antigravity session artifact.
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Diff Inspection** | `run_command` | `CommandLine="git diff <fixed-point>...HEAD"`, `WaitMsBeforeAsync=5000` | Fetch exact unified diff range |
+| **Parallel Review** | `invoke_subagent` | `Subagents=[{"Role": "Standards & GxP Auditor"}, {"Role": "Spec Verifier"}]` | Launch concurrent decoupled review subagents |
+| **Inter-Agent Comms**| `send_message` | `Recipient="<conversationId>"`, `Message="..."` | Communicate clarifying instructions to subagents |
+| **Artifact Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/code_review.md` | Emit side-by-side review report with alerts and file links |
 
 ---
 
@@ -47,13 +51,15 @@ Call `invoke_subagent` with two subagents:
       "TypeName": "self",
       "Role": "Standards & GxP Auditor",
       "Model": "inherit",
-      "Prompt": "Perform the Standards & GxP axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\n\nStandards sources: AGENTS.md, GxP 21 CFR Part 11 requirements, Fowler code smells.\n\nStrictly check: E712 boolean filter `.is_(True/False)`, I001 alphabetical imports, PEP 695 generics, Part 11 audit fields, and Fowler smells.\n\nOutput your findings grouped by file with exact file:/// links and line references. Under 400 words."
+      "Workspace": "inherit",
+      "Prompt": "Perform the Standards & GxP axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\n\nStandards sources: AGENTS.md, GxP 21 CFR Part 11 requirements, Fowler code smells.\n\nStrictly check: E712 boolean filter `.is_(True/False)`, I001 alphabetical imports, PEP 695 generics, Part 11 audit fields, and Fowler smells.\n\nOutput your findings grouped by file with line references. Under 400 words."
     },
     {
       "TypeName": "self",
       "Role": "Spec & Requirement Verifier",
       "Model": "inherit",
-      "Prompt": "Perform the Spec Compliance axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\nSpec source: <spec-path-or-issue>\n\nReport:\n1. Missing or partial requirements.\n2. Scope creep (unrequested behavior).\n3. Misimplemented requirements with exact spec quotes.\n\nOutput your findings with file:/// links. Under 400 words."
+      "Workspace": "inherit",
+      "Prompt": "Perform the Spec Compliance axis review on the diff between <fixed-point> and HEAD.\n\nDiff command: `git diff <fixed-point>...HEAD`\nSpec source: <spec-path-or-issue>\n\nReport:\n1. Missing or partial requirements.\n2. Scope creep (unrequested behavior).\n3. Misimplemented requirements with exact spec quotes.\n\nOutput your findings with line references. Under 400 words."
     }
   ]
 }
@@ -66,9 +72,10 @@ Stop calling tools to await subagent completion. The Antigravity messaging syste
 Write the consolidated review to `<appDataDir>/brain/<conversation-id>/code_review.md` using `write_to_file` with `ArtifactMetadata`:
 
 - Header with reviewed commit/diff range and spec source.
-- `## Standards & GxP Compliance` section with clickable file links `[file.py:L10-L20](file:///path/to/file.py#L10-L20)`.
+- `## Standards & GxP Compliance` section with file links and line numbers.
 - `## Specification Alignment` section citing exact requirement IDs (`@req:PRD-SYS-xxx`).
 - Summary alert box (`[!IMPORTANT]` / `[!TIP]`) with the single most critical finding per axis.
 
 ### 5. Present Concise Summary
 In your final chat response, provide a high-level 2-sentence summary and point the user to the generated `code_review.md` artifact.
+

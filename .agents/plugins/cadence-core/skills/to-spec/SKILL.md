@@ -9,7 +9,15 @@ metadata:
 
 # Cadence Spec Synthesis
 
-Synthesizes the active conversation, settled decisions, and architectural requirements into a formal specification document.
+Synthesizes the active conversation, settled decisions, and architectural requirements into a formal specification document using Antigravity artifact and inspection tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Context Review** | `view_file` | Read `CONTEXT.md` and `docs/SDLC/01_Product_Requirements_Document_PRD.md` | Ground spec in existing requirements and glossary |
+| **Ambiguity Settlement**| `ask_question` | `questions=[{"question": "Confirm Acceptance Criterion", ...}]` | Confirm critical regulatory bounds before writing spec |
+| **Spec Emission** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` | Emit formal specification document |
 
 ---
 
@@ -31,3 +39,4 @@ Generate a comprehensive specification with the following sections:
 
 Write the specification to `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
 If long-term documentation is needed, also write to `docs/specs/<feature-name>.md`.
+

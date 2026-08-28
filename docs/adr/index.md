@@ -191,6 +191,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-28: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md)
+- [2026-08-28: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md)
 - [2026-08-28: Site Greenlight Governance Regulatory Binders and DOA Signing](2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md)
 - [2026-08-25: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine](2026-08-25-autonomous-multi-criteria-cohort-reasoning-and-synthetic-feasibility-engine.md)
 - [2026-08-24: ClinicalIssueHub Module-Based Routing and Dual-Target SLAs](2026-08-24-clinicalissuehub-module-based-routing-and-dual-target-slas.md)
@@ -246,6 +248,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-28: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md)
+- [2026-08-28: Specialized Science Safety Submissions CSM Forensics and AI Air Gap](2026-08-28-specialized-science-safety-submissions-csm-forensics-and-ai-air-gap.md)
 - [2026-08-23: Autonomous Cross-Domain Quality Surveillance Runner Architecture](2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md)
 - [2026-08-18: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing](2026-08-18-metadata-bound-filtering-and-consent-abstraction-for-transaction-auditing.md)
 

@@ -9,7 +9,14 @@ metadata:
 
 # Cadence Interactive Wizard Generator
 
-Generates a step-by-step interactive terminal script for operational tasks that only a human can execute (e.g. AWS IAM role provisioning, Keycloak client creation, external API key issuance).
+Generates a step-by-step interactive terminal script for operational tasks that only a human can execute (e.g. AWS IAM role provisioning, Keycloak client creation, external API key issuance) using Antigravity code generation tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Wizard Script** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/scratch/<wizard_name>.sh` | Scaffold executable bash wizard script |
+| **Interactive Step** | `ask_question` | `questions=[{"question": "Confirm Target Environment", ...}]` | Interactively configure wizard defaults |
 
 ---
 
@@ -19,3 +26,4 @@ Generates a step-by-step interactive terminal script for operational tasks that 
 2. **Idempotent Actions**: Ensure commands can be run repeatedly without duplicating configuration.
 3. **Sensitive Secret Handling**: Never echo secrets to the terminal; use `read -s`.
 4. **Validation Checks**: Verify connectivity or token validity at the conclusion of the wizard.
+

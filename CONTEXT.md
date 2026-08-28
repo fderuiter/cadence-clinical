@@ -489,3 +489,73 @@ _Avoid_: Unsigned database role flags, unsealed delegation tables
 An authoritative clinical document taxonomy (10 canonical zones) standardized across eTMF and eISF binders, supporting deterministic bidirectional synchronization, correlation key idempotency, CRA QC review staging, and zero-downtime dual-read object storage adapters.
 _Avoid_: Hardcoded proprietary folder trees, unmapped binder synchronizations
 
+### Real-Time Event-to-Payable Ledger
+
+An automated financial calculation engine in `apps/payments` that processes transactional outbox events triggered by eCRF visit completion, procedure submissions, and CRA Source Data Verification (SDV) certifications to generate immutable payable line items mapped against active investigator fee matrices.
+_Avoid_: Unverified instant payouts on uncertified visits, delayed manual spreadsheet invoicing
+
+### Multi-Party Payee Split
+
+A contractual grant allocation mechanism that dynamically divides earned clinical procedure payables among multiple designated entity accounts (e.g. Institution 70% / Principal Investigator 30%) with exact arithmetic precision.
+_Avoid_: Unsplit manual ledger reconciliations
+
+### Closeout Holdback Retention Escrow
+
+A statutory financial risk-mitigation reserve that automatically sequesters a 10% deduction from all earned procedure payables into escrow, strictly releasable at site closeout only upon dual 21 CFR Part 11 electronic signatures from Sponsor Finance and Lead CRA.
+_Avoid_: Single-user holdback release, un-escrowed closeout disbursements
+
+### Patient Financial Wallet
+
+A participant-facing compensation and expense portal supporting automated SoA visit stipends, mobile receipt OCR uploads with 1-click CRC approval, and an automated $600 USD IRS 1099-MISC threshold accumulator that triggers mandatory W-9 validation.
+_Avoid_: Unmonitored cash gift cards, untracked annual compensation thresholds
+
+### Plain Language Lay Summary Portal
+
+An EU CTR 536/2014 Article 37 compliant delivery portal providing trial participants with access to approved clinical trial lay summaries and generating cryptographically signed SHA-256 confirmed read-receipts stored in the GxP audit ledger.
+_Avoid_: Unverified unauthenticated public links without audit confirmation
+
+### Automated NCI-CTCAE v5.0 Toxicity Grading
+
+A pharmacovigilance evaluation engine in `apps/safety` that analyzes numerical clinical laboratory results and UCUM units against NCI-CTCAE v5.0 criteria, automatically staging Grade 3 (Severe) and Grade 4 (Life-threatening) events as adverse event drafts for Safety Physician causality review.
+_Avoid_: Manual lab report grading, un-staged automatic regulatory transmissions without medical review
+
+### ICH E2B(R3) AS2 S/MIME EDI Gateway
+
+A B2B electronic regulatory transmission pipeline in `apps/safety` that compiles Individual Case Safety Reports (ICSR) into ISO 27953-2 compliant ICH E2B(R3) XML payloads and transmits them over RFC 4130 AS2 with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
+_Avoid_: Unencrypted email attachments, manual un-tracked agency portal uploads
+
+### Centralized Statistical Monitoring (CSM) Forensics
+
+A risk-based quality management engine in `apps/quality` that computes Benford's Law Chi-Square and Mean Absolute Deviation (MAD), terminal digit bias, and Mahalanobis distance multivariate outlier detection across site data streams to uncover fabrication and clinical anomaly clusters.
+_Avoid_: Single-metric variance checks, un-audited manual data spot checks
+
+### 64-Bit DCT Perceptual Hashing (pHash) Sentinel
+
+An image forensics pipeline in `apps/quality` and `apps/imaging` that computes 64-bit Discrete Cosine Transform perceptual hashes for medical images and flags cross-patient or cross-site duplicates with Hamming distance $\le 5$ for fraud investigations.
+_Avoid_: MD5/SHA256 exact bit comparison for lossy medical imaging duplicates
+
+### Blinded Dual-Reader RECIST 1.1 Adjudication
+
+An oncology imaging evaluation workflow in `apps/imaging` where two independent blinded radiologists record tumor measurements, automatically triggering Adjudication Committee review and Chair step-up electronic sign-off if Sum of Diameters (SOD) discordance exceeds 20%.
+_Avoid_: Conflicting un-adjudicated radiologist reads, arbitrary single-reader overrides
+
+### Sequential 6-Persona Golden Path
+
+A complete end-to-end clinical trial verification scenario executing sequentially across `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, and `auditor` in full-width Vanilla CSS client workspaces (`apps/web`), validating role boundaries and state handovers from protocol authoring to database lock.
+_Avoid_: Fragmented isolated persona tests without lifecycle continuity
+
+### 1080p Playwright Video Capture
+
+An automated qualification recording pipeline using Playwright at 1920x1080 resolution (`RECORD_VIDEO=true`) with realistic action delays, cursor movements, and click ripple highlights that produces documentary video proof of system operations.
+_Avoid_: Fast un-paced headless executions without video evidence for regulatory audits
+
+### Triple Sentinel Assertion Gates
+
+A three-layer test verification standard requiring: 1) visual and functional DOM component state verification, 2) client console and network hygiene (zero unhandled exceptions or HTTP failures), and 3) verified backend database state and 21 CFR Part 11 audit trails (`created_by`, `reason_for_change`, `version_index`, SHA-256 digests).
+_Avoid_: Single HTTP status code assertions without audit trail verification
+
+### 100% GxP RTM Synchronization
+
+A continuous compliance assurance protocol that automates synchronization of test execution results and `@req:` docstrings via `scripts/sync_gxp.py`, guaranteeing 100% traceability across all 226 system requirements (192 PRD + 34 SRS) with zero drift in CI/CD.
+_Avoid_: Manual untracked Markdown table edits, partial requirement coverage
+

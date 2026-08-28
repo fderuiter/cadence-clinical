@@ -9,10 +9,19 @@ metadata:
 
 # Cadence Interactive Teaching
 
-Teach a technical or clinical concept using concrete mental models, worked examples, and interactive checks for understanding.
+Teach a technical or clinical concept using concrete mental models, worked examples, and interactive checks for understanding using Antigravity interactive questioning.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Check Understanding**| `ask_question` | `questions=[{"question": "Quick Check Question", ...}]` | Test comprehension with interactive modal |
+
+---
 
 ## Process
 1. State the core mental model in 1 sentence.
 2. Provide a concrete before/after code or clinical scenario.
 3. Highlight the common pitfalls and why they occur.
-4. Ask a quick check-for-understanding question.
+4. Ask a quick check-for-understanding question using `ask_question`.
+

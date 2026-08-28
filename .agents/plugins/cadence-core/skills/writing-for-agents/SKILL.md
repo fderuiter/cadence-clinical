@@ -9,7 +9,15 @@ metadata:
 
 # Writing for Antigravity Agents
 
-Guidelines for authoring clear, deterministic, and token-efficient documentation, skills, rules, and prompts for AI coding agents.
+Guidelines for authoring clear, deterministic, and token-efficient documentation, skills, rules, and prompts for AI coding agents using Antigravity editing and validation tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Audit Existing Skills**| `view_file` | Read `SKILL.md` via `AbsolutePath` | Check frontmatter, length, and references |
+| **Skill/Rule Authoring**| `replace_file_content` / `write_to_file` | Target: `SKILL.md` or `AGENTS.md`, surgical edit | Apply progressive disclosure and clear constraints |
+| **Markdown Validation**| `run_command` | `CommandLine="uv run python scripts/validate_markdown.py"` | Verify relative links and format compliance |
 
 ---
 
@@ -32,3 +40,4 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 - State hard constraints and anti-patterns explicitly ("_Avoid_: raw SQL string interpolation, sibling database imports").
 - Provide concrete input/output code examples.
 - Include explicit verification and testing steps (`uv run cadence test --fast`).
+

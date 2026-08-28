@@ -9,7 +9,18 @@ metadata:
 
 # Cadence Test-Driven Development (TDD)
 
-TDD in Cadence follows a strict, rapid red → green → refactor loop anchored to domain seams, in-memory test doubles, and 21 CFR Part 11 requirements traceability.
+TDD in Cadence follows a strict, rapid red → green → refactor loop anchored to domain seams, in-memory test doubles, and 21 CFR Part 11 requirements traceability using Antigravity code and execution tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Seam Discovery** | `find_by_name` / `view_file` | Read target service and test suite via `AbsolutePath` | Inspect existing domain seams and test doubles |
+| **Red (Failing Test)** | `replace_file_content` / `write_to_file` | Author new test case with `@req:PRD-SYS-xxx` | Add failing test case testing public interface |
+| **Test Execution** | `run_command` | `CommandLine="uv run cadence test --fast -k <test_name>"`, `WaitMsBeforeAsync=5000` | Execute sub-second unit test verification |
+| **Green (Implementation)**| `replace_file_content` | Target: production code, single contiguous edit | Write minimal production code to pass test |
+| **Quality Sentinel** | `run_command` | `CommandLine="uv run cadence fix --all && uv run cadence check --parallel"` | Format, sort imports, and run 10 quality gates |
+| **Compliance Sync** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"` | Regenerate and stage GxP Traceability Matrix |
 
 ---
 
@@ -54,7 +65,7 @@ Agree on the public interface boundary before authoring tests:
 - Never test internal/private methods or reach into ORM internals directly.
 
 ### 2. Red: Author Failing Test
-- Author a minimal failing test at the agreed seam.
+- Use `replace_file_content` or `write_to_file` to author a minimal failing test at the agreed seam.
 - Include the `@req:PRD-SYS-xxx` docstring tag.
 - Execute with sub-second fast test runner:
   ```bash
@@ -63,7 +74,7 @@ Agree on the public interface boundary before authoring tests:
 - Confirm the test fails for the expected reason (red).
 
 ### 3. Green: Minimal Implementation
-- Write only enough production code to make the test pass.
+- Use `replace_file_content` to write only enough production code to make the test pass.
 - Adhere strictly to Cadence conventions:
   - Boolean ORM filters: `.is_(True)` / `.is_(False)` (E712).
   - Alphabetical import sorting (I001).
@@ -86,3 +97,4 @@ When the slice is complete and all tests pass:
 ```bash
 uv run python scripts/sync_gxp.py
 ```
+

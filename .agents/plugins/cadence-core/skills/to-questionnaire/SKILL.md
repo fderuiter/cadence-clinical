@@ -9,7 +9,14 @@ metadata:
 
 # Cadence Decision Questionnaire
 
-Turns unresolved clinical, regulatory, or technical questions into a clear, structured questionnaire for clinical data managers, study designers, or product owners.
+Turns unresolved clinical, regulatory, or technical questions into a clear, structured questionnaire for clinical data managers, study designers, or product owners using Antigravity interactive tools and artifacts.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Interactive Prompt**| `ask_question` | `questions=[{"question": "...", "options": [...]}]` | Prompt stakeholder with interactive modal directly |
+| **Questionnaire Artifact**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` | Emit complete questionnaire artifact for offline review |
 
 ---
 
@@ -26,3 +33,4 @@ Group questions by domain area and provide clear context:
 ## 2. Output as Antigravity Artifact
 
 Write the questionnaire to `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
+

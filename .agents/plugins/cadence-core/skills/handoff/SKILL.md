@@ -9,7 +9,15 @@ metadata:
 
 # Cadence Session Handoff
 
-Compacts the active conversation into an Antigravity handoff artifact so a future agent or session can resume with zero context loss.
+Compacts the active conversation into an Antigravity handoff artifact so a future agent or session can resume with zero context loss using Antigravity state, task, and artifact tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **State Inspection** | `run_command` | `CommandLine="git status -s && git diff --stat"` | Inspect uncommitted changes and branch state |
+| **Transcript Search** | `grep_search` | Target: `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl` | Review earlier user instructions and tool calls |
+| **Handoff Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/handoff.md` | Emit structured handoff document with conversation link |
 
 ---
 
@@ -40,7 +48,7 @@ What was accomplished in this session.
 - Decision 2
 
 ## 3. Active & In-Flight State
-- Files modified: clickable [file.py:L1-L20](file:///path/to/file.py#L1-L20) links.
+- Files modified: clickable [file.py:L1-L20](relative/path/to/file.py#L1-L20) links.
 - Test outcomes: commands to run to inspect state.
 
 ## 4. Next Actions for Receiving Agent
@@ -52,3 +60,4 @@ What was accomplished in this session.
 
 ## 3. Present Final Response
 Print a brief message in chat pointing the user to the `handoff.md` artifact.
+

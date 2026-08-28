@@ -9,7 +9,17 @@ metadata:
 
 # Cadence GxP Compliance Synchronization
 
-Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and traceability matrix alignment.
+Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and traceability matrix alignment using Antigravity asynchronous tasks and validation tools.
+
+## Antigravity Tool Execution Matrix
+
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Execution** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"`, `WaitMsBeforeAsync=10000` | Launch qualification suite and RTM generator |
+| **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Monitor long-running test execution asynchronously |
+| **Watchdog Timer** | `schedule` | `DurationSeconds=180`, `TimerCondition=<task-id>` | Bound execution time to prevent hanging workers |
+| **Verification** | `view_file` | `AbsolutePath=".../docs/SDLC/Requirements_Traceability_Matrix.md"` | Verify requirement coverage percentage and outcomes |
+| **Summary Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/gxp_sync_summary.md` | Emit audit-ready execution summary artifact |
 
 ## When to Run
 
@@ -19,26 +29,17 @@ Run this workflow whenever:
 - Test pass/fail outcomes change.
 - CI fails with: `GxP compliance documentation is out of sync with the current system state!`
 
-## Primary Execution Command
+## Execution Protocol
 
-```bash
-uv run python scripts/sync_gxp.py
-```
-*(Or via Cadence CLI: `uv run cadence gxp sync`)*
+1. **Launch Sync**: Run `uv run python scripts/sync_gxp.py` (or `uv run cadence gxp sync`) via `run_command`.
+2. **Handle Background Task**: If sent to background, inspect progress using `manage_task(Action="status")`. Set a `schedule` watchdog timer if needed.
+3. **Verify Staged Artifacts**:
+   - Inspect [`docs/SDLC/Requirements_Traceability_Matrix.md`](../../../../docs/SDLC/Requirements_Traceability_Matrix.md).
+   - Inspect [`docs/SDLC/IQ_OQ_PQ_Execution_Report.md`](../../../../docs/SDLC/IQ_OQ_PQ_Execution_Report.md).
 
-## What the Synchronization Script Does
+4. **Emit Session Artifact**: Write a structured summary to `<appDataDir>/brain/<conversation-id>/gxp_sync_summary.md` via `write_to_file`.
+5. **Commit**: Guide the user or commit staged SDLC files:
+   ```bash
+   git commit -m "docs(rtm): sync GxP compliance docs with current test state"
+   ```
 
-1. Runs the test suite and generates `report.xml`:
-   `uv run pytest -n auto --junitxml=report.xml`
-2. Generates the updated Traceability Matrix and Execution Report:
-   `uv run python scripts/generate_rtm.py`
-3. Stages the generated documentation files:
-   - `docs/SDLC/Requirements_Traceability_Matrix.md`
-   - `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
-
-## Verification & Commit
-
-1. Review the git diff on the staged SDLC documents:
-   `git diff --staged docs/SDLC/`
-2. Commit the synced compliance artifacts:
-   `git commit -m "docs(rtm): sync GxP compliance docs with current test state"`
