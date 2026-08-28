@@ -311,7 +311,11 @@ class DigitizationDAGRunner:
                     stage.value,
                     current_retries,
                 )
-                repaired_data, recovery_ok, recovery_errors = await self._attempt_llm_schema_recovery(
+                (
+                    repaired_data,
+                    recovery_ok,
+                    recovery_errors,
+                ) = await self._attempt_llm_schema_recovery(
                     stage, job, checkpoint_data, gate_errors
                 )
                 if recovery_ok:
@@ -325,14 +329,13 @@ class DigitizationDAGRunner:
                         current_retries,
                     )
                     break
-                else:
-                    checkpoint_data = repaired_data
-                    gate_errors = recovery_errors
-                    logger.warning(
-                        "Stage gate %s self-healing recovery attempt %d failed.",
-                        stage.value,
-                        current_retries,
-                    )
+                checkpoint_data = repaired_data
+                gate_errors = recovery_errors
+                logger.warning(
+                    "Stage gate %s self-healing recovery attempt %d failed.",
+                    stage.value,
+                    current_retries,
+                )
 
         duration_ms = (time.perf_counter() - t0) * 1000.0
         completed_at = datetime.now(UTC)
@@ -391,8 +394,9 @@ class DigitizationDAGRunner:
                 )
             if not repaired.get("protocol_id"):
                 repaired["protocol_id"] = (
-                    f"PROT-{hashlib.md5(job.filename.encode()).hexdigest()[:8].upper()}"
+                    f"PROT-{hashlib.md5(job.filename.encode(), usedforsecurity=False).hexdigest()[:8].upper()}"  # nosec B324
                 )
+
             if not repaired.get("phase"):
                 repaired["phase"] = "PHASE_II"
             if not repaired.get("therapeutic_area"):
@@ -505,7 +509,9 @@ class DigitizationDAGRunner:
         except Exception as exc:
             return repaired, False, [str(exc)]
 
-    def _validate_stage_data(self, stage: DigitizationStage, data: dict[str, Any]) -> None:
+    def _validate_stage_data(
+        self, stage: DigitizationStage, data: dict[str, Any]
+    ) -> None:
         """Helper to validate data payload against stage gate Pydantic models."""
         if stage == DigitizationStage.LAYOUT_PARSING:
             LayoutParsingCheckpoint(**data)
@@ -574,10 +580,9 @@ class DigitizationDAGRunner:
 
         if payload.resume_pipeline:
             return await self.run_job(job_id, start_from_stage=stage)
-        else:
-            job.status = DigitizationJobStatus.RUNNING
-            await self.store.update_job(job)
-            return job
+        job.status = DigitizationJobStatus.RUNNING
+        await self.store.update_job(job)
+        return job
 
     # -------------------------------------------------------------------------
     # STAGE HANDLERS

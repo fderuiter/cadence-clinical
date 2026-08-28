@@ -501,11 +501,11 @@ async def test_clinical_query_trial_lock_enforcement_at_visit_level() -> None:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
-            with pytest.raises(PermissionError) as excinfo:
-                await client.post(
-                    "/api/v1/execution/queries", json=payload, headers=dm_headers
-                )
-            assert "locked in a read-only state" in str(excinfo.value)
+            res = await client.post(
+                "/api/v1/execution/queries", json=payload, headers=dm_headers
+            )
+            assert res.status_code == 423
+            assert "locked in a read-only state" in res.text
     finally:
         # Cleanup lock state
         TrialLockManager.unlock_visit("VISIT-LOCKED")

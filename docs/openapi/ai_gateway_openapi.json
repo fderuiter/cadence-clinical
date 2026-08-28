@@ -788,6 +788,13 @@
           "patient_context": {
             "anyOf": [
               {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
                 "additionalProperties": true,
                 "type": "object"
               },

@@ -21,7 +21,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-
 from pydantic import ValidationError
 
 from apps.designer.adapters.digitization_job_store import (

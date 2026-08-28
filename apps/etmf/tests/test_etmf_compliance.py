@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.x509.oid import NameOID
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from apps.etmf.cryptography import (
     extract_signature_from_content,
@@ -329,9 +329,11 @@ async def test_tampering_detection_and_lockout_propagation():
         log_to_tamper = (await session.execute(stmt)).scalars().first()
         assert log_to_tamper is not None
 
-        # Modify details
-        log_to_tamper.details = (
-            "TAMPERED: Changing the immutable log action description."
+        # Modify details via direct SQL update to simulate direct database tampering
+        await session.execute(
+            update(TMFAuditLog)
+            .where(TMFAuditLog.id == log_to_tamper.id)
+            .values(details="TAMPERED: Changing the immutable log action description.")
         )
         await session.commit()
 

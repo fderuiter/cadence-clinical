@@ -293,7 +293,9 @@ async def test_human_escalation_and_manual_stage_correction_with_signature():
     assert job.status == DigitizationJobStatus.PENDING_REVIEW
 
     # Submit stage correction with valid schema and 21 CFR Part 11 electronic signature
-    from apps.designer.domain.digitization_dag_models import SubmitStageCorrectionRequest
+    from apps.designer.domain.digitization_dag_models import (
+        SubmitStageCorrectionRequest,
+    )
 
     correction_payload = SubmitStageCorrectionRequest(
         stage=DigitizationStage.LAYOUT_PARSING,
@@ -318,7 +320,10 @@ async def test_human_escalation_and_manual_stage_correction_with_signature():
     ckpt1 = resumed_job.checkpoints[DigitizationStage.LAYOUT_PARSING.value]
     assert ckpt1.gate_status == StageGateStatus.PASSED
     assert ckpt1.corrected_by == "qa_lead_user"
-    assert ckpt1.correction_reason == "Corrected missing protocol metadata for USDM v4 compliance"
+    assert (
+        ckpt1.correction_reason
+        == "Corrected missing protocol metadata for USDM v4 compliance"
+    )
     assert ckpt1.signature_manifestation is not None
     assert ckpt1.signature_manifestation["signer_id"] == "qa_lead_user"
 

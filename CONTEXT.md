@@ -434,5 +434,58 @@ _Avoid_: Manual invoicing scripts, unsealed financial statements
 A deep domain module managing participant financial wallets, SoA-linked visit stipend rules, deterministic EDC visit verification triggers, mobile travel/meal expense reimbursement claims with OCR metadata extraction, coordinator 1-click approvals, digital payouts (Virtual Card/ACH), and EU CTR 536/2014 Article 37 Plain Language Lay Summary distribution with cryptographic receipt confirmation seals.
 _Avoid_: Fragmented participant wallet endpoints, unvalidated receipt workflows
 
+### Protocol Semantic Diff Engine
 
+A deep, pure in-process domain module that ingests polymorphic protocol version representations, performs 4-layer comparison across USDM Graph AST, Schedule of Activities (SoA) Matrix, Eligibility Logic, and eCRF Schemas, and evaluates operational amendment impacts including subject re-consent gating, downstream migration directives, operational ticket blueprints, and site burden scoring with zero I/O side effects.
+_Avoid_: Scattered dictionary flattener scripts, fragmented ripple helpers, router-level diff assembly
+
+### Dynamic Consent Engine
+
+A deep, local-substitutable domain engine in `apps/econsent` that evaluates participant consent state, protocol amendment version alignments, granular optional research choices, and age-of-majority transitions in ephemeral memory without I/O dependencies.
+_Avoid_: Monolithic database queries inside evaluation loops, fragmented router-level consent checks
+
+### Re-Consent Gating Matrix
+
+A deterministic clinical policy engine defining operational data capture permissions across study encounters, efficacy assessments, investigational product dispensing, and safety-exempt carve-outs (adverse events, emergency unblinding) when participants require protocol re-consent.
+_Avoid_: Global participant freezes, unchecked safety form locks
+
+### Granular Consent Capability
+
+A strongly-typed, auditable domain permission token derived from participant optional research selections (e.g. pharmacogenomic biobanking, future biomedical research, longitudinal re-contact) that explicitly authorizes or restricts exploratory clinical data capture and sample export.
+_Avoid_: Unstructured metadata JSON string queries
+
+### Minor-to-Adult Transition Window
+
+A regulatory lifecycle window governing pediatric participant transitions upon reaching jurisdiction-specific legal age thresholds, coordinating pre-notification warnings, state advancement, and visit-aligned adult self-consent enforcement.
+_Avoid_: Immediate mid-visit execution locks without pre-notification
+
+### Clinical Issue Hub
+
+A deep, local-substitutable domain engine in `apps/tickets` that performs multi-tier module-based routing, dual-target SLA tracking (initial acknowledgment vs. final resolution), state-dependent clock pauses, and controlled reopening window evaluations in ephemeral memory without I/O dependencies.
+_Avoid_: Fragmented router-level routing matrices, monolithic database queries inside SLA loops, untracked single-clock deadlines
+
+### Cadence Workspace Plugin
+
+An encapsulated Antigravity customization bundle (`.agents/plugins/cadence-core/`) that unifies clinical skill runbooks, 21 CFR Part 11 lifecycle hooks, and workspace rules into a single discoverable and version-controlled unit.
+_Avoid_: Loose unmanaged script directories, fragmented per-tool config files
+
+### 6-Facet Site Greenlight Engine
+
+A multi-factor site activation evaluator in CTMS that assesses 6 statutory readiness facets (IRB/Ethics approval, executed Clinical Trial Agreement, completed essential regulatory documents, PI-certified DOA log, site staff protocol training, and IP release authorization) against country jurisdiction presets, issuing cryptographic HMAC-SHA256 tokens upon unanimous approval.
+_Avoid_: Unchecked manual activation toggles without multi-facet verification
+
+### Sovereign Site Execution Gatekeeper
+
+An autonomous middleware security interceptor in `apps/execution` that verifies site greenlight approval and HMAC token validity before permitting subject randomization, eCRF visit creation, or IP kit dispensation, returning RFC 7807 `HTTP 423 Resource Locked` for non-greenlight sites.
+_Avoid_: Allowing unapproved site data capture or soft unblocking warnings
+
+### Principal Investigator Electronic DOA Log
+
+A 21 CFR Part 11 compliant site task delegation log where the Principal Investigator electronically signs delegated site duties and staff role authorizations using signature step-up tokens (`execution.doa.signoff`), generating immutable audit ledger seals and certified watermarked PDF exports.
+_Avoid_: Unsigned database role flags, unsealed delegation tables
+
+### DIA Reference Model v3.2.0
+
+An authoritative clinical document taxonomy (10 canonical zones) standardized across eTMF and eISF binders, supporting deterministic bidirectional synchronization, correlation key idempotency, CRA QC review staging, and zero-downtime dual-read object storage adapters.
+_Avoid_: Hardcoded proprietary folder trees, unmapped binder synchronizations
 

@@ -10,7 +10,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-28: Antigravity Workspace Plugin and Skill Architecture](2026-08-28-antigravity-workspace-plugin-and-skill-architecture.md)
 - [2026-08-25: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md)
+- [2026-08-24: Dynamic Consent Engine Re-Consent Gating and Lifecycle](2026-08-24-dynamic-consent-engine-re-consent-gating-and-lifecycle.md)
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
@@ -189,7 +191,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-28: Site Greenlight Governance Regulatory Binders and DOA Signing](2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md)
 - [2026-08-25: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine](2026-08-25-autonomous-multi-criteria-cohort-reasoning-and-synthetic-feasibility-engine.md)
+- [2026-08-24: ClinicalIssueHub Module-Based Routing and Dual-Target SLAs](2026-08-24-clinicalissuehub-module-based-routing-and-dual-target-slas.md)
 - [2026-08-23: Decompose Payments Domain Modules](2026-08-23-decompose-payments-domain-modules.md)
 - [2026-08-23: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam](2026-08-23-deep-regulatory-transmission-gateway-and-multi-tier-acknowledgement-seam.md)
 - [2026-08-23: Deep Adjudication Workflow Seam](2026-08-23-deep-adjudication-workflow-seam.md)

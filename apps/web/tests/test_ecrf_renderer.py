@@ -325,22 +325,23 @@ async def test_reconsent_gating_blocks_data_entry_and_unlocks_on_reconsent() -> 
                 headers=get_auth_headers(),
             )
 
-            # 3. Attempting to record observations or form submissions MUST raise PermissionError / Re-Consent Gate
-            with pytest.raises(PermissionError) as exc_info:
-                await client.post(
-                    "/api/v1/execution/form-submissions",
-                    json={
-                        "study_id": study_id,
-                        "site_id": site_id,
-                        "subject_id": subject_id,
-                        "visit_id": "VISIT-002",
-                        "form_id": "VS_DEMO",
-                        "payload": {"vssbp": 125.0},
-                    },
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info.value
+            # 3. Attempting to record observations or form submissions MUST return HTTP 423 Re-Consent Gate
+            res_blocked = await client.post(
+                "/api/v1/execution/form-submissions",
+                json={
+                    "study_id": study_id,
+                    "site_id": site_id,
+                    "subject_id": subject_id,
+                    "visit_id": "VISIT-002",
+                    "form_id": "VS_DEMO",
+                    "payload": {"vssbp": 125.0},
+                },
+                headers=get_auth_headers(),
+            )
+            assert res_blocked.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_blocked.text
             )
 
             # 4. Clear the gate by recording signed ICF v2.0.0 (requires_reconsent=False)

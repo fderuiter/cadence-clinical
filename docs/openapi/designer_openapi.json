@@ -656,6 +656,67 @@
         }
       }
     },
+    "/api/v1/designer/digitization/dag/jobs/{job_id}/stages/{stage}/correct": {
+      "post": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Submit Stage Correction Endpoint",
+        "description": "Submits manual corrections and electronic signature for a flagged stage gate, resuming execution.",
+        "operationId": "submit_stage_correction_endpoint_api_v1_designer_digitization_dag_jobs__job_id__stages__stage__correct_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DigitizationStage"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitStageCorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DAGJobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/designer/digitization/dag/jobs/{job_id}/compile-usdm": {
       "post": {
         "tags": [
@@ -10002,6 +10063,7 @@
           "PENDING",
           "RUNNING",
           "COMPLETED",
+          "PENDING_REVIEW",
           "FAILED",
           "CANCELLED"
         ],
@@ -13599,6 +13661,55 @@
             "title": "Gate Errors",
             "description": "Diagnostic schema validation error messages"
           },
+          "recovery_attempts": {
+            "type": "integer",
+            "title": "Recovery Attempts",
+            "description": "Number of automated LLM schema recovery attempts executed",
+            "default": 0
+          },
+          "recovered_by_llm": {
+            "type": "boolean",
+            "title": "Recovered By Llm",
+            "description": "Whether stage validation passed via automated LLM self-healing",
+            "default": false
+          },
+          "corrected_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected By",
+            "description": "Username or Signer ID who manually corrected the stage gate"
+          },
+          "correction_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Reason",
+            "description": "Part 11 change reason provided for manual correction"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation",
+            "description": "Part 11 signature manifestation audit record"
+          },
           "confidence_score": {
             "type": "number",
             "maximum": 1.0,
@@ -13916,6 +14027,57 @@
         "type": "object",
         "title": "SubjectManagementRtsmImpact",
         "description": "Manifest of impact on randomization, trial supply management (RTSM), and cohort dosing."
+      },
+      "SubmitStageCorrectionRequest": {
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/DigitizationStage",
+            "description": "Stage gate being corrected"
+          },
+          "corrected_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Corrected Data",
+            "description": "Corrected stage data payload"
+          },
+          "signature_username": {
+            "type": "string",
+            "title": "Signature Username",
+            "description": "Part 11 signer username/ID"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Part 11 GxP reason for manual correction"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token",
+            "description": "Optional authentication or signature token"
+          },
+          "resume_pipeline": {
+            "type": "boolean",
+            "title": "Resume Pipeline",
+            "description": "Whether to resume DAG execution immediately after saving correction",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "corrected_data",
+          "signature_username",
+          "change_reason"
+        ],
+        "title": "SubmitStageCorrectionRequest",
+        "description": "Request payload to submit manual stage corrections and electronic signature for human escalation."
       },
       "Suggestion": {
         "properties": {

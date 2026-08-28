@@ -18,8 +18,7 @@ import logging
 import random
 import time
 import uuid
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from apps.designer.domain.cohort_feasibility_models import (
     CohortFeasibilityReport,
@@ -110,11 +109,11 @@ def generate_synthetic_patient_profiles(
 class CohortFeasibilityEngine:
     """Core reasoning engine for trial sub-cohort discovery and synthetic feasibility simulation."""
 
-    def __init__(self, db_session: AsyncSession | None = None) -> None:
+    def __init__(self, db_session: Any = None) -> None:
         """Initialize engine instance.
 
         Args:
-            db_session: Optional SQLAlchemy async session for advisory locks.
+            db_session: Optional database session for advisory locks.
         """
         self.db_session = db_session
 

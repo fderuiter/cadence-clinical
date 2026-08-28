@@ -3,7 +3,7 @@ import hashlib
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from apps.etmf.database import db_manager
 from apps.etmf.main import app as etmf_app
@@ -267,10 +267,13 @@ async def test_sealer_retains_and_validates_reason_for_change(monkeypatch) -> No
         # Validate ledger integrity
         assert await validate_etmf_ledger_integrity(session) is True
 
-        # Tamper with the new_log's reason_for_change and assert integrity check detects it
-        new_log.reason_for_change = "Tampered reason"
-        session.add(new_log)
-        await session.flush()
+        # Tamper with the new_log's reason_for_change via direct SQL update and assert integrity check detects it
+        await session.execute(
+            update(TMFAuditLog)
+            .where(TMFAuditLog.id == new_log.id)
+            .values(reason_for_change="Tampered reason")
+        )
+        await session.commit()
 
         with pytest.raises(ValueError, match="Integrity violation"):
             await validate_etmf_ledger_integrity(session)

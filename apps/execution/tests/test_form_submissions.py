@@ -337,13 +337,12 @@ async def test_form_submission_locks() -> None:
         # 1. Test Site Lock
         TrialLockManager.lock_site("SITE-LOCKED")
         try:
-            with pytest.raises(
-                PermissionError, match="SITE-LOCKED is currently locked"
-            ):
-                await client.post(
-                    f"/api/v1/execution/form-submissions/{submission_id}/complete",
-                    headers=get_auth_headers(),
-                )
+            res_site = await client.post(
+                f"/api/v1/execution/form-submissions/{submission_id}/complete",
+                headers=get_auth_headers(),
+            )
+            assert res_site.status_code == 423
+            assert "SITE-LOCKED is currently locked" in res_site.text
         finally:
             TrialLockManager.unlock_site("SITE-LOCKED")
 
@@ -361,17 +360,16 @@ async def test_form_submission_locks() -> None:
                 "signature_manifest": {"signer_id": "pi_1"},
                 "signing_reason": "PI approval and sign-off.",
             }
-            with pytest.raises(
-                PermissionError, match="VISIT-LOCKED is currently locked"
-            ):
-                await client.post(
-                    f"/api/v1/execution/form-submissions/{submission_id}/approve",
-                    json=approve_payload,
-                    headers=get_auth_headers(
-                        roles="investigator",
-                        action=f"/api/v1/execution/form-submissions/{submission_id}/approve",
-                    ),
-                )
+            res_visit = await client.post(
+                f"/api/v1/execution/form-submissions/{submission_id}/approve",
+                json=approve_payload,
+                headers=get_auth_headers(
+                    roles="investigator",
+                    action=f"/api/v1/execution/form-submissions/{submission_id}/approve",
+                ),
+            )
+            assert res_visit.status_code == 423
+            assert "VISIT-LOCKED is currently locked" in res_visit.text
         finally:
             TrialLockManager.unlock_visit("VISIT-LOCKED")
 
@@ -379,12 +377,13 @@ async def test_form_submission_locks() -> None:
         TrialLockManager.lock_trial("Security breach simulation")
         try:
             # Creation of new submission should fail under trial lock
-            with pytest.raises(PermissionError, match="Trial is currently locked"):
-                await client.post(
-                    "/api/v1/execution/form-submissions",
-                    json=payload,
-                    headers=get_auth_headers(),
-                )
+            res_trial = await client.post(
+                "/api/v1/execution/form-submissions",
+                json=payload,
+                headers=get_auth_headers(),
+            )
+            assert res_trial.status_code == 423
+            assert "Trial is currently locked" in res_trial.text
         finally:
             TrialLockManager.reset()
 

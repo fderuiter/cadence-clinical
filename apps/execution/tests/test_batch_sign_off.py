@@ -441,16 +441,15 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
         # Lock the site of sub2
         TrialLockManager.lock_site("SITE-LOCKED")
 
-        # When we attempt batch sign-off, it should hit the lock check, raise PermissionError,
-        # and rollback the entire transaction, leaving BOTH submissions as COMPLETED (none APPROVED).
-        with pytest.raises(PermissionError, match="SITE-LOCKED is currently locked"):
-            await client.post(
-                action_path,
-                json=payload,
-                headers=get_auth_headers(
-                    roles="pi", action=action_path, payload=payload
-                ),
-            )
+        # When we attempt batch sign-off, it hits the lock check, returning HTTP 423 (Resource Locked),
+        # and rolls back the entire transaction, leaving BOTH submissions as COMPLETED (none APPROVED).
+        res_lock = await client.post(
+            action_path,
+            json=payload,
+            headers=get_auth_headers(roles="pi", action=action_path, payload=payload),
+        )
+        assert res_lock.status_code == 423
+        assert "SITE-LOCKED is currently locked" in res_lock.text
 
         # Verify that sub1 was NOT approved (proper rollback occurred!)
         async with db_manager.get_session_maker()() as session:
@@ -589,62 +588,60 @@ async def test_batch_sign_off_all_locks() -> None:
 
         TrialLockManager.lock_trial("Security breach simulation")
         try:
-            with pytest.raises(PermissionError, match="Trial is currently locked"):
-                await client.post(
-                    action_path,
-                    json=payload,
-                    headers=get_auth_headers(
-                        roles="pi", action=action_path, payload=payload
-                    ),
-                )
+            res_trial = await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
+            )
+            assert res_trial.status_code == 423
+            assert "Trial is currently locked" in res_trial.text
         finally:
             TrialLockManager.reset()
 
         # 2. Visit Lock
         TrialLockManager.lock_visit("VISIT-001")
         try:
-            with pytest.raises(
-                PermissionError, match="Visit VISIT-001 is currently locked"
-            ):
-                await client.post(
-                    action_path,
-                    json=payload,
-                    headers=get_auth_headers(
-                        roles="pi", action=action_path, payload=payload
-                    ),
-                )
+            res_visit = await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
+            )
+            assert res_visit.status_code == 423
+            assert "Visit VISIT-001 is currently locked" in res_visit.text
         finally:
             TrialLockManager.reset()
 
         # 3. Subject Lock
         TrialLockManager.lock_subject("SUBJ-001")
         try:
-            with pytest.raises(
-                PermissionError, match="Subject SUBJ-001 is currently locked"
-            ):
-                await client.post(
-                    action_path,
-                    json=payload,
-                    headers=get_auth_headers(
-                        roles="pi", action=action_path, payload=payload
-                    ),
-                )
+            res_subj = await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
+            )
+            assert res_subj.status_code == 423
+            assert "Subject SUBJ-001 is currently locked" in res_subj.text
         finally:
             TrialLockManager.reset()
 
         # 4. Form Lock
         TrialLockManager.lock_form("FORM-001")
         try:
-            with pytest.raises(
-                PermissionError, match="Form FORM-001 is currently locked"
-            ):
-                await client.post(
-                    action_path,
-                    json=payload,
-                    headers=get_auth_headers(
-                        roles="pi", action=action_path, payload=payload
-                    ),
-                )
+            res_form = await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
+            )
+            assert res_form.status_code == 423
+            assert "Form FORM-001 is currently locked" in res_form.text
         finally:
             TrialLockManager.reset()
 

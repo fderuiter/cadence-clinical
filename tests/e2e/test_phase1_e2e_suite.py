@@ -1525,18 +1525,18 @@ async def test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion(
         f"{subject_id},VISIT-02,ALT,Alanine Aminotransferase,22.0,U/L,2026-08-11T11:00:00Z\n"
     )
     headers = get_test_auth_headers(roles="crc")
-    with pytest.raises(Exception):
-        await client.post(
-            "/api/v1/execution/labs/ingest",
-            headers=headers,
-            params={"study_id": "STUDY-001", "site_id": "SITE-01", "format": "csv"},
-            json={
-                "study_id": "STUDY-001",
-                "site_id": "SITE-01",
-                "format": "csv",
-                "payload": csv_payload,
-            },
-        )
+    res = await client.post(
+        "/api/v1/execution/labs/ingest",
+        headers=headers,
+        params={"study_id": "STUDY-001", "site_id": "SITE-01", "format": "csv"},
+        json={
+            "study_id": "STUDY-001",
+            "site_id": "SITE-01",
+            "format": "csv",
+            "payload": csv_payload,
+        },
+    )
+    assert res.status_code in (400, 403, 422, 423)
     assert TrialLockManager.is_subject_locked(subject_id)
 
 

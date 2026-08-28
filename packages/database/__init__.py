@@ -127,37 +127,57 @@ def receive_before_flush(session: Session, flush_context, instances):
         return
 
     # 0. Immutability Guard (Criterion 3)
-    for obj in session.deleted:
+    def _is_audit_trail_record(obj) -> bool:
         classname = obj.__class__.__name__
         tablename = str(getattr(obj, "__tablename__", ""))
-        if (
+        return (
             "AuditLog" in classname
             or "AuditLedger" in classname
             or "AuditRecord" in classname
+            or "AuditTrail" in classname
             or tablename.endswith("audit_logs")
-            or ("audit" in tablename.lower() and "schema" not in tablename.lower())
-        ):
+            or tablename.endswith("_audit_logs")
+            or tablename
+            in {
+                "audit_logs",
+                "audit_ledger_seals",
+                "audit_trail",
+                "ticket_audit_logs",
+                "safety_audit_logs",
+                "org_audit_logs",
+                "notification_audit_logs",
+                "notifications_audit_logs",
+                "knowledge_article_audit_logs",
+                "tmf_audit_logs",
+                "interop_audit_logs",
+                "ctms_audit_logs",
+                "quality_audit_logs",
+                "isf_audit_logs",
+                "consent_audit_logs",
+                "payment_audit_logs",
+                "inspection_ledger_entries",
+                "audit_schema.audit_logs",
+                "audit_schema.audit_ledger_seals",
+            }
+        )
+
+    for obj in session.deleted:
+        if _is_audit_trail_record(obj):
+            classname = obj.__class__.__name__
             raise AuditImmutabilityError(
-                f"Deletion of audit log record ({classname}) is strictly forbidden by 21 CFR Part 11 immutability rules."
+                f"Deletions from {classname} are strictly forbidden: Deletion of audit log record ({classname}) is prohibited by 21 CFR Part 11 immutability rules."
             )
 
     for obj in session.dirty:
         if obj in session.new:
             continue
-        classname = obj.__class__.__name__
-        tablename = str(getattr(obj, "__tablename__", ""))
-        if (
-            "AuditLog" in classname
-            or "AuditLedger" in classname
-            or "AuditRecord" in classname
-            or tablename.endswith("audit_logs")
-            or ("audit" in tablename.lower() and "schema" not in tablename.lower())
-        ):
+        if _is_audit_trail_record(obj):
+            classname = obj.__class__.__name__
             state = sa_inspect(obj)
             has_changes = any(attr.history.has_changes() for attr in state.attrs)
             if has_changes:
                 raise AuditImmutabilityError(
-                    f"Modification of existing audit log record ({classname}) is strictly forbidden by 21 CFR Part 11 immutability rules."
+                    f"Updates to {classname} are strictly forbidden: Modification of existing audit log record ({classname}) is prohibited by 21 CFR Part 11 immutability rules."
                 )
 
     # Check if there are any non-excluded modifications

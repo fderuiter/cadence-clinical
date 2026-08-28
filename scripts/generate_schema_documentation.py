@@ -1511,7 +1511,7 @@ def export_cdisc_compliance_document(
     return usdm_doc, target_file
 
 
-def main():
+def main(args_list: list[str] | None = None):
     """Compiles and generates the complete interactive schema boundary dashboard and CDISC USDM catalog."""
     import argparse
 
@@ -1534,7 +1534,9 @@ def main():
         action="store_true",
         help="Emit full USDM document to stdout.",
     )
-    args, _ = parser.parse_known_args()
+    if args_list is None:
+        args_list = []
+    args, _ = parser.parse_known_args(args_list)
 
     ensure_vendor_assets()
 
@@ -1628,4 +1630,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

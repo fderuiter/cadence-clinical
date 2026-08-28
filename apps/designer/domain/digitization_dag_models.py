@@ -352,9 +352,13 @@ class SubmitStageCorrectionRequest(BaseModel):
     """Request payload to submit manual stage corrections and electronic signature for human escalation."""
 
     stage: DigitizationStage = Field(..., description="Stage gate being corrected")
-    corrected_data: dict[str, Any] = Field(..., description="Corrected stage data payload")
+    corrected_data: dict[str, Any] = Field(
+        ..., description="Corrected stage data payload"
+    )
     signature_username: str = Field(..., description="Part 11 signer username/ID")
-    change_reason: str = Field(..., description="Part 11 GxP reason for manual correction")
+    change_reason: str = Field(
+        ..., description="Part 11 GxP reason for manual correction"
+    )
     signature_token: str | None = Field(
         default=None, description="Optional authentication or signature token"
     )
