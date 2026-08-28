@@ -328,17 +328,6 @@ class ESignatureVerifier:
             # Check self-signed using the public trust store validation service
             is_self_signed = cert.issuer == cert.subject
             if is_self_signed:
-                try:
-                    subject_str = cert.subject.rfc4514_string()
-                    if (
-                        "Cadence GxP" in subject_str
-                        or "Cadence Clinical" in subject_str
-                        or "cadence" in subject_str.lower()
-                    ):
-                        cert_store.register_certificate("gxp_runner", cert_pem_str)
-                except Exception:
-                    pass
-
                 if not cert_store.verify_trust(cert_pem_str):
                     return VerificationResult(
                         is_valid=False,

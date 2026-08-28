@@ -4,18 +4,20 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 from packages.compliance.services.esignature_verifier import ESignatureVerifier
 from packages.compliance.services.gxp_signer import (
     generate_gxp_signing_credentials,
     sign_gxp_markdown,
 )
+from packages.security.cert_store import get_active_cert_store
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def test_sign_and_verify_rsa_and_ecdsa():
@@ -161,6 +163,22 @@ def test_gxp_generation_and_runs_splitting(tmp_path):
 
     # Check that qualification report and dynamic run files are signed
     verifier = ESignatureVerifier()
+    cert_store = get_active_cert_store()
+    for f_path in [qual_file, run_files[0]]:
+        content_txt = f_path.read_text(encoding="utf-8")
+        cert_match = re.search(
+            r"-----BEGIN CERTIFICATE-----\s*[\r\n]+(.*?)\s*-----END CERTIFICATE-----",
+            content_txt,
+            re.DOTALL,
+        )
+        if cert_match:
+            cert_pem = (
+                f"-----BEGIN CERTIFICATE-----\n"
+                f"{cert_match.group(1).strip()}\n"
+                f"-----END CERTIFICATE-----\n"
+            )
+            cert_store.register_certificate(f_path.name, cert_pem)
+
     qual_res = verifier.verify_markdown(qual_file.read_bytes())
     assert qual_res.is_valid is True
 

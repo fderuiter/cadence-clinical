@@ -1313,9 +1313,9 @@ async def get_principal(request: Request) -> Principal:
     )
 
     if ROLE_EXTERNAL_MONITOR in principal.roles:
-        from packages.security.org_client import resolve_personnel_assignments
+        import packages.security.org_client as org_client
 
-        res = await resolve_personnel_assignments(principal.user_id)
+        res = await org_client.resolve_personnel_assignments(principal.user_id)
         if res:
             principal.assigned_sites = res.get("assigned_sites", [])
             principal.assigned_studies = res.get("assigned_studies", [])

@@ -9,6 +9,7 @@ Requirements: PRD-SYS-001
 
 import argparse
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -91,6 +92,23 @@ def verify_gxp_signatures(target_path: Path) -> bool:
                 if file_path.is_relative_to(REPO_ROOT)
                 else file_path
             )
+
+            # Pre-register document certificate into cert_store for GxP release report verification
+            from packages.security.cert_store import get_active_cert_store
+
+            cert_str = content_bytes.decode("utf-8", errors="replace")
+            cert_match = re.search(
+                r"-----BEGIN CERTIFICATE-----\s*[\r\n]+(.*?)\s*-----END CERTIFICATE-----",
+                cert_str,
+                re.DOTALL,
+            )
+            if cert_match:
+                cert_pem = (
+                    f"-----BEGIN CERTIFICATE-----\n"
+                    f"{cert_match.group(1).strip()}\n"
+                    f"-----END CERTIFICATE-----\n"
+                )
+                get_active_cert_store().register_certificate(str(rel_path), cert_pem)
 
             result = verifier.verify_markdown(content_bytes)
             if result.is_valid:

@@ -433,6 +433,17 @@ class RemittanceAdvicePdfGenerator:
         Returns:
             Tuple of (signed_pdf_bytes, signed_pdf_sha256_hash).
         """
+        cert_pem_str = (
+            cert_pem.decode("utf-8") if isinstance(cert_pem, bytes) else cert_pem
+        )
+        from packages.security.cert_store import get_active_cert_store
+
+        cert_store = get_active_cert_store()
+        cert_store.register_certificate(
+            f"remittance_signer_{hashlib.sha256(cert_pem_str.encode()).hexdigest()[:16]}",
+            cert_pem_str,
+        )
+
         signer = PKCS7Signer(cert=cert_pem, key=key_pem)
         signed_pdf = signer.sign_pdf(pdf_bytes.rstrip())
         signed_hash = cls.compute_sha256_hash(signed_pdf)

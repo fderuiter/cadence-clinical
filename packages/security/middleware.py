@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import logging
 import os
 import threading
 import time
@@ -71,6 +72,8 @@ class DownstreamReplayCache:
             self.used_tokens.clear()
 
 
+logger = logging.getLogger(__name__)
+
 downstream_replay_cache = DownstreamReplayCache()
 
 
@@ -83,36 +86,49 @@ def verify_sig_token(
     expected_semantic_action: str | None = None,
     check_replay: bool = True,
 ) -> tuple[bool, dict | str]:
-    """
-    Standalone function to verify a signature token (JWT).
+    """Standalone function to verify a signature token (JWT).
+
     Validates presence, signature, expiration, identity binding, action/semantic_action binding,
     and single-use replay protection.
 
     Returns:
         tuple[bool, Union[dict, str]]: (True, sig_payload) on success, or (False, error_message) on failure.
     """
-    print(
-        f"VERIFY_SIG_TOKEN: sig_token={sig_token[:20] if sig_token else None}, user_id={user_id}, request_path={request_path}, expected_semantic={expected_semantic_action}"
+    masked_sig = (
+        f"{sig_token[:4]}...{sig_token[-4:]}"
+        if sig_token and len(sig_token) > 8
+        else "***"
+        if sig_token
+        else None
+    )
+    logger.debug(
+        "VERIFY_SIG_TOKEN: sig_token=%s, user_id=%s, request_path=%s, expected_semantic=%s",
+        masked_sig,
+        user_id,
+        request_path,
+        expected_semantic_action,
     )
     if not sig_token:
-        print("VERIFY_SIG_TOKEN: Failed on missing token")
+        logger.debug("VERIFY_SIG_TOKEN: Failed on missing token")
         return False, "21 CFR Part 11 mandate: Re-authentication is required."
 
     try:
         sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
     except JWTError as e:
-        print(f"VERIFY_SIG_TOKEN: Failed to decode: {e}")
+        logger.debug("VERIFY_SIG_TOKEN: Failed to decode: %s", e)
         return False, "Invalid signature token."
 
     # Check expiration
     if sig_payload.get("exp", 0) < time.time():
-        print("VERIFY_SIG_TOKEN: Failed on expiration")
+        logger.debug("VERIFY_SIG_TOKEN: Failed on expiration")
         return False, "Signature token has expired."
 
     # Check user binding
     if sig_payload.get("sub") != user_id:
-        print(
-            f"VERIFY_SIG_TOKEN: Failed on user mismatch: sub={sig_payload.get('sub')} vs {user_id}"
+        logger.debug(
+            "VERIFY_SIG_TOKEN: Failed on user mismatch: sub=%s vs %s",
+            sig_payload.get("sub"),
+            user_id,
         )
         return False, "Signature token user mismatch."
 
@@ -120,8 +136,10 @@ def verify_sig_token(
     token_semantic = sig_payload.get("semantic_action")
     if expected_semantic_action and token_semantic:
         if token_semantic != expected_semantic_action:
-            print(
-                f"VERIFY_SIG_TOKEN: Failed on semantic mismatch: {token_semantic} vs {expected_semantic_action}"
+            logger.debug(
+                "VERIFY_SIG_TOKEN: Failed on semantic mismatch: %s vs %s",
+                token_semantic,
+                expected_semantic_action,
             )
             return False, "Signature token semantic action mismatch."
 
@@ -132,8 +150,10 @@ def verify_sig_token(
         and bound_action not in request_path
         and request_path not in bound_action
     ):
-        print(
-            f"VERIFY_SIG_TOKEN: Failed on path mismatch: bound_action={bound_action} vs request_path={request_path}"
+        logger.debug(
+            "VERIFY_SIG_TOKEN: Failed on path mismatch: bound_action=%s vs request_path=%s",
+            bound_action,
+            request_path,
         )
         return False, "Signature token action mismatch."
 
@@ -141,10 +161,10 @@ def verify_sig_token(
     if check_replay:
         jti = sig_payload.get("jti")
         if replay_cache.is_replayed(sig_token, sig_payload.get("exp", 0), jti):
-            print("VERIFY_SIG_TOKEN: Failed on replay check")
+            logger.debug("VERIFY_SIG_TOKEN: Failed on replay check")
             return False, "Signature token has already been used."
 
-    print("VERIFY_SIG_TOKEN: SUCCESS")
+    logger.debug("VERIFY_SIG_TOKEN: SUCCESS")
     return True, sig_payload
 
 

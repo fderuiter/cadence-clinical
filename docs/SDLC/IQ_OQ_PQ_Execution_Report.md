@@ -11,8 +11,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3819
-- **Passed:** 3780 🟢
+- **Total Automated Test Cases Run:** 3832
+- **Passed:** 3793 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 39 ⚪
 - **Overall Operational Pass Rate:** 98.98%
@@ -3112,7 +3112,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_assert_secure_secrets_validation` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_logger_creates_valid_record` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_logger_detects_chain_tampering` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_logger_raises_runtime_error_if_secret_missing` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_logger_raises_runtime_error_if_secret_missing` | `packages.compliance.tests.test_compliance_security` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
 | `test_crypto_verifier_invalid_signature` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_crypto_verifier_valid_signature` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_raises_runtime_error_if_secret_missing` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3122,7 +3122,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_security_audit_scanner_detection_and_bypass` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_script` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_targeted_files` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_signing_raises_runtime_error_if_email_secret_missing` | `packages.compliance.tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signing_raises_runtime_error_if_email_secret_missing` | `packages.compliance.tests.test_compliance_security` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_trusted_self_signed_cert_accepted` | `packages.compliance.tests.test_esignature_trust` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_untrusted_self_signed_cert_rejected` | `packages.compliance.tests.test_esignature_trust` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
 | `test_revocation_blocks_when_serial_matches` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_revocation_exact_match_prevents_false_positives` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_revoked_certs_normalization_helper` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3141,12 +3143,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_utc_datetime_type_decorator_enforcement` | `packages.database.tests.test_compliance_pre_flush` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_ci_database_parity_enforcement_raises_on_failure` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_database_session_dependency_does_not_set_app_writing` | `packages.database.tests.test_database_managers` | PRD-SYS-053, Trace-15 | 🟢 PASSED | < 1s |
 | `test_econsent_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_interop_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_database_exceptions_decorator` | `packages.database.tests.test_database_managers` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_notifications_database_manager_uninitialized_and_close` | `packages.database.tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_relational_database_manager_pool_recycle` | `packages.database.tests.test_database_managers` | PRD-SYS-053, Trace-15 | 🟢 PASSED | < 1s |
+| `test_database_session_dependency_does_not_set_app_writing` | `packages.database.tests.test_database_security` | PRD-SYS-053, Trace-15 | 🟢 PASSED | < 1s |
+| `test_relational_database_manager_pool_recycle` | `packages.database.tests.test_database_security` | PRD-SYS-053, Trace-15 | 🟢 PASSED | < 1s |
 | `test_assign_activities_to_visit_mock` | `packages.database.tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assign_activities_to_visit_real` | `packages.database.tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_library_version_increments` | `packages.database.tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3470,6 +3476,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fingerprint_vs_serial_forgery_rejection` | `packages.security.tests.test_cert_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_register_and_verify_valid_certificate` | `packages.security.tests.test_cert_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_revoke_certificate_status_check` | `packages.security.tests.test_cert_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_logger_module_import_safety_unset_secrets` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_crypto_verifier_asymmetric_rsa_pss` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_crypto_verifier_ecdsa` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_crypto_verifier_hmac` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_crypto_verifier_legacy_padding_rejected` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_middleware_masked_logging` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
+| `test_signing_module_import_safety_unset_secrets` | `packages.security.tests.test_crypto_verifier` | PRD-SYS-053, Trace-14 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_duplicate_shares` | `packages.security.tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_malformed_share` | `packages.security.tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_mismatched_versions` | `packages.security.tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -4115,28 +4128,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 32ccc4c556d9d331366e1566756ebbc720bc8c5296068ecc485b102511efc5d2
+- **Cryptographic Hash (SHA-256):** 3595f0e069e5438e40e10b80d7aeb841790a5a4b5c41a96ceccace57f6ae6913
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUcS8ohv7RYFBFt7z59HWtnNSSYkMwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUJ8N5a9EbIkQI5bzpMG6JSUy5jVAwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-NzE3MjkxMloXDTI3MDgyODE3MjkxMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+NzE4MDMwNloXDTI3MDgyODE4MDMwNlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt5mB
-idZmMFYz6XYFSGrDAr+FZSnM9RslFrFzUq7IsAnMFnM3NfiCD9Lm58GjKkAlCFez
-pxL1aC7A1+Ik2WgWzHbnshhYjX7QY49fA6uu12kBG7szjcWMugrBheAEtLOMz9t5
-pqzl25uLDpiZqFriSIa6k18kPKnffXCNPOSd2uweDklXT4zgwD+VJKJKGgaVwCIV
-Y+fm51t7s65lb5u7WPwoZCKbrNPbcJY6qtGBO0dOBnXuNGD1Y+/1R28o1VtmrCGQ
-5/twB4a6msjYZDCIBM6MmZ2QrJKjQy6Jo0YstXM/rKeJSUfXvlE5KYZ2PyYyO7Q4
-jRZPtu4ATLPsD2cm1wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAylMv8rs+3PDfm
-4OCte4Cs8Tgqs+oKvwVQwuvrnet4coB7QHB6v6E20Y6rTEKI8DS761PUS0V4PtuH
-7ez4dhdlH7UKfJUrPJRJUqRzqDzuFLOdRzC9gFqCuVv/yQL6m4GTG0OVJaRFJn4p
-dY8mwLrUMPTEQ4WxM+KO+46gA/Keu9qWS0hhWsNc3u1frrlUGAbQt0/fU7/m0Stb
-P8yMeOUe7ya4HaJ3gd/j/20L+oi4MdE1pMaZXwTUekSrowx5xjd0o8gnG47aDUd4
-SbAGuSBydOyqtuQwEYtNC1RawbP2iu6SgGQgKNQ/fFEmiga68hwuxPj9imxuyIn9
-LSdzput+
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8jzi
+p4QifzO/2fh33Jc0sfLwnYr1zILv6E6Ftl8WCXEvKkVN01/WJsGaCUydiyKd/FDF
+jwc37zqKek4DERkPqbYc7K3u/nDHL4Z5UAGdeRWkO/6Dji5qbq7gxqSzGQ6rTpGA
+KpFxxVa35epjxtmuQvu3nadnE+zHKm5T0PbKakmNzlZh0ZaV7zTuSLo4aXRsNrah
+1uz9OqLuR5f+ntzZvpoapYoNMR5NVjSAswe9MhknJXjxv90XOaIpKF8qLu9lbR4y
+UXUyMbFLileRtyWK1sc/9PJt0YKUyGhh0maLljQTEfxvdbRjT1F5RovOyvSSsteF
+jBmfuoJf5+B0GFnWywIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQC4Gc/Oe2oX+X/e
+eEK7q1eeTv18w6nMkRpieSPZRMFamlgLF2sIrHJkvttG0SntcqE21kRoSCR4R0il
+Pc32YMDr3jRIq3R/2JdXOSw9LO3gmNuccng2cYpoYNDa0DPz+GdZ89R8He+Ar24b
+jwJM2nzUPY2+b30nk+vTncBZ7L40VPrTGGu0ZggReavX3zlr+5mslNmxmNdx4O2H
+G50Z2xm1LpWZkq5NiDkUBMa1SD0xVbb5XJqN/oP8aF16plCIDLLshVhH+wWICfOA
+6+SVGPj5rsLguDZdtDQ5J5EJBoM/uNoazZrRBT76faFDyuQuz3gYePF2xrouvhKo
+LiIX4UrY
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-tBxvKkA/1N7lpBYGLzbUnpfpNVPEbUUH0m8jOht8frxjNqw09PmguEXVOUKNtlWV3owPf44ZobNqHasEhZGKbTmAUT16Ed2K8BQZIHRKtmxU6Cl6AyeOpG//Zt1Apmkz0sMU6Owh12+rUsP5jcz4rQ1RovD6McWZPr3xWAEPTTSRODXFv1W0hdNHl2AO6gS0RiIMpqj/LZ3LC4bLsx8b2/arrl24Wk7iou1Ul4uaows/JC8N6UozBBKymIzUaMJOF2Gi/9s3UI/UZMavRm6xWM6pXkDfx5ND0oLp2RY+IlL7VUovwiDu0tlFWr3L+bkLoNmL+jLIXbAYSanpdgnwJQ==
+htvY5L5FnjX2WZcYAty3ar5xK0iarAMWvSPyYspSCRfHZvWC1x8Z0b6LzCQjOBNOoSb0eLHIgc9gWCJZ3bHFaPb1imvJ6Gqbux1Js/ounAnG9rbD6xhlmx866Q8xrnSRKD/aIop6vpsCNF4fuIcGMFn2Sv102MpgOmTUlYe3Ecf2IzakxgdgbeIJiq0ugIBjQNLiEOLgeJ7N2hp38im3Rtyj6Ic5KfMMju3vDhVoVpwGV+tRlHfu0jMQMBrDgmpycgRMQdnfvsLGgWw2jOlCLk0NG0bkzPdGevxPR2G3ObypGTFbgvRxEhopGPTXbRay0zvfXGzav5SZenOhpNJHmw==
 -----END SIGNATURE-----

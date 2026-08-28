@@ -295,7 +295,11 @@ def test_security_audit_scanner_detection_and_bypass():
 
 
 def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
-    """Verify that the security module raises a RuntimeError if AUDIT_LOG_SECRET_KEY is missing or empty."""
+    """Verify that importing audit_logger succeeds with missing secret, but runtime usage raises RuntimeError.
+
+    @req:PRD-SYS-053
+    @req:Trace-14
+    """
     import importlib
     import sys
 
@@ -310,8 +314,11 @@ def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
     sys.modules.pop("packages.security", None)
 
     try:
+        # Import should succeed cleanly without crashing
+        mod = importlib.import_module("packages.security.audit_logger")
+        # Invocation should fail with RuntimeError
         with pytest.raises(RuntimeError) as exc_info:
-            importlib.import_module("packages.security.audit_logger")
+            mod.get_audit_log_secret_key()
         assert "AUDIT_LOG_SECRET_KEY environment variable is missing or empty" in str(
             exc_info.value
         )
@@ -325,7 +332,11 @@ def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
 
 
 def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
-    """Verify that the signing module raises a RuntimeError if INBOUND_EMAIL_HMAC_SECRET is missing or empty."""
+    """Verify that importing signing succeeds with missing email secret, but runtime usage raises RuntimeError.
+
+    @req:PRD-SYS-053
+    @req:Trace-14
+    """
     import importlib
     import sys
 
@@ -339,8 +350,11 @@ def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
     sys.modules.pop("packages.security", None)
 
     try:
+        # Import should succeed cleanly without crashing
+        mod = importlib.import_module("packages.security.signing")
+        # Invocation should fail with RuntimeError
         with pytest.raises(RuntimeError) as exc_info:
-            importlib.import_module("packages.security.signing")
+            mod.get_inbound_email_hmac_secret()
         assert (
             "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
             in str(exc_info.value)

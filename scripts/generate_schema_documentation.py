@@ -61,11 +61,26 @@ def parse_sqlalchemy_schema(base_class: Any, service_name: str) -> list[dict[str
     """
     tables_meta = []
     classes = [
-        cls for cls in get_all_subclasses(base_class) if hasattr(cls, "__tablename__")
+        cls
+        for cls in get_all_subclasses(base_class)
+        if hasattr(cls, "__tablename__")
+        and not getattr(cls, "__module__", "").startswith("tests.")
+        and ".tests" not in getattr(cls, "__module__", "")
     ]
 
-    for cls in sorted(classes, key=lambda x: x.__name__):
+    seen_tables: set[str] = set()
+    for cls in sorted(
+        classes,
+        key=lambda x: (
+            not getattr(x, "__module__", "").endswith(".models")
+            and not getattr(x, "__module__", "").endswith("models"),
+            x.__name__,
+        ),
+    ):
         table_name = getattr(cls, "__tablename__")
+        if table_name in seen_tables:
+            continue
+        seen_tables.add(table_name)
         docstring = cls.__doc__ or "No description provided."
         # Clean docstring indentation and whitespace
         cleaned_doc = "\n".join(

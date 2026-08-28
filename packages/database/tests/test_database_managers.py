@@ -1,8 +1,9 @@
 import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from packages.database import RelationalDatabaseManager
+from packages.database import DatabaseSessionDependency, RelationalDatabaseManager
 
 
 def test_interop_database_manager_uninitialized_and_close():
@@ -122,3 +123,67 @@ async def test_map_database_exceptions_decorator():
 
     with pytest.raises(DatabaseError, match="Database operational or schema error"):
         await raise_sqlalchemy_error()
+
+
+def test_relational_database_manager_pool_recycle(monkeypatch):
+    """Verify RelationalDatabaseManager configures pool_recycle=1800 for PostgreSQL.
+
+    @req:PRD-SYS-053
+    @req:Trace-15
+    """
+    captured_kwargs = {}
+
+    def mock_create_async_engine(url, **kwargs):
+        captured_kwargs.update(kwargs)
+        mock_engine = MagicMock()
+        mock_engine.sync_engine = MagicMock()
+        return mock_engine
+
+    import packages.database as db_pkg
+
+    monkeypatch.setattr(db_pkg, "create_async_engine", mock_create_async_engine)
+
+    manager = RelationalDatabaseManager(service_name="test_service")
+    manager.init_db("postgresql+asyncpg://user:pass@localhost:5432/testdb")
+
+    assert captured_kwargs.get("pool_recycle") == 1800
+    assert captured_kwargs.get("pool_size") == 10
+    assert captured_kwargs.get("max_overflow") == 20
+    assert captured_kwargs.get("pool_pre_ping") is True
+
+
+@pytest.mark.asyncio
+async def test_database_session_dependency_does_not_set_app_writing():
+    """Verify DatabaseSessionDependency does not set cadence.app_writing during standard operations.
+
+    @req:PRD-SYS-053
+    @req:Trace-15
+    """
+    mock_session = AsyncMock()
+    mock_session.bind = MagicMock()
+    mock_session.bind.dialect.name = "postgresql"
+    executed_statements = []
+
+    async def mock_execute(statement, params=None):
+        executed_statements.append(str(statement))
+
+    mock_session.execute = mock_execute
+
+    mock_db_manager = MagicMock()
+
+    class MockAsyncContext:
+        async def __aenter__(self):
+            return mock_session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_db_manager.get_session_maker.return_value = lambda: MockAsyncContext()
+
+    dep = DatabaseSessionDependency(db_manager=mock_db_manager)
+    gen = dep()
+    sess = await anext(gen)
+    assert sess is mock_session
+
+    for stmt in executed_statements:
+        assert "cadence.app_writing" not in stmt

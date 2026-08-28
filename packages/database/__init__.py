@@ -359,6 +359,7 @@ class RelationalDatabaseManager:
                 "pool_size": 10,
                 "max_overflow": 20,
                 "pool_timeout": 30,
+                "pool_recycle": 1800,
                 "pool_pre_ping": True,
             }
             # Merge with kwargs, letting kwargs override
@@ -427,11 +428,6 @@ class DatabaseSessionDependency:
                                 ),
                                 {"reason": reason},
                             )
-                        await session.execute(
-                            text(
-                                "SELECT set_config('cadence.app_writing', 'true', true);"
-                            )
-                        )
                 except Exception:
                     pass
 
@@ -570,11 +566,6 @@ def create_transactional_decorator(
                                         ),
                                         {"reason": reason},
                                     )
-                                await session.execute(
-                                    text(
-                                        "SELECT set_config('cadence.app_writing', 'true', true);"
-                                    )
-                                )
                         except Exception:
                             pass
 
