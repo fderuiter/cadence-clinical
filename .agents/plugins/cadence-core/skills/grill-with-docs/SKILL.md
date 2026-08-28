@@ -28,15 +28,32 @@ Executes an interactive design-tree interview (`grilling`) combined with live do
 1. Read [`CONTEXT.md`](../../../../CONTEXT.md) and relevant ADRs in [`docs/adr/`](../../../../docs/adr/) to anchor domain concepts.
 2. Initialize the **Design Tree**: Map the root goal into branching prerequisite and downstream decisions.
 3. Compute the **Frontier**: Identify all questions whose prerequisites are settled.
-4. Format all frontier questions in the round:
+4. **Interactive Decision Invocations (`ask_question`)**:
+   When a decision presents discrete choices or requires structured user sign-off, invoke `ask_question`:
+   ```json
+   {
+     "questions": [
+       {
+         "question": "Which architectural pattern should govern <Feature>?",
+         "options": [
+           "(Recommended) Option A: Implement deep domain engine in apps/<service> with in-memory double",
+           "Option B: Expose direct REST endpoints in apps/gateway with client proxy routing"
+         ],
+         "is_multi_select": false
+       }
+     ]
+   }
+   ```
+   - **Rules**: Phrased as user direct response, recommended option listed first prefixed with `(Recommended)`, no duplicate "Other" options (provided by UI).
+5. For open-ended conceptual exploration, format questions in markdown:
    ```
    ❓ **Q1** - **<question title>**: <body with trade-offs and options>
 
    ➡️ <recommended answer>
    ```
-   *(Or present via `ask_question` for direct modal response).*
-5. Perform fact-finding autonomously using `grep_search` and `view_file` without asking the user for facts you can look up yourself.
-6. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
-7. When significant architectural trade-offs are settled, scaffold an ADR (`uv run cadence scaffold adr "Title"`).
-8. Conclude only when the frontier is empty and the user confirms shared understanding.
+6. Perform fact-finding autonomously using `grep_search` and `view_file` without asking the user for facts you can look up yourself.
+7. When terms crystallize, update `CONTEXT.md` inline immediately using `replace_file_content`.
+8. When significant architectural trade-offs are settled, scaffold an ADR (`uv run cadence scaffold adr "Title"`).
+9. Conclude only when the frontier is empty and the user confirms shared understanding.
+
 

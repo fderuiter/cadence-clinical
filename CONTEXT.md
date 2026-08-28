@@ -559,3 +559,19 @@ _Avoid_: Single HTTP status code assertions without audit trail verification
 A continuous compliance assurance protocol that automates synchronization of test execution results and `@req:` docstrings via `scripts/sync_gxp.py`, guaranteeing 100% traceability across all 226 system requirements (192 PRD + 34 SRS) with zero drift in CI/CD.
 _Avoid_: Manual untracked Markdown table edits, partial requirement coverage
 
+### Model Tiering Matrix
+
+A hierarchical compute allocation strategy in Antigravity that dynamically assigns subagents across four compute tiers (`flash_lite` for ultra-low latency parsing, `flash` for fast search and codebase sweeps, `pro` for deep architectural analysis and complex refactors, and `inherit` for mirroring the parent orchestrator), optimizing token economy and execution latency.
+_Avoid_: Monolithic flagship model allocation for low-complexity search tasks
+
+### Interactive Decision Modal (ask_question)
+
+An interactive modal rendering protocol in Antigravity that presents structured multiple-choice questions with selectable response options, default write-in input, and multi-select support (`is_multi_select: true`), formatted strictly from the user's perspective with recommended options prefixed by `(Recommended)`.
+_Avoid_: Asking trivial binary yes/no questions via modal, hardcoding duplicate "Other" options
+
+### Workspace Isolation Modes
+
+A filesystem sandboxing architecture for Antigravity subagents providing three operational isolation modes: `inherit` for direct in-place workspace access, `share` for isolated git worktree branching sharing underlying repo storage, and `branch` for complete ephemeral workspace isolation during throwaway prototyping.
+_Avoid_: Mutating production workspace branches during exploratory throwaway prototyping
+
+

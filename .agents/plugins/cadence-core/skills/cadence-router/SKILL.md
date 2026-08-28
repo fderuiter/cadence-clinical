@@ -50,7 +50,23 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 
 ## Routing Protocol
 
-1. **Intent Matching**: Analyze user prompt and context. If multiple paths are viable, use `ask_question` to let the user select the branch.
+1. **Intent Matching**: Analyze user prompt and context. If multiple skill paths are viable, use `ask_question` to let the user select the branch:
+   ```json
+   {
+     "questions": [
+       {
+         "question": "Which workflow would you like to launch?",
+         "options": [
+           "(Recommended) /grill-with-docs: Stress-test plan and update CONTEXT.md & ADRs",
+           "/tdd: Execute Red-Green-Refactor test-driven implementation slice",
+           "/code-review: Parallel Standards & Spec compliance audit"
+         ],
+         "is_multi_select": false
+       }
+     ]
+   }
+   ```
 2. **Skill Direct Loading**: Read the matching skill's `SKILL.md` using `view_file` to execute its specific instructions.
-3. **Subagent Delegation**: If the task requires deep research or parallel reviews, launch subagents via `invoke_subagent` using appropriate `Model` (`flash` vs `pro`) and `Workspace` modes.
+3. **Subagent Delegation**: If the task requires deep research or parallel reviews, launch subagents via `invoke_subagent` using appropriate `Model` (`flash` vs `pro`) and `Workspace` modes (`inherit`, `share`, `branch`).
+
 

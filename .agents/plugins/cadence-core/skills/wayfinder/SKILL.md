@@ -15,7 +15,8 @@ Plans large-scale initiatives that exceed what a single agent turn or session ca
 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
-| **Exploratory Survey**| `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Roadmap Analyst"}]` | Survey multi-service dependencies concurrently |
+| **Exploratory Survey**| `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Roadmap Analyst", "Model": "flash"}]` | Survey multi-service dependencies concurrently |
+| **Risk Analysis** | `invoke_subagent` | `Subagents=[{"Role": "Architecture Risk Analyst", "Model": "pro"}]` | Evaluate deep coupling and migration risks |
 | **Visual Roadmap** | `generate_image` | `Prompt="Gantt-style milestone roadmap with dependency arrows for ..."`, `AspectRatio="16:9"` | Generate visual project milestone graphic |
 | **Interactive Sign-Off**| `ask_question` | `questions=[{"question": "Approve Phase 1 Milestone Scope", ...}]` | Align on sequential execution boundaries |
 | **Living Map Artifact**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/wayfinder_map.md` | Emit comprehensive roadmap and Mermaid DAG |
@@ -29,7 +30,7 @@ Plans large-scale initiatives that exceed what a single agent turn or session ca
 ---
 
 ## 2. Dispatch Research Subagents
-When exploratory facts are needed across services, launch research subagents (`invoke_subagent` with `TypeName: "research"`).
+When exploratory facts are needed across services, launch research subagents using `Model: "flash"` for rapid scans or `Model: "pro"` for deep risk analysis.
 
 ---
 
@@ -43,6 +44,24 @@ Write to `<appDataDir>/brain/<conversation-id>/wayfinder_map.md` via `write_to_f
 
 ---
 
-## 4. Work One Slice at a Time
-Guide the user through executing one slice at a time using `/tdd` and `/implement`.
+## 4. Milestone Sign-Off via `ask_question`
+
+Before transitioning across phases, prompt the user for interactive approval:
+```json
+{
+  "questions": [
+    {
+      "question": "Phase 1 complete. How would you like to advance the roadmap?",
+      "options": [
+        "(Recommended) Advance immediately to Phase 2: Domain Core & REST API layer",
+        "Run full GxP qualification suite and freeze Phase 1 baseline before proceeding",
+        "Re-evaluate Phase 2 priorities based on Phase 1 benchmark outcomes"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+Work each slice iteratively using [`tdd`](../tdd/SKILL.md) and [`implement`](../implement/SKILL.md).
+
 
