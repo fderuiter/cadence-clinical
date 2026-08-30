@@ -11,12 +11,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import packages  # noqa: F401
 from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.models.lock import DataLock
+from apps.execution.dependencies import verify_change_justification
 from apps.execution.domain.lock_models import (
     DataLockRecord,
     LockStatusEnum,
@@ -26,6 +28,12 @@ from apps.execution.domain.lock_transport_models import (
     DataLockResponse,
 )
 from apps.execution.trial_lock import TrialLockManager
+from packages.security import (
+    ROLE_CRA,
+    ROLE_DATA_MANAGER,
+    ROLE_SPONSOR_ADMIN,
+    require_roles,
+)
 from packages.security.middleware import get_current_user
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
@@ -589,3 +597,180 @@ async def get_lock_hierarchy_tree_endpoint(
         "total_active_locks": len(all_locks),
         "timestamp": datetime.now(UTC).isoformat(),
     }
+
+
+class LockStatusResponse(BaseModel):
+    """Pydantic model representing the active locking/freezing state of the system."""
+
+    locked_sites: list[str]
+    locked_visits: list[str]
+    locked_forms: list[str]
+    locked_subjects: list[str]
+    trial_locked: bool
+
+
+@router.get(
+    "",
+    response_model=LockStatusResponse,
+)
+async def get_lock_status(
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_CRA)),
+) -> LockStatusResponse:
+    """Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial."""
+    return LockStatusResponse(
+        locked_sites=list(TrialLockManager._locked_sites),
+        locked_visits=list(TrialLockManager._locked_visits),
+        locked_forms=list(TrialLockManager._locked_forms),
+        locked_subjects=list(TrialLockManager._locked_subjects),
+        trial_locked=TrialLockManager.is_locked(),
+    )
+
+
+@router.post("/site/{site_id}/lock", status_code=200)
+@router.post("/site/{site_id}/freeze", status_code=200)
+async def lock_site_endpoint(
+    site_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Locks or freezes a specific site."""
+    verify_change_justification(request)
+    TrialLockManager.lock_site(site_id)
+    return {"status": "success", "message": f"Site {site_id} is locked/frozen."}
+
+
+@router.post("/site/{site_id}/unlock", status_code=200)
+@router.post("/site/{site_id}/unfreeze", status_code=200)
+async def unlock_site_endpoint(
+    site_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific site."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_site(site_id)
+    return {"status": "success", "message": f"Site {site_id} is unlocked/unfrozen."}
+
+
+@router.post("/visit/{visit_id}/lock", status_code=200)
+@router.post("/visit/{visit_id}/freeze", status_code=200)
+async def lock_visit_endpoint(
+    visit_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Locks or freezes a specific visit."""
+    verify_change_justification(request)
+    TrialLockManager.lock_visit(visit_id)
+    return {"status": "success", "message": f"Visit {visit_id} is locked/frozen."}
+
+
+@router.post("/visit/{visit_id}/unlock", status_code=200)
+@router.post("/visit/{visit_id}/unfreeze", status_code=200)
+async def unlock_visit_endpoint(
+    visit_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific visit."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_visit(visit_id)
+    return {"status": "success", "message": f"Visit {visit_id} is unlocked/unfrozen."}
+
+
+@router.post("/form/{form_id}/lock", status_code=200)
+@router.post("/form/{form_id}/freeze", status_code=200)
+async def lock_form_endpoint(
+    form_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Locks or freezes a specific form."""
+    verify_change_justification(request)
+    TrialLockManager.lock_form(form_id)
+    return {"status": "success", "message": f"Form {form_id} is locked/frozen."}
+
+
+@router.post("/form/{form_id}/unlock", status_code=200)
+@router.post("/form/{form_id}/unfreeze", status_code=200)
+async def unlock_form_endpoint(
+    form_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific form."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_form(form_id)
+    return {"status": "success", "message": f"Form {form_id} is unlocked/unfrozen."}
+
+
+@router.post("/subject/{subject_id}/lock", status_code=200)
+@router.post("/subject/{subject_id}/freeze", status_code=200)
+async def lock_subject_endpoint(
+    subject_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Locks or freezes a specific subject."""
+    verify_change_justification(request)
+    TrialLockManager.lock_subject(subject_id)
+    return {"status": "success", "message": f"Subject {subject_id} is locked/frozen."}
+
+
+@router.post("/subject/{subject_id}/unlock", status_code=200)
+@router.post("/subject/{subject_id}/unfreeze", status_code=200)
+async def unlock_subject_endpoint(
+    subject_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific subject."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_subject(subject_id)
+    return {
+        "status": "success",
+        "message": f"Subject {subject_id} is unlocked/unfrozen.",
+    }
+
+
+@router.post("/trial/lock", status_code=200)
+@router.post("/trial/freeze", status_code=200)
+async def lock_trial_endpoint(
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> dict[str, str]:
+    """Locks or freezes the trial/study."""
+    verify_change_justification(request)
+    reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
+    user_id = request.headers.get("X-User-Id", "admin_user")
+    TrialLockManager.lock_trial(reason=reason)
+
+    from apps.execution.database.models import IntegrationOutbox
+
+    outbox_entry = IntegrationOutbox(
+        id=str(uuid.uuid4()),
+        event_type="TRIAL_LOCK",
+        payload={"trial_locked": True, "reason": reason},
+        status="PENDING",
+        attempts=0,
+        correlation_id=f"lock-{uuid.uuid4().hex[:12]}",
+        created_by=user_id,
+        reason_for_change=reason,
+    )
+    session.add(outbox_entry)
+    await session.commit()
+
+    return {"status": "success", "message": "Trial is locked/frozen."}
+
+
+@router.post("/trial/unlock", status_code=200)
+@router.post("/trial/unfreeze", status_code=200)
+async def unlock_trial_endpoint(
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes the trial/study."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_trial()
+    return {"status": "success", "message": "Trial is unlocked/unfrozen."}

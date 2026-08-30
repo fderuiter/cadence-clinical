@@ -147,6 +147,9 @@ from apps.designer.presentation.routers.startup_matrix import (
     router as startup_matrix_router,
 )
 from apps.designer.presentation.routers.synopsis import router as synopsis_router
+from apps.designer.presentation.routers.tripartite import (
+    router as tripartite_router,
+)
 from apps.designer.rendering import TemplateRenderingError
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
@@ -205,6 +208,7 @@ app.include_router(amendments_router)
 app.include_router(designer_router)
 app.include_router(startup_matrix_router)
 app.include_router(cohort_feasibility_router)
+app.include_router(tripartite_router)
 
 
 from fastapi.exception_handlers import http_exception_handler

@@ -864,11 +864,17 @@ class LabAssessmentEngine:
         cls,
         study_id: str,
         site_id: str,
-        obs_date: datetime,
+        obs_date: datetime | str,
         session: AsyncSession,
     ) -> LocalLabCertificationVerifyResponse:
         """Verifies active accreditation status and expiration for a local laboratory facility."""
-        clean_obs_date = obs_date.replace(tzinfo=None)
+        if isinstance(obs_date, str):
+            clean_obs_date = datetime.fromisoformat(obs_date).replace(tzinfo=None)
+        elif obs_date.tzinfo is not None:
+            clean_obs_date = obs_date.replace(tzinfo=None)
+        else:
+            clean_obs_date = obs_date
+
         stmt = select(LocalLabCertification).where(
             LocalLabCertification.study_id == study_id,
             LocalLabCertification.site_id == site_id,

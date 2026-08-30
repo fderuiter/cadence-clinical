@@ -8,7 +8,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+from typing import Any
 
 # ==========================================
 # 1. Base Domain Exceptions & HTTP Mappings
@@ -190,10 +190,6 @@ class DomainEvent:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "event_type", self.__class__.__name__)
-
-
-ID = TypeVar("ID")
-T = TypeVar("T")
 
 
 class ValueObject:

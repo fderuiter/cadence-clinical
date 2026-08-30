@@ -10,6 +10,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-28: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
+- [2026-08-28: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md)
+- [2026-08-28: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md)
 - [2026-08-28: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md)
 - [2026-08-28: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md)
 - [2026-08-28: Programmatic VitePress API Documentation Engine](2026-08-28-programmatic-vitepress-api-documentation-engine.md)
@@ -195,6 +198,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-29: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md)
 - [2026-08-28: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md)
 - [2026-08-28: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md)
 - [2026-08-28: Site Greenlight Governance Regulatory Binders and DOA Signing](2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md)

@@ -35,6 +35,7 @@ packages-testing = { workspace = true }
 packages-tooling-core = { workspace = true }
 packages-sentinels = { workspace = true }
 packages-ddf = { workspace = true }
+packages-engine-core = { workspace = true }
 apps-ai-gateway = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }

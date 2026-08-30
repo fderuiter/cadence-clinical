@@ -11,11 +11,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3849
-- **Passed:** 3810 🟢
+- **Total Automated Test Cases Run:** 3941
+- **Passed:** 3902 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 39 ⚪
-- **Overall Operational Pass Rate:** 98.99%
+- **Overall Operational Pass Rate:** 99.01%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -152,6 +152,7 @@ packages-compliance      0.1.0
 packages-database        0.1.0
 packages-ddf             0.1.0
 packages-deid            0.1.0
+packages-engine-core     0.1.0
 packages-hexagonal       0.1.0
 packages-security        0.1.0
 packages-sentinels       0.1.0
@@ -266,6 +267,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_missing_tenant_context_rejected` | `apps.ai_gateway.tests.test_clinical_reasoning` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_stateless_execution_with_caller_managed_state` | `apps.ai_gateway.tests.test_clinical_reasoning` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_verified_multi_step_synthesis_in_draft_state` | `apps.ai_gateway.tests.test_clinical_reasoning` | PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_crf_uat_generator_volume_and_boundaries` | `apps.ai_gateway.tests.test_crf_uat_generator` | PRD-CRF-009, PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_protocol_to_crf_scaffolding` | `apps.ai_gateway.tests.test_crf_uat_generator` | PRD-DDF-001, PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_embedding_batch_sanitization` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_enable_deid_false_bypasses_scrubbing` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_inflight_prompt_deidentification_and_rehydration` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
@@ -793,6 +796,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ingest_incomplete_study_with_empty_arrays` | `apps.designer.tests.test_transactional_usdm_ingest` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_linear_scaling_and_no_timeout_on_large_payload` | `apps.designer.tests.test_transactional_usdm_ingest` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_mock_state_unchanged_on_transaction_failure` | `apps.designer.tests.test_transactional_usdm_ingest` | PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_amendment_diff_service` | `apps.designer.tests.test_tripartite_service` | PRD-CRF-012 | 🟢 PASSED | < 1s |
+| `test_publication_audit_service` | `apps.designer.tests.test_tripartite_service` | PRD-SYS-001, PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_smart_blocks_catalog_and_instantiation` | `apps.designer.tests.test_tripartite_service` | PRD-CRF-001, PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_tripartite_compiler_service` | `apps.designer.tests.test_tripartite_service` | PRD-CRF-001, PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_uat_runner_service` | `apps.designer.tests.test_tripartite_service` | PRD-CRF-009, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pydantic_domain_models` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_graph_importer_in_memory_state_sync` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_graph_importer_sync_wrapper` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1817,6 +1825,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_tampered_pdf_fails_verification` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_certificate_pem_substring_no_false_positive` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_part11_signature_verification` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_post_amendment_patient_routing` | `apps.execution.tests.test_patient_routing_service` | PRD-CRF-012, PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_pre_amendment_patient_retrospective_projection` | `apps.execution.tests.test_patient_routing_service` | PRD-CRF-012, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_engine_bounding_box` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_engine_purges_metadata_and_fields` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_overlay_generation` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -3209,6 +3219,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ddf_compiler_end_to_end_success` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ddf_compiler_uninitialized_validator_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_accessibility_stage_uninitialized_validator_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dataset_json_sdtm_extraction` | `packages.ddf.tests.test_dataset_json_etl` | PRD-MDR-001, PRD-SYS-125 | 🟢 PASSED | < 1s |
 | `test_ir_builder_processes_items_and_rules` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-002 | 🟢 PASSED | < 1s |
 | `test_ir_builder_skip_logic_and_narratives` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-002 | 🟢 PASSED | < 1s |
 | `test_normalizer_duplicate_ids_raises` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-001 | 🟢 PASSED | < 1s |
@@ -3223,6 +3234,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_extract_appearance` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_resolve_concept_id` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sanitize_identifier` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_patient_migration_matrix_directives` | `packages.ddf.tests.test_tripartite` | PRD-CRF-012 | 🟢 PASSED | < 1s |
+| `test_tripartite_schema_instantiation` | `packages.ddf.tests.test_tripartite` | PRD-CRF-001, PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_uat_simulation_and_evidence_report` | `packages.ddf.tests.test_tripartite` | PRD-CRF-009, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_co_reference_consistency_across_messages` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_and_rehydrate_basic_phi` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_batch_texts_embeddings` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3263,6 +3277,85 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_legacy_passthrough_parity` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_new_hipaa_categories_redaction` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trailing_punctuation_clinical_identifiers` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_calculate_bmi` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_calculate_bsa_mosteller_and_dubois` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_calculate_egfr_ckd_epi_2021` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_calculate_map_and_cockcroft_gault` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_calculate_qtc_fridericia_and_bazett` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_custom_ast_expression_formula` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_plausibility_bounds_gating` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_unit_normalization_helper` | `packages.engine_core.tests.test_derived_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_state_machine_electronic_signature_requirement` | `packages.engine_core.tests.test_fsm_engine` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_state_machine_guard_condition_success_and_failure` | `packages.engine_core.tests.test_fsm_engine` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_state_machine_initialization_and_properties` | `packages.engine_core.tests.test_fsm_engine` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_state_machine_reason_for_change_length_enforcement` | `packages.engine_core.tests.test_fsm_engine` | PRD-CRF-010 | 🟢 PASSED | < 1s |
+| `test_state_machine_role_authorization_gating` | `packages.engine_core.tests.test_fsm_engine` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_validator_detects_dead_end_non_terminal_states` | `packages.engine_core.tests.test_fsm_validator` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_validator_detects_duplicate_nondeterministic_transitions` | `packages.engine_core.tests.test_fsm_validator` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_validator_detects_unreachable_orphan_states` | `packages.engine_core.tests.test_fsm_validator` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_validator_valid_graph_passes` | `packages.engine_core.tests.test_fsm_validator` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_end_to_end_clinical_subject_workflow` | `packages.engine_core.tests.test_integration` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_isomorphic_ast_arithmetic_and_comparisons` | `packages.engine_core.tests.test_isomorphic_rules` | PRD-CRF-009, PRD-EDC-003 | 🟢 PASSED | < 1s |
+| `test_isomorphic_ast_derived_bmi_calculation` | `packages.engine_core.tests.test_isomorphic_rules` | PRD-CRF-010, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_batch_ledger_summary_and_audit_digest` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-PAY-001, PRD-SYS-050, Trace-1 | 🟢 PASSED | < 1s |
+| `test_holdback_retention_and_escrow_release` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-PAY-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_line_item_audit_hash_tamper_detection` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-SYS-050, Trace-1 | 🟢 PASSED | < 1s |
+| `test_payable_ledger_event_matching_and_caps` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-PAY-001, PRD-SYS-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_split_payee_penny_perfect_reconciliation` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-PAY-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_tiered_overhead_marginal_brackets` | `packages.engine_core.tests.test_payable_ledger_engine` | PRD-PAY-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_boin_boundaries_and_posterior_calculation` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-002 | 🟢 PASSED | < 1s |
+| `test_boin_dose_escalation_decision_rules` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-002 | 🟢 PASSED | < 1s |
+| `test_pocock_simon_minimization_range_variance_stddev` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-001 | 🟢 PASSED | < 1s |
+| `test_stratified_permuted_block_allocation_and_seed_reproducibility` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-001 | 🟢 PASSED | < 1s |
+| `test_stratum_key_generation` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-001 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_rule_based_escalation` | `packages.engine_core.tests.test_randomization_engine` | PRD-RTSM-002 | 🟢 PASSED | < 1s |
+| `test_expression_node_arithmetic_operators` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_comparison_operators` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_constant` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_field_ref` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_function_operators` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_logical_operators` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_expression_node_variable` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_field_reference_creation` | `packages.engine_core.tests.test_rules_ast` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_rule_definition_checksum_and_validation` | `packages.engine_core.tests.test_rules_ast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_evaluate_arithmetic_operations` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_comparisons` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_constants` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_date_functions` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_functions_and_collections` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_logical_operators` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_variables_and_nested_contexts` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_parse_and_evaluate_json_logic` | `packages.engine_core.tests.test_rules_evaluator` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_calculate_expression_complexity` | `packages.engine_core.tests.test_rules_sentinels` | PRD-CRF-005 | 🟢 PASSED | < 1s |
+| `test_detect_circular_dependencies_direct_cycle` | `packages.engine_core.tests.test_rules_sentinels` | PRD-CRF-005 | 🟢 PASSED | < 1s |
+| `test_detect_circular_dependencies_no_cycle` | `packages.engine_core.tests.test_rules_sentinels` | PRD-CRF-005 | 🟢 PASSED | < 1s |
+| `test_detect_unresolved_references` | `packages.engine_core.tests.test_rules_sentinels` | PRD-CRF-005 | 🟢 PASSED | < 1s |
+| `test_extract_field_references_and_variables` | `packages.engine_core.tests.test_rules_sentinels` | PRD-CRF-005 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_conditional_release_for_pending_siv` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-SSU-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_facility_and_ip_depot_failures` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-SSU-001, PRD-SYS-003, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_fully_compliant_cleared` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-SSU-001, PRD-SYS-003, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_irb_expired_and_version_mismatch_blocks` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-CTMS-004, PRD-SSU-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_missing_fda_1572_blocks` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-SSU-001, PRD-SYS-003, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_staff_deficiencies_diagnostics` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-CTMS-004, PRD-SSU-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_unexecuted_cta_blocks` | `packages.engine_core.tests.test_site_greenlight_engine` | PRD-SSU-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_countdown_clock_and_alert_level_progression` | `packages.engine_core.tests.test_sla_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_countdown_clock_paused_time_adjustment` | `packages.engine_core.tests.test_sla_engine` | PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_evaluate_multi_tier_escalation_policies` | `packages.engine_core.tests.test_sla_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_sla_due_date_computation_24x7` | `packages.engine_core.tests.test_sla_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_sla_due_date_computation_business_hours` | `packages.engine_core.tests.test_sla_engine` | PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_21cfr_part11_emergency_unblinding` | `packages.engine_core.tests.test_supply_engine` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_mean_kinetic_temperature_and_dtp_cold_chain_gating` | `packages.engine_core.tests.test_supply_engine` | PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_multi_echelon_hierarchy_rollup_and_cycle_detection` | `packages.engine_core.tests.test_supply_engine` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_predictive_demand_forecasting_and_expiry_warnings` | `packages.engine_core.tests.test_supply_engine` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_compute_subject_schedule_with_anchors_and_chaining` | `packages.engine_core.tests.test_timeline_engine` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cycle_template_expansion` | `packages.engine_core.tests.test_timeline_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_evaluate_visit_deviation_classifications` | `packages.engine_core.tests.test_timeline_engine` | PRD-CRF-004 | 🟢 PASSED | < 1s |
+| `test_timeline_definition_checksum_and_model` | `packages.engine_core.tests.test_timeline_engine` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_delta_check_alert_and_custom_rule_extension` | `packages.engine_core.tests.test_toxicity_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_hematology_absolute_range_grading_platelets` | `packages.engine_core.tests.test_toxicity_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_hys_law_dili_sentinel_triad` | `packages.engine_core.tests.test_toxicity_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_standard_ctcae_hepatic_grading_alt` | `packages.engine_core.tests.test_toxicity_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
+| `test_standard_ctcae_renal_grading_creatinine` | `packages.engine_core.tests.test_toxicity_engine` | PRD-PVG-001 | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -4145,28 +4238,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** bf32966cf5d53edf369e833d6e8cde1bd199192ac85234a9db3e509c81bb4adb
+- **Cryptographic Hash (SHA-256):** 8ecfe99902c2129ab71bd3ef034201b3d105d369e41b561837564fd2911af8ae
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUSuB0qgNczuG8PVs4WB8J3noEfxowDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUem2udGnxV9nVEYHbGNj6bJrCECkwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-NzIwMzYzNFoXDTI3MDgyODIwMzYzNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+ODEzMjAyNFoXDTI3MDgyOTEzMjAyNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1PSi
-S+TWlCv1Ew18gzQJDib2SVWpC41fyGqnHV3D69y1SPTiZyoKsGVjXw5QjgEM4Q/5
-Q5HmMSDAh0giTjp7Rh6zW4uPV0A3FzV8na5OYPTxTWTMPu2Tlm9YWauumdbWjeJ6
-ozJEW7Y81TE1kzXEkxFLkp2x4W1kz7agtglb5RVpU6HSuSTZzUumy/tuSzuISZz1
-lhVddDARD/QkL8wkhyDdc0WR6BSOa4ZRvsuEEYNKebuHnd7ahzN07+j4brLVA3Wc
-LMnfVzd041O40naubXz/IVXleKVqES1oAzYi81pROMYK6PF2ETvoQxVjY1bwEN/o
-DguB3JGodpI+Td3rpwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCTZNqEz7zPElvl
-WL1UBfpubbsNVCBd0SWykOLbGnQxbXUVK65TthNGeyVf3gcO9lwYTq2xL5LdeOgW
-e+CNGrG0fzcYGFfqXUtH+7bCtcKHUfH+j7J/EId5OOmik5NXNPN6oUNCEaL9aODU
-8d9Bys/JbAMt7xvUBOJQZpGquL19Zr0p3JK/6pdnO4V4GoW1XPtIDt5keplfM4ZX
-oZ0k8PvHy7r2/REd1E/A/fzxvdo/EKcBHPsYEX8G4cTBkvUpNRzKQ2BpsVdwhrm3
-dzSXjxpTqa+gE0Oagk3f7lGAUr6hIPgv83RXRea2zOJUscVqY+eBpL6HzKQfb3XR
-7zDmxslx
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwgFQ
+58v0OKWIeo+oUMxc1WEgY6chvK5GGCtBmIUwRlzBrPHTVyQ6QRBpkQbe5FeXJ+hY
+AFK/8sXA9luo/hY2CdvkGmf5OI7PmvYqqJvdCRlmc8OjVZV4bflaC/ExIGStRSOt
+cEZNa+zQ28XB5Li614292GQgb4cZOR+JiwmgbjloPJLw+qtSXec3qXIlvZiVWm8i
+aOJSkKjjgcavhw9nhRGe2YIu5O0YRfX/ZilihCFDfVYMaWQK+sOpYZLfBwSuxCxO
+40eaDfU4wQHWdjOdLTflUu/DrF1jIfUbSr3wcTO3vwcspDTV1h97nm8kQf5O/M9K
+kWSov1tIAzKgNp8jWQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBuTgnb03ZKeM1l
+eZu/74KdTydLRqqNurbErBs3iyaS9v1cDi3AaYGAERwEfUsqDsn4kNOGHUSoxW8u
+xjUUVr7mVJxdkNYu4QC/ZS8S1M6+joB70C1HztXg21IVt//UrPhAMAdM6KttODr5
+Mw2TPWPMVq5maAvcIAroXopj1X0k1k+zCxS/Ax2++zM6h5j/+cxNW4Ua4e66Ej1x
+rLE3RWaG0Zyj26KrzyuV8IRGqWl+EmReMtm51nVjeJ66omHJzxy/Luv1L6guX3e0
+D/F7gfIb5woKyuRCNw+d/s586lLJKYz+p0UwBflTp9h9MLMZnGFYlg54HLubfnZh
+IPyYODE/
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-cTv1VG4dy6tJe+WnvrusEKwlb39Kifkf4jFa/Czj44tmx2zgXnBZ8Fg4rd7QANacnfDRROjBtmHsW0ip7CpQo0m0GDThpzGQAJi2lkxY6ZAXKz25DERJE0VFm8m2yQx4pjh6TDpRNK3iLZzkZbhpvQq2KCRZamJH7IE6HWk1oLKTClGgi40ex50Ib6ATFTNtEwlrO/NydIg+4K9kaxYx6aSxcjdV7hY0mNsVGf8uBmWIOh3gKScoKhHKs8PmhhTAin5N/2SLcOmvCmCaYtqe4UjIMzDYni0vtUng8dF0wplu9/gttxhNJ1Mh03HJUXwgi/j76cbEkLobCpT1L2jwRw==
+n83w78fX3XqvYLl0KHgdUPTF4uYIqTLXZXktbNXLJB3fRwvPJo9g3fdjabfqpkoFR3TmgO69Cb3JLOIWtp7J/JxxPS3D4ncH8fXChLuxSugDPHarZlMFWog5Z/kFT5YKLwwPQVYFJDJUpXgkmXftqr2u4qQMsepNvAer2q6Ojn+DSuhmu1E3mVsnrUwS7CJyJ40zqPAuYx/JnwZzW0h5DT9hZ9SCvbphvkuFVv+Pqi2V1Q9+cSL9zXPdxLDtY9zTnZH/OTwTHVUjN9UM/zFTbR/2JnfcM1vLQV1usUYK5siLCHm7R/XEY49uoaYjLfdLrQ55iQOUWGuqLmXauENjyQ==
 -----END SIGNATURE-----

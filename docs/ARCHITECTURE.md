@@ -12,13 +12,16 @@ Traditional clinical trial builds require manual, error-prone translation of pro
 
 ### A. Designer Service (`apps/designer`)
 
-- **Role:** Study Definition Repository (SDR) and Clinical Metadata Repository (MDR).
-- **Datastore:** Neo4j Graph Database.
+- **Role:** Study Definition Repository (SDR), Clinical Metadata Repository (MDR), and Visual Metadata IDE.
+- **Datastore:** Neo4j Graph Database + In-Memory CRDTs.
 - **Core Responsibilities:**
-  - Protocol structure authoring (Arms, Epochs, Branches, Visits).
-  - Schedule of Activities (SoA) matrix generation.
-  - CDISC USDM export endpoints.
-  - Fine-grained protocol semantic versioning and amendment diffing.
+  - Protocol structure authoring (Arms, Epochs, Branches, Visits) and Schedule of Activities (SoA) matrix generation.
+  - **Tripartite JSON Schema Architecture (`packages/ddf/tripartite.py`):** Authoring and compiling decoupled Data (`schema.json`), UI (`uischema.json`), and Logic (`rules.json`) schemas without relational DDL generation.
+  - **Real-Time Multiplayer Collaboration:** WebSocket room sync utilizing Yjs CRDTs for presence awareness, live remote cursors, and contextual field-level commenting.
+  - **CDISC-Native Global Library:** Pre-configured Smart Component Blocks with auto-binding CDASH/SDTM metadata, UCUM units, and upstream inheritance subscriptions.
+  - **Visual Logic Studio:** No-code AST rule builder with cross-visit chronology mapping and derived variable math.
+  - **Automated UAT & Simulation Studio:** AI-generated edge-case evaluation ($\ge 500$ payloads) producing 21 CFR Part 11 certified PDF evidence reports in $< 30$ seconds.
+  - **Git-Style Amendment Branching & In-Flight Migration Matrix:** Immutable version branching, visual semantic diffs, and prospective vs. retrospective deployment policy.
 
 ### B. Execution Engine (`apps/execution`)
 

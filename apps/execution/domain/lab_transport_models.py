@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from .lab_models import (
     CertificationStatusEnum,
@@ -56,8 +56,8 @@ class LabReferenceRangeCreate(BaseModel):
     critical_high: float | None = Field(
         None, description="Nullable upper limit of critical/panic alert range"
     )
-    reason_for_change: str = Field(
-        ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
+    reason_for_change: str | None = Field(
+        None, description="Optional GxP 21 CFR Part 11 justification reason"
     )
 
 
@@ -72,9 +72,7 @@ class LabReferenceRangeUpdate(BaseModel):
     test_name: str | None = Field(
         None, description="Updated descriptive name of the test"
     )
-    source: LabSourceEnum | None = Field(
-        None, description="Updated source type of the range"
-    )
+    source: str | None = Field(None, description="Updated source type of the range")
     site_id: str | None = Field(
         None, description="Updated investigator site identifier"
     )
@@ -104,8 +102,8 @@ class LabReferenceRangeUpdate(BaseModel):
     critical_high: float | None = Field(
         None, description="Updated upper limit of critical alert range"
     )
-    reason_for_change: str = Field(
-        ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
+    reason_for_change: str | None = Field(
+        None, description="Optional GxP 21 CFR Part 11 justification reason"
     )
 
 
@@ -208,6 +206,8 @@ class LocalLabCertificationResponse(BaseModel):
     Requirements: PRD-LAB-001
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(..., description="Unique database identifier")
     study_id: str = Field(..., description="Unique protocol study identifier")
     site_id: str = Field(..., description="Investigator site identifier")
@@ -221,8 +221,12 @@ class LocalLabCertificationResponse(BaseModel):
     director_name: str | None = Field(None, description="Laboratory director name")
     is_accredited: bool = Field(..., description="Accredited status")
     notes: str | None = Field(None, description="Notes")
-    version: int = Field(..., description="Version index")
-    is_deleted: bool = Field(..., description="Soft deletion flag")
+    version: int = Field(
+        default=1,
+        validation_alias=AliasChoices("version", "version_index"),
+        description="Version index",
+    )
+    is_deleted: bool = Field(default=False, description="Soft deletion flag")
 
 
 class LocalLabCertificationVerifyRequest(BaseModel):
@@ -312,6 +316,12 @@ class StagedAdverseEventActionRequest(BaseModel):
     action: str = Field(
         ...,
         description="Action to take: 'CONFIRM' (promote to formal AE), 'DISMISS' (not clinically significant), or 'ESCALATE_SAE'",
+    )
+    ae_term: str | None = Field(
+        None, description="Optional adverse event term override"
+    )
+    causality_assessment: str | None = Field(
+        None, description="Optional relationship to study treatment"
     )
     investigator_notes: str | None = Field(
         None, description="Clinical commentary and rationale"

@@ -1,5 +1,17 @@
 # Clinical Domain Glossary
 
+### Hybrid CQRS & Query Services Pattern
+
+An architectural separation pattern where strict Domain Repository Ports govern domain entity state mutations and transactional invariants (Commands), while specialized, high-throughput Read-Model Query Services perform direct, read-only SQL projections and batch extractions (e.g. CDISC SDTM/ADaM datasets, cross-domain eCRF anomaly scans, and GxP audit ledger verification) without loading full domain entities into memory.
+
+### Hexagonal Unit of Work (UoW) Protocol
+
+An asynchronous transaction boundary abstraction defined in `packages.hexagonal` that encapsulates repository collection access, optimistic concurrency version checks, and atomic commit/rollback lifecycles across multiple domain aggregate roots, guaranteeing atomic multi-repository operations without leaking underlying ORM sessions into domain application services.
+
+### Dual-Defense GxP Audit Trail Architecture
+
+A regulatory data integrity pattern combining application-level Domain Event Dispatching (which records structured business change reasons, electronic signatures, and user attestation payloads) with database-level PostgreSQL triggers (`cadence.current_user_id` / `cadence.current_change_reason` session variables and SHA-256 cryptographic block-sealing), guaranteeing that direct SQL interventions and service-level mutations are both immutably audited under 21 CFR Part 11 and ICH GCP E6(R2).
+
 ### Protocol Amendment
 
 A formal, versioned modification to an approved clinical study protocol. Protocol amendments can introduce changes to study arms, epochs, visit schedules, procedures, dosage cohorts, or safety requirements, and may be designated as requiring subject re-consent.
@@ -673,6 +685,161 @@ _Avoid_: Hardcoded calendar date math scattered across frontend views
 
 A declarative, JSON/YAML-serialized specification language governing domain rules (financial fee matrices, PV decision rules, laboratory toxicity grades, ETL schema mappings, agent DAG pipelines) with immutable version indices and 21 CFR Part 11 electronic signature publication gates.
 _Avoid_: Unversioned mutable configurations mutating locked historical clinical data
+
+### Finite State Machine (FSM) Lifecycle Engine
+
+A declarative, strongly-typed directed acyclic graph (DAG) state transition engine governing regulated entity lifecycles (subjects, documents, queries, CRF drafts) with dynamic expression guards, role authorization gates, Part 11 reason-for-change validation, and cycle/deadlock detection.
+_Avoid_: Scattered procedural status updates without guard validation or audit trail manifests
+
+### Event-Driven SLA Escalation Engine
+
+A deterministic, zero-I/O countdown and alert engine calculating service-level agreement targets, paused clock durations, warning/critical/overdue threshold notifications, and multi-tier operational escalation policies across clinical workflows.
+_Avoid_: Hardcoded timer loops and fragmented date math in microservice handlers
+
+### Sandboxed AST Evaluator
+
+A pure, side-effect-free in-memory expression evaluation runtime that traverses Abstract Syntax Tree (AST) representations and JSONLogic structures with strict type safety, null coalescing, and clinical arithmetic operators.
+_Avoid_: Insecure eval() or exec() calls executing untrusted Python strings
+
+### Deterministic DAG Transition Validator
+
+A static graph analysis sentinel that validates state machine definitions for terminal state reachability, dead-end traps, cycle compliance, and non-deterministic transition conflicts prior to publication.
+_Avoid_: Unvalidated state machine configurations that strand clinical entities in unreachable states
+
+### Schedule of Activities (SoA) Vector Timeline Engine
+
+A pure mathematical scheduling engine that computes clinical encounter target dates, permissible window envelopes ($[-w_b, +w_a]$), and automated out-of-window deviation flags dynamically from relative anchor event offsets (Screening, Randomization, First Dose, Cycle Start, Previous Visit) without I/O side effects.
+_Avoid_: Static hardcoded visit day lists or scattered calendar date math across client views
+
+### Derived Variable Math Engine
+
+A standardized medical equation and biostatistical derivation evaluator built on pure UREE AST execution, compiling validated clinical formulas (eGFR CKD-EPI 2021 race-free, BSA Mosteller/DuBois, BMI, QTcF Fridericia, Mean Arterial Pressure, Cockcroft-Gault) with automated unit conversion and range gating.
+_Avoid_: Ad-hoc procedural calculations embedded directly in API route handlers
+
+### Declarative CTCAE & DAIDS Lab Toxicity Grading Engine
+
+A version-pinned, declarative clinical laboratory evaluation engine that grades central and local lab observations against NCI-CTCAE v5.0 and DAIDS v2.1 criteria using ULN/LLN relative ratios, absolute threshold cuts, baseline delta checks, and automated Grade 3/4 Adverse Event staging.
+_Avoid_: Monolithic procedural if/elif cascades hardcoded in Python backend services
+
+### Hy's Law Drug-Induced Liver Injury (DILI) Sentinel
+
+A pharmacovigilance safety sentinel evaluating concurrent hepatic biomarker elevations ($ALT/AST \ge 3\times ULN$ AND $Total Bilirubin \ge 2\times ULN$ in the absence of significant alkaline phosphatase elevation $ALP < 2\times ULN$), automatically triggering urgent clinical notifications and potential DILI safety case workflows.
+_Avoid_: Disconnected single-analyte lab flags missing multi-parameter DILI triad patterns
+
+### Asymmetric Visit Window Tolerance Envelope
+
+A structured temporal boundary model defining permissible before ($w_b$) and after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day $28 [-3, +5]$ days), outputting deterministic deviation classifications (`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`, `MISSED_VISIT`).
+_Avoid_: Symmetric window approximations or untracked protocol visit deviations
+
+### Cycle-Based Template Expansion
+
+A clinical protocol scheduling pattern in the SoA Vector Timeline Engine that generates repeating encounter sequences across oncology cycles (e.g. Q3W Cycles 1-6 with Day 1, Day 8, Day 15 visits) from a single parameterized template definition without manual visit duplicating.
+_Avoid_: Manually cloning individual visit records for each multi-cycle regimen iteration
+
+### Predecessor Visit DAG Chaining
+
+A dynamic scheduling dependency model where downstream encounter target dates dynamically anchor to the actual completion date of predecessor visits (e.g. Visit $N$ occurs $14 \pm 2$ days after Visit $N-1$), preventing cumulative scheduling drift during subject-level delays.
+_Avoid_: Static day calculations that ignore actual patient visit timing deltas
+
+### Physiological Plausibility Boundary Gating
+
+A biostatistical validation sentinel in the Derived Variable Math Engine that evaluates input parameters against clinical plausibility envelopes (e.g. Weight $20-300$ kg, Height $50-250$ cm, Heart Rate $30-220$ bpm) before evaluating medical equations, preventing distorted clinical scores.
+_Avoid_: Silent evaluation of physically impossible input values resulting in corrupt derived variables
+
+### Staged Laboratory Adverse Event (AE) Draft Envelope
+
+A regulatory compliance pattern where CTCAE Grade 3 (Severe) and Grade 4 (Life-Threatening) toxicities and Hy's Law DILI alerts automatically generate structured, immutable AE draft envelopes pre-populated with MedDRA terms, requiring human Safety Physician review and 21 CFR Part 11 electronic signature sign-off before official regulatory submission.
+_Avoid_: Direct un-reviewed adverse event injection into active safety ledgers
+
+### Stochastic Randomization Engine
+
+A zero-I/O, deterministic clinical allocation runtime implementing multi-arm treatment assignment across Stratified Permuted Block, Pocock-Simon Dynamic Covariate Adaptive Minimization, Response-Adaptive Randomization (RAR), and Phase I/II Adaptive Dose Escalation (BOIN / 3+3) designs with reproducible cryptographic random number generation.
+_Avoid_: Non-reproducible unseeded pseudo-random number calls embedded in database transactions
+
+### Pocock-Simon Covariate Adaptive Minimization Engine
+
+A dynamic allocation engine that computes marginal imbalance scores across prognostic stratification covariates using configurable distance metrics (Range, Variance, Standard Deviation) and factor weights, assigning incoming subjects via a biased coin probability ($p \in [0.5, 1.0]$) to maintain optimal treatment group balance in small trials.
+_Avoid_: Unweighted marginal counts or static post-stratification approximations
+
+### Bayesian Optimal Interval (BOIN) Dose Escalation Engine
+
+A model-assisted adaptive Phase I/II oncology dose-finding engine that evaluates dose-limiting toxicity (DLT) rates against target toxicity $\phi$ and mathematical escalation/de-escalation boundaries ($\lambda_e, \lambda_d$), calculating Bayesian posterior safety stopping boundaries ($\Pr(p_j > \phi | \text{data}) > 0.95$) to protect patient safety.
+_Avoid_: Rigid rule-based 3+3 designs unable to incorporate continuous Bayesian toxicity evidence
+
+### Stratified Permuted Block Randomization Engine
+
+A deterministic block allocation strategy that partitions subjects into discrete strata based on baseline factor combinations, generating variable-length balanced permutation blocks sealed with cryptographic checksums to guarantee allocation predictability prevention while maintaining exact target ratios.
+_Avoid_: Fixed-size unmasked blocks susceptible to clinical investigator selection bias
+
+### Multi-Echelon Predictive Resupply Forecasting Engine
+
+A supply chain optimization runtime that models inventory across the complete clinical supply hierarchy (Primary Manufacturer $\to$ Central Depot $\to$ Regional Depot $\to$ Clinical Site), calculating lead-time safety buffers, lot shelf-life expiration run-out curves, and automated resupply orders to eliminate patient treatment interruption.
+_Avoid_: Reactive single-site threshold checks ignoring multi-tier replenishment lead times
+
+### Poisson & Monte Carlo Enrollment Demand Simulator
+
+A stochastic simulation engine that generates future investigational product demand projections across clinical sites by sampling subject accrual rates via Poisson arrival distributions and mapping anticipated visit-level dispensation schedules against current on-hand and in-transit stock.
+_Avoid_: Linear demand approximations that fail to account for stochastic recruitment surges
+
+### Direct-to-Patient (DTP) Temperature-Gated Logistics Engine
+
+A decentralized clinical trial supply orchestrator that validates investigational product eligibility for home dispensation, enforcing continuous cold-chain temperature excursion verification, expiry thresholds, and tamper-evident packaging manifests before authorizing courier dispatch.
+_Avoid_: Unverified direct shipments bypassing site investigator delegation and cold-chain compliance
+
+### 21 CFR Part 11 Emergency Unblinding Protocol & Audit Envelope
+
+A secure, tamper-evident emergency unblinding workflow that reveals subject treatment assignment strictly upon provision of authenticated physician identity, mandatory change justification rationale, and dual-party confirmation, immediately emitting high-priority safety notifications and immutable audit log records.
+_Avoid_: Silent database lookups or unlogged treatment code disclosures during medical emergencies
+
+### Tripartite JSON Schema Architecture
+
+A clinical form metadata pattern decoupling form definitions into three distinct, version-controlled JSON documents: 1) Data Schema (`schema.json`) defining variables, CDISC OIDs, and validation constraints; 2) UI Schema (`uischema.json`) defining responsive CSS grid layouts, widget selections, and viewport breakpoints; and 3) Logic Schema (`rules.json`) defining declarative AST edit checks, cross-visit dependencies, and derived math formulas.
+_Avoid_: Mapping form fields to physical relational database columns or generating physical DDL tables per form
+
+### Visual Metadata IDE (eCRF Designer)
+
+An AI-enhanced, CDISC-native visual authoring environment for Clinical Data Managers and Biostatisticians that unifies low-code form layout, real-time multiplayer CRDT collaboration (Yjs), omni-channel WYSIWYG preview (Site Desktop EDC, Patient Mobile ePRO, Tablet eSource), no-code AST rule authoring, automated synthetic UAT generation, and zero-downtime protocol amendment branching.
+_Avoid_: Disjointed proprietary form programming workflows requiring 8-12 weeks of manual scripting
+
+### Isomorphic AST Execution
+
+A clinical logic evaluation architecture where validation rules, skip logic, and edit checks are compiled into declarative Abstract Syntax Trees (JSONLogic / Google CEL compatible) that execute identically in browser JavaScript memory (for immediate sub-millisecond red-text feedback) and backend Python services (for strict GxP enforcement).
+_Avoid_: Separate un-synchronized client JavaScript and backend Python validation codebases
+
+### Smart Clinical Component Blocks
+
+Pre-configured, domain-validated form panels (e.g. Vital Signs, Adverse Events, ConMeds) in the Global Metadata Repository (MDR) that inherently embed standardized CDASH/SDTM metadata mappings (`VS.VSORRES`, `AE.AETERM`), standard UCUM unit catalogs (`mmHg`, `kg`, `g/dL`), and baseline reference ranges upon canvas drop.
+_Avoid_: Raw unmapped primitive input fields requiring post-hoc SAS/SDTM ETL mapping
+
+### Automated UAT & Simulation Studio
+
+An automated qualification environment in the eCRF Designer that utilizes AI Gateway synthetic generation to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
+_Avoid_: Weeks of manual data entry and exploratory testing for study UAT sign-off
+
+### In-Flight Patient Migration Matrix
+
+A runtime routing policy governing active subjects during protocol amendments without database DDL migrations, enabling data managers to configure prospective deployment (applied only to newly enrolled subjects) versus retrospective deployment (applied to all active subjects with automated missing-data queries for past encounters).
+_Avoid_: Offline database migrations, global patient freezes, or data loss during mid-study amendments
+
+### Multiplayer Clinical Form Canvas (CRDT)
+
+A real-time collaborative workspace powered by WebSockets and Conflict-free Replicated Data Types (Yjs) allowing multiple clinical stakeholders (Data Manager, Biostatistician, Medical Monitor) to concurrently design, edit, and review eCRF schemas with live remote cursors and contextual field-level comment threads.
+_Avoid_: Rigid single-user study locks blocking multi-party protocol design collaboration
+
+### Dynamic Repeating Log Grid
+
+A high-density clinical data capture component for multi-instance domain records (Adverse Events, Concomitant Medications, Medical History) supporting infinite repeatable row instances, column-level validation rules, and reactive mathematical aggregations.
+_Avoid_: Fixed-row static tables or unstructured text fields for longitudinal multi-event capture
+
+### Medical Dictionary Auto-Coding Binding
+
+A clinical input field binding that integrates directly with MedDRA and WHODrug terminology APIs, auto-suggesting standardized medical terms and recording hierarchical SOC, PT, and ATC classification codes in real time during investigator data entry.
+_Avoid_: Post-study batch manual dictionary coding workflows delaying clinical database lock
+
+
+
+
+
 
 
 

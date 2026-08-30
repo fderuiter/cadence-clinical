@@ -983,7 +983,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProtocolImpactAssessment"
+                  "$ref": "#/components/schemas/ProtocolImpactAssessment-Output"
                 }
               }
             }
@@ -7254,6 +7254,329 @@
         }
       }
     },
+    "/api/v1/designer/studies/{study_id}/forms/compile": {
+      "post": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "Compile Form Schema",
+        "description": "Compile and validate a Tripartite Form Definition.",
+        "operationId": "compile_form_schema_api_v1_designer_studies__study_id__forms_compile_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripartiteFormDefinition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Compile Form Schema Api V1 Designer Studies  Study Id  Forms Compile Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/library/smart-blocks": {
+      "get": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "List Smart Blocks",
+        "description": "List pre-configured CDISC clinical Smart Blocks.",
+        "operationId": "list_smart_blocks_api_v1_designer_library_smart_blocks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Smart Blocks Api V1 Designer Library Smart Blocks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/library/smart-blocks/{block_id}/instantiate": {
+      "post": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "Instantiate Smart Block",
+        "description": "Instantiate a CDISC Smart Block into a complete Tripartite Form Schema.",
+        "operationId": "instantiate_smart_block_api_v1_designer_library_smart_blocks__block_id__instantiate_post",
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripartiteFormDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/studies/{study_id}/amendments/diff": {
+      "post": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "Calculate Amendment Diff",
+        "description": "Calculate structural diff between base and amended form versions.",
+        "operationId": "calculate_amendment_diff_api_v1_designer_studies__study_id__amendments_diff_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiffRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientMigrationMatrix"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/studies/{study_id}/forms/{form_id}/uat/execute": {
+      "post": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "Execute Uat Simulation",
+        "description": "Execute synthetic UAT simulation suite and generate 21 CFR Part 11 Evidence Report.",
+        "operationId": "execute_uat_simulation_api_v1_designer_studies__study_id__forms__form_id__uat_execute_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UatExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UatEvidenceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/studies/{study_id}/forms/{form_id}/publish": {
+      "post": {
+        "tags": [
+          "Tripartite eCRF Designer"
+        ],
+        "summary": "Publish And Seal Form",
+        "description": "Publish and cryptographically seal form definition with step-up electronic signature.",
+        "operationId": "publish_and_seal_form_api_v1_designer_studies__study_id__forms__form_id__publish_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          },
+          {
+            "name": "X-User-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "system",
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Publish And Seal Form Api V1 Designer Studies  Study Id  Forms  Form Id  Publish Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -7763,6 +8086,48 @@
         ],
         "title": "ArmReorderRequest"
       },
+      "AstEditCheck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ast_expression": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ast Expression"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "HARD"
+          },
+          "query_message": {
+            "type": "string",
+            "title": "Query Message"
+          },
+          "target_variable_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variable Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ast_expression",
+          "query_message"
+        ],
+        "title": "AstEditCheck",
+        "description": "Isomorphic AST validation and query firing rule."
+      },
       "AttritionStep": {
         "properties": {
           "criterion_id": {
@@ -8254,6 +8619,85 @@
         ],
         "title": "CascadedFormTemplate",
         "description": "Auto-generated eCRF form template derived from USDM activities.\n\nRequirements: PRD-SYS-001"
+      },
+      "CdiscMetadata": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "default": "VS"
+          },
+          "variable_name": {
+            "type": "string",
+            "title": "Variable Name",
+            "default": "VSORRES"
+          },
+          "oid": {
+            "type": "string",
+            "title": "Oid"
+          },
+          "codelist_oid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codelist Oid"
+          },
+          "ucum_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ucum Unit"
+          },
+          "core_designation": {
+            "type": "string",
+            "title": "Core Designation",
+            "default": "Req"
+          },
+          "sdtm_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdtm Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "oid"
+        ],
+        "title": "CdiscMetadata",
+        "description": "CDISC CDASH/SDTM variable mapping annotations."
+      },
+      "ClinicalDataType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "integer",
+          "float",
+          "date",
+          "datetime",
+          "time",
+          "boolean",
+          "codelist",
+          "text",
+          "repeat_log"
+        ],
+        "title": "ClinicalDataType",
+        "description": "Supported CDISC clinical data types."
       },
       "CodeValidationState": {
         "type": "string",
@@ -9134,6 +9578,87 @@
         "title": "ConceptValidationReport",
         "description": "Detailed validation status for a single terminology concept code."
       },
+      "ConstraintDefinition": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Length"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          },
+          "regex_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regex Pattern"
+          },
+          "allowed_values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Values"
+          }
+        },
+        "type": "object",
+        "title": "ConstraintDefinition",
+        "description": "Value-level data validation constraints."
+      },
       "CreateArmRequest": {
         "properties": {
           "id": {
@@ -9695,6 +10220,50 @@
         "title": "CriteriaBreakdownSummary",
         "description": "Summary of criteria evaluation results for a sub-cohort or participant group."
       },
+      "CrossVisitDependency": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "trigger_visit_id": {
+            "type": "string",
+            "title": "Trigger Visit Id"
+          },
+          "trigger_variable_id": {
+            "type": "string",
+            "title": "Trigger Variable Id"
+          },
+          "trigger_condition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Trigger Condition"
+          },
+          "target_visit_ids_to_spawn": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Visit Ids To Spawn"
+          },
+          "target_visit_ids_to_suppress": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Visit Ids To Suppress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "trigger_visit_id",
+          "trigger_variable_id",
+          "trigger_condition"
+        ],
+        "title": "CrossVisitDependency",
+        "description": "Horizontal journey logic linking multiple visits/encounters."
+      },
       "DAGJobStatusResponse": {
         "properties": {
           "job_id": {
@@ -10034,6 +10603,97 @@
         ],
         "title": "DataElementPayload",
         "description": "Data-element specific payload validation containing units and format."
+      },
+      "DataSchema": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "2.0"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "cdisc_form_oid": {
+            "type": "string",
+            "title": "Cdisc Form Oid"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableDefinition"
+            },
+            "type": "array",
+            "title": "Variables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "name",
+          "cdisc_form_oid"
+        ],
+        "title": "DataSchema",
+        "description": "Pillar 1: Data Schema (schema.json) - Defines what is collected."
+      },
+      "DerivedMathRule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "target_variable_id": {
+            "type": "string",
+            "title": "Target Variable Id"
+          },
+          "formula_expression": {
+            "type": "string",
+            "title": "Formula Expression"
+          },
+          "input_variable_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Input Variable Ids"
+          },
+          "unit_conversion": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Unit Conversion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "target_variable_id",
+          "formula_expression"
+        ],
+        "title": "DerivedMathRule",
+        "description": "Reactive formula derivation rule."
+      },
+      "DiffRequest": {
+        "properties": {
+          "base_form": {
+            "$ref": "#/components/schemas/TripartiteFormDefinition"
+          },
+          "amended_form": {
+            "$ref": "#/components/schemas/TripartiteFormDefinition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_form",
+          "amended_form"
+        ],
+        "title": "DiffRequest",
+        "description": "Request payload for comparing two form versions."
       },
       "DifferenceResult": {
         "properties": {
@@ -10951,6 +11611,72 @@
         "title": "FieldReference",
         "description": "Represents a structured field reference pointing to an eCRF domain variable.\nFormat must strictly follow: eCRF.<DOMAIN>.<VARIABLE>"
       },
+      "FieldWidgetConfig": {
+        "properties": {
+          "variable_id": {
+            "type": "string",
+            "title": "Variable Id"
+          },
+          "widget": {
+            "$ref": "#/components/schemas/WidgetType",
+            "default": "text_input"
+          },
+          "grid_column_span": {
+            "type": "integer",
+            "title": "Grid Column Span",
+            "default": 12
+          },
+          "placeholder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeholder"
+          },
+          "help_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Text"
+          },
+          "css_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Css Class"
+          },
+          "readonly": {
+            "type": "boolean",
+            "title": "Readonly",
+            "default": false
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "variable_id"
+        ],
+        "title": "FieldWidgetConfig",
+        "description": "UI presentation options for a single variable field."
+      },
       "FormItem": {
         "properties": {
           "item_id": {
@@ -11232,6 +11958,37 @@
           "summary_by_country"
         ],
         "title": "GenerateStartupTemplateResponse"
+      },
+      "GridSection": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns",
+            "default": 12
+          },
+          "widgets": {
+            "items": {
+              "$ref": "#/components/schemas/FieldWidgetConfig"
+            },
+            "type": "array",
+            "title": "Widgets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "GridSection",
+        "description": "Layout container section in the UI Schema."
       },
       "HTTPValidationError": {
         "properties": {
@@ -11668,6 +12425,46 @@
         ],
         "title": "LinkVisitProcedureRequest"
       },
+      "LogicSchema": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "2.0"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "edit_checks": {
+            "items": {
+              "$ref": "#/components/schemas/AstEditCheck"
+            },
+            "type": "array",
+            "title": "Edit Checks"
+          },
+          "derived_rules": {
+            "items": {
+              "$ref": "#/components/schemas/DerivedMathRule"
+            },
+            "type": "array",
+            "title": "Derived Rules"
+          },
+          "cross_visit_dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/CrossVisitDependency"
+            },
+            "type": "array",
+            "title": "Cross Visit Dependencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id"
+        ],
+        "title": "LogicSchema",
+        "description": "Pillar 1: Logic Schema (rules.json) - Defines how it behaves."
+      },
       "LogicalOperator": {
         "type": "string",
         "enum": [
@@ -11678,7 +12475,7 @@
         "title": "LogicalOperator",
         "description": "Allowed logical connectors for composite criteria expressions."
       },
-      "MigrationDirective": {
+      "MigrationDirective-Input": {
         "properties": {
           "directive_id": {
             "type": "string",
@@ -11716,6 +12513,15 @@
         ],
         "title": "MigrationDirective",
         "description": "Directive for in-flight subject migration and version transition.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
+      },
+      "MigrationMode": {
+        "type": "string",
+        "enum": [
+          "prospective",
+          "retrospective"
+        ],
+        "title": "MigrationMode",
+        "description": "In-flight patient migration policies during protocol amendments."
       },
       "NarrativeDelta": {
         "properties": {
@@ -11981,6 +12787,42 @@
         "title": "OperationalTicketBlueprint",
         "description": "Structured actionable ticket blueprint ready for dispatch to apps/tickets."
       },
+      "PatientMigrationMatrix": {
+        "properties": {
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id"
+          },
+          "from_version_tag": {
+            "type": "string",
+            "title": "From Version Tag"
+          },
+          "to_version_tag": {
+            "type": "string",
+            "title": "To Version Tag"
+          },
+          "directives": {
+            "items": {
+              "$ref": "#/components/schemas/packages__ddf__tripartite__MigrationDirective"
+            },
+            "type": "array",
+            "title": "Directives"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_id",
+          "from_version_tag",
+          "to_version_tag"
+        ],
+        "title": "PatientMigrationMatrix",
+        "description": "Pillar 6: In-Flight Patient Migration Matrix for Protocol Amendments."
+      },
       "PrerequisiteCriterionTemplate": {
         "properties": {
           "country_code": {
@@ -12189,7 +13031,7 @@
         "title": "ProtocolAmendRequest",
         "description": "Payload for the Protocol/Designer Amendment endpoint."
       },
-      "ProtocolImpactAssessment": {
+      "ProtocolImpactAssessment-Input": {
         "properties": {
           "assessment_id": {
             "type": "string",
@@ -12296,7 +13138,142 @@
           },
           "migration_directives": {
             "items": {
-              "$ref": "#/components/schemas/MigrationDirective"
+              "$ref": "#/components/schemas/MigrationDirective-Input"
+            },
+            "type": "array",
+            "title": "Migration Directives",
+            "description": "In-flight migration directives"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "UTC ISO timestamp of assessment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assessment_id",
+          "study_id",
+          "base_version",
+          "amended_version",
+          "executive_summary",
+          "data_capture_ecrf",
+          "subject_management_rtsm",
+          "regulatory_compliance",
+          "reconsent_gating_plan",
+          "created_at"
+        ],
+        "title": "ProtocolImpactAssessment",
+        "description": "Consolidated Protocol Amendment Ripple-Effect Impact Assessment."
+      },
+      "ProtocolImpactAssessment-Output": {
+        "properties": {
+          "assessment_id": {
+            "type": "string",
+            "title": "Assessment Id",
+            "description": "Unique assessment identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study identifier"
+          },
+          "base_version": {
+            "type": "string",
+            "title": "Base Version",
+            "description": "Baseline protocol version tag"
+          },
+          "amended_version": {
+            "type": "string",
+            "title": "Amended Version",
+            "description": "Amended protocol version tag"
+          },
+          "amendment_type": {
+            "type": "string",
+            "title": "Amendment Type",
+            "description": "Amendment classification: major or minor",
+            "default": "minor"
+          },
+          "is_substantial": {
+            "type": "boolean",
+            "title": "Is Substantial",
+            "description": "Whether amendment is substantial vs administrative",
+            "default": false
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Whether mandatory subject re-consent is mandated",
+            "default": false
+          },
+          "patient_burden_delta": {
+            "type": "number",
+            "title": "Patient Burden Delta",
+            "description": "Calculated patient burden score change",
+            "default": 0.0
+          },
+          "estimated_cost_usd": {
+            "type": "number",
+            "title": "Estimated Cost Usd",
+            "description": "Estimated total operational cost delta in USD",
+            "default": 0.0
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary",
+            "description": "Executive narrative summary of the ripple effect analysis"
+          },
+          "graph_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/EntityDiff"
+            },
+            "type": "array",
+            "title": "Graph Deltas",
+            "description": "USDM Graph entity diffs"
+          },
+          "soa_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/EntityDiff"
+            },
+            "type": "array",
+            "title": "Soa Deltas",
+            "description": "Schedule of Activities matrix diffs"
+          },
+          "narrative_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/NarrativeDelta"
+            },
+            "type": "array",
+            "title": "Narrative Deltas",
+            "description": "Narrative section textual diffs"
+          },
+          "data_capture_ecrf": {
+            "$ref": "#/components/schemas/DataCaptureEcrfImpact",
+            "description": "eCRF & Visit data capture domain manifest"
+          },
+          "subject_management_rtsm": {
+            "$ref": "#/components/schemas/SubjectManagementRtsmImpact",
+            "description": "RTSM & Dosing domain manifest"
+          },
+          "regulatory_compliance": {
+            "$ref": "#/components/schemas/RegulatoryComplianceImpact",
+            "description": "Regulatory & Safety compliance domain manifest"
+          },
+          "reconsent_gating_plan": {
+            "$ref": "#/components/schemas/ReConsentGatingPlan",
+            "description": "Subject re-consent gating enforcement plan"
+          },
+          "operational_tickets": {
+            "items": {
+              "$ref": "#/components/schemas/OperationalTicketBlueprint"
+            },
+            "type": "array",
+            "title": "Operational Tickets",
+            "description": "Domain-routed operational ticket blueprints"
+          },
+          "migration_directives": {
+            "items": {
+              "$ref": "#/components/schemas/apps__designer__domain__cdisc__branch_models__MigrationDirective"
             },
             "type": "array",
             "title": "Migration Directives",
@@ -12472,6 +13449,29 @@
         ],
         "title": "ProtocolRAGContextChunk",
         "description": "Normalized protocol excerpt chunk passed to RAG generation and verification."
+      },
+      "PublicationRequest": {
+        "properties": {
+          "form_definition": {
+            "$ref": "#/components/schemas/TripartiteFormDefinition"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "step_up_signature_token": {
+            "type": "string",
+            "title": "Step Up Signature Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_definition",
+          "reason_for_change",
+          "step_up_signature_token"
+        ],
+        "title": "PublicationRequest",
+        "description": "Request payload for publishing and sealing a form."
       },
       "PublishStudyVersionRequest": {
         "properties": {
@@ -13215,7 +14215,7 @@
           },
           "migration_directives": {
             "items": {
-              "$ref": "#/components/schemas/MigrationDirective"
+              "$ref": "#/components/schemas/apps__designer__domain__cdisc__branch_models__MigrationDirective"
             },
             "type": "array",
             "title": "Migration Directives",
@@ -14399,6 +15399,39 @@
         "title": "SynthesizedECRFForm",
         "description": "Synthesized CDASH eCRF form definition compiled from extracted activities."
       },
+      "SyntheticPayload": {
+        "properties": {
+          "payload_id": {
+            "type": "string",
+            "title": "Payload Id"
+          },
+          "test_scenario": {
+            "type": "string",
+            "title": "Test Scenario"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          },
+          "expected_rule_outcomes": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Expected Rule Outcomes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payload_id",
+          "test_scenario",
+          "data",
+          "expected_rule_outcomes"
+        ],
+        "title": "SyntheticPayload",
+        "description": "AI-generated synthetic test payload targeting rule boundaries."
+      },
       "SyntheticSimulationSummary": {
         "properties": {
           "simulated_subject_count": {
@@ -14539,7 +15572,7 @@
           "impact_assessment": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProtocolImpactAssessment"
+                "$ref": "#/components/schemas/ProtocolImpactAssessment-Input"
               },
               {
                 "type": "null"
@@ -14801,6 +15834,62 @@
         ],
         "title": "TransitionItemRequest"
       },
+      "TripartiteFormDefinition": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "default": 1
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag",
+            "default": "1.0.0"
+          },
+          "data_schema": {
+            "$ref": "#/components/schemas/DataSchema"
+          },
+          "ui_schema": {
+            "$ref": "#/components/schemas/UiSchema"
+          },
+          "logic_schema": {
+            "$ref": "#/components/schemas/LogicSchema"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "default": "system"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "default": "Initial eCRF baseline release"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "protocol_id",
+          "data_schema",
+          "ui_schema",
+          "logic_schema"
+        ],
+        "title": "TripartiteFormDefinition",
+        "description": "The unified, versioned Tripartite Clinical Form Document."
+      },
       "USDMProtocolExtractionResponse": {
         "properties": {
           "study_title": {
@@ -14899,6 +15988,127 @@
         ],
         "title": "USDMProtocolExtractionResponse",
         "description": "Structured response representing complete USDM v4.0 protocol parameters."
+      },
+      "UatEvidenceReport": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "title": "Report Id"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Executed At"
+          },
+          "total_scenarios_evaluated": {
+            "type": "integer",
+            "title": "Total Scenarios Evaluated"
+          },
+          "scenarios_passed": {
+            "type": "integer",
+            "title": "Scenarios Passed"
+          },
+          "scenarios_failed": {
+            "type": "integer",
+            "title": "Scenarios Failed"
+          },
+          "rule_coverage_percentage": {
+            "type": "number",
+            "title": "Rule Coverage Percentage"
+          },
+          "execution_duration_ms": {
+            "type": "number",
+            "title": "Execution Duration Ms"
+          },
+          "gxp_compliance_verified": {
+            "type": "boolean",
+            "title": "Gxp Compliance Verified",
+            "default": true
+          },
+          "sha256_evidence_digest": {
+            "type": "string",
+            "title": "Sha256 Evidence Digest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "form_id",
+          "protocol_id",
+          "total_scenarios_evaluated",
+          "scenarios_passed",
+          "scenarios_failed",
+          "rule_coverage_percentage",
+          "execution_duration_ms",
+          "sha256_evidence_digest"
+        ],
+        "title": "UatEvidenceReport",
+        "description": "Pillar 5: Automated 21 CFR Part 11 UAT Evidence Report."
+      },
+      "UatExecutionRequest": {
+        "properties": {
+          "form_definition": {
+            "$ref": "#/components/schemas/TripartiteFormDefinition"
+          },
+          "payloads": {
+            "items": {
+              "$ref": "#/components/schemas/SyntheticPayload"
+            },
+            "type": "array",
+            "title": "Payloads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_definition"
+        ],
+        "title": "UatExecutionRequest",
+        "description": "Request payload for executing synthetic UAT suite."
+      },
+      "UiSchema": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "2.0"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/GridSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "default_viewport": {
+            "$ref": "#/components/schemas/ViewportMode",
+            "default": "desktop_edc"
+          },
+          "theme_tokens": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Theme Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id"
+        ],
+        "title": "UiSchema",
+        "description": "Pillar 1: UI Schema (uischema.json) - Defines how it looks."
       },
       "UpdateArmRequest": {
         "properties": {
@@ -15216,6 +16426,51 @@
         ],
         "title": "ValidationError"
       },
+      "VariableDefinition": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "data_type": {
+            "$ref": "#/components/schemas/ClinicalDataType",
+            "default": "string"
+          },
+          "cdisc": {
+            "$ref": "#/components/schemas/CdiscMetadata"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/ConstraintDefinition"
+          },
+          "phi_pii_masked": {
+            "type": "boolean",
+            "title": "Phi Pii Masked",
+            "default": false
+          },
+          "sdv_tier": {
+            "type": "string",
+            "title": "Sdv Tier",
+            "default": "TSDV_REPRESENTATIVE"
+          },
+          "part11_reason_required": {
+            "type": "boolean",
+            "title": "Part11 Reason Required",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "cdisc"
+        ],
+        "title": "VariableDefinition",
+        "description": "Data Schema element defining a single clinical collection variable."
+      },
       "VersionDiffResponse": {
         "properties": {
           "added_nodes": {
@@ -15247,6 +16502,16 @@
           "deleted_nodes"
         ],
         "title": "VersionDiffResponse"
+      },
+      "ViewportMode": {
+        "type": "string",
+        "enum": [
+          "desktop_edc",
+          "mobile_epro",
+          "tablet_esource"
+        ],
+        "title": "ViewportMode",
+        "description": "Omni-channel preview modes."
       },
       "VisitAttributes": {
         "properties": {
@@ -15527,6 +16792,65 @@
           "visit_ids"
         ],
         "title": "VisitToEpochAssignmentRequest"
+      },
+      "WidgetType": {
+        "type": "string",
+        "enum": [
+          "text_input",
+          "textarea",
+          "number_input",
+          "radio_group",
+          "select_dropdown",
+          "multi_select",
+          "date_picker",
+          "time_picker",
+          "slider_vas",
+          "body_map_coordinate",
+          "repeating_log_grid",
+          "medical_autocode",
+          "sensor_stream_card"
+        ],
+        "title": "WidgetType",
+        "description": "UI Widget representations for the headless renderer."
+      },
+      "apps__designer__domain__cdisc__branch_models__MigrationDirective": {
+        "properties": {
+          "directive_id": {
+            "type": "string",
+            "title": "Directive Id",
+            "description": "Unique migration directive ID"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Directive action: RECONSENT_GATE, SCHEMA_UPGRADE, PRESERVE_HISTORICAL"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed directive description"
+          },
+          "affected_cohort": {
+            "type": "string",
+            "title": "Affected Cohort",
+            "description": "Target subject cohort: ACTIVE, COMPLETED, ALL",
+            "default": "ACTIVE"
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "description": "Target protocol version tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "directive_id",
+          "action",
+          "description",
+          "target_version"
+        ],
+        "title": "MigrationDirective",
+        "description": "Directive for in-flight subject migration and version transition.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
       },
       "apps__designer__domain__eligibility__models__ExpressionNode-Input": {
         "properties": {
@@ -15857,6 +17181,40 @@
         ],
         "title": "FieldReference",
         "description": "Represents a structured field reference within an expression tree."
+      },
+      "packages__ddf__tripartite__MigrationDirective": {
+        "properties": {
+          "variable_id": {
+            "type": "string",
+            "title": "Variable Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "migration_mode": {
+            "$ref": "#/components/schemas/MigrationMode",
+            "default": "prospective"
+          },
+          "backfill_query_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backfill Query Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "variable_id",
+          "action"
+        ],
+        "title": "MigrationDirective",
+        "description": "Action directive for an individual clinical field in an amendment."
       }
     }
   }

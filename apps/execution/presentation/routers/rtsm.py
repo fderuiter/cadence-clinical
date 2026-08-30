@@ -5,7 +5,15 @@ Requirements: PRD-SCM-001, GMP Annex 13
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+)
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +24,11 @@ from apps.execution.adaptive_math import (
 from apps.execution.adaptive_math import (
     calculate_boin_boundaries as calculate_boin_boundaries,
 )
+from apps.execution.database.context import (
+    current_change_reason,
+    current_user_id,
+)
+from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     CGTBedsideVerification,
     CGTChainOfCustody,
@@ -27,6 +40,7 @@ from apps.execution.database.models import (
     IPKit,
     LotExpiryExtension,
     ReLabelingTask,
+    ResupplyEvent,
     SupplyNode,
     SupplyNodeInventory,
     TemperatureLogger,
@@ -170,14 +184,18 @@ from apps.execution.rtsm_cold_chain import (
     verify_relabeling_task_transaction,
 )
 from apps.execution.rtsm_supply import (
+    ExpiredKitError,
     InsufficientStockError,
     InvalidHierarchyError,
     InvalidTransferOrderStateError,
+    QuarantinedKitError,
+    SiteInventoryNotFoundError,
     StorageCapacityExceededError,
     TransferOrderNotFoundError,
     approve_transfer_order_transaction,
     build_supply_hierarchy_tree,
     create_transfer_order_transaction,
+    dispense_kit_transaction,
     generate_packing_manifest_transaction,
     receive_transfer_order_transaction,
     run_predictive_forecast_transaction,
@@ -3180,3 +3198,351 @@ def calculate_crm_posterior_endpoint(
         is_safety_stop_triggered=safety_stop,
         rationale=rat,
     )
+
+
+# ==========================================
+# RTSM Supply Chain & Inventory Management API
+# ==========================================
+
+
+class DispenseRequest(BaseModel):
+    study_id: str
+    site_id: str
+    subject_id: str
+    visit_id: str
+    kit_id: str
+    quantity: int = Field(default=1, ge=1)
+
+
+class DispenseResponse(BaseModel):
+    status: str
+    message: str
+    resupply_triggered: bool
+
+
+class ResupplyEventResponse(BaseModel):
+    id: str
+    study_id: str
+    site_id: str
+    kit_id: str
+    requested_qty: int
+    status: str
+    triggered_at: Any
+
+
+class ResupplyEventApprovalRequest(BaseModel):
+    change_justification: str
+
+
+@router.post(
+    "/dispense",
+    response_model=DispenseResponse,
+    status_code=201,
+)
+async def dispense_kit_endpoint(
+    request: Request,
+    payload: DispenseRequest,
+    background_tasks: BackgroundTasks,
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_CRA,
+            detail="Forbidden: User role is not authorized for RTSM supply dispensation.",
+        )
+    ),
+) -> DispenseResponse:
+    """End-point to dispense investigational product (IP) kits against site inventory."""
+    if TrialLockManager.is_site_locked(payload.site_id):
+        raise HTTPException(
+            status_code=423,
+            detail=f"Site {payload.site_id} is currently locked in a read-only state.",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            resupply_triggered = await dispense_kit_transaction(
+                session=session,
+                study_id=payload.study_id,
+                site_id=payload.site_id,
+                subject_id=payload.subject_id,
+                visit_id=payload.visit_id,
+                kit_id=payload.kit_id,
+                quantity=payload.quantity,
+            )
+            await session.commit()
+        except (QuarantinedKitError, ExpiredKitError) as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        except SiteInventoryNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except InsufficientStockError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except PermissionError as e:
+            raise HTTPException(status_code=423, detail=str(e))
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Internal database error: {str(e)}"
+            )
+
+    if resupply_triggered:
+
+        def dispatch_resupply_notification(
+            site_id: str, kit_id: str, requested_qty: int
+        ):
+            from apps.execution.trial_lock import NotificationRouter
+
+            router = NotificationRouter()
+            payload_notif = {
+                "message": f"Resupply triggered for site {site_id}, kit {kit_id}. Requested quantity: {requested_qty}",
+                "site_id": site_id,
+                "kit_id": kit_id,
+                "requested_qty": requested_qty,
+                "related_entity_type": "site-inventory",
+                "related_entity_id": f"{site_id}:{kit_id}",
+            }
+            router.send_dashboard_notification(["supply_manager"], payload_notif)
+
+        background_tasks.add_task(
+            dispatch_resupply_notification,
+            payload.site_id,
+            payload.kit_id,
+            20,
+        )
+
+    return DispenseResponse(
+        status="success",
+        message=f"Successfully dispensed {payload.quantity} of kit {payload.kit_id} to subject {payload.subject_id}.",
+        resupply_triggered=resupply_triggered,
+    )
+
+
+@router.get(
+    "/resupply-events",
+    response_model=list[ResupplyEventResponse],
+)
+async def list_resupply_events_endpoint(
+    study_id: str | None = None,
+    site_id: str | None = None,
+    status: str | None = None,
+    principal: Principal = Depends(get_principal),
+) -> list[ResupplyEventResponse]:
+    """List resupply events filtered by role and site permissions."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ResupplyEvent).where(ResupplyEvent.is_deleted.is_(False))
+        if study_id:
+            stmt = stmt.where(ResupplyEvent.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(ResupplyEvent.site_id == site_id)
+        if status:
+            stmt = stmt.where(ResupplyEvent.status == status)
+
+        stmt = stmt.order_by(ResupplyEvent.triggered_at.desc())
+        result = await session.execute(stmt)
+        events = result.scalars().all()
+
+        filtered = []
+        for ev in events:
+            if can_access_site(principal, ev.site_id) and can_access_study(
+                principal, ev.study_id
+            ):
+                filtered.append(ev)
+
+        return [
+            ResupplyEventResponse(
+                id=ev.id,
+                study_id=ev.study_id,
+                site_id=ev.site_id,
+                kit_id=ev.kit_id,
+                requested_qty=ev.requested_qty,
+                status=ev.status,
+                triggered_at=ev.triggered_at,
+            )
+            for ev in filtered
+        ]
+
+
+@router.post(
+    "/resupply-events/{event_id}/confirm",
+    response_model=ResupplyEventResponse,
+)
+async def approve_resupply_event_endpoint(
+    event_id: str,
+    request: Request,
+    payload: ResupplyEventApprovalRequest,
+    principal: Principal = Depends(get_principal),
+) -> ResupplyEventResponse:
+    """Approve a resupply event to trigger shipment generation."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not payload.change_justification or not payload.change_justification.strip():
+        raise HTTPException(
+            status_code=400, detail="Change justification must not be empty."
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ResupplyEvent).where(
+            ResupplyEvent.id == event_id, ResupplyEvent.is_deleted.is_(False)
+        )
+        result = await session.execute(stmt)
+        event = result.scalars().first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Resupply event not found")
+
+        if not (
+            can_access_site(principal, event.site_id)
+            and can_access_study(principal, event.study_id)
+        ):
+            raise HTTPException(
+                status_code=403, detail="Forbidden: Access denied to site or study."
+            )
+
+        def is_manager(p: Principal) -> bool:
+            manager_roles = {"sponsor_dm", "admin", "sysadmin", "cra", "monitor"}
+            if any(r in manager_roles for r in p.roles):
+                return True
+            raw_manager_roles = {
+                "cra",
+                "monitor",
+                "clinical_research_associate",
+                "clinicalresearchassociate",
+                "sponsor_admin",
+                "sponsoradmin",
+                "admin",
+                "sysadmin",
+                "system_admin",
+                "systemadmin",
+            }
+            for r in p.raw_roles:
+                norm_r = r.strip().lower().replace(" ", "_")
+                if norm_r in raw_manager_roles:
+                    return True
+            return False
+
+        if not is_manager(principal):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: User does not have manager-level permissions.",
+            )
+
+        if TrialLockManager.is_site_locked(event.site_id):
+            raise HTTPException(
+                status_code=423,
+                detail=f"Site {event.site_id} is currently locked in a read-only state.",
+            )
+
+        event.status = "APPROVED"
+        event.version += 1
+        current_user_id.set(principal.user_id)
+        current_change_reason.set(change_reason)
+
+        session.add(event)
+        await session.commit()
+
+        stmt = select(ResupplyEvent).where(ResupplyEvent.id == event_id)
+        result = await session.execute(stmt)
+        event = result.scalars().first()
+
+        return ResupplyEventResponse(
+            id=event.id,
+            study_id=event.study_id,
+            site_id=event.site_id,
+            kit_id=event.kit_id,
+            requested_qty=event.requested_qty,
+            status=event.status,
+            triggered_at=event.triggered_at,
+        )
+
+
+@router.post(
+    "/resupply-events/{event_id}/reject",
+    response_model=ResupplyEventResponse,
+)
+async def reject_resupply_event_endpoint(
+    event_id: str,
+    request: Request,
+    payload: ResupplyEventApprovalRequest,
+    principal: Principal = Depends(get_principal),
+) -> ResupplyEventResponse:
+    """Reject a resupply event."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not payload.change_justification or not payload.change_justification.strip():
+        raise HTTPException(
+            status_code=400, detail="Change justification must not be empty."
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ResupplyEvent).where(
+            ResupplyEvent.id == event_id, ResupplyEvent.is_deleted.is_(False)
+        )
+        result = await session.execute(stmt)
+        event = result.scalars().first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Resupply event not found")
+
+        if not (
+            can_access_site(principal, event.site_id)
+            and can_access_study(principal, event.study_id)
+        ):
+            raise HTTPException(
+                status_code=403, detail="Forbidden: Access denied to site or study."
+            )
+
+        def is_manager(p: Principal) -> bool:
+            manager_roles = {"sponsor_dm", "admin", "sysadmin", "cra", "monitor"}
+            if any(r in manager_roles for r in p.roles):
+                return True
+            raw_manager_roles = {
+                "cra",
+                "monitor",
+                "clinical_research_associate",
+                "clinicalresearchassociate",
+                "sponsor_admin",
+                "sponsoradmin",
+                "admin",
+                "sysadmin",
+                "system_admin",
+                "systemadmin",
+            }
+            for r in p.raw_roles:
+                norm_r = r.strip().lower().replace(" ", "_")
+                if norm_r in raw_manager_roles:
+                    return True
+            return False
+
+        if not is_manager(principal):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: User does not have manager-level permissions.",
+            )
+
+        if TrialLockManager.is_site_locked(event.site_id):
+            raise HTTPException(
+                status_code=423,
+                detail=f"Site {event.site_id} is currently locked in a read-only state.",
+            )
+
+        event.status = "REJECTED"
+        event.version += 1
+        current_user_id.set(principal.user_id)
+        current_change_reason.set(change_reason)
+
+        session.add(event)
+        await session.commit()
+
+        stmt = select(ResupplyEvent).where(ResupplyEvent.id == event_id)
+        result = await session.execute(stmt)
+        event = result.scalars().first()
+
+        return ResupplyEventResponse(
+            id=event.id,
+            study_id=event.study_id,
+            site_id=event.site_id,
+            kit_id=event.kit_id,
+            requested_qty=event.requested_qty,
+            status=event.status,
+            triggered_at=event.triggered_at,
+        )

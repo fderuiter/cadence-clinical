@@ -36,6 +36,7 @@ members = [
     "packages-database",
     "packages-ddf",
     "packages-deid",
+    "packages-engine-core",
     "packages-hexagonal",
     "packages-security",
     "packages-sentinels",
@@ -2417,6 +2418,21 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.2" },
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "rapidfuzz", specifier = ">=3.14.5" },
+]
+
+[[package]]
+name = "packages-engine-core"
+version = "0.1.0"
+source = { editable = "packages/engine_core" }
+dependencies = [
+    { name = "packages-ddf" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "packages-ddf", editable = "packages/ddf" },
+    { name = "pydantic", specifier = ">=2.6.0" },
 ]
 
 [[package]]

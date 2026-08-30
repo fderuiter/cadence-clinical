@@ -894,3 +894,34 @@ async def execute_export_wizard(
             status_code=500,
             detail=f"Export execution failed: {scrubbed_msg}",
         )
+
+
+@router.get("/export")
+async def export_study_cdisc_odm_xml(
+    study_id: str = Query(..., description="The clinical study ID to export"),
+    session: AsyncSession = Depends(get_execution_db_session),
+    roles: list[str] = Depends(
+        require_roles(ROLE_SPONSOR_ADMIN, ROLE_DATA_MANAGER, ROLE_CRA)
+    ),
+) -> Response:
+    """Export all study observations, subjects, visits, and forms as CDISC ODM XML."""
+    bundle_data: dict[str, list[dict[str, Any]]] = {}
+    for dom in ["DM", "VS", "LB", "AE", "MH"]:
+        records, _ = await run_sdtm_extraction(session, study_id, dom)
+        if records:
+            bundle_data[dom] = records
+
+    xml_str = serialize_to_odm_xml(
+        study_id=study_id,
+        data=bundle_data,
+        metadata_version_oid="MV.001",
+        audit_user="system",
+        change_reason="Standard Study CDISC ODM Export",
+    )
+    return Response(
+        content=xml_str,
+        media_type="application/xml",
+        headers={
+            "Content-Disposition": f"attachment; filename={study_id.lower()}_odm.xml"
+        },
+    )
