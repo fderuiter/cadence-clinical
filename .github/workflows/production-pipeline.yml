@@ -31,7 +31,7 @@ jobs:
 
       # Set up pnpm and Node.js for frontend vulnerability audit
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
