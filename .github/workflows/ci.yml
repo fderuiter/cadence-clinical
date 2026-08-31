@@ -30,7 +30,7 @@ jobs:
       architecture_outcome: ${{ steps.run_architecture.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -237,7 +237,7 @@ jobs:
       deid_outcome: ${{ steps.run_deid_scan.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -346,7 +346,7 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -446,7 +446,7 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -540,7 +540,7 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -593,7 +593,7 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -655,7 +655,7 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -737,7 +737,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -868,7 +868,7 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
