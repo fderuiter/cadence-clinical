@@ -17,7 +17,7 @@
     "@types/node": "^26.2.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "^4.1.10",
-    "@vue/test-utils": "^2.4.11",
+    "@vue/test-utils": "^2.5.0",
     "eslint-plugin-vue": "^10.10.0",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
