@@ -357,6 +357,7 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
 
     try:
         with open(INDEX_FILE, encoding="utf-8") as f:
+            index_content = f.read()
     except Exception as e:
         print(f"Error reading {INDEX_FILE}: {e}")
         return False
@@ -406,6 +407,7 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
             try:
                 with open(filepath, encoding="utf-8") as f:
                     content = f.read()
+            except Exception as e:
                 print(f"Error reading {filepath}: {e}")
                 all_passed = False
                 continue
