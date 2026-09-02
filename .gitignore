@@ -154,3 +154,19 @@ scripts/sync_github_project.py
 scripts/live_hygiene_enforcement.py
 .scratch/
 
+# ------------------------------------------
+# .NET 10 & C# Build Artifacts
+# ------------------------------------------
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+*.trx
+*.DotSettings.user
+*.crash
+_ReSharper*/
+*.suo
+

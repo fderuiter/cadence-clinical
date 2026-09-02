@@ -111,8 +111,7 @@ if (-not (Test-Path $csprojPath)) {
 "@
     Set-Content -Path $csprojPath -Value $csprojContent.Trim() -Encoding utf8
     Write-Host "  Created: $([System.IO.Path]::GetRelativePath($repoRoot, $csprojPath))" -ForegroundColor Green
-}
-else {
+} else {
     Write-Host "  Project file exists: $([System.IO.Path]::GetRelativePath($repoRoot, $csprojPath))" -ForegroundColor Gray
 }
 
@@ -231,8 +230,7 @@ $slnPath = Join-Path $repoRoot "Cadence.sln"
 $slnContent = Get-Content $slnPath -Raw
 if ($slnContent -like "*Cadence.Apps.$capName.csproj*") {
     Write-Host "  [SUCCESS] Project is already bound in Cadence.sln." -ForegroundColor Green
-}
-else {
+} else {
     Write-Host "  [ACTION NEEDED] Project needs to be bound in Cadence.sln." -ForegroundColor Yellow
     Write-Host "  Run 'dotnet sln Cadence.sln add apps\$ServiceName\src\Cadence.Apps.$capName.csproj --solution-folder Apps'" -ForegroundColor Cyan
 }
