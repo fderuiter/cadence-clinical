@@ -24,14 +24,16 @@ Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and tracea
 ## When to Run
 
 Run this workflow whenever:
-- Test functions are added, renamed, or deleted.
-- `@req:PRD-SYS-xxx` tags in test docstrings are added or modified.
+- Test functions are added, renamed, or deleted in Python (`pytest`) or C# (`xUnit`).
+- `@req:PRD-SYS-xxx` tags in test docstrings or `[GxPRequirement("PRD-SYS-xxx")]` attributes in C# tests are added or modified.
 - Test pass/fail outcomes change.
 - CI fails with: `GxP compliance documentation is out of sync with the current system state!`
 
 ## Execution Protocol
 
-1. **Launch Sync**: Run `uv run python scripts/sync_gxp.py` (or `uv run cadence gxp sync`) via `run_command`.
+1. **Launch Sync**: Run `python scripts/sync_gxp.py` (or `dotnet cadence gxp sync`) via `run_command`.
+   - Executes both `pytest` and `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"`.
+   - `scripts/generate_rtm.py` scans both `.py` and `.cs` test files, parsing JUnit and TRX reports into a unified matrix.
 2. **Handle Background Task**: If sent to background, inspect progress using `manage_task(Action="status")`. Set a `schedule` watchdog timer if needed.
 3. **Verify Staged Artifacts**:
    - Inspect [`docs/SDLC/Requirements_Traceability_Matrix.md`](../../../../docs/SDLC/Requirements_Traceability_Matrix.md).

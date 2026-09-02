@@ -277,6 +277,22 @@ Whenever a .NET 10 implementation supersedes a legacy Python architectural patte
 
 ---
 
+### 13. Pure .NET Projects & uv Workspace Boundaries
+
+When scaffolding a new .NET project under `packages/<name>` or `apps/<name>` that does not contain a `pyproject.toml`, agents must immediately add the directory path to `[tool.uv.workspace] exclude` in `pyproject.toml`. Without this exclusion, `uv`'s wildcard matching (`packages/*`, `apps/*`) fails during workspace dependency resolution.
+
+---
+
+### 14. Pre-Commit Quality Gate Multi-Runtime Invariant
+
+The repository's `.pre-commit-config.yaml` runs both C# and Python quality gates locally before any commit is created:
+1. `dotnet format Cadence.sln --verify-no-changes` verifies C# style, namespace ordering, and `.editorconfig` rules.
+2. `python scripts/validate_adrs.py` verifies ADR status and index integrity.
+3. `python scripts/validate_architecture_drift.py` ensures service topology parity.
+Agents must ensure all code changes satisfy `dotnet format` and ADR validation prior to proposing commits.
+
+---
+
 ## Primary Developer & Agent CLI Commands (`dotnet cadence`)
 
 Agents should use the native Cadence CLI tool for development, diagnostics, and testing:
