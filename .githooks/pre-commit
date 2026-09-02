@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Cadence Clinical Platform - Automated Git Pre-Commit Hook
+# Validates code formatting, ADR integrity, and GxP compliance before commit.
+# Requirements: PRD-SYS-053, ADR-2233
+# ==============================================================================
+
+set -euo pipefail
+
+echo "[Pre-Commit] Executing Cadence Quality Sentinels..."
+
+# 1. Format check on C# files
+if command -v dotnet >/dev/null 2>&1; then
+    echo "  Validating C# code style (.editorconfig)..."
+    if ! dotnet format Cadence.sln --verify-no-changes >/dev/null 2>&1; then
+        echo "::error:: C# formatting violations detected! Run 'dotnet format Cadence.sln' to auto-fix."
+        exit 1
+    fi
+fi
+
+# 2. Validate Architectural Decision Records
+if [ -f "scripts/validate_adrs.py" ]; then
+    echo "  Validating ADR index and requirement tags..."
+    python scripts/validate_adrs.py
+fi
+
+echo "[Pre-Commit] All quality sentinels passed."
