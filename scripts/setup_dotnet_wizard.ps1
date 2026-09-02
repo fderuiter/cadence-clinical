@@ -56,12 +56,10 @@ try {
     if ($dotnetVersion -and $dotnetVersion.StartsWith("10.")) {
         Write-Host "  [SUCCESS] Found active .NET 10 SDK: $dotnetVersion" -ForegroundColor Green
         $sdkFound = $true
-    }
-    elseif ($dotnetVersion) {
+    } elseif ($dotnetVersion) {
         Write-Host "  [NOTICE] Detected .NET SDK $dotnetVersion, but .NET 10 is required." -ForegroundColor DarkYellow
     }
-}
-catch {
+} catch {
     Write-Host "  [NOTICE] No .NET SDK found in PATH." -ForegroundColor DarkYellow
 }
 
@@ -70,8 +68,7 @@ if (-not $sdkFound) {
     if ($installChoice -ne 'n' -and $installChoice -ne 'N') {
         Write-Host "  Installing .NET 10 SDK via scripts/setup_dotnet_env.ps1..." -ForegroundColor Cyan
         & powershell.exe -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "setup_dotnet_env.ps1") -SkipCertTrust
-    }
-    else {
+    } else {
         Write-Host "  [SKIPPED] Please manually install .NET 10 SDK before compiling Cadence.sln." -ForegroundColor Yellow
     }
 }
@@ -87,8 +84,7 @@ foreach ($tool in $tools) {
     try {
         & dotnet tool update --global $tool 2>$null
         Write-Host "  [SUCCESS] $tool is configured." -ForegroundColor Green
-    }
-    catch {
+    } catch {
         Write-Host "  [INFO] Tool configuration note: $_" -ForegroundColor DarkGray
     }
 }
@@ -104,8 +100,7 @@ if ($certPrompt -ne 'n' -and $certPrompt -ne 'N') {
         & dotnet dev-certs https --clean
         & dotnet dev-certs https --trust
         Write-Host "  [SUCCESS] Local development certificate trusted." -ForegroundColor Green
-    }
-    catch {
+    } catch {
         Write-Host "  [NOTICE] Certificate generation: $_" -ForegroundColor DarkYellow
     }
 }
@@ -121,8 +116,7 @@ $pgSuccess = $pgAsync.AsyncWaitHandle.WaitOne(800, $false)
 if ($pgSuccess -and $pgSocket.Connected) {
     Write-Host "  [SUCCESS] PostgreSQL running on port 5432." -ForegroundColor Green
     $pgSocket.Close()
-}
-else {
+} else {
     Write-Host "  [INFO] PostgreSQL not responding on port 5432." -ForegroundColor DarkYellow
     Write-Host "         Run 'docker compose up -d postgres' to launch local database." -ForegroundColor Gray
 }
@@ -133,8 +127,7 @@ $neoSuccess = $neoAsync.AsyncWaitHandle.WaitOne(800, $false)
 if ($neoSuccess -and $neoSocket.Connected) {
     Write-Host "  [SUCCESS] Neo4j Bolt service running on port 7687." -ForegroundColor Green
     $neoSocket.Close()
-}
-else {
+} else {
     Write-Host "  [INFO] Neo4j Bolt not responding on port 7687." -ForegroundColor DarkYellow
     Write-Host "         Run 'docker compose up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
 }
@@ -151,8 +144,7 @@ $envExample = Join-Path $repoRoot ".env.example"
 if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
     Copy-Item -Path $envExample -Destination $envFile
     Write-Host "  [SUCCESS] Initialized .env from template." -ForegroundColor Green
-}
-else {
+} else {
     Write-Host "  [SUCCESS] .env file is present." -ForegroundColor Green
 }
 
