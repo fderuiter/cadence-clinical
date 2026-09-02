@@ -20,6 +20,10 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0-preview.1.25120.13" />
     <PackageVersion Include="Neo4j.Driver" Version="5.28.1" />
 
+    <!-- Asynchronous Messaging & Transactional Outbox -->
+    <PackageVersion Include="MassTransit" Version="8.3.6" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.3.6" />
+
     <!-- CLI & Developer Experience -->
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.49.1" />
