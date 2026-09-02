@@ -46,6 +46,13 @@ repos:
         files: \.(json|css|md)$
         pass_filenames: true
 
+      - id: dotnet-format
+        name: .NET C# Code Formatting Check (.editorconfig)
+        entry: dotnet format Cadence.sln --verify-no-changes
+        language: system
+        files: \.(cs|csproj|sln)$
+        pass_filenames: false
+
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
         entry: uv run --python 3.14 python scripts/clean_secrets_baseline.py

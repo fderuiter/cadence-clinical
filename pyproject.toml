@@ -20,6 +20,7 @@ exclude = [
     "packages/gateway-rewrite",
     "packages/usdm-schemas",
     "packages/core-models",
+    "packages/contracts",
     "packages/deidentification"
 ]
 

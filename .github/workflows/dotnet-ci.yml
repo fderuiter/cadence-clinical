@@ -28,10 +28,13 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Setup Python Runtime (for GxP Verification)
-        uses: actions/setup-python@v5
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
+
+      - name: Setup Python Runtime (for GxP Verification)
+        run: uv python install 3.14
 
       - name: Restore NuGet Packages
         run: dotnet restore Cadence.sln
@@ -46,9 +49,9 @@ jobs:
         run: dotnet test Cadence.sln --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
 
       - name: Validate Architecture Decision Records (ADRs)
-        run: python scripts/validate_adrs.py
+        run: uv run --python 3.14 python scripts/validate_adrs.py
 
       - name: Verify GxP Requirements Traceability (RTM Drift Check)
         run: |
-          python scripts/sync_gxp.py
+          uv run --python 3.14 python scripts/sync_gxp.py
           git diff --exit-code docs/SDLC/Requirements_Traceability_Matrix.md || (echo "::error::GxP RTM drift detected! Run 'python scripts/sync_gxp.py' locally and commit updated docs." && exit 1)
