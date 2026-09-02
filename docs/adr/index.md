@@ -14,7 +14,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-02: Migration to .NET 10 Architecture and Standards](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md)
 - [2026-08-28: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
 - [2026-08-28: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md)
-- [2026-08-28: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md)
+- [2026-08-28: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) *(Superseded by ADR-2234)*
 - [2026-08-28: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md)
 - [2026-08-28: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md)
 - [2026-08-28: Programmatic VitePress API Documentation Engine](2026-08-28-programmatic-vitepress-api-documentation-engine.md)
@@ -25,7 +25,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
-- [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md)
+- [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) *(Superseded by ADR-2234)*
 - [2026-08-22: Sovereign All-in-One eClinical Suite Expansion](2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md)
 - [2026-08-21: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md)
 - [2026-08-21: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md)
