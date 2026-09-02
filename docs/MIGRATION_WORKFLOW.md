@@ -246,3 +246,4 @@ Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly and 
 | **ADR Validation** | `python scripts/validate_adrs.py` | Validates ADR index formatting and requirement tags |
 | **GxP Compliance Sync** | `python scripts/sync_gxp.py` | Parses tests, extracts `@req` tags, and updates SDLC docs |
 | **Docker Dev Stack** | `docker compose --profile dotnet up -d` | Starts .NET container with hot reload and live datastores |
+
