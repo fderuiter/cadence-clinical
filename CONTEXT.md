@@ -4,6 +4,18 @@
 
 An enterprise boundary standard in Cadence .NET 10 microservices where domain entities, aggregates, and repository interfaces (Ports) reside in a dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly decoupled from external persistence (Adapters), HTTP presentation, or third-party infrastructure.
 
+### Dual-Stack GxP Traceability Pipeline
+
+A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across heterogeneous test runners during architectural migration. The pipeline inspects both legacy Python tests (pytest docstrings) and modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting combined JUnit and Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`).
+
+### Unified Pre-Commit Sentinel Gate
+
+A multi-runtime developer verification gate configured within `.pre-commit-config.yaml` and `.githooks/` that executes before any git commit is created. The gate enforces zero code-style drift via `dotnet format Cadence.sln --verify-no-changes`, validates Architectural Decision Record (ADR) index integrity via `python scripts/validate_adrs.py`, and scans for hardcoded secrets and boundary leaks across all C#, Python, and Vue assets.
+
+### Dotnet Tool Manifest Policy
+
+A repository governance standard enforcing deterministic developer CLI execution through `.config/dotnet-tools.json`. Local tool manifests ensure that all human engineers and autonomous AI agents invoke identical versions of developer utilities (including Entity Framework Core migration tooling `dotnet-ef` and the Cadence Developer CLI `Cadence.Cli`) without relying on ambient or unversioned global host installations.
+
 ### ASP.NET Core Minimal API Filter Chain
 
 A high-performance, Native AOT-compatible HTTP pipeline pattern utilizing `EndpointFilter` components (`IEndpointFilter`) to enforce cross-cutting GxP requirements—such as HMAC gateway signature verification, 21 CFR Part 11 electronic signature validation, and trace context propagation—prior to executing domain application handlers.
