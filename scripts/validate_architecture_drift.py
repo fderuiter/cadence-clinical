@@ -66,7 +66,9 @@ def get_active_services(compose_file: Path) -> list[str]:
                 # Service keys are indented by exactly two spaces and end with a colon
                 match = re.match(r"^  ([a-zA-Z0-9_-]+):", line)
                 if match:
-                    services.append(match.group(1))
+                    service_name = match.group(1)
+                    if service_name not in ("dotnet-dev",):
+                        services.append(service_name)
 
     return services
 

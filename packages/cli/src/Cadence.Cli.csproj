@@ -4,6 +4,8 @@
     <RootNamespace>Cadence.Cli</RootNamespace>
     <AssemblyName>cadence</AssemblyName>
     <Description>Native .NET 10 developer CLI and diagnostic tool for Cadence Clinical Research Software.</Description>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>cadence</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>

@@ -400,6 +400,29 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 str(REPO_ROOT / "report_qualification.xml"),
             ]
         )
+
+        # Run .NET test suites if dotnet is available
+        import shutil
+        if shutil.which("dotnet"):
+            try:
+                print("\n▶  dotnet test Cadence.sln --logger trx;LogFileName=report_dotnet.trx")
+                subprocess.run(
+                    [
+                        "dotnet",
+                        "test",
+                        "Cadence.sln",
+                        "--configuration",
+                        "Release",
+                        "--logger",
+                        "trx;LogFileName=report_dotnet.trx",
+                        "--filter",
+                        "Category!=Integration",
+                    ],
+                    cwd=REPO_ROOT,
+                    check=False,
+                )
+            except Exception as exc:
+                print(f"⚠ .NET test execution notice: {exc}")
     except subprocess.CalledProcessError:
         print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
         sys.exit(1)
