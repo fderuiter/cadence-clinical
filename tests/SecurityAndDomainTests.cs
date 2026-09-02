@@ -5,6 +5,7 @@ using FluentAssertions;
 using Xunit;
 
 using Cadence.Core.Domain;
+using Cadence.Core.Domain.Audit;
 using Cadence.Security;
 using Cadence.Testing;
 
@@ -77,5 +78,57 @@ public class SecurityAndDomainTests
         retrieved.VersionIndex.Should().Be(2);
         retrieved.ReasonForChange.Should().Be("Initial subject registration");
     }
-}
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions()
+    {
+        /// <summary>
+        /// Validates that Result monads encapsulate domain validation errors without runtime exception overhead.
+        /// @req:PRD-SYS-053
+        /// </summary>
+
+        // Arrange & Act
+        Result<string> successResult = Result<string>.Success("Subject enrolled successfully");
+        var error = DomainError.Validation("ERR_AGE_INVALID", "Subject must be at least 18 years of age");
+        Result<string> failureResult = Result<string>.Failure(error);
+
+        // Assert
+        successResult.IsSuccess.Should().BeTrue();
+        successResult.Value.Should().Be("Subject enrolled successfully");
+
+        failureResult.IsFailure.Should().BeTrue();
+        failureResult.Error.Should().NotBeNull();
+        failureResult.Error!.Code.Should().Be("ERR_AGE_INVALID");
+        failureResult.Error!.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor()
+    {
+        /// <summary>
+        /// Validates that AuditLogEntry computes deterministic SHA-256 Merkle hashes chained to predecessor blocks.
+        /// @req:PRD-SYS-053
+        /// </summary>
+
+        // Arrange
+        var timestamp = new DateTime(2026, 9, 2, 12, 0, 0, DateTimeKind.Utc);
+        const string predecessor = "genesis_block_hash_0000000000";
+
+        // Act
+        string hash1 = AuditLogEntry.ComputeBlockHash(
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":120}", predecessor);
+        string hash2 = AuditLogEntry.ComputeBlockHash(
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":120}", predecessor);
+        string alteredHash = AuditLogEntry.ComputeBlockHash(
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":125}", predecessor);
+
+        // Assert
+        hash1.Should().NotBeNullOrWhiteSpace();
+        hash1.Should().Be(hash2);
+        hash1.Should().NotBe(alteredHash);
+    }
+}
