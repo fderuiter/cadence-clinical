@@ -10,14 +10,14 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Position=0, Mandatory=$true)]
+    [Parameter(Position = 0, Mandatory = $true)]
     [ValidateSet("add", "script", "bundle", "apply", "list")]
     [string]$Action,
 
-    [Parameter(Position=1, Mandatory=$true)]
+    [Parameter(Position = 1, Mandatory = $true)]
     [string]$Service,
 
-    [Parameter(Position=2)]
+    [Parameter(Position = 2)]
     [string]$MigrationName
 )
 
@@ -78,3 +78,4 @@ switch ($Action) {
         & dotnet ef migrations list --project $projectPath
     }
 }
+

@@ -25,3 +25,4 @@ if [ -f "scripts/validate_adrs.py" ]; then
 fi
 
 echo "[Pre-Commit] All quality sentinels passed."
+
