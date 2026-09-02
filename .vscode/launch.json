@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Gateway (Port 8000)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/apps/gateway/src/Cadence.Apps.Gateway.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8000"
+      }
+    },
+    {
+      "name": "Launch Execution Engine (Port 8002)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/apps/execution/src/Cadence.Apps.Execution.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8002"
+      }
+    },
+    {
+      "name": "Launch Designer (Port 8001)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/apps/designer/src/Cadence.Apps.Designer.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8001"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Core Clinical Services (Gateway + Execution + Designer)",
+      "configurations": [
+        "Launch Gateway (Port 8000)",
+        "Launch Execution Engine (Port 8002)",
+        "Launch Designer (Port 8001)"
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Cadence.Cli</RootNamespace>
+    <AssemblyName>cadence</AssemblyName>
+    <Description>Native .NET 10 developer CLI and diagnostic tool for Cadence Clinical Research Software.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+  </ItemGroup>
+</Project>
+

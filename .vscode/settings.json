@@ -1,0 +1,22 @@
+{
+  "dotnet.defaultSolution": "Cadence.sln",
+  "csharp.format.enable": true,
+  "editor.formatOnSave": true,
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csdevkit",
+    "editor.formatOnSave": true
+  },
+  "csharp.inlayHints.enableForParameters": true,
+  "csharp.inlayHints.enableForLiteralParameters": true,
+  "csharp.inlayHints.enableForIndexerParameters": true,
+  "csharp.inlayHints.enableForObjectCreationParameters": true,
+  "csharp.inlayHints.enableForTypes": true,
+  "dotnet.server.useOmnisharp": false,
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.git": true,
+    "**/.venv": true
+  }
+}
+

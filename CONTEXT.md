@@ -16,6 +16,34 @@ A persistence-level regulatory guardrail implementing `ISaveChangesInterceptor` 
 
 A centralized dependency governance mechanism configured via `Directory.Packages.props` at the repository root that pins exact, audited NuGet package versions across all Cadence .NET solutions, preventing transitive dependency drift and securing the regulated software supply chain.
 
+### Central SDK Pinning (`global.json`)
+
+A repository-level developer environment policy declared in `global.json` at the solution root that locks the active .NET SDK version, enforces deterministic build toolchains across developer workstations and CI pipelines, and governs feature-band roll-forward rules under 21 CFR Part 11 software lifecycle requirements.
+
+### Hermetic .NET Multi-Stage Container
+
+A standardized development and deployment container pattern utilizing official Microsoft .NET 10 SDK and ASP.NET Core runtime base images, encapsulating ahead-of-time compilation, live `dotnet watch` code-reloading, and Native AOT target compatibility without host operating system dependencies.
+
+### Single-Assembly Clean Architecture
+
+A microservice packaging pattern where Domain entities, Application use cases, Infrastructure persistence adapters, and Minimal API Endpoints reside within a single project assembly (`Cadence.Apps.<Service>.csproj`) strictly partitioned by namespaces (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`). This pattern prevents multi-project solution bloat (avoiding 60+ assemblies), accelerates compilation, and supports Native AOT trimming while enforcing unidirectional dependency boundaries via static architectural sentinels.
+
+### Direct Typed Application Service Pattern
+
+An explicit dependency injection pattern where Minimal API endpoints directly invoke strongly-typed application service interfaces (`ISubjectApplicationService`) with primary constructor injection, eliminating reflection-based in-process mediator indirection (`MediatR`), maximizing Native AOT compile readiness, and ensuring transparent stack traces in OpenTelemetry distributed telemetry.
+
+### Transactional Outbox Pattern (MassTransit)
+
+A regulatory event consistency pattern where domain entity state mutations and outbound event messages are committed atomically into PostgreSQL within the same EF Core database transaction. A dedicated background bus dispatcher ensures at-least-once message delivery to downstream consumers, completely eliminating dual-write failure windows under 21 CFR Part 11.
+
+### Domain Result Pattern (RFC 7807)
+
+An error-handling architecture where domain operations return strongly-typed `Result<TValue, DomainError>` monads rather than throwing computational exceptions for predictable business validation failures. Minimal API endpoints map failure cases directly to standard RFC 7807 `ProblemDetails` HTTP responses, reserving exceptions strictly for unhandled infrastructure faults handled by `IExceptionHandler`.
+
+### Merkle-Chained Audit Interceptor
+
+A persistence-level cryptographic audit pattern implemented via EF Core `ISaveChangesInterceptor` that computes monotonic SHA-256 digests over entity mutation property deltas, chaining each audit entry to the predecessor hash block and writing synchronously to an immutable `AuditLogEntry` ledger table within the active database transaction.
+
 ### Hybrid CQRS & Query Services Pattern
 
 An architectural separation pattern where strict Domain Repository Ports govern domain entity state mutations and transactional invariants (Commands), while specialized, high-throughput Read-Model Query Services perform direct, read-only SQL projections and batch extractions (e.g. CDISC SDTM/ADaM datasets, cross-domain eCRF anomaly scans, and GxP audit ledger verification) without loading full domain entities into memory.

@@ -1,0 +1,45 @@
+# ==============================================================================
+# Cadence Clinical Research Software — .NET 10 Hermetic Development & Build Container
+# Requirements: PRD-SYS-053, ADR-2233
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Base Development & SDK Stage
+# ------------------------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-bookworm-slim AS dev
+
+# Install curl, git, procps for developer introspection
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    procps \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install global tools in container
+ENV PATH="$PATH:/root/.dotnet/tools"
+RUN dotnet tool install --global dotnet-ef --version 10.0.0-preview* || true \
+    && dotnet tool install --global dotnet-format || true
+
+WORKDIR /workspace
+
+# Copy solution files first to leverage Docker layer caching
+COPY Cadence.sln Directory.Build.props Directory.Packages.props .editorconfig global.json ./
+
+# Expose standard Cadence microservice ports
+EXPOSE 8000 8001 8002
+
+# Default command for development: watch and hot-reload Gateway
+CMD ["dotnet", "watch", "--project", "apps/gateway/src/Cadence.Apps.Gateway.csproj", "run"]
+
+# ------------------------------------------------------------------------------
+# 2. Production Native AOT / Trimmed Runtime Stage
+# ------------------------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-bookworm-slim AS runtime
+
+WORKDIR /app
+USER app
+
+EXPOSE 8000
+ENTRYPOINT ["dotnet"]
+
