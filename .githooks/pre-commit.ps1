@@ -18,7 +18,8 @@ if ($dotnet) {
             Write-Host "::error:: C# formatting violations detected! Run 'dotnet format Cadence.sln' to auto-fix." -ForegroundColor Red
             exit 1
         }
-    } catch {
+    }
+    catch {
         Write-Host "::error:: Failed checking dotnet format." -ForegroundColor Red
         exit 1
     }
@@ -36,3 +37,4 @@ if (Test-Path "scripts\validate_adrs.py") {
 
 Write-Host "[Pre-Commit] All quality sentinels passed." -ForegroundColor Green
 exit 0
+
