@@ -16,7 +16,7 @@
   "dependencies": {
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
-    "vue": "^3.5.41"
+    "vue": "^3.5.42"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
