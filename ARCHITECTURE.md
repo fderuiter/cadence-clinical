@@ -345,15 +345,35 @@ Cadence enforces rigorous regulatory controls across all transactions:
 
 ---
 
-## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233)
+## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233 / ADR-2234)
 
-Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), Cadence is executing a clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
+Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), Cadence is executing a clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
 
 ### A. Architectural Pillars
-1. **ASP.NET Core 10 Minimal APIs**: High-performance endpoint groups (`app.MapGroup(...)`) using `IEndpointFilter` for cross-cutting GxP security, HMAC signature verification, and correlation context propagation.
-2. **Entity Framework Core 10 (Npgsql)**: PostgreSQL persistence with compiled models, mandatory `.AsNoTracking()` for read queries, and `ISaveChangesInterceptor` for immutable 21 CFR Part 11 audit trails.
-3. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
-4. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
-5. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, and `System.Text.Json` source generator contexts.
-6. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+1. **Single-Assembly Clean Architecture**: Each microservice is organized into internal namespace layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) avoiding multi-assembly compilation bloat while enforcing strict directional dependencies.
+2. **ASP.NET Core 10 Minimal APIs**: High-performance endpoint groups (`app.MapGroup(...)`) using `IEndpointFilter` for cross-cutting GxP security, HMAC signature verification, and correlation context propagation.
+3. **Entity Framework Core 10 + GxP Interceptor**: PostgreSQL persistence with compiled models, mandatory `.AsNoTracking()` for read queries, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing for immutable 21 CFR Part 11 audit trails.
+4. **Transactional Outbox & Event Spine**: MassTransit with PostgreSQL transactional outbox guaranteeing atomic database state commits and outbound domain events.
+5. **Cross-Service Typed Contracts (`Cadence.Contracts`)**: Strongly-typed DTO records and `IHttpClientFactory` typed clients configured with `Polly` exponential backoff and circuit breaker pipelines.
+6. **Architecture Sentinels (`ArchUnitNET`)**: Automated tests in `tests/Cadence.ArchitectureTests.csproj` asserting domain purity and mandatory `IGxPAuditable` implementation at build time.
+7. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
+8. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
+9. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, `Result<TValue, DomainError>` monads, and `System.Text.Json` source generator contexts.
+10. **Interactive Developer Wizards**: Cross-platform wizards for onboarding (`setup_dotnet_wizard`), scaffolding (`migrate_service_wizard`), and decommissioning legacy Python (`decommission_service_wizard`).
+11. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+
+### B. Microservice Port & Architecture Blueprint
+
+| Service | .NET 10 Host Project | Port | Primary Datastore | Target Migration Phase |
+| :--- | :--- | :--- | :--- | :--- |
+| **API Gateway** | `Cadence.Apps.Gateway` | `8000` | HMAC Router / OIDC | Phase 1 (Tracer Bullet) |
+| **Protocol Designer** | `Cadence.Apps.Designer` | `8001` | Neo4j (USDM v3/v4) | Phase 1 (Tracer Bullet) |
+| **EDC Execution** | `Cadence.Apps.Execution` | `8002` | PostgreSQL (EF Core 10) | Phase 1 (Tracer Bullet) |
+| **eTMF** | `Cadence.Apps.Etmf` | `8003` | PostgreSQL + S3/MinIO | Phase 2 (Operations) |
+| **Interoperability** | `Cadence.Apps.Interop` | `8004` | PostgreSQL (FHIR/ODM) | Phase 3 (Integrations) |
+| **Quality & CAPA** | `Cadence.Apps.Quality` | `8005` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+| **Notifications** | `Cadence.Apps.Notifications` | `8006` | PostgreSQL / SMTP | Phase 3 (Integrations) |
+| **CTMS** | `Cadence.Apps.Ctms` | `8007` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+| **Safety & PV** | `Cadence.Apps.Safety` | `8008` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+
 
