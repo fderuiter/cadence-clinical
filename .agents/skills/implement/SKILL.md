@@ -1,76 +1,81 @@
 ---
 name: implement
-description: "Implement a feature, bug fix, or refactor with strict adherence to Cadence coding standards, GxP traceability, and automated quality gates. Use when implementing approved plans, specs, or tickets."
+description: "Implement a feature, bug fix, or refactor with strict adherence to Cadence .NET 10 coding standards, GxP traceability, and automated quality gates. Use when implementing approved plans, specs, or tickets."
 license: MIT
 metadata:
   author: Cadence Team
-  version: "2.0"
+  version: "3.0"
 ---
 
-# Cadence Implementation Workflow
+# Cadence Implementation Workflow (.NET 10 / C# 14)
 
-Executes code implementation tasks with strict adherence to repository standards, 21 CFR Part 11 requirements, and Antigravity artifact reporting using Antigravity code, task, and verification tools.
+Executes code implementation tasks adhering to .NET 10 Clean Architecture standards, 21 CFR Part 11 requirements, and automated quality gates.
 
 ## Antigravity Tool Execution Matrix
 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
-| **Context Review** | `find_by_name` / `view_file` | Read relevant spec, models, and tests via `AbsolutePath` | Map dependencies and domain invariants |
-| **Surgical Editing** | `replace_file_content` | Target: production file, single contiguous chunk | Implement changes with strict typing and E712/I001 compliance |
-| **File Creation** | `write_to_file` | Target: new module/test, with complete contents | Scaffold new services, endpoints, or test suites |
-| **Quality Remediation**| `run_command` | `CommandLine="uv run cadence fix --all"`, `WaitMsBeforeAsync=5000` | Auto-format and sort imports |
-| **Fast Verification** | `run_command` | `CommandLine="uv run cadence test --fast"`, `WaitMsBeforeAsync=10000` | Run unit tests across 10 workers |
-| **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Track long-running test execution |
-| **Sentinels Check** | `run_command` | `CommandLine="uv run cadence check --parallel"` | Concurrently run all 10 quality gates |
-| **Compliance Sync** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"` | Sync RTM and IQ/OQ/PQ execution reports |
-| **Walkthrough Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md` | Emit structured completion artifact with file links |
+| **Context Review** | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath` | Map dependencies and domain invariants |
+| **Surgical Editing** | `replace_file_content` | Target: C# file, single contiguous chunk | Implement changes with strict nullable typing |
+| **File Creation** | `write_to_file` | Target: new module/test, with complete contents | Scaffold new records, services, or test suites |
+| **Format Check** | `run_command` | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000` | Verify .editorconfig styling |
+| **Auto-Remediate** | `run_command` | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000` | Auto-format whitespace & namespace order |
+| **Fast Tests** | `run_command` | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000` | Run fast unit tests |
+| **Architecture Sentinels** | `run_command` | `CommandLine="dotnet test tests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity |
+| **Compliance Sync** | `run_command` | `CommandLine="python scripts/sync_gxp.py"` | Sync RTM and IQ/OQ/PQ execution reports |
+| **Walkthrough Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md` | Emit completion artifact with file links |
 
 ---
 
 ## 1. Pre-Implementation Review
-- Read the relevant spec, ticket, or plan.
-- Check [`CONTEXT.md`](../../../../CONTEXT.md) for canonical domain terminology.
-
-- Identify the target directories:
-  - `apps/designer/`: Study authoring / MDR / Neo4j logic.
-  - `apps/execution/`: Data capture / eCRF / PostgreSQL logic.
-  - `apps/gateway/`: OIDC Auth & API routers.
-  - `apps/web/`: Frontend Vue 3 views (Vanilla CSS design tokens, no Tailwind).
-  - `packages/`: Reusable cross-app packages (`packages.testing`, `packages.security`).
-
----
-
-## 2. Implementation Execution
-
-### MANDATORY TOOL INVOCATION (`replace_file_content` / `write_to_file`)
-- Make surgical, cohesive edits using `replace_file_content` (never full-file overwrite for existing files).
-- Use `write_to_file` only when creating brand new modules or session artifacts.
-- Follow critical patterns:
-  - **E712 Boolean Filters**: Always use `.is_(True)` / `.is_(False)` in SQLAlchemy queries.
-  - **I001 Import Ordering**: Standard library → third-party → first-party, strictly sorted alphabetically.
-  - **PEP 695 Generics**: Use native syntax (`class Repository[T]: ...`).
-  - **Frontend Tokens**: Use semantic CSS variables (`var(--primary)`, `var(--surface)`).
-  - **@req: Docstrings**: Add requirement tags (`@req:PRD-SYS-xxx`) to all new/modified test functions.
-- If scope trade-offs or breaking changes arise during implementation, pause and invoke `ask_question`.
+- Consult [`docs/MIGRATION_WORKFLOW.md`](../../../../docs/MIGRATION_WORKFLOW.md) and [`CONTEXT.md`](../../../../CONTEXT.md).
+- Target directories:
+  - `apps/designer/`: Protocol design / CDISC USDM / Neo4j graph.
+  - `apps/execution/`: EDC runtime / eCRF observations / PostgreSQL EF Core 10.
+  - `apps/gateway/`: YARP reverse proxy, OIDC, and HMAC authentication.
+  - `packages/contracts/`: Shared cross-service DTOs and Polly HTTP clients.
+  - `packages/engine_core/`: Core domain aggregates, `IGxPAuditable`, and `Result<T>`.
+  - `packages/testing/`: Centralized test fakes and fixtures.
+  - `packages/security/`: HMAC token signing and verification.
 
 ---
 
-## 3. Mandatory Quality Gate Sequence (MANDATORY TOOL: `run_command`)
+## 2. Implementation Execution Standards
 
-Before concluding any implementation turn, execute the four quality gates:
+### C# 14 / .NET 10 Coding Rules
+1. **File-Scoped Namespaces**: Always use `namespace Cadence.<Layer>;`.
+2. **Using Directives Ordering**:
+   - `System` and `System.*` (alphabetical)
+   - Third-party packages (alphabetical)
+   - First-party `Cadence.*` packages (alphabetical)
+3. **Immutability & Nullability**:
+   - `<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` are active.
+   - Use `record` types with primary constructors and `init` properties.
+   - Return `Result<TValue, DomainError>` monads; avoid throwing exceptions for domain logic.
+4. **Entity Framework Core 10**:
+   - Apply `.AsNoTracking()` to all query-only read operations.
+   - Attach `GxPAuditInterceptor` on mutating `DbContext` instances to compute SHA-256 Merkle block hashes.
+5. **Mandatory 21 CFR Part 11 Traceability**:
+   - Annotate all test methods with XML doc comments (`/// @req:PRD-SYS-xxx`) and `[GxPRequirement("PRD-SYS-xxx")]` attributes.
+
+---
+
+## 3. Mandatory Quality Gate Sequence
+
+Before concluding any implementation turn, execute the quality gates:
 
 ```bash
-# 1. Auto-remediate formatting and import ordering
-uv run cadence fix --all
+# 1. Format code according to .editorconfig
+dotnet format Cadence.sln
 
-# 2. Run fast unit and integration tests
-uv run cadence test --fast
+# 2. Build solution in Release configuration
+dotnet build Cadence.sln --configuration Release
 
-# 3. Run all 10 architecture and compliance sentinels
-uv run cadence check --parallel
+# 3. Verify architecture sentinels and unit tests
+dotnet test Cadence.sln
 
-# 4. Sync GxP Traceability Matrix & Execution Report
-uv run python scripts/sync_gxp.py
+# 4. Synchronize GxP requirements matrix
+python scripts/sync_gxp.py
 ```
 
 ---
@@ -80,6 +85,4 @@ uv run python scripts/sync_gxp.py
 Record changes in `<appDataDir>/brain/<conversation-id>/walkthrough.md` via `write_to_file`:
 - Multi-component summary of files created/modified with clickable `[basename](file:///path/to/file)` links.
 - Verification results table showing test outcomes and sentinel checks.
-- Key GxP requirement IDs satisfied.
-
-
+- Key GxP requirement IDs satisfied (`PRD-SYS-xxx`).
