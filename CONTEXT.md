@@ -1,5 +1,21 @@
 # Clinical Domain Glossary
 
+### .NET 10 Clean Architecture Port
+
+An enterprise boundary standard in Cadence .NET 10 microservices where domain entities, aggregates, and repository interfaces (Ports) reside in a dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly decoupled from external persistence (Adapters), HTTP presentation, or third-party infrastructure.
+
+### ASP.NET Core Minimal API Filter Chain
+
+A high-performance, Native AOT-compatible HTTP pipeline pattern utilizing `EndpointFilter` components (`IEndpointFilter`) to enforce cross-cutting GxP requirements—such as HMAC gateway signature verification, 21 CFR Part 11 electronic signature validation, and trace context propagation—prior to executing domain application handlers.
+
+### EF Core SaveChanges Audit Interceptor
+
+A persistence-level regulatory guardrail implementing `ISaveChangesInterceptor` in Entity Framework Core 10 that automatically inspects entity state changes, enforces non-nullable GxP audit fields (`CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex`), computes SHA-256 Merkle hashes, and writes immutable shadow audit ledger entries synchronously within the database transaction.
+
+### Central Package Management (CPM)
+
+A centralized dependency governance mechanism configured via `Directory.Packages.props` at the repository root that pins exact, audited NuGet package versions across all Cadence .NET solutions, preventing transitive dependency drift and securing the regulated software supply chain.
+
 ### Hybrid CQRS & Query Services Pattern
 
 An architectural separation pattern where strict Domain Repository Ports govern domain entity state mutations and transactional invariants (Commands), while specialized, high-throughput Read-Model Query Services perform direct, read-only SQL projections and batch extractions (e.g. CDISC SDTM/ADaM datasets, cross-domain eCRF anomaly scans, and GxP audit ledger verification) without loading full domain entities into memory.

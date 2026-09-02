@@ -356,8 +356,7 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
     valid_reqs = compliance_utility.get_valid_requirements()
 
     try:
-        with open(INDEX_FILE) as f:
-            index_content = f.read()
+        with open(INDEX_FILE, encoding="utf-8") as f:
     except Exception as e:
         print(f"Error reading {INDEX_FILE}: {e}")
         return False
@@ -405,9 +404,8 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
 
             # 3. Read file and check contents
             try:
-                with open(filepath) as f:
+                with open(filepath, encoding="utf-8") as f:
                     content = f.read()
-            except Exception as e:
                 print(f"Error reading {filepath}: {e}")
                 all_passed = False
                 continue
@@ -488,10 +486,9 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
 
             # 3. Read file and check contents
             try:
-                with open(filepath) as f:
+                with open(filepath, encoding="utf-8") as f:
                     content = f.read()
             except Exception as e:
-                print(f"Error reading {filepath}: {e}")
                 all_passed = False
                 continue
 

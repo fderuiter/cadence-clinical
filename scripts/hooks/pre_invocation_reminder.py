@@ -15,10 +15,10 @@ from typing import Any
 
 GXP_EPHEMERAL_REMINDER = (
     "GxP Sentinel (PRD-SYS-053): Enforce 21 CFR Part 11 standards across all changes: "
-    "1) Use .is_(True)/.is_(False) for SQLAlchemy boolean filters (E712), "
-    "2) Sort imports alphabetically (I001), "
-    "3) Add @req: tags to all test docstrings, and "
-    "4) Sync compliance docs via 'uv run python scripts/sync_gxp.py'."
+    "1) Adhere to C# 14 / .NET 10 target standards (file-scoped namespaces, nullable enabled), "
+    "2) Sort using directives (System first, then alphabetical), "
+    "3) Add @req: and [GxPRequirement] to all test docstrings/attributes, and "
+    "4) Sync compliance docs via 'python scripts/sync_gxp.py'."
 )
 
 

@@ -13,17 +13,15 @@ quality gates, and CI failure recovery procedures.
 
 The most common commands you will reach for day-to-day (via the unified Cadence CLI or Make):
 
-| Task                               | Primary CLI (`cadence`)               | Make / Shortcut |
-| :--------------------------------- | :------------------------------------ | :-------------- |
-| Interactive Dev TUI Cockpit        | `uv run cadence dev --tui`            | `make dev`      |
-| Test Watcher (auto-retest on edit) | `uv run cadence test --watch`         | —               |
-| Fast Unit Tests (sub-second)       | `uv run cadence test --fast`          | —               |
-| Auto-Fix Lint, Format & Schemas    | `uv run cadence fix --all`            | `make fix`      |
-| Quality Gates (10 sentinels)       | `uv run cadence check --parallel`     | `make check`    |
-| Diagnostic Auto-Healing            | `uv run cadence doctor --auto-fix`    | `make doctor`   |
-| Sync GxP Compliance Docs           | `uv run cadence gxp sync`             | `make sync-gxp` |
-| Seed Multi-Engine DB Scenarios     | `uv run cadence db seed --tier full`  | `make seed`     |
-| Scaffold New ADR                   | `uv run cadence scaffold adr "Title"` | `make adr`      |
+| Task                               | .NET 10 / CLI Command                 | Description / Shortcut |
+| :--------------------------------- | :------------------------------------ | :--------------------- |
+| Build Entire Solution              | `dotnet build Cadence.sln`            | Compiles all projects under net10.0 |
+| Fast Unit Tests                    | `dotnet test --filter "Category!=Integration"` | Sub-second unit tests across projects |
+| Integration Tests (PG / Neo4j)     | `dotnet test --filter "Category=Integration"`  | Runs tests with Testcontainers |
+| Code Style & Formatting            | `dotnet format --verify-no-changes`   | Validates .editorconfig & Roslyn rules |
+| Sync GxP Compliance Docs           | `python scripts/sync_gxp.py`          | `make sync-gxp`        |
+| Scaffold New ADR                   | `python scripts/create_adr.py --title "Title"` | `make adr`             |
+| Seed Multi-Engine DB Scenarios     | `dotnet cadence db seed --tier full`  | Multi-engine test fixtures |
 
 ---
 

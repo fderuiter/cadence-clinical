@@ -108,7 +108,7 @@ def evaluate_file_mutation_safety(target_file: str) -> tuple[bool, str | None]:
             return (
                 False,
                 f"GxP Compliance Guardrail: Direct manual editing of '{locked}' is prohibited. "
-                "Regenerate automatically via 'uv run python scripts/sync_gxp.py'.",
+                "Regenerate automatically via 'python scripts/sync_gxp.py'.",
             )
 
     return True, None
