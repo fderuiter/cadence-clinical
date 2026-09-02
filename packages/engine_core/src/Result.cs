@@ -78,3 +78,4 @@ public readonly record struct Result<TValue>
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<DomainError, TResult> onFailure) =>
         IsSuccess ? onSuccess(Value!) : onFailure(Error!);
 }
+

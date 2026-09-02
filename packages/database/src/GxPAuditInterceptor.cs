@@ -53,3 +53,4 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider) : SaveChanges
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 }
+
