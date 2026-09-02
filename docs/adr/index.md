@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-09-02: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 - [2026-09-02: Migration to .NET 10 Architecture and Standards](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md)
 - [2026-08-28: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
 - [2026-08-28: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md)

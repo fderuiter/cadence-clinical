@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Testing</RootNamespace>
+    <Description>Centralized test infrastructure, in-memory repository fakes, GxP requirement attributes, and factories.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
+  </ItemGroup>
+</Project>
+
