@@ -341,4 +341,19 @@ Cadence enforces rigorous regulatory controls across all transactions:
 2. **HMAC-SHA256 Inter-Service Gateway Signatures**: Downstream services reject unauthenticated internal requests lacking valid `X-Gateway-Signature` headers.
 3. **60-Second Signature Step-Up Re-Authentication**: High-stakes mutations (PI batch sign-offs, subject randomization, unblinding) require re-entering password + TOTP to receive a short-lived `sig_token`.
 4. **Monotonic SHA-256 Audit Chaining**: Every mutating transaction records `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic hash digest chained to its predecessor.
-5. **Strict Boolean Filters (E712)**: Prevents SQL emission discrepancies on nullable boolean columns via `.is_(True)` and `.is_(False)`.
+5. **Strict Boolean Filters (E712 / EF Core)**: Prevents SQL emission discrepancies on nullable boolean columns via `.is_(True)` / `.is_(False)` in legacy Python and strongly-typed predicate evaluations in EF Core 10.
+
+---
+
+## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233)
+
+Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), Cadence is executing a clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
+
+### A. Architectural Pillars
+1. **ASP.NET Core 10 Minimal APIs**: High-performance endpoint groups (`app.MapGroup(...)`) using `IEndpointFilter` for cross-cutting GxP security, HMAC signature verification, and correlation context propagation.
+2. **Entity Framework Core 10 (Npgsql)**: PostgreSQL persistence with compiled models, mandatory `.AsNoTracking()` for read queries, and `ISaveChangesInterceptor` for immutable 21 CFR Part 11 audit trails.
+3. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
+4. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
+5. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, and `System.Text.Json` source generator contexts.
+6. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+
