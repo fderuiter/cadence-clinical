@@ -221,14 +221,35 @@ public class SubjectRegistrationTests
 
 ---
 
-### Step 6: Regulatory Traceability Synchronization
-After adding or modifying tests, regenerate the Requirements Traceability Matrix (RTM):
+### Step 6: Regulatory Traceability & Documentation Synchronization
 
+Regulatory compliance under 21 CFR Part 11 requires that all architectural evolutions, domain models, and test assertions stay synchronized across documentation without drift:
+
+#### 6.1: GxP Traceability Matrix Sync
+After adding or modifying tests, parse test execution output and regenerate the Requirements Traceability Matrix:
 ```bash
 python scripts/sync_gxp.py
 ```
+Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements.
 
-Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly and commit all changes.
+#### 6.2: Legacy ADR Supersession & Index Updating
+When transcribing a service or pattern that supersedes a prior architectural decision:
+1. Locate the legacy ADR in `docs/adr/`.
+2. Update the status header:
+   ```markdown
+   * **Status:** Superseded by [ADR-XXXX](path-to-new-adr.md)
+   ```
+3. Add a standard supersession notice callout at the top:
+   ```markdown
+   > [!NOTE]
+   > **Superseded Notice (YYYY-MM-DD):** This record documented the legacy Python implementation. As of YYYY-MM-DD, it has been formally superseded for .NET 10 by [ADR-XXXX](path-to-new-adr.md). Refer to `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
+   ```
+4. Annotate the listing in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
+5. Validate via `python scripts/validate_adrs.py` to confirm zero broken links or invalid tags.
+
+#### 6.3: System Architecture & Domain Glossary Sync
+1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect .NET 10 Minimal APIs, active port, and EF Core / Neo4j persistence drivers.
+2. **`CONTEXT.md`**: Refine domain terms to reflect C# 14 / .NET 10 implementation patterns and primary constructor models.
 
 ---
 
