@@ -47,6 +47,8 @@ The Cadence platform has executed a clean-break architectural migration to **.NE
 
 ## Python Reference & Transcription Matrix
 
+> **Authoritative Playbook:** For the end-to-end 6-step service transcription recipe, project templates, and migration sequence, refer to `docs/MIGRATION_WORKFLOW.md`.
+
 When transcribing existing Python modules into .NET 10 C# implementations, agents must strictly follow these direct paradigm equivalents:
 
 | Python 3.14+ (Reference Pattern) | .NET 10 / C# 14 (Target Standard) | Migration Rule |

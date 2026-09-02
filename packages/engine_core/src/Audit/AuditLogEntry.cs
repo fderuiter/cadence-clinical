@@ -40,3 +40,4 @@ public sealed class AuditLogEntry
         return Convert.ToHexStringLower(hash);
     }
 }
+
