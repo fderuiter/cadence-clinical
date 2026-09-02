@@ -24,7 +24,7 @@ To address these requirements, Cadence is executing a clean-break architectural 
 ## 2. Decision Drivers & Constraints
 
 * **Performance & Concurrency:** Microservice operations must satisfy strict internal SLAs (<100ms cross-service, <10ms database round-trips) under concurrent EDC site submissions.
-* **GxP Compliance (PRD-SYS-053):** 21 CFR Part 11 and ICH GCP E6(R2) compliance requires non-repudiation, cryptographic block sealing, and deterministic requirement traceability (`@req:PRD-SYS-xxx`).
+* **GxP Compliance (PRD-SYS-053):** 21 CFR Part 11 and ICH GCP E6(R2) compliance requires non-repudiation, cryptographic block sealing, and deterministic requirement traceability (`@req:PRD-SYS-053`).
 * **Developer & Agent Ergonomics:** AI coding agents and human engineers require unambiguous coding standards, strong compiler diagnostics, and standardized project layout.
 * **CDISC Standards Fidelity:** High-throughput processing and serialization of CDISC USDM v3/v4 protocol models and ODM XML/JSON datasets.
 
@@ -85,7 +85,7 @@ To address these requirements, Cadence is executing a clean-break architectural 
    - CLI Tooling: Transition developer commands from `uv run cadence` to native `dotnet cadence` (`Cadence.Cli`) built with `Spectre.Console`.
 
 5. **GxP Traceability:**
-   - Test methods must feature both XML doc comments (`/// <summary> @req:PRD-SYS-xxx </summary>`) and strongly-typed compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+   - Test methods must feature both XML doc comments (`/// <summary> @req:PRD-SYS-053 </summary>`) and strongly-typed compile-time attributes (`[GxPRequirement("PRD-SYS-053")]`).
    - Automated sync tools (`scripts/sync_gxp.py`) will ingest `.trx` and JUnit XML test reports from `dotnet test`.
 
 ---
