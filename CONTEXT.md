@@ -880,6 +880,47 @@ _Avoid_: Fixed-row static tables or unstructured text fields for longitudinal mu
 A clinical input field binding that integrates directly with MedDRA and WHODrug terminology APIs, auto-suggesting standardized medical terms and recording hierarchical SOC, PT, and ATC classification codes in real time during investigator data entry.
 _Avoid_: Post-study batch manual dictionary coding workflows delaying clinical database lock
 
+### Single-Assembly Clean Architecture
+
+A microservice organizational structure that packages internal architectural layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) into a single C# 14 compilation assembly per service, eliminating multi-assembly solution bloat while maintaining strict inward dependency direction.
+_Avoid_: Creating 4–5 separate assembly projects per microservice, which explodes solution load times and complicates Native AOT packaging.
+
+### Transactional Outbox Pattern (MassTransit & EF Core)
+
+A distributed event publishing mechanism that persists domain events into an outbox table within the exact same database transaction as the clinical state mutation, guaranteed to publish events to downstream consumers via MassTransit without message loss during network partitions or broker outages.
+_Avoid_: Direct synchronous cross-service HTTP calls during database transactions or dual-write inconsistencies.
+
+### Architecture Sentinels (ArchUnitNET)
+
+Automated build- and test-time unit tests that introspect compiled C# assemblies to mathematically assert Clean Architecture layer purity (e.g. `Domain` having zero dependencies on `Infrastructure` or `Endpoints`) and regulatory compliance (e.g. mandatory `IGxPAuditable` interfaces on mutating aggregate roots).
+_Avoid_: Relying exclusively on manual pull request reviews to catch architectural erosion and boundary leaks.
+
+### Cross-Service Typed API Contracts (Cadence.Contracts)
+
+A shared contract library containing canonical DTO records and strongly-typed HTTP client interfaces (`IHttpClientFactory`) configured with Polly resilience policies (exponential backoff, circuit breaking), eliminating brittle string-based URLs and unvalidated JSON payloads across internal microservice boundaries.
+_Avoid_: Ad-hoc, hardcoded string URLs and raw untyped HTTP clients in individual service codebases.
+
+### Interactive Developer Wizards (Cadence.Cli Wizard)
+
+Cross-platform interactive terminal wizards (`dotnet cadence wizard ...`) guiding developers and AI coding agents through multi-step operational tasks, including local environment onboarding, microservice scaffolding, and legacy Python decommissioning.
+_Avoid_: Manual, error-prone multi-step terminal procedures without interactive prompts and validation guards.
+
+### Idempotent Database Migration Bundle
+
+A self-contained, executable database migration binary or idempotent SQL script generated via `scripts/manage_migrations.ps1` that can be safely executed against any target PostgreSQL database multiple times without re-applying migrations or producing duplicate schema state.
+_Avoid_: Manual manual SQL execution or un-versioned database changes bypassing 21 CFR Part 11 qualification.
+
+### 4-Step Service Decommissioning Protocol ("Clearing Out the Old")
+
+A regulated decommissioning lifecycle for retiring legacy Python services upon .NET 10 transcription completion, enforcing: 1) behavioral schema parity and 100% `@req` test passing, 2) gateway reverse proxy route cutover, 3) interactive safety confirmation before permanently deleting legacy Python directories, and 4) unlinking from workspace members.
+_Avoid_: Leaving orphaned, unmaintained Python source files and dual-runtime technical debt in the repository.
+
+### ADR Supersession Lifecycle
+
+A formal documentation governance protocol in which legacy architectural decisions are officially linked to their .NET 10 successors, updating their status header to `Superseded by [ADR-XXXX](...)`, attaching an explicit deprecation callout, and synchronizing the master index in `docs/adr/index.md`.
+_Avoid_: Leaving obsolete architectural decisions marked as "Accepted", causing confusion for engineers and AI agents.
+
+
 
 
 

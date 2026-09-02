@@ -17,11 +17,16 @@ The most common commands you will reach for day-to-day (via the unified Cadence 
 | :--------------------------------- | :------------------------------------ | :--------------------- |
 | Build Entire Solution              | `dotnet build Cadence.sln`            | Compiles all projects under net10.0 |
 | Fast Unit Tests                    | `dotnet test --filter "Category!=Integration"` | Sub-second unit tests across projects |
+| Architecture Sentinels             | `dotnet test tests/Cadence.ArchitectureTests.csproj` | Verifies Clean Architecture purity via ArchUnitNET |
 | Integration Tests (PG / Neo4j)     | `dotnet test --filter "Category=Integration"`  | Runs tests with Testcontainers |
 | Code Style & Formatting            | `dotnet format --verify-no-changes`   | Validates .editorconfig & Roslyn rules |
+| Developer Onboarding Wizard        | `dotnet cadence wizard onboarding`    | Guided setup for SDK, certs, datastores, .env |
+| Microservice Migration Wizard      | `dotnet cadence wizard migrate <name>`| Interactive Clean Architecture scaffolding |
+| Service Decommission Wizard        | `dotnet cadence wizard decommission <name>` | Guided 4-step legacy Python retirement |
+| Manage Database Migrations         | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Manages EF Core PostgreSQL migrations |
 | Sync GxP Compliance Docs           | `python scripts/sync_gxp.py`          | `make sync-gxp`        |
 | Scaffold New ADR                   | `python scripts/create_adr.py --title "Title"` | `make adr`             |
-| Seed Multi-Engine DB Scenarios     | `dotnet cadence db seed --tier full`  | Multi-engine test fixtures |
+| Activate Git Pre-Commit Hooks      | `git config core.hooksPath .githooks` | Enforces format and ADR checks on commit |
 
 ---
 

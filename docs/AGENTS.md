@@ -37,10 +37,14 @@ The Cadence platform has executed a clean-break architectural migration to **.NE
 | Data capture / eCRF logic      | `apps/execution/`                                                                          |
 | OIDC Auth & Gateway routers    | `apps/gateway/`                                                                            |
 | Shared Domain & Core Ports     | `packages/engine_core/`, `packages/core-models/`                                            |
+| Cross-Service API Contracts    | `packages/contracts/`                                                                      |
 | Security & Gateway HMAC Tokens | `packages/security/`                                                                       |
 | Centralized Test Fakes         | `packages/testing/`                                                                        |
-| Unit & integration tests       | `tests/`                                                                                   |
+| Unit & Architecture Tests      | `tests/` (`Cadence.UnitTests`, `Cadence.ArchitectureTests`)                                |
+| Developer CLI & Interactive Wizards | `packages/cli/`, `scripts/`                                                           |
+| Git Pre-Commit Quality Gates   | `.githooks/`                                                                               |
 | Architecture Decision Records  | `docs/adr/`                                                                                |
+| Migration Playbook             | `docs/MIGRATION_WORKFLOW.md`                                                               |
 | GxP compliance docs            | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`)                      |
 
 ---
@@ -225,6 +229,54 @@ To ensure proper GxP boundaries across microservices:
 
 ---
 
+### 8. Architecture Unit Tests (`ArchUnitNET`) & Boundary Purity
+
+Clean Architecture layers must maintain strict directional dependency flow:
+- `Domain/` (and `Cadence.Core.Domain`) must have **zero** dependencies on `Infrastructure/`, `Endpoints/`, `Microsoft.AspNetCore`, or database drivers (`Npgsql`, `EntityFrameworkCore`).
+- `Application/` depends only on `Domain/` and core ports; it must never reference `Endpoints/` or UI presentation logic.
+- Every mutating entity must implement `IGxPAuditable`.
+- Layer purity is enforced at build/test time via `tests/Cadence.ArchitectureTests.csproj`.
+
+---
+
+### 9. Cross-Service Communication via Typed Contracts (`Cadence.Contracts`)
+
+Cross-service HTTP requests must never use raw, unvalidated string URLs:
+- All service-to-service DTOs and client interfaces (e.g. `IExecutionApiClient`) must reside in `packages/contracts/`.
+- Typed clients must be registered in DI using `IHttpClientFactory` and configured with `Polly` exponential backoff and transient circuit breakers.
+- Every cross-service request must carry HMAC signatures generated via `Cadence.Security.Signing.HmacSigner`.
+
+---
+
+### 10. Database Schema Migrations & Tooling (`scripts/manage_migrations.ps1`)
+
+Entity Framework Core migrations must follow a disciplined, audited change management protocol:
+- Use `powershell .\scripts\manage_migrations.ps1 add <service> <MigrationName>` to generate migrations under `Infrastructure/Persistence/Migrations/`.
+- Always generate idempotent SQL scripts (`scripts/manage_migrations.ps1 script <service>`) for DBA inspection and GxP qualification.
+- Migrations must be verified in test suites using Testcontainers PostgreSQL instances.
+
+---
+
+### 11. Interactive Developer Wizards (`dotnet cadence wizard`)
+
+Developers and agents should leverage the interactive wizard suite for operational tasks:
+- `dotnet cadence wizard onboarding`: Guided tour for SDK, HTTPS dev certs, datastores, and `.env`.
+- `dotnet cadence wizard migrate <service>`: Scaffolds Single-Assembly Clean Architecture layout and project boilerplate.
+- `dotnet cadence wizard decommission <service>`: Guided 4-step sequence to retire and purge legacy Python code.
+
+---
+
+### 12. ADR Supersession & Living Documentation Lifecycle
+
+Whenever a .NET 10 implementation supersedes a legacy Python architectural pattern:
+1. Update the legacy ADR status in `docs/adr/` to `* **Status:** Superseded by [ADR-XXXX](path-to-new-adr.md)`.
+2. Add the standard `> [!NOTE]` supersession callout at the top.
+3. Annotate the entry in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
+4. Validate with `python scripts/validate_adrs.py`.
+5. Update `ARCHITECTURE.md` service status and `CONTEXT.md` domain concepts.
+
+---
+
 ## Primary Developer & Agent CLI Commands (`dotnet cadence`)
 
 Agents should use the native Cadence CLI tool for development, diagnostics, and testing:
@@ -232,9 +284,13 @@ Agents should use the native Cadence CLI tool for development, diagnostics, and 
 | Task                 | Command                                  | Description                                                        |
 | :------------------- | :--------------------------------------- | :----------------------------------------------------------------- |
 | Fast Unit Tests      | `dotnet cadence test --fast`             | Runs unit tests across all projects bypassing heavy containers     |
+| Architecture Sentinels | `dotnet test tests/Cadence.ArchitectureTests.csproj` | Verifies Clean Architecture layer boundaries via ArchUnitNET |
 | Integration Tests    | `dotnet cadence test --integration`      | Runs integration test suites with Testcontainers (PG & Neo4j)      |
 | Code Formatting      | `dotnet format`                          | Verifies and auto-formats C# code against `.editorconfig` rules    |
-| Architecture Sentinels | `dotnet cadence check`                 | Executes build-time architecture sentinels and package validations |
+| Developer Onboarding | `dotnet cadence wizard onboarding`       | Interactive .NET 10 setup, certs, datastores, and environment check |
+| Service Migration    | `dotnet cadence wizard migrate <name>`   | Interactive scaffolding for Clean Architecture microservices       |
+| Service Decommission | `dotnet cadence wizard decommission <name>`| Interactive retirement and safe purge of legacy Python code      |
+| Manage Migrations    | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Scaffolds EF Core PostgreSQL migrations |
 | Multi-Engine Seeding | `dotnet cadence db seed --tier full`     | Seeds multi-engine clinical test scenarios across Neo4j and PG     |
 | GxP Sync             | `dotnet cadence gxp sync`                | Executes tests, parses TRX/JUnit XML, regenerates RTM docs        |
 
