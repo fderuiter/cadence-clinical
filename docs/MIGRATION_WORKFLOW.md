@@ -232,7 +232,45 @@ Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly and 
 
 ---
 
-## 3. Developer & Agent Command Reference
+## 3. The Decommissioning & Cleanup Protocol ("Building the New & Clearing Out the Old")
+
+To ensure an orderly, clean-break transition without accumulating technical debt or orphaned Python files, every migrated microservice must follow this 4-step decommissioning sequence:
+
+```text
+[1. Behavioral Parity] ──▶ [2. Gateway Cutover] ──▶ [3. Python Purge] ──▶ [4. Workspace Unlink]
+```
+
+### 1. Behavioral Parity & Schema Verification
+- Validate that the new .NET 10 Minimal API endpoint schemas (`/openapi/v1.json`) match or cleanly supersede the legacy Python FastAPI schemas.
+- Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-xxx`) tested in the Python test suite are covered in the new xUnit test suite with equal or greater test assertion coverage.
+
+### 2. Gateway Route Cutover
+- In `apps/gateway` (YARP reverse proxy), redirect the upstream routing destination for the service route prefix to the active .NET 10 microservice port:
+  - Gateway: `8000`
+  - Designer: `8001`
+  - Execution: `8002`
+  - eTMF: `8003`
+  - Interop: `8004`
+  - Quality: `8005`
+  - Notifications: `8006`
+  - CTMS: `8007`
+  - Safety: `8008`
+- Execute live end-to-end regression tests through the gateway to confirm zero regression.
+
+### 3. Deprecated Python Source Purge
+- Delete the legacy Python implementation files within the service directory:
+  - Remove `apps/<service>/src/cadence/<service>/`
+  - Remove `apps/<service>/tests/` (once ported to `tests/`)
+  - Remove legacy Alembic migration files (`apps/<service>/alembic/`) superseded by EF Core migrations.
+
+### 4. Workspace Member Unlink & CI Pruning
+- Remove the decommissioned service path from `pyproject.toml` under `[tool.uv.workspace] members`.
+- Remove legacy Python test paths from pytest configurations.
+- Execute `dotnet cadence check` and `python scripts/sync_gxp.py` to confirm clean builds and 100% RTM compliance.
+
+---
+
+## 4. Developer & Agent Command Reference
 
 | Task | Command | Description |
 | :--- | :--- | :--- |
