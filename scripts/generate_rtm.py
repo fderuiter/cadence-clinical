@@ -329,6 +329,109 @@ def check_fragment_relative_links(sdlc_dirs=None):
                         sys.exit(1)
 
 
+def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
+    """Scan a C# test file for xUnit test methods, [GxPRequirement] attributes, and /// @req: doc comments."""
+    try:
+        with open(filepath, encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception:
+        return
+
+    namespace = ""
+    current_class = ""
+    pending_tags = []
+    pending_is_test = False
+    current_test = None
+
+    ns_pattern = re.compile(r"^\s*namespace\s+([A-Za-z0-9_.]+)")
+    class_pattern = re.compile(r"^\s*(?:public|internal|sealed|abstract|\s)*class\s+([A-Za-z0-9_]+)")
+    test_attr_pattern = re.compile(r"\[(?:Fact|Theory)(?:\(.*\))?\]")
+    gxp_attr_pattern = re.compile(r'\[GxPRequirement\("([^"]+)"\)')
+    method_pattern = re.compile(r"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\(")
+    req_doc_pattern = re.compile(r"@req:\s*([A-Za-z0-9_-]+)")
+
+    for i, line in enumerate(lines):
+        line_num = i + 1
+        stripped = line.strip()
+
+        ns_match = ns_pattern.search(stripped)
+        if ns_match:
+            namespace = ns_match.group(1).rstrip(";")
+            continue
+
+        class_match = class_pattern.search(stripped)
+        if class_match:
+            current_class = class_match.group(1)
+            continue
+
+        if test_attr_pattern.search(stripped):
+            pending_is_test = True
+
+        for gxp_match in gxp_attr_pattern.findall(stripped):
+            pending_tags.append(gxp_match)
+
+        for req in req_doc_pattern.findall(stripped):
+            pending_tags.append(req)
+
+        if pending_is_test:
+            method_match = method_pattern.search(stripped)
+            if method_match:
+                test_name = method_match.group(1)
+                classname = f"{namespace}.{current_class}" if namespace else current_class
+
+                normalized_tags = []
+                for tag in pending_tags:
+                    ntag = tag
+                    if ntag.lower().startswith("trace"):
+                        ntag = ntag.replace(" ", "").replace("_", "-")
+                        if not ntag.startswith("Trace-"):
+                            m = re.search(r"\d+", ntag)
+                            if m:
+                                ntag = f"Trace-{m.group(0)}"
+                    normalized_tags.append(ntag)
+
+                unique_tags = sorted(list(set(normalized_tags)))
+                norm_rel_filepath = rel_filepath.replace("\\", "/")
+                test_cases_all[(classname, test_name)] = {
+                    "file": norm_rel_filepath,
+                    "name": test_name,
+                    "tags": unique_tags,
+                }
+                for tag in unique_tags:
+                    test_mappings.setdefault(tag, []).append({
+                        "file": norm_rel_filepath,
+                        "test_name": test_name,
+                        "line": line_num,
+                    })
+
+                current_test = (classname, test_name, line_num)
+                pending_tags = []
+                pending_is_test = False
+                continue
+
+        if current_test:
+            if stripped.startswith("[") or "class " in stripped:
+                current_test = None
+            else:
+                for req in req_doc_pattern.findall(stripped):
+                    cname, tname, lnum = current_test
+                    ntag = req
+                    if ntag.lower().startswith("trace"):
+                        ntag = ntag.replace(" ", "").replace("_", "-")
+                        if not ntag.startswith("Trace-"):
+                            m = re.search(r"\d+", ntag)
+                            if m:
+                                ntag = f"Trace-{m.group(0)}"
+                    if ntag not in test_cases_all[(cname, tname)]["tags"]:
+                        test_cases_all[(cname, tname)]["tags"].append(ntag)
+                        test_cases_all[(cname, tname)]["tags"].sort()
+                        test_mappings.setdefault(ntag, []).append({
+                            "file": rel_filepath.replace("\\", "/"),
+                            "test_name": tname,
+                            "line": lnum,
+                        })
+
+
 def scan_tests(tests_dirs=None):
     if tests_dirs is None:
         tests_dirs = ["apps", "packages", "scripts", "tests"]
@@ -346,7 +449,12 @@ def scan_tests(tests_dirs=None):
         for root, dirs, files in os.walk(tests_dir):
             dirs.sort()  # In-place sort directories to guarantee deterministic traversal order
             for file in sorted(files):  # Sort files alphabetically
-                if (
+                filepath = os.path.join(root, file)
+                rel_filepath = os.path.relpath(filepath, start=os.getcwd())
+
+                if file.endswith(".cs") and not file.startswith("__"):
+                    _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all)
+                elif (
                     file.endswith(".py")
                     and not file.startswith("__")
                     and file != "conftest.py"
@@ -472,65 +580,135 @@ def scan_tests(tests_dirs=None):
     return sorted_test_mappings, test_cases_all
 
 
-def parse_test_results(report_xml_path):
-    results = {}
-    if not os.path.exists(report_xml_path):
-        print(f"Warning: Test report {report_xml_path} not found.")
-        return results
-
+def parse_trx_file(trx_path, results):
+    """Parse a Visual Studio / xUnit TRX XML report and add execution results."""
+    if not os.path.exists(trx_path):
+        return
     try:
-        tree = ET.parse(report_xml_path)  # nosec B314
+        tree = ET.parse(trx_path)
         root = tree.getroot()
-        for testcase in root.iter("testcase"):
-            classname = testcase.get("classname", "")
-            name = testcase.get("name", "")
+        ns = {"ns": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
 
-            # Normalize classname to make it fully deterministic regardless of pytest execution path
-            if classname and not (
-                classname.startswith("tests.")
-                or classname.startswith("apps.")
-                or classname.startswith("packages.")
-                or classname.startswith("scripts.")
-            ):
-                if classname.startswith("validation."):
-                    classname = "tests." + classname
-                elif classname in (
-                    "gxp_compliance_suite",
-                    "prd_compliance_traceability_suite",
-                    "dia_tmf_validation_suite",
-                    "environment_integrity_suite",
-                    "test_path_boundary_linter",
-                ):
-                    classname = "tests.validation." + classname
+        # Build map of testId -> (className, testName) from TestDefinitions if present
+        test_defs = {}
+        unit_tests = root.findall(".//ns:UnitTest", ns) or root.findall(".//UnitTest")
+        for ut in unit_tests:
+            ut_id = ut.get("id")
+            test_method = ut.find("ns:TestMethod", ns) if ut.find("ns:TestMethod", ns) is not None else ut.find("TestMethod")
+            if test_method is not None:
+                cname = test_method.get("className", "")
+                mname = test_method.get("name", "")
+                if ut_id and cname and mname:
+                    test_defs[ut_id] = (cname, mname)
+
+        unit_test_results = root.findall(".//ns:UnitTestResult", ns) or root.findall(".//UnitTestResult")
+        for utr in unit_test_results:
+            test_id = utr.get("testId")
+            full_test_name = utr.get("testName", "")
+            outcome = utr.get("outcome", "Passed")
+            duration = utr.get("duration", "0.0")
+
+            if test_id in test_defs:
+                classname, name = test_defs[test_id]
+            else:
+                parts = full_test_name.split(".")
+                if len(parts) >= 2:
+                    name = parts[-1]
+                    classname = ".".join(parts[:-1])
                 else:
-                    classname = "tests." + classname
+                    name = full_test_name
+                    classname = ""
 
-            # Check for failure, error, skipped
-            status = "PASSED"
-            failure_message = ""
-
-            failure = testcase.find("failure")
-            if failure is not None:
+            outcome_lower = outcome.lower()
+            if outcome_lower == "passed":
+                status = "PASSED"
+            elif outcome_lower in ("failed", "error"):
                 status = "FAILED"
-                failure_message = failure.text or failure.get("message", "")
-
-            error = testcase.find("error")
-            if error is not None:
-                status = "ERROR"
-                failure_message = error.text or error.get("message", "")
-
-            skipped = testcase.find("skipped")
-            if skipped is not None:
+            else:
                 status = "SKIPPED"
-                failure_message = skipped.text or skipped.get("message", "")
+
+            msg = ""
+            error_info = utr.find(".//ns:ErrorInfo/ns:Message", ns) if utr.find(".//ns:ErrorInfo/ns:Message", ns) is not None else utr.find(".//ErrorInfo/Message")
+            if error_info is not None and error_info.text:
+                msg = error_info.text
 
             results[(classname, name)] = {
                 "status": status,
-                "message": failure_message,
-                "time": testcase.get("time", "0.0"),
+                "message": msg,
+                "time": str(duration),
             }
     except Exception as e:
-        print(f"Error parsing XML report: {e}")
+        print(f"Error parsing TRX file {trx_path}: {e}")
+
+
+def parse_test_results(report_xml_path):
+    results = {}
+
+    # 1. Parse main JUnit XML report if present
+    if os.path.exists(report_xml_path):
+        try:
+            tree = ET.parse(report_xml_path)  # nosec B314
+            root = tree.getroot()
+            for testcase in root.iter("testcase"):
+                classname = testcase.get("classname", "")
+                name = testcase.get("name", "")
+
+                # Normalize classname to make it fully deterministic regardless of pytest execution path
+                if classname and not (
+                    classname.startswith("tests.")
+                    or classname.startswith("apps.")
+                    or classname.startswith("packages.")
+                    or classname.startswith("scripts.")
+                ):
+                    if classname.startswith("validation."):
+                        classname = "tests." + classname
+                    elif classname in (
+                        "gxp_compliance_suite",
+                        "prd_compliance_traceability_suite",
+                        "dia_tmf_validation_suite",
+                        "environment_integrity_suite",
+                        "test_path_boundary_linter",
+                    ):
+                        classname = "tests.validation." + classname
+                    else:
+                        classname = "tests." + classname
+
+                # Check for failure, error, skipped
+                status = "PASSED"
+                failure_message = ""
+
+                failure = testcase.find("failure")
+                if failure is not None:
+                    status = "FAILED"
+                    failure_message = failure.text or failure.get("message", "")
+
+                error = testcase.find("error")
+                if error is not None:
+                    status = "ERROR"
+                    failure_message = error.text or error.get("message", "")
+
+                skipped = testcase.find("skipped")
+                if skipped is not None:
+                    status = "SKIPPED"
+                    failure_message = skipped.text or skipped.get("message", "")
+
+                results[(classname, name)] = {
+                    "status": status,
+                    "message": failure_message,
+                    "time": testcase.get("time", "0.0"),
+                }
+        except Exception as e:
+            print(f"Error parsing XML report: {e}")
+    else:
+        print(f"Warning: Test report {report_xml_path} not found.")
+
+    # 2. Check and parse any .trx files (e.g. test_results.trx, report_dotnet.trx)
+    for candidate in ["test_results.trx", "report_dotnet.trx"]:
+        if os.path.exists(candidate):
+            parse_trx_file(candidate, results)
+
+    if report_xml_path.endswith(".trx") and os.path.exists(report_xml_path):
+        parse_trx_file(report_xml_path, results)
 
     return results
 
