@@ -57,6 +57,7 @@ graph TD
 | **[4. Solution Scaffold Guide](SCAFFOLD_GUIDE.md)**                            | `docs/migration/SCAFFOLD_GUIDE.md`                   | Step-by-step developer instructions for running and verifying the automated .NET 10 solution scaffold (`scripts/scaffold_dotnet_solution.sh`), configuring Central Package Management (CPM), and building `Cadence.sln`.            |
 | **[5. Forensic Readiness Audit](Migration_Phase0_Readiness_Audit.md)**         | `docs/migration/Migration_Phase0_Readiness_Audit.md` | Forensic gap analysis, orphan code audit, floating-point precision risks, dynamic import seams, and Tier 1 leaf-node ordering traps.                                                                                                |
 | **[6. Service Migration Workflow](../MIGRATION_WORKFLOW.md)**                  | `docs/MIGRATION_WORKFLOW.md`                         | The authoritative 6-step service transcription SOP and 4-step Python decommissioning recipe.                                                                                                                                        |
+| **[7. Executive Discovery Deliverable](PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md)** | `docs/migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md` | Condensed decision-ready output: Executive Repository Map, an evidence-based Migration Sequence Matrix (built from a verified runtime HTTP coupling graph, not just domain inference), and a `dotnet new`-driven CLI scaffold for the remaining unbuilt Tier 1 packages and 15 app services. |
 
 ---
 
