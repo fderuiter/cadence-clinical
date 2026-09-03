@@ -48,10 +48,16 @@
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.0-preview.1.25120.13" />
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.2.0" />
+
+    <!-- Media, Storage & Antivirus Integrations -->
+    <PackageVersion Include="FFMpegCore" Version="5.1.0" />
+    <PackageVersion Include="nClam" Version="7.0.0" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.412.3" />
+    <PackageVersion Include="Google.Apis.Drive.v3" Version="1.68.0.3428" />
 
     <!-- Analyzers & Code Quality -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
   </ItemGroup>
 </Project>
-

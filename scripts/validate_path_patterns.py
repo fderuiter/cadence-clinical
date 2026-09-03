@@ -197,6 +197,11 @@ ALLOWED_ROOT_FILES = {
     "REPORT.md",
     "SECURITY.md",
     ".env.example",
+    "Directory.Packages.props",
+    "Directory.Build.props",
+    "Cadence.sln",
+    "global.json",
+    ".editorconfig",
 }
 
 # Allowed root-level subdirectories for general file placement

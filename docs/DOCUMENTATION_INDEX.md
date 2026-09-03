@@ -45,6 +45,7 @@ Deep technical design specifications, database models, and service boundary defi
   - **[Dependency & Parity Catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md)** (`docs/migration/DEPENDENCY_AND_PARITY_CATALOG.md`): Python-to-.NET 10 library cross-walk, test fixtures, and golden datasets.
   - **[Bounded Context Migration Matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md)** (`docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md`): 4-tier dependency sequence and Clean Architecture sentinels.
   - **[Solution Scaffold Guide](migration/SCAFFOLD_GUIDE.md)** (`docs/migration/SCAFFOLD_GUIDE.md`): Executable solution scaffold guide and verification steps.
+  - **[Forensic Readiness Audit](migration/Migration_Phase0_Readiness_Audit.md)** (`docs/migration/Migration_Phase0_Readiness_Audit.md`): Forensic gap analysis, orphan code audit, floating-point precision risks, and dependency traps.
   - **[Migration Workflow Playbook](MIGRATION_WORKFLOW.md)** (`docs/MIGRATION_WORKFLOW.md`): Authoritative 6-step service transcription SOP and Python decommissioning recipe.
 - **[Technical Design Document (TDD)](SDLC/02_Technical_Design_Document_TDD.md)** (`02_Technical_Design_Document_TDD.md`): Internal micro-architecture, database schemas, cryptographic signature specs, and service isolation boundaries.
 - **[API Integration Specification](SDLC/03_API_Integration_Specification.md)** (`03_API_Integration_Specification.md`): Gateway routes, request/response payload contracts, RFC 7807 error formats, and authentication propagation headers.

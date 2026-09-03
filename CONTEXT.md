@@ -12,6 +12,14 @@ A persistence unification architecture where all 18 platform microservices (incl
 
 A data modeling standard in C# 14 / EF Core 10 replacing Python untyped dictionaries for variable clinical attributes (e.g. `ClinicalObservation.additional_properties` and eCRF `form_data`). Attributes are mapped to strongly-typed C# 14 record hierarchies serialized to PostgreSQL `jsonb` using Native AOT `System.Text.Json` source generation, paired with a fallback dictionary (`Dictionary<string, JsonElement>`) to preserve forward compatibility for unrecognized domain extensions.
 
+### Universal Decimal Precision Standard
+
+A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial audit regulations. All monetary currency values (e.g., site contract fee schedules, investigator procedure costs, withholding deductions, patient stipends, participant travel reimbursements, and invoice totals) and high-precision dosage/lab calculations are strictly forbidden from using binary floating-point types (`float`, `double`). All financial attributes must be modeled exclusively as C# 14 `decimal` (`System.Decimal`, 128-bit fixed-point precision with 28-29 significant digits) mapped to PostgreSQL `numeric(18, 4)` and evaluated using explicit banker's rounding (`MidpointRounding.ToEven`).
+
+### Canonical Timestamp Normalization Invariant
+
+A cryptographic integrity invariant governing 21 CFR Part 11 immutable audit trail hashing and Merkle block sealing. All audit event timestamps across .NET 10 microservices, background outbox workers, and external signing APIs must be strictly normalized to UTC Unix Epoch Milliseconds (`long`) or canonical ISO 8601 millisecond strings (`yyyy-MM-ddTHH:mm:ss.fffZ`) prior to computing SHA-256 digest chains, preventing cross-runtime timestamp serialization mismatches between Python 6-digit microsecond strings and .NET 7-digit tick strings.
+
 ### Dual-Stack GxP Traceability Pipeline
 
 A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across heterogeneous test runners during architectural migration. The pipeline inspects both legacy Python tests (pytest docstrings) and modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting combined JUnit and Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`).

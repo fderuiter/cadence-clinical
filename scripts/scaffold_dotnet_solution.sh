@@ -157,6 +157,9 @@ dotnet sln Cadence.sln add packages/database/src/Cadence.Database.csproj --solut
 dotnet sln Cadence.sln add packages/contracts/src/Cadence.Contracts.csproj --solution-folder Packages || true
 dotnet sln Cadence.sln add packages/testing/src/Cadence.Testing.csproj --solution-folder Packages || true
 dotnet sln Cadence.sln add packages/cli/src/Cadence.Cli.csproj --solution-folder Packages || true
+dotnet sln Cadence.sln add packages/deid/src/Cadence.Deid.csproj --solution-folder Packages || true
+dotnet sln Cadence.sln add packages/storage/src/Cadence.Storage.csproj --solution-folder Packages || true
+dotnet sln Cadence.sln add packages/ddf/src/Cadence.Ddf.csproj --solution-folder Packages || true
 
 # Add services
 for SVC in "${SERVICES[@]}"; do

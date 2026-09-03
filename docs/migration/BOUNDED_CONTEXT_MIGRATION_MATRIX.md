@@ -165,6 +165,9 @@ graph TD
 - **`Cadence.Database` (`packages/database`):** EF Core `DbContext` base configurations, `GxPAuditInterceptor` with SHA-256 Merkle block hashing, and PostgreSQL connection resiliency.
 - **`Cadence.Contracts` (`packages/contracts`):** Inter-service DTO records, HTTP API client interfaces (`IExecutionApiClient`, `IDesignerApiClient`), and MassTransit event contracts.
 - **`Cadence.Testing` (`packages/testing`):** Entity factories (`SubjectFactory`), in-memory repository fakes (`InMemoryRepository<T>`), and mock security context helpers.
+- **`Cadence.Deid` (`packages/deid`):** HIPAA Safe Harbor & Expert Determination rule engine with high-throughput compiled C# 14 regex PHI redactors and SHA-256 date-shifting.
+- **`Cadence.Storage` (`packages/storage`):** Multi-backend storage port (`StoragePort`) with AWS S3 envelope encryption, local disk spooling, and Google Drive API v3 video evidence uploads.
+- **`Cadence.Ddf` (`packages/ddf`):** Digital Data Flow compiler, tripartite transformer, and Dataset-JSON 1.0 columnar ETL pipeline.
 - **`Cadence.Cli` (`packages/cli`):** Native developer CLI built with `Spectre.Console`.
 
 ### Tier 2: Core Entities & Persistent Engines (Tracer Bullet Slices)
@@ -178,19 +181,21 @@ graph TD
 - **`Cadence.Apps.Ctms` (`apps/ctms`):** Clinical trial site milestones, monitoring visit reports (MVR), 6-facet greenlight activation engine.
 - **`Cadence.Apps.Etmf` (`apps/etmf`):** DIA TMF Reference Model v3.2.0 document ingestion, automated QC review stages, and document expiration tracking.
 - **`Cadence.Apps.Eisf` (`apps/eisf`):** Investigator Site File binders, PI sign-offs, and bidirectional synchronization with eTMF.
-- **`Cadence.Apps.Quality` (`apps/quality`):** Protocol deviation tracking, CAPA workflows, and Centralized Statistical Monitoring (CSM) forensics.
+- **`Cadence.Apps.Quality` (`apps/quality`):** Protocol deviation tracking, CAPA workflows, and Centralized Statistical Monitoring (CSM) forensics. Sequenced in Tier 3 following `Cadence.Execution` and utilizing typed `IExecutionApiClient` contracts (ADR-2239).
 - **`Cadence.Apps.Safety` (`apps/safety`):** Adverse event intake, CTCAE laboratory toxicity evaluation, ICH E2B(R3) ISO 27953-2 XML generation, and B2B AS2 transmission.
 - **`Cadence.Apps.Econsent` (`apps/econsent`):** Dynamic informed consent templates, Flesch-Kincaid readability grading, cryptographic signature stamping, and protocol amendment re-consent gating.
-- **`Cadence.Apps.Payments` (`apps/payments`):** Procedure-based grant budgets, CRA SDV trigger-based payables, participant stipends, and 1099 reporting.
+- **`Cadence.Apps.Payments` (`apps/payments`):** Procedure-based grant budgets, CRA SDV trigger-based payables, participant stipends, and 1099 reporting enforcing the Universal Decimal Precision Standard (`System.Decimal`) under ADR-2239.
 - **`Cadence.Apps.Tickets` (`apps/tickets`):** Clinical discrepancy escalation hub, dual-target SLA tracking, and 21 CFR Part 11 reopening reason audit logs.
 
 ### Tier 4: Edge, Consumers & External Integrations
 
-- **`Cadence.Apps.Gateway` (`apps/gateway`):** Central reverse proxy router, Keycloak OIDC authentication, HMAC injection, and OpenAPI aggregation.
+- **`Cadence.Apps.Gateway` (`apps/gateway`):** Central reverse proxy router, Keycloak OIDC authentication, HMAC injection, and dynamic HTTP OpenAPI aggregation (ADR-2239).
 - **`Cadence.Apps.Notifications` (`apps/notifications`):** Asynchronous multi-channel dispatch engine (SMTP email via MailKit, SMS, and HMAC signed webhooks).
 - **`Cadence.Apps.Interop` (`apps/interop`):** SMART on FHIR USCDI clinical ingestion, split-screen CRC reconciliation drawer, and continuous biometric sensor streams.
 - **`Cadence.Apps.AiGateway` (`apps/ai_gateway`):** Outbound PHI/PII de-identification air-gap, three-tier model router, and hybrid semantic medical coding (MedDRA / WHODrug).
-- **`Cadence.Apps.Fileshare` (`apps/fileshare`):** Binary blob storage broker, MinIO/S3 presigned transfer URLs, and media transcoding pipelines.
+- **`Cadence.Apps.Fileshare` (`apps/fileshare`):** Binary blob storage broker, MinIO/S3 presigned transfer URLs, and media transcoding pipelines (`FFMpegCore`, `nClam`).
 - **`Cadence.Apps.Imaging` (`apps/imaging`):** Blinded dual-reader RECIST 1.1 oncology adjudication and WebGL multi-planar reconstruction (MPR) viewer.
 - **`Cadence.Apps.Knowledge` (`apps/knowledge`):** Contextual SOP delivery, hierarchical specificity scoring, and two-tier controlled article governance.
 - **`Cadence.Apps.Compliance` (`apps/compliance`):** Automated IQ/OQ/PQ regulatory test runner, RTM synchronization, and 21 CFR Part 11 verification.
+- **`apps/web` (`apps/web`):** Primary Clinical Investigator, CRC, and Data Manager Vue 3 SPA frontend.
+- **`apps/subject-portal` (`apps/subject-portal`):** Patient/Subject-facing eCOA and eConsent Vue 3 application.

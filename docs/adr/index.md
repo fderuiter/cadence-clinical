@@ -11,6 +11,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-09-03: Universal Decimal Financial Precision Dynamic OpenAPI Gateway Discovery and Tier 2 Quality Realignment](2026-09-03-universal-decimal-financial-precision-dynamic-openapi-gateway-discovery-and-tier-2-quality-realignment.md)
+
 - [2026-09-03: Universal PostgreSQL Persistence Standard and Hybrid JSONB Record Projection](2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)
 - [2026-09-02: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 - [2026-09-02: Migration to .NET 10 Architecture and Standards](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md)
