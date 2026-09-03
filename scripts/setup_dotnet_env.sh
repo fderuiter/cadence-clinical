@@ -27,19 +27,35 @@ if command -v dotnet &>/dev/null; then
 fi
 
 if [ "$SDK_INSTALLED" = false ]; then
-    echo "  [ACTION] Downloading official Microsoft dotnet-install script..."
-    TEMP_SCRIPT="$(mktemp /tmp/dotnet-install.XXXXXX.sh)"
-    curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
-    chmod +x "$TEMP_SCRIPT"
-    
-    INSTALL_DIR="$HOME/.dotnet"
-    echo "  [ACTION] Installing .NET $TARGET_CHANNEL SDK to $INSTALL_DIR..."
-    "$TEMP_SCRIPT" --channel "$TARGET_CHANNEL" --install-dir "$INSTALL_DIR" --quality preview
-    rm -f "$TEMP_SCRIPT"
-    
-    export DOTNET_ROOT="$INSTALL_DIR"
-    export PATH="$INSTALL_DIR:$PATH"
-    
+    SUDO=""
+    if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+
+    if command -v apt-get &>/dev/null && [ -f /etc/debian_version ]; then
+        # .NET 10 GA is packaged in Ubuntu 24.04+/Debian 13+ apt feeds; prefer it
+        # since it's faster and stays patched via the normal OS update path.
+        echo "  [ACTION] Installing dotnet-sdk-10.0 via apt..."
+        if $SUDO apt-get update -qq && $SUDO apt-get install -y --no-install-recommends dotnet-sdk-10.0; then
+            SDK_INSTALLED=true
+        else
+            echo "  [INFO] apt install failed or dotnet-sdk-10.0 unavailable; falling back to dotnet-install.sh."
+        fi
+    fi
+
+    if [ "$SDK_INSTALLED" = false ]; then
+        echo "  [ACTION] Downloading official Microsoft dotnet-install script..."
+        TEMP_SCRIPT="$(mktemp /tmp/dotnet-install.XXXXXX.sh)"
+        curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
+        chmod +x "$TEMP_SCRIPT"
+
+        INSTALL_DIR="$HOME/.dotnet"
+        echo "  [ACTION] Installing .NET $TARGET_CHANNEL SDK (GA) to $INSTALL_DIR..."
+        "$TEMP_SCRIPT" --channel "$TARGET_CHANNEL" --install-dir "$INSTALL_DIR"
+        rm -f "$TEMP_SCRIPT"
+
+        export DOTNET_ROOT="$INSTALL_DIR"
+        export PATH="$INSTALL_DIR:$PATH"
+    fi
+
     NEW_VERSION=$(dotnet --version 2>/dev/null || true)
     echo -e "  \033[32m[OK] .NET 10 SDK successfully installed: $NEW_VERSION\033[0m"
 fi
@@ -89,4 +105,3 @@ echo -e "\n================================================================="
 echo -e "  \033[32m.NET 10 Developer Environment Setup Complete!\033[0m"
 echo -e "  Run 'dotnet build Cadence.sln' to build the solution."
 echo -e "=================================================================\n"
-

@@ -16,12 +16,14 @@ members = [
 exclude = [
     "apps/web",
     "apps/subject-portal",
+    "apps/__pycache__",
     "packages/ui",
     "packages/gateway-rewrite",
     "packages/usdm-schemas",
     "packages/core-models",
     "packages/contracts",
-    "packages/deidentification"
+    "packages/deidentification",
+    "packages/__pycache__"
 ]
 
 [tool.uv.sources]

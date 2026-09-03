@@ -28,5 +28,4 @@ api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", gateway = "Ca
     .WithName("GatewayStatus")
     .WithSummary("Returns gateway dispatch status.");
 
-app.Run();
-
+await app.RunAsync();

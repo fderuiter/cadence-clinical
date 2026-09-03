@@ -50,7 +50,17 @@
       "type": "process",
       "args": ["scripts/sync_gxp.py"],
       "problemMatcher": []
+    },
+    {
+      "label": "Run Full-Stack Setup Wizard",
+      "command": "bash",
+      "type": "process",
+      "args": ["scripts/setup_wizard.sh"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }
-

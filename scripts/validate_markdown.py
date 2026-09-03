@@ -1337,7 +1337,18 @@ def main():
             e
             for e in root_entries
             if (repo_root / e).is_dir()
-            and (not e.startswith(".") or e in (".github", ".agents", ".config"))
+            and (
+                not e.startswith(".")
+                or e
+                in (
+                    ".github",
+                    ".agents",
+                    ".config",
+                    ".claude",
+                    ".devcontainer",
+                    ".vscode",
+                )
+            )
         }
         root_files = {
             e

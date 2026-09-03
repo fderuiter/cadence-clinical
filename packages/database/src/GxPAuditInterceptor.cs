@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cadence.Database;
 
@@ -32,25 +32,18 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider) : SaveChanges
 
         foreach (var entry in eventData.Context.ChangeTracker.Entries<IGxPAuditable>())
         {
-            if (entry.State == EntityState.Added)
+            if (entry.State == EntityState.Added && entry.Entity is AggregateRoot<string> addedAggStr)
             {
-                if (entry.Entity is AggregateRoot<string> aggStr)
-                {
-                    aggStr.CreatedAt = now;
-                    aggStr.CreatedBy = string.IsNullOrWhiteSpace(aggStr.CreatedBy) ? currentUser : aggStr.CreatedBy;
-                    aggStr.VersionIndex = 1;
-                }
+                addedAggStr.CreatedAt = now;
+                addedAggStr.CreatedBy = string.IsNullOrWhiteSpace(addedAggStr.CreatedBy) ? currentUser : addedAggStr.CreatedBy;
+                addedAggStr.VersionIndex = 1;
             }
-            else if (entry.State == EntityState.Modified)
+            else if (entry.State == EntityState.Modified && entry.Entity is AggregateRoot<string> modifiedAggStr)
             {
-                if (entry.Entity is AggregateRoot<string> aggStr)
-                {
-                    aggStr.VersionIndex++;
-                }
+                modifiedAggStr.VersionIndex++;
             }
         }
 
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 }
-

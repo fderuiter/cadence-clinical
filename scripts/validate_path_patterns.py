@@ -96,8 +96,9 @@ RULES = {
             ".jules/**/*.sh",
             ".agents/**/*.sh",
             ".scratch/**/*.sh",
+            ".claude/**/*.sh",
         ],
-        "description": "Shell scripts (*.sh) must reside in scripts/ or its subfolders.",
+        "description": "Shell scripts (*.sh) must reside in scripts/ or its subfolders (or .claude/ for Claude Code hooks).",
     },
     "*.js": {
         "allowed": [
@@ -218,6 +219,11 @@ APPROVED_SUBDIRECTORIES = {
     ".jules/",
     ".agents/",
     ".scratch/",
+    # Standard editor/agent/container tooling config directories — not
+    # "architectural" boundaries, but legitimately root-level.
+    ".claude/",
+    ".devcontainer/",
+    ".vscode/",
 }
 
 

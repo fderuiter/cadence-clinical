@@ -4,8 +4,10 @@ Welcome to the **Cadence Clinical Research Software** platform repository. This 
 single authoritative reference for development workflows, coding standards,
 quality gates, and CI failure recovery procedures.
 
-> **Before you start**: run `make setup` (or `pnpm setup:dev`) once to install
-> all dependencies, Playwright browsers, and local Git hooks.
+> **Before you start**: on a brand-new machine/Codespace/devcontainer, run
+> `make wizard` once to install the .NET 10 SDK plus all dependencies,
+> Playwright browsers, and local Git hooks. Already set up? `make setup` (or
+> `pnpm setup:dev`) refreshes just the Python/Node side.
 
 ---
 
@@ -13,20 +15,21 @@ quality gates, and CI failure recovery procedures.
 
 The most common commands you will reach for day-to-day (via the unified Cadence CLI or Make):
 
-| Task                               | .NET 10 / CLI Command                 | Description / Shortcut |
-| :--------------------------------- | :------------------------------------ | :--------------------- |
-| Build Entire Solution              | `dotnet build Cadence.sln`            | Compiles all projects under net10.0 |
-| Fast Unit Tests                    | `dotnet test --filter "Category!=Integration"` | Sub-second unit tests across projects |
-| Architecture Sentinels             | `dotnet test tests/Cadence.ArchitectureTests.csproj` | Verifies Clean Architecture purity via ArchUnitNET |
-| Integration Tests (PG / Neo4j)     | `dotnet test --filter "Category=Integration"`  | Runs tests with Testcontainers |
-| Code Style & Formatting            | `dotnet format --verify-no-changes`   | Validates .editorconfig & Roslyn rules |
-| Developer Onboarding Wizard        | `dotnet cadence wizard onboarding`    | Guided setup for SDK, certs, datastores, .env |
-| Microservice Migration Wizard      | `dotnet cadence wizard migrate <name>`| Interactive Clean Architecture scaffolding |
-| Service Decommission Wizard        | `dotnet cadence wizard decommission <name>` | Guided 4-step legacy Python retirement |
-| Manage Database Migrations         | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Manages EF Core PostgreSQL migrations |
-| Sync GxP Compliance Docs           | `python scripts/sync_gxp.py`          | `make sync-gxp`        |
-| Scaffold New ADR                   | `python scripts/create_adr.py --title "Title"` | `make adr`             |
-| Activate Git Pre-Commit Hooks      | `git config core.hooksPath .githooks` | Enforces format and ADR checks on commit |
+| Task                           | .NET 10 / CLI Command                                         | Description / Shortcut                                                    |
+| :----------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------ |
+| Build Entire Solution          | `dotnet build Cadence.sln`                                    | Compiles all projects under net10.0                                       |
+| Fast Unit Tests                | `dotnet test --filter "Category!=Integration"`                | Sub-second unit tests across projects                                     |
+| Architecture Sentinels         | `dotnet test tests/Cadence.ArchitectureTests.csproj`          | Verifies Clean Architecture purity via ArchUnitNET                        |
+| Integration Tests (PG / Neo4j) | `dotnet test --filter "Category=Integration"`                 | Runs tests with Testcontainers                                            |
+| Code Style & Formatting        | `dotnet format --verify-no-changes`                           | Validates .editorconfig & Roslyn rules                                    |
+| Developer Onboarding Wizard    | `dotnet cadence wizard onboarding` / `make wizard`            | Full-stack setup: .NET SDK, Node/pnpm, Python/uv, certs, datastores, .env |
+| .NET-Only Onboarding Wizard    | `dotnet cadence wizard dotnet`                                | Just the .NET 10 SDK, global tools, dev certs                             |
+| Microservice Migration Wizard  | `dotnet cadence wizard migrate <name>`                        | Interactive Clean Architecture scaffolding                                |
+| Service Decommission Wizard    | `dotnet cadence wizard decommission <name>`                   | Guided 4-step legacy Python retirement                                    |
+| Manage Database Migrations     | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Manages EF Core PostgreSQL migrations                                     |
+| Sync GxP Compliance Docs       | `python scripts/sync_gxp.py`                                  | `make sync-gxp`                                                           |
+| Scaffold New ADR               | `python scripts/create_adr.py --title "Title"`                | `make adr`                                                                |
+| Activate Git Pre-Commit Hooks  | `git config core.hooksPath .githooks`                         | Enforces format and ADR checks on commit                                  |
 
 ---
 
@@ -137,17 +140,34 @@ Use this table to resolve CI errors without digging through logs:
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
 
-# Install everything and activate Git hooks
+# Brand-new machine, Codespace, or devcontainer? Run the full-stack wizard —
+# it installs the .NET 10 SDK too, which `make setup` does not.
+make wizard
+# Equivalent: bash scripts/setup_wizard.sh   (Windows: scripts/setup_wizard.ps1)
+# Non-interactive (CI/agents): scripts/setup_wizard.sh --dev [--minimal]
+
+# Already have .NET installed and just need Python/Node deps refreshed?
 make setup
 # Equivalent: pnpm setup:dev
 ```
 
-This single command:
+`make wizard` (`scripts/setup_wizard.sh`) detects the environment (local
+workstation, GitHub Codespaces, a devcontainer, a Claude Code remote session,
+or CI) and then, per stage:
 
-1. Installs Python 3.14 dependencies via `uv sync`
-2. Installs Playwright Chromium for integration tests
-3. Installs all pre-commit Git hooks (`pre-commit install --install-hooks`)
-4. Installs Node/pnpm workspace dependencies
+1. Installs/validates the .NET 10 SDK, `dotnet-ef`/`dotnet-format` global
+   tools, and trusts the local HTTPS dev cert
+2. Installs Node/pnpm workspace dependencies (`pnpm install`)
+3. Installs Python 3.14 dependencies via `uv sync`, Playwright Chromium, and
+   all pre-commit Git hooks
+4. Probes local datastores (PostgreSQL, Neo4j) and prints how to start them
+5. Bootstraps `.env` from `.env.example`
+6. Runs `cadence doctor` as a final health check
+
+Pass `--minimal` to skip the Playwright browser download on short-lived
+sessions, or `--dev`/`-y` to skip confirmation prompts. `make setup` remains
+the narrower Python+Node-only path (steps 2–3 above) for machines that
+already have the .NET SDK.
 
 ---
 

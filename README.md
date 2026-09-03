@@ -1,6 +1,6 @@
 # Cadence Clinical Research Software
 
-> **The Metadata-Driven Clinical Execution Platform.**  
+> **The Metadata-Driven Clinical Execution Platform.**
 > _Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into an automated Digital Data Flow (DDF)._
 
 [![CI Status](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml/badge.svg)](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml)
@@ -14,11 +14,11 @@
 ---
 
 > [!IMPORTANT]
-> **Active Initial Development / Pre-Release Status**  
-> Cadence Clinical Research Software is currently undergoing **active initial pre-release development** prior to our initial v1.0 General Availability (GA) release. The platform, architecture, and microservices are evolving rapidly.  
-> 
-> This repository represents an open-source evaluation sandbox and development environment intended for developers, clinical architects, and trial sponsors to explore automated digital data flows, test CDISC USDM protocol compilation, and evaluate GxP-compliant clinical microservices.  
-> 
+> **Active Initial Development / Pre-Release Status**
+> Cadence Clinical Research Software is currently undergoing **active initial pre-release development** prior to our initial v1.0 General Availability (GA) release. The platform, architecture, and microservices are evolving rapidly.
+>
+> This repository represents an open-source evaluation sandbox and development environment intended for developers, clinical architects, and trial sponsors to explore automated digital data flows, test CDISC USDM protocol compilation, and evaluate GxP-compliant clinical microservices.
+>
 > - **Pre-Release Sandbox**: All databases, keycloak realms, and seed datasets provided in local containers are configured for pre-production evaluation with synthetic datasets.
 > - **Clinical Pilots & Enterprise Inquiries**: For commercial evaluation, pilot program participation, or production qualification, please visit [ccrsoft.com](https://ccrsoft.com) or consult our [Support Policy](SUPPORT.md) rather than submitting inquiries on the public GitHub tracker.
 
@@ -77,14 +77,14 @@ Cadence Clinical is structured around three foundational architectural pillars:
 
 Cadence is built around end-to-end clinical role workflows. The web client (`apps/web`) provides role switching across six primary personas to demonstrate authentic clinical data lifecycles:
 
-| Persona | Clinical Role | Primary Workspaces & Responsibilities | Key GxP Actions |
-| :--- | :--- | :--- | :--- |
-| **`sponsor_designer`** | Study Protocol Architect | • Protocol Designer (`apps/designer`)<br>• Schedule of Activities (SoA) Matrix<br>• Biomedical Concept Library | Authors USDM graph protocols, specifies visit schedules, defines eligibility criteria, and publishes versioned protocol amendments. |
-| **`site_crc`** | Clinical Research Coordinator | • Site Execution & eCRF Capture (`apps/execution`)<br>• eConsent Portal (`apps/econsent`)<br>• Participant Financial Wallet (`apps/payments`) | Verifies 6-facet site greenlight, enrolls subjects, manages re-consent gating, records visit observations, and approves participant expense claims. |
-| **`cra_monitor`** | Clinical Research Associate | • CTMS Monitoring Workspace (`apps/ctms`)<br>• eISF Binder Inspector (`apps/eisf`)<br>• Source Data Verification (SDV/TSDV) | Performs on-site/remote monitoring, executes 100% SDV / Targeted SDV, verifies investigator delegation logs, and issues protocol deviations. |
-| **`data_manager`** | Clinical Data Manager | • Clinical Query & Issue Hub (`apps/tickets`)<br>• Medical Coding Console (MedDRA / WHODrug)<br>• SDTM / ADaM Export Engine (`apps/execution`) | Adjudicates auto-generated edit-check queries, reviews AI-assisted medical coding terms, manages lab reference ranges, and executes database freeze/lock. |
-| **`safety_physician`** | Pharmacovigilance Officer | • Safety & ICSR Gateway (`apps/safety`)<br>• Blinded DICOM Adjudication (`apps/imaging`)<br>• NCI-CTCAE Toxicity Reviewer | Reviews Grade 3/4 adverse events, performs blinded RECIST 1.1 tumor adjudication, generates safety narratives, and signs E2B(R3) AS2 XML submissions. |
-| **`auditor`** | Regulatory QA & Inspector | • Quality & CAPA Engine (`apps/quality`)<br>• eTMF Archive Inspector (`apps/etmf`)<br>• Cryptographic Audit Trail Explorer | Verifies SHA-256 Merkle root digest chains, reviews CAPA root-cause analyses, inspects DIA TMF binders, and validates 100% GxP RTM traceability. |
+| Persona                | Clinical Role                 | Primary Workspaces & Responsibilities                                                                                                          | Key GxP Actions                                                                                                                                           |
+| :--------------------- | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`sponsor_designer`** | Study Protocol Architect      | • Protocol Designer (`apps/designer`)<br>• Schedule of Activities (SoA) Matrix<br>• Biomedical Concept Library                                 | Authors USDM graph protocols, specifies visit schedules, defines eligibility criteria, and publishes versioned protocol amendments.                       |
+| **`site_crc`**         | Clinical Research Coordinator | • Site Execution & eCRF Capture (`apps/execution`)<br>• eConsent Portal (`apps/econsent`)<br>• Participant Financial Wallet (`apps/payments`)  | Verifies 6-facet site greenlight, enrolls subjects, manages re-consent gating, records visit observations, and approves participant expense claims.       |
+| **`cra_monitor`**      | Clinical Research Associate   | • CTMS Monitoring Workspace (`apps/ctms`)<br>• eISF Binder Inspector (`apps/eisf`)<br>• Source Data Verification (SDV/TSDV)                    | Performs on-site/remote monitoring, executes 100% SDV / Targeted SDV, verifies investigator delegation logs, and issues protocol deviations.              |
+| **`data_manager`**     | Clinical Data Manager         | • Clinical Query & Issue Hub (`apps/tickets`)<br>• Medical Coding Console (MedDRA / WHODrug)<br>• SDTM / ADaM Export Engine (`apps/execution`) | Adjudicates auto-generated edit-check queries, reviews AI-assisted medical coding terms, manages lab reference ranges, and executes database freeze/lock. |
+| **`safety_physician`** | Pharmacovigilance Officer     | • Safety & ICSR Gateway (`apps/safety`)<br>• Blinded DICOM Adjudication (`apps/imaging`)<br>• NCI-CTCAE Toxicity Reviewer                      | Reviews Grade 3/4 adverse events, performs blinded RECIST 1.1 tumor adjudication, generates safety narratives, and signs E2B(R3) AS2 XML submissions.     |
+| **`auditor`**          | Regulatory QA & Inspector     | • Quality & CAPA Engine (`apps/quality`)<br>• eTMF Archive Inspector (`apps/etmf`)<br>• Cryptographic Audit Trail Explorer                     | Verifies SHA-256 Merkle root digest chains, reviews CAPA root-cause analyses, inspects DIA TMF binders, and validates 100% GxP RTM traceability.          |
 
 ---
 
@@ -163,66 +163,66 @@ The Cadence monorepo is organized as a unified workspace managed with `uv` for P
 
 ### Layer 1: Protocol Design, Metadata & Intelligence
 
-| Path | Microservice | Description & Primary Responsibilities | Persistence | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **`apps/designer`** | Study Designer (MDR/SDR) | Graph-based clinical protocol authoring, CDISC USDM v3/v4 representation, SoA matrix builder, and Biomedical Concept library. | Neo4j 5.0+ | **Supported** |
-| **`apps/knowledge`** | Knowledge & SOP Engine | Contextual SOP delivery, dynamic help drawer routing, role-specific clinical guidance, and controlled document versioning. | SQLite / PostgreSQL | **Supported** |
-| **`apps/ai_gateway`** | Clinical AI Gateway | De-identification air-gap proxy, model routing (Tier 1–3), medical coding embeddings, and Part 11 dual-attribution AI ledgers. | Ephemeral / REST | **Supported** |
+| Path                  | Microservice             | Description & Primary Responsibilities                                                                                         | Persistence         | Pre-Release Status |
+| :-------------------- | :----------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :------------------ | :----------------- |
+| **`apps/designer`**   | Study Designer (MDR/SDR) | Graph-based clinical protocol authoring, CDISC USDM v3/v4 representation, SoA matrix builder, and Biomedical Concept library.  | Neo4j 5.0+          | **Supported**      |
+| **`apps/knowledge`**  | Knowledge & SOP Engine   | Contextual SOP delivery, dynamic help drawer routing, role-specific clinical guidance, and controlled document versioning.     | SQLite / PostgreSQL | **Supported**      |
+| **`apps/ai_gateway`** | Clinical AI Gateway      | De-identification air-gap proxy, model routing (Tier 1–3), medical coding embeddings, and Part 11 dual-attribution AI ledgers. | Ephemeral / REST    | **Supported**      |
 
 ### Layer 2: Clinical Execution & Site Operations
 
-| Path | Microservice | Description & Primary Responsibilities | Persistence | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **`apps/execution`** | EDC Execution Engine | Downstream EDC runtime, subject state machines, dynamic eCRF schema projection, real-time edit checks, and Dataset-JSON SDTM export. | PostgreSQL 14+ | **Supported** |
-| **`apps/ctms`** | CTMS Operations | Trial operational tracking, milestone governance, CRA monitoring visit reports, 6-facet site greenlight, and budget matrices. | PostgreSQL / SQLite | **Supported** |
-| **`apps/org`** | Organization Directory | Global directory of Sponsor/CRO organizations, clinical trial sites, staff credentials, and Principal Investigator DOA logs. | PostgreSQL / SQLite | **Supported** |
-| **`apps/tickets`** | Clinical Issue Hub | Discrepancy escalation, data management queries, dual-target SLA timers, and controlled reopening windows. | PostgreSQL / SQLite | **Supported** |
-| **`apps/payments`** | Site Payments & Grants | Investigator grant contracts, procedure-fee rule calculations, payee split management, closeout holdbacks, and self-billing invoices. | PostgreSQL / SQLite | **Supported** |
+| Path                 | Microservice           | Description & Primary Responsibilities                                                                                                | Persistence         | Pre-Release Status |
+| :------------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :------------------ | :----------------- |
+| **`apps/execution`** | EDC Execution Engine   | Downstream EDC runtime, subject state machines, dynamic eCRF schema projection, real-time edit checks, and Dataset-JSON SDTM export.  | PostgreSQL 14+      | **Supported**      |
+| **`apps/ctms`**      | CTMS Operations        | Trial operational tracking, milestone governance, CRA monitoring visit reports, 6-facet site greenlight, and budget matrices.         | PostgreSQL / SQLite | **Supported**      |
+| **`apps/org`**       | Organization Directory | Global directory of Sponsor/CRO organizations, clinical trial sites, staff credentials, and Principal Investigator DOA logs.          | PostgreSQL / SQLite | **Supported**      |
+| **`apps/tickets`**   | Clinical Issue Hub     | Discrepancy escalation, data management queries, dual-target SLA timers, and controlled reopening windows.                            | PostgreSQL / SQLite | **Supported**      |
+| **`apps/payments`**  | Site Payments & Grants | Investigator grant contracts, procedure-fee rule calculations, payee split management, closeout holdbacks, and self-billing invoices. | PostgreSQL / SQLite | **Supported**      |
 
 ### Layer 3: Patient Engagement & Decentralized Trials
 
-| Path | Microservice | Description & Primary Responsibilities | Persistence | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **`apps/subject-portal`** | eCOA / ePRO PWA | Offline-first Progressive Web App for trial participants. Includes IndexedDB local sync queues and electronic diary capture. | IndexedDB / Client PWA | **Supported** |
-| **`apps/econsent`** | Electronic Consent | Interactive informed consent authoring, dynamic amendment re-consent gating, readability metrics, and digital signature sealing. | PostgreSQL / SQLite | **Supported** |
-| **`apps/notifications`** | Multi-Channel Dispatcher | Automated patient compliance reminders and high-priority GxP alerts across SMTP Email (Jinja2), SMS, HMAC Webhooks, and In-App inbox. | PostgreSQL / SQLite | **Supported** |
-| **`apps/interop`** | FHIR & eSource Gateway | SMART on FHIR EHR integration, eSource ingestion drawers, and Open mHealth continuous biometric sensor streaming adapters. | PostgreSQL / SQLite | **Supported** |
+| Path                      | Microservice             | Description & Primary Responsibilities                                                                                                | Persistence            | Pre-Release Status |
+| :------------------------ | :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :--------------------- | :----------------- |
+| **`apps/subject-portal`** | eCOA / ePRO PWA          | Offline-first Progressive Web App for trial participants. Includes IndexedDB local sync queues and electronic diary capture.          | IndexedDB / Client PWA | **Supported**      |
+| **`apps/econsent`**       | Electronic Consent       | Interactive informed consent authoring, dynamic amendment re-consent gating, readability metrics, and digital signature sealing.      | PostgreSQL / SQLite    | **Supported**      |
+| **`apps/notifications`**  | Multi-Channel Dispatcher | Automated patient compliance reminders and high-priority GxP alerts across SMTP Email (Jinja2), SMS, HMAC Webhooks, and In-App inbox. | PostgreSQL / SQLite    | **Supported**      |
+| **`apps/interop`**        | FHIR & eSource Gateway   | SMART on FHIR EHR integration, eSource ingestion drawers, and Open mHealth continuous biometric sensor streaming adapters.            | PostgreSQL / SQLite    | **Supported**      |
 
 ### Layer 4: Clinical Safety, Quality & Regulatory Governance
 
-| Path | Microservice | Description & Primary Responsibilities | Persistence | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **`apps/safety`** | Safety & Pharmacovigilance | ICH E2B(R3) ICSR XML compilation, NCI-CTCAE v5.0 lab toxicity grading, WHODrug validation, and B2B AS2 S/MIME regulatory EDI gateway. | PostgreSQL / SQLite | **Supported** |
-| **`apps/quality`** | Quality & CAPA Engine | Protocol deviation management, Centralized Statistical Monitoring (CSM forensics / Benford's Law), and 64-bit DCT pHash image fraud detection. | PostgreSQL / SQLite | **Supported** |
-| **`apps/imaging`** | Blinded DICOM Adjudication | Zero-footprint WebGL Multi-Planar Reconstruction (MPR), blinded dual-reader RECIST 1.1 oncology evaluation, and 20% discordance escalation. | PostgreSQL / SQLite | **Supported** |
-| **`apps/etmf`** | Electronic Trial Master File | DIA TMF Reference Model v3.2.0 classification, Expected Document Lists (EDLs), completeness indices, and automated QC lifecycle transitions. | PostgreSQL / SQLite | **Supported** |
-| **`apps/eisf`** | Investigator Site Files | Site-scoped regulatory binder management, DIA eISF taxonomy inheritance, and PI certification audit manifests. | PostgreSQL / SQLite | **Supported** |
-| **`apps/fileshare`** | Object Storage Gateway | StoragePort abstraction over MinIO/S3, presigned transfer URLs, cryptographic guest links, and 21 CFR Part 11 document envelopes. | MinIO / S3 & SQL Envelope | **Supported** |
+| Path                 | Microservice                 | Description & Primary Responsibilities                                                                                                         | Persistence               | Pre-Release Status |
+| :------------------- | :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------ | :----------------- |
+| **`apps/safety`**    | Safety & Pharmacovigilance   | ICH E2B(R3) ICSR XML compilation, NCI-CTCAE v5.0 lab toxicity grading, WHODrug validation, and B2B AS2 S/MIME regulatory EDI gateway.          | PostgreSQL / SQLite       | **Supported**      |
+| **`apps/quality`**   | Quality & CAPA Engine        | Protocol deviation management, Centralized Statistical Monitoring (CSM forensics / Benford's Law), and 64-bit DCT pHash image fraud detection. | PostgreSQL / SQLite       | **Supported**      |
+| **`apps/imaging`**   | Blinded DICOM Adjudication   | Zero-footprint WebGL Multi-Planar Reconstruction (MPR), blinded dual-reader RECIST 1.1 oncology evaluation, and 20% discordance escalation.    | PostgreSQL / SQLite       | **Supported**      |
+| **`apps/etmf`**      | Electronic Trial Master File | DIA TMF Reference Model v3.2.0 classification, Expected Document Lists (EDLs), completeness indices, and automated QC lifecycle transitions.   | PostgreSQL / SQLite       | **Supported**      |
+| **`apps/eisf`**      | Investigator Site Files      | Site-scoped regulatory binder management, DIA eISF taxonomy inheritance, and PI certification audit manifests.                                 | PostgreSQL / SQLite       | **Supported**      |
+| **`apps/fileshare`** | Object Storage Gateway       | StoragePort abstraction over MinIO/S3, presigned transfer URLs, cryptographic guest links, and 21 CFR Part 11 document envelopes.              | MinIO / S3 & SQL Envelope | **Supported**      |
 
 ### Layer 5: Frontend Workspaces & Gateway Infrastructure
 
-| Path | Component | Description & Primary Responsibilities | Technology | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **`apps/web`** | Clinical Workspace SPA | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite | **Supported** |
-| **`apps/gateway`** | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs. | FastAPI + HTTPX | **Supported** |
-| **`apps/compliance`** | Compliance Test Suite | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions. | Pytest + Playwright | **Supported** |
+| Path                  | Component                 | Description & Primary Responsibilities                                                                                                         | Technology           | Pre-Release Status |
+| :-------------------- | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- | :----------------- |
+| **`apps/web`**        | Clinical Workspace SPA    | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite | **Supported**      |
+| **`apps/gateway`**    | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs.     | FastAPI + HTTPX      | **Supported**      |
+| **`apps/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | Pytest + Playwright  | **Supported**      |
 
 ### Layer 6: Shared Core Packages & SDKs
 
-| Path | Package Name | Description & Purpose |
-| :--- | :--- | :--- |
-| **`packages/cli`** | `cadence` CLI | Unified developer CLI providing Rich TUI cockpits, auto-healing diagnostics, parallel quality gates, and DB seeding. |
-| **`packages/ddf`** | DDF Compiler Engine | Pure in-memory domain compiler translating USDM graph models into DDF IR, XPath rules, and CDISC ODM XForms. |
-| **`packages/security`** | Cryptography & Security | HMAC-SHA256 gateway signing (`generate_gateway_signature`), step-up signature verification, and Keycloak JWT helpers. |
-| **`packages/testing`** | Centralized Test Harness | Shared domain entity factories (`SubjectFactory`, `AuditLogFactory`), `InMemoryRepository[T]` fakes, and test auth tokens. |
-| **`packages/storage`** | StoragePort & Object Envelope | Decoupled S3/MinIO binary storage adapter with relational GxP metadata envelopes and SHA-256 checksum validation. |
-| **`packages/database`** | Database Manager | SQLAlchemy async engine initialization, connection pooling, pre-boot migrations, and SQLite/PostgreSQL connection abstractions. |
-| **`packages/deid`** | De-Identification Engine | High-performance PII/PHI redaction and tokenization engine for clinical narratives, medical notes, and DICOM metadata. |
-| **`packages/sentinels`** | Architecture Sentinels | Extensible sentinel plugin engine checking code duplication, import boundary leaks, ADR schema parity, and ORM boolean safety. |
-| **`packages/ui`** | Shared UI & Web Components | Reusable Vanilla CSS components, dialog modals, accessible SoA grid primitives, and browser cryptographic signing utilities. |
-| **`packages/usdm-schemas`** | CDISC USDM Schemas | Versioned Pydantic v2 domain schemas validating CDISC USDM v3.0 and v4.0 study definitions. |
-| **`packages/hexagonal`** | Hexagonal Architecture SDK | Core architectural port and adapter primitives, command/query dispatchers, and domain event interfaces. |
-| **`packages/core-models`** | Core Domain Models | Universal base models, 21 CFR Part 11 GxP audit mixins, and standardized RFC 7807 problem detail representations. |
+| Path                        | Package Name                  | Description & Purpose                                                                                                           |
+| :-------------------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **`packages/cli`**          | `cadence` CLI                 | Unified developer CLI providing Rich TUI cockpits, auto-healing diagnostics, parallel quality gates, and DB seeding.            |
+| **`packages/ddf`**          | DDF Compiler Engine           | Pure in-memory domain compiler translating USDM graph models into DDF IR, XPath rules, and CDISC ODM XForms.                    |
+| **`packages/security`**     | Cryptography & Security       | HMAC-SHA256 gateway signing (`generate_gateway_signature`), step-up signature verification, and Keycloak JWT helpers.           |
+| **`packages/testing`**      | Centralized Test Harness      | Shared domain entity factories (`SubjectFactory`, `AuditLogFactory`), `InMemoryRepository[T]` fakes, and test auth tokens.      |
+| **`packages/storage`**      | StoragePort & Object Envelope | Decoupled S3/MinIO binary storage adapter with relational GxP metadata envelopes and SHA-256 checksum validation.               |
+| **`packages/database`**     | Database Manager              | SQLAlchemy async engine initialization, connection pooling, pre-boot migrations, and SQLite/PostgreSQL connection abstractions. |
+| **`packages/deid`**         | De-Identification Engine      | High-performance PII/PHI redaction and tokenization engine for clinical narratives, medical notes, and DICOM metadata.          |
+| **`packages/sentinels`**    | Architecture Sentinels        | Extensible sentinel plugin engine checking code duplication, import boundary leaks, ADR schema parity, and ORM boolean safety.  |
+| **`packages/ui`**           | Shared UI & Web Components    | Reusable Vanilla CSS components, dialog modals, accessible SoA grid primitives, and browser cryptographic signing utilities.    |
+| **`packages/usdm-schemas`** | CDISC USDM Schemas            | Versioned Pydantic v2 domain schemas validating CDISC USDM v3.0 and v4.0 study definitions.                                     |
+| **`packages/hexagonal`**    | Hexagonal Architecture SDK    | Core architectural port and adapter primitives, command/query dispatchers, and domain event interfaces.                         |
+| **`packages/core-models`**  | Core Domain Models            | Universal base models, 21 CFR Part 11 GxP audit mixins, and standardized RFC 7807 problem detail representations.               |
 
 ---
 
@@ -246,23 +246,29 @@ Run all commands using `uv run cadence`:
 
 ### Primary CLI Commands
 
-| Task | Command | Description |
-| :--- | :--- | :--- |
-| **Interactive Dev TUI** | `uv run cadence dev --tui` | Launches multi-service Rich interactive cockpit with live streaming logs and hotkey process restarts. |
-| **System Diagnostics** | `uv run cadence doctor --auto-fix` | Validates host runtimes (Python, Docker, Node), tests database connections, and auto-initializes missing SQLite schemas. |
-| **Parallel Quality Gates** | `uv run cadence check --parallel` | Concurrently executes all 10 architectural sentinels (linters, import boundaries, ADR validator, duplication scanner). |
-| **Automated Remediation** | `uv run cadence fix --all` | Auto-remediates lint violations, sorts imports alphabetically (I001), formats code, and indexes ADR records. |
-| **Fast Test Watcher** | `uv run cadence test --watch` | Smart AST-aware test watcher that re-runs only the minimal subset of tests affected by changed files. |
-| **Sub-Second Fast Tests** | `uv run cadence test --fast` | Sub-second unit test runner executing against in-memory repository fakes, bypassing database containers. |
-| **Multi-Engine Seeding** | `uv run cadence db seed --tier full` | Seeds multi-engine clinical test scenarios across Neo4j, PostgreSQL, SQLite, and MinIO. |
-| **GxP Compliance Sync** | `uv run cadence gxp sync` | Executes test suites, regenerates Requirements Traceability Matrix (RTM), and stages GxP documentation. |
-| **ADR Scaffolding** | `uv run cadence scaffold adr "Title"` | Scaffolds a new dated Architecture Decision Record under `docs/adr/` and auto-indexes `docs/adr/index.md`. |
+| Task                       | Command                               | Description                                                                                                              |
+| :------------------------- | :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------- |
+| **Interactive Dev TUI**    | `uv run cadence dev --tui`            | Launches multi-service Rich interactive cockpit with live streaming logs and hotkey process restarts.                    |
+| **System Diagnostics**     | `uv run cadence doctor --auto-fix`    | Validates host runtimes (Python, Docker, Node), tests database connections, and auto-initializes missing SQLite schemas. |
+| **Parallel Quality Gates** | `uv run cadence check --parallel`     | Concurrently executes all 10 architectural sentinels (linters, import boundaries, ADR validator, duplication scanner).   |
+| **Automated Remediation**  | `uv run cadence fix --all`            | Auto-remediates lint violations, sorts imports alphabetically (I001), formats code, and indexes ADR records.             |
+| **Fast Test Watcher**      | `uv run cadence test --watch`         | Smart AST-aware test watcher that re-runs only the minimal subset of tests affected by changed files.                    |
+| **Sub-Second Fast Tests**  | `uv run cadence test --fast`          | Sub-second unit test runner executing against in-memory repository fakes, bypassing database containers.                 |
+| **Multi-Engine Seeding**   | `uv run cadence db seed --tier full`  | Seeds multi-engine clinical test scenarios across Neo4j, PostgreSQL, SQLite, and MinIO.                                  |
+| **GxP Compliance Sync**    | `uv run cadence gxp sync`             | Executes test suites, regenerates Requirements Traceability Matrix (RTM), and stages GxP documentation.                  |
+| **ADR Scaffolding**        | `uv run cadence scaffold adr "Title"` | Scaffolds a new dated Architecture Decision Record under `docs/adr/` and auto-indexes `docs/adr/index.md`.               |
 
 ---
 
 ## 🚀 Developer Quickstart
 
 Follow these steps to spin up the entire Cadence Clinical development environment locally.
+
+> **Shortcut**: on a brand-new machine, Codespace, or devcontainer, `make wizard`
+> (or `bash scripts/setup_wizard.sh`, Windows: `scripts/setup_wizard.ps1`) runs
+> steps 1–3 below for you — .NET 10 SDK, Node/pnpm, Python/uv, Playwright,
+> pre-commit hooks, `.env`, and a final `cadence doctor` health check — and
+> adapts to CI/agent sessions automatically. See [CONTRIBUTING.md](CONTRIBUTING.md#1-first-time-setup).
 
 ### 1. Prerequisites
 
@@ -318,6 +324,7 @@ pnpm --filter web dev
 ```
 
 Open your browser to:
+
 - **Clinical Web Workspace**: [http://localhost:5173](http://localhost:5173)
 - **Subject Portal PWA**: [http://localhost:5174](http://localhost:5174)
 - **API Gateway Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -369,6 +376,7 @@ Our development trajectory is organized into four sequential strategic phases:
 ```
 
 ### ✅ Phase 0 — Core Foundation & DDF Engine (Completed)
+
 - [x] USDM v3.0 Neo4j graph data models and relationship versioning.
 - [x] PostgreSQL relational EDC runtime with dynamic subject schema projections.
 - [x] Pure DDF Intermediate Representation (IR) compiler and OpenRosa XPath rule compiler.
@@ -376,6 +384,7 @@ Our development trajectory is organized into four sequential strategic phases:
 - [x] Initial Vue 3 single-page application sandbox with Pinia state management.
 
 ### 🔄 Phase 1 — Enterprise Multi-Module Suite & CLI (Active / Current Milestone)
+
 - [x] Scaffold and deploy 20+ specialized microservices (CTMS, eTMF, Safety, Quality, Imaging, Payments, Interop).
 - [x] Build unified `cadence` CLI developer experience (Rich TUI cockpit, doctor, DB seeders, quality gates).
 - [x] Implement Centralized Statistical Monitoring (CSM / Benford's Law) and 64-bit DCT pHash image forensics.
@@ -386,6 +395,7 @@ Our development trajectory is organized into four sequential strategic phases:
 - [ ] Finalize the full migration of remaining legacy layout scripts into modular Vue 3 components.
 
 ### 🔜 Phase 2 — Multi-Site Clinical Pilot Validation (Upcoming)
+
 - [ ] Multi-center clinical trial simulation and high-concurrency stress testing (>10,000 active eCRFs).
 - [ ] Production SMART on FHIR electronic health record (EHR) bidirectional connectors.
 - [ ] WHODrug and MedDRA automated dictionary up-versioning engine with impact analytics.
@@ -393,6 +403,7 @@ Our development trajectory is organized into four sequential strategic phases:
 - [ ] Multi-echelon RTSM supply optimization with Monte Carlo depot replenishment forecasting.
 
 ### 🎯 Phase 3 — v1.0 General Availability & Part 11 Certification (Planned Target)
+
 - [ ] Formal independent 21 CFR Part 11 and EU Annex 11 computer systems validation (CSV/CSA) package.
 - [ ] SOC 2 Type II and HIPAA/GDPR security audit certifications.
 - [ ] Automated high-availability multi-region Kubernetes deployment helm charts.

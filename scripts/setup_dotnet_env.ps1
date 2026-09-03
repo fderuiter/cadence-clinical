@@ -40,27 +40,41 @@ catch {
 }
 
 if (-not $sdkInstalled -and -not $SkipSdkInstall) {
-    Write-Host "  [ACTION] Downloading official Microsoft dotnet-install script..." -ForegroundColor Cyan
-    $installScriptUrl = "https://dot.net/v1/dotnet-install.ps1"
-    $tempScript = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "dotnet-install.ps1")
-    
-    Invoke-WebRequest -Uri $installScriptUrl -OutFile $tempScript
-    
-    $installDir = [System.IO.Path]::Combine($env:LOCALAPPDATA, "Microsoft", "dotnet")
-    Write-Host "  [ACTION] Installing .NET $TargetChannel SDK to $installDir..." -ForegroundColor Cyan
-    
-    & powershell.exe -ExecutionPolicy Bypass -File $tempScript -Channel $TargetChannel -InstallDir $installDir -Quality preview
-    
-    # Configure PATH for current session and persistent user environment
-    if ($env:PATH -notlike "*$installDir*") {
-        $env:PATH = "$installDir;" + $env:PATH
-        $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-        if ($userPath -notlike "*$installDir*") {
-            [Environment]::SetEnvironmentVariable("Path", "$installDir;$userPath", "User")
-            Write-Host "  [OK] Added $installDir to persistent User PATH." -ForegroundColor Green
+    $installedViaWinget = $false
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "  [ACTION] Installing .NET 10 SDK via winget..." -ForegroundColor Cyan
+        try {
+            & winget install --id Microsoft.DotNet.SDK.10 --accept-source-agreements --accept-package-agreements -e
+            if ($LASTEXITCODE -eq 0) { $installedViaWinget = $true }
+        }
+        catch {
+            Write-Host "  [INFO] winget install failed; falling back to dotnet-install.ps1." -ForegroundColor DarkYellow
         }
     }
-    
+
+    if (-not $installedViaWinget) {
+        Write-Host "  [ACTION] Downloading official Microsoft dotnet-install script..." -ForegroundColor Cyan
+        $installScriptUrl = "https://dot.net/v1/dotnet-install.ps1"
+        $tempScript = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "dotnet-install.ps1")
+
+        Invoke-WebRequest -Uri $installScriptUrl -OutFile $tempScript
+
+        $installDir = [System.IO.Path]::Combine($env:LOCALAPPDATA, "Microsoft", "dotnet")
+        Write-Host "  [ACTION] Installing .NET $TargetChannel SDK (GA) to $installDir..." -ForegroundColor Cyan
+
+        & powershell.exe -ExecutionPolicy Bypass -File $tempScript -Channel $TargetChannel -InstallDir $installDir
+
+        # Configure PATH for current session and persistent user environment
+        if ($env:PATH -notlike "*$installDir*") {
+            $env:PATH = "$installDir;" + $env:PATH
+            $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+            if ($userPath -notlike "*$installDir*") {
+                [Environment]::SetEnvironmentVariable("Path", "$installDir;$userPath", "User")
+                Write-Host "  [OK] Added $installDir to persistent User PATH." -ForegroundColor Green
+            }
+        }
+    }
+
     $newVersion = & dotnet --version 2>$null
     Write-Host "  [OK] .NET 10 SDK successfully installed: $newVersion" -ForegroundColor Green
 }
@@ -147,4 +161,3 @@ Write-Host "`n================================================================="
 Write-Host "  .NET 10 Developer Environment Setup Complete!                  " -ForegroundColor Green
 Write-Host "  Run 'dotnet build Cadence.sln' to build the solution.          " -ForegroundColor Cyan
 Write-Host "=================================================================`n" -ForegroundColor Cyan
-

@@ -1,13 +1,14 @@
 using System;
 using System.Threading.Tasks;
 
-using FluentAssertions;
-using Xunit;
-
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Security;
 using Cadence.Testing;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests;
 
@@ -25,19 +26,18 @@ public class TestSubject : AggregateRoot<string>
 
 public class SecurityAndDomainTests
 {
+    /// <summary>
+    /// Validates deterministic HMAC-SHA256 signature computation and fixed-time verification.
+    /// @req:PRD-SYS-053
+    /// </summary>
     [Fact]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
     public void HmacSigner_GeneratesDeterministicSignature_AndVerifiesCorrectly()
     {
-        /// <summary>
-        /// Validates deterministic HMAC-SHA256 signature computation and fixed-time verification.
-        /// @req:PRD-SYS-053
-        /// </summary>
-        
         // Arrange
         const string payload = "{\"subject_id\":\"SUBJ-101\",\"action\":\"RANDOMIZE\"}";
-        const string secret = "internal-test-secret-key-12345";
+        const string secret = "internal-test-secret-key-12345"; // pragma: allowlist secret
 
         // Act
         string signature = HmacSigner.ComputeSignature(payload, secret);
@@ -50,16 +50,15 @@ public class SecurityAndDomainTests
         isInvalid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Validates that in-memory repository fakes capture mutations and monotonically advance GxP version index.
+    /// @req:PRD-SYS-053
+    /// </summary>
     [Fact]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
     public async Task InMemoryRepository_PersistsEntity_AndIncrementsVersionIndex()
     {
-        /// <summary>
-        /// Validates that in-memory repository fakes capture mutations and monotonically advance GxP version index.
-        /// @req:PRD-SYS-053
-        /// </summary>
-
         // Arrange
         var repo = new InMemoryRepository<TestSubject, string>();
         var subject = new TestSubject("SUBJ-001", "SITE-A")
@@ -69,8 +68,8 @@ public class SecurityAndDomainTests
         };
 
         // Act
-        await repo.SaveAsync(subject);
-        var retrieved = await repo.GetByIdAsync("SUBJ-001");
+        await repo.SaveAsync(subject, TestContext.Current.CancellationToken);
+        var retrieved = await repo.GetByIdAsync("SUBJ-001", TestContext.Current.CancellationToken);
 
         // Assert
         retrieved.Should().NotBeNull();
@@ -79,16 +78,15 @@ public class SecurityAndDomainTests
         retrieved.ReasonForChange.Should().Be("Initial subject registration");
     }
 
+    /// <summary>
+    /// Validates that Result monads encapsulate domain validation errors without runtime exception overhead.
+    /// @req:PRD-SYS-053
+    /// </summary>
     [Fact]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
     public void ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions()
     {
-        /// <summary>
-        /// Validates that Result monads encapsulate domain validation errors without runtime exception overhead.
-        /// @req:PRD-SYS-053
-        /// </summary>
-
         // Arrange & Act
         Result<string> successResult = Result<string>.Success("Subject enrolled successfully");
         var error = DomainError.Validation("ERR_AGE_INVALID", "Subject must be at least 18 years of age");
@@ -104,16 +102,15 @@ public class SecurityAndDomainTests
         failureResult.Error!.Type.Should().Be(ErrorType.Validation);
     }
 
+    /// <summary>
+    /// Validates that AuditLogEntry computes deterministic SHA-256 Merkle hashes chained to predecessor blocks.
+    /// @req:PRD-SYS-053
+    /// </summary>
     [Fact]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
     public void AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor()
     {
-        /// <summary>
-        /// Validates that AuditLogEntry computes deterministic SHA-256 Merkle hashes chained to predecessor blocks.
-        /// @req:PRD-SYS-053
-        /// </summary>
-
         // Arrange
         var timestamp = new DateTime(2026, 9, 2, 12, 0, 0, DateTimeKind.Utc);
         const string predecessor = "genesis_block_hash_0000000000";
