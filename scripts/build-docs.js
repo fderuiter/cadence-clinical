@@ -7,13 +7,13 @@ const repoRoot = path.resolve(__dirname, "..");
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
 if (!process.env.AUDIT_LOG_SECRET_KEY) {
-  process.env.AUDIT_LOG_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes";
+  process.env.AUDIT_LOG_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 if (!process.env.INBOUND_EMAIL_HMAC_SECRET) {
-  process.env.INBOUND_EMAIL_HMAC_SECRET = "development_secret_key_for_rtm_generation_32bytes";
+  process.env.INBOUND_EMAIL_HMAC_SECRET = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 if (!process.env.GATEWAY_SECRET_KEY) {
-  process.env.GATEWAY_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes";
+  process.env.GATEWAY_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 
 // Ensure adequate heap allocation for large documentation bundles under VitePress
@@ -183,6 +183,9 @@ function rewriteLinks(content) {
 function copyAndPreprocess(srcName, destName) {
   const srcPath = path.join(repoRoot, srcName);
   const destPath = path.join(repoRoot, "docs", destName);
+  if (fs.existsSync(destPath) && !originalFilesMap.has(destPath)) {
+    originalFilesMap.set(destPath, fs.readFileSync(destPath, "utf8"));
+  }
   let content = fs.readFileSync(srcPath, "utf8");
   content = rewriteLinks(content);
   fs.writeFileSync(destPath, content, "utf8");
@@ -327,7 +330,7 @@ try {
 
   // 4. Build VitePress static portal
   console.log("--- Step 4: Compiling VitePress Static Portal ---");
-  runCommand(`${pnpmCmd} vitepress build docs`);
+  runCommand(`${pnpmCmd} exec vitepress build docs`);
 
   console.log("--- Docs Build Completed Successfully! ---");
 } catch (error) {

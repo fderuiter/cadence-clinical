@@ -81,6 +81,7 @@ ALLOWED_COMMON_TOOLS = {
     "pip3",
     "pytest",
     "ruff",
+    "dotnet",
     "pnpm",
     "npm",
     "yarn",
@@ -1336,7 +1337,7 @@ def main():
             e
             for e in root_entries
             if (repo_root / e).is_dir()
-            and (not e.startswith(".") or e in (".github", ".agents"))
+            and (not e.startswith(".") or e in (".github", ".agents", ".config"))
         }
         root_files = {
             e

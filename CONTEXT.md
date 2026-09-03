@@ -4,6 +4,14 @@
 
 An enterprise boundary standard in Cadence .NET 10 microservices where domain entities, aggregates, and repository interfaces (Ports) reside in a dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly decoupled from external persistence (Adapters), HTTP presentation, or third-party infrastructure.
 
+### Universal PostgreSQL Persistence Standard
+
+A persistence unification architecture where all 18 platform microservices (including the 7 operational services previously utilizing SQLite—safety, interop, tickets, notifications, econsent, eisf, fileshare) standardize on PostgreSQL 14+ with logical database or schema-level multi-tenant isolation. This standard allows the entire platform to uniformly deploy Entity Framework Core 10, compiled models, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing under 21 CFR Part 11.
+
+### Hybrid Strongly-Typed JSONB Record Projection
+
+A data modeling standard in C# 14 / EF Core 10 replacing Python untyped dictionaries for variable clinical attributes (e.g. `ClinicalObservation.additional_properties` and eCRF `form_data`). Attributes are mapped to strongly-typed C# 14 record hierarchies serialized to PostgreSQL `jsonb` using Native AOT `System.Text.Json` source generation, paired with a fallback dictionary (`Dictionary<string, JsonElement>`) to preserve forward compatibility for unrecognized domain extensions.
+
 ### Dual-Stack GxP Traceability Pipeline
 
 A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across heterogeneous test runners during architectural migration. The pipeline inspects both legacy Python tests (pytest docstrings) and modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting combined JUnit and Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`).
@@ -931,13 +939,3 @@ _Avoid_: Leaving orphaned, unmaintained Python source files and dual-runtime tec
 
 A formal documentation governance protocol in which legacy architectural decisions are officially linked to their .NET 10 successors, updating their status header to `Superseded by [ADR-XXXX](...)`, attaching an explicit deprecation callout, and synchronizing the master index in `docs/adr/index.md`.
 _Avoid_: Leaving obsolete architectural decisions marked as "Accepted", causing confusion for engineers and AI agents.
-
-
-
-
-
-
-
-
-
-

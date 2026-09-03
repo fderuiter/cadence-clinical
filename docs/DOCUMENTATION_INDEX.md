@@ -40,6 +40,12 @@ High-level clinical system contracts, product scope, and functional specificatio
 Deep technical design specifications, database models, and service boundary definitions.
 
 - **[System Architecture Guide](ARCHITECTURE.md)** (`ARCHITECTURE.md`): High-level system architecture, service communication topology, and database split (Neo4j for MDR, PostgreSQL for EDC).
+- **[.NET 10 Platform Modernization Hub](migration/index.md)** (`docs/migration/index.md`): Master Phase 0 modernization baseline, 18-context decomposition, and .NET 10 transition roadmap.
+  - **[Surface & Data Topology Audit](migration/SYSTEM_TOPOLOGY_AUDIT.md)** (`docs/migration/SYSTEM_TOPOLOGY_AUDIT.md`): Complete entry point catalog, persistence models, and dynamic behavior audit.
+  - **[Dependency & Parity Catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md)** (`docs/migration/DEPENDENCY_AND_PARITY_CATALOG.md`): Python-to-.NET 10 library cross-walk, test fixtures, and golden datasets.
+  - **[Bounded Context Migration Matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md)** (`docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md`): 4-tier dependency sequence and Clean Architecture sentinels.
+  - **[Solution Scaffold Guide](migration/SCAFFOLD_GUIDE.md)** (`docs/migration/SCAFFOLD_GUIDE.md`): Executable solution scaffold guide and verification steps.
+  - **[Migration Workflow Playbook](MIGRATION_WORKFLOW.md)** (`docs/MIGRATION_WORKFLOW.md`): Authoritative 6-step service transcription SOP and Python decommissioning recipe.
 - **[Technical Design Document (TDD)](SDLC/02_Technical_Design_Document_TDD.md)** (`02_Technical_Design_Document_TDD.md`): Internal micro-architecture, database schemas, cryptographic signature specs, and service isolation boundaries.
 - **[API Integration Specification](SDLC/03_API_Integration_Specification.md)** (`03_API_Integration_Specification.md`): Gateway routes, request/response payload contracts, RFC 7807 error formats, and authentication propagation headers.
 - **[Data Standards & Interoperability Blueprint](SDLC/04_Data_Standards_Interoperability_Blueprint.md)** (`04_Data_Standards_Interoperability_Blueprint.md`): CDISC USDM v3.0/v4.0, CDISC ODM, SDTM/ADaM exports, FHIR/eSource, and MedDRA/WHODrug medical coding integration.

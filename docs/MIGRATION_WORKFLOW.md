@@ -1,8 +1,8 @@
 # Cadence Clinical Platform: .NET 10 Migration Workflow & Playbook
 
-**Target Architecture:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)  
-**Governing ADRs:** [ADR-2233](file:///d:/Users/Fred/Documents/GitHub/cadence-clinical/docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](file:///d:/Users/Fred/Documents/GitHub/cadence-clinical/docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)  
-**Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053  
+**Target Architecture:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
+**Governing ADRs:** [ADR-2233](file:///d:/Users/Fred/Documents/GitHub/cadence-clinical/docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](file:///d:/Users/Fred/Documents/GitHub/cadence-clinical/docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+**Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
 
 ---
 
@@ -57,9 +57,10 @@ For every microservice (`apps/<service>`), engineers and AI agents must follow t
 ---
 
 ### Step 1: Pure Domain Modeling (`Domain/`)
-* Create aggregates, entities, and value objects inheriting from `AggregateRoot<TId>` or implementing `IGxPAuditable`.
-* Pure C# 14 only — **zero** dependencies on EF Core, ASP.NET Core, or third-party web packages.
-* Enforce domain invariants through private setters and factory methods.
+
+- Create aggregates, entities, and value objects inheriting from `AggregateRoot<TId>` or implementing `IGxPAuditable`.
+- Pure C# 14 only — **zero** dependencies on EF Core, ASP.NET Core, or third-party web packages.
+- Enforce domain invariants through private setters and factory methods.
 
 ```csharp
 namespace Cadence.Apps.Execution.Domain;
@@ -97,9 +98,10 @@ public sealed class Subject : AggregateRoot<string>
 ---
 
 ### Step 2: Persistence & GxP Interceptor (`Infrastructure/`)
-* Configure Entity Framework Core 10 Fluent API (`IEntityTypeConfiguration<T>`).
-* Register `GxPAuditInterceptor` in `DbContextOptions` to automatically compute SHA-256 Merkle hashes and update version indices.
-* Apply `.AsNoTracking()` to all query-only operations.
+
+- Configure Entity Framework Core 10 Fluent API (`IEntityTypeConfiguration<T>`).
+- Register `GxPAuditInterceptor` in `DbContextOptions` to automatically compute SHA-256 Merkle hashes and update version indices.
+- Apply `.AsNoTracking()` to all query-only operations.
 
 ```csharp
 namespace Cadence.Apps.Execution.Infrastructure;
@@ -129,9 +131,10 @@ public class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : 
 ---
 
 ### Step 3: Application Services & Validation (`Application/`)
-* Define typed service interfaces (e.g. `ISubjectApplicationService`) and implementations.
-* Use primary constructors for explicit dependency injection (100% Native AOT ready).
-* Return strongly-typed `Result<TValue>` monads for domain rule validation.
+
+- Define typed service interfaces (e.g. `ISubjectApplicationService`) and implementations.
+- Use primary constructors for explicit dependency injection (100% Native AOT ready).
+- Return strongly-typed `Result<TValue>` monads for domain rule validation.
 
 ```csharp
 namespace Cadence.Apps.Execution.Application;
@@ -155,9 +158,10 @@ public record SubjectDto(string Id, string SiteId, string Identifier, string Sta
 ---
 
 ### Step 4: Minimal API Route Mapping & Security (`Endpoints/`)
-* Define route groups using ASP.NET Core 10 Minimal APIs (`MapGroup("/api/v1/...")`).
-* Apply `GatewayHmacValidationFilter` to verify internal HMAC signatures.
-* Return strongly-typed `Results<Ok<T>, ProblemHttpResult>`.
+
+- Define route groups using ASP.NET Core 10 Minimal APIs (`MapGroup("/api/v1/...")`).
+- Apply `GatewayHmacValidationFilter` to verify internal HMAC signatures.
+- Return strongly-typed `Results<Ok<T>, ProblemHttpResult>`.
 
 ```csharp
 namespace Cadence.Apps.Execution.Endpoints;
@@ -189,8 +193,9 @@ public static class SubjectEndpoints
 ---
 
 ### Step 5: Unit & Integration Testing (`tests/`)
-* Test application workflows using `xunit.v3`, `FluentAssertions`, and `InMemoryRepository<T>`.
-* Every test validating a regulatory or functional requirement **must** declare:
+
+- Test application workflows using `xunit.v3`, `FluentAssertions`, and `InMemoryRepository<T>`.
+- Every test validating a regulatory or functional requirement **must** declare:
   1. XML doc comment with `/// @req:PRD-SYS-xxx`
   2. `[GxPRequirement("PRD-SYS-xxx")]` custom attribute
 
@@ -213,7 +218,7 @@ public class SubjectRegistrationTests
         /// Verifies that subject registration initializes the GxP audit trail at version 1.
         /// @req:PRD-SYS-053
         /// </summary>
-        
+
         // Assertions ...
     }
 }
@@ -226,18 +231,23 @@ public class SubjectRegistrationTests
 Regulatory compliance under 21 CFR Part 11 requires that all architectural evolutions, domain models, and test assertions stay synchronized across documentation without drift:
 
 #### 6.1: GxP Traceability Matrix Sync
+
 After adding or modifying tests, parse test execution output and regenerate the Requirements Traceability Matrix:
+
 ```bash
 python scripts/sync_gxp.py
 ```
+
 Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements.
 
 #### 6.2: Legacy ADR Supersession & Index Updating
+
 When transcribing a service or pattern that supersedes a prior architectural decision:
+
 1. Locate the legacy ADR in `docs/adr/`.
 2. Update the status header:
    ```markdown
-   * **Status:** Superseded by [ADR-XXXX](path-to-new-adr.md)
+   - **Status:** Superseded by [ADR-XXXX](path-to-new-adr.md)
    ```
 3. Add a standard supersession notice callout at the top:
    ```markdown
@@ -248,6 +258,7 @@ When transcribing a service or pattern that supersedes a prior architectural dec
 5. Validate via `python scripts/validate_adrs.py` to confirm zero broken links or invalid tags.
 
 #### 6.3: System Architecture & Domain Glossary Sync
+
 1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect .NET 10 Minimal APIs, active port, and EF Core / Neo4j persistence drivers.
 2. **`CONTEXT.md`**: Refine domain terms to reflect C# 14 / .NET 10 implementation patterns and primary constructor models.
 
@@ -262,10 +273,12 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 ```
 
 ### 1. Behavioral Parity & Schema Verification
+
 - Validate that the new .NET 10 Minimal API endpoint schemas (`/openapi/v1.json`) match or cleanly supersede the legacy Python FastAPI schemas.
 - Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-xxx`) tested in the Python test suite are covered in the new xUnit test suite with equal or greater test assertion coverage.
 
 ### 2. Gateway Route Cutover
+
 - In `apps/gateway` (YARP reverse proxy), redirect the upstream routing destination for the service route prefix to the active .NET 10 microservice port:
   - Gateway: `8000`
   - Designer: `8001`
@@ -279,12 +292,14 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 - Execute live end-to-end regression tests through the gateway to confirm zero regression.
 
 ### 3. Deprecated Python Source Purge
+
 - Delete the legacy Python implementation files within the service directory:
   - Remove `apps/<service>/src/cadence/<service>/`
   - Remove `apps/<service>/tests/` (once ported to `tests/`)
   - Remove legacy Alembic migration files (`apps/<service>/alembic/`) superseded by EF Core migrations.
 
 ### 4. Workspace Member Unlink & CI Pruning
+
 - Remove the decommissioned service path from `pyproject.toml` under `[tool.uv.workspace] members`.
 - Remove legacy Python test paths from pytest configurations.
 - Execute `dotnet cadence check` and `python scripts/sync_gxp.py` to confirm clean builds and 100% RTM compliance.
@@ -293,16 +308,15 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 ## 4. Developer & Agent Command Reference
 
-| Task | Command | Description |
-| :--- | :--- | :--- |
-| **Local Host Setup** | `powershell .\scripts\setup_dotnet_env.ps1` | Provisions SDK, global tools, HTTPS certs, and .env on Windows |
-| **Linux/macOS Setup** | `bash ./scripts/setup_dotnet_env.sh` | Provisions SDK, tools, and certs on POSIX systems |
-| **Build Solution** | `dotnet build Cadence.sln` | Compiles all apps, packages, and test projects |
-| **Format Verification** | `dotnet format Cadence.sln --verify-no-changes` | Enforces `.editorconfig` rules (fails on deviations) |
-| **Auto-Format Code** | `dotnet format Cadence.sln` | Automatically fixes whitespace and namespace formatting |
-| **Run Fast Unit Tests** | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests |
-| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"` | Runs Testcontainers PostgreSQL & Neo4j tests |
-| **ADR Validation** | `python scripts/validate_adrs.py` | Validates ADR index formatting and requirement tags |
-| **GxP Compliance Sync** | `python scripts/sync_gxp.py` | Parses tests, extracts `@req` tags, and updates SDLC docs |
-| **Docker Dev Stack** | `docker compose --profile dotnet up -d` | Starts .NET container with hot reload and live datastores |
-
+| Task                      | Command                                                    | Description                                                    |
+| :------------------------ | :--------------------------------------------------------- | :------------------------------------------------------------- |
+| **Local Host Setup**      | `powershell .\scripts\setup_dotnet_env.ps1`                | Provisions SDK, global tools, HTTPS certs, and .env on Windows |
+| **Linux/macOS Setup**     | `bash scripts/setup_dotnet_env.sh`                         | Provisions SDK, tools, and certs on POSIX systems              |
+| **Build Solution**        | `dotnet build Cadence.sln`                                 | Compiles all apps, packages, and test projects                 |
+| **Format Verification**   | `dotnet format Cadence.sln --verify-no-changes`            | Enforces `.editorconfig` rules (fails on deviations)           |
+| **Auto-Format Code**      | `dotnet format Cadence.sln`                                | Automatically fixes whitespace and namespace formatting        |
+| **Run Fast Unit Tests**   | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests                                      |
+| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL & Neo4j tests                   |
+| **ADR Validation**        | `python scripts/validate_adrs.py`                          | Validates ADR index formatting and requirement tags            |
+| **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                               | Parses tests, extracts `@req` tags, and updates SDLC docs      |
+| **Docker Dev Stack**      | `docker compose --profile dotnet up -d`                    | Starts .NET container with hot reload and live datastores      |

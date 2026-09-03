@@ -171,6 +171,7 @@ export default withMermaid(
         { text: "Home", link: "/" },
         { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
         { text: "Architecture", link: "/ARCHITECTURE" },
+        { text: ".NET 10 Migration", link: "/migration/index" },
         { text: "API Reference", link: "/api/index" },
         { text: "CLI Reference", link: "/cli" },
         { text: "UI Components", link: "/components/index" },
@@ -189,6 +190,17 @@ export default withMermaid(
             { text: "System Architecture", link: "/ARCHITECTURE" },
             { text: "Developer CLI (`cadence`)", link: "/cli" },
             { text: "AI Agents & Instructions", link: "/AGENTS" },
+          ],
+        },
+        {
+          text: ".NET 10 Modernization & Migration",
+          items: [
+            { text: "Modernization Hub Overview", link: "/migration/index" },
+            { text: "Surface & Data Topology Audit", link: "/migration/SYSTEM_TOPOLOGY_AUDIT" },
+            { text: "Dependency & Parity Catalog", link: "/migration/DEPENDENCY_AND_PARITY_CATALOG" },
+            { text: "Bounded Context Migration Matrix", link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX" },
+            { text: "Solution Scaffold Guide", link: "/migration/SCAFFOLD_GUIDE" },
+            { text: "Migration Workflow Playbook", link: "/MIGRATION_WORKFLOW" },
           ],
         },
         {

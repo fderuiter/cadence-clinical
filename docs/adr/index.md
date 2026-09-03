@@ -10,11 +10,13 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
+- [2026-09-03: Universal PostgreSQL Persistence Standard and Hybrid JSONB Record Projection](2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)
 - [2026-09-02: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 - [2026-09-02: Migration to .NET 10 Architecture and Standards](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md)
 - [2026-08-28: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
 - [2026-08-28: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md)
-- [2026-08-28: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) *(Superseded by ADR-2234)*
+- [2026-08-28: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) _(Superseded by ADR-2234)_
 - [2026-08-28: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md)
 - [2026-08-28: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md)
 - [2026-08-28: Programmatic VitePress API Documentation Engine](2026-08-28-programmatic-vitepress-api-documentation-engine.md)
@@ -25,7 +27,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
-- [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) *(Superseded by ADR-2234)*
+- [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) _(Superseded by ADR-2234)_
 - [2026-08-22: Sovereign All-in-One eClinical Suite Expansion](2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md)
 - [2026-08-21: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md)
 - [2026-08-21: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md)
@@ -96,6 +98,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+
 - [2026-08-25: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md)
 - [2026-08-21: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md)
 - [2026-08-18: Localize datetime helpers in security package](2026-08-18-localize-datetime-helpers-in-security-package.md)
@@ -161,11 +164,11 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+
 - [2026-08-23: Deepen CDISC Study Submission Compiler](2026-08-23-deepen-cdisc-study-submission-compiler.md)
 - [2026-08-23: DDF Compiler Pipeline Architecture](2026-08-23-ddf-compiler-pipeline-architecture.md)
 - [2026-08-23: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md)
 - [2026-08-21: Hybrid Semantic Medical Coding Pipeline with pgvector](2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md)
-
 
 - [2026-08-22: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper](2026-08-22-hybrid-fhir-to-cdisc-semantic-interoperability-mapper.md)
 - [2026-08-17: Fast Version-Check with Immediate Quarantine and Client Alerting](2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md)
@@ -200,6 +203,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+
 - [2026-08-29: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md)
 - [2026-08-28: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md)
 - [2026-08-28: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md)
@@ -258,6 +262,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+
 - [2026-08-28: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md)
 - [2026-08-28: Specialized Science Safety Submissions CSM Forensics and AI Air Gap](2026-08-28-specialized-science-safety-submissions-csm-forensics-and-ai-air-gap.md)
 - [2026-08-23: Autonomous Cross-Domain Quality Surveillance Runner Architecture](2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md)
@@ -320,6 +325,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+
 - [2026-09-02: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration](2026-09-02-unified-gxp-traceability-and-tooling-pipeline-for-net-10-migration.md)
 - [2026-08-22: Self Hosted CI Runner and Trunk Based Branching Lifecycle](2026-08-22-self-hosted-ci-runner-and-trunk-based-branching-lifecycle.md)
 - [2026-08-21: Comprehensive Developer Tooling Overhaul](2026-08-21-comprehensive-developer-tooling-overhaul.md)
@@ -424,3 +430,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-24: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails](2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
 - [2026-08-24: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
 - [2026-08-25: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer](2026-08-25-standardize-microservice-domain-exceptions-rfc-7807-handlers-and-repository-layer.md)
+- [2026-08-29: E2B R3 Suspect Drug WHODrug Active Ingredient Validation and AS2 PreFlight Gating](2026-08-29-e2b-r3-suspect-drug-whodrug-active-ingredient-validation-and-as2-preflight-gating.md)
+- [2026-08-29: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md)
+- [2026-08-29: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md)
+- [2026-08-29: Schedule of Activities Matrix WCAG 2.1 AA 2D Grid Navigation and Background Sync Hardening](2026-08-29-schedule-of-activities-matrix-wcag-21-aa-2d-grid-navigation-and-background-sync-hardening.md)
