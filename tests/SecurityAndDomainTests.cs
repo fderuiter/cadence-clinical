@@ -30,10 +30,10 @@ public class SecurityAndDomainTests
     /// Validates deterministic HMAC-SHA256 signature computation and fixed-time verification.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "HmacSigner_GeneratesDeterministicSignature_AndVerifiesCorrectly")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
-    public void HmacSigner_GeneratesDeterministicSignature_AndVerifiesCorrectly()
+    public void HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly()
     {
         // Arrange
         const string payload = "{\"subject_id\":\"SUBJ-101\",\"action\":\"RANDOMIZE\"}";
@@ -54,10 +54,10 @@ public class SecurityAndDomainTests
     /// Validates that in-memory repository fakes capture mutations and monotonically advance GxP version index.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "InMemoryRepository_PersistsEntity_AndIncrementsVersionIndex")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
-    public async Task InMemoryRepository_PersistsEntity_AndIncrementsVersionIndex()
+    public async Task InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex()
     {
         // Arrange
         var repo = new InMemoryRepository<TestSubject, string>();
@@ -82,10 +82,10 @@ public class SecurityAndDomainTests
     /// Validates that Result monads encapsulate domain validation errors without runtime exception overhead.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
-    public void ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions()
+    public void ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions()
     {
         // Arrange & Act
         Result<string> successResult = Result<string>.Success("Subject enrolled successfully");
@@ -106,10 +106,10 @@ public class SecurityAndDomainTests
     /// Validates that AuditLogEntry computes deterministic SHA-256 Merkle hashes chained to predecessor blocks.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-053")]
-    public void AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor()
+    public void AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor()
     {
         // Arrange
         var timestamp = new DateTime(2026, 9, 2, 12, 0, 0, DateTimeKind.Utc);
