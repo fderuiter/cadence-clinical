@@ -328,6 +328,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 7. DevOps, Tooling & CI/CD
 
+- [2026-09-03: Full-Stack Environment Setup Wizard and Python Workspace Glob Hardening](2026-09-03-full-stack-environment-setup-wizard-and-python-workspace-glob-hardening.md)
+
 - [2026-09-02: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration](2026-09-02-unified-gxp-traceability-and-tooling-pipeline-for-net-10-migration.md)
 - [2026-08-22: Self Hosted CI Runner and Trunk Based Branching Lifecycle](2026-08-22-self-hosted-ci-runner-and-trunk-based-branching-lifecycle.md)
 - [2026-08-21: Comprehensive Developer Tooling Overhaul](2026-08-21-comprehensive-developer-tooling-overhaul.md)

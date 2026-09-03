@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup fix lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline regenerate-templates
+.PHONY: help setup wizard fix lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -22,6 +22,9 @@ setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit ho
 	uv run --python 3.14 pre-commit install --install-hooks
 	pnpm install --frozen-lockfile
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
+
+wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/CI/Codespaces environments)
+	bash scripts/setup_wizard.sh
 
 ##@ Developer Experience & CLI
 doctor: ## Run system diagnostics and verify development environment health

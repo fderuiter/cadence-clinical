@@ -23,6 +23,5 @@
   },
   "forwardPorts": [8000, 8001, 8002, 5432, 7687],
   "remoteUser": "root",
-  "postCreateCommand": "dotnet restore Cadence.sln || true"
+  "postCreateCommand": "bash scripts/setup_wizard.sh --dev"
 }
-

@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <!-- ASP.NET Core & OpenTelemetry -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-preview.1.25120.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.0" />
@@ -14,10 +14,10 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
 
     <!-- Persistence & Database Drivers -->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-preview.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0-preview.1.25120.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-preview.1.25120.13" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0-preview.1.25120.13" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
     <PackageVersion Include="Neo4j.Driver" Version="5.28.1" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
@@ -43,11 +43,11 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
     <PackageVersion Include="Testcontainers.Neo4j" Version="4.3.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="ArchUnitNET.xUnit" Version="0.11.1" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.0-preview.1.25120.13" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.11" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.2.0" />
 
     <!-- Media, Storage & Antivirus Integrations -->

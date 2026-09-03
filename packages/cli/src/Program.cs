@@ -24,7 +24,8 @@ public static class Program
             AnsiConsole.MarkupLine("  [cyan]doctor[/]                 Validates system dependencies and local datastores");
             AnsiConsole.MarkupLine("  [cyan]gxp sync[/]               Executes test suites and regenerates RTM compliance docs");
             AnsiConsole.MarkupLine("  [cyan]test[/]                   Runs fast unit tests or testcontainer integration suites");
-            AnsiConsole.MarkupLine("  [cyan]wizard onboarding[/]      Interactive .NET 10 developer onboarding wizard");
+            AnsiConsole.MarkupLine("  [cyan]wizard onboarding[/]      Interactive full-stack (.NET/Node/Python) developer setup wizard");
+            AnsiConsole.MarkupLine("  [cyan]wizard dotnet[/]          Interactive .NET 10-only onboarding wizard (SDK, tools, certs)");
             AnsiConsole.MarkupLine("  [cyan]wizard migrate[/]         Interactive microservice transcription & scaffolding wizard");
             AnsiConsole.MarkupLine("  [cyan]wizard decommission[/]    Interactive legacy Python decommissioning & cleanup wizard");
             return 0;
@@ -48,7 +49,8 @@ public static class Program
 
             case "wizard":
                 string subCommand = args.Length > 1 ? args[1].ToLowerInvariant() : "";
-                return RunWizard(subCommand, args.Length > 2 ? args[2] : null);
+                string[] wizardArgs = args.Length > 2 ? args[2..] : [];
+                return RunWizard(subCommand, wizardArgs);
 
             default:
                 AnsiConsole.MarkupLine($"[red]Unknown command:[/] {command}");
@@ -200,7 +202,7 @@ public static class Program
         return RunProcess("python", "scripts/sync_gxp.py");
     }
 
-    private static int RunWizard(string subCommand, string? serviceArg)
+    private static int RunWizard(string subCommand, string[] extraArgs)
     {
         bool isWindows = OperatingSystem.IsWindows();
         string scriptDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "scripts");
@@ -211,7 +213,8 @@ public static class Program
 
         string scriptName = subCommand switch
         {
-            "onboarding" => isWindows ? "setup_dotnet_wizard.ps1" : "setup_dotnet_wizard.sh",
+            "onboarding" => isWindows ? "setup_wizard.ps1" : "setup_wizard.sh",
+            "dotnet" => isWindows ? "setup_dotnet_wizard.ps1" : "setup_dotnet_wizard.sh",
             "migrate" => isWindows ? "migrate_service_wizard.ps1" : "migrate_service_wizard.sh",
             "decommission" => isWindows ? "decommission_service_wizard.ps1" : "decommission_service_wizard.sh",
             _ => ""
@@ -223,14 +226,16 @@ public static class Program
                 new SelectionPrompt<string>()
                     .Title("Select a [cyan]Cadence Developer Wizard[/]:")
                     .AddChoices(
-                        "1. Onboarding (.NET 10 Developer Environment)",
-                        "2. Migrate Service (Scaffold Clean Architecture)",
-                        "3. Decommission Service (Retire Legacy Python)",
-                        "4. Exit"));
+                        "1. Onboarding (Full-Stack: .NET + Node + Python)",
+                        "2. .NET Only (SDK, Global Tools, Dev Certs)",
+                        "3. Migrate Service (Scaffold Clean Architecture)",
+                        "4. Decommission Service (Retire Legacy Python)",
+                        "5. Exit"));
 
-            if (selected.StartsWith("1")) return RunWizard("onboarding", null);
-            if (selected.StartsWith("2")) return RunWizard("migrate", null);
-            if (selected.StartsWith("3")) return RunWizard("decommission", null);
+            if (selected.StartsWith('1')) return RunWizard("onboarding", []);
+            if (selected.StartsWith('2')) return RunWizard("dotnet", []);
+            if (selected.StartsWith('3')) return RunWizard("migrate", []);
+            if (selected.StartsWith('4')) return RunWizard("decommission", []);
             return 0;
         }
 
@@ -241,12 +246,20 @@ public static class Program
             return 1;
         }
 
+        // The migrate and decommission wizards take a single positional service name on
+        // Windows; the onboarding and dotnet wizards take switches that are forwarded as-is.
+        bool isServiceWizard = subCommand is "migrate" or "decommission";
+        string windowsExtra = isServiceWizard && extraArgs.Length > 0
+            ? $"-ServiceName {extraArgs[0]}"
+            : string.Join(' ', extraArgs);
+        string arguments = isWindows
+            ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\" {windowsExtra}"
+            : $"\"{scriptPath}\" {string.Join(' ', extraArgs)}";
+
         var processInfo = new ProcessStartInfo
         {
             FileName = isWindows ? "powershell.exe" : "bash",
-            Arguments = isWindows
-                ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\" {(string.IsNullOrEmpty(serviceArg) ? "" : $"-ServiceName {serviceArg}")}"
-                : $"\"{scriptPath}\" {serviceArg ?? ""}",
+            Arguments = arguments,
             UseShellExecute = false
         };
 

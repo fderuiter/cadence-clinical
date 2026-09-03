@@ -28,5 +28,4 @@ api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithName("ListStudies")
     .WithSummary("Lists active CDISC USDM study protocol graph definitions.");
 
-app.Run();
-
+await app.RunAsync();

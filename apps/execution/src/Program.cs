@@ -28,5 +28,4 @@ api.MapGet("/subjects", () => TypedResults.Ok(Array.Empty<string>()))
     .WithName("ListSubjects")
     .WithSummary("Retrieves subjects projected under the active protocol version.");
 
-app.Run();
-
+await app.RunAsync();
