@@ -270,3 +270,13 @@ Remaining blockers, in the order they should be closed:
 3. Environment-variable dictionary backfill for the 65 undocumented in-scope variables, particularly the credential and regulatory-gateway ones (Gate 3).
 
 Gates 1 and 2 are genuinely solid and need no rework. Once the three items above are closed, this baseline is in a materially strong position — the topology and coupling analysis documents are unusually rigorous (they correctly self-identified the Execution↔Designer cycle and the `packages/security` leaf-status problem before this audit ever ran) — but none of the three blockers above should be waived, since each maps to a concrete Phase 1 failure mode: an unbuildable solution, a slice sequenced against an unmet dependency, or a secret-manager migration missing real secrets.
+
+---
+
+## Addendum (2026-09-03) — Gate 4 remediation: MIG-03 resolved
+
+§4c's Slice 01 True Leaf Test finding — that Slice 01 (Execution) is not a true leaf because of its live, bidirectional, same-tier HTTP cycle with Slice 02 (Designer), and that MIG-03 was an open decision rather than a resolution — has been addressed. This addendum records only that the remediation landed and where; the original audit findings above are left unmodified.
+
+MIG-03 is now a recorded decision: parallel migration of SLICE-01 and SLICE-02 with contract-first coordination, both directions' HTTP contracts frozen in `Cadence.Contracts` (`IDesignerEligibilityApiClient` for the Execution→Designer edge, `IExecutionAmendmentApiClient` for the Designer→Execution edge) ahead of either team's service-code work. The decision, its justification against the sub-sequencing alternative, and the staffing implication are recorded in `docs/migration/phase0/03_migration_plan.md` §3.1; the SLICE-01/SLICE-02 rows in that document's §2 table and `02_bounded_contexts.md` §4.2 were updated to point at it.
+
+This closes remediation item 2 of §6/§7 above. Items 1 (`Directory.Packages.props` pins / Gate 5) and 3 (environment-variable dictionary backfill / Gate 3) are unaffected by this addendum and remain open under their own tracking.
