@@ -46,3 +46,25 @@
   - No aggregates, persistence, or HTTP surface touched — matches the ticket's explicit scope boundary.
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-001 - strongly-typed IDs and value objects`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-003 - Implement `SubjectErrors` Domain Error Factory
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** `03_tickets.md`'s WBS Dependencies column lists `MIG-SUBJ-002` ("`SubjectState` Enum, Codec & Transition Graph") as the next zero-dependency ticket ahead of this one in numbering, but `02_technical_design.md` §2.2's authoritative `SubjectTransitionGraph.Guard` code shape calls `SubjectErrors.InvalidStateTransition(...)` directly — a real compile-time dependency the WBS table does not surface (MIG-SUBJ-002 has no listed dependency on MIG-SUBJ-003, yet cannot be implemented per its own Technical Implementation Details without `SubjectErrors` existing first). Implementing MIG-SUBJ-002 now would have forced a choice between defining `SubjectErrors` inline (scope creep into this ticket's explicit territory) or diverging from the design doc's `Guard` signature. `MIG-SUBJ-003` itself has no dependencies of its own (domain layer only, no aggregate/HTTP surface) and is independently listed as zero-dependency/startable-immediately in the roadmap, so it was implemented first to unblock MIG-SUBJ-002 cleanly for the next pass.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Subjects/SubjectErrors.cs`
+  - `tests/Execution/Subjects/SubjectErrorsTests.cs`
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
+- **Tests Executed:** 139 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`) — 131 pre-existing + 8 new `SubjectErrorsTests`
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (the initial `with { ... }` one-liners for `LockedFactorMutation`/`ReconsentRequired` were reformatted onto their own line by `dotnet format` to match the repo's house style; committed as reformatted)
+- **Golden Master Parity:** N/A — pure domain error-factory ticket, no fixture inputs/outputs in `fixtures/*.json`. Verified instead against `02_technical_design.md` §3.4's exact code shapes (all 7 factory methods, the two `with`-expression `Type` overrides) and the ticket's own Acceptance Criteria (fixed `Code` strings, `LockedFactorMutation`'s `Conflict` override, `InvalidStateTransition`'s free-text message distinct from its fixed `Code`).
+- **Notes:**
+  - Implemented verbatim against `02_technical_design.md` §3.4: `NotFound`, `InvalidStateTransition`, `LockedFactorMutation` (`Validation` base `with { Type = ErrorType.Conflict }`), `SoftDeleteBlocked`, `BlockedEnrollment`, `BlockedActivation`, `ReconsentRequired` (`Conflict` base `with { Type = ErrorType.Forbidden }`) — all 7 codes distinct, asserted by a dedicated reconciliation test (`AllFactoryMethods_ProduceDistinctCodes`).
+  - Per the ticket's explicit scope note, raise site #19 (bare `except Exception`) and #22 (suppressed decrypt failure) have no corresponding factory method — no "unexpected exception" method exists on `SubjectErrors` by design; this is intentional, not an oversight.
+  - HTTP status mapping (MIG-SUBJ-010) and aggregate-level call sites (MIG-SUBJ-004) are explicitly out of scope here and untouched.
+  - No divergence from the design doc or ticket text in the implementation itself — the only deviation worth flagging is the ticket-ordering rationale above (implemented ahead of MIG-SUBJ-002 due to the real, WBS-unlisted dependency).
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-003 - SubjectErrors domain error factory`

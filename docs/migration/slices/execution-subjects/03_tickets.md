@@ -233,7 +233,7 @@ Port the 9-state enum, the `UPPER_SNAKE_CASE` string codec (`normalize_state`'s 
 
 ---
 
-### [MIG-SUBJ-003] Implement `SubjectErrors` Domain Error Factory
+### [MIG-SUBJ-003] Implement `SubjectErrors` Domain Error Factory `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Small (1h)
@@ -259,11 +259,11 @@ Per `02_technical_design.md` §3.4, using the existing `Cadence.Core.Domain.Doma
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given each of the 7 factory methods, when invoked, then the returned `DomainError.Code` matches the fixed string exactly (`SUBJECT_NOT_FOUND`, `INVALID_STATE_TRANSITION`, `LOCKED_FACTOR_MUTATION`, `SOFT_DELETE_BLOCKED`, `BLOCKED_ENROLLMENT`, `BLOCKED_ACTIVATION`, `RECONSENT_REQUIRED`).
-- [ ] Boundary check: `LockedFactorMutation()`'s `Type` is `ErrorType.Conflict` (not the `Validation` default that would otherwise apply if constructed via `DomainError.Validation`) — assert this explicitly since it drives the 422 override in MIG-SUBJ-010.
-- [ ] Error condition: `InvalidStateTransition` message text is human-readable free text (`"Transition from {from} to {to} is forbidden."`), not the fixed `INVALID_STATE_TRANSITION` string — the fixed string lives in `Code`, matching §3.4's "pick one response shape" resolution of raise sites #12 vs #18's legacy free-text/fixed-string split.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given each of the 7 factory methods, when invoked, then the returned `DomainError.Code` matches the fixed string exactly (`SUBJECT_NOT_FOUND`, `INVALID_STATE_TRANSITION`, `LOCKED_FACTOR_MUTATION`, `SOFT_DELETE_BLOCKED`, `BLOCKED_ENROLLMENT`, `BLOCKED_ACTIVATION`, `RECONSENT_REQUIRED`).
+- [x] Boundary check: `LockedFactorMutation()`'s `Type` is `ErrorType.Conflict` (not the `Validation` default that would otherwise apply if constructed via `DomainError.Validation`) — assert this explicitly since it drives the 422 override in MIG-SUBJ-010.
+- [x] Error condition: `InvalidStateTransition` message text is human-readable free text (`"Transition from {from} to {to} is forbidden."`), not the fixed `INVALID_STATE_TRANSITION` string — the fixed string lives in `Code`, matching §3.4's "pick one response shape" resolution of raise sites #12 vs #18's legacy free-text/fixed-string split.
 
 #### Verification & Test Requirements
 
