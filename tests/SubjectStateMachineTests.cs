@@ -152,6 +152,11 @@ public class SubjectStateMachineTests
         act.Should().Throw<InvalidStateTransitionException>();
     }
 
+    /// <summary>
+    /// Validates post-randomization lock classification for all nine subject lifecycle states.
+    /// @req:PRD-SYS-001
+    /// @req:PRD-SYS-042
+    /// </summary>
     [Theory(DisplayName = "IsLockedPostRandomization_ReturnsTrue_OnlyForTheFiveLockedStates")]
     [InlineData(SubjectState.Randomized, true)]
     [InlineData(SubjectState.Active, true)]
@@ -171,6 +176,10 @@ public class SubjectStateMachineTests
         SubjectStateMachine.IsLockedPostRandomization(state).Should().Be(expectedLocked);
     }
 
+    /// <summary>
+    /// Validates the default locked-factor exception emits a non-empty regulatory safety message.
+    /// @req:PRD-SYS-001
+    /// </summary>
     [Fact(DisplayName = "LockedFactorMutationException_DefaultConstructor_CarriesRegulatoryMessage")]
     [Trait("Category", "Unit")]
     [GxPRequirement("PRD-SYS-001")]
