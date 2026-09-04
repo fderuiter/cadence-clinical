@@ -8,6 +8,18 @@ exclude = [
     "apps/execution/database/models.py"
 ]
 
+[tool.uv]
+# uv's default python-preference ("managed") re-selects an already-downloaded
+# managed interpreter over a newer system one even when that cached build is a
+# stale pre-release (e.g. a 3.14 release candidate someone downloaded before
+# 3.14 went final). That interpreter silently poisons every later `uv sync`/
+# `uv run` on the machine: pydantic's typing._eval_type() shim targets the
+# final 3.14 typing API and raises TypeError/AssertionError on import against
+# a pre-release build, even though nothing about the code changed. Preferring
+# system Python sidesteps the stale-managed-cache trap (setup_wizard.sh also
+# verifies and self-heals if no usable system interpreter is present yet).
+python-preference = "system"
+
 [tool.uv.workspace]
 members = [
     "apps/*",

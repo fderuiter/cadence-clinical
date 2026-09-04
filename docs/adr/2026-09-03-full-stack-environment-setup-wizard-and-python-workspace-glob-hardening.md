@@ -129,6 +129,9 @@ relocated above the method they document.
   Python 3.14.0rc2 due to a `pydantic`/`typing` incompatibility unrelated to
   this change; the wizard surfaces it in its summary output but does not
   fix it (needs a `pydantic` version investigation, out of scope here).
+  Resolved in ADR-2241: the root cause was `uv` silently preferring a
+  cached pre-release `3.14.0rc2` interpreter over a correct final-release
+  one, not a `pydantic` version gap.
 - **Mitigation:** `setup_dotnet_env.sh`/`.ps1` no longer force
   `--quality preview` for the SDK install now that .NET 10 is GA, and prefer
   the OS package manager (`apt`/`winget`) before falling back to
