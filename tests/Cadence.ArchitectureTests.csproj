@@ -1,4 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <!-- Cadence.UnitTests.csproj and Cadence.ArchitectureTests.csproj both live directly in tests/;
+       without distinct intermediate/output paths they collide on obj/project.assets.json and bin/,
+       which produces a nondeterministic race in solution-wide builds. BaseIntermediateOutputPath
+       must be set before the Sdk.props import, so the implicit Sdk="..." shorthand can't be used
+       here (see https://go.microsoft.com/fwlink/?linkid=869650). -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj\ArchitectureTests\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\ArchitectureTests\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
   <PropertyGroup>
     <RootNamespace>Cadence.ArchitectureTests</RootNamespace>
     <IsPackable>false</IsPackable>
@@ -22,4 +34,6 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="TngTech.ArchUnitNET.xUnit" />
   </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

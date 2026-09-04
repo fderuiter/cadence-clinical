@@ -17,10 +17,10 @@ public class ArchitectureSentinelTests
     /// Validates Hexagonal and Clean Architecture boundary purity: Cadence.Core.Domain must not reference infrastructure or web assemblies.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "DomainLayer_MustNotReference_InfrastructureOrPresentationAssemblies")]
     [Trait("Category", "Architecture")]
     [GxPRequirement("PRD-SYS-053")]
-    public void DomainLayer_MustNotReference_InfrastructureOrPresentationAssemblies()
+    public void DomainLayerMustNotReferenceInfrastructureOrPresentationAssemblies()
     {
         // Arrange
         var domainAssembly = typeof(AggregateRoot<>).Assembly;
@@ -39,10 +39,10 @@ public class ArchitectureSentinelTests
     /// Validates 21 CFR Part 11 regulatory invariant: All DDD aggregate roots must implement IGxPAuditable.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "AggregateRoots_MustImplement_IGxPAuditableContract")]
     [Trait("Category", "Architecture")]
     [GxPRequirement("PRD-SYS-053")]
-    public void AggregateRoots_MustImplement_IGxPAuditableContract()
+    public void AggregateRootsMustImplementIGxPAuditableContract()
     {
         // Arrange
         var aggregateType = typeof(AggregateRoot<string>);
@@ -56,23 +56,23 @@ public class ArchitectureSentinelTests
     /// Validates that test methods in test projects carry compile-time [GxPRequirement] regulatory tags.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact]
+    [Fact(DisplayName = "RegulatedTestSuites_MustFeature_GxPRequirementAttributes")]
     [Trait("Category", "Architecture")]
     [GxPRequirement("PRD-SYS-053")]
-    public void RegulatedTestSuites_MustFeature_GxPRequirementAttributes()
+    public void RegulatedTestSuitesMustFeatureGxPRequirementAttributes()
     {
         // Arrange
         var testAssembly = typeof(Cadence.UnitTests.SecurityAndDomainTests).Assembly;
         var testMethods = testAssembly.GetTypes()
             .SelectMany(t => t.GetMethods())
-            .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Any())
+            .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Length > 0)
             .ToList();
 
         // Assert
         testMethods.Should().NotBeEmpty();
         foreach (var method in testMethods)
         {
-            var hasGxpAttribute = method.GetCustomAttributes(typeof(GxPRequirementAttribute), false).Any();
+            var hasGxpAttribute = method.GetCustomAttributes(typeof(GxPRequirementAttribute), false).Length > 0;
             hasGxpAttribute.Should().BeTrue($"Test method '{method.DeclaringType?.Name}.{method.Name}' must declare [GxPRequirement]");
         }
     }
