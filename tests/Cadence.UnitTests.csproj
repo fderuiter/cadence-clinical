@@ -22,6 +22,7 @@
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>
