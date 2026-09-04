@@ -146,7 +146,7 @@ graph TD
 
 ## 2. Implementation Tickets
 
-### [MIG-SUBJ-001] Implement Strongly-Typed IDs & Value Objects
+### [MIG-SUBJ-001] Implement Strongly-Typed IDs & Value Objects `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Small (2h)
@@ -177,13 +177,13 @@ Exactly per `02_technical_design.md` §2.1: `SubjectId`/`SubjectConsentId` as `r
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an empty or whitespace-only string, when constructing `SubjectCode`/`StudyCode`/`SiteCode`, then an `ArgumentException` is thrown.
-- [ ] Given a 256-character string, when constructing `SubjectCode`/`StudyCode`, then an `ArgumentException` is thrown (255 is the max valid length).
-- [ ] Given `SubjectId.New()` called twice, when comparing results, then they are unequal (`Guid.NewGuid()` per call).
-- [ ] Boundary check: a 255-character string is accepted (upper boundary is inclusive).
-- [ ] Error condition: `SiteCode` constructed with `""` throws — distinct from a `SiteCode?` parameter left `null`, which is legal.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an empty or whitespace-only string, when constructing `SubjectCode`/`StudyCode`/`SiteCode`, then an `ArgumentException` is thrown.
+- [x] Given a 256-character string, when constructing `SubjectCode`/`StudyCode`, then an `ArgumentException` is thrown (255 is the max valid length).
+- [x] Given `SubjectId.New()` called twice, when comparing results, then they are unequal (`Guid.NewGuid()` per call).
+- [x] Boundary check: a 255-character string is accepted (upper boundary is inclusive).
+- [x] Error condition: `SiteCode` constructed with `""` throws — distinct from a `SiteCode?` parameter left `null`, which is legal.
 
 #### Verification & Test Requirements
 
