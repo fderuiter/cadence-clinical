@@ -438,3 +438,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-29: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md)
 - [2026-08-29: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md)
 - [2026-08-29: Schedule of Activities Matrix WCAG 2.1 AA 2D Grid Navigation and Background Sync Hardening](2026-08-29-schedule-of-activities-matrix-wcag-21-aa-2d-grid-navigation-and-background-sync-hardening.md)
+- [2026-09-04: Pin `uv` Python Preference to System for Python 3.14](2026-09-04-pin-uv-python-preference-to-system-for-python-314.md)
