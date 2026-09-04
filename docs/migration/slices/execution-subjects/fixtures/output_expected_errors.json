@@ -1,0 +1,168 @@
+{
+  "$schema_note": "Expected error outputs for input_invalid_validation_errors.json, matched by scenario_id. `raise_site` cross-references 01_spec.md §5.1's Full Raise-Site Inventory. Every HTTP-kind entry's body is the bare `{\"detail\": ...}` envelope documented in §5's shape callout — none of these use the richer ProblemDetails shape.",
+  "results": [
+    {
+      "scenario_id": "INV-001",
+      "raise_site": 14,
+      "status": 400,
+      "body": { "detail": "Either status or state must be provided." }
+    },
+    {
+      "scenario_id": "INV-002",
+      "raise_site": 17,
+      "status": 404,
+      "body": { "detail": "Subject not found" }
+    },
+    {
+      "scenario_id": "INV-003",
+      "raise_site": 13,
+      "status": 404,
+      "body": { "detail": "Subject not found" }
+    },
+    {
+      "scenario_id": "INV-004",
+      "raise_site": 10,
+      "status": 404,
+      "body": { "detail": "Clinical subject not found." },
+      "note": "Distinct wording from INV-002/003/005/006's \"Subject not found\" — a genuine legacy inconsistency, not a fixture typo. See 01_spec.md §5.1 #10."
+    },
+    {
+      "scenario_id": "INV-005",
+      "raise_site": 20,
+      "status": 404,
+      "body": { "detail": "Subject not found" }
+    },
+    {
+      "scenario_id": "INV-006",
+      "raise_site": 24,
+      "status": 404,
+      "body": { "detail": "Subject not found" }
+    },
+    {
+      "scenario_id": "INV-007",
+      "raise_site": 11,
+      "status": 400,
+      "body": {
+        "detail": "Study ID must be provided in the payload or resolved from the ClinicalSubject."
+      }
+    },
+    {
+      "scenario_id": "INV-008",
+      "raise_site": 18,
+      "status": 400,
+      "body": { "detail": "INVALID_STATE_TRANSITION" }
+    },
+    {
+      "scenario_id": "INV-009",
+      "raise_site": 12,
+      "status": 400,
+      "body": {
+        "detail": "Transition from RANDOMIZED to ENROLLED is forbidden."
+      },
+      "note": "Free-text variant (raise site #12), not the fixed \"INVALID_STATE_TRANSITION\" string used by INV-008/INV-020 (raise sites #18/#6). Target is ENROLLED because the precondition sets eligibility_result=eligible=true, which drives evaluate_and_transition_screening to attempt subject_obj.status = \"ENROLLED\"; RANDOMIZED's allowed-transition set does not include ENROLLED, so the ORM @validates guard rejects it."
+    },
+    {
+      "scenario_id": "INV-010",
+      "raise_site": 21,
+      "status": 422,
+      "body": { "detail": "LOCKED_FACTOR_MUTATION" }
+    },
+    {
+      "scenario_id": "INV-011",
+      "raise_site": 23,
+      "status": 422,
+      "body": { "detail": "LOCKED_FACTOR_MUTATION" }
+    },
+    {
+      "scenario_id": "INV-012",
+      "raise_site": 25,
+      "status": 403,
+      "body": { "detail": "SOFT_DELETE_BLOCKED" }
+    },
+    {
+      "scenario_id": "INV-013",
+      "raise_site": 9,
+      "status": 400,
+      "body": {
+        "detail": "Site activation blocked: Site SITE-NONCOMPLIANT-01 is not compliant in eTMF. Missing expected documents."
+      },
+      "audit_assertions": [
+        {
+          "table_name": "site_compliance_caches",
+          "action": "BLOCKED_ACTIVATION"
+        }
+      ]
+    },
+    {
+      "scenario_id": "INV-014",
+      "status": 400,
+      "body": {
+        "detail": "Subject enrollment blocked: Site SITE-NONCOMPLIANT-01 is not compliant."
+      },
+      "audit_assertions": [
+        { "table_name": "clinical_subjects", "action": "BLOCKED_ENROLLMENT" }
+      ]
+    },
+    {
+      "scenario_id": "INV-015",
+      "raise_site": 16,
+      "status": 400,
+      "body": {
+        "detail": "Subject enrollment blocked: Site SITE-NONCOMPLIANT-01 is not compliant."
+      },
+      "audit_assertions": [
+        { "table_name": "clinical_subjects", "action": "BLOCKED_ENROLLMENT" }
+      ]
+    },
+    {
+      "scenario_id": "INV-016",
+      "raise_site": 7,
+      "status": 423,
+      "body": {
+        "detail": "Protocol Amendment 2.0.0 is active. Subject SUBJ-016 must execute re-consent before data entry on visit VISIT-002."
+      },
+      "note": "Corrected from the Phase 1 report's \"428 / 403\" claim — verified 423 against amendments.py:364-368."
+    },
+    {
+      "scenario_id": "INV-017",
+      "raise_site": 8,
+      "status": 404,
+      "body": { "detail": "Subject SUBJ-DOES-NOT-EXIST not found." },
+      "note": "Underlying exception is a bare ValueError, not SubjectNotFoundError — only reaches 404 because this one call site (amendments.py:369-373) specifically catches ValueError. See 01_spec.md §5.1 #8."
+    },
+    {
+      "scenario_id": "INV-018",
+      "raise_site": 19,
+      "status": 400,
+      "body": {
+        "detail": "<the injected exception's str(e) — implementation-defined by the harness's fault-injection message>"
+      },
+      "note": "Demonstrates the genuine bare catch-all at subjects.py:643-644 (raise site #19). The harness should assert status=400 and that the body's detail equals whatever message the injected fault carried, not a fixed string — that's the point of this gap (arbitrary internal failures leak their message verbatim as a 400)."
+    },
+    {
+      "scenario_id": "INV-019",
+      "raise_site": 22,
+      "status": 422,
+      "body": { "detail": "LOCKED_FACTOR_MUTATION" },
+      "note": "Spurious lock: the subject's demographics were never actually mutated, but the corrupted existing ciphertext silently decrypts to current_demo={} (raise site #22's suppressed exception), which then compares unequal to any non-empty submitted payload. A .NET port that fails loudly on the existing-ciphertext decrypt instead would produce a different status here (see 01_spec.md §5.1 #22's recommendation) — this fixture captures today's actual (arguably wrong) legacy behavior for parity baselining, not the recommended fix."
+    },
+    {
+      "scenario_id": "INV-020",
+      "raise_site": 6,
+      "status": 400,
+      "body": { "detail": "INVALID_STATE_TRANSITION" },
+      "note": "Same fixed-string body as INV-008 — a malformed state name (\"ENROLED\") and a legal-but-forbidden transition are indistinguishable in the response, per 01_spec.md §5.1 #6."
+    },
+    {
+      "scenario_id": "INV-021",
+      "raise_site": 5,
+      "status": "n/a (direct function call, not HTTP)",
+      "exception": {
+        "type": "InvalidStateTransitionError",
+        "current_state": "None",
+        "target_state": "ENROLLED",
+        "message": "Transition from None to ENROLLED is forbidden."
+      }
+    }
+  ]
+}

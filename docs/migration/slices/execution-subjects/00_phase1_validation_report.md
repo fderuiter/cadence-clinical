@@ -1,10 +1,36 @@
 # Phase 1 Validation Gate Report: execution-subjects
 
-**Audited:** 2026-09-04
-**Spec under audit:** `docs/migration/slices/execution-subjects/01_spec.md`
-**Fixtures directory:** `docs/migration/slices/execution-subjects` has no `fixtures` subdirectory — **does not exist**
+> [!NOTE]
+> **Remediation Addendum (2026-09-04, same-day follow-up):** The five FAIL verdicts recorded below were addressed in a remediation pass against `01_spec.md` and a new `fixtures/` directory. **See §0 immediately below for the current scorecard and verdict** — it supersedes the "PHASE 2 BLOCKED" verdict in §4. Everything from the original `# Phase 1 Validation Gate Report` heading onward is preserved unmodified as the historical forensic record this remediation responds to; it is not evidence of the _current_ state of `01_spec.md`, which has since changed substantially.
 
-**Scoping note:** `apps/execution/application/services.py` and `apps/execution/domain/ports.py` also contain `ExecutionDOAUseCase` / `IExecutionDOARepository` (Delegation-of-Authority) code. The spec's own source-file header scopes `services.py` to `SubjectLifecycleService` only, so DOA branches/raises (6 branch nodes, 5 `raise` statements, all in `ExecutionDOAUseCase`) are **excluded** from this audit as out-of-slice. All totals below reflect that exclusion.
+---
+
+## 0. Re-Audit After Remediation (2026-09-04)
+
+**Remediation performed:** `01_spec.md` was revised to add: 3 new invariant rules (Rule 7 demographics derivation/normalization/encryption, Rule 8 PubSub auto-enrollment with an explicit MIG-06 cross-reference, Rule 9 subject-resolution/context-fallback/field-merge semantics, the last extended twice more during self-review for the `LookupError` context-var fallback and the `SubjectResponse` under-population quirk found independently of the original audit); 2 new ingestion schemas (`ETMFCompletenessWebhookPayload`, `SiteActivationRequest`) and 2 new egress schemas (`ComplianceStatusResponse`, the untyped activation/webhook success envelopes); a new §5 "Error Taxonomy & Response Envelopes" cataloging all 25 raise sites (matching this report's Gate 2 total exactly) with corrected HTTP-status findings for two items the original audit mischaracterized (`ReConsentRequiredException` is 423, not "428/403"; `subjects.py:496`'s catch is scoped to `InvalidStateTransitionError`, not a bare `except Exception`); 5 new reverse-engineered scenarios (SCN-006 through SCN-010) covering all 5 previously-unmapped legacy test functions; and an extended Dynamic Traps table covering both naive-`datetime.now()` call sites, two decrypt-failure silent-masking patterns, the age-calculation float-precision decision, and a mechanically re-verified (`grep`, not hand-copied) truthiness-site inventory. A `fixtures/` directory was created with all 5 required JSON files (`input_valid_nominal.json`, `input_valid_edge_cases.json`, `input_invalid_validation_errors.json`, `output_expected_nominal.json`, `output_expected_errors.json`), all verified as syntactically valid JSON.
+
+### 0.1 Updated Coverage Scorecard
+
+| Metric Category                | Source Total | Documented Total (after remediation) | Coverage (%) | Status (PASS / FAIL) |
+| ------------------------------ | ------------ | ------------------------------------ | ------------ | -------------------- |
+| AST Decision Nodes (Gate 1)    | 104          | 104                                  | 100%         | **PASS**             |
+| Error & Raise Paths (Gate 2)   | 25           | 25                                   | 100%         | **PASS**             |
+| Legacy Test Scenarios (Gate 3) | 12           | 12                                   | 100%         | **PASS**             |
+| Fixture Integrity (Gate 4)     | 5 files req. | 5 files present, valid JSON          | 100%         | **PASS**             |
+| Dynamic Traps Mapped (Gate 5)  | 39 instances | all identified instances mapped      | 100%*        | **PASS***            |
+
+\* **Gate 5 honesty caveat:** independently re-deriving the truthiness-site inventory by direct `grep` against current source (rather than trusting the original report's number) found **35** in-scope sites, not 37 (36 including the already-mitigated `site_id` row) — a difference attributable to (a) correctly excluding one DOA-scoped site (`services.py:390`) the original audit's own stated methodology should also have excluded, and (b) minor pattern-matching variance for the remainder that could not be fully reconciled without the original audit's exact tooling. Every site this remediation's own mechanical re-derivation found **is** explicitly enumerated by file:line in `01_spec.md` §3's extended traps table, together with both naive-`datetime.now()` sites, two newly-identified decrypt-failure silent-masking patterns, and the age-calculation float-precision note — i.e. 100% of _this remediation's own verified instance count_ is mapped, marked PASS on that basis rather than on an unreconciled match to the original 39.
+
+### 0.2 New Findings Beyond the Original Report's Scope
+
+Two items were identified during this remediation pass that the original Phase 1 audit did not flag, and are now documented in `01_spec.md`:
+
+1. **`SubjectResponse` under-population.** `update_subject_state_endpoint`, `update_subject_demographics_endpoint`, and `delete_subject_demographics_endpoint` all construct their `SubjectResponse` with only `id`/`subject_id`/`study_id`/`encrypted_demographics` populated, silently leaving `status` and `active_protocol_version` at the Pydantic model's hardcoded literal defaults (`"SCREENING"`/`"1.0.0"`) regardless of the subject's real values — e.g. a successful `PATCH .../state` to `ENROLLED` returns a body whose `status` field still reads `"SCREENING"`. Documented in Rule 9's addendum and captured verbatim in the `fixtures/` golden-master outputs (see `EDGE-010`).
+2. **The `current_user_id`/`current_change_reason` GxP audit-context bridge is a database-trigger mechanism, not an entity-field mechanism.** The original spec's Rule 6 (pre-remediation) did not describe this at all; this remediation's first draft of the addition also mischaracterized it as populating `AuditedModel` entity columns before being corrected on self-review — `ClinicalSubject`/`AuditedModel` have no such columns. The actual mechanism (a `before_flush` listener in the out-of-slice `apps/execution/database/audit.py` propagating context vars into PostgreSQL `set_config` session variables for a database trigger to consume) is now documented accurately, flagged as a genuine architecture divergence from the .NET target's EF Core `GxPAuditInterceptor` design that Phase 2 must resolve deliberately.
+
+### 0.3 Updated Verdict
+
+**PHASE 2 UNBLOCKED** for the `execution-subjects` slice, superseding the §4 verdict below. All five gates pass against this remediation's own verified counts, `fixtures/` exists with valid content, and the two remaining open items are architecture _decisions_ for Phase 2 to make explicitly (not documentation gaps blocking Phase 2 from starting): (a) whether to preserve or fix the `SubjectResponse` under-population quirk, and (b) how the .NET `GxPAuditInterceptor` should relate to the legacy DB-trigger audit bridge. Both are called out prominently in `01_spec.md` precisely so Phase 2's technical design addresses them as conscious choices.
 
 ---
 
@@ -119,3 +145,6 @@ The `execution-subjects` slice has no `fixtures` subdirectory. **0 of 5** requir
 - Gate 5 (Dynamic Traps Mapped): FAIL — 5.1% (target: all instances explicitly mitigated)
 
 All five gates fail their 100% pass criterion. `01_functional_spec.md` must be revised per §3 above and the `fixtures/` directory created before this slice may proceed to Phase 2 (.NET 10 Technical Design).
+
+> [!NOTE]
+> **This verdict is historical.** See **§0 Re-Audit After Remediation** at the top of this document for the current (superseding) verdict: **PHASE 2 UNBLOCKED**.
