@@ -1,0 +1,311 @@
+{
+  "$schema_note": "Golden-master fixture: inputs that must fail for the execution-subjects slice. `raise_site` cross-references the numbered row in 01_spec.md §5.1's Full Raise-Site Inventory. Pair each entry with the same scenario_id in output_expected_errors.json.",
+  "scenarios": [
+    {
+      "scenario_id": "INV-001",
+      "raise_site": 14,
+      "spec_ref": "01_spec.md §5.1 #14",
+      "description": "PATCH .../state with neither status nor state supplied.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-001/state",
+      "headers": { "X-Change-Reason": "Attempted update" },
+      "body": {}
+    },
+    {
+      "scenario_id": "INV-002",
+      "raise_site": 17,
+      "spec_ref": "01_spec.md §5.1 #17 (SubjectNotFoundError, the one local catch)",
+      "description": "PATCH .../state for a subject id that does not exist, targeting a non-ENROLLED state (so the ENROLLED-specific pre-check at raise site #15 is not what's exercised).",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST/state",
+      "headers": { "X-Change-Reason": "Attempted withdrawal" },
+      "body": { "status": "WITHDRAWN" }
+    },
+    {
+      "scenario_id": "INV-003",
+      "raise_site": 13,
+      "spec_ref": "01_spec.md §5.1 #13",
+      "description": "GET subject detail for a nonexistent subject_id.",
+      "kind": "http",
+      "method": "GET",
+      "route": "/api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST"
+    },
+    {
+      "scenario_id": "INV-004",
+      "raise_site": 10,
+      "spec_ref": "01_spec.md §5.1 #10 (note distinct detail string: \"Clinical subject not found.\")",
+      "description": "Screening evaluation for a nonexistent subject_id.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST/screening",
+      "body": { "study_id": "STUDY-001" }
+    },
+    {
+      "scenario_id": "INV-005",
+      "raise_site": 20,
+      "spec_ref": "01_spec.md §5.1 #20",
+      "description": "Demographics PUT for a nonexistent subject_id.",
+      "kind": "http",
+      "method": "PUT",
+      "route": "/api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST/demographics",
+      "headers": { "X-Change-Reason": "Attempted correction" },
+      "body": { "demographics": { "gender": "F" } }
+    },
+    {
+      "scenario_id": "INV-006",
+      "raise_site": 24,
+      "spec_ref": "01_spec.md §5.1 #24",
+      "description": "Demographics DELETE for a nonexistent subject_id.",
+      "kind": "http",
+      "method": "DELETE",
+      "route": "/api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST/demographics",
+      "headers": { "X-Change-Reason": "Attempted soft delete" }
+    },
+    {
+      "scenario_id": "INV-007",
+      "raise_site": 11,
+      "spec_ref": "01_spec.md §5.1 #11",
+      "description": "Screening evaluation where neither the request payload nor the existing subject record has a study_id.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-NO-STUDY/screening",
+      "body": {},
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-NO-STUDY",
+          "study_id": null,
+          "status": "SCREENING"
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-008",
+      "raise_site": 18,
+      "spec_ref": "01_spec.md §5.1 #18, SCN-003",
+      "description": "PATCH .../state attempting a well-formed but forbidden transition (SCREENING -> ACTIVE, skipping ENROLLED and RANDOMIZED).",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-008/state",
+      "headers": { "X-Change-Reason": "Erroneous direct activation attempt" },
+      "body": { "status": "ACTIVE" },
+      "preconditions": {
+        "subject": { "subject_id": "SUBJ-008", "status": "SCREENING" }
+      }
+    },
+    {
+      "scenario_id": "INV-009",
+      "raise_site": 12,
+      "spec_ref": "01_spec.md §5.1 #12 (free-text variant, corrected from the Phase 1 report's mischaracterization)",
+      "description": "Screening evaluation on a subject whose current status is already RANDOMIZED (not SCREENING) -> evaluate_and_transition_screening's own status assignment (SCREEN_FAILED or ENROLLED) is rejected by the ORM @validates guard as an illegal transition, surfacing InvalidStateTransitionError's own free-text message rather than the fixed INVALID_STATE_TRANSITION string.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-009/screening",
+      "body": { "study_id": "STUDY-001" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-009",
+          "study_id": "STUDY-001",
+          "status": "RANDOMIZED"
+        },
+        "eligibility_result": "eligible=true"
+      }
+    },
+    {
+      "scenario_id": "INV-010",
+      "raise_site": 21,
+      "spec_ref": "01_spec.md §5.1 #21, SCN-004, Rule 1",
+      "description": "Post-randomization strat_factors mutation attempt.",
+      "kind": "http",
+      "method": "PUT",
+      "route": "/api/v1/execution/subjects/SUBJ-010/demographics",
+      "headers": { "X-Change-Reason": "Attempted re-stratification" },
+      "body": { "strat_factors": { "site": "C" } },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-010",
+          "status": "RANDOMIZED",
+          "strat_factors": { "site": "B" }
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-011",
+      "raise_site": 23,
+      "spec_ref": "01_spec.md §5.1 #23, SCN-004, Rule 1",
+      "description": "Post-randomization demographics mutation attempt (genuinely changed payload, correctly-decryptable existing ciphertext).",
+      "kind": "http",
+      "method": "PUT",
+      "route": "/api/v1/execution/subjects/SUBJ-011/demographics",
+      "headers": { "X-Change-Reason": "Attempted demographics change" },
+      "body": { "demographics": { "gender": "M" } },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-011",
+          "status": "RANDOMIZED",
+          "encrypted_demographics_plaintext": { "gender": "F" }
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-012",
+      "raise_site": 25,
+      "spec_ref": "01_spec.md §5.1 #25, SCN-004, Rule 1",
+      "description": "Post-randomization demographics soft-delete attempt.",
+      "kind": "http",
+      "method": "DELETE",
+      "route": "/api/v1/execution/subjects/SUBJ-012/demographics",
+      "headers": { "X-Change-Reason": "Attempted soft delete" },
+      "preconditions": {
+        "subject": { "subject_id": "SUBJ-012", "status": "ACTIVE" }
+      }
+    },
+    {
+      "scenario_id": "INV-013",
+      "raise_site": 9,
+      "spec_ref": "01_spec.md §5.1 #9",
+      "description": "Explicit site-activation call for a site with no completed SITE_ACTIVATION milestone.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/sites/SITE-NONCOMPLIANT-01/activate",
+      "body": { "study_id": "STUDY-GATED" }
+    },
+    {
+      "scenario_id": "INV-014",
+      "spec_ref": "01_spec.md SCN-005, Rule 2 (screening-path BLOCKED_ENROLLMENT)",
+      "description": "Screening evaluation returns eligible=true, but the subject's site has no completed SITE_ACTIVATION milestone -> enrollment blocked, BLOCKED_ENROLLMENT audit entry written.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-014/screening",
+      "body": { "study_id": "STUDY-GATED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-014",
+          "study_id": "STUDY-GATED",
+          "site_id": "SITE-NONCOMPLIANT-01",
+          "status": "SCREENING"
+        },
+        "eligibility_result": "eligible=true"
+      }
+    },
+    {
+      "scenario_id": "INV-015",
+      "raise_site": 16,
+      "spec_ref": "01_spec.md §5.1 #16, SCN-005 (state-update path BLOCKED_ENROLLMENT)",
+      "description": "PATCH .../state to ENROLLED for a subject at a non-compliant site.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-015/state",
+      "headers": { "X-Change-Reason": "Attempted enrollment" },
+      "body": { "status": "ENROLLED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-015",
+          "study_id": "STUDY-GATED",
+          "site_id": "SITE-NONCOMPLIANT-01",
+          "status": "SCREENING"
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-016",
+      "raise_site": 7,
+      "spec_ref": "01_spec.md §5.1 #7 (corrected: HTTP 423, not 428/403)",
+      "description": "Version-gating check for a subject whose active_protocol_version no longer matches the study's active amendment, with no signed consent on file for the new version.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/amendments/validate-gating",
+      "body": {
+        "subject_id": "SUBJ-016",
+        "target_visit_id": "VISIT-002",
+        "active_protocol_version": "2.0.0",
+        "requires_reconsent": true
+      },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-016",
+          "active_protocol_version": "1.0.0"
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-017",
+      "raise_site": 8,
+      "spec_ref": "01_spec.md §5.1 #8",
+      "description": "Version-gating check for a subject_id that does not exist -> bare ValueError, caught and mapped to 404 only by this one call site.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/amendments/validate-gating",
+      "body": {
+        "subject_id": "SUBJ-DOES-NOT-EXIST",
+        "target_visit_id": "VISIT-001",
+        "active_protocol_version": "1.0.0",
+        "requires_reconsent": true
+      }
+    },
+    {
+      "scenario_id": "INV-018",
+      "raise_site": 19,
+      "spec_ref": "01_spec.md §5.1 #19 (the genuine bare catch-all)",
+      "description": "A state-update whose underlying advance_subject_state call raises an exception type not otherwise handled by this endpoint (e.g. a repository/database failure) -> masked as a generic 400 with the exception's own message. Representative example only; the harness should inject a repository fault for this case rather than reproduce a real DB outage.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-018/state",
+      "headers": {
+        "X-Change-Reason": "Attempted transition during injected repository fault"
+      },
+      "body": { "status": "ENROLLED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-018",
+          "status": "SCREENING",
+          "site_id": null
+        },
+        "injected_fault": "repository.save raises a generic RuntimeError"
+      }
+    },
+    {
+      "scenario_id": "INV-019",
+      "raise_site": 22,
+      "spec_ref": "01_spec.md §5.1 #22, §3 dynamic-traps table",
+      "description": "Post-randomization demographics PUT where the subject's *existing* encrypted_demographics ciphertext is corrupted/undecryptable -> silently treated as current_demo={}, which then spuriously looks like a genuine change against any non-empty submitted payload, triggering LOCKED_FACTOR_MUTATION even though the subject's demographics were never actually mutated.",
+      "kind": "http",
+      "method": "PUT",
+      "route": "/api/v1/execution/subjects/SUBJ-019/demographics",
+      "headers": { "X-Change-Reason": "Routine follow-up update" },
+      "body": { "demographics": { "gender": "F" } },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-019",
+          "status": "ACTIVE",
+          "encrypted_demographics_raw": "CORRUPTED-NOT-VALID-FERNET-TOKEN"
+        }
+      }
+    },
+    {
+      "scenario_id": "INV-020",
+      "raise_site": 6,
+      "spec_ref": "01_spec.md §5.1 #6, Rule 9",
+      "description": "PATCH .../state with an unmapped/malformed state string -> rejected identically to a legal-but-forbidden transition (same INVALID_STATE_TRANSITION body as INV-008).",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-020/state",
+      "headers": { "X-Change-Reason": "Typo'd status value" },
+      "body": { "status": "ENROLED" },
+      "preconditions": {
+        "subject": { "subject_id": "SUBJ-020", "status": "SCREENING" }
+      }
+    },
+    {
+      "scenario_id": "INV-021",
+      "raise_site": 5,
+      "spec_ref": "01_spec.md §5.1 #5, Rule 9",
+      "description": "Direct model-layer transition guard call with current_state=None and a target other than SCREENING -> only reachable below the HTTP layer (a persisted row always already has a status once it exists).",
+      "kind": "model",
+      "model": "subject_lifecycle",
+      "operation": "guard_subject_transition",
+      "args": { "current_state": null, "target_state": "ENROLLED" }
+    }
+  ]
+}

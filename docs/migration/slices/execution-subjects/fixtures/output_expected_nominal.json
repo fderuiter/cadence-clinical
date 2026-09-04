@@ -1,0 +1,380 @@
+{
+  "$schema_note": "Expected outputs for both input_valid_nominal.json and input_valid_edge_cases.json, matched by scenario_id. `body` uses `<opaque>` for values that are non-deterministic (generated UUIDs, ciphertext) but must be non-null/present, and `<unchanged>` where a field must equal whatever the precondition set it to. Side effects not visible in the HTTP/service response body are listed under `db_assertions`/`audit_assertions`.",
+  "results": [
+    {
+      "scenario_id": "SCN-001-A",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-001",
+        "study_id": "STUDY-001",
+        "site_id": "SITE-101",
+        "treatment_group": "ARM-A",
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "encrypted_demographics": "<opaque-non-null>"
+      },
+      "db_assertions": { "enrollment_index": 0 },
+      "audit_assertions": [
+        { "table_name": "clinical_subjects", "action": "ENROLL_SUBJECT" }
+      ]
+    },
+    {
+      "scenario_id": "SCN-001-B",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-002",
+        "study_id": "STUDY-001",
+        "site_id": "SITE-101",
+        "treatment_group": "ARM-B",
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "encrypted_demographics": null
+      },
+      "db_assertions": { "enrollment_index": 1 },
+      "note": "enrollment_index must be sequential from SCN-001-A within the same study, not independently zero."
+    },
+    {
+      "scenario_id": "SCN-002-A",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-001",
+        "study_id": "STUDY-001",
+        "version_tag": "v1.0",
+        "version_index": 1,
+        "icf_signed": true,
+        "icf_signed_date": "<opaque-defaulted-to-now-UTC>",
+        "requires_reconsent": true,
+        "is_paper_override": false,
+        "version": 1
+      },
+      "note": "`version` here is the AuditedModel optimistic-lock row counter (defaults to 1 on first save) — unrelated to `version_index`, the protocol/consent version number."
+    },
+    {
+      "scenario_id": "SCN-002-B",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-001",
+        "study_id": "STUDY-001",
+        "version_tag": "v2.0",
+        "version_index": 2,
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": false,
+        "version": 1
+      },
+      "db_assertions": {
+        "prior_consent_version_index_1": { "requires_reconsent": false }
+      },
+      "note": "Rule 3 cascade: the version_index=1 row from SCN-002-A must now read requires_reconsent=false even though this request only targeted version_index=2."
+    },
+    {
+      "scenario_id": "SCN-003-A",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-NOSITE",
+        "study_id": "STUDY-001",
+        "encrypted_demographics": null,
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "site_id": null,
+        "treatment_group": null
+      },
+      "db_assertions": { "status": "ENROLLED" },
+      "note": "Rule 9 SubjectResponse-under-population quirk: the response body's `status`/`active_protocol_version` are the Pydantic model's hardcoded defaults, NOT the subject's real post-transition values. The DB row genuinely is ENROLLED; the response body is not evidence of that. Do not 'fix' this fixture to show status=ENROLLED — that would misrepresent legacy behavior."
+    },
+    {
+      "scenario_id": "SCN-004-A",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-003",
+        "study_id": "<unchanged>",
+        "encrypted_demographics": "<unchanged>",
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "site_id": null,
+        "treatment_group": null
+      },
+      "db_assertions": { "strat_factors": { "site": "B" } },
+      "note": "Same SubjectResponse-under-population quirk as SCN-003-A; status='SCREENING' here happens to also be the subject's true status, which is a coincidence of this scenario, not evidence the endpoint populated it correctly."
+    },
+    {
+      "scenario_id": "SCN-005-A",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "message": "Compliance cache updated successfully."
+      },
+      "db_assertions": {
+        "site_compliance_cache": {
+          "study_id": "STUDY-GATED",
+          "site_id": "SITE-COMPLIANT-01",
+          "milestone": "SITE_ACTIVATION",
+          "is_complete": true,
+          "version": 1
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-005-B",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "message": "Site SITE-COMPLIANT-01 activated successfully."
+      },
+      "audit_assertions": [
+        { "table_name": "site_compliance_caches", "action": "SITE_ACTIVATION" }
+      ]
+    },
+    {
+      "scenario_id": "SCN-005-C",
+      "status": 200,
+      "body": {
+        "study_id": "STUDY-GATED",
+        "site_id": "SITE-COMPLIANT-01",
+        "milestone": "SITE_ACTIVATION",
+        "is_complete": true,
+        "missing_documents": []
+      }
+    },
+    {
+      "scenario_id": "SCN-005-D",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-GATED",
+        "study_id": "STUDY-GATED",
+        "encrypted_demographics": null,
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "site_id": null,
+        "treatment_group": null
+      },
+      "db_assertions": { "status": "ENROLLED" },
+      "note": "Same SubjectResponse-under-population quirk — the DB row is genuinely ENROLLED; the response body's status field is not."
+    },
+    {
+      "scenario_id": "SCN-006-A",
+      "status": "n/a (service call, not HTTP)",
+      "body": {
+        "encrypted_demographics": "<opaque-non-null-differs-from-precondition>"
+      },
+      "audit_assertions": [
+        { "table_name": "clinical_subjects", "action": "UPDATE_DEMOGRAPHICS" }
+      ]
+    },
+    {
+      "scenario_id": "SCN-007-A",
+      "status": "n/a (model call, not HTTP)",
+      "body": {
+        "status": "SCREENING",
+        "strat_factors": { "age_group": "GE_65", "gender": "F" },
+        "is_unblinded": false,
+        "randomization_id": null,
+        "kit_reference": null
+      },
+      "note": "Per the corrected spec (01_spec.md SCN-007): this scenario asserts only these field values. It does NOT assert audit-context propagation onto the entity itself — ClinicalSubject has no CreatedBy/UpdatedBy columns; the context vars are consumed by the separate, out-of-slice DB-trigger audit bridge (Rule 6)."
+    },
+    {
+      "scenario_id": "SCN-008-A",
+      "status": "n/a (model call, not HTTP)",
+      "body": {
+        "status": "UNBLINDED",
+        "is_unblinded": true,
+        "unblinded_by": "doctor_smith",
+        "unblinded_reason": "SAE-Life-Threatening-Event",
+        "unblinded_at": "<opaque-non-null-naive-local-timestamp>"
+      }
+    },
+    {
+      "scenario_id": "SCN-008-B",
+      "status": "n/a (model call, not HTTP)",
+      "body": {
+        "status": "WITHDRAWN",
+        "withdrawal_reason": "Subject withdrew consent",
+        "withdrawn_at": "<opaque-non-null-naive-local-timestamp>"
+      }
+    },
+    {
+      "scenario_id": "SCN-009-A",
+      "status": "n/a (background handler, not HTTP)",
+      "db_assertions": {
+        "clinical_subject": {
+          "subject_id": "SUBJ-AUTO-01",
+          "status": "SCREENING",
+          "study_id": "STUDY-AUTO",
+          "site_id": "SITE-AUTO-01",
+          "enrollment_index": 0
+        },
+        "subject_consent": {
+          "subject_id": "SUBJ-AUTO-01",
+          "icf_signed": true,
+          "is_paper_override": false,
+          "requires_reconsent": false
+        }
+      },
+      "audit_assertions": [
+        {
+          "table_name": "clinical_subjects",
+          "action": "INSERT",
+          "user_id": "system-pubsub"
+        },
+        {
+          "table_name": "subject_consents",
+          "action": "INSERT",
+          "user_id": "system-pubsub"
+        }
+      ]
+    },
+    {
+      "scenario_id": "SCN-009-B",
+      "status": "n/a (background handler, not HTTP)",
+      "note": "Idempotent: no duplicate ClinicalSubject row is created for SUBJ-AUTO-01. The consent-cache upsert step still runs independently (Rule 8, step 4) and is itself idempotent on (subject_id, study_id, version_index)."
+    },
+    {
+      "scenario_id": "SCN-010-A",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-PAPER",
+        "study_id": "STUDY-PAPER",
+        "site_id": null,
+        "treatment_group": null,
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "encrypted_demographics": "<opaque-non-null>"
+      }
+    },
+    {
+      "scenario_id": "SCN-010-B",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-PAPER",
+        "study_id": "STUDY-PAPER",
+        "version_tag": "1.0",
+        "version_index": 1,
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": true,
+        "version": 1
+      }
+    },
+    {
+      "scenario_id": "SCN-010-C",
+      "status": 200,
+      "body": { "visit_name": "Week 1" },
+      "note": "Now succeeds because the out-of-slice audit.py write-guard's has_any_paper_override check finds the SCN-010-B consent row. Prior to SCN-010-B this same request returns 423 (see SCN-010 in 01_spec.md for the failing leg, not separately fixture'd since it duplicates the out-of-slice write-guard's contract already captured in §5.2)."
+    },
+    {
+      "scenario_id": "EDGE-001",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-EDGE-001",
+        "study_id": "STUDY-001",
+        "site_id": "",
+        "treatment_group": null,
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "encrypted_demographics": null
+      },
+      "note": "Confirms the site_id=\"\" truthiness trap: creation succeeds with no site-compliance check performed (none would apply to creation anyway; this fixture exists to lock in that \"\" round-trips as empty string, not coerced to null, so downstream compliance-gate calls on this subject also see \"\" and take the `if not site_id: return True` bypass branch)."
+    },
+    {
+      "scenario_id": "EDGE-002",
+      "status": "n/a (service call, not HTTP)",
+      "body": {
+        "encrypted_demographics": "gAAAAABh...pre-encrypted-fernet-ciphertext-placeholder...=="
+      },
+      "note": "The stored ciphertext must equal the input string byte-for-byte (no re-encryption / double-wrapping)."
+    },
+    {
+      "scenario_id": "EDGE-003",
+      "status": "n/a (service call, not HTTP)",
+      "body": {
+        "version_tag": "v1.1",
+        "protocol_version": "2024-Amendment-3",
+        "icf_signed_date": "2026-01-10T00:00:00Z"
+      },
+      "note": "protocol_version and icf_signed_date must remain the precondition's stored values; only version_tag changes."
+    },
+    {
+      "scenario_id": "EDGE-004",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-EDGE-004",
+        "study_id": "<unchanged>",
+        "encrypted_demographics": "<unchanged>",
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "site_id": null,
+        "treatment_group": null
+      },
+      "db_assertions": { "status": "WITHDRAWN" },
+      "note": "Succeeds (no InvalidStateTransitionError) per the same-state no-op rule; SubjectResponse-under-population quirk applies here too, so the body's status='SCREENING' default is not evidence of the real (unchanged) WITHDRAWN state."
+    },
+    {
+      "scenario_id": "EDGE-005",
+      "status": "n/a (service call, not HTTP)",
+      "body": {
+        "icf_signed_date": "2026-02-01T09:30:00Z",
+        "is_paper_override": false
+      },
+      "note": "icf_signed_date must remain the precondition's original timestamp, not be reset to 'now'."
+    },
+    {
+      "scenario_id": "EDGE-006-A",
+      "status": "n/a (pure function call)",
+      "body": 0.0
+    },
+    {
+      "scenario_id": "EDGE-006-B",
+      "status": "n/a (pure function call)",
+      "body": 24.0,
+      "note": "8766 days / 365.25 = 24.0 exactly for this leap-to-leap span; assert the exact float the /365.25 divisor produces, not a calendar-based 24-years-flat assumption if they happen to differ for other date pairs."
+    },
+    {
+      "scenario_id": "EDGE-006-C",
+      "status": "n/a (pure function call)",
+      "body": "<opaque-non-null-float>",
+      "note": "Must NOT be null — the whitespace-split fallback in _parse_date_string must successfully extract 1990-05-15 from the non-ISO string."
+    },
+    {
+      "scenario_id": "EDGE-007",
+      "status": "n/a (pure function call)",
+      "body": "NON-BINARY"
+    },
+    {
+      "scenario_id": "EDGE-008",
+      "status": "n/a (service call, not HTTP)",
+      "body": { "status": "ENROLLED", "subject_id": "SUBJ-EDGE-008" },
+      "note": "Resolves correctly even though the identifier passed is the internal UUID, not the domain subject_id code."
+    },
+    {
+      "scenario_id": "EDGE-010",
+      "status": 200,
+      "body": {
+        "id": "<opaque>",
+        "subject_id": "SUBJ-EDGE-010",
+        "study_id": "STUDY-001",
+        "encrypted_demographics": null,
+        "status": "SCREENING",
+        "active_protocol_version": "1.0.0",
+        "site_id": null,
+        "treatment_group": null
+      },
+      "db_assertions": {
+        "status": "ENROLLED",
+        "active_protocol_version": "2.1.0"
+      },
+      "note": "The canonical demonstration of the SubjectResponse-under-population quirk: the DB row's real active_protocol_version (2.1.0, set by the precondition) is silently replaced by the literal default \"1.0.0\" in the response body. A .NET port that fully populates its response DTO will disagree with this fixture unless the quirk is deliberately preserved — see 01_spec.md §2.2 Rule 9's addendum for the explicit decision this fixture is flagging, not silently resolving."
+    }
+  ]
+}

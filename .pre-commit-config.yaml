@@ -27,6 +27,7 @@ repos:
           (?x)(
             pnpm-lock\.yaml|uv\.lock|
             tests/fixtures/keys/|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|
+            docs/migration/slices/.*/fixtures/|
             report.*\.xml|coverage.*\.xml|\.cadence/|dist/|
             \.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$
           )

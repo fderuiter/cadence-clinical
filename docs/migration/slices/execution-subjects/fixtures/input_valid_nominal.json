@@ -1,0 +1,346 @@
+{
+  "$schema_note": "Golden-master fixture: nominal (happy-path) inputs for the execution-subjects slice. Each entry's `kind` says how the .NET xUnit harness should dispatch it: 'http' replays an HTTP request against the Minimal API surface documented in 01_spec.md §1; 'service' invokes the application-service method directly (ISubjectApplicationService-equivalent); 'model' invokes a domain-entity/aggregate operation directly; 'background-handler' invokes the consent-completion background handler directly (no transport). Multi-step scenarios share a `scenario_id` prefix and are ordered by `step`. Pair each entry with the same scenario_id/step in output_expected_nominal.json.",
+  "scenarios": [
+    {
+      "scenario_id": "SCN-001-A",
+      "step": 1,
+      "spec_ref": "01_spec.md SCN-001",
+      "description": "Enroll the first subject in a study with no prior subjects.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects",
+      "headers": {
+        "X-User-Id": "crc.user",
+        "X-Change-Reason": "Initial Subject Enrollment"
+      },
+      "body": {
+        "subject_id": "SUBJ-001",
+        "study_id": "STUDY-001",
+        "site_id": "SITE-101",
+        "arm_id": "ARM-A",
+        "demographics": {
+          "name": "Test Subject One",
+          "birthdate": "1980-01-15",
+          "gender": "F",
+          "race": "White"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-001-B",
+      "step": 2,
+      "spec_ref": "01_spec.md SCN-001",
+      "description": "Enroll a second subject in the same study; enrollment_index must be sequential (1), not reused.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects",
+      "headers": {
+        "X-User-Id": "crc.user",
+        "X-Change-Reason": "Second Enrollment"
+      },
+      "body": {
+        "subject_id": "SUBJ-002",
+        "study_id": "STUDY-001",
+        "site_id": "SITE-101",
+        "arm_id": "ARM-B",
+        "demographics": null
+      }
+    },
+    {
+      "scenario_id": "SCN-002-A",
+      "step": 1,
+      "spec_ref": "01_spec.md SCN-002",
+      "description": "Record an initial consent version that requires re-consent.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-001/consent",
+      "headers": {
+        "X-User-Id": "crc.user",
+        "X-Change-Reason": "Protocol v1.0 initial consent"
+      },
+      "body": {
+        "protocol_version": {
+          "study_id": "STUDY-001",
+          "version_tag": "v1.0",
+          "version_index": 1
+        },
+        "icf_signed": true,
+        "requires_reconsent": true,
+        "is_paper_override": false
+      }
+    },
+    {
+      "scenario_id": "SCN-002-B",
+      "step": 2,
+      "spec_ref": "01_spec.md SCN-002, Rule 3",
+      "description": "Record an amended consent version signed with requires_reconsent=false; must cascade-clear the prior version's requires_reconsent flag.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-001/consent",
+      "headers": {
+        "X-User-Id": "crc.user",
+        "X-Change-Reason": "Protocol v2.0 reconsent completed"
+      },
+      "body": {
+        "protocol_version": {
+          "study_id": "STUDY-001",
+          "version_tag": "v2.0",
+          "version_index": 2
+        },
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": false
+      }
+    },
+    {
+      "scenario_id": "SCN-003-A",
+      "spec_ref": "01_spec.md SCN-003, Rule 2",
+      "description": "Valid transition SCREENING -> ENROLLED for a subject with no site_id (compliance check short-circuits to compliant per check_site_compliance_for_enrollment's `if not site_id: return True`).",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-NOSITE/state",
+      "headers": { "X-Change-Reason": "Subject passed screening eligibility" },
+      "body": { "status": "ENROLLED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-NOSITE",
+          "study_id": "STUDY-001",
+          "site_id": null,
+          "status": "SCREENING"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-004-A",
+      "spec_ref": "01_spec.md SCN-004, Rule 1",
+      "description": "Pre-randomization (SCREENING) strat_factors update succeeds.",
+      "kind": "http",
+      "method": "PUT",
+      "route": "/api/v1/execution/subjects/SUBJ-003/demographics",
+      "headers": {
+        "X-Change-Reason": "Stratification factor correction pre-randomization"
+      },
+      "body": { "strat_factors": { "site": "B" } },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-003",
+          "status": "SCREENING",
+          "strat_factors": { "site": "A" }
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-005-A",
+      "step": 1,
+      "spec_ref": "01_spec.md SCN-005, §1.1 ETMFCompletenessWebhookPayload",
+      "description": "eTMF completeness webhook reports SITE_ACTIVATION complete for a site with no prior cache row (insert path, version=1).",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/webhooks/etmf",
+      "body": {
+        "study_id": "STUDY-GATED",
+        "site_id": "SITE-COMPLIANT-01",
+        "milestone": "SITE_ACTIVATION",
+        "is_complete": true,
+        "missing_artifacts": []
+      }
+    },
+    {
+      "scenario_id": "SCN-005-B",
+      "step": 2,
+      "spec_ref": "01_spec.md §1.1 SiteActivationRequest",
+      "description": "Explicit site-activation call against the now-compliant site succeeds.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/sites/SITE-COMPLIANT-01/activate",
+      "body": { "study_id": "STUDY-GATED" }
+    },
+    {
+      "scenario_id": "SCN-005-C",
+      "step": 3,
+      "spec_ref": "01_spec.md §1.2 ComplianceStatusResponse",
+      "description": "Compliance-status GET reflects the completed milestone.",
+      "kind": "http",
+      "method": "GET",
+      "route": "/api/v1/execution/sites/SITE-COMPLIANT-01/compliance-status?study_id=STUDY-GATED&milestone=SITE_ACTIVATION"
+    },
+    {
+      "scenario_id": "SCN-005-D",
+      "step": 4,
+      "spec_ref": "01_spec.md SCN-005, Rule 2",
+      "description": "State-update transition to ENROLLED now succeeds for the compliant site.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-GATED/state",
+      "headers": { "X-Change-Reason": "Site compliance verified" },
+      "body": { "status": "ENROLLED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-GATED",
+          "study_id": "STUDY-GATED",
+          "site_id": "SITE-COMPLIANT-01",
+          "status": "SCREENING"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-006-A",
+      "spec_ref": "01_spec.md SCN-006",
+      "description": "Pre-randomization demographics update via the application-service layer succeeds (contrast SCN-004-C in the error fixture for the post-randomization rejection).",
+      "kind": "service",
+      "service": "SubjectLifecycleService",
+      "method": "update_demographics",
+      "args": {
+        "subject_id": "SUBJ-004",
+        "demographics": { "weight": 71.0, "height": 175 },
+        "user_id": "crc.user",
+        "reason": "Follow-up Vitals Update"
+      },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-004",
+          "status": "SCREENING",
+          "encrypted_demographics_plaintext": { "weight": 70.5 }
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-007-A",
+      "spec_ref": "01_spec.md SCN-007, Rule 6",
+      "description": "GxP audit-context values (current_user_id/current_change_reason) propagate onto the persisted entity's own audit fields at creation.",
+      "kind": "model",
+      "model": "ClinicalSubject",
+      "operation": "create",
+      "context": {
+        "current_user_id": "investigator_1",
+        "current_change_reason": "Enrolling new subject SUBJ-005"
+      },
+      "args": {
+        "subject_id": "SUBJ-005",
+        "study_id": "STUDY_XYZ",
+        "strat_factors": { "age_group": "GE_65", "gender": "F" }
+      }
+    },
+    {
+      "scenario_id": "SCN-008-A",
+      "step": 1,
+      "spec_ref": "01_spec.md SCN-008",
+      "description": "Emergency unblind of a randomized subject; verify field capture.",
+      "kind": "model",
+      "model": "ClinicalSubject",
+      "operation": "unblind",
+      "args": {
+        "unblinded_by": "doctor_smith",
+        "reason": "SAE-Life-Threatening-Event"
+      },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-006",
+          "study_id": "STUDY_XYZ",
+          "status": "RANDOMIZED"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-008-B",
+      "step": 2,
+      "spec_ref": "01_spec.md SCN-008",
+      "description": "Withdraw the same subject after unblinding; verify field capture.",
+      "kind": "model",
+      "model": "ClinicalSubject",
+      "operation": "withdraw",
+      "args": { "reason": "Subject withdrew consent" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-006",
+          "study_id": "STUDY_XYZ",
+          "status": "UNBLINDED"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-009-A",
+      "spec_ref": "01_spec.md SCN-009, Rule 8",
+      "description": "PubSub consent-completed event auto-provisions a brand-new subject plus a signed consent cache row.",
+      "kind": "background-handler",
+      "handler": "handle_consent_completed_message",
+      "payload": {
+        "action": "consent_completed",
+        "subject_id": "SUBJ-AUTO-01",
+        "study_id": "STUDY-AUTO",
+        "site_id": "SITE-AUTO-01",
+        "version_tag": "1.0",
+        "version_index": 1
+      }
+    },
+    {
+      "scenario_id": "SCN-009-B",
+      "spec_ref": "01_spec.md Rule 8 (idempotency)",
+      "description": "Re-delivering the same consent-completed event for a subject that now already exists is a no-op for subject creation (idempotency), but still independently backfills the consent cache if that row is somehow missing.",
+      "kind": "background-handler",
+      "handler": "handle_consent_completed_message",
+      "payload": {
+        "action": "consent_completed",
+        "subject_id": "SUBJ-AUTO-01",
+        "study_id": "STUDY-AUTO",
+        "site_id": "SITE-AUTO-01",
+        "version_tag": "1.0",
+        "version_index": 1
+      },
+      "preconditions": { "subject_already_exists": true }
+    },
+    {
+      "scenario_id": "SCN-010-A",
+      "step": 1,
+      "spec_ref": "01_spec.md SCN-010",
+      "description": "Create a subject with no consent on file (eConsent service mocked unreachable at fetch_subject_consent_status).",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects",
+      "body": {
+        "subject_id": "SUBJ-PAPER",
+        "study_id": "STUDY-PAPER",
+        "demographics": {
+          "name": "Jamie Lee",
+          "birthdate": "1994-04-14",
+          "gender": "F",
+          "race": "White"
+        }
+      }
+    },
+    {
+      "scenario_id": "SCN-010-B",
+      "step": 2,
+      "spec_ref": "01_spec.md SCN-010, Rule 3",
+      "description": "Record a manual paper-consent override for the subject.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-PAPER/consent",
+      "body": {
+        "protocol_version": {
+          "study_id": "STUDY-PAPER",
+          "version_tag": "1.0",
+          "version_index": 1,
+          "status": "PUBLISHED"
+        },
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": true
+      }
+    },
+    {
+      "scenario_id": "SCN-010-C",
+      "step": 3,
+      "spec_ref": "01_spec.md SCN-010, §5.2",
+      "description": "Retry the visit-creation write that previously failed with 423; now unblocked by the paper-override consent row (out-of-slice write-guard, documented for context only).",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/visits",
+      "body": {
+        "subject_id": "SUBJ-PAPER",
+        "visit_name": "Week 1",
+        "study_id": "STUDY-PAPER"
+      }
+    }
+  ]
+}
