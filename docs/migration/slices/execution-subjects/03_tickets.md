@@ -34,7 +34,7 @@ graph TD
 
 ---
 
-### MIG-SUBJ-001: Implement Domain Enums, Exceptions, and Regulated State Machine
+### MIG-SUBJ-001: Implement Domain Enums, Exceptions, and Regulated State Machine `[COMPLETED]`
 
 - **Ticket ID:** `MIG-SUBJ-001`
 - **Title:** Implement Domain Enums, Custom Exceptions, and Subject State Machine Rule Engine
@@ -50,17 +50,17 @@ graph TD
   ```
 - **Pre-requisites:** None
 - **Acceptance Criteria:**
-  - Implement `SubjectState` enum covering all 9 states: `Screening`, `ScreenFailed`, `Enrolled`, `Randomized`, `Active`, `Completed`, `Unblinded`, `Withdrawn`, `ReconsentRequired`.
-  - Implement `SubjectStateMachine` using C# 14 `FrozenDictionary<SubjectState, FrozenSet<SubjectState>>` with zero runtime allocations.
-  - Implement `CanTransition(SubjectState current, SubjectState target)` and `EnsureValidTransition(SubjectState current, SubjectState target)`.
-  - Self-transitions (`current == target`) evaluate to `true` (idempotent).
-  - Terminal states (`ScreenFailed`, `Completed`, `Withdrawn`) forbid all outgoing transitions.
-  - `IsLockedPostRandomization(SubjectState state)` returns true for `Randomized`, `Active`, `Completed`, `Unblinded`, and `Withdrawn`.
-  - Zero warnings under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<Nullable>enable</Nullable>`.
+  - [x] Implement `SubjectState` enum covering all 9 states: `Screening`, `ScreenFailed`, `Enrolled`, `Randomized`, `Active`, `Completed`, `Unblinded`, `Withdrawn`, `ReconsentRequired`.
+  - [x] Implement `SubjectStateMachine` using C# 14 `FrozenDictionary<SubjectState, FrozenSet<SubjectState>>` with zero runtime allocations.
+  - [x] Implement `CanTransition(SubjectState current, SubjectState target)` and `EnsureValidTransition(SubjectState current, SubjectState target)`.
+  - [x] Self-transitions (`current == target`) evaluate to `true` (idempotent).
+  - [x] Terminal states (`ScreenFailed`, `Completed`, `Withdrawn`) forbid all outgoing transitions.
+  - [x] `IsLockedPostRandomization(SubjectState state)` returns true for `Randomized`, `Active`, `Completed`, `Unblinded`, and `Withdrawn`.
+  - [x] Zero warnings under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<Nullable>enable</Nullable>`.
 - **Parity Test Criteria:**
-  - Unit tests in `SubjectStateMachineTests` validating all 81 transition permutations.
-  - Reverse-engineered parity with `test_pure_python_transition_guard` from `test_subject_randomization_lifecycle.py`.
-  - Tagged with `[GxPRequirement("PRD-SYS-042")]` and `[GxPRequirement("PRD-SUB-001")]`.
+  - [x] Unit tests in `SubjectStateMachineTests` validating all 81 transition permutations.
+  - [x] Reverse-engineered parity with `test_pure_python_transition_guard` from `test_subject_randomization_lifecycle.py`.
+  - [x] Tagged with `[GxPRequirement("PRD-SYS-042")]` and `[GxPRequirement("PRD-SUB-001")]`.
 
 ---
 
