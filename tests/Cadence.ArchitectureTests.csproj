@@ -34,6 +34,7 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="TngTech.ArchUnitNET.xUnit" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
