@@ -236,3 +236,89 @@
   - No other divergence from the ticket text or design doc.
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-006 - SiteComplianceCache aggregate`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-008 - Implement Response DTOs & the §2.6 Under-Population Decision
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** First batch executed under the Phase 4 Parallel Implementation protocol (`.github/prompts/slice-phase4-implement.prompt.md`) after the Phase 3 gate was re-audited and approved for the regenerated 28-ticket backlog (see `00_phase3_validation_report.md` §6). Ready-frontier computation found `MIG-SUBJ-008`, `MIG-SUBJ-009`, `MIG-SUBJ-010`, and `MIG-SUBJ-011` all dependency-satisfied and mutually file-disjoint except that `008` and `010` both touch `apps/execution/src/Program.cs` — so `008`, `009`, and `011` were batched together (Batch A) and dispatched to three independent agents in isolated git worktrees; `010` was deferred to the next batch to avoid a same-file race. Also discovered during frontier computation: `MIG-SUBJ-012` and `MIG-SUBJ-017` both have a real, WBS-unlisted dependency on `MIG-SUBJ-011` (both need the `ExecutionDbContext` type `011` creates), so they were excluded from this batch despite `012`'s own "Parallelizable With: MIG-SUBJ-011" annotation.
+- **Target Files Modified:**
+  - `apps/execution/src/Application/Subjects/SubjectResponse.cs` (new)
+  - `apps/execution/src/Application/Subjects/SubjectDetailResponse.cs` (new)
+  - `apps/execution/src/Application/Subjects/SubjectConsentResponse.cs` (new)
+  - `apps/execution/src/Application/Compliance/ComplianceStatusResponse.cs` (new)
+  - `apps/execution/src/Application/OperationEnvelopeResponse.cs` (new)
+  - `apps/execution/src/Application/Serialization/ExecutionJsonSerialization.cs` (new, beyond ticket's literal list — see Notes)
+  - `apps/execution/src/Application/Serialization/ValueObjectJsonConverters.cs` (new, beyond ticket's literal list — see Notes)
+  - `apps/execution/src/Program.cs` (modified — additive `ConfigureHttpJsonOptions` registration)
+  - `tests/Execution/Subjects/SubjectResponseTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state (008 + 009 + 011 together).
+- **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 11 of these are `SubjectResponseTests`. (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race; see this batch's closing note below.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch A merged branch state).
+- **Golden Master Parity:** Directly targets fixture `EDGE-010` and the `SCN-003-A` family in `fixtures/output_expected_nominal.json` — the deliberate `SubjectResponse` under-population quirk (§2.6) is encoded as a shared private factory (`FromAggregate` vs `Underpopulated`) rather than three copy-pasted call sites, reproducing the legacy behavior byte-for-byte rather than "fixing" it. Full fixture-replay verification remains `MIG-SUBJ-026`'s job; this ticket unit-tests the DTO construction logic in isolation only.
+- **Notes:**
+  - **`TODO(CADENCE-EXEC-SUBJ-001)` could not be spelled literally.** SonarAnalyzer's `S1135` treats a literal `TODO(...)` comment as a build error under this repo's `TreatWarningsAsErrors`. Reworded to "Tracked hardening item CADENCE-EXEC-SUBJ-001" — same grep-able ID and §2.6/§7 pointer, no build breakage.
+  - **Necessary addition beyond the ticket's literal Target Files: `ValueObjectJsonConverters.cs` / `ExecutionJsonSerialization.cs`.** Without custom converters, `System.Text.Json` would serialize the `readonly record struct` value objects (`SubjectId`, `SubjectCode`, `StudyCode`, `SiteCode`, `SubjectConsentId`) as nested `{"value": "..."}` objects instead of the plain scalar strings the fixtures and `01_spec.md` require. The ticket's own Technical Implementation Details assigns `Program.cs` as a target specifically for JSON wiring, so this was judged in-scope rather than scope creep — omitting it would leave the DTOs silently wrong the moment a real endpoint serializes one. Fully additive; no MIG-SUBJ-001 value-object files touched.
+  - `SubjectResponse` uses a trailing-underscore-named backing property (`SubjectId_`) with an explicit `[JsonPropertyName("subject_id")]`, per the design doc's own code block verbatim (avoids ambiguity with the record's unrelated `Id` surrogate-key property) — compiled and verified, not assumed.
+  - Noted but not touched (pre-existing, unrelated to this ticket): `apps/execution/src/Domain/Enums/SubjectState.cs` and `Domain/Exceptions/*.cs`/`Domain/Rules/SubjectStateMachine.cs` are an orphaned duplicate scaffold from the pre-remediation backlog (different namespace than the canonical `Domain/Subjects/*`, never referenced) — flagged for a future cleanup pass, not this slice's ticket scope.
+  - No other divergence from the ticket text or design doc.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-008 - response DTOs and under-population decision`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-009 - Implement Request DTOs & FluentValidation Validators
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-008` and `MIG-SUBJ-011` as Batch A — see `MIG-SUBJ-008`'s entry above for the frontier-computation and batching rationale. This ticket's `Dependencies: None` was already satisfied; its only shared-file risk was `apps/execution/src/Cadence.Apps.Execution.csproj` (a `FluentValidation` `PackageReference` addition), which `MIG-SUBJ-011` also touches (a `Cadence.Database` `ProjectReference` addition) — an expected, mechanical conflict resolved automatically by git's merge (`ort` strategy) with both additions landing correctly in the same `<ItemGroup>`, verified by direct file inspection after merge.
+- **Target Files Modified:**
+  - `apps/execution/src/Application/Subjects/SubjectCreateRequest.cs` (new — `DemographicsPayload`, `SubjectCreateRequest`, `SubjectCreateRequestValidator`)
+  - `apps/execution/src/Application/Subjects/SubjectConsentRequest.cs` (new — `ProtocolVersionPayload`, `SubjectConsentRequest`, `SubjectConsentRequestValidator`)
+  - `apps/execution/src/Application/Subjects/SubjectStateUpdateRequest.cs` (new — `SubjectStateUpdateRequest` + `Target`, `SubjectStateUpdateRequestValidator`)
+  - `apps/execution/src/Application/Subjects/SubjectDemographicsUpdateRequest.cs` (new — no validator, per design)
+  - `apps/execution/src/Application/Compliance/EtmfCompletenessWebhookPayload.cs` (new — payload + validator)
+  - `apps/execution/src/Application/Compliance/SiteActivationRequest.cs` (new — no validator, per design)
+  - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `FluentValidation` `PackageReference`, CPM-versioned centrally)
+  - `tests/Execution/Subjects/RequestValidatorTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state.
+- **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state — 29 of these are `RequestValidatorTests` (22 test methods / 29 theory-row cases). (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch A merged branch state).
+- **Golden Master Parity:** Cross-checked against `fixtures/input_invalid_validation_errors.json` scenario `INV-001` (missing status/state) in isolation; full fixture-replay wiring is `MIG-SUBJ-026`'s job.
+- **Notes:**
+  - **Namespace placement for the two Compliance DTOs is a judgment call, not a literal design-doc match.** `02_technical_design.md` §2.7's code sample groups `EtmfCompletenessWebhookPayload`/`SiteActivationRequest` under one `...Application.Subjects` namespace; the ticket's own Target Files list places those two files under `Application/Compliance/` instead. The implementing agent followed the ticket's file layout (namespace `Cadence.Apps.Execution.Application.Compliance`), consistent with this repo's folder-mirrors-namespace convention used everywhere else (e.g. `Domain/Compliance/SiteComplianceCache.cs`). Treated the ticket's explicit path list as authoritative over the design snippet's grouping, per this repo's own stated precedence rule.
+  - **Documented, not fixed, `SubjectStateUpdateRequest.Target`/validator asymmetry:** the validator accepts either `Status` or `State` independently via `IsNullOrWhiteSpace` (either non-blank is sufficient), while `Target => Status ?? State` only falls back on `null`, not empty string — so `{"status": "", "state": "ENROLLED"}` passes validation but `Target` resolves to `""`, not `"ENROLLED"`. Both source documents (ticket text and design doc) specify exactly this shape; the agent added a test making the asymmetry explicit (`SubjectStateUpdateRequest_EmptyStatusWithPopulatedState_ValidatorPassesButTargetPrefersEmptyStatus`) rather than silently special-casing it, flagging it for whichever ticket builds the handler that consumes `Target`.
+  - No `FluentValidation.TestHelper` package added — tests call `validator.Validate(request)` directly and assert via FluentAssertions, avoiding an unnecessary new `Directory.Packages.props` entry.
+  - No other divergence from the ticket text or design doc.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-009 - request DTOs and FluentValidation validators`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-011 - Implement `ExecutionDbContext` & `ClinicalSubjectConfiguration`
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-008` and `MIG-SUBJ-009` as Batch A — see `MIG-SUBJ-008`'s entry above for the frontier-computation and batching rationale. With this ticket landed, `MIG-SUBJ-012` (`SubjectConsentConfiguration`/`SiteComplianceCacheConfiguration`) and `MIG-SUBJ-017` (Audit Context Accessor & Log Writer) are now genuinely unblocked — both need the `ExecutionDbContext` type this ticket creates, confirming the hidden-dependency correction noted above. `MIG-SUBJ-010` and `MIG-SUBJ-022` (deps `MIG-SUBJ-003`/`MIG-SUBJ-009` respectively, both already satisfied, both file-disjoint from 010/012/017) join them as the next batch.
+- **Target Files Modified:**
+  - `apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs` (new)
+  - `apps/execution/src/Infrastructure/Persistence/Configurations/ClinicalSubjectConfiguration.cs` (new)
+  - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `ProjectReference` to `Cadence.Database.csproj`; required EF Core/Npgsql `PackageReference`s were already present from earlier scaffolding)
+  - `tests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests.csproj` (added `Microsoft.EntityFrameworkCore.Sqlite` `PackageReference` — see Notes)
+  - `Directory.Packages.props` (added matching `PackageVersion` for CPM)
+  - `tests/Execution/Persistence/ClinicalSubjectConfigurationTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked testable Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state; `Cadence.Apps.Gateway` and `Cadence.Apps.Designer` confirmed still building cleanly (neither's code was touched).
+- **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state — 13 of these are `ClinicalSubjectConfigurationTests`. (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race — this batch hit it on all three agents' independent worktrees plus the orchestrating session's own integration builds; workaround remains reliable, but the recurrence rate across four independent environments suggests the underlying MSBuild incremental-build interaction between `dotnet build` and a subsequent `dotnet test` against these two custom-output-path test projects deserves a real root-cause fix at some point — logged as a follow-up, not blocking, and deliberately not attempted here to avoid touching shared test infrastructure mid-batch without a properly isolated investigation.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch A merged branch state).
+- **Golden Master Parity:** N/A at this layer — pure EF Core configuration ticket, no HTTP surface. Verified against `02_technical_design.md` §4.1's mapping requirements (table name, value-object conversions, composite unique index on `(StudyCode, EnrollmentIndex)`, `jsonb`-backed `_stratFactors`, shadow `_version` concurrency token) and this ticket's own Acceptance Criteria.
+- **`ExecutionDbContext`'s public shape (for MIG-SUBJ-012 / MIG-SUBJ-017):** `public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : DbContext(options)`, exposing `DbSet<ClinicalSubject> ClinicalSubjects` and `DbSet<AuditLogEntry> AuditLogEntries`, with `OnModelCreating` applying `ClinicalSubjectConfiguration`. Not `partial` — `MIG-SUBJ-012` adds its two `DbSet<T>`/`ApplyConfiguration` lines directly into this same file's body. Single public constructor, ordinary scoped DI registration (`services.AddDbContext<ExecutionDbContext>(...)`), nothing unusual blocking downstream injection.
+- **Notes:**
+  - **Necessary fix to compile the design's `Status` conversion:** §4.1's inline `TryParse`/`throw` lambda inside `HasConversion` does not compile — `HasConversion`'s `Expression<Func<...>>` trees cannot contain an `out` variable declaration (CS8198) or a `throw` expression (CS8188). Extracted a `private static SubjectState ParseStatus(string)` method called via `v => ParseStatus(v)` (a single method-call node, expression-tree-legal). No semantic change.
+  - **Necessary addition beyond the design's literal `IsRowVersion()`: `.HasDefaultValue(0L)` on the shadow `_version` column.** `IsRowVersion()` alone only auto-computes on SQL Server; neither SQLite nor the real production target (Npgsql/Postgres) has an equivalent automatic mechanism, and with no starting value EF's generated INSERT omits the store-generated column, violating the non-nullable `long` column's own NOT NULL constraint (reproduced empirically: `SQLite Error 19: NOT NULL constraint failed`). **Flagging a real residual limitation, not fully closed by this ticket:** this fixes inserts but does not make `_version` auto-increment on UPDATE the way SQL Server's rowversion does. `02_technical_design.md` §4.2 assigns the concurrency retry policy to `MIG-SUBJ-013`'s repository layer — whichever ticket first exercises concurrent-update conflict detection will need a real mechanism (a Postgres trigger, an app-level pre-save increment, or Npgsql's native `.UseXminAsConcurrencyToken()`). Flagged forward for `MIG-SUBJ-013`.
+  - **`GxPAuditInterceptor` is deliberately NOT registered inside `ExecutionDbContext` itself** (no `OnConfiguring` override), diverging from the design prose's suggestion that the context registers it directly. Reasoning: the interceptor's current-user delegate source, `ICurrentAuditContextAccessor` (§4.4), doesn't exist yet (that's `MIG-SUBJ-017`), and `Program.cs` (the natural production registration site) isn't a target file of this ticket — hardcoding a placeholder registration here would risk double-registration (double-written `AuditLogEntry` rows, double-incremented `VersionIndex`) once `MIG-SUBJ-017`/composition-root wiring lands. The AC is proved instead via a test that registers the interceptor at `DbContextOptions`-build time, matching `MIG-SUBJ-007`'s own established `GxPAuditInterceptorMerkleChainTests.cs` convention. Production registration remains explicitly open for whichever ticket owns `Program.cs`'s `AddDbContext` call.
+  - **Pre-existing design-doc inconsistency (not this ticket's to resolve):** `02_technical_design.md` §4.3's summary table describes `strat_factors` via `OwnsOne(...).ToJson()`, contradicting §4.1's own code sample (which explicitly rules out `.ToJson()` for the same reason the ticket text does — untyped `Dictionary<string, object?>` values). Followed §4.1 and the ticket text, which agree and are more specific than the summary table.
+  - Noted but not touched: the same orphaned `Domain/Enums/SubjectState.cs`/`Domain/Exceptions/*.cs` scaffold flagged in `MIG-SUBJ-008`'s entry.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-011 - ExecutionDbContext and ClinicalSubjectConfiguration`
