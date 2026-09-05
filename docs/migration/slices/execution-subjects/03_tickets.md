@@ -790,7 +790,7 @@ Per `02_technical_design.md` §5.1: `IDemographicsEncryptionService.Encrypt(IRea
 
 ---
 
-### [MIG-SUBJ-016] Implement Demographics Normalization Service & `IClock`
+### [MIG-SUBJ-016] Implement Demographics Normalization Service & `IClock` `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (4h)
@@ -819,15 +819,15 @@ Rule 7's gender-normalization table, age-calculation algorithm (with its deliber
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given every input in the Rule 7 gender-mapping table, when `NormalizeGender` is called with `preserveCustom: false`, then the output matches the table exactly.
-- [ ] Given an unmapped input `"NB"` with `preserveCustom: true`, when `NormalizeGender` is called, then the output is `"NB"` (trimmed, upper-cased verbatim) — with `preserveCustom: false`, the same input yields `"U"`.
-- [ ] Given `birthDate = 2000-01-01`, `observationDate = 2020-01-01`, when `CalculateAge` is called, then the result equals `(DateOnly Jan-1-2020.DayNumber - DateOnly Jan-1-2000.DayNumber) / 365.25` exactly (assert the literal computed float value, not merely "approximately 20").
-- [ ] Given a malformed date string that fails both the ISO-8601 and whitespace-split-fallback parse attempts, when `CalculateAge` is called, then it returns `null`, not an exception.
-- [ ] Given `GetSafeDemographics` called with ciphertext that fails to decrypt, when invoked, then it returns `{"gender": "U", "age": null}` and does **not** throw — this is the one call site in the slice permitted to swallow a `DemographicsDecryptionFailedException`.
-- [ ] Boundary check: `GetSafeDemographics` accepts all three legacy input shapes (a `ClinicalSubject`-like object via its `EncryptedDemographics` property, a raw ciphertext `string` directly, and — if a dict-shaped equivalent is meaningful in C# — an `IReadOnlyDictionary` containing an `"encrypted_demographics"` key) without throwing on any of them.
-- [ ] Error condition: N/A by design — every public method on `IDemographicsNormalizationService` is non-throwing; this absence-of-exceptions is itself the behavior under test.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given every input in the Rule 7 gender-mapping table, when `NormalizeGender` is called with `preserveCustom: false`, then the output matches the table exactly.
+- [x] Given an unmapped input `"NB"` with `preserveCustom: true`, when `NormalizeGender` is called, then the output is `"NB"` (trimmed, upper-cased verbatim) — with `preserveCustom: false`, the same input yields `"U"`.
+- [x] Given `birthDate = 2000-01-01`, `observationDate = 2020-01-01`, when `CalculateAge` is called, then the result equals `(DateOnly Jan-1-2020.DayNumber - DateOnly Jan-1-2000.DayNumber) / 365.25` exactly (assert the literal computed float value, not merely "approximately 20").
+- [x] Given a malformed date string that fails both the ISO-8601 and whitespace-split-fallback parse attempts, when `CalculateAge` is called, then it returns `null`, not an exception.
+- [x] Given `GetSafeDemographics` called with ciphertext that fails to decrypt, when invoked, then it returns `{"gender": "U", "age": null}` and does **not** throw — this is the one call site in the slice permitted to swallow a `DemographicsDecryptionFailedException`.
+- [x] Boundary check: `GetSafeDemographics` accepts all three legacy input shapes (a `ClinicalSubject`-like object via its `EncryptedDemographics` property, a raw ciphertext `string` directly, and — if a dict-shaped equivalent is meaningful in C# — an `IReadOnlyDictionary` containing an `"encrypted_demographics"` key) without throwing on any of them.
+- [x] Error condition: N/A by design — every public method on `IDemographicsNormalizationService` is non-throwing; this absence-of-exceptions is itself the behavior under test.
 
 #### Verification & Test Requirements
 
