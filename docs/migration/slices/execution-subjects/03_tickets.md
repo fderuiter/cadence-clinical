@@ -271,7 +271,7 @@ Per `02_technical_design.md` §3.4, using the existing `Cadence.Core.Domain.Doma
 
 ---
 
-### [MIG-SUBJ-004] Implement `ClinicalSubject` Aggregate Root
+### [MIG-SUBJ-004] Implement `ClinicalSubject` Aggregate Root `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Large (6h)
@@ -298,15 +298,15 @@ Exactly per `02_technical_design.md` §2.3: `sealed class ClinicalSubject : Aggr
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a subject in `Screening`, when `UpdateStratFactors`/`UpdateDemographics` is called, then it succeeds (SCN-004 pre-rand case, SCN-006).
-- [ ] Given a subject in `Randomized`/`Active`/`Completed`/`Unblinded`/`Withdrawn`, when `UpdateStratFactors` or `UpdateDemographics` is called, then it fails with `LOCKED_FACTOR_MUTATION` (SCN-004 post-rand case).
-- [ ] Given a post-randomization subject, when `ClearDemographics` is called, then it fails with `SOFT_DELETE_BLOCKED` — verify this is a distinct `DomainError.Code` from `LOCKED_FACTOR_MUTATION`, not a reuse.
-- [ ] Given a subject `Screening → Enrolled → Randomized`, when `Unblind("doctor_smith", "SAE-Life-Threatening-Event", clock)` is called, then `Status == Unblinded`, `IsUnblinded == true`, `UnblindedBy`/`UnblindedReason` match, `UnblindedAt == clock.UtcNow` (SCN-008).
-- [ ] Given the same subject after unblinding, when `Withdraw("Subject withdrew consent", clock)` is called, then `Status == Withdrawn`, `WithdrawalReason` matches, `WithdrawnAt == clock.UtcNow`.
-- [ ] Boundary check: calling `Withdraw` a second time on an already-`Withdrawn` subject succeeds silently (same-state no-op per `SubjectTransitionGraph.Guard`), it does not throw.
-- [ ] Error condition: `Unblind`/`Withdraw` called when the underlying `Guard` transition is illegal (e.g. `Unblind` on a `Screening` subject) returns `Result<bool>.Failure` with `INVALID_STATE_TRANSITION` — the failure must propagate through `Unblind`/`Withdraw`'s own return, not throw.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a subject in `Screening`, when `UpdateStratFactors`/`UpdateDemographics` is called, then it succeeds (SCN-004 pre-rand case, SCN-006).
+- [x] Given a subject in `Randomized`/`Active`/`Completed`/`Unblinded`/`Withdrawn`, when `UpdateStratFactors` or `UpdateDemographics` is called, then it fails with `LOCKED_FACTOR_MUTATION` (SCN-004 post-rand case).
+- [x] Given a post-randomization subject, when `ClearDemographics` is called, then it fails with `SOFT_DELETE_BLOCKED` — verify this is a distinct `DomainError.Code` from `LOCKED_FACTOR_MUTATION`, not a reuse.
+- [x] Given a subject `Screening → Enrolled → Randomized`, when `Unblind("doctor_smith", "SAE-Life-Threatening-Event", clock)` is called, then `Status == Unblinded`, `IsUnblinded == true`, `UnblindedBy`/`UnblindedReason` match, `UnblindedAt == clock.UtcNow` (SCN-008).
+- [x] Given the same subject after unblinding, when `Withdraw("Subject withdrew consent", clock)` is called, then `Status == Withdrawn`, `WithdrawalReason` matches, `WithdrawnAt == clock.UtcNow`.
+- [x] Boundary check: calling `Withdraw` a second time on an already-`Withdrawn` subject succeeds silently (same-state no-op per `SubjectTransitionGraph.Guard`), it does not throw.
+- [x] Error condition: `Unblind`/`Withdraw` called when the underlying `Guard` transition is illegal (e.g. `Unblind` on a `Screening` subject) returns `Result<bool>.Failure` with `INVALID_STATE_TRANSITION` — the failure must propagate through `Unblind`/`Withdraw`'s own return, not throw.
 
 #### Verification & Test Requirements
 
@@ -314,7 +314,7 @@ Exactly per `02_technical_design.md` §2.3: `sealed class ClinicalSubject : Aggr
 
 ---
 
-### [MIG-SUBJ-005] Implement `SubjectConsent` Aggregate & `ProtocolVersionRef`
+### [MIG-SUBJ-005] Implement `SubjectConsent` Aggregate & `ProtocolVersionRef` `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Medium (3h)
@@ -342,14 +342,14 @@ Per `02_technical_design.md` §2.4: `ProtocolVersionRef(StudyCode StudyCode, str
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `icf_signed_date` omitted on `Create`, when the aggregate is constructed, then `IcfSignedDate == clock.UtcNow`.
-- [ ] Given an existing consent with `IcfSignedDate` set, when `MergeResubmission` is called with `icfSignedDate: null`, then the existing date is preserved unchanged (not overwritten, not re-defaulted to now).
-- [ ] Given an existing consent with `IcfSignedDate == null` (edge case), when `MergeResubmission` is called with `icfSignedDate: null`, then it defaults to `clock.UtcNow`.
-- [ ] Given `MergeResubmission` called with `incomingProtocolVersion: null`, when applied, then the stored `ProtocolVersion` is unchanged (not nulled).
-- [ ] Boundary check: `VersionTag`/`IcfSigned`/`RequiresReconsent`/`IsPaperOverride` are replaced even when the incoming values equal the existing ones (unconditional replace, not a no-op-on-equal optimization that could mask a bug).
-- [ ] Error condition: N/A — this aggregate has no failure-returning methods; `ClearReconsentRequirement` and `MergeResubmission` are always-succeed mutations by design.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `icf_signed_date` omitted on `Create`, when the aggregate is constructed, then `IcfSignedDate == clock.UtcNow`.
+- [x] Given an existing consent with `IcfSignedDate` set, when `MergeResubmission` is called with `icfSignedDate: null`, then the existing date is preserved unchanged (not overwritten, not re-defaulted to now).
+- [x] Given an existing consent with `IcfSignedDate == null` (edge case), when `MergeResubmission` is called with `icfSignedDate: null`, then it defaults to `clock.UtcNow`.
+- [x] Given `MergeResubmission` called with `incomingProtocolVersion: null`, when applied, then the stored `ProtocolVersion` is unchanged (not nulled).
+- [x] Boundary check: `VersionTag`/`IcfSigned`/`RequiresReconsent`/`IsPaperOverride` are replaced even when the incoming values equal the existing ones (unconditional replace, not a no-op-on-equal optimization that could mask a bug).
+- [x] Error condition: N/A — this aggregate has no failure-returning methods; `ClearReconsentRequirement` and `MergeResubmission` are always-succeed mutations by design.
 
 #### Verification & Test Requirements
 
@@ -357,7 +357,7 @@ Per `02_technical_design.md` §2.4: `ProtocolVersionRef(StudyCode StudyCode, str
 
 ---
 
-### [MIG-SUBJ-006] Implement `SiteComplianceCache` Aggregate
+### [MIG-SUBJ-006] Implement `SiteComplianceCache` Aggregate `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Small (2h)
@@ -383,13 +383,13 @@ Per `02_technical_design.md` §2.5: `SiteComplianceCache : AggregateRoot<Guid>` 
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `Create(...)`, when constructed, then `Version == 1` and `MissingDocuments` matches the supplied collection exactly.
-- [ ] Given an existing cache row, when `ApplyWebhookUpdate` is called twice in sequence, then `Version` increments by exactly 1 each call (2 total after two calls), with no compare-and-swap rejection on either call.
-- [ ] Given `ApplyWebhookUpdate(isComplete: true, missingDocuments: [])`, when applied to a row whose prior `MissingDocuments` was non-empty, then the list is fully replaced (cleared, not merged/appended).
-- [ ] Boundary check: `MissingDocuments` is exposed as `IReadOnlyList<string>` — attempting to cast back to a mutable list and modify it from outside the aggregate must not affect the aggregate's internal state (defensive backing-field encapsulation).
-- [ ] Error condition: N/A — this aggregate has no failure-returning methods.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `Create(...)`, when constructed, then `Version == 1` and `MissingDocuments` matches the supplied collection exactly.
+- [x] Given an existing cache row, when `ApplyWebhookUpdate` is called twice in sequence, then `Version` increments by exactly 1 each call (2 total after two calls), with no compare-and-swap rejection on either call.
+- [x] Given `ApplyWebhookUpdate(isComplete: true, missingDocuments: [])`, when applied to a row whose prior `MissingDocuments` was non-empty, then the list is fully replaced (cleared, not merged/appended).
+- [x] Boundary check: `MissingDocuments` is exposed as `IReadOnlyList<string>` — attempting to cast back to a mutable list and modify it from outside the aggregate must not affect the aggregate's internal state (defensive backing-field encapsulation).
+- [x] Error condition: N/A — this aggregate has no failure-returning methods.
 
 #### Verification & Test Requirements
 

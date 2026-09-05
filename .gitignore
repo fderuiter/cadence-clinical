@@ -170,3 +170,5 @@ TestResults/
 _ReSharper*/
 *.suo
 
+# Claude Code agent worktrees (isolated checkouts for background subagents)
+.claude/worktrees/

@@ -171,3 +171,68 @@
   - `GetSafeDemographics`'s `catch` clause is scoped to `DemographicsDecryptionFailedException` specifically, not a blanket `catch (Exception)` — this is not a narrowing of the ticket's "any other exception" language, it is a consequence of this slice's own `IDemographicsEncryptionService.Decrypt` contract (`MIG-SUBJ-015`): every failure mode the legacy's `get_safe_demographics` swallows (tamper, wrong key, malformed input, non-dict/non-object payload) is already collapsed onto that single exception type by `Decrypt`'s own documented contract ("never returns a sentinel or default value" on failure), so there is no second, distinct exception type left for a broader catch to guard against in the C# port.
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-016 - demographics normalization service and IClock`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-004 - Implement `ClinicalSubject` Aggregate Root
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** With `MIG-SUBJ-016` landed, all of `MIG-SUBJ-004`'s WBS-listed dependencies (001/002/003) and its real, WBS-unlisted `IClock` dependency (flagged in the two prior sign-off entries) are satisfied. `MIG-SUBJ-005` (`SubjectConsent`) and `MIG-SUBJ-006` (`SiteComplianceCache`) are independently unblocked the same way (both need only `MIG-SUBJ-001`, plus `IClock` for 005) and share no target files with this ticket, so all three were implemented in parallel by independent agents working in isolated git worktrees off this branch, then merged sequentially (004 → 005 → 006) with a full clean build/test/format re-verification after each merge and again after the final merge — no conflicts occurred, confirming the three tickets' own "Parallelizable With" annotations. `MIG-SUBJ-008`, `MIG-SUBJ-009`, and `MIG-SUBJ-010` remain independently available zero-hidden-dependency alternatives for the next pass.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Subjects/ClinicalSubject.cs` (new)
+  - `tests/Execution/Subjects/ClinicalSubjectTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state (all three of MIG-SUBJ-004/005/006 present together), not just in the implementing agent's isolated worktree.
+- **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`, re-run on the final merged branch state after all three tickets landed) — 41 of these are `ClinicalSubjectTests`. (`rm -rf tests/obj tests/bin` was run before both the build and the test invocation per this project's documented obj-collision race between the two test projects sharing `tests/` — the race reproduced exactly as documented on the first post-merge `dotnet test` run, immediately after a `dotnet build` had populated `tests/obj`, and cleaning + re-running resolved it.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final merged branch state).
+- **Golden Master Parity:** N/A — pure Domain-layer aggregate ticket, no HTTP surface and no fixture inputs/outputs in `fixtures/*.json`. Verified instead against `02_technical_design.md` §2.3's exact code shape and this ticket's own Acceptance Criteria (factory initial-state, the full pre/post-randomization lock matrix for `UpdateStratFactors`/`UpdateDemographics`/`ClearDemographics` with distinct error codes for the latter, `TransitionTo` delegation, `Unblind`/`Withdraw` field capture via a fake `IClock`, `Withdraw` same-state idempotency, and illegal-transition `Result<bool>.Failure` propagation without throwing).
+- **Notes:**
+  - Implemented verbatim against `02_technical_design.md` §2.3, with the one point where the ticket's own text explicitly overrides the design doc snippet: `ClinicalSubject` is declared as `sealed class ClinicalSubject : AggregateRoot<SubjectId>` with no redundant `, IGxPAuditable` on the class signature, since that interface is already inherited via `AggregateRoot<TId> : AggregateRootBase : IGxPAuditable` (per the ticket's parenthetical: "the `IGxPAuditable` implementation is inherited from `AggregateRoot<TId>` already — no redeclaration needed").
+  - **Necessary divergence to satisfy this repo's build gate (not a design deviation):** the design doc's `TreatmentGroupCiphertext`, `RandomizationId`, and `KitReference` properties are carried over verbatim with private setters for future randomization/kit-assignment tickets, but no method in this ticket's scope ever assigns them. Under this repo's `TreatWarningsAsErrors=true`, SonarAnalyzer's `S1144` ("unused private setter") flags that as a build error. Fixed by explicitly initializing all three to `null` in `Create`'s object initializer — semantically identical to the properties' own defaults, no observable behavior change, and no Acceptance Criterion affected.
+  - `TransitionTo`'s test coverage is a thin delegation check only (legal/illegal/no-op cases), per the ticket's own explicit instruction not to duplicate `MIG-SUBJ-002`'s existing 81-permutation `SubjectTransitionGraph.Guard` matrix.
+  - No other divergence from the ticket text or design doc.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-004 - ClinicalSubject aggregate root`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-005 - Implement `SubjectConsent` Aggregate & `ProtocolVersionRef`
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-004` and `MIG-SUBJ-006` — see that entry's Scope Note for the parallelization/merge methodology. This ticket's only WBS-listed dependency (`MIG-SUBJ-001`) plus its real, WBS-unlisted `IClock` dependency (per `02_technical_design.md` §2.4's `Create`/`MergeResubmission` signatures) were both already satisfied.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Subjects/SubjectConsent.cs` (new)
+  - `apps/execution/src/Domain/Subjects/ProtocolVersionRef.cs` (new)
+  - `tests/Execution/Subjects/SubjectConsentTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state.
+- **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both test projects, re-run on the final merged branch state) — 21 of these are `SubjectConsentTests`, covering `Create`'s `IcfSignedDate` defaulting, the full 3-way `IcfSignedDate` matrix (existing-date-preserved / existing-date-replaced / no-prior-date-defaults-to-now), `incomingProtocolVersion` null-vs-supplied, each of the four unconditional-replace fields (including equal-value cases proving no no-op-on-equal shortcut), and `ClearReconsentRequirement`. (`rm -rf tests/obj tests/bin` was run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final merged branch state; the implementing agent's own pass found and fixed 9 whitespace/indentation diffs in the `Create` object-initializer before this).
+- **Golden Master Parity:** N/A — pure Domain-layer aggregate ticket, no HTTP surface and no fixture inputs/outputs. Verified instead against `02_technical_design.md` §2.4's exact code shape (including the design doc's own `ProtocolVersion = ProtocolVersion with { VersionTag = versionTag }`-then-conditionally-fully-replace sequencing in `MergeResubmission`, followed verbatim) and `02_technical_design.md` §6.2's explicit 3-way `IcfSignedDate` matrix callout.
+- **Notes:**
+  - Implemented verbatim against `02_technical_design.md` §2.4: `ProtocolVersionRef` as a `sealed record`; `SubjectConsent : AggregateRoot<SubjectConsentId>`; `Create` defaulting `IcfSignedDate` via `?? clock.UtcNow`; `MergeResubmission`'s four-category precedence (unconditional-replace fields, conditional `IcfSignedDate` with no-prior-date fallback, conditional whole-`ProtocolVersion` replace only when `incomingProtocolVersion is not null`); `ClearReconsentRequirement`.
+  - **Divergence (test-only, flagged per the implementing agent's own report):** the Acceptance Criteria's "existing consent with `IcfSignedDate == null`" edge case is not reachable through the public API — `Create` always resolves `IcfSignedDate` to a non-null value via `?? clock.UtcNow`, and `IcfSignedDate`'s setter is `private` with no `InternalsVisibleTo` between the test assembly and `Cadence.Apps.Execution`. The test for this case (`MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow`) uses `PropertyInfo.SetValue` via reflection, inside the test file only, to force that state before invoking `MergeResubmission` — framed as simulating a legacy-migrated row with no recorded date. This is a test-only technique; no production code's public surface, access modifiers, or the `IClock` interface were changed to accommodate it.
+  - No other divergence from the ticket text or design doc.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-005 - SubjectConsent aggregate and ProtocolVersionRef`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-006 - Implement `SiteComplianceCache` Aggregate
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-004` and `MIG-SUBJ-005` — see `MIG-SUBJ-004`'s entry for the parallelization/merge methodology. This ticket's only WBS-listed dependency (`MIG-SUBJ-001`) was already satisfied, and it has no `IClock` dependency (unlike 004/005), since `SiteComplianceCache` has no timestamp-capturing methods.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Compliance/SiteComplianceCache.cs` (new)
+  - `tests/Execution/Compliance/SiteComplianceCacheTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state (all three of MIG-SUBJ-004/005/006 present together).
+- **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both test projects, re-run on the final merged branch state) — 5 of these are `SiteComplianceCacheTests`: factory initial-state, two-sequential-call version-increment-by-exactly-1-per-call with no rejection, full-replace-not-merge on both non-empty and empty `missingDocuments`, and the cast-and-mutate defensive-encapsulation boundary check. (`rm -rf tests/obj tests/bin` was run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final merged branch state).
+- **Golden Master Parity:** N/A — pure Domain-layer aggregate ticket, no HTTP surface and no fixture inputs/outputs. Verified instead against `02_technical_design.md` §2.5's exact code shape and this ticket's own Acceptance Criteria (initial state, the plain upsert-increment-never-CAS semantics of `ApplyWebhookUpdate`, full-replacement of `MissingDocuments`, and the defensive-encapsulation boundary check).
+- **Notes:**
+  - Implemented verbatim against `02_technical_design.md` §2.5 for `SiteComplianceCache : AggregateRoot<Guid>`, `Create` (initializing `Version = 1`), and `ApplyWebhookUpdate` (always overwrites `IsComplete`, fully clears+re-adds `MissingDocuments`, increments `Version` by exactly 1, no compare-and-swap).
+  - **Necessary divergence from the design doc's literal `MissingDocuments` snippet (required by the ticket's own Acceptance Criteria, not optional):** the design doc's code block exposes `MissingDocuments` as `public IReadOnlyList<string> MissingDocuments => _missingDocuments;` — a direct upcast of the backing list that is NOT defensively encapsulated (a caller could cast the result back to `List<string>` and mutate the aggregate's internal state through it). This ticket's own Acceptance Criteria explicitly require genuine encapsulation ("attempting to cast back to a mutable list and modify it from outside the aggregate must not affect the aggregate's internal state"), which the design doc's literal snippet does not satisfy. Implemented instead as `public IReadOnlyList<string> MissingDocuments => _missingDocuments.AsReadOnly();`, returning a `ReadOnlyCollection<string>` wrapper each time rather than the backing `List<string>` itself — a cast back to `List<string>` now throws `InvalidCastException` instead of silently succeeding, verified directly by a dedicated test (`MissingDocuments_CastToMutableListAndMutated_DoesNotAffectAggregateState`).
+  - No other divergence from the ticket text or design doc.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-006 - SiteComplianceCache aggregate`
