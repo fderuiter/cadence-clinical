@@ -1,8 +1,14 @@
 using System;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
+using Cadence.Apps.Execution.Infrastructure.Security;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -60,6 +66,44 @@ builder.Services.AddProblemDetails(options =>
         }
     };
 });
+
+// MIG-SUBJ-021 (`02_technical_design.md` §5.2, ADR-2234 / Rule 8 / MIG-06): MassTransit plus
+// AddEntityFrameworkOutbox<ExecutionDbContext>() close the legacy Redis pub/sub subscriber's documented
+// delivery-durability gap (MIG-06) for EConsentCompletedConsumer. The outbox/consumer registration itself is
+// transport-agnostic; UsingInMemory is the transport used here because no real broker package (RabbitMQ,
+// Azure Service Bus, ...) is declared in Directory.Packages.props yet -- selecting and wiring one is the
+// responsibility of whichever future ticket actually publishes EConsentCompletedEvent from upstream eConsent
+// completion (out of this slice's scope, the same boundary §5.2 draws around econsent_client.py). Swapping
+// UsingInMemory for a real broker later is a one-line change here, not a rework of this registration.
+// ExecutionDbContext itself is not yet registered via AddDbContext (that is MIG-SUBJ-024's "final wiring"
+// ticket -- see ExecutionDbContext's own remarks and SaveChangesResiliencePipelineFactory's registration
+// above), so this consumer cannot actually run end-to-end in this composition root until that lands; this
+// ticket's own test coverage exercises the consumer via MassTransit.Testing.ITestHarness against fakes,
+// per `02_technical_design.md` §6.2, independent of Program.cs's own runtime wiring.
+builder.Services.AddMassTransit(x =>
+{
+    x.AddEntityFrameworkOutbox<ExecutionDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
+    x.AddConsumer<EConsentCompletedConsumer>();
+
+    x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
+});
+
+// SystemAuditContextAccessor's fixed "system-pubsub" identity (MIG-SUBJ-017), registered scoped so a fresh
+// instance backs each MassTransit-created per-message DI scope ("registered scoped-per-consume via
+// MassTransit's own DI scope", `02_technical_design.md` §4.4) -- matching the legacy subscriber's own fixed
+// `user_id="system-pubsub"`. This is the only ICurrentAuditContextAccessor registration in this composition
+// root today because no HTTP-scoped alternative (HttpCurrentAuditContextAccessor) is wired in yet
+// (MIG-SUBJ-018/019/023/024 remain outstanding); whichever of those tickets registers
+// HttpCurrentAuditContextAccessor for the HTTP request pipeline owns resolving the resulting
+// two-implementations-one-interface question (e.g. a composite accessor, or a per-ambient-scope choice made
+// where ExecutionDbContext's own AddDbContext callback wires GxPAuditInterceptor) -- it is not re-litigated
+// here.
+builder.Services.AddScoped<ICurrentAuditContextAccessor, SystemAuditContextAccessor>();
 
 var app = builder.Build();
 

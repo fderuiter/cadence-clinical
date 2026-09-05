@@ -34,6 +34,8 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- MIG-SUBJ-021: MassTransit.Testing.ITestHarness for EConsentCompletedConsumerTests. -->
+    <PackageReference Include="MassTransit" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

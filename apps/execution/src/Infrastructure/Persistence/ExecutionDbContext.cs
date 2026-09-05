@@ -3,6 +3,8 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 
+using MassTransit;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -53,5 +55,16 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
+
+        // MIG-SUBJ-021: MassTransit.EntityFrameworkCore's transactional outbox (ADR-2234 / Rule 8 / MIG-06)
+        // needs its own InboxState/OutboxState/OutboxMessage tables on this same DbContext -- Program.cs's
+        // `AddEntityFrameworkOutbox<ExecutionDbContext>()` call resolves this model at runtime the first time
+        // EConsentCompletedConsumer (or any future outbox-backed publisher/consumer sharing this context)
+        // persists a message, and fails outright if the entities aren't mapped here. One call adds all three
+        // (MassTransit.EntityFrameworkOutboxConfigurationExtensions.AddTransactionalOutboxEntities, verified
+        // against the pinned MassTransit.EntityFrameworkCore 8.3.6 API) rather than the three
+        // AddInboxStateEntity/AddOutboxStateEntity/AddOutboxMessageEntity calls, which the package's own XML
+        // docs say must not be combined with this one.
+        modelBuilder.AddTransactionalOutboxEntities();
     }
 }

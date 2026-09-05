@@ -17,6 +17,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Polly" />
+    <!-- MIG-SUBJ-021: MassTransit + the EF Core transactional outbox (ADR-2234 / Rule 8 / MIG-06). -->
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.EntityFrameworkCore" />
   </ItemGroup>
 
   <ItemGroup>
