@@ -1010,7 +1010,7 @@ The eTMF webhook upsert, the site-activation gate-check endpoint's business logi
 
 ---
 
-### [MIG-SUBJ-021] `EConsentCompletedConsumer` (MassTransit Transactional Outbox)
+### [MIG-SUBJ-021] `EConsentCompletedConsumer` (MassTransit Transactional Outbox) `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (5h)
@@ -1038,14 +1038,14 @@ Per `02_technical_design.md` §5.2 (implementation given near-verbatim in the de
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no existing subject `SUBJ-AUTO-01` in study `STUDY-AUTO`, when an `EConsentCompletedEvent` is consumed, then a `ClinicalSubject` is created with `Status == Screening`, `EnrollmentIndex == 0`, an `INSERT` audit entry (`table_name == "clinical_subjects"`), and a `SubjectConsent` cache row with `IcfSigned == true, IsPaperOverride == false, RequiresReconsent == false` (SCN-009).
-- [ ] Given a malformed event (`SubjectId` empty/whitespace), when consumed, then no exception is thrown, no subject is created, and the consumer completes normally (silent drop).
-- [ ] Given the **same** event delivered twice (redelivery simulation), when both are consumed, then exactly one `ClinicalSubject` exists afterward (idempotent skip on the second delivery), not two.
-- [ ] Given a subject that already exists but has no consent-cache row for the event's `(studyCode, versionIndex)`, when the event is consumed, then the subject is **not** re-created but the consent-cache row **is** backfilled — proving the two idempotency checks are independent, not coupled.
-- [ ] Boundary check: the subject-creation path and the `EConsentCompletedEvent`-triggered enrollment-index assignment share the exact same repository method (`EnrollNextIndexAsync`) as `SubjectApplicationService.CreateAsync` — verify via a shared-code-path assertion (e.g. both call sites reference the same `ISubjectRepository` method, not two separately-implemented index queries) rather than merely matching output values.
-- [ ] Error condition: a downstream persistence failure (e.g. simulated `DbUpdateException`) during `Consume` propagates to MassTransit's own retry/outbox handling rather than being caught and swallowed by this consumer — do not wrap the body in a broad try/catch that suppresses infrastructure failures alongside the one documented silent-drop case (malformed input only).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no existing subject `SUBJ-AUTO-01` in study `STUDY-AUTO`, when an `EConsentCompletedEvent` is consumed, then a `ClinicalSubject` is created with `Status == Screening`, `EnrollmentIndex == 0`, an `INSERT` audit entry (`table_name == "clinical_subjects"`), and a `SubjectConsent` cache row with `IcfSigned == true, IsPaperOverride == false, RequiresReconsent == false` (SCN-009).
+- [x] Given a malformed event (`SubjectId` empty/whitespace), when consumed, then no exception is thrown, no subject is created, and the consumer completes normally (silent drop).
+- [x] Given the **same** event delivered twice (redelivery simulation), when both are consumed, then exactly one `ClinicalSubject` exists afterward (idempotent skip on the second delivery), not two.
+- [x] Given a subject that already exists but has no consent-cache row for the event's `(studyCode, versionIndex)`, when the event is consumed, then the subject is **not** re-created but the consent-cache row **is** backfilled — proving the two idempotency checks are independent, not coupled.
+- [x] Boundary check: the subject-creation path and the `EConsentCompletedEvent`-triggered enrollment-index assignment share the exact same repository method (`EnrollNextIndexAsync`) as `SubjectApplicationService.CreateAsync` — verify via a shared-code-path assertion (e.g. both call sites reference the same `ISubjectRepository` method, not two separately-implemented index queries) rather than merely matching output values.
+- [x] Error condition: a downstream persistence failure (e.g. simulated `DbUpdateException`) during `Consume` propagates to MassTransit's own retry/outbox handling rather than being caught and swallowed by this consumer — do not wrap the body in a broad try/catch that suppresses infrastructure failures alongside the one documented silent-drop case (malformed input only).
 
 #### Verification & Test Requirements
 
