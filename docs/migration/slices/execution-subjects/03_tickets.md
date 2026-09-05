@@ -532,7 +532,7 @@ Per `02_technical_design.md` §2.7: `SubjectCreateRequest(string SubjectId, stri
 
 ---
 
-### [MIG-SUBJ-010] Implement `DomainError` → `ProblemDetails` HTTP Mapping
+### [MIG-SUBJ-010] Implement `DomainError` → `ProblemDetails` HTTP Mapping `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Small (2h)
@@ -560,14 +560,14 @@ Per `02_technical_design.md` §3.4's table: default `ErrorType` → status mappi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `SubjectErrors.LockedFactorMutation()`, when `.ToProblemResult()` is called, then the resulting HTTP status is **422**, not 409.
-- [ ] Given `SubjectErrors.ReconsentRequired(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is **423**, not 403.
-- [ ] Given `SubjectErrors.NotFound(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is 404 (default `NotFound` mapping, no override needed).
-- [ ] Given `SubjectErrors.SoftDeleteBlocked()`, when `.ToProblemResult()` is called, then the resulting HTTP status is 403 (default `Forbidden` mapping — confirms this code does _not_ need an override, only `RECONSENT_REQUIRED` does despite sharing `Type = Forbidden`).
-- [ ] Boundary check: the override table is keyed by `Code`, not `Type` — verify a hypothetical second `Conflict`-typed error (if one existed) would still map to 409, proving the override is scoped to the named code only.
-- [ ] Error condition: an exception that is _not_ wrapped in a `DomainError` (falls through to ASP.NET Core's global `IExceptionHandler`) produces a generic 500 — assert this is not intercepted or downgraded to 400 by this ticket's code (closing raise site #19, the bare-catch-all that must not be reproduced).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `SubjectErrors.LockedFactorMutation()`, when `.ToProblemResult()` is called, then the resulting HTTP status is **422**, not 409.
+- [x] Given `SubjectErrors.ReconsentRequired(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is **423**, not 403.
+- [x] Given `SubjectErrors.NotFound(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is 404 (default `NotFound` mapping, no override needed).
+- [x] Given `SubjectErrors.SoftDeleteBlocked()`, when `.ToProblemResult()` is called, then the resulting HTTP status is 403 (default `Forbidden` mapping — confirms this code does _not_ need an override, only `RECONSENT_REQUIRED` does despite sharing `Type = Forbidden`).
+- [x] Boundary check: the override table is keyed by `Code`, not `Type` — verify a hypothetical second `Conflict`-typed error (if one existed) would still map to 409, proving the override is scoped to the named code only.
+- [x] Error condition: an exception that is _not_ wrapped in a `DomainError` (falls through to ASP.NET Core's global `IExceptionHandler`) produces a generic 500 — assert this is not intercepted or downgraded to 400 by this ticket's code (closing raise site #19, the bare-catch-all that must not be reproduced).
 
 #### Verification & Test Requirements
 
