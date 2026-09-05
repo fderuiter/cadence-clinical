@@ -707,7 +707,7 @@ Per `02_technical_design.md` §4.2: `EnrollNextIndexAsync(StudyCode)` opens `Dat
 
 ---
 
-### [MIG-SUBJ-014] EF Core Migration Generation
+### [MIG-SUBJ-014] EF Core Migration Generation `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Small (2h)
@@ -733,12 +733,12 @@ Run `dotnet ef migrations add AddExecutionSubjectsSlice --project apps/execution
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] Given the generated migration, when `dotnet ef database update` is run against a clean Postgres instance, then it succeeds without error.
-- [ ] Given the migration applied, when inspecting the resulting schema, then `strat_factors` is column type `jsonb` and `missing_documents` is column type `text[]` (not `text`).
-- [ ] Given the migration applied, when inspecting indexes, then a unique index on `(study_code, enrollment_index)` exists on `clinical_subjects`.
-- [ ] Boundary check: `dotnet ef migrations remove` followed by re-running `dotnet ef migrations add` produces an identical (or behaviorally equivalent) migration — no snapshot drift from manual edits made after generation.
-- [ ] Error condition: applying the migration a second time (idempotency check via `dotnet ef database update` run twice) does not error or duplicate schema objects.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] Given the generated migration, when `dotnet ef database update` is run against a clean Postgres instance, then it succeeds without error.
+- [x] Given the migration applied, when inspecting the resulting schema, then `strat_factors` is column type `jsonb` and `missing_documents` is column type `text[]` (not `text`).
+- [x] Given the migration applied, when inspecting indexes, then a unique index on `(study_code, enrollment_index)` exists on `clinical_subjects`.
+- [x] Boundary check: `dotnet ef migrations remove` followed by re-running `dotnet ef migrations add` produces an identical (or behaviorally equivalent) migration — no snapshot drift from manual edits made after generation.
+- [x] Error condition: applying the migration a second time (idempotency check via `dotnet ef database update` run twice) does not error or duplicate schema objects.
 
 #### Verification & Test Requirements
 

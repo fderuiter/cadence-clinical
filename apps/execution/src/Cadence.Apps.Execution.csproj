@@ -17,4 +17,14 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="FluentValidation" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Design-time only: required for `dotnet ef migrations add`/`database update` (MIG-SUBJ-014). Never
+         needed at runtime, so it is excluded from the published output the same way the repo's own
+         analyzer packages are in Directory.Build.props. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>
