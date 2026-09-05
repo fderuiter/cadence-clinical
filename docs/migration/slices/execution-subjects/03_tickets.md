@@ -397,7 +397,7 @@ Per `02_technical_design.md` §2.5: `SiteComplianceCache : AggregateRoot<Guid>` 
 
 ---
 
-### [MIG-SUBJ-007] Shared-Kernel Prerequisite: `AggregateRootBase` & `GxPAuditInterceptor` Generalization
+### [MIG-SUBJ-007] Shared-Kernel Prerequisite: `AggregateRootBase` & `GxPAuditInterceptor` Generalization `[COMPLETED]`
 
 - **Layer:** Domain (shared-kernel — outside this slice's own project, a hard prerequisite for it)
 - **Complexity:** Medium (4h)
@@ -425,13 +425,13 @@ Introduce `public abstract class AggregateRootBase : IGxPAuditable` in a new fil
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` across **all** consumers of `AggregateRoot<TId>` in the solution (`Cadence.Apps.Gateway`, `Cadence.Apps.Designer`, not just `Cadence.Apps.Execution`) — run `dotnet build Cadence.sln`, not just this slice's project.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an entity of type `AggregateRoot<SubjectId>` (a non-`string` TId), when added and `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are stamped (regression test for the exact gap this ticket closes).
-- [ ] Given two sequential `SaveChangesAsync` calls mutating the same entity type, when both complete, then the second `AuditLogEntry.PredecessorHash` equals the first `AuditLogEntry.BlockHash` for that `EntityName`.
-- [ ] Given entities of two different `EntityName`s modified in the same `SaveChangesAsync` call, when audit entries are written, then each entity type's chain is independent (entity A's second entry does not chain off entity B's first entry).
-- [ ] Boundary check: an entity implementing `IGxPAuditable` but **not** inheriting `AggregateRootBase` (if any exist elsewhere in the solution) is still field-stamped by the pre-existing `IGxPAuditable`-typed `ChangeTracker.Entries<IGxPAuditable>()` enumeration, but does not need to satisfy the `AggregateRootBase` pattern match for the `AuditLogEntry` write path — verify this doesn't regress for any such entity if one exists today.
-- [ ] Error condition: `eventData.Context is null` still short-circuits to `base.SavingChangesAsync(...)` exactly as today — do not remove this existing guard.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` across **all** consumers of `AggregateRoot<TId>` in the solution (`Cadence.Apps.Gateway`, `Cadence.Apps.Designer`, not just `Cadence.Apps.Execution`) — run `dotnet build Cadence.sln`, not just this slice's project.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an entity of type `AggregateRoot<SubjectId>` (a non-`string` TId), when added and `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are stamped (regression test for the exact gap this ticket closes).
+- [x] Given two sequential `SaveChangesAsync` calls mutating the same entity type, when both complete, then the second `AuditLogEntry.PredecessorHash` equals the first `AuditLogEntry.BlockHash` for that `EntityName`.
+- [x] Given entities of two different `EntityName`s modified in the same `SaveChangesAsync` call, when audit entries are written, then each entity type's chain is independent (entity A's second entry does not chain off entity B's first entry).
+- [x] Boundary check: an entity implementing `IGxPAuditable` but **not** inheriting `AggregateRootBase` (if any exist elsewhere in the solution) is still field-stamped by the pre-existing `IGxPAuditable`-typed `ChangeTracker.Entries<IGxPAuditable>()` enumeration, but does not need to satisfy the `AggregateRootBase` pattern match for the `AuditLogEntry` write path — verify this doesn't regress for any such entity if one exists today.
+- [x] Error condition: `eventData.Context is null` still short-circuits to `base.SavingChangesAsync(...)` exactly as today — do not remove this existing guard.
 
 #### Verification & Test Requirements
 
