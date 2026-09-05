@@ -43,10 +43,11 @@ public sealed class SubjectConsentConfiguration : IEntityTypeConfiguration<Subje
 
         // Shadow EF concurrency token — distinct from SiteComplianceCache.Version (MIG-SUBJ-012), which is
         // domain data, not an EF concurrency token. Mirrors ClinicalSubjectConfiguration's `_version`
-        // (MIG-SUBJ-011): HasDefaultValue(0L) supplies the starting value Npgsql/SQLite don't auto-compute
-        // the way SQL Server's native rowversion does, so the non-nullable shadow column doesn't violate
-        // its own NOT NULL constraint on the very first insert. See that configuration's comment for the
-        // full rationale.
-        builder.Property<long>("_version").IsRowVersion().HasDefaultValue(0L);
+        // (MIG-SUBJ-011/013): `.IsConcurrencyToken()` alone, deliberately not `.IsRowVersion()`, so EF always
+        // sends this property's value explicitly rather than treating it as store-generated (see that
+        // configuration's comment for the full rationale) — required for MIG-SUBJ-013's
+        // `ConcurrencyTokenIncrementInterceptor` app-level auto-increment-on-update fix to actually take
+        // effect. HasDefaultValue(0L) supplies the starting value for a brand-new row's INSERT.
+        builder.Property<long>("_version").IsConcurrencyToken().HasDefaultValue(0L);
     }
 }

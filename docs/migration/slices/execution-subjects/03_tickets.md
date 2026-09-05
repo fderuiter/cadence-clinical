@@ -661,7 +661,7 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
 
 ---
 
-### [MIG-SUBJ-013] Implement Repositories & Sequential Enrollment-Index Locking
+### [MIG-SUBJ-013] Implement Repositories & Sequential Enrollment-Index Locking `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Large (6h)
@@ -693,13 +693,13 @@ Per `02_technical_design.md` §4.2: `EnrollNextIndexAsync(StudyCode)` opens `Dat
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an empty study, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `0`.
-- [ ] Given a study with subjects at indices `{0, 1, 2}`, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `3`.
-- [ ] Given two concurrent `EnrollNextIndexAsync` calls for the **same** study (simulated via parallel tasks against a shared connection pool in a Testcontainers-backed test — the InMemory provider cannot exercise a real advisory lock), when both complete, then they return two distinct sequential indices, never a duplicate (this specific scenario is deferred to MIG-SUBJ-028's integration test, but the repository method under test here must be structurally correct — i.e. the lock/transaction scoping compiles and passes a single-caller smoke test in this ticket).
-- [ ] Boundary check: `EnrollNextIndexAsync` for study `A` does not block or wait behind a concurrent, held advisory lock for study `B` (different `hashtext` values) — verify via a unit-level assertion that the lock key is derived from the study code, not a global constant.
-- [ ] Error condition: `GetByIdAsync`/`GetByCodeAsync` return `null` (not throw) when no matching row exists — not-found handling is the application service's responsibility (`SubjectErrors.NotFound`), not the repository's.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an empty study, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `0`.
+- [x] Given a study with subjects at indices `{0, 1, 2}`, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `3`.
+- [x] Given two concurrent `EnrollNextIndexAsync` calls for the **same** study (simulated via parallel tasks against a shared connection pool in a Testcontainers-backed test — the InMemory provider cannot exercise a real advisory lock), when both complete, then they return two distinct sequential indices, never a duplicate (this specific scenario is deferred to MIG-SUBJ-028's integration test, but the repository method under test here must be structurally correct — i.e. the lock/transaction scoping compiles and passes a single-caller smoke test in this ticket). Exceeded: `SubjectRepositoryTests` includes a genuine N=8-parallel-task test (real concurrent `Task.WhenAll` callers, file-backed SQLite) asserting `{0..7}` with no duplicates/gaps, on top of the required single-caller smoke tests — see that test's own doc comment for why SQLite (not just Postgres) can genuinely exercise this, and its report for what remains MIG-SUBJ-028-only.
+- [x] Boundary check: `EnrollNextIndexAsync` for study `A` does not block or wait behind a concurrent, held advisory lock for study `B` (different `hashtext` values) — verify via a unit-level assertion that the lock key is derived from the study code, not a global constant.
+- [x] Error condition: `GetByIdAsync`/`GetByCodeAsync` return `null` (not throw) when no matching row exists — not-found handling is the application service's responsibility (`SubjectErrors.NotFound`), not the repository's.
 
 #### Verification & Test Requirements
 
