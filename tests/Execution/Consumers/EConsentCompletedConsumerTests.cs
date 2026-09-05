@@ -122,6 +122,25 @@ public class EConsentCompletedConsumerTests
             Task.FromResult(unitOfWork.Consents.Any(c =>
                 c.SubjectCode == subjectCode && c.ProtocolVersion.StudyCode == studyCode && c.ProtocolVersion.VersionIndex == versionIndex));
 
+        // Added when MIG-SUBJ-018 extended IConsentRepository with the tracked-read methods
+        // SubjectApplicationService.RecordConsentAsync needs (this consumer never calls either — it only
+        // exercises ExistsAsync/AddAsync/SaveChangesAsync — but the fake must still satisfy the interface).
+        public Task<SubjectConsent?> GetAsync(SubjectCode subjectCode, StudyCode studyCode, int versionIndex, CancellationToken cancellationToken) =>
+            Task.FromResult(unitOfWork.Consents.FirstOrDefault(c =>
+                c.SubjectCode == subjectCode && c.ProtocolVersion.StudyCode == studyCode && c.ProtocolVersion.VersionIndex == versionIndex));
+
+        public Task<IReadOnlyList<SubjectConsent>> GetOtherRequiringReconsentAsync(SubjectCode subjectCode, StudyCode studyCode,
+            int excludeVersionIndex, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<SubjectConsent> others = unitOfWork.Consents
+                .Where(c => c.SubjectCode == subjectCode
+                    && c.ProtocolVersion.StudyCode == studyCode
+                    && c.ProtocolVersion.VersionIndex != excludeVersionIndex
+                    && c.RequiresReconsent)
+                .ToList();
+            return Task.FromResult(others);
+        }
+
         public Task AddAsync(SubjectConsent consent, CancellationToken cancellationToken)
         {
             unitOfWork.StageConsent(consent);
