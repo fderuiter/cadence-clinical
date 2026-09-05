@@ -880,7 +880,7 @@ Per `02_technical_design.md` §4.4: `ICurrentAuditContextAccessor { string UserI
 
 ---
 
-### [MIG-SUBJ-018] `SubjectApplicationService` — `CreateAsync` & `RecordConsentAsync`
+### [MIG-SUBJ-018] `SubjectApplicationService` — `CreateAsync` & `RecordConsentAsync` `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (6h)
@@ -908,14 +908,14 @@ Per `02_technical_design.md` §3.1/§3.3: `ISubjectApplicationService` declares 
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an empty study, when `CreateAsync` enrolls `SUBJ-001` then `SUBJ-002`, then their `enrollment_index` values are `0` and `1` respectively, both persisted with `Status == Screening` and an `ENROLL_SUBJECT` audit entry each (SCN-001).
-- [ ] Given a `SubjectCreateRequest` with a populated `Demographics` payload, when `CreateAsync` is called, then the persisted `EncryptedDemographics` is non-null ciphertext, never the plaintext payload serialized directly.
-- [ ] Given a subject with an existing consent (version 1, `RequiresReconsent == true`), when `RecordConsentAsync` is called with a new consent (version 2, `IcfSigned == true`, `RequiresReconsent == false`), then consent version 1 is updated to `RequiresReconsent == false` and version 2 is persisted with `RequiresReconsent == false` (SCN-002).
-- [ ] Given `RecordConsentAsync` called for a `(subjectCode, studyCode, versionIndex)` with no existing row, when invoked, then a new `SubjectConsent` is created (not a merge).
-- [ ] Boundary check: `RecordConsentAsync`'s cascade clearance targets only _other_ consent rows for the same subject — a consent row for a **different** subject with `RequiresReconsent == true` is untouched.
-- [ ] Error condition: `RecordConsentAsync` called with `subjectIdOrCode` matching no subject by either ID or code returns `SubjectErrors.NotFound(...)`, not an unhandled exception.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an empty study, when `CreateAsync` enrolls `SUBJ-001` then `SUBJ-002`, then their `enrollment_index` values are `0` and `1` respectively, both persisted with `Status == Screening` and an `ENROLL_SUBJECT` audit entry each (SCN-001).
+- [x] Given a `SubjectCreateRequest` with a populated `Demographics` payload, when `CreateAsync` is called, then the persisted `EncryptedDemographics` is non-null ciphertext, never the plaintext payload serialized directly.
+- [x] Given a subject with an existing consent (version 1, `RequiresReconsent == true`), when `RecordConsentAsync` is called with a new consent (version 2, `IcfSigned == true`, `RequiresReconsent == false`), then consent version 1 is updated to `RequiresReconsent == false` and version 2 is persisted with `RequiresReconsent == false` (SCN-002).
+- [x] Given `RecordConsentAsync` called for a `(subjectCode, studyCode, versionIndex)` with no existing row, when invoked, then a new `SubjectConsent` is created (not a merge).
+- [x] Boundary check: `RecordConsentAsync`'s cascade clearance targets only _other_ consent rows for the same subject — a consent row for a **different** subject with `RequiresReconsent == true` is untouched.
+- [x] Error condition: `RecordConsentAsync` called with `subjectIdOrCode` matching no subject by either ID or code returns `SubjectErrors.NotFound(...)`, not an unhandled exception.
 
 #### Verification & Test Requirements
 
