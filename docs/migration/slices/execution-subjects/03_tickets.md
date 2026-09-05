@@ -575,7 +575,7 @@ Per `02_technical_design.md` §3.4's table: default `ErrorType` → status mappi
 
 ---
 
-### [MIG-SUBJ-011] Implement `ExecutionDbContext` & `ClinicalSubjectConfiguration`
+### [MIG-SUBJ-011] Implement `ExecutionDbContext` & `ClinicalSubjectConfiguration` `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Large (5h)
@@ -603,13 +603,13 @@ Per `02_technical_design.md` §4.1: `ExecutionDbContext` registers `GxPAuditInte
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `ClinicalSubject` persisted and reloaded via `ExecutionDbContext`, when compared to the original, then `SubjectCode`/`StudyCode`/`SiteCode`/`Status`/`_stratFactors` round-trip exactly (including `null` `SiteCode`).
-- [ ] Given two subjects with the same `StudyCode` and `EnrollmentIndex` inserted in the same transaction, when `SaveChangesAsync` is called, then the second insert fails on the unique index (DB-level enforcement of Rule 5, backstopping the app-level lock).
-- [ ] Given a subject added via `ExecutionDbContext` with `GxPAuditInterceptor` registered, when `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are populated (regression test proving MIG-SUBJ-007's fix is actually wired up in this context, not just unit-tested in isolation).
-- [ ] Boundary check: `_stratFactors` containing nested objects/arrays (not just flat key-value pairs) round-trips through the `jsonb` conversion without data loss.
-- [ ] Error condition: a corrupted `Status` string value read from the database (e.g. manually set to an invalid string via raw SQL in a test) throws `InvalidOperationException` on materialization, not a silent default or a `Result<T>` failure.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `ClinicalSubject` persisted and reloaded via `ExecutionDbContext`, when compared to the original, then `SubjectCode`/`StudyCode`/`SiteCode`/`Status`/`_stratFactors` round-trip exactly (including `null` `SiteCode`).
+- [x] Given two subjects with the same `StudyCode` and `EnrollmentIndex` inserted in the same transaction, when `SaveChangesAsync` is called, then the second insert fails on the unique index (DB-level enforcement of Rule 5, backstopping the app-level lock).
+- [x] Given a subject added via `ExecutionDbContext` with `GxPAuditInterceptor` registered, when `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are populated (regression test proving MIG-SUBJ-007's fix is actually wired up in this context, not just unit-tested in isolation).
+- [x] Boundary check: `_stratFactors` containing nested objects/arrays (not just flat key-value pairs) round-trips through the `jsonb` conversion without data loss.
+- [x] Error condition: a corrupted `Status` string value read from the database (e.g. manually set to an invalid string via raw SQL in a test) throws `InvalidOperationException` on materialization, not a silent default or a `Result<T>` failure.
 
 #### Verification & Test Requirements
 
