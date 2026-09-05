@@ -38,5 +38,11 @@ public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
         return Task.FromResult(match);
     }
 
+    public Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken)
+    {
+        _store[cache.Id] = cache;
+        return Task.CompletedTask;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
