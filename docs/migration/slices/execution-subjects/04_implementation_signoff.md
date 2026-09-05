@@ -68,3 +68,27 @@
   - No divergence from the design doc or ticket text in the implementation itself — the only deviation worth flagging is the ticket-ordering rationale above (implemented ahead of MIG-SUBJ-002 due to the real, WBS-unlisted dependency).
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-003 - SubjectErrors domain error factory`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-002 - Implement `SubjectState` Enum, Codec & Transition Graph
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** The next zero-dependency ticket per the regenerated `03_tickets.md` WBS (Dependencies: None) that was not yet implemented under the current numbering. As MIG-SUBJ-003's own sign-off flagged, `02_technical_design.md` §2.2's `SubjectTransitionGraph.Guard` calls `SubjectErrors.InvalidStateTransition(...)` directly, so this ticket's real (WBS-unlisted) prerequisite — `SubjectErrors` — was already in place from the prior ticket, and this ticket could proceed exactly per the design doc's code shape with no ordering compromise. The pre-existing `apps/execution/src/Domain/Enums/SubjectState.cs` / `Domain/Rules/SubjectStateMachine.cs` (from the original, now-superseded ticket numbering, see MIG-SUBJ-001's first sign-off entry) are a distinct, differently-shaped implementation in different namespaces (`Domain.Enums`/`Domain.Rules` vs. this ticket's `Domain.Subjects`, `FrozenDictionary`-backed `CanTransition`/`EnsureValidTransition`-with-exceptions vs. this ticket's `IReadOnlyDictionary`-backed `Result<SubjectState> Guard`) — both now coexist in the solution; this ticket did not touch or remove the legacy `SubjectStateMachine` surface, since no other ticket in the regenerated backlog names it for removal and reconciling `01_spec.md` against `02_technical_design.md` is out of this ticket's explicit scope.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Subjects/SubjectState.cs`
+  - `apps/execution/src/Domain/Subjects/SubjectStateCodec.cs`
+  - `apps/execution/src/Domain/Subjects/SubjectTransitionGraph.cs`
+  - `tests/Execution/Subjects/SubjectTransitionGraphTests.cs`
+  - `tests/Execution/Subjects/SubjectStateCodecTests.cs`
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
+- **Tests Executed:** 258 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests` — the two test projects build the same shared test sources and report identical totals, consistent with this slice's existing dual-project setup) — 118 new: 99 in `SubjectTransitionGraphTests` (81-permutation full transition matrix via `[Theory]`/`[MemberData]`, 9 same-state no-op cases, 1 null-current-targeting-Screening case, 7 null-current-targeting-non-Screening failure cases, 1 `ReconsentRequired` 7-state fan-out check) + 19 in `SubjectStateCodecTests` (9 `ToCode`/`TryParse` round-trips, 4 casing/whitespace/space-normalization cases, 6 unmapped-or-empty-input false-not-throw cases).
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes
+- **Golden Master Parity:** N/A for this ticket — pure domain enum/codec/transition-graph ticket, no fixture inputs/outputs in `fixtures/*.json`. Verified instead against `01_spec.md` §2.1's mermaid transition graph (independently cross-checked line-by-line against `02_technical_design.md` §2.2's `Allowed` dictionary — both agree exactly) and this ticket's own Acceptance Criteria (full 81-permutation matrix, null-current boundary, `ReconsentRequired` 7-state fan-out, `TryParse` malformed-input non-throwing behavior).
+- **Notes:**
+  - Implemented verbatim against `02_technical_design.md` §2.2: 9-member `SubjectState` enum; `SubjectStateCodec.ToCode`/`TryParse` (trim, upper-case, space-to-underscore before dictionary lookup, `false` — never a thrown exception — on an unmapped string); `SubjectTransitionGraph.Guard(SubjectState? current, SubjectState target) -> Result<SubjectState>` with the exact check order (same-state no-op first, then null-current-only-targets-Screening, then the `Allowed` dictionary lookup), reusing the existing `SubjectErrors.InvalidStateTransition` factory from MIG-SUBJ-003 for both the null-current and known-state-forbidden-transition failure paths, matching raise site #6's documented indistinguishability.
+  - `SubjectStateCodec.TryParse("in progress")` (AC's explicit named case) returns `false`, not a thrown exception — asserted directly; no `IN_PROGRESS` member exists in this domain's 9-state enum, so the "if one exists" branch of the AC does not apply.
+  - No divergence from the design doc or ticket text in the new code itself. The only thing worth flagging is the coexistence-with-legacy-`SubjectStateMachine` note above, inherited unresolved from MIG-SUBJ-001's original (pre-regeneration) sign-off.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-002 - SubjectState enum, codec, and transition graph`
