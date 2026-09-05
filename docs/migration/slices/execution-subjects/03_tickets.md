@@ -746,7 +746,7 @@ Manual `dotnet ef database update`/`migrations remove`/re-add cycle against a lo
 
 ---
 
-### [MIG-SUBJ-015] Implement AES-GCM Demographics Encryption Service
+### [MIG-SUBJ-015] Implement AES-GCM Demographics Encryption Service `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -775,14 +775,14 @@ Per `02_technical_design.md` §5.1: `IDemographicsEncryptionService.Encrypt(IRea
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a demographics dictionary, when `Encrypt` then `Decrypt` is called with the same key, then the round-tripped dictionary equals the original.
-- [ ] Given ciphertext with a single bit flipped (tamper simulation), when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` (AES-GCM authentication tag failure), never silently returning garbage or an empty dict.
-- [ ] Given a syntactically-invalid base64 string, when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` wrapping a `FormatException`.
-- [ ] Given valid ciphertext whose decrypted plaintext is valid JSON but not a JSON object (e.g. a bare array), when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` with the message "Decrypted payload was not a JSON object."
-- [ ] Boundary check: the encryption key is never present as a literal string anywhere in `AesGcmDemographicsEncryptionService.cs` — sourced exclusively via `IOptions<DemographicsEncryptionOptions>`.
-- [ ] Error condition: `Decrypt` given ciphertext produced with a _different_ key throws `DemographicsDecryptionFailedException` (wrong-key case, indistinguishable from tampering at the AES-GCM tag-verification level — this is expected and correct, not a gap).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a demographics dictionary, when `Encrypt` then `Decrypt` is called with the same key, then the round-tripped dictionary equals the original.
+- [x] Given ciphertext with a single bit flipped (tamper simulation), when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` (AES-GCM authentication tag failure), never silently returning garbage or an empty dict.
+- [x] Given a syntactically-invalid base64 string, when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` wrapping a `FormatException`.
+- [x] Given valid ciphertext whose decrypted plaintext is valid JSON but not a JSON object (e.g. a bare array), when `Decrypt` is called, then it throws `DemographicsDecryptionFailedException` with the message "Decrypted payload was not a JSON object."
+- [x] Boundary check: the encryption key is never present as a literal string anywhere in `AesGcmDemographicsEncryptionService.cs` — sourced exclusively via `IOptions<DemographicsEncryptionOptions>`.
+- [x] Error condition: `Decrypt` given ciphertext produced with a _different_ key throws `DemographicsDecryptionFailedException` (wrong-key case, indistinguishable from tampering at the AES-GCM tag-verification level — this is expected and correct, not a gap).
 
 #### Verification & Test Requirements
 
