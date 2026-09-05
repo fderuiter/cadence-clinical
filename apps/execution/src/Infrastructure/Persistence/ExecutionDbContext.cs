@@ -1,3 +1,4 @@
+using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
@@ -39,6 +40,10 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 {
     public DbSet<ClinicalSubject> ClinicalSubjects => Set<ClinicalSubject>();
 
+    public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
+
+    public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -46,5 +51,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
+        modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
+        modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
     }
 }
