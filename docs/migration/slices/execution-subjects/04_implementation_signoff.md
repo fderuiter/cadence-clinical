@@ -322,3 +322,106 @@
   - Noted but not touched: the same orphaned `Domain/Enums/SubjectState.cs`/`Domain/Exceptions/*.cs` scaffold flagged in `MIG-SUBJ-008`'s entry.
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-011 - ExecutionDbContext and ClinicalSubjectConfiguration`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-017 - Implement Audit Context Accessor & Audit Log Writer
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** First ticket of Batch B under the Phase 4 protocol. Frontier recomputation after Batch A found `MIG-SUBJ-010`, `MIG-SUBJ-012`, `MIG-SUBJ-017`, and `MIG-SUBJ-022` all dependency-satisfied (the `MIG-SUBJ-011`→`012`/`017` hidden dependency flagged in `MIG-SUBJ-011`'s entry above was confirmed real and is now closed) and mutually file-disjoint, so all four were dispatched together. The first dispatch attempt hit a session-wide API rate limit before any of the four agents wrote code (all failed cleanly mid-research, no partial worktree state); redispatched fresh after the limit reset with identical prompts.
+- **Target Files Modified:**
+  - `apps/execution/src/Application/Abstractions/ICurrentAuditContextAccessor.cs` (new)
+  - `apps/execution/src/Application/Abstractions/IAuditLogWriter.cs` (new)
+  - `apps/execution/src/Infrastructure/Security/HttpCurrentAuditContextAccessor.cs` (new)
+  - `apps/execution/src/Infrastructure/Security/SystemAuditContextAccessor.cs` (new)
+  - `apps/execution/src/Infrastructure/Persistence/EfAuditLogWriter.cs` (new)
+  - `tests/Execution/Security/CurrentAuditContextAccessorTests.cs` (new)
+  - `tests/Execution/Persistence/EfAuditLogWriterTests.cs` (new, beyond the ticket's literal Target Files list — see Notes)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state (all four tickets present together).
+- **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 21 of these are this ticket's own (14 `CurrentAuditContextAccessorTests`, 7 `EfAuditLogWriterTests`). (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch B merged branch state).
+- **Golden Master Parity:** N/A — pure Application/Infrastructure-layer cross-cutting seam ticket, no HTTP surface and no fixture inputs/outputs. Verified against `02_technical_design.md` §4.4 and this ticket's own Acceptance Criteria (single consistently-defaulting resolution path for both `UserId`/`ChangeReason`, fixed compile-time-constant `SystemAuditContextAccessor` values, and Merkle `PredecessorHash`/`BlockHash` chaining for `IAuditLogWriter.WriteAsync`).
+- **Notes:**
+  - Confirmed `EfAuditLogWriter` injects the already-merged `ExecutionDbContext` (MIG-SUBJ-011) as an ordinary scoped dependency and appends directly to its `ChangeTracker` — no second `DbContext` instance, satisfying the "commits inside the same transaction" requirement.
+  - **Whitespace-sensitive defaulting applied uniformly to both properties** (not just `ChangeReason`, matching the ticket's own "one resolution path for both properties" instruction), via one shared `Resolve(string?, string)` helper using `string.IsNullOrWhiteSpace` — a stricter reading than §4.4's illustrative snippet, which only guards empty-string, but required by the ticket's own boundary-check AC.
+  - **`VersionIndex` for writer-initiated rows defined as a chain-position counter** ("1 + the predecessor entry's own `VersionIndex` for that `tableName`"), since `WriteAsync`'s signature carries no version number unlike the interceptor's own aggregate-sourced counter — documented as an inference in the XML doc comment, not literally specified by either source document.
+  - **`EfAuditLogWriter` also takes `IClock`** (this slice's existing seam) rather than raw `DateTime.UtcNow`, for deterministic tests and consistency with sibling Infrastructure code — a reasonable addition beyond the ticket's literal constructor description.
+  - Added `EfAuditLogWriterTests.cs` beyond the ticket's literal Target Files list (which names only the accessor test file) — the `PredecessorHash`-chaining and same-transaction ACs have no natural home in an accessor-focused test file, so `EfAuditLogWriter` got dedicated coverage mirroring `GxPAuditInterceptorMerkleChainTests.cs`'s existing sibling-file convention, including a test proving the interceptor's and this writer's audit trails coexist independently within one `SaveChangesAsync`.
+  - DI/composition-root wiring (`AddHttpContextAccessor`, scoped registrations for the new interfaces) deliberately left to a later ticket — no prior ticket has wired any Application/Infrastructure service into `Program.cs`'s DI container yet either, so this is consistent with existing practice, not a gap this ticket introduced.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-017 - audit context accessor and audit log writer`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-012 - Implement `SubjectConsentConfiguration` & `SiteComplianceCacheConfiguration`
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-010`, `MIG-SUBJ-017`, and `MIG-SUBJ-022` as Batch B — see `MIG-SUBJ-017`'s entry above for the batching rationale and the rate-limit redispatch note. Adds two more `DbSet<T>` properties (`SubjectConsents`, `SiteComplianceCaches`) directly into `ExecutionDbContext`'s `OnModelCreating`, alongside `MIG-SUBJ-011`'s `ClinicalSubjects`/`AuditLogEntries` — no conflict occurred merging into the same non-partial file, since `MIG-SUBJ-017` only consumes `ExecutionDbContext`, never modifies it.
+- **Target Files Modified:**
+  - `apps/execution/src/Infrastructure/Persistence/Configurations/SubjectConsentConfiguration.cs` (new)
+  - `apps/execution/src/Infrastructure/Persistence/Configurations/SiteComplianceCacheConfiguration.cs` (new)
+  - `apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs` (modified — added `DbSet<SubjectConsent> SubjectConsents`, `DbSet<SiteComplianceCache> SiteComplianceCaches`, and their `ApplyConfiguration` calls only)
+  - `tests/Execution/Persistence/SubjectConsentConfigurationTests.cs` (new)
+  - `tests/Execution/Persistence/SiteComplianceCacheConfigurationTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state.
+- **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 13 of these are this ticket's own (5 `SubjectConsentConfigurationTests`, 8 `SiteComplianceCacheConfigurationTests`). (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch B merged branch state).
+- **Golden Master Parity:** N/A at this layer — pure EF Core configuration ticket, no HTTP surface. Verified against `02_technical_design.md` §4.1/§4.3's mapping requirements (`ComplexProperty` for `ProtocolVersion`, native `text[]` for `_missingDocuments`, `SiteComplianceCache.Version` as a plain non-concurrency-token `int`) and this ticket's own Acceptance Criteria, including the explicit EF-metadata-inspection test proving `IsConcurrencyToken == false` on that property.
+- **Notes:**
+  - **Table name `site_compliance_caches` (plural)** matches the legacy SQLAlchemy model's actual `__tablename__` exactly (`apps/execution/database/models/compliance.py`), diverging from an informal singular mention in the ticket's own Objective & Scope prose. No AC tests a literal table-name string and no design-doc section flags a deliberate rename, so the legacy source (this repo's own "authoritative behavioral reference" per `AGENTS.md`) was treated as ground truth; documented in the configuration's doc comment.
+  - **Necessary test-infrastructure divergence: EF Core InMemory provider limitation with `ComplexProperty` + `HasConversion`.** InMemory (10.0.11) throws `KeyNotFoundException` inside its own query-shaping pipeline when materializing a `ComplexProperty` member (`ProtocolVersion.StudyCode`) that also carries a value converter — reproduced consistently; SQLite materializes the identical model correctly. `SubjectConsentConfigurationTests`' round-trip tests use SQLite instead, matching `MIG-SUBJ-011`'s own established precedent of falling back to SQLite wherever InMemory's non-relational internals fall short. Flagged in the test file for future tickets touching `SubjectConsent` persistence.
+  - No explicit column names given for the `ProtocolVersion` complex-type members (left to EF convention) — neither the ticket AC nor design doc specifies exact names for those three fields, unlike `strat_factors` in MIG-SUBJ-011, so nothing was invented that wasn't requested.
+  - Deliberately not touched: a strongly-typed `SiteComplianceCacheId` (a stale `00_phase2_validation_report.md` recommendation never adopted into the merged `MIG-SUBJ-006` domain code — out of this persistence-only ticket's scope); a DB-level uniqueness index on `(StudyCode, SiteCode, Milestone)` (not required by any AC here, presumably `MIG-SUBJ-013`'s repository-level upsert logic owns that invariant).
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-012 - SubjectConsent and SiteComplianceCache EF configurations`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-010 - Implement `DomainError` → `ProblemDetails` HTTP Mapping
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-012`, `MIG-SUBJ-017`, and `MIG-SUBJ-022` as Batch B — see `MIG-SUBJ-017`'s entry above for the batching rationale and the rate-limit redispatch note. This ticket's `Program.cs` edit (RFC 9457 `ProblemDetails` registration + `UseExceptionHandler()`) merged cleanly alongside `MIG-SUBJ-008`'s earlier, independent `ConfigureHttpJsonOptions` addition to the same file — both are purely additive blocks with no overlapping lines.
+- **Target Files Modified:**
+  - `apps/execution/src/Domain/Subjects/DomainErrorHttpMapping.cs` (new)
+  - `apps/execution/src/Domain/Subjects/DomainErrorExtensions.cs` (new)
+  - `apps/execution/src/Program.cs` (modified — additive `AddProblemDetails`/`CustomizeProblemDetails` registration and `UseExceptionHandler()`)
+  - `tests/Execution/Subjects/DomainErrorHttpMappingTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state.
+- **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 14 of these are `DomainErrorHttpMappingTests` (full `[Theory]` coverage of all 7 `SubjectErrors` factories, dedicated 422/423 override highlights, and the global-safety-net vs. untouched-generic-500 boundary). (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch B merged branch state).
+- **Golden Master Parity:** Resolves all 25 raise sites in `01_spec.md` §5.1 via the 7 already-implemented `SubjectErrors` codes (MIG-SUBJ-003); full end-to-end fixture-replay verification against actual HTTP responses remains `MIG-SUBJ-026`'s job.
+- **Notes:**
+  - **`ProblemDetails` base type lives in `Microsoft.AspNetCore.Mvc`, not `Microsoft.AspNetCore.Http`**, in this SDK (10.0.11) — confirmed empirically via ref-assembly inspection rather than assumed from the design doc's snippet; `ProblemDetailsContext`/`IProblemDetailsService`/`ProblemHttpResult` remain in `Microsoft.AspNetCore.Http`.
+  - **`SOFT_DELETE_BLOCKED` correctly excluded from the status-code override table** (hits the plain `Forbidden→403` default) — the ticket's own Acceptance Criteria explicitly state it needs no override, which the implementing agent followed over an ambiguous phrasing in the orchestrator's dispatch summary that could have been misread as requiring one; the ticket text and design doc's 2-entry override table (422/423 only) agree and take precedence.
+  - **`app.UseExceptionHandler()` added**, not explicitly named in the ticket's `Program.cs` bullet but necessary for the ticket's own stated behavior (an unhandled exception "falls through to ASP.NET Core's global `IExceptionHandler`, which maps to a generic 500 `ProblemDetails`") to be real rather than theoretical — without it, an unhandled exception produces a bare empty-body 500.
+  - **`DomainErrorHttpMapping.ApplyKnownCodeStatus` treats `SUBJECT_NOT_FOUND` as a third table entry** alongside the two true overrides, even though its corrected status (404) agrees with its own `Type=NotFound` default — necessary because the `Program.cs` safety net only ever sees a bare `code` string extension at that point, not the original `DomainError.Type`, and this closes `01_spec.md` §5's "no global not-found handler" gap without introducing a new exception type outside this ticket's file list.
+  - Noted, not touched: pre-existing `Domain/Rules/SubjectStateMachine.cs`/`Domain/Exceptions/*.cs` (a parallel, apparently-unused, throw-based state-machine implementation alongside the canonical `Result<T>`-based `SubjectTransitionGraph`) — outside this ticket's Target Files, already naturally falls through to the generic-500 path this ticket verifies; flagged for whoever picks up MIG-SUBJ-018/019 or a future cleanup pass.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-010 - DomainError to ProblemDetails HTTP mapping`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-022 - Implement Endpoint Filters — `ChangeReasonHeaderFilter` & `ValidationFilter<T>`
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Implemented in parallel with `MIG-SUBJ-010`, `MIG-SUBJ-012`, and `MIG-SUBJ-017` as Batch B — see `MIG-SUBJ-017`'s entry above for the batching rationale and the rate-limit redispatch note. This ticket only depends on `MIG-SUBJ-009` (`[COMPLETED]`, request DTOs + FluentValidation validators) and shares no target files with any other ticket in this batch, closing out Batch B. With this batch fully integrated, the next frontier recomputation should find `MIG-SUBJ-013` and `MIG-SUBJ-014` newly unblocked (both depend on `MIG-SUBJ-011`+`012`, now both `[COMPLETED]`).
+- **Target Files Modified:**
+  - `apps/execution/src/Endpoints/Filters/ChangeReasonHeaderFilter.cs` (new)
+  - `apps/execution/src/Endpoints/Filters/ValidationFilter.cs` (new — generic `ValidationFilter<TRequest>`)
+  - `tests/Execution/Endpoints/ChangeReasonHeaderFilterTests.cs` (new)
+  - `tests/Execution/Endpoints/ValidationFilterTests.cs` (new)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state (all four tickets present together).
+- **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 11 of these are this ticket's own (4 `ChangeReasonHeaderFilterTests`, 7 `ValidationFilterTests`). (`rm -rf tests/obj tests/bin` run before build/test per the documented obj-collision race.)
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch B merged branch state).
+- **Golden Master Parity:** N/A — pure Presentation-layer filter ticket, no route registration yet (deferred to `MIG-SUBJ-023`/`024`). Verified against this ticket's own Acceptance Criteria: absent/empty/whitespace-only `X-Change-Reason` all rejected identically with 400, `ValidationFilter<TRequest>` genericity proven against two unrelated DTOs plus a position-independence case.
+- **Notes:**
+  - Confirmed via runtime reflection against the installed net10.0 SDK (rather than assumed) the exact API shapes used: `IEndpointFilter.InvokeAsync`/`EndpointFilterDelegate` both return `ValueTask<object?>`; `DefaultEndpointFilterInvocationContext(HttpContext, params object?[])` is the documented public test-double type for unit-testing filters without a hosted `WebApplicationFactory`.
+  - **`ValidationFilter<TRequest>` locates its argument by runtime-type scan over `Arguments`, not a hardcoded index** — a position-independence choice not literally specified by the ticket, verified by a dedicated test placing `TRequest` behind an unrelated `string subjectId` argument; a no-match case throws `InvalidOperationException` (a misconfiguration guard) rather than silently misbehaving.
+  - The ticket's AC bullet referencing a `.FirstOrDefault()!` null-forgiving-operator cleanup describes code in `SubjectEndpoints.cs`, which doesn't exist yet (`MIG-SUBJ-023`'s file) — nothing to literally edit here; `ChangeReasonHeaderFilter`'s XML doc explicitly documents the short-circuit guarantee that makes that future `!` provably safe, carrying the intent forward.
+  - DI/validator registration (`FluentValidation.DependencyInjectionExtensions`, `AddValidatorsFromAssembly`) and actual route-filter wiring deliberately left to `MIG-SUBJ-023`/`024` — this ticket's filters only call `GetRequiredService<IValidator<TRequest>>()` against whatever container they're given.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-022 - ChangeReasonHeaderFilter and ValidationFilter`
