@@ -835,7 +835,7 @@ Rule 7's gender-normalization table, age-calculation algorithm (with its deliber
 
 ---
 
-### [MIG-SUBJ-017] Implement Audit Context Accessor & Audit Log Writer
+### [MIG-SUBJ-017] Implement Audit Context Accessor & Audit Log Writer `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -865,14 +865,14 @@ Per `02_technical_design.md` §4.4: `ICurrentAuditContextAccessor { string UserI
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no `HttpContext.User` claims and no `X-Change-Reason` header, when `HttpCurrentAuditContextAccessor.UserId`/`.ChangeReason` are read, then they return `"system"`/`"system_operation"` respectively.
-- [ ] Given a `"sub"` claim present and an `X-Change-Reason` header present, when read, then both return the actual header/claim values, not the defaults.
-- [ ] Given `SystemAuditContextAccessor`, when `.UserId`/`.ChangeReason` are read, then they always return the fixed `"system-pubsub"`/`"Automated consent-completion enrollment"` values regardless of any ambient `HttpContext` state.
-- [ ] Given `IAuditLogWriter.WriteAsync` called twice for the same `tableName`/`recordId` combination within one logical audit stream, when both complete, then the second `AuditLogEntry.PredecessorHash` chains to the first's `BlockHash`.
-- [ ] Boundary check: an explicitly-empty (whitespace-only, not absent) `X-Change-Reason` header resolves to the same `"system_operation"` default as a fully-absent header — one consistent falsy-check, not a `null`-only check that would treat `""` differently.
-- [ ] Error condition: N/A — both accessors are non-throwing by design (always resolve to a default rather than raising on missing context).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no `HttpContext.User` claims and no `X-Change-Reason` header, when `HttpCurrentAuditContextAccessor.UserId`/`.ChangeReason` are read, then they return `"system"`/`"system_operation"` respectively.
+- [x] Given a `"sub"` claim present and an `X-Change-Reason` header present, when read, then both return the actual header/claim values, not the defaults.
+- [x] Given `SystemAuditContextAccessor`, when `.UserId`/`.ChangeReason` are read, then they always return the fixed `"system-pubsub"`/`"Automated consent-completion enrollment"` values regardless of any ambient `HttpContext` state.
+- [x] Given `IAuditLogWriter.WriteAsync` called twice for the same `tableName`/`recordId` combination within one logical audit stream, when both complete, then the second `AuditLogEntry.PredecessorHash` chains to the first's `BlockHash`.
+- [x] Boundary check: an explicitly-empty (whitespace-only, not absent) `X-Change-Reason` header resolves to the same `"system_operation"` default as a fully-absent header — one consistent falsy-check, not a `null`-only check that would treat `""` differently.
+- [x] Error condition: N/A — both accessors are non-throwing by design (always resolve to a default rather than raising on missing context).
 
 #### Verification & Test Requirements
 
