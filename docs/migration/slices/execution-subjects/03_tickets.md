@@ -617,7 +617,7 @@ Per `02_technical_design.md` §4.1: `ExecutionDbContext` registers `GxPAuditInte
 
 ---
 
-### [MIG-SUBJ-012] Implement `SubjectConsentConfiguration` & `SiteComplianceCacheConfiguration`
+### [MIG-SUBJ-012] Implement `SubjectConsentConfiguration` & `SiteComplianceCacheConfiguration` `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Medium (4h)
@@ -647,13 +647,13 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `SubjectConsent` persisted and reloaded, when compared, then `ProtocolVersion.{StudyCode,VersionTag,VersionIndex}` round-trip exactly via the Complex Type mapping.
-- [ ] Given a `SiteComplianceCache` with `MissingDocuments = ["Form-A", "Form-B"]` persisted and reloaded, when compared, then the array round-trips as a native Postgres array (verify the underlying column type is `text[]`, not a delimited `text` scalar).
-- [ ] Given a `SiteComplianceCache.Version` field, when the entity is configured, then it is mapped as a plain `int`/`long` column with **no** `[Timestamp]`/`IsRowVersion()` attribute — assert this via EF Core metadata inspection (`IsConcurrencyToken == false` on that property specifically), distinguishing it from the separate shadow `_version` property which **is** the concurrency token.
-- [ ] Boundary check: `ApplyWebhookUpdate` incrementing `Version` twice in the same `SaveChangesAsync` batch (two separate calls, one save) persists the final incremented value, not an intermediate one.
-- [ ] Error condition: N/A for this configuration ticket — behavioral upsert-vs-CAS semantics are exercised at the aggregate level (MIG-SUBJ-006) and the repository level (MIG-SUBJ-013).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `SubjectConsent` persisted and reloaded, when compared, then `ProtocolVersion.{StudyCode,VersionTag,VersionIndex}` round-trip exactly via the Complex Type mapping.
+- [x] Given a `SiteComplianceCache` with `MissingDocuments = ["Form-A", "Form-B"]` persisted and reloaded, when compared, then the array round-trips as a native Postgres array (verify the underlying column type is `text[]`, not a delimited `text` scalar).
+- [x] Given a `SiteComplianceCache.Version` field, when the entity is configured, then it is mapped as a plain `int`/`long` column with **no** `[Timestamp]`/`IsRowVersion()` attribute — assert this via EF Core metadata inspection (`IsConcurrencyToken == false` on that property specifically), distinguishing it from the separate shadow `_version` property which **is** the concurrency token.
+- [x] Boundary check: `ApplyWebhookUpdate` incrementing `Version` twice in the same `SaveChangesAsync` batch (two separate calls, one save) persists the final incremented value, not an intermediate one.
+- [x] Error condition: N/A for this configuration ticket — behavioral upsert-vs-CAS semantics are exercised at the aggregate level (MIG-SUBJ-006) and the repository level (MIG-SUBJ-013).
 
 #### Verification & Test Requirements
 
