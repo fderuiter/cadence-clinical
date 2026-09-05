@@ -439,7 +439,7 @@ Introduce `public abstract class AggregateRootBase : IGxPAuditable` in a new fil
 
 ---
 
-### [MIG-SUBJ-008] Implement Response DTOs & the §2.6 Under-Population Decision
+### [MIG-SUBJ-008] Implement Response DTOs & the §2.6 Under-Population Decision `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -471,13 +471,13 @@ Per `02_technical_design.md` §2.6: `SubjectResponse(SubjectId, SubjectCode, Stu
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `ClinicalSubject` in state `Enrolled` with a non-null `SiteCode`, when `SubjectResponse.FromAggregate(subject)` is called, then `Status == "ENROLLED"` and `SiteId` matches the aggregate's actual value.
-- [ ] Given the same subject, when `SubjectResponse.Underpopulated(id, code, study, demographics)` is called, then `Status == "SCREENING"` and `ActiveProtocolVersion == "1.0.0"` **regardless** of the subject's real `Enrolled` status — this is the documented quirk, assert it explicitly rather than treating a mismatch as a test failure to "fix."
-- [ ] Boundary check: `Underpopulated`'s `SiteId` and `TreatmentGroup` are always `null` in its output, even when called for a subject that does have a site/treatment group assigned.
-- [ ] Error condition: N/A — these are pure data-shaping factories with no failure path.
-- [ ] Serialized JSON property names match `01_spec.md` §1.2's snake_case field list exactly (`subject_id`, not `subjectId`).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `ClinicalSubject` in state `Enrolled` with a non-null `SiteCode`, when `SubjectResponse.FromAggregate(subject)` is called, then `Status == "ENROLLED"` and `SiteId` matches the aggregate's actual value.
+- [x] Given the same subject, when `SubjectResponse.Underpopulated(id, code, study, demographics)` is called, then `Status == "SCREENING"` and `ActiveProtocolVersion == "1.0.0"` **regardless** of the subject's real `Enrolled` status — this is the documented quirk, assert it explicitly rather than treating a mismatch as a test failure to "fix."
+- [x] Boundary check: `Underpopulated`'s `SiteId` and `TreatmentGroup` are always `null` in its output, even when called for a subject that does have a site/treatment group assigned.
+- [x] Error condition: N/A — these are pure data-shaping factories with no failure path.
+- [x] Serialized JSON property names match `01_spec.md` §1.2's snake_case field list exactly (`subject_id`, not `subjectId`).
 
 #### Verification & Test Requirements
 
