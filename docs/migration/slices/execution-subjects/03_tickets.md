@@ -485,7 +485,7 @@ Per `02_technical_design.md` §2.6: `SubjectResponse(SubjectId, SubjectCode, Stu
 
 ---
 
-### [MIG-SUBJ-009] Implement Request DTOs & FluentValidation Validators
+### [MIG-SUBJ-009] Implement Request DTOs & FluentValidation Validators `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -517,14 +517,14 @@ Per `02_technical_design.md` §2.7: `SubjectCreateRequest(string SubjectId, stri
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `SubjectCreateRequest` with `SiteId: null`, when validated, then it passes (site is optional).
-- [ ] Given `SubjectCreateRequest` with `SiteId: ""`, when validated, then it passes model-shape validation (empty string is a _valid_ string for this DTO's own rules) — the empty-string-as-absent ambiguity is resolved at the domain layer (`SiteCode`'s constructor, MIG-SUBJ-001), not suppressed here.
-- [ ] Given `SubjectStateUpdateRequest(Status: null, State: null)`, when validated, then it fails with error code `MISSING_TARGET_STATE`.
-- [ ] Given `SubjectStateUpdateRequest(Status: null, State: "ENROLLED")`, when validated, then it passes and `.Target == "ENROLLED"`.
-- [ ] Boundary check: `SubjectCreateRequest.SubjectId`/`StudyId` at exactly 255 characters passes; 256 characters fails `MaximumLength(255)`.
-- [ ] Error condition: `EtmfCompletenessWebhookPayload` with `StudyId: ""` fails `NotEmpty()` (whitespace-only strings also fail — FluentValidation's `NotEmpty()` treats them as empty).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `SubjectCreateRequest` with `SiteId: null`, when validated, then it passes (site is optional).
+- [x] Given `SubjectCreateRequest` with `SiteId: ""`, when validated, then it passes model-shape validation (empty string is a _valid_ string for this DTO's own rules) — the empty-string-as-absent ambiguity is resolved at the domain layer (`SiteCode`'s constructor, MIG-SUBJ-001), not suppressed here.
+- [x] Given `SubjectStateUpdateRequest(Status: null, State: null)`, when validated, then it fails with error code `MISSING_TARGET_STATE`.
+- [x] Given `SubjectStateUpdateRequest(Status: null, State: "ENROLLED")`, when validated, then it passes and `.Target == "ENROLLED"`.
+- [x] Boundary check: `SubjectCreateRequest.SubjectId`/`StudyId` at exactly 255 characters passes; 256 characters fails `MaximumLength(255)`.
+- [x] Error condition: `EtmfCompletenessWebhookPayload` with `StudyId: ""` fails `NotEmpty()` (whitespace-only strings also fail — FluentValidation's `NotEmpty()` treats them as empty).
 
 #### Verification & Test Requirements
 
