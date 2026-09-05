@@ -2,11 +2,14 @@ using System;
 
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+using Polly;
 
 using Scalar.AspNetCore;
 
@@ -19,6 +22,19 @@ builder.Services.AddOpenApi();
 // §2.6). ExecutionJsonSerialization.Configure is itself idempotent, so this stays additive/safe even if
 // another slice's own ConfigureHttpJsonOptions call also runs it on the same options instance.
 builder.Services.ConfigureHttpJsonOptions(options => ExecutionJsonSerialization.Configure(options.SerializerOptions));
+
+// MIG-SUBJ-013 (`02_technical_design.md` §4.2): the shared DbUpdateConcurrencyException retry pipeline
+// every ExecutionRepositoryBase-derived repository's SaveChangesAsync wraps around
+// ExecutionDbContext.SaveChangesAsync — registered once here so all three repositories consume the SAME
+// pipeline instance rather than each building its own. Registered as a singleton ResiliencePipeline (not
+// via the Polly.Extensions `AddResiliencePipeline` DI helper, which is a separate NuGet package not
+// otherwise needed by this slice) since a stateless retry pipeline has no per-request dependencies. The
+// repositories themselves (ISubjectRepository/IConsentRepository/ISiteComplianceRepository ->
+// SubjectRepository/ConsentRepository/SiteComplianceRepository) and ExecutionDbContext are not yet
+// registered in this composition root — that is MIG-SUBJ-024's "final wiring" ticket, which should
+// register ConcurrencyTokenIncrementInterceptor (Infrastructure/Persistence/ConcurrencyTokenIncrementInterceptor.cs)
+// alongside GxPAuditInterceptor on that same AddDbContext<ExecutionDbContext> call.
+builder.Services.AddSingleton(SaveChangesResiliencePipelineFactory.Create());
 
 // RFC 9457 ProblemDetails for every domain/validation/unhandled-exception response (MIG-SUBJ-010,
 // `02_technical_design.md` §3.4). `DomainError.ToProblemResult()` (Domain/Subjects/DomainErrorExtensions.cs)

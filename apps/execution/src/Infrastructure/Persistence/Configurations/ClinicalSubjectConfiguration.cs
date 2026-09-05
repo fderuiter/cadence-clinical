@@ -69,17 +69,20 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
 
         // Shadow EF concurrency token — distinct from Rule 5's enrollment-index lock above and from
         // SiteComplianceCache.Version (MIG-SUBJ-012), which is domain data, not an EF concurrency token.
-        // `IsRowVersion()` alone is sufficient on SQL Server, where the database natively computes a new
-        // value for every write; Npgsql/SQLite have no equivalent automatic mechanism, so with no starting
-        // value at all EF's generated INSERT omits this store-generated column and the (non-nullable
-        // `long`) column violates its own NOT NULL constraint on the very first insert. HasDefaultValue(0)
-        // supplies that missing starting value so inserts succeed; it does not, by itself, make the token
-        // auto-increment on UPDATE the way SQL Server's rowversion does — that requires a follow-up
-        // mechanism (e.g. a Postgres trigger, an app-level pre-save increment, or Npgsql's native `xmin`
-        // system column) that is not part of this ticket's acceptance criteria and is left to whichever
-        // ticket first exercises concurrent-update conflict detection (§4.2 assigns the
-        // DbUpdateConcurrencyException retry policy to MIG-SUBJ-013's repository layer).
-        builder.Property<long>("_version").IsRowVersion().HasDefaultValue(0L);
+        // Configured as `.IsConcurrencyToken()` alone — deliberately NOT `.IsRowVersion()` (shorthand for
+        // `.IsConcurrencyToken().ValueGeneratedOnAddOrUpdate()`) — because `ValueGeneratedOnAddOrUpdate`
+        // tells EF the *database* produces this value on every write, so EF never includes it in the
+        // generated UPDATE column list on a provider with no store-side mechanism to do so (neither
+        // Npgsql/PostgreSQL nor SQLite auto-computes an arbitrary column on UPDATE the way SQL Server's
+        // native rowversion does): any value an app-level mechanism assigned before saving would be silently
+        // discarded by EF's own post-command store-generated-value read-back. Leaving off
+        // `ValueGeneratedOnAddOrUpdate()` here leaves `ValueGenerated` at whatever EF's own convention infers
+        // from `HasDefaultValue(0L)` below (`ValueGenerated.OnAdd` — a database default fills a brand-new
+        // row's INSERT when the column is omitted) — which, unlike `OnAddOrUpdate`, has no effect on UPDATE
+        // statements: EF always sends this property's current value explicitly there, which is what lets
+        // MIG-SUBJ-013's `ConcurrencyTokenIncrementInterceptor` (the real per-write auto-increment mechanism
+        // `IsRowVersion()` alone could not provide on these providers) actually take effect.
+        builder.Property<long>("_version").IsConcurrencyToken().HasDefaultValue(0L);
 
         builder.Property(x => x.EncryptedDemographics).HasMaxLength(int.MaxValue);
 

@@ -70,8 +70,11 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
 
         // Shadow EF concurrency token — the ACTUAL optimistic-concurrency guard for SaveChangesAsync,
         // entirely separate from the domain Version counter above. Mirrors ClinicalSubjectConfiguration's
-        // `_version` (MIG-SUBJ-011); HasDefaultValue(0L) is required on Npgsql/SQLite for the same reason
-        // documented there (no server-side auto-computed starting value outside SQL Server).
-        builder.Property<long>("_version").IsRowVersion().HasDefaultValue(0L);
+        // `_version` (MIG-SUBJ-011/013): `.IsConcurrencyToken()` alone, deliberately not `.IsRowVersion()`,
+        // so EF always sends this property's value explicitly rather than treating it as store-generated
+        // (see that configuration's comment for the full rationale) — required for MIG-SUBJ-013's
+        // `ConcurrencyTokenIncrementInterceptor` app-level auto-increment-on-update fix to actually take
+        // effect. HasDefaultValue(0L) supplies the starting value for a brand-new row's INSERT.
+        builder.Property<long>("_version").IsConcurrencyToken().HasDefaultValue(0L);
     }
 }
