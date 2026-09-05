@@ -968,7 +968,7 @@ Per `02_technical_design.md` §3.2 (the representative `AdvanceStateAsync` imple
 
 ---
 
-### [MIG-SUBJ-020] `SiteComplianceApplicationService`
+### [MIG-SUBJ-020] `SiteComplianceApplicationService` `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (4h)
@@ -995,14 +995,14 @@ The eTMF webhook upsert, the site-activation gate-check endpoint's business logi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no existing `SiteComplianceCache` row, when `ApplyEtmfWebhookAsync` is called, then a new row is created with `Version == 1` and **no** audit-log entry is written.
-- [ ] Given an existing row, when `ApplyEtmfWebhookAsync` is called again for the same key, then `Version` increments and no audit-log entry is written (both branches share the "no audit" rule).
-- [ ] Given a non-compliant/missing site, when `ActivateSiteAsync` is called, then it fails with `BLOCKED_ACTIVATION` and a `BLOCKED_ACTIVATION` audit entry is written **before** the failure is returned.
-- [ ] Given a compliant site, when `ActivateSiteAsync` is called, then it succeeds and writes a `SITE_ACTIVATION` audit entry, and the underlying `SiteComplianceCache.IsComplete` flag is **unchanged** by this call (it was already `true` from a prior webhook, not flipped by activation itself).
-- [ ] Boundary check: `GetComplianceStatusAsync` for a `(study, site, milestone)` combination with no cache row returns `IsComplete: false, MissingDocuments: []` with **no exception and no `Result<T>.Failure`** — verify the method signature itself has no failure return path.
-- [ ] Error condition: N/A for `GetComplianceStatusAsync` (always succeeds); `ApplyEtmfWebhookAsync` has no documented failure path either (always upserts) — only `ActivateSiteAsync` has a failure path (`BLOCKED_ACTIVATION`).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no existing `SiteComplianceCache` row, when `ApplyEtmfWebhookAsync` is called, then a new row is created with `Version == 1` and **no** audit-log entry is written.
+- [x] Given an existing row, when `ApplyEtmfWebhookAsync` is called again for the same key, then `Version` increments and no audit-log entry is written (both branches share the "no audit" rule).
+- [x] Given a non-compliant/missing site, when `ActivateSiteAsync` is called, then it fails with `BLOCKED_ACTIVATION` and a `BLOCKED_ACTIVATION` audit entry is written **before** the failure is returned.
+- [x] Given a compliant site, when `ActivateSiteAsync` is called, then it succeeds and writes a `SITE_ACTIVATION` audit entry, and the underlying `SiteComplianceCache.IsComplete` flag is **unchanged** by this call (it was already `true` from a prior webhook, not flipped by activation itself).
+- [x] Boundary check: `GetComplianceStatusAsync` for a `(study, site, milestone)` combination with no cache row returns `IsComplete: false, MissingDocuments: []` with **no exception and no `Result<T>.Failure`** — verify the method signature itself has no failure return path.
+- [x] Error condition: N/A for `GetComplianceStatusAsync` (always succeeds); `ApplyEtmfWebhookAsync` has no documented failure path either (always upserts) — only `ActivateSiteAsync` has a failure path (`BLOCKED_ACTIVATION`).
 
 #### Verification & Test Requirements
 

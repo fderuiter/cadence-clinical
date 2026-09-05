@@ -12,6 +12,12 @@ namespace Cadence.Apps.Execution.Domain.Ports;
 /// <c>SubjectApplicationService.AdvanceStateAsync</c> is the representative caller: it looks up the
 /// <c>SITE_ACTIVATION</c> milestone for the subject's own site before allowing a transition into
 /// <c>Enrolled</c>).
+/// <para>
+/// MIG-SUBJ-013 shipped this port with <see cref="GetAsync"/> only, deliberately deferring the write side
+/// to "a later ticket" (see that ticket's own <c>SiteComplianceRepositoryTests</c> doc comment) — that
+/// ticket is MIG-SUBJ-020, which added <see cref="AddAsync"/> and made <see cref="GetAsync"/> tracked so its
+/// <c>SiteComplianceApplicationService.ApplyEtmfWebhookAsync</c> can upsert the eTMF-webhook cache row.
+/// </para>
 /// Replaces <c>apps/execution/adapters/repositories.py</c> (compliance-cache lookup methods).
 /// @req:PRD-SUB-001
 /// </summary>
@@ -25,8 +31,22 @@ public interface ISiteComplianceRepository
     /// row names a definite site), a <see langword="null"/> <paramref name="siteCode"/> can never match any
     /// row and this deliberately always resolves to <see langword="null"/> in that case, rather than treating
     /// it as "any site" — a subject with no site cannot satisfy a site-specific compliance gate.
+    /// <para>
+    /// Tracked (not <c>AsNoTracking()</c>), mirroring <see cref="ISubjectRepository.GetByIdAsync"/>'s own
+    /// rationale: <c>SiteComplianceApplicationService.ApplyEtmfWebhookAsync</c> (MIG-SUBJ-020) loads via this
+    /// method, calls <see cref="SiteComplianceCache.ApplyWebhookUpdate"/> on the result, and persists the
+    /// change through a subsequent <see cref="SaveChangesAsync"/> with no intervening Attach/Update call —
+    /// that flow only works if the returned entity is tracked by this repository's <c>ExecutionDbContext</c>.
+    /// Read-only callers (e.g. <c>SubjectApplicationService.AdvanceStateAsync</c>'s gate check) are unaffected
+    /// by tracking either way, since they never mutate the result.
+    /// </para>
     /// </summary>
     Task<SiteComplianceCache?> GetAsync(StudyCode studyCode, SiteCode? siteCode, string milestone, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new <see cref="SiteComplianceCache"/> for insertion; takes effect on the next
+    /// <see cref="SaveChangesAsync"/>. Added by MIG-SUBJ-020 for the eTMF-webhook "no existing row" branch —
+    /// mirrors <see cref="IConsentRepository.AddAsync"/>/<see cref="ISubjectRepository.AddAsync"/>.</summary>
+    Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken);
 
     /// <summary>
     /// Persists all pending changes tracked by this repository's underlying

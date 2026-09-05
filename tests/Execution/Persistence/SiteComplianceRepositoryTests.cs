@@ -16,12 +16,14 @@ namespace Cadence.UnitTests.Execution.Persistence;
 
 /// <summary>
 /// Coverage for `MIG-SUBJ-013`'s <see cref="SiteComplianceRepository"/>: <see cref="SiteComplianceRepository.GetAsync"/>
-/// basic CRUD round-trips. The repository itself exposes no write method (the ticket names only
-/// <c>GetAsync</c> for this port — a later ticket owns the eTMF-webhook write path), so rows are seeded
-/// directly through <see cref="ExecutionDbContext"/>, matching `SiteComplianceCacheConfigurationTests`' own
-/// established round-trip convention. Uses the InMemory provider (no <c>ComplexProperty</c>/value-converter
-/// combination is involved for this aggregate, so InMemory materializes it without the limitation
-/// `ConsentRepositoryTests` works around).
+/// basic CRUD round-trips, seeding rows directly through <see cref="ExecutionDbContext"/> (matching
+/// `SiteComplianceCacheConfigurationTests`' own established round-trip convention) for the read-only cases.
+/// <see cref="SiteComplianceRepository.AddAsync"/> and <see cref="SiteComplianceRepository.GetAsync"/>'s tracked-for-mutation contract
+/// are MIG-SUBJ-020 additions — this port originally shipped read-only (see this ticket's git history) with
+/// the write side explicitly deferred to "a later ticket," which turned out to be MIG-SUBJ-020's
+/// eTMF-webhook upsert; their coverage lives in the last two `[Fact]`s below. Uses the InMemory provider (no
+/// <c>ComplexProperty</c>/value-converter combination is involved for this aggregate, so InMemory materializes
+/// it without the limitation `ConsentRepositoryTests` works around).
 /// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceRepositoryTests
@@ -112,5 +114,63 @@ public class SiteComplianceRepositoryTests
         var found = await repository.GetAsync(Study, siteCode: null, Milestone, TestContext.Current.CancellationToken);
 
         found.Should().BeNull();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task AddAsync_ThenSaveChangesAsync_PersistsANewRowRetrievableByGetAsync()
+    {
+        string databaseName = System.Guid.NewGuid().ToString();
+        var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false, new[] { "1572" });
+
+        await using (var writeContext = CreateContext(databaseName))
+        {
+            var writeRepository = new SiteComplianceRepository(writeContext, SaveChangesResiliencePipelineFactory.Create());
+            await writeRepository.AddAsync(cache, TestContext.Current.CancellationToken);
+            await writeRepository.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var readContext = CreateContext(databaseName);
+        var readRepository = new SiteComplianceRepository(readContext, SaveChangesResiliencePipelineFactory.Create());
+        var found = await readRepository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
+
+        found.Should().NotBeNull();
+        found!.Version.Should().Be(1);
+        found.MissingDocuments.Should().Equal("1572");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task GetAsync_ReturnsATrackedEntity_MutatingItAndCallingSaveChangesPersistsTheUpdate()
+    {
+        // Regression test for MIG-SUBJ-020's removal of AsNoTracking() from GetAsync: the eTMF-webhook
+        // upsert flow loads via GetAsync, calls ApplyWebhookUpdate on the result, and saves through the
+        // very same repository instance with no explicit re-attach -- that only works if GetAsync's result
+        // is tracked by this repository's own ExecutionDbContext.
+        string databaseName = System.Guid.NewGuid().ToString();
+        var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false, new[] { "1572" });
+
+        await using (var seed = CreateContext(databaseName))
+        {
+            seed.SiteComplianceCaches.Add(cache);
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var updateContext = CreateContext(databaseName))
+        {
+            var repository = new SiteComplianceRepository(updateContext, SaveChangesResiliencePipelineFactory.Create());
+            var tracked = await repository.GetAsync(Study, Site, Milestone, TestContext.Current.CancellationToken);
+            tracked!.ApplyWebhookUpdate(isComplete: true, missingDocuments: new[] { "CV" });
+
+            await repository.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var readContext = CreateContext(databaseName);
+        var reloaded = await readContext.SiteComplianceCaches.AsNoTracking()
+            .SingleAsync(TestContext.Current.CancellationToken);
+
+        reloaded.Version.Should().Be(2);
+        reloaded.IsComplete.Should().BeTrue();
+        reloaded.MissingDocuments.Should().Equal("CV");
     }
 }
