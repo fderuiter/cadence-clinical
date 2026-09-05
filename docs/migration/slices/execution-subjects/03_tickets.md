@@ -191,7 +191,7 @@ Exactly per `02_technical_design.md` §2.1: `SubjectId`/`SubjectConsentId` as `r
 
 ---
 
-### [MIG-SUBJ-002] Implement `SubjectState` Enum, Codec & Transition Graph
+### [MIG-SUBJ-002] Implement `SubjectState` Enum, Codec & Transition Graph `[COMPLETED]`
 
 - **Layer:** Domain
 - **Complexity:** Small (2h)
@@ -219,13 +219,13 @@ Port the 9-state enum, the `UPPER_SNAKE_CASE` string codec (`normalize_state`'s 
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given any state `S`, when `Guard(S, S)` is called, then it succeeds (no-op), including for `ScreenFailed`, `Completed`, `Withdrawn`.
-- [ ] Given `current = null` and `target = Screening`, when `Guard` is called, then it succeeds; given `current = null` and any other target, then it fails with `INVALID_STATE_TRANSITION`.
-- [ ] Given every `(current, target)` pair in the `01_spec.md` §2.1 mermaid graph, when `Guard` is called, then allowed pairs succeed and all other pairs fail with `INVALID_STATE_TRANSITION`.
-- [ ] Boundary check: `ReconsentRequired` is the only state whose outbound set includes 7 of the other 8 states (every state except itself) — verify the full fan-out, not just a sample.
-- [ ] Error condition: `SubjectStateCodec.TryParse("in progress")` (lowercase, embedded space) returns `true` with `state = ` whichever member maps to `IN_PROGRESS` if one exists, else returns `false` — assert the actual unmapped-string case returns `false`, not a thrown exception.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given any state `S`, when `Guard(S, S)` is called, then it succeeds (no-op), including for `ScreenFailed`, `Completed`, `Withdrawn`.
+- [x] Given `current = null` and `target = Screening`, when `Guard` is called, then it succeeds; given `current = null` and any other target, then it fails with `INVALID_STATE_TRANSITION`.
+- [x] Given every `(current, target)` pair in the `01_spec.md` §2.1 mermaid graph, when `Guard` is called, then allowed pairs succeed and all other pairs fail with `INVALID_STATE_TRANSITION`.
+- [x] Boundary check: `ReconsentRequired` is the only state whose outbound set includes 7 of the other 8 states (every state except itself) — verify the full fan-out, not just a sample.
+- [x] Error condition: `SubjectStateCodec.TryParse("in progress")` (lowercase, embedded space) returns `true` with `state = ` whichever member maps to `IN_PROGRESS` if one exists, else returns `false` — assert the actual unmapped-string case returns `false`, not a thrown exception.
 
 #### Verification & Test Requirements
 
