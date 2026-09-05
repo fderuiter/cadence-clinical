@@ -1053,7 +1053,7 @@ Per `02_technical_design.md` §5.2 (implementation given near-verbatim in the de
 
 ---
 
-### [MIG-SUBJ-022] Implement Endpoint Filters — `ChangeReasonHeaderFilter` & `ValidationFilter<T>`
+### [MIG-SUBJ-022] Implement Endpoint Filters — `ChangeReasonHeaderFilter` & `ValidationFilter<T>` `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Small (2h)
@@ -1081,13 +1081,13 @@ Two small, generic `IEndpointFilter` implementations consumed by MIG-SUBJ-023/02
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments — in particular, resolve the `.FirstOrDefault()!` pattern noted above by relying on the filter's short-circuit guarantee, not by leaving the `!` in place.
-- [ ] Given a request with no `X-Change-Reason` header, when routed through `ChangeReasonHeaderFilter`, then the response is 400 and the downstream endpoint delegate is never invoked.
-- [ ] Given a request with `X-Change-Reason: ""` (present but empty), when routed through the filter, then it is also rejected (whitespace-only counts as absent — do not accept an empty header value as satisfying the requirement).
-- [ ] Given a request whose body fails `IValidator<TRequest>` validation, when routed through `ValidationFilter<TRequest>`, then the response is a `400` validation-problem body and the endpoint delegate is never invoked.
-- [ ] Boundary check: `ValidationFilter<TRequest>` correctly locates the `TRequest`-typed argument regardless of its parameter position among the endpoint delegate's other parameters (e.g. `(string subjectId, SubjectConsentRequest request, ...)` — the DTO is not always the first parameter).
-- [ ] Error condition: a request with a valid header but an unrelated validation failure elsewhere in the pipeline is not affected by `ChangeReasonHeaderFilter` (the two filters are independent and composable on the same route).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments — in particular, resolve the `.FirstOrDefault()!` pattern noted above by relying on the filter's short-circuit guarantee, not by leaving the `!` in place.
+- [x] Given a request with no `X-Change-Reason` header, when routed through `ChangeReasonHeaderFilter`, then the response is 400 and the downstream endpoint delegate is never invoked.
+- [x] Given a request with `X-Change-Reason: ""` (present but empty), when routed through the filter, then it is also rejected (whitespace-only counts as absent — do not accept an empty header value as satisfying the requirement).
+- [x] Given a request whose body fails `IValidator<TRequest>` validation, when routed through `ValidationFilter<TRequest>`, then the response is a `400` validation-problem body and the endpoint delegate is never invoked.
+- [x] Boundary check: `ValidationFilter<TRequest>` correctly locates the `TRequest`-typed argument regardless of its parameter position among the endpoint delegate's other parameters (e.g. `(string subjectId, SubjectConsentRequest request, ...)` — the DTO is not always the first parameter).
+- [x] Error condition: a request with a valid header but an unrelated validation failure elsewhere in the pipeline is not affected by `ChangeReasonHeaderFilter` (the two filters are independent and composable on the same route).
 
 #### Verification & Test Requirements
 
