@@ -12,26 +12,45 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
 /// Direct typed implementation of <see cref="ISubjectApplicationService"/> (ADR-2234 §3.2, no MediatR),
-/// per <c>02_technical_design.md</c> §3.1/§3.3. `MIG-SUBJ-018` (this ticket) implements only
-/// <see cref="CreateAsync"/> and <see cref="RecordConsentAsync"/> — the two "creation-shaped" use cases
-/// (SCN-001/SCN-002). The remaining 5 interface members
+/// per <c>02_technical_design.md</c> §3.1/§3.3. `MIG-SUBJ-018` implemented <see cref="CreateAsync"/> and
+/// <see cref="RecordConsentAsync"/> — the two "creation-shaped" use cases (SCN-001/SCN-002). `MIG-SUBJ-019`
+/// (this ticket) adds the remaining 5 interface members
 /// (<see cref="AdvanceStateAsync"/>/<see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/>/
-/// <see cref="GetDetailAsync"/>/<see cref="EvaluateAndTransitionScreeningAsync"/>) are `MIG-SUBJ-019`'s
-/// responsibility, added to this same file as a later, in-place continuation (not a second physical file —
-/// this class is not declared <c>partial</c>, since MIG-SUBJ-019's own Target Files entry is this exact
-/// path). Because a non-abstract class implementing an interface must provide every member a body to
-/// compile, each of those 5 methods is stubbed below with <see cref="NotImplementedException"/> for now —
-/// implementing their real logic here would duplicate MIG-SUBJ-019's own scope, not merely stand this file
-/// up standalone.
+/// <see cref="GetDetailAsync"/>/<see cref="EvaluateAndTransitionScreeningAsync"/>) as a later, in-place
+/// continuation of this same file (not a second physical file — this class is not declared <c>partial</c>,
+/// since MIG-SUBJ-019's own Target Files entry is this exact path), covering 16 of the 25 raise sites and
+/// SCN-003 through SCN-007.
 ///
 /// <para>
 /// <see cref="ResolveSubjectAsync"/> is the shared Rule 9 dual-lookup helper (try the surrogate id, then the
-/// domain code) both <see cref="RecordConsentAsync"/> (this ticket) and MIG-SUBJ-019's
-/// <c>AdvanceStateAsync</c> use — kept as a private instance method (not duplicated per call site) so the
-/// two-step lookup sequencing lives in exactly one place, per <c>02_technical_design.md</c> §3.2.
+/// domain code) <see cref="RecordConsentAsync"/>, <see cref="AdvanceStateAsync"/>, and
+/// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/> all use — kept as a private
+/// instance method (not duplicated per call site) so the two-step lookup sequencing lives in exactly one
+/// place, per <c>02_technical_design.md</c> §3.2. <see cref="GetDetailAsync"/> and
+/// <see cref="EvaluateAndTransitionScreeningAsync"/> deliberately do <b>not</b> use it — see their own doc
+/// comments for why a single, code-only lookup is the legacy-faithful choice for those two. Likewise,
+/// <see cref="TransitionSubjectAsync"/> is the shared Rule 2 gate + transition + audit + response helper
+/// <see cref="AdvanceStateAsync"/> and <see cref="EvaluateAndTransitionScreeningAsync"/> both call, so a
+/// transition into <see cref="SubjectState.Enrolled"/> is gated, and audited on the blocked path, identically
+/// through either entry point (SCN-005).
+/// </para>
+/// <para>
+/// <paramref name="screeningEligibility"/> is <see cref="EvaluateAndTransitionScreeningAsync"/>'s injected
+/// seam onto the out-of-slice eligibility rule engine (<c>01_spec.md</c>'s explicit boundary around
+/// <c>apps/execution/eligibility_service.py</c>) — per this ticket's own text, "accept it as an injected
+/// <c>Func&lt;...&gt;</c>/port for this ticket's purposes," since the rule engine itself does not exist in
+/// this slice. Optional (defaulting to <see langword="null"/>) purely so this primary constructor's
+/// pre-existing 7-argument call sites (MIG-SUBJ-018's own <c>SubjectApplicationServiceCreateTests</c>/
+/// <c>SubjectApplicationServiceConsentTests</c>, which never exercise screening) keep compiling unmodified;
+/// <see cref="EvaluateAndTransitionScreeningAsync"/> itself fails loudly (not a silently-guessed verdict) if
+/// actually invoked without one configured.
 /// </para>
 /// Legacy Python source being replaced: <c>apps/execution/application/services.py</c>
-/// (<c>SubjectLifecycleService.enroll_subject</c>, <c>.record_consent</c>).
+/// (<c>SubjectLifecycleService.enroll_subject</c>, <c>.record_consent</c>, <c>.advance_subject_state</c>,
+/// <c>.update_demographics</c>) and the business-logic portions of
+/// <c>apps/execution/presentation/routers/subjects.py</c> (<c>get_subject_detail</c>,
+/// <c>evaluate_and_transition_screening</c>, <c>update_subject_demographics_endpoint</c>,
+/// <c>delete_subject_demographics_endpoint</c>, the RTSM-blinding filter).
 /// @req:PRD-SUB-001
 /// </summary>
 public sealed class SubjectApplicationService(
@@ -41,7 +60,8 @@ public sealed class SubjectApplicationService(
     IDemographicsEncryptionService demographicsEncryption,
     IAuditLogWriter auditLog,
     IClock clock,
-    ICurrentAuditContextAccessor auditContext) : ISubjectApplicationService
+    ICurrentAuditContextAccessor auditContext,
+    Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null) : ISubjectApplicationService
 {
     // ---- MIG-SUBJ-018: CreateAsync & RecordConsentAsync ----------------------------------------
 
@@ -151,49 +171,260 @@ public sealed class SubjectApplicationService(
             consent.IcfSignedDate, consent.RequiresReconsent, consent.IsPaperOverride, consent.VersionIndex);
     }
 
-    // ---- MIG-SUBJ-019: remaining 5 methods (stubbed here only so this file compiles standalone) --------
-    // Each throws NotImplementedException rather than carrying real logic: implementing that logic is
-    // MIG-SUBJ-019's scope (dependent on this ticket), and duplicating it here would pre-empt that ticket's
-    // own work rather than merely keeping SubjectApplicationService buildable in the meantime.
+    // ---- MIG-SUBJ-019: AdvanceState/UpdateDemographics/Delete/Detail/Screening -------------------------
 
-    /// <summary>Implemented by MIG-SUBJ-019.</summary>
-    public Task<Result<SubjectResponse>> AdvanceStateAsync(
+    /// <summary>
+    /// Transitions a subject's lifecycle state (SCN-003/SCN-005), folding legacy raise sites #1/#4-#6/#14-#19.
+    /// Resolves the subject via the shared <see cref="ResolveSubjectAsync"/> dual-lookup; an unparseable
+    /// <see cref="SubjectStateUpdateRequest.Target"/> maps to the same <c>INVALID_STATE_TRANSITION</c> code a
+    /// well-formed-but-forbidden transition would (closing raise site #6 onto #4/#5's family, per Rule 9 —
+    /// callers cannot distinguish a typo'd state name from a legal-but-forbidden one from the response alone).
+    /// The Rule 2 site-compliance gate, the actual transition, the audit write, and the §2.6 under-populated
+    /// response are then all delegated to <see cref="TransitionSubjectAsync"/> — see that method's own doc
+    /// comment for why it is shared with <see cref="EvaluateAndTransitionScreeningAsync"/>.
+    /// </summary>
+    public async Task<Result<SubjectResponse>> AdvanceStateAsync(
         string subjectIdOrCode, SubjectStateUpdateRequest request, string changeReason, CancellationToken ct)
     {
-        // `compliance` (Rule 2's site-activation gate, per 02_technical_design.md §3.2) is consumed by this
-        // method once MIG-SUBJ-019 implements it. Referenced here only so the shared primary-constructor
-        // parameter is not flagged as unread (CS9113) while every method that touches it is still a stub.
-        _ = compliance;
-        throw new NotImplementedException("AdvanceStateAsync is implemented by MIG-SUBJ-019.");
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
+
+        if (!SubjectStateCodec.TryParse(request.Target, out var target))
+        {
+            return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(subject.Status), request.Target ?? "");
+        }
+
+        return await TransitionSubjectAsync(subject, target, changeReason, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Implemented by MIG-SUBJ-019.</summary>
-    public Task<Result<SubjectResponse>> UpdateDemographicsAsync(
-        string subjectIdOrCode, SubjectDemographicsUpdateRequest request, string changeReason, CancellationToken ct) =>
-        throw new NotImplementedException("UpdateDemographicsAsync is implemented by MIG-SUBJ-019.");
+    /// <summary>
+    /// Re-encrypts demographics and/or replaces stratification factors (SCN-004 failure path/SCN-006 success
+    /// path), subject to <see cref="ClinicalSubject"/>'s post-randomization lock. Dual-lookup uniformly
+    /// (closing raise site #2: the legacy router's own inline lookup bypassed
+    /// <c>SubjectLifecycleService.update_demographics</c>'s dual-lookup entirely — this port uses the
+    /// service-layer dual-lookup for every call site instead, a deliberate, documented closing of that gap).
+    /// Strat factors are checked before demographics, mirroring the legacy router's own check ordering
+    /// (<c>subjects.py:690-692</c> then <c>:705-707</c>, raise sites #21 then #23) — a strat-factors failure
+    /// short-circuits before any demographics re-encryption is attempted, and neither mutation is persisted
+    /// (no <c>SaveChangesAsync</c> has run yet) if either fails.
+    /// </summary>
+    public async Task<Result<SubjectResponse>> UpdateDemographicsAsync(
+        string subjectIdOrCode, SubjectDemographicsUpdateRequest request, string changeReason, CancellationToken ct)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
 
-    /// <summary>Implemented by MIG-SUBJ-019.</summary>
-    public Task<Result<SubjectResponse>> DeleteDemographicsAsync(
-        string subjectIdOrCode, string changeReason, CancellationToken ct) =>
-        throw new NotImplementedException("DeleteDemographicsAsync is implemented by MIG-SUBJ-019.");
+        if (request.StratFactors is { } stratFactors)
+        {
+            var stratResult = subject.UpdateStratFactors(stratFactors);
+            if (stratResult.IsFailure)
+            {
+                // `!`: Result<T>.Error is non-null exactly when IsFailure is true (Result<T>'s own
+                // constructor invariant, packages/engine_core/src/Result.cs) -- re-wrapped into
+                // Result<SubjectResponse> since stratResult's TValue (bool) differs from this method's.
+                return Result<SubjectResponse>.Failure(stratResult.Error!);
+            }
+        }
 
-    /// <summary>Implemented by MIG-SUBJ-019.</summary>
-    public Task<Result<SubjectDetailResponse>> GetDetailAsync(
-        string subjectId, bool isBlindedCaller, CancellationToken ct) =>
-        throw new NotImplementedException("GetDetailAsync is implemented by MIG-SUBJ-019.");
+        if (request.Demographics is { } demographics)
+        {
+            // Raise site #22's fix. The legacy lock check decrypts the *existing* stored ciphertext to
+            // compare "did this update actually change demographics" and, on a decrypt failure, silently
+            // treats it as current_demo={} -- which can spuriously look like a change and misreport
+            // LOCKED_FACTOR_MUTATION for a subject whose demographics were never actually mutated, merely
+            // corrupted-at-rest. ClinicalSubject.UpdateDemographics (MIG-SUBJ-004) already collapses raise
+            // sites #3/#21/#23 onto one unconditional post-randomization guard (02_technical_design.md
+            // §2.3/§4.1), so the decrypted value itself is never consulted for a verdict here -- it is
+            // decrypted, and the result deliberately discarded, purely so a corrupted existing ciphertext
+            // fails loudly before that unconditional guard would otherwise mask the real problem behind
+            // LOCKED_FACTOR_MUTATION.
+            if (subject.IsPostRandomization() && subject.EncryptedDemographics is { } existingCiphertext)
+            {
+                _ = demographicsEncryption.Decrypt(existingCiphertext);
+            }
 
-    /// <summary>Implemented by MIG-SUBJ-019.</summary>
-    public Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct) =>
-        throw new NotImplementedException("EvaluateAndTransitionScreeningAsync is implemented by MIG-SUBJ-019.");
+            string newEncryptedDemographics = demographicsEncryption.Encrypt(ToDictionary(demographics));
+            var demographicsResult = subject.UpdateDemographics(newEncryptedDemographics);
+            if (demographicsResult.IsFailure)
+            {
+                // `!`: same Result<T>.Error non-null-when-IsFailure invariant as above.
+                return Result<SubjectResponse>.Failure(demographicsResult.Error!);
+            }
+        }
+
+        subject.ReasonForChange = changeReason;
+        // Unlike the legacy router (which bypassed SubjectLifecycleService.update_demographics entirely for
+        // every HTTP call -- raise site #2), this port always routes through the one method above, so a
+        // strat-factors-only update now also gets an UPDATE_DEMOGRAPHICS audit entry the legacy *router*
+        // path never wrote for that case (only the legacy *service* method -- exercised solely by SCN-006's
+        // direct unit test -- ever audited this action; fixtures/output_expected_nominal.json's SCN-004-A,
+        // which replays the router's own strat-factors-only path, has no audit_assertions for exactly this
+        // reason). This is the same kind of deliberate, documented consolidation as the dual-lookup fix
+        // above, not a hidden behavior change.
+        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "UPDATE_DEMOGRAPHICS",
+            auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+    }
+
+    /// <summary>
+    /// Soft-deletes (clears) demographics (raise site #25) — a distinct error family
+    /// (<see cref="SubjectErrors.SoftDeleteBlocked"/>) from <see cref="UpdateDemographicsAsync"/>'s
+    /// <see cref="SubjectErrors.LockedFactorMutation"/> despite both gating on the same
+    /// <see cref="ClinicalSubject.IsPostRandomization"/> predicate. No <see cref="IAuditLogWriter"/> entry is
+    /// written on success here: neither <c>01_spec.md</c> Rule 6's action list nor this ticket's own
+    /// technical-implementation notes name one for this call site (unlike <see cref="AdvanceStateAsync"/>/
+    /// <see cref="UpdateDemographicsAsync"/>, both of which explicitly do), and the legacy
+    /// <c>delete_subject_demographics_endpoint</c> this replaces has no parallel service-layer method to
+    /// consolidate onto the way <c>update_demographics</c> did.
+    /// </summary>
+    public async Task<Result<SubjectResponse>> DeleteDemographicsAsync(
+        string subjectIdOrCode, string changeReason, CancellationToken ct)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
+
+        var clearResult = subject.ClearDemographics();
+        if (clearResult.IsFailure)
+        {
+            // `!`: same Result<T>.Error non-null-when-IsFailure invariant as UpdateDemographicsAsync above.
+            return Result<SubjectResponse>.Failure(clearResult.Error!);
+        }
+
+        subject.ReasonForChange = changeReason;
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+    }
+
+    /// <summary>
+    /// Full subject detail (raise site #13), single-lookup by domain code only — matching
+    /// <c>get_subject_detail</c>'s legacy contract (<c>01_spec.md</c> §1.2) — deliberately not the
+    /// <see cref="ResolveSubjectAsync"/> dual-lookup <see cref="AdvanceStateAsync"/>/
+    /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/> share: every fixture route
+    /// exercising this method (e.g. <c>GET /api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST</c>) passes a
+    /// domain subject code, never a surrogate GUID, and <c>01_spec.md</c> Rule 9 lists only
+    /// <c>advance_subject_state</c>/<c>update_demographics</c> as dual-lookup call sites. Applies the RTSM
+    /// blinding filter for a blinded caller: <see cref="ClinicalSubject.TreatmentGroupCiphertext"/> is this
+    /// slice's only concrete RTSM-derived field today — the <c>AllocationKeyManager</c> decrypt mechanism
+    /// that would additionally populate a randomization seed / investigational product id belongs to the
+    /// out-of-scope randomization slice (this ticket's own boundary note: treat its output as an opaque,
+    /// already-decrypted value this method may redact but not itself decrypt) — so
+    /// <see cref="SubjectDetailResponse.RandomizationSeed"/>/<see cref="SubjectDetailResponse.InvestigationalProductId"/>
+    /// have no data source to redact yet on <see cref="ClinicalSubject"/> and are always <see langword="null"/>
+    /// regardless of <paramref name="isBlindedCaller"/>.
+    /// </summary>
+    public async Task<Result<SubjectDetailResponse>> GetDetailAsync(
+        string subjectId, bool isBlindedCaller, CancellationToken ct)
+    {
+        var subject = await subjects.GetByCodeAsync(subjectId, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectId);
+        }
+
+        string? treatmentGroup = isBlindedCaller ? null : subject.TreatmentGroupCiphertext;
+
+        return new SubjectDetailResponse(subject.SubjectCode, subject.StudyCode,
+            SubjectStateCodec.ToCode(subject.Status), subject.SiteCode, treatmentGroup,
+            RandomizationSeed: null, InvestigationalProductId: null);
+    }
+
+    /// <summary>
+    /// Evaluates screening eligibility and transitions to <see cref="SubjectState.ScreenFailed"/> or
+    /// <see cref="SubjectState.Enrolled"/> (SCN-005/SCN-007), single-lookup by domain code only — see
+    /// <see cref="GetDetailAsync"/>'s remarks on why this is not the shared dual-lookup helper; raise site
+    /// #10's not-found is standardized onto <see cref="SubjectErrors.NotFound"/> rather than reproducing the
+    /// legacy's distinct "Clinical subject not found." string. Resolves the acting user/reason from
+    /// <see cref="ICurrentAuditContextAccessor"/> (MIG-SUBJ-017 — the one call site Rule 9 singles out for the
+    /// legacy's <c>LookupError</c>-catch-vs-truthy-<c>or</c> idiom split, now unified onto this one accessor)
+    /// rather than a caller-supplied <c>changeReason</c>, matching this method's interface signature (no such
+    /// parameter exists on it, unlike <see cref="AdvanceStateAsync"/>/<see cref="UpdateDemographicsAsync"/>/
+    /// <see cref="DeleteDemographicsAsync"/>). Delegates the actual eligibility verdict to the injected
+    /// <c>screeningEligibility</c> constructor seam — the eligibility rule engine itself is out of this
+    /// slice's scope per <c>01_spec.md</c>'s explicit boundary — then reuses <see cref="TransitionSubjectAsync"/> so a
+    /// transition to <see cref="SubjectState.Enrolled"/> is gated by the exact same Rule 2 site-compliance
+    /// check <see cref="AdvanceStateAsync"/> uses (SCN-005).
+    /// </summary>
+    public async Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct)
+    {
+        var subject = await subjects.GetByCodeAsync(subjectId, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectId);
+        }
+
+        var evaluateEligibility = screeningEligibility ?? throw new InvalidOperationException(
+            "SubjectApplicationService was constructed without a screening-eligibility evaluator -- the " +
+            "out-of-slice 'Func<...>/port' seam 03_tickets.md's MIG-SUBJ-019 describes. " +
+            "EvaluateAndTransitionScreeningAsync cannot resolve an eligibility verdict without one.");
+        bool eligible = await evaluateEligibility(subject, ct).ConfigureAwait(false);
+        var target = eligible ? SubjectState.Enrolled : SubjectState.ScreenFailed;
+
+        return await TransitionSubjectAsync(subject, target, auditContext.ChangeReason, ct).ConfigureAwait(false);
+    }
 
     // ---- Shared helpers -------------------------------------------------------------------------------
 
     /// <summary>
+    /// Rule 2 sovereign-site-activation gate (enforced only when <paramref name="target"/> is
+    /// <see cref="SubjectState.Enrolled"/>) + <see cref="ClinicalSubject.TransitionTo"/> + the semantic
+    /// <c>TRANSITION_&lt;STATE&gt;</c> audit write + the §2.6 under-populated response — shared by
+    /// <see cref="AdvanceStateAsync"/> and <see cref="EvaluateAndTransitionScreeningAsync"/> so a subject
+    /// targeting <see cref="SubjectState.Enrolled"/> at a non-compliant site is blocked, and a
+    /// <c>BLOCKED_ENROLLMENT</c> audit entry written for that blocked attempt itself (not only for successes,
+    /// matching the legacy's own behavior), identically through either entry point (SCN-005). Always uses
+    /// <see cref="ICurrentAuditContextAccessor.UserId"/> for the audit <c>userId</c> — every caller resolves
+    /// its own acting user the same way, so that argument is not threaded through as a parameter.
+    /// </summary>
+    private async Task<Result<SubjectResponse>> TransitionSubjectAsync(
+        ClinicalSubject subject, SubjectState target, string changeReason, CancellationToken ct)
+    {
+        if (target == SubjectState.Enrolled)
+        {
+            var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct).ConfigureAwait(false);
+            if (gate is not { IsComplete: true })
+            {
+                await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "BLOCKED_ENROLLMENT",
+                    auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+                return SubjectErrors.BlockedEnrollment(subject.SiteCode);
+            }
+        }
+
+        var transition = subject.TransitionTo(target);
+        if (transition.IsFailure)
+        {
+            // `!`: same Result<T>.Error non-null-when-IsFailure invariant as UpdateDemographicsAsync above --
+            // this is the one call site 02_technical_design.md §3.2's verbatim AdvanceStateAsync reference
+            // implementation itself uses unmodified.
+            return Result<SubjectResponse>.Failure(transition.Error!);
+        }
+
+        subject.ReasonForChange = changeReason;
+        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
+            auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+    }
+
+    /// <summary>
     /// Rule 9 dual-lookup: try the surrogate PK first, then the domain code — shared by
-    /// <see cref="RecordConsentAsync"/> (MIG-SUBJ-018) and MIG-SUBJ-019's <c>AdvanceStateAsync</c>, so the
-    /// two-step lookup sequencing lives in exactly one place rather than being duplicated per call site.
-    /// Returns <see langword="null"/> when neither lookup matches; callers are responsible for mapping that
-    /// to <see cref="SubjectErrors.NotFound"/>.
+    /// <see cref="RecordConsentAsync"/> (MIG-SUBJ-018) and MIG-SUBJ-019's <see cref="AdvanceStateAsync"/>/
+    /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/>, so the two-step lookup
+    /// sequencing lives in exactly one place rather than being duplicated per call site. Returns
+    /// <see langword="null"/> when neither lookup matches; callers are responsible for mapping that to
+    /// <see cref="SubjectErrors.NotFound"/>.
     /// </summary>
     private async Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
         await subjects.GetByIdAsync(subjectIdOrCode, ct).ConfigureAwait(false)

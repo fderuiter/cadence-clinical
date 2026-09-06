@@ -923,7 +923,7 @@ Per `02_technical_design.md` §3.1/§3.3: `ISubjectApplicationService` declares 
 
 ---
 
-### [MIG-SUBJ-019] `SubjectApplicationService` — Advance/UpdateDemographics/Delete/Detail/Screening
+### [MIG-SUBJ-019] `SubjectApplicationService` — Advance/UpdateDemographics/Delete/Detail/Screening `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (7h)
@@ -952,15 +952,15 @@ Per `02_technical_design.md` §3.2 (the representative `AdvanceStateAsync` imple
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a subject at a non-compliant site, when `AdvanceStateAsync` targets `Enrolled`, then it fails with `BLOCKED_ENROLLMENT`, an audit entry is written for the blocked attempt, and this holds identically whether reached via `AdvanceStateAsync` or `EvaluateAndTransitionScreeningAsync` (SCN-005).
-- [ ] Given a successful `AdvanceStateAsync` call transitioning a subject to `Enrolled`, when the response is inspected, then `Status == "SCREENING"` (the §2.6 under-population quirk, not the real post-transition value) — assert this explicitly as correct, not as a bug to fix.
-- [ ] Given a post-randomization subject, when `UpdateDemographicsAsync` is called with a changed payload, then it fails with `LOCKED_FACTOR_MUTATION`; given a pre-randomization subject with the same call shape, then it succeeds (SCN-004/SCN-006 contrast).
-- [ ] Given a subject whose _existing_ stored ciphertext is corrupted (fails to decrypt), when `UpdateDemographicsAsync` is called on a post-randomization subject, then the call fails with a decryption-failure error, **not** `LOCKED_FACTOR_MUTATION` — this is the explicit fix for raise site #22's legacy bug; assert the error type/code differs from the lock-mutation case.
-- [ ] Given `isBlindedCaller: true`, when `GetDetailAsync` is called for an unblinded-role-restricted subject, then `TreatmentGroup`/`RandomizationSeed`/`InvestigationalProductId` are all `null` in the response.
-- [ ] Boundary check: `DeleteDemographicsAsync` on a pre-randomization subject succeeds and returns `Underpopulated(...)`; on a post-randomization subject it fails with `SOFT_DELETE_BLOCKED`, a **distinct** error code from `LOCKED_FACTOR_MUTATION` despite both gating on `IsPostRandomization()`.
-- [ ] Error condition: every one of `AdvanceStateAsync`/`UpdateDemographicsAsync`/`DeleteDemographicsAsync`/`GetDetailAsync`/`EvaluateAndTransitionScreeningAsync` returns `SubjectErrors.NotFound(...)` (never throws, never an inconsistent message string) when the resolved subject does not exist, closing raise sites #1,#8,#10,#13,#15,#17,#20,#24 onto one uniform path.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a subject at a non-compliant site, when `AdvanceStateAsync` targets `Enrolled`, then it fails with `BLOCKED_ENROLLMENT`, an audit entry is written for the blocked attempt, and this holds identically whether reached via `AdvanceStateAsync` or `EvaluateAndTransitionScreeningAsync` (SCN-005).
+- [x] Given a successful `AdvanceStateAsync` call transitioning a subject to `Enrolled`, when the response is inspected, then `Status == "SCREENING"` (the §2.6 under-population quirk, not the real post-transition value) — assert this explicitly as correct, not as a bug to fix.
+- [x] Given a post-randomization subject, when `UpdateDemographicsAsync` is called with a changed payload, then it fails with `LOCKED_FACTOR_MUTATION`; given a pre-randomization subject with the same call shape, then it succeeds (SCN-004/SCN-006 contrast).
+- [x] Given a subject whose _existing_ stored ciphertext is corrupted (fails to decrypt), when `UpdateDemographicsAsync` is called on a post-randomization subject, then the call fails with a decryption-failure error, **not** `LOCKED_FACTOR_MUTATION` — this is the explicit fix for raise site #22's legacy bug; assert the error type/code differs from the lock-mutation case.
+- [x] Given `isBlindedCaller: true`, when `GetDetailAsync` is called for an unblinded-role-restricted subject, then `TreatmentGroup`/`RandomizationSeed`/`InvestigationalProductId` are all `null` in the response.
+- [x] Boundary check: `DeleteDemographicsAsync` on a pre-randomization subject succeeds and returns `Underpopulated(...)`; on a post-randomization subject it fails with `SOFT_DELETE_BLOCKED`, a **distinct** error code from `LOCKED_FACTOR_MUTATION` despite both gating on `IsPostRandomization()`.
+- [x] Error condition: every one of `AdvanceStateAsync`/`UpdateDemographicsAsync`/`DeleteDemographicsAsync`/`GetDetailAsync`/`EvaluateAndTransitionScreeningAsync` returns `SubjectErrors.NotFound(...)` (never throws, never an inconsistent message string) when the resolved subject does not exist, closing raise sites #1,#8,#10,#13,#15,#17,#20,#24 onto one uniform path.
 
 #### Verification & Test Requirements
 
