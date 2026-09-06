@@ -1095,7 +1095,7 @@ Two small, generic `IEndpointFilter` implementations consumed by MIG-SUBJ-023/02
 
 ---
 
-### [MIG-SUBJ-023] Implement Subject Minimal API Endpoints
+### [MIG-SUBJ-023] Implement Subject Minimal API Endpoints `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Large (5h)
@@ -1121,14 +1121,14 @@ Per `02_technical_design.md` §3.3, verbatim route shapes: `POST /api/v1/executi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a valid `POST /api/v1/execution/subjects` request, when handled, then the response is `201 Created` with a `Location` header pointing at `/api/v1/execution/subjects/{subject_id}`.
-- [ ] Given `PATCH .../state` with no `X-Change-Reason` header, when handled, then the response is `400` and `AdvanceStateAsync` is never invoked (filter short-circuit, not an application-layer check).
-- [ ] Given `POST .../consents` (plural alias), when handled, then it behaves identically to `POST .../consent` and does **not** appear in the generated OpenAPI document.
-- [ ] Given `GET /{subjectId}` for a blinded-role caller on a randomized-and-unblinded-restricted subject, when handled, then the response body has `treatment_group: null` (delegating to `GetDetailAsync`'s redaction, this ticket only verifies the wiring, not the redaction logic itself).
-- [ ] Boundary check: every route's `CancellationToken` parameter is honored — cancelling the request mid-flight (simulated in a routing test via a pre-cancelled token) results in an `OperationCanceledException`/499-equivalent rather than the request completing anyway.
-- [ ] Error condition: a `SubjectErrors.NotFound` result from any handler maps through `.ToProblemResult()` to a `404` response body with the standardized `"Subject not found"` detail, consistently across all 5 not-found-capable routes.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a valid `POST /api/v1/execution/subjects` request, when handled, then the response is `201 Created` with a `Location` header pointing at `/api/v1/execution/subjects/{subject_id}`.
+- [x] Given `PATCH .../state` with no `X-Change-Reason` header, when handled, then the response is `400` and `AdvanceStateAsync` is never invoked (filter short-circuit, not an application-layer check).
+- [x] Given `POST .../consents` (plural alias), when handled, then it behaves identically to `POST .../consent` and does **not** appear in the generated OpenAPI document.
+- [x] Given `GET /{subjectId}` for a blinded-role caller on a randomized-and-unblinded-restricted subject, when handled, then the response body has `treatment_group: null` (delegating to `GetDetailAsync`'s redaction, this ticket only verifies the wiring, not the redaction logic itself).
+- [x] Boundary check: every route's `CancellationToken` parameter is honored — cancelling the request mid-flight (simulated in a routing test via a pre-cancelled token) results in an `OperationCanceledException`/499-equivalent rather than the request completing anyway.
+- [x] Error condition: a `SubjectErrors.NotFound` result from any handler maps through `.ToProblemResult()` to a `404` response body with the standardized `"Subject not found"` detail, consistently across all 5 not-found-capable routes.
 
 #### Verification & Test Requirements
 

@@ -129,3 +129,26 @@ api.MapGet("/subjects", () => TypedResults.Ok(Array.Empty<string>()))
     .WithSummary("Retrieves subjects projected under the active protocol version.");
 
 await app.RunAsync();
+
+// MIG-SUBJ-023: the standard, minimal ASP.NET Core idiom making the implicit top-level-statement `Program`
+// class (`internal` by default) visible to `Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>`
+// in `tests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` -- pure test-visibility plumbing, not
+// composition-root wiring (this ticket deliberately does not call `MapSubjectEndpoints()`/register
+// `ISubjectApplicationService` here; that "final wiring" is `MIG-SUBJ-024`'s own Target Files entry). Every
+// later ticket that hosts this app via `WebApplicationFactory<Program>` (MIG-SUBJ-024's startup smoke test,
+// MIG-SUBJ-025's `ExecutionApiFactory`) needs this exact same marker, so it is added once, here, by whichever
+// ticket first needs it rather than by each in turn.
+public partial class Program
+{
+    // SonarAnalyzer S1118: a partial class whose only visible member (from this declaration's own vantage
+    // point) is the compiler-synthesized static `Main` would otherwise be flagged as a utility class that
+    // should either be `static` or explicitly guard its constructor. It cannot be made `static` here --
+    // C# requires every partial declaration of a type to agree on the `static` modifier, and the
+    // compiler-generated top-level-statement declaration is not static -- so an explicit `protected`
+    // constructor is the correct fix Sonar's own rule message names. `WebApplicationFactory<Program>` never
+    // actually constructs a `Program` (it only needs the type/assembly for reflection), so narrowing
+    // construction to `protected` changes nothing observable.
+    protected Program()
+    {
+    }
+}

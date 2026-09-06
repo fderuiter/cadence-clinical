@@ -18,6 +18,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- MIG-SUBJ-023: this project's own default compile glob (tests/**/*.cs, since it lives directly in
+         tests/ alongside Cadence.UnitTests.csproj) would otherwise also try to compile
+         SubjectEndpointsRoutingTests.cs here. That file needs Microsoft.AspNetCore.Mvc.Testing (not
+         referenced by this project) and WebApplicationFactory(Program), which is ambiguous in this specific
+         project's compilation since it references both Cadence.Apps.Execution and Cadence.Apps.Designer,
+         each with their own top-level-statement Program class; no prior file in tests/ referenced Program
+         at all, so this ambiguity never previously surfaced. Excluding it here leaves it compiled into
+         Cadence.UnitTests.csproj only, where Cadence.Apps.Execution is the sole Program-bearing reference. -->
+    <Compile Remove="Execution\Endpoints\SubjectEndpointsRoutingTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
