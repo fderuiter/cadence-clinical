@@ -12,6 +12,15 @@
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <!-- MIG-SUBJ-025: GoldenMasterAssert.DbStateMatches/AuditLogContains are generic over any DbContext derived
+         type rather than a concrete slice DbContext (e.g. Cadence.Apps.Execution's ExecutionDbContext),
+         specifically so this shared, cross-slice package never needs a project reference to a slice's
+         application assembly; see GoldenMasterAssert.cs's own remarks for the exact
+         Microsoft.EntityFrameworkCore.Relational assembly version conflict build warning (documented in
+         MIG-SUBJ-018's implementation sign-off) that a slice-assembly reference would reintroduce. Only the
+         base EF Core abstractions are referenced here; no relational/provider package (Npgsql, Sqlite,
+         InMemory) is needed by this shared library at all. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 </Project>
-
