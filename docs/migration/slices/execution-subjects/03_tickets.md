@@ -1179,7 +1179,7 @@ Per `02_technical_design.md` §3.3: `POST /api/v1/execution/webhooks/etmf` → `
 
 ---
 
-### [MIG-SUBJ-025] Golden-Master Test Harness (Fixture Loader & Assert)
+### [MIG-SUBJ-025] Golden-Master Test Harness (Fixture Loader & Assert) `[COMPLETED]`
 
 - **Layer:** Testing
 - **Complexity:** Medium (4h)
@@ -1208,14 +1208,14 @@ Per `02_technical_design.md` §6.1: `GoldenMasterFixtureLoader.LoadScenarios(inp
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given the `input_valid_nominal.json` / `output_expected_nominal.json` pair (17 `SCN-*` scenario IDs) plus the `input_valid_edge_cases.json` / `output_expected_nominal.json` pair (the same output file, per the design's file-pairing — 11 `EDGE-*` IDs), when `LoadScenarios` is called against each pair, then it returns exactly the scenario count present in each pair with no exceptions.
-- [ ] Given a deliberately-mismatched test fixture pair (one file has a `scenario_id` the other lacks, constructed as a test-only fixture pair for this ticket only — not a change to the real fixtures), when `LoadScenarios` is called, then it throws at load time rather than silently omitting the orphaned scenario.
-- [ ] Given an expected-body field value of `"<opaque>"`, when `BodyMatches` compares an actual response with any non-null value in that field, then it passes; given the actual field is `null`, then it fails.
-- [ ] Given an expected-body field value of `"<unchanged>"`, when `BodyMatches` is given a captured pre-state value and an actual post-state value that differ, then it fails; when they match, it passes.
-- [ ] Boundary check: `"<opaque-non-null>"` fails when the actual value is `null`, distinguishing it from plain `"<opaque>"` which (per the design's naming) would also require non-null — confirm against the actual fixture usage whether `<opaque>` alone ever legitimately allows `null`, and encode whichever behavior the fixtures actually exercise, not an assumed symmetric pair.
-- [ ] Error condition: `DbStateMatches`/`AuditLogContains` given an assertion that doesn't hold (e.g. expected `enrollment_index: 1`, actual `0`) produces a clear, scenario-ID-attributed failure message, not a generic assertion-library stack trace with no scenario context.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given the `input_valid_nominal.json` / `output_expected_nominal.json` pair (17 `SCN-*` scenario IDs) plus the `input_valid_edge_cases.json` / `output_expected_nominal.json` pair (the same output file, per the design's file-pairing — 11 `EDGE-*` IDs), when `LoadScenarios` is called against each pair, then it returns exactly the scenario count present in each pair with no exceptions. **Verified count correction:** the real `input_valid_nominal.json` declares 19 `SCN-*` ids, not 17 (`jq '.scenarios | length'` confirms 19; the 11 `EDGE-*` count is accurate) — `GoldenMasterFixtureLoaderTests` asserts against the real, verified counts (19/11/21). Discovering this also surfaced that `output_expected_nominal.json` is one shared file legitimately serving both input pairs (30 = 19 + 11 results), which is why the fail-fast check below is one-directional (input → output) rather than symmetric — see `GoldenMasterFixtureLoader`'s own remarks.
+- [x] Given a deliberately-mismatched test fixture pair (one file has a `scenario_id` the other lacks, constructed as a test-only fixture pair for this ticket only — not a change to the real fixtures), when `LoadScenarios` is called, then it throws at load time rather than silently omitting the orphaned scenario.
+- [x] Given an expected-body field value of `"<opaque>"`, when `BodyMatches` compares an actual response with any non-null value in that field, then it passes; given the actual field is `null`, then it fails.
+- [x] Given an expected-body field value of `"<unchanged>"`, when `BodyMatches` is given a captured pre-state value and an actual post-state value that differ, then it fails; when they match, it passes.
+- [x] Boundary check: `"<opaque-non-null>"` fails when the actual value is `null`, distinguishing it from plain `"<opaque>"` which (per the design's naming) would also require non-null — confirm against the actual fixture usage whether `<opaque>` alone ever legitimately allows `null`, and encode whichever behavior the fixtures actually exercise, not an assumed symmetric pair. **Finding:** across every real usage in `fixtures/output_expected_*.json`, plain `<opaque>` is used exclusively on fields (overwhelmingly `id`) that can never legitimately be null in a successful response — no real fixture exercises `<opaque>` tolerating null. `GoldenMasterAssert` therefore gives `<opaque>` and `<opaque-non-null>` identical non-null-enforcing behavior, matching both this AC's own explicit mandate for plain `<opaque>` and the fixtures' actual (non-symmetric-by-assumption, but not actually asymmetric in practice) usage.
+- [x] Error condition: `DbStateMatches`/`AuditLogContains` given an assertion that doesn't hold (e.g. expected `enrollment_index: 1`, actual `0`) produces a clear, scenario-ID-attributed failure message, not a generic assertion-library stack trace with no scenario context.
 
 #### Verification & Test Requirements
 

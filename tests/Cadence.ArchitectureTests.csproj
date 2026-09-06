@@ -32,6 +32,16 @@
          independent-host routing tests and the real-composition-root startup smoke tests), and this project
          references both Cadence.Apps.Execution and Cadence.Apps.Designer. -->
     <Compile Remove="Execution\Endpoints\SiteComplianceEndpointsRoutingTests.cs" />
+    <!-- MIG-SUBJ-025: same ambiguous-Program-reference collision as the two exclusions above.
+         ExecutionApiFactory (WebApplicationFactory<Program>) boots the real Program composition root for
+         golden-master use, so it hits the identical Cadence.Apps.Execution-vs-Cadence.Apps.Designer
+         Program ambiguity in this project. -->
+    <Compile Remove="Execution\ExecutionApiFactory.cs" />
+    <!-- MIG-SUBJ-025: GoldenMasterFixtureLoaderTests.cs's DB/audit-assertion tests exercise ExecutionApiFactory
+         directly (to prove GoldenMasterAssert.DbStateMatches/AuditLogContains work against a real,
+         DI-resolved ExecutionDbContext, not just an ad-hoc one), so it transitively hits the same ambiguity
+         as ExecutionApiFactory.cs itself. Left compiled into Cadence.UnitTests.csproj only. -->
+    <Compile Remove="Execution\GoldenMaster\GoldenMasterFixtureLoaderTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
