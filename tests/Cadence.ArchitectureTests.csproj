@@ -27,6 +27,11 @@
          at all, so this ambiguity never previously surfaced. Excluding it here leaves it compiled into
          Cadence.UnitTests.csproj only, where Cadence.Apps.Execution is the sole Program-bearing reference. -->
     <Compile Remove="Execution\Endpoints\SubjectEndpointsRoutingTests.cs" />
+    <!-- MIG-SUBJ-024: same ambiguous-Program-reference collision SubjectEndpointsRoutingTests.cs already
+         hit (see the remark above). This file also hosts WebApplicationFactory<Program> (both the
+         independent-host routing tests and the real-composition-root startup smoke tests), and this project
+         references both Cadence.Apps.Execution and Cadence.Apps.Designer. -->
+    <Compile Remove="Execution\Endpoints\SiteComplianceEndpointsRoutingTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

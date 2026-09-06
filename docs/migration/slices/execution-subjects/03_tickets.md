@@ -1136,7 +1136,7 @@ Per `02_technical_design.md` §3.3, verbatim route shapes: `POST /api/v1/executi
 
 ---
 
-### [MIG-SUBJ-024] Implement SiteCompliance Minimal API Endpoints & `Program.cs` Wiring
+### [MIG-SUBJ-024] Implement SiteCompliance Minimal API Endpoints & `Program.cs` Wiring `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Medium (4h)
@@ -1164,14 +1164,14 @@ Per `02_technical_design.md` §3.3: `POST /api/v1/execution/webhooks/etmf` → `
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given the service started via `dotnet run`, when `GET /healthz` is called, then it still returns the existing health-check response unchanged (this ticket must not regress the pre-existing placeholder route).
-- [ ] Given an eTMF webhook payload for a new `(study, site, milestone)`, when `POST /api/v1/execution/webhooks/etmf` is called, then the response is `200` with the exact success envelope shape from `01_spec.md` §1.2.
-- [ ] Given a non-compliant site, when `POST /api/v1/execution/sites/{siteId}/activate` is called, then the response is `400` with detail `"Site activation blocked: Site {site_id} is not compliant in eTMF. Missing expected documents."`.
-- [ ] Given any `(study, site, milestone)` combination with no cache row, when `GET .../compliance-status` is called, then the response is `200` (never `404`) with `is_complete: false, missing_documents: []`.
-- [ ] Boundary check: all DI registrations resolve successfully at startup (`app.Services.GetRequiredService<T>()` for every interface registered in this ticket, exercised via a startup smoke test) — no missing-registration runtime failure on first request.
-- [ ] Error condition: the MassTransit outbox/consumer registration does not require a live Redis/broker connection to start the app in a test host (in-memory transport for tests, per §5.2's "no environment-variable gate" decision — verify the app starts cleanly under `WebApplicationFactory` without an external broker).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given the service started via `dotnet run`, when `GET /healthz` is called, then it still returns the existing health-check response unchanged (this ticket must not regress the pre-existing placeholder route).
+- [x] Given an eTMF webhook payload for a new `(study, site, milestone)`, when `POST /api/v1/execution/webhooks/etmf` is called, then the response is `200` with the exact success envelope shape from `01_spec.md` §1.2.
+- [x] Given a non-compliant site, when `POST /api/v1/execution/sites/{siteId}/activate` is called, then the response is `400` with detail `"Site activation blocked: Site {site_id} is not compliant in eTMF. Missing expected documents."`.
+- [x] Given any `(study, site, milestone)` combination with no cache row, when `GET .../compliance-status` is called, then the response is `200` (never `404`) with `is_complete: false, missing_documents: []`.
+- [x] Boundary check: all DI registrations resolve successfully at startup (`app.Services.GetRequiredService<T>()` for every interface registered in this ticket, exercised via a startup smoke test) — no missing-registration runtime failure on first request.
+- [x] Error condition: the MassTransit outbox/consumer registration does not require a live Redis/broker connection to start the app in a test host (in-memory transport for tests, per §5.2's "no environment-variable gate" decision — verify the app starts cleanly under `WebApplicationFactory` without an external broker).
 
 #### Verification & Test Requirements
 
