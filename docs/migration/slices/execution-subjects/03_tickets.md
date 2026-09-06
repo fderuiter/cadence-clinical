@@ -1263,7 +1263,7 @@ This ticket **is** the verification requirement — `dotnet test --filter "Fully
 
 ---
 
-### [MIG-SUBJ-027] Targeted Unit Coverage Beyond Fixtures
+### [MIG-SUBJ-027] Targeted Unit Coverage Beyond Fixtures `[COMPLETED]`
 
 - **Layer:** Testing
 - **Complexity:** Large (6h)
@@ -1300,12 +1300,12 @@ Audit checklist (per `02_technical_design.md` §6.2, cross-referenced against th
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a code-coverage report run against the §6.2 checklist's 6 items, when reviewed, then all 6 are confirmed covered (by this ticket's new tests, or by citation of the originating ticket's existing tests — document which, in the PR description, not silently).
-- [ ] Given two sequential `SaveChangesAsync` calls persisting the same `ClinicalSubject` instance through `ExecutionDbContext` (not a generic test double), when their audit entries are inspected, then the second's `PredecessorHash` chains to the first's `BlockHash`.
-- [ ] Boundary check: the same Merkle-chain check performed independently for `SubjectConsent` and `SiteComplianceCache` — not just `ClinicalSubject` — since each is a distinct `EntityName` chain per MIG-SUBJ-007's per-entity-type chaining design.
-- [ ] Error condition: N/A — this is an audit/gap-fill ticket, not new failure-path logic.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a code-coverage report run against the §6.2 checklist's 6 items, when reviewed, then all 6 are confirmed covered (by this ticket's new tests, or by citation of the originating ticket's existing tests — document which, in the PR description, not silently).
+- [x] Given two sequential `SaveChangesAsync` calls persisting the same `ClinicalSubject` instance through `ExecutionDbContext` (not a generic test double), when their audit entries are inspected, then the second's `PredecessorHash` chains to the first's `BlockHash`.
+- [x] Boundary check: the same Merkle-chain check performed independently for `SubjectConsent` and `SiteComplianceCache` — not just `ClinicalSubject` — since each is a distinct `EntityName` chain per MIG-SUBJ-007's per-entity-type chaining design.
+- [x] Error condition: N/A — this is an audit/gap-fill ticket, not new failure-path logic.
 
 #### Verification & Test Requirements
 
