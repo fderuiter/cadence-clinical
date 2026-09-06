@@ -541,25 +541,19 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     /// <summary>
-    /// <see cref="ExecutionJsonSerialization.Configure"/> sets <c>PropertyNamingPolicy</c> via <c>??=</c>,
-    /// which is a no-op against <see cref="Microsoft.AspNetCore.Http.Json.JsonOptions.SerializerOptions"/>
-    /// specifically: that instance is constructed from <see cref="JsonSerializerDefaults.Web"/>, whose
-    /// <c>PropertyNamingPolicy</c> is already <see cref="JsonNamingPolicy.CamelCase"/> (non-null) by the time
-    /// a <c>ConfigureHttpJsonOptions</c> callback runs, so the intended snake_case policy never actually
-    /// takes effect through that specific registration path. This is a pre-existing bug in already-merged
-    /// `MIG-SUBJ-008` code (`ExecutionJsonSerialization.cs`), discovered by this ticket's own tests being the
-    /// first in this repo to exercise a real end-to-end HTTP request/response cycle against this service's
-    /// JSON options -- out of this ticket's scope to fix at its source (flagged in this ticket's own final
-    /// report instead). Forcing the policy here reproduces the wire contract `01_spec.md`/
-    /// `02_technical_design.md` actually specify (snake_case) and this ticket's own AC #4 assumes
-    /// (`treatment_group: null`), rather than silently asserting against the currently-buggy camelCase
-    /// behavior the unmodified helper would otherwise produce.
+    /// This ticket's own tests were the first in this repo to exercise a real end-to-end HTTP
+    /// request/response cycle against this service's JSON options, which surfaced a bug in already-merged
+    /// `MIG-SUBJ-008` code: <see cref="ExecutionJsonSerialization.Configure"/> used to set
+    /// <c>PropertyNamingPolicy</c> via <c>??=</c>, a no-op against
+    /// <see cref="Microsoft.AspNetCore.Http.Json.JsonOptions.SerializerOptions"/> specifically (constructed
+    /// from <see cref="JsonSerializerDefaults.Web"/>, whose <c>PropertyNamingPolicy</c> is already
+    /// <see cref="JsonNamingPolicy.CamelCase"/>, non-null, by the time a <c>ConfigureHttpJsonOptions</c>
+    /// callback runs) — flagged in this ticket's own final report and fixed at its source immediately after,
+    /// so this helper now just calls <see cref="ExecutionJsonSerialization.Configure"/> directly like every
+    /// other caller.
     /// </summary>
-    private static void ApplyExecutionJsonConventions(Microsoft.AspNetCore.Http.Json.JsonOptions options)
-    {
-        options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+    private static void ApplyExecutionJsonConventions(Microsoft.AspNetCore.Http.Json.JsonOptions options) =>
         ExecutionJsonSerialization.Configure(options.SerializerOptions);
-    }
 
     private static async Task AssertProblemDetailAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedDetail)
     {
