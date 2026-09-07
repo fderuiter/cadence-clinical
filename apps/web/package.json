@@ -7,7 +7,7 @@
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
     "vue": "^3.5.42",
-    "vue-router": "^5.3.0",
+    "vue-router": "^5.3.1",
     "vuedraggable": "4.1.0"
   },
   "description": "",
