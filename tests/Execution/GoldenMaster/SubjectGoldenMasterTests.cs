@@ -1411,6 +1411,70 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     // Shared precondition seeding
     // ================================================================================================
 
+    /// <summary>
+    /// Per-<see cref="StudyCode"/> cursor backing <see cref="AllocatePreconditionEnrollmentIndex"/> --
+    /// <see langword="static"/> (not per-instance) for the exact same reason <see cref="TestApiCache"/> is:
+    /// this class is constructed once per <c>[Theory]</c> case, not once per class run, and every case must
+    /// share one view of which negative indices have already been handed out for a given study.
+    /// </summary>
+    private static readonly ConcurrentDictionary<StudyCode, int> NextPreconditionEnrollmentIndex = new();
+
+    /// <summary>
+    /// Mints a distinct, per-study, strictly-negative "safe" <c>enrollment_index</c> for a
+    /// precondition-seeded (synthetic, test-setup-only) <see cref="ClinicalSubject"/> -- the fix for a real,
+    /// reproduced bug in this suite's own prior approach, not a hypothetical hardening.
+    /// <para>
+    /// <b>Evidence this was a genuine bug, not a style preference:</b> <see cref="EnsureSubjectPreconditionAsync"/>
+    /// previously assigned a precondition-seeded subject's index via the exact same live
+    /// <c>MAX(EnrollmentIndex WHERE StudyCode = ...) + 1</c> query <see cref="ISubjectRepository.EnrollNextIndexAsync"/>'s
+    /// own real, production implementation runs (`MIG-SUBJ-013`), and <see cref="EnsureConsentPreconditionAsync"/>'s
+    /// own subject-creation fallback hardcoded plain <c>0</c>. Cross-referencing every <c>study_id</c> declared
+    /// anywhere in <c>docs/migration/slices/execution-subjects/fixtures/input_valid_*.json</c>/
+    /// <c>input_invalid_validation_errors.json</c> against the two output fixtures' own <c>enrollment_index</c>
+    /// assertions (there are exactly three: SCN-001-A expects <c>0</c>, SCN-001-B expects <c>1</c>, both for
+    /// study <c>STUDY-001</c>; SCN-009-A expects <c>0</c> for study <c>STUDY-AUTO</c>) confirms that
+    /// <c>SCN-003-A</c> (nominal), <c>EDGE-010</c> (edge-case), and <c>INV-009</c> (error) each ALSO
+    /// precondition-seed a subject into <c>STUDY-001</c> -- the exact study SCN-001-A/B's own real,
+    /// HTTP-driven <c>EnrollNextIndexAsync</c> call reads. Those three scenarios belong to the OTHER two
+    /// <c>[Theory]</c> methods (or, for SCN-003-A, run later in the same one) than
+    /// <c>NominalScenario_MatchesGoldenMaster</c>'s own SCN-001-A/B rows, and this suite's three Theory
+    /// methods share one <see cref="IClassFixture{TFixture}"/>-cached database -- but xUnit guarantees only
+    /// that ONE Theory method's own <see cref="MemberDataAttribute"/> rows execute in the order
+    /// <see cref="GoldenMasterFixtureLoader"/> yields them (relied on directly by, and proven by the current
+    /// passing state of, every multi-step chain in this suite, e.g. SCN-001-A -&gt; SCN-002-A/B) -- never
+    /// that one method's rows all execute before or after a DIFFERENT method's. Whichever of those three
+    /// scenarios' preconditions happened to reach that shared, live MAX+1 counter before SCN-001-A/B's own
+    /// HTTP calls did silently shifted the index SCN-001-A/B themselves then computed and asserted --
+    /// reproduced directly, deterministically, across repeated clean-rebuild runs, as
+    /// "<c>[SCN-001-A] DB state assertion failed: $.enrollment_index: expected 0 but actual was 2</c>" /
+    /// "<c>[SCN-001-B] ... expected 1 but actual was 3</c>" (exactly the count of foreign STUDY-001 rows two
+    /// of those three scenarios happened to add first in that particular build's scheduling). No fixture
+    /// entry anywhere ever asserts a precondition-seeded subject's OWN <c>enrollment_index</c> (confirmed by
+    /// the same cross-reference above), so nothing is lost by never handing this helper the real sequence at
+    /// all.
+    /// </para>
+    /// <para>
+    /// <b>Why strictly negative, per study, is airtight regardless of scheduling:</b> the first
+    /// precondition-seeded subject for a given study receives exactly <c>-1</c>; each subsequent one for the
+    /// SAME study receives one less again (<c>-2</c>, <c>-3</c>, ...). The set of indices any one study's
+    /// precondition-seeded subjects ever hold therefore has a maximum of exactly <c>-1</c> once at least one
+    /// exists -- so a real enrollment's own <c>EnrollNextIndexAsync</c> call always computes
+    /// <c>MAX(EnrollmentIndex) + 1 == 0</c> for that study's FIRST real enrollment (regardless of how many
+    /// negative-indexed precondition rows already share the study, or when, relative to the real
+    /// enrollment(s), they were created -- MAX always resolves to the least-negative one, <c>-1</c>), and
+    /// <c>== priorRealIndex + 1</c> for every subsequent real enrollment (a non-negative real index always
+    /// exceeds every negative one). This exactly reproduces the sequential-from-zero-per-study guarantee
+    /// `02_technical_design.md` §4.2/Rule 5 documents, independent of this suite's three Theory methods'
+    /// relative scheduling. Legal per both <c>ClinicalSubjectConfiguration</c>'s own Rule 5
+    /// composite-unique <c>(StudyCode, EnrollmentIndex)</c> index (still satisfied -- every minted value is
+    /// globally distinct) and <see cref="ClinicalSubject.Create"/>'s own <c>enrollmentIndex</c> parameter
+    /// (a plain, unconstrained <see langword="int"/> with no non-negative invariant anywhere in the
+    /// domain/persistence layers, confirmed directly against both).
+    /// </para>
+    /// </summary>
+    private static int AllocatePreconditionEnrollmentIndex(StudyCode studyCode) =>
+        NextPreconditionEnrollmentIndex.AddOrUpdate(studyCode, -1, (_, previous) => previous - 1);
+
     private async Task ApplyPreconditionsAsync(JsonElement? input, CancellationToken ct)
     {
         if (input is not { } inputElement || !inputElement.TryGetProperty("preconditions", out JsonElement preconditions))
@@ -1487,13 +1551,15 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         // relational database that DOES enforce it for real -- multiple precondition-seeded subjects sharing
         // one study_id (several fixture entries default to "STUDY-001") each hardcoded to index 0 collided
         // with each other, and with SCN-001-A/B's own really-enrolled subjects, throwing SQLite Error 19
-        // (verified directly). Mirrors SubjectRepository.EnrollNextIndexAsync's own already-proven-against-
-        // SQLite MAX+1 computation (MIG-SUBJ-013) rather than inventing a different scheme.
-        int? maxEnrollmentIndex = await db.ClinicalSubjects
-            .Where(s => s.StudyCode == studyCode)
-            .Select(s => (int?)s.EnrollmentIndex)
-            .MaxAsync(ct);
-        int enrollmentIndex = maxEnrollmentIndex is null ? 0 : maxEnrollmentIndex.Value + 1;
+        // (verified directly). A live MAX(EnrollmentIndex)+1 mirror of SubjectRepository.EnrollNextIndexAsync's
+        // own computation (MIG-SUBJ-013) fixed THAT crash but -- verified directly as this suite's own real,
+        // reproducible "SCN-001-A/B enrollment_index off by +2" bug -- only replaced it with an
+        // order-dependent WRONG value, by reading and writing the exact same shared, per-study counter
+        // SCN-001-A/B's own production EnrollNextIndexAsync call depends on. See
+        // AllocatePreconditionEnrollmentIndex's own remarks for the full evidence trail and why a
+        // strictly-negative, per-study index is airtight against that regardless of this suite's three
+        // [Theory] methods' relative scheduling.
+        int enrollmentIndex = AllocatePreconditionEnrollmentIndex(studyCode);
 
         ClinicalSubject subject = ClinicalSubject.Create(new SubjectCode(subjectCodeValue), studyCode, siteCode,
             enrollmentIndex, encryptedDemographics, stratFactors);
@@ -1539,9 +1605,16 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         {
             // RecordConsentAsync's dual-lookup requires the owning subject to exist, even though the
             // fixture's own "preconditions" block names only "existing_consent" -- EDGE-003/EDGE-005 both
-            // implicitly assume a subject is already on file.
+            // implicitly assume a subject is already on file. Enrollment index: see
+            // AllocatePreconditionEnrollmentIndex's own remarks -- a hardcoded 0 here is the exact same
+            // shared-counter hazard already evidenced and fixed in EnsureSubjectPreconditionAsync above.
+            // Neither EDGE-003 (STUDY-003) nor EDGE-005 (STUDY-005), the only two scenarios reaching this
+            // fallback today, currently shares its study with a real, index-asserting enrollment, but
+            // nothing about this fallback's own shape guaranteed that would stay true as this fixture set
+            // grows, so it gets the identical fix rather than remaining a second, latent copy of the same
+            // defect.
             db.ClinicalSubjects.Add(ClinicalSubject.Create(subjectCodeKey, studyCodeKey,
-                siteCode: null, enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null));
+                siteCode: null, enrollmentIndex: AllocatePreconditionEnrollmentIndex(studyCodeKey), encryptedDemographics: null, stratFactors: null));
         }
 
         string versionTag = precondition.TryGetProperty("version_tag", out JsonElement versionTagEl) ? versionTagEl.GetString()! : "v1.0";
