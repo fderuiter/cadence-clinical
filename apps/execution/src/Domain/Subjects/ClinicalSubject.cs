@@ -40,7 +40,8 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     private ClinicalSubject() { } // EF Core
 
     public static ClinicalSubject Create(SubjectCode subjectCode, StudyCode studyCode, SiteCode? siteCode,
-        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors)
+        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors,
+        string? treatmentGroup = null)
     {
         var subject = new ClinicalSubject
         {
@@ -51,11 +52,22 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
             Status = SubjectState.Screening,
             EnrollmentIndex = enrollmentIndex,
             EncryptedDemographics = encryptedDemographics,
-            // Assigned explicitly (rather than left as the property default) so the private setters
-            // are exercised at construction time: randomization/kit-assignment is out of this ticket's
-            // scope (no method here ever populates them), and SonarAnalyzer's S1144 otherwise flags an
-            // apparently-unused private setter as a build error under this repo's TreatWarningsAsErrors.
-            TreatmentGroupCiphertext = null,
+            // MIG-SUBJ-026 fix: SubjectCreateRequest.ArmId (the enrollment-time treatment-arm assignment,
+            // e.g. "ARM-A") was declared on the request DTO but never threaded through anywhere -- neither
+            // this factory nor SubjectApplicationService.CreateAsync ever read it, so every created subject's
+            // TreatmentGroupCiphertext was unconditionally null regardless of what the caller supplied,
+            // confirmed directly blocking SCN-001-A's golden-master fixture (expects the response's
+            // treatment_group to echo the request's arm_id verbatim: "ARM-A", not null). This new, optional
+            // (defaulted, so every one of the ~20 already-merged call sites across tests/ and
+            // EConsentCompletedConsumer.cs -- which never assign a treatment group at auto-enrollment time --
+            // keeps compiling and behaving unchanged) parameter is unrelated to actual randomization/kit
+            // assignment (RandomizationId/KitReference below, still never populated here, out of this
+            // slice's scope per this same comment's original note) -- it is the enrollment-time arm_id, which
+            // the fixture's own expectation confirms round-trips as a plain string, not an encrypted/blinded
+            // value, despite this property's "Ciphertext"-suffixed name (the true RTSM-encrypted-and-blinded
+            // treatment group is a randomization-slice concern this port never reaches -- see
+            // SubjectApplicationService.GetDetailAsync's own remarks on that boundary).
+            TreatmentGroupCiphertext = treatmentGroup,
             RandomizationId = null,
             KitReference = null,
         };
