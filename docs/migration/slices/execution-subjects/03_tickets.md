@@ -439,7 +439,7 @@ Introduce `public abstract class AggregateRootBase : IGxPAuditable` in a new fil
 
 ---
 
-### [MIG-SUBJ-008] Implement Response DTOs & the §2.6 Under-Population Decision
+### [MIG-SUBJ-008] Implement Response DTOs & the §2.6 Under-Population Decision `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -471,13 +471,13 @@ Per `02_technical_design.md` §2.6: `SubjectResponse(SubjectId, SubjectCode, Stu
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `ClinicalSubject` in state `Enrolled` with a non-null `SiteCode`, when `SubjectResponse.FromAggregate(subject)` is called, then `Status == "ENROLLED"` and `SiteId` matches the aggregate's actual value.
-- [ ] Given the same subject, when `SubjectResponse.Underpopulated(id, code, study, demographics)` is called, then `Status == "SCREENING"` and `ActiveProtocolVersion == "1.0.0"` **regardless** of the subject's real `Enrolled` status — this is the documented quirk, assert it explicitly rather than treating a mismatch as a test failure to "fix."
-- [ ] Boundary check: `Underpopulated`'s `SiteId` and `TreatmentGroup` are always `null` in its output, even when called for a subject that does have a site/treatment group assigned.
-- [ ] Error condition: N/A — these are pure data-shaping factories with no failure path.
-- [ ] Serialized JSON property names match `01_spec.md` §1.2's snake_case field list exactly (`subject_id`, not `subjectId`).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `ClinicalSubject` in state `Enrolled` with a non-null `SiteCode`, when `SubjectResponse.FromAggregate(subject)` is called, then `Status == "ENROLLED"` and `SiteId` matches the aggregate's actual value.
+- [x] Given the same subject, when `SubjectResponse.Underpopulated(id, code, study, demographics)` is called, then `Status == "SCREENING"` and `ActiveProtocolVersion == "1.0.0"` **regardless** of the subject's real `Enrolled` status — this is the documented quirk, assert it explicitly rather than treating a mismatch as a test failure to "fix."
+- [x] Boundary check: `Underpopulated`'s `SiteId` and `TreatmentGroup` are always `null` in its output, even when called for a subject that does have a site/treatment group assigned.
+- [x] Error condition: N/A — these are pure data-shaping factories with no failure path.
+- [x] Serialized JSON property names match `01_spec.md` §1.2's snake_case field list exactly (`subject_id`, not `subjectId`).
 
 #### Verification & Test Requirements
 
@@ -485,7 +485,7 @@ Per `02_technical_design.md` §2.6: `SubjectResponse(SubjectId, SubjectCode, Stu
 
 ---
 
-### [MIG-SUBJ-009] Implement Request DTOs & FluentValidation Validators
+### [MIG-SUBJ-009] Implement Request DTOs & FluentValidation Validators `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -517,14 +517,14 @@ Per `02_technical_design.md` §2.7: `SubjectCreateRequest(string SubjectId, stri
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `SubjectCreateRequest` with `SiteId: null`, when validated, then it passes (site is optional).
-- [ ] Given `SubjectCreateRequest` with `SiteId: ""`, when validated, then it passes model-shape validation (empty string is a _valid_ string for this DTO's own rules) — the empty-string-as-absent ambiguity is resolved at the domain layer (`SiteCode`'s constructor, MIG-SUBJ-001), not suppressed here.
-- [ ] Given `SubjectStateUpdateRequest(Status: null, State: null)`, when validated, then it fails with error code `MISSING_TARGET_STATE`.
-- [ ] Given `SubjectStateUpdateRequest(Status: null, State: "ENROLLED")`, when validated, then it passes and `.Target == "ENROLLED"`.
-- [ ] Boundary check: `SubjectCreateRequest.SubjectId`/`StudyId` at exactly 255 characters passes; 256 characters fails `MaximumLength(255)`.
-- [ ] Error condition: `EtmfCompletenessWebhookPayload` with `StudyId: ""` fails `NotEmpty()` (whitespace-only strings also fail — FluentValidation's `NotEmpty()` treats them as empty).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `SubjectCreateRequest` with `SiteId: null`, when validated, then it passes (site is optional).
+- [x] Given `SubjectCreateRequest` with `SiteId: ""`, when validated, then it passes model-shape validation (empty string is a _valid_ string for this DTO's own rules) — the empty-string-as-absent ambiguity is resolved at the domain layer (`SiteCode`'s constructor, MIG-SUBJ-001), not suppressed here.
+- [x] Given `SubjectStateUpdateRequest(Status: null, State: null)`, when validated, then it fails with error code `MISSING_TARGET_STATE`.
+- [x] Given `SubjectStateUpdateRequest(Status: null, State: "ENROLLED")`, when validated, then it passes and `.Target == "ENROLLED"`.
+- [x] Boundary check: `SubjectCreateRequest.SubjectId`/`StudyId` at exactly 255 characters passes; 256 characters fails `MaximumLength(255)`.
+- [x] Error condition: `EtmfCompletenessWebhookPayload` with `StudyId: ""` fails `NotEmpty()` (whitespace-only strings also fail — FluentValidation's `NotEmpty()` treats them as empty).
 
 #### Verification & Test Requirements
 
@@ -532,7 +532,7 @@ Per `02_technical_design.md` §2.7: `SubjectCreateRequest(string SubjectId, stri
 
 ---
 
-### [MIG-SUBJ-010] Implement `DomainError` → `ProblemDetails` HTTP Mapping
+### [MIG-SUBJ-010] Implement `DomainError` → `ProblemDetails` HTTP Mapping `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Small (2h)
@@ -560,14 +560,14 @@ Per `02_technical_design.md` §3.4's table: default `ErrorType` → status mappi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given `SubjectErrors.LockedFactorMutation()`, when `.ToProblemResult()` is called, then the resulting HTTP status is **422**, not 409.
-- [ ] Given `SubjectErrors.ReconsentRequired(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is **423**, not 403.
-- [ ] Given `SubjectErrors.NotFound(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is 404 (default `NotFound` mapping, no override needed).
-- [ ] Given `SubjectErrors.SoftDeleteBlocked()`, when `.ToProblemResult()` is called, then the resulting HTTP status is 403 (default `Forbidden` mapping — confirms this code does _not_ need an override, only `RECONSENT_REQUIRED` does despite sharing `Type = Forbidden`).
-- [ ] Boundary check: the override table is keyed by `Code`, not `Type` — verify a hypothetical second `Conflict`-typed error (if one existed) would still map to 409, proving the override is scoped to the named code only.
-- [ ] Error condition: an exception that is _not_ wrapped in a `DomainError` (falls through to ASP.NET Core's global `IExceptionHandler`) produces a generic 500 — assert this is not intercepted or downgraded to 400 by this ticket's code (closing raise site #19, the bare-catch-all that must not be reproduced).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given `SubjectErrors.LockedFactorMutation()`, when `.ToProblemResult()` is called, then the resulting HTTP status is **422**, not 409.
+- [x] Given `SubjectErrors.ReconsentRequired(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is **423**, not 403.
+- [x] Given `SubjectErrors.NotFound(...)`, when `.ToProblemResult()` is called, then the resulting HTTP status is 404 (default `NotFound` mapping, no override needed).
+- [x] Given `SubjectErrors.SoftDeleteBlocked()`, when `.ToProblemResult()` is called, then the resulting HTTP status is 403 (default `Forbidden` mapping — confirms this code does _not_ need an override, only `RECONSENT_REQUIRED` does despite sharing `Type = Forbidden`).
+- [x] Boundary check: the override table is keyed by `Code`, not `Type` — verify a hypothetical second `Conflict`-typed error (if one existed) would still map to 409, proving the override is scoped to the named code only.
+- [x] Error condition: an exception that is _not_ wrapped in a `DomainError` (falls through to ASP.NET Core's global `IExceptionHandler`) produces a generic 500 — assert this is not intercepted or downgraded to 400 by this ticket's code (closing raise site #19, the bare-catch-all that must not be reproduced).
 
 #### Verification & Test Requirements
 
@@ -575,7 +575,7 @@ Per `02_technical_design.md` §3.4's table: default `ErrorType` → status mappi
 
 ---
 
-### [MIG-SUBJ-011] Implement `ExecutionDbContext` & `ClinicalSubjectConfiguration`
+### [MIG-SUBJ-011] Implement `ExecutionDbContext` & `ClinicalSubjectConfiguration` `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Large (5h)
@@ -603,13 +603,13 @@ Per `02_technical_design.md` §4.1: `ExecutionDbContext` registers `GxPAuditInte
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `ClinicalSubject` persisted and reloaded via `ExecutionDbContext`, when compared to the original, then `SubjectCode`/`StudyCode`/`SiteCode`/`Status`/`_stratFactors` round-trip exactly (including `null` `SiteCode`).
-- [ ] Given two subjects with the same `StudyCode` and `EnrollmentIndex` inserted in the same transaction, when `SaveChangesAsync` is called, then the second insert fails on the unique index (DB-level enforcement of Rule 5, backstopping the app-level lock).
-- [ ] Given a subject added via `ExecutionDbContext` with `GxPAuditInterceptor` registered, when `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are populated (regression test proving MIG-SUBJ-007's fix is actually wired up in this context, not just unit-tested in isolation).
-- [ ] Boundary check: `_stratFactors` containing nested objects/arrays (not just flat key-value pairs) round-trips through the `jsonb` conversion without data loss.
-- [ ] Error condition: a corrupted `Status` string value read from the database (e.g. manually set to an invalid string via raw SQL in a test) throws `InvalidOperationException` on materialization, not a silent default or a `Result<T>` failure.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `ClinicalSubject` persisted and reloaded via `ExecutionDbContext`, when compared to the original, then `SubjectCode`/`StudyCode`/`SiteCode`/`Status`/`_stratFactors` round-trip exactly (including `null` `SiteCode`).
+- [x] Given two subjects with the same `StudyCode` and `EnrollmentIndex` inserted in the same transaction, when `SaveChangesAsync` is called, then the second insert fails on the unique index (DB-level enforcement of Rule 5, backstopping the app-level lock).
+- [x] Given a subject added via `ExecutionDbContext` with `GxPAuditInterceptor` registered, when `SaveChangesAsync` is called, then `CreatedAt`/`CreatedBy`/`VersionIndex` are populated (regression test proving MIG-SUBJ-007's fix is actually wired up in this context, not just unit-tested in isolation).
+- [x] Boundary check: `_stratFactors` containing nested objects/arrays (not just flat key-value pairs) round-trips through the `jsonb` conversion without data loss.
+- [x] Error condition: a corrupted `Status` string value read from the database (e.g. manually set to an invalid string via raw SQL in a test) throws `InvalidOperationException` on materialization, not a silent default or a `Result<T>` failure.
 
 #### Verification & Test Requirements
 
@@ -617,7 +617,7 @@ Per `02_technical_design.md` §4.1: `ExecutionDbContext` registers `GxPAuditInte
 
 ---
 
-### [MIG-SUBJ-012] Implement `SubjectConsentConfiguration` & `SiteComplianceCacheConfiguration`
+### [MIG-SUBJ-012] Implement `SubjectConsentConfiguration` & `SiteComplianceCacheConfiguration` `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Medium (4h)
@@ -647,13 +647,13 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a `SubjectConsent` persisted and reloaded, when compared, then `ProtocolVersion.{StudyCode,VersionTag,VersionIndex}` round-trip exactly via the Complex Type mapping.
-- [ ] Given a `SiteComplianceCache` with `MissingDocuments = ["Form-A", "Form-B"]` persisted and reloaded, when compared, then the array round-trips as a native Postgres array (verify the underlying column type is `text[]`, not a delimited `text` scalar).
-- [ ] Given a `SiteComplianceCache.Version` field, when the entity is configured, then it is mapped as a plain `int`/`long` column with **no** `[Timestamp]`/`IsRowVersion()` attribute — assert this via EF Core metadata inspection (`IsConcurrencyToken == false` on that property specifically), distinguishing it from the separate shadow `_version` property which **is** the concurrency token.
-- [ ] Boundary check: `ApplyWebhookUpdate` incrementing `Version` twice in the same `SaveChangesAsync` batch (two separate calls, one save) persists the final incremented value, not an intermediate one.
-- [ ] Error condition: N/A for this configuration ticket — behavioral upsert-vs-CAS semantics are exercised at the aggregate level (MIG-SUBJ-006) and the repository level (MIG-SUBJ-013).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a `SubjectConsent` persisted and reloaded, when compared, then `ProtocolVersion.{StudyCode,VersionTag,VersionIndex}` round-trip exactly via the Complex Type mapping.
+- [x] Given a `SiteComplianceCache` with `MissingDocuments = ["Form-A", "Form-B"]` persisted and reloaded, when compared, then the array round-trips as a native Postgres array (verify the underlying column type is `text[]`, not a delimited `text` scalar).
+- [x] Given a `SiteComplianceCache.Version` field, when the entity is configured, then it is mapped as a plain `int`/`long` column with **no** `[Timestamp]`/`IsRowVersion()` attribute — assert this via EF Core metadata inspection (`IsConcurrencyToken == false` on that property specifically), distinguishing it from the separate shadow `_version` property which **is** the concurrency token.
+- [x] Boundary check: `ApplyWebhookUpdate` incrementing `Version` twice in the same `SaveChangesAsync` batch (two separate calls, one save) persists the final incremented value, not an intermediate one.
+- [x] Error condition: N/A for this configuration ticket — behavioral upsert-vs-CAS semantics are exercised at the aggregate level (MIG-SUBJ-006) and the repository level (MIG-SUBJ-013).
 
 #### Verification & Test Requirements
 
@@ -661,7 +661,7 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
 
 ---
 
-### [MIG-SUBJ-013] Implement Repositories & Sequential Enrollment-Index Locking
+### [MIG-SUBJ-013] Implement Repositories & Sequential Enrollment-Index Locking `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Large (6h)
@@ -693,13 +693,13 @@ Per `02_technical_design.md` §4.2: `EnrollNextIndexAsync(StudyCode)` opens `Dat
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an empty study, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `0`.
-- [ ] Given a study with subjects at indices `{0, 1, 2}`, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `3`.
-- [ ] Given two concurrent `EnrollNextIndexAsync` calls for the **same** study (simulated via parallel tasks against a shared connection pool in a Testcontainers-backed test — the InMemory provider cannot exercise a real advisory lock), when both complete, then they return two distinct sequential indices, never a duplicate (this specific scenario is deferred to MIG-SUBJ-028's integration test, but the repository method under test here must be structurally correct — i.e. the lock/transaction scoping compiles and passes a single-caller smoke test in this ticket).
-- [ ] Boundary check: `EnrollNextIndexAsync` for study `A` does not block or wait behind a concurrent, held advisory lock for study `B` (different `hashtext` values) — verify via a unit-level assertion that the lock key is derived from the study code, not a global constant.
-- [ ] Error condition: `GetByIdAsync`/`GetByCodeAsync` return `null` (not throw) when no matching row exists — not-found handling is the application service's responsibility (`SubjectErrors.NotFound`), not the repository's.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an empty study, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `0`.
+- [x] Given a study with subjects at indices `{0, 1, 2}`, when `EnrollNextIndexAsync(studyCode)` is called, then it returns `3`.
+- [x] Given two concurrent `EnrollNextIndexAsync` calls for the **same** study (simulated via parallel tasks against a shared connection pool in a Testcontainers-backed test — the InMemory provider cannot exercise a real advisory lock), when both complete, then they return two distinct sequential indices, never a duplicate (this specific scenario is deferred to MIG-SUBJ-028's integration test, but the repository method under test here must be structurally correct — i.e. the lock/transaction scoping compiles and passes a single-caller smoke test in this ticket). Exceeded: `SubjectRepositoryTests` includes a genuine N=8-parallel-task test (real concurrent `Task.WhenAll` callers, file-backed SQLite) asserting `{0..7}` with no duplicates/gaps, on top of the required single-caller smoke tests — see that test's own doc comment for why SQLite (not just Postgres) can genuinely exercise this, and its report for what remains MIG-SUBJ-028-only.
+- [x] Boundary check: `EnrollNextIndexAsync` for study `A` does not block or wait behind a concurrent, held advisory lock for study `B` (different `hashtext` values) — verify via a unit-level assertion that the lock key is derived from the study code, not a global constant.
+- [x] Error condition: `GetByIdAsync`/`GetByCodeAsync` return `null` (not throw) when no matching row exists — not-found handling is the application service's responsibility (`SubjectErrors.NotFound`), not the repository's.
 
 #### Verification & Test Requirements
 
@@ -707,7 +707,7 @@ Per `02_technical_design.md` §4.2: `EnrollNextIndexAsync(StudyCode)` opens `Dat
 
 ---
 
-### [MIG-SUBJ-014] EF Core Migration Generation
+### [MIG-SUBJ-014] EF Core Migration Generation `[COMPLETED]`
 
 - **Layer:** Persistence
 - **Complexity:** Small (2h)
@@ -733,12 +733,12 @@ Run `dotnet ef migrations add AddExecutionSubjectsSlice --project apps/execution
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] Given the generated migration, when `dotnet ef database update` is run against a clean Postgres instance, then it succeeds without error.
-- [ ] Given the migration applied, when inspecting the resulting schema, then `strat_factors` is column type `jsonb` and `missing_documents` is column type `text[]` (not `text`).
-- [ ] Given the migration applied, when inspecting indexes, then a unique index on `(study_code, enrollment_index)` exists on `clinical_subjects`.
-- [ ] Boundary check: `dotnet ef migrations remove` followed by re-running `dotnet ef migrations add` produces an identical (or behaviorally equivalent) migration — no snapshot drift from manual edits made after generation.
-- [ ] Error condition: applying the migration a second time (idempotency check via `dotnet ef database update` run twice) does not error or duplicate schema objects.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] Given the generated migration, when `dotnet ef database update` is run against a clean Postgres instance, then it succeeds without error.
+- [x] Given the migration applied, when inspecting the resulting schema, then `strat_factors` is column type `jsonb` and `missing_documents` is column type `text[]` (not `text`).
+- [x] Given the migration applied, when inspecting indexes, then a unique index on `(study_code, enrollment_index)` exists on `clinical_subjects`.
+- [x] Boundary check: `dotnet ef migrations remove` followed by re-running `dotnet ef migrations add` produces an identical (or behaviorally equivalent) migration — no snapshot drift from manual edits made after generation.
+- [x] Error condition: applying the migration a second time (idempotency check via `dotnet ef database update` run twice) does not error or duplicate schema objects.
 
 #### Verification & Test Requirements
 
@@ -835,7 +835,7 @@ Rule 7's gender-normalization table, age-calculation algorithm (with its deliber
 
 ---
 
-### [MIG-SUBJ-017] Implement Audit Context Accessor & Audit Log Writer
+### [MIG-SUBJ-017] Implement Audit Context Accessor & Audit Log Writer `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (3h)
@@ -865,14 +865,14 @@ Per `02_technical_design.md` §4.4: `ICurrentAuditContextAccessor { string UserI
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no `HttpContext.User` claims and no `X-Change-Reason` header, when `HttpCurrentAuditContextAccessor.UserId`/`.ChangeReason` are read, then they return `"system"`/`"system_operation"` respectively.
-- [ ] Given a `"sub"` claim present and an `X-Change-Reason` header present, when read, then both return the actual header/claim values, not the defaults.
-- [ ] Given `SystemAuditContextAccessor`, when `.UserId`/`.ChangeReason` are read, then they always return the fixed `"system-pubsub"`/`"Automated consent-completion enrollment"` values regardless of any ambient `HttpContext` state.
-- [ ] Given `IAuditLogWriter.WriteAsync` called twice for the same `tableName`/`recordId` combination within one logical audit stream, when both complete, then the second `AuditLogEntry.PredecessorHash` chains to the first's `BlockHash`.
-- [ ] Boundary check: an explicitly-empty (whitespace-only, not absent) `X-Change-Reason` header resolves to the same `"system_operation"` default as a fully-absent header — one consistent falsy-check, not a `null`-only check that would treat `""` differently.
-- [ ] Error condition: N/A — both accessors are non-throwing by design (always resolve to a default rather than raising on missing context).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no `HttpContext.User` claims and no `X-Change-Reason` header, when `HttpCurrentAuditContextAccessor.UserId`/`.ChangeReason` are read, then they return `"system"`/`"system_operation"` respectively.
+- [x] Given a `"sub"` claim present and an `X-Change-Reason` header present, when read, then both return the actual header/claim values, not the defaults.
+- [x] Given `SystemAuditContextAccessor`, when `.UserId`/`.ChangeReason` are read, then they always return the fixed `"system-pubsub"`/`"Automated consent-completion enrollment"` values regardless of any ambient `HttpContext` state.
+- [x] Given `IAuditLogWriter.WriteAsync` called twice for the same `tableName`/`recordId` combination within one logical audit stream, when both complete, then the second `AuditLogEntry.PredecessorHash` chains to the first's `BlockHash`.
+- [x] Boundary check: an explicitly-empty (whitespace-only, not absent) `X-Change-Reason` header resolves to the same `"system_operation"` default as a fully-absent header — one consistent falsy-check, not a `null`-only check that would treat `""` differently.
+- [x] Error condition: N/A — both accessors are non-throwing by design (always resolve to a default rather than raising on missing context).
 
 #### Verification & Test Requirements
 
@@ -880,7 +880,7 @@ Per `02_technical_design.md` §4.4: `ICurrentAuditContextAccessor { string UserI
 
 ---
 
-### [MIG-SUBJ-018] `SubjectApplicationService` — `CreateAsync` & `RecordConsentAsync`
+### [MIG-SUBJ-018] `SubjectApplicationService` — `CreateAsync` & `RecordConsentAsync` `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (6h)
@@ -908,14 +908,14 @@ Per `02_technical_design.md` §3.1/§3.3: `ISubjectApplicationService` declares 
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given an empty study, when `CreateAsync` enrolls `SUBJ-001` then `SUBJ-002`, then their `enrollment_index` values are `0` and `1` respectively, both persisted with `Status == Screening` and an `ENROLL_SUBJECT` audit entry each (SCN-001).
-- [ ] Given a `SubjectCreateRequest` with a populated `Demographics` payload, when `CreateAsync` is called, then the persisted `EncryptedDemographics` is non-null ciphertext, never the plaintext payload serialized directly.
-- [ ] Given a subject with an existing consent (version 1, `RequiresReconsent == true`), when `RecordConsentAsync` is called with a new consent (version 2, `IcfSigned == true`, `RequiresReconsent == false`), then consent version 1 is updated to `RequiresReconsent == false` and version 2 is persisted with `RequiresReconsent == false` (SCN-002).
-- [ ] Given `RecordConsentAsync` called for a `(subjectCode, studyCode, versionIndex)` with no existing row, when invoked, then a new `SubjectConsent` is created (not a merge).
-- [ ] Boundary check: `RecordConsentAsync`'s cascade clearance targets only _other_ consent rows for the same subject — a consent row for a **different** subject with `RequiresReconsent == true` is untouched.
-- [ ] Error condition: `RecordConsentAsync` called with `subjectIdOrCode` matching no subject by either ID or code returns `SubjectErrors.NotFound(...)`, not an unhandled exception.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given an empty study, when `CreateAsync` enrolls `SUBJ-001` then `SUBJ-002`, then their `enrollment_index` values are `0` and `1` respectively, both persisted with `Status == Screening` and an `ENROLL_SUBJECT` audit entry each (SCN-001).
+- [x] Given a `SubjectCreateRequest` with a populated `Demographics` payload, when `CreateAsync` is called, then the persisted `EncryptedDemographics` is non-null ciphertext, never the plaintext payload serialized directly.
+- [x] Given a subject with an existing consent (version 1, `RequiresReconsent == true`), when `RecordConsentAsync` is called with a new consent (version 2, `IcfSigned == true`, `RequiresReconsent == false`), then consent version 1 is updated to `RequiresReconsent == false` and version 2 is persisted with `RequiresReconsent == false` (SCN-002).
+- [x] Given `RecordConsentAsync` called for a `(subjectCode, studyCode, versionIndex)` with no existing row, when invoked, then a new `SubjectConsent` is created (not a merge).
+- [x] Boundary check: `RecordConsentAsync`'s cascade clearance targets only _other_ consent rows for the same subject — a consent row for a **different** subject with `RequiresReconsent == true` is untouched.
+- [x] Error condition: `RecordConsentAsync` called with `subjectIdOrCode` matching no subject by either ID or code returns `SubjectErrors.NotFound(...)`, not an unhandled exception.
 
 #### Verification & Test Requirements
 
@@ -923,7 +923,7 @@ Per `02_technical_design.md` §3.1/§3.3: `ISubjectApplicationService` declares 
 
 ---
 
-### [MIG-SUBJ-019] `SubjectApplicationService` — Advance/UpdateDemographics/Delete/Detail/Screening
+### [MIG-SUBJ-019] `SubjectApplicationService` — Advance/UpdateDemographics/Delete/Detail/Screening `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (7h)
@@ -952,15 +952,15 @@ Per `02_technical_design.md` §3.2 (the representative `AdvanceStateAsync` imple
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a subject at a non-compliant site, when `AdvanceStateAsync` targets `Enrolled`, then it fails with `BLOCKED_ENROLLMENT`, an audit entry is written for the blocked attempt, and this holds identically whether reached via `AdvanceStateAsync` or `EvaluateAndTransitionScreeningAsync` (SCN-005).
-- [ ] Given a successful `AdvanceStateAsync` call transitioning a subject to `Enrolled`, when the response is inspected, then `Status == "SCREENING"` (the §2.6 under-population quirk, not the real post-transition value) — assert this explicitly as correct, not as a bug to fix.
-- [ ] Given a post-randomization subject, when `UpdateDemographicsAsync` is called with a changed payload, then it fails with `LOCKED_FACTOR_MUTATION`; given a pre-randomization subject with the same call shape, then it succeeds (SCN-004/SCN-006 contrast).
-- [ ] Given a subject whose _existing_ stored ciphertext is corrupted (fails to decrypt), when `UpdateDemographicsAsync` is called on a post-randomization subject, then the call fails with a decryption-failure error, **not** `LOCKED_FACTOR_MUTATION` — this is the explicit fix for raise site #22's legacy bug; assert the error type/code differs from the lock-mutation case.
-- [ ] Given `isBlindedCaller: true`, when `GetDetailAsync` is called for an unblinded-role-restricted subject, then `TreatmentGroup`/`RandomizationSeed`/`InvestigationalProductId` are all `null` in the response.
-- [ ] Boundary check: `DeleteDemographicsAsync` on a pre-randomization subject succeeds and returns `Underpopulated(...)`; on a post-randomization subject it fails with `SOFT_DELETE_BLOCKED`, a **distinct** error code from `LOCKED_FACTOR_MUTATION` despite both gating on `IsPostRandomization()`.
-- [ ] Error condition: every one of `AdvanceStateAsync`/`UpdateDemographicsAsync`/`DeleteDemographicsAsync`/`GetDetailAsync`/`EvaluateAndTransitionScreeningAsync` returns `SubjectErrors.NotFound(...)` (never throws, never an inconsistent message string) when the resolved subject does not exist, closing raise sites #1,#8,#10,#13,#15,#17,#20,#24 onto one uniform path.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a subject at a non-compliant site, when `AdvanceStateAsync` targets `Enrolled`, then it fails with `BLOCKED_ENROLLMENT`, an audit entry is written for the blocked attempt, and this holds identically whether reached via `AdvanceStateAsync` or `EvaluateAndTransitionScreeningAsync` (SCN-005).
+- [x] Given a successful `AdvanceStateAsync` call transitioning a subject to `Enrolled`, when the response is inspected, then `Status == "SCREENING"` (the §2.6 under-population quirk, not the real post-transition value) — assert this explicitly as correct, not as a bug to fix.
+- [x] Given a post-randomization subject, when `UpdateDemographicsAsync` is called with a changed payload, then it fails with `LOCKED_FACTOR_MUTATION`; given a pre-randomization subject with the same call shape, then it succeeds (SCN-004/SCN-006 contrast).
+- [x] Given a subject whose _existing_ stored ciphertext is corrupted (fails to decrypt), when `UpdateDemographicsAsync` is called on a post-randomization subject, then the call fails with a decryption-failure error, **not** `LOCKED_FACTOR_MUTATION` — this is the explicit fix for raise site #22's legacy bug; assert the error type/code differs from the lock-mutation case.
+- [x] Given `isBlindedCaller: true`, when `GetDetailAsync` is called for an unblinded-role-restricted subject, then `TreatmentGroup`/`RandomizationSeed`/`InvestigationalProductId` are all `null` in the response.
+- [x] Boundary check: `DeleteDemographicsAsync` on a pre-randomization subject succeeds and returns `Underpopulated(...)`; on a post-randomization subject it fails with `SOFT_DELETE_BLOCKED`, a **distinct** error code from `LOCKED_FACTOR_MUTATION` despite both gating on `IsPostRandomization()`.
+- [x] Error condition: every one of `AdvanceStateAsync`/`UpdateDemographicsAsync`/`DeleteDemographicsAsync`/`GetDetailAsync`/`EvaluateAndTransitionScreeningAsync` returns `SubjectErrors.NotFound(...)` (never throws, never an inconsistent message string) when the resolved subject does not exist, closing raise sites #1,#8,#10,#13,#15,#17,#20,#24 onto one uniform path.
 
 #### Verification & Test Requirements
 
@@ -968,7 +968,7 @@ Per `02_technical_design.md` §3.2 (the representative `AdvanceStateAsync` imple
 
 ---
 
-### [MIG-SUBJ-020] `SiteComplianceApplicationService`
+### [MIG-SUBJ-020] `SiteComplianceApplicationService` `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Medium (4h)
@@ -995,14 +995,14 @@ The eTMF webhook upsert, the site-activation gate-check endpoint's business logi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no existing `SiteComplianceCache` row, when `ApplyEtmfWebhookAsync` is called, then a new row is created with `Version == 1` and **no** audit-log entry is written.
-- [ ] Given an existing row, when `ApplyEtmfWebhookAsync` is called again for the same key, then `Version` increments and no audit-log entry is written (both branches share the "no audit" rule).
-- [ ] Given a non-compliant/missing site, when `ActivateSiteAsync` is called, then it fails with `BLOCKED_ACTIVATION` and a `BLOCKED_ACTIVATION` audit entry is written **before** the failure is returned.
-- [ ] Given a compliant site, when `ActivateSiteAsync` is called, then it succeeds and writes a `SITE_ACTIVATION` audit entry, and the underlying `SiteComplianceCache.IsComplete` flag is **unchanged** by this call (it was already `true` from a prior webhook, not flipped by activation itself).
-- [ ] Boundary check: `GetComplianceStatusAsync` for a `(study, site, milestone)` combination with no cache row returns `IsComplete: false, MissingDocuments: []` with **no exception and no `Result<T>.Failure`** — verify the method signature itself has no failure return path.
-- [ ] Error condition: N/A for `GetComplianceStatusAsync` (always succeeds); `ApplyEtmfWebhookAsync` has no documented failure path either (always upserts) — only `ActivateSiteAsync` has a failure path (`BLOCKED_ACTIVATION`).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no existing `SiteComplianceCache` row, when `ApplyEtmfWebhookAsync` is called, then a new row is created with `Version == 1` and **no** audit-log entry is written.
+- [x] Given an existing row, when `ApplyEtmfWebhookAsync` is called again for the same key, then `Version` increments and no audit-log entry is written (both branches share the "no audit" rule).
+- [x] Given a non-compliant/missing site, when `ActivateSiteAsync` is called, then it fails with `BLOCKED_ACTIVATION` and a `BLOCKED_ACTIVATION` audit entry is written **before** the failure is returned.
+- [x] Given a compliant site, when `ActivateSiteAsync` is called, then it succeeds and writes a `SITE_ACTIVATION` audit entry, and the underlying `SiteComplianceCache.IsComplete` flag is **unchanged** by this call (it was already `true` from a prior webhook, not flipped by activation itself).
+- [x] Boundary check: `GetComplianceStatusAsync` for a `(study, site, milestone)` combination with no cache row returns `IsComplete: false, MissingDocuments: []` with **no exception and no `Result<T>.Failure`** — verify the method signature itself has no failure return path.
+- [x] Error condition: N/A for `GetComplianceStatusAsync` (always succeeds); `ApplyEtmfWebhookAsync` has no documented failure path either (always upserts) — only `ActivateSiteAsync` has a failure path (`BLOCKED_ACTIVATION`).
 
 #### Verification & Test Requirements
 
@@ -1010,7 +1010,7 @@ The eTMF webhook upsert, the site-activation gate-check endpoint's business logi
 
 ---
 
-### [MIG-SUBJ-021] `EConsentCompletedConsumer` (MassTransit Transactional Outbox)
+### [MIG-SUBJ-021] `EConsentCompletedConsumer` (MassTransit Transactional Outbox) `[COMPLETED]`
 
 - **Layer:** Application
 - **Complexity:** Large (5h)
@@ -1038,14 +1038,14 @@ Per `02_technical_design.md` §5.2 (implementation given near-verbatim in the de
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given no existing subject `SUBJ-AUTO-01` in study `STUDY-AUTO`, when an `EConsentCompletedEvent` is consumed, then a `ClinicalSubject` is created with `Status == Screening`, `EnrollmentIndex == 0`, an `INSERT` audit entry (`table_name == "clinical_subjects"`), and a `SubjectConsent` cache row with `IcfSigned == true, IsPaperOverride == false, RequiresReconsent == false` (SCN-009).
-- [ ] Given a malformed event (`SubjectId` empty/whitespace), when consumed, then no exception is thrown, no subject is created, and the consumer completes normally (silent drop).
-- [ ] Given the **same** event delivered twice (redelivery simulation), when both are consumed, then exactly one `ClinicalSubject` exists afterward (idempotent skip on the second delivery), not two.
-- [ ] Given a subject that already exists but has no consent-cache row for the event's `(studyCode, versionIndex)`, when the event is consumed, then the subject is **not** re-created but the consent-cache row **is** backfilled — proving the two idempotency checks are independent, not coupled.
-- [ ] Boundary check: the subject-creation path and the `EConsentCompletedEvent`-triggered enrollment-index assignment share the exact same repository method (`EnrollNextIndexAsync`) as `SubjectApplicationService.CreateAsync` — verify via a shared-code-path assertion (e.g. both call sites reference the same `ISubjectRepository` method, not two separately-implemented index queries) rather than merely matching output values.
-- [ ] Error condition: a downstream persistence failure (e.g. simulated `DbUpdateException`) during `Consume` propagates to MassTransit's own retry/outbox handling rather than being caught and swallowed by this consumer — do not wrap the body in a broad try/catch that suppresses infrastructure failures alongside the one documented silent-drop case (malformed input only).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given no existing subject `SUBJ-AUTO-01` in study `STUDY-AUTO`, when an `EConsentCompletedEvent` is consumed, then a `ClinicalSubject` is created with `Status == Screening`, `EnrollmentIndex == 0`, an `INSERT` audit entry (`table_name == "clinical_subjects"`), and a `SubjectConsent` cache row with `IcfSigned == true, IsPaperOverride == false, RequiresReconsent == false` (SCN-009).
+- [x] Given a malformed event (`SubjectId` empty/whitespace), when consumed, then no exception is thrown, no subject is created, and the consumer completes normally (silent drop).
+- [x] Given the **same** event delivered twice (redelivery simulation), when both are consumed, then exactly one `ClinicalSubject` exists afterward (idempotent skip on the second delivery), not two.
+- [x] Given a subject that already exists but has no consent-cache row for the event's `(studyCode, versionIndex)`, when the event is consumed, then the subject is **not** re-created but the consent-cache row **is** backfilled — proving the two idempotency checks are independent, not coupled.
+- [x] Boundary check: the subject-creation path and the `EConsentCompletedEvent`-triggered enrollment-index assignment share the exact same repository method (`EnrollNextIndexAsync`) as `SubjectApplicationService.CreateAsync` — verify via a shared-code-path assertion (e.g. both call sites reference the same `ISubjectRepository` method, not two separately-implemented index queries) rather than merely matching output values.
+- [x] Error condition: a downstream persistence failure (e.g. simulated `DbUpdateException`) during `Consume` propagates to MassTransit's own retry/outbox handling rather than being caught and swallowed by this consumer — do not wrap the body in a broad try/catch that suppresses infrastructure failures alongside the one documented silent-drop case (malformed input only).
 
 #### Verification & Test Requirements
 
@@ -1053,7 +1053,7 @@ Per `02_technical_design.md` §5.2 (implementation given near-verbatim in the de
 
 ---
 
-### [MIG-SUBJ-022] Implement Endpoint Filters — `ChangeReasonHeaderFilter` & `ValidationFilter<T>`
+### [MIG-SUBJ-022] Implement Endpoint Filters — `ChangeReasonHeaderFilter` & `ValidationFilter<T>` `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Small (2h)
@@ -1081,13 +1081,13 @@ Two small, generic `IEndpointFilter` implementations consumed by MIG-SUBJ-023/02
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments — in particular, resolve the `.FirstOrDefault()!` pattern noted above by relying on the filter's short-circuit guarantee, not by leaving the `!` in place.
-- [ ] Given a request with no `X-Change-Reason` header, when routed through `ChangeReasonHeaderFilter`, then the response is 400 and the downstream endpoint delegate is never invoked.
-- [ ] Given a request with `X-Change-Reason: ""` (present but empty), when routed through the filter, then it is also rejected (whitespace-only counts as absent — do not accept an empty header value as satisfying the requirement).
-- [ ] Given a request whose body fails `IValidator<TRequest>` validation, when routed through `ValidationFilter<TRequest>`, then the response is a `400` validation-problem body and the endpoint delegate is never invoked.
-- [ ] Boundary check: `ValidationFilter<TRequest>` correctly locates the `TRequest`-typed argument regardless of its parameter position among the endpoint delegate's other parameters (e.g. `(string subjectId, SubjectConsentRequest request, ...)` — the DTO is not always the first parameter).
-- [ ] Error condition: a request with a valid header but an unrelated validation failure elsewhere in the pipeline is not affected by `ChangeReasonHeaderFilter` (the two filters are independent and composable on the same route).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments — in particular, resolve the `.FirstOrDefault()!` pattern noted above by relying on the filter's short-circuit guarantee, not by leaving the `!` in place.
+- [x] Given a request with no `X-Change-Reason` header, when routed through `ChangeReasonHeaderFilter`, then the response is 400 and the downstream endpoint delegate is never invoked.
+- [x] Given a request with `X-Change-Reason: ""` (present but empty), when routed through the filter, then it is also rejected (whitespace-only counts as absent — do not accept an empty header value as satisfying the requirement).
+- [x] Given a request whose body fails `IValidator<TRequest>` validation, when routed through `ValidationFilter<TRequest>`, then the response is a `400` validation-problem body and the endpoint delegate is never invoked.
+- [x] Boundary check: `ValidationFilter<TRequest>` correctly locates the `TRequest`-typed argument regardless of its parameter position among the endpoint delegate's other parameters (e.g. `(string subjectId, SubjectConsentRequest request, ...)` — the DTO is not always the first parameter).
+- [x] Error condition: a request with a valid header but an unrelated validation failure elsewhere in the pipeline is not affected by `ChangeReasonHeaderFilter` (the two filters are independent and composable on the same route).
 
 #### Verification & Test Requirements
 
@@ -1095,7 +1095,7 @@ Two small, generic `IEndpointFilter` implementations consumed by MIG-SUBJ-023/02
 
 ---
 
-### [MIG-SUBJ-023] Implement Subject Minimal API Endpoints
+### [MIG-SUBJ-023] Implement Subject Minimal API Endpoints `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Large (5h)
@@ -1121,14 +1121,14 @@ Per `02_technical_design.md` §3.3, verbatim route shapes: `POST /api/v1/executi
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a valid `POST /api/v1/execution/subjects` request, when handled, then the response is `201 Created` with a `Location` header pointing at `/api/v1/execution/subjects/{subject_id}`.
-- [ ] Given `PATCH .../state` with no `X-Change-Reason` header, when handled, then the response is `400` and `AdvanceStateAsync` is never invoked (filter short-circuit, not an application-layer check).
-- [ ] Given `POST .../consents` (plural alias), when handled, then it behaves identically to `POST .../consent` and does **not** appear in the generated OpenAPI document.
-- [ ] Given `GET /{subjectId}` for a blinded-role caller on a randomized-and-unblinded-restricted subject, when handled, then the response body has `treatment_group: null` (delegating to `GetDetailAsync`'s redaction, this ticket only verifies the wiring, not the redaction logic itself).
-- [ ] Boundary check: every route's `CancellationToken` parameter is honored — cancelling the request mid-flight (simulated in a routing test via a pre-cancelled token) results in an `OperationCanceledException`/499-equivalent rather than the request completing anyway.
-- [ ] Error condition: a `SubjectErrors.NotFound` result from any handler maps through `.ToProblemResult()` to a `404` response body with the standardized `"Subject not found"` detail, consistently across all 5 not-found-capable routes.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a valid `POST /api/v1/execution/subjects` request, when handled, then the response is `201 Created` with a `Location` header pointing at `/api/v1/execution/subjects/{subject_id}`.
+- [x] Given `PATCH .../state` with no `X-Change-Reason` header, when handled, then the response is `400` and `AdvanceStateAsync` is never invoked (filter short-circuit, not an application-layer check).
+- [x] Given `POST .../consents` (plural alias), when handled, then it behaves identically to `POST .../consent` and does **not** appear in the generated OpenAPI document.
+- [x] Given `GET /{subjectId}` for a blinded-role caller on a randomized-and-unblinded-restricted subject, when handled, then the response body has `treatment_group: null` (delegating to `GetDetailAsync`'s redaction, this ticket only verifies the wiring, not the redaction logic itself).
+- [x] Boundary check: every route's `CancellationToken` parameter is honored — cancelling the request mid-flight (simulated in a routing test via a pre-cancelled token) results in an `OperationCanceledException`/499-equivalent rather than the request completing anyway.
+- [x] Error condition: a `SubjectErrors.NotFound` result from any handler maps through `.ToProblemResult()` to a `404` response body with the standardized `"Subject not found"` detail, consistently across all 5 not-found-capable routes.
 
 #### Verification & Test Requirements
 
@@ -1136,7 +1136,7 @@ Per `02_technical_design.md` §3.3, verbatim route shapes: `POST /api/v1/executi
 
 ---
 
-### [MIG-SUBJ-024] Implement SiteCompliance Minimal API Endpoints & `Program.cs` Wiring
+### [MIG-SUBJ-024] Implement SiteCompliance Minimal API Endpoints & `Program.cs` Wiring `[COMPLETED]`
 
 - **Layer:** Presentation
 - **Complexity:** Medium (4h)
@@ -1164,14 +1164,14 @@ Per `02_technical_design.md` §3.3: `POST /api/v1/execution/webhooks/etmf` → `
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given the service started via `dotnet run`, when `GET /healthz` is called, then it still returns the existing health-check response unchanged (this ticket must not regress the pre-existing placeholder route).
-- [ ] Given an eTMF webhook payload for a new `(study, site, milestone)`, when `POST /api/v1/execution/webhooks/etmf` is called, then the response is `200` with the exact success envelope shape from `01_spec.md` §1.2.
-- [ ] Given a non-compliant site, when `POST /api/v1/execution/sites/{siteId}/activate` is called, then the response is `400` with detail `"Site activation blocked: Site {site_id} is not compliant in eTMF. Missing expected documents."`.
-- [ ] Given any `(study, site, milestone)` combination with no cache row, when `GET .../compliance-status` is called, then the response is `200` (never `404`) with `is_complete: false, missing_documents: []`.
-- [ ] Boundary check: all DI registrations resolve successfully at startup (`app.Services.GetRequiredService<T>()` for every interface registered in this ticket, exercised via a startup smoke test) — no missing-registration runtime failure on first request.
-- [ ] Error condition: the MassTransit outbox/consumer registration does not require a live Redis/broker connection to start the app in a test host (in-memory transport for tests, per §5.2's "no environment-variable gate" decision — verify the app starts cleanly under `WebApplicationFactory` without an external broker).
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given the service started via `dotnet run`, when `GET /healthz` is called, then it still returns the existing health-check response unchanged (this ticket must not regress the pre-existing placeholder route).
+- [x] Given an eTMF webhook payload for a new `(study, site, milestone)`, when `POST /api/v1/execution/webhooks/etmf` is called, then the response is `200` with the exact success envelope shape from `01_spec.md` §1.2.
+- [x] Given a non-compliant site, when `POST /api/v1/execution/sites/{siteId}/activate` is called, then the response is `400` with detail `"Site activation blocked: Site {site_id} is not compliant in eTMF. Missing expected documents."`.
+- [x] Given any `(study, site, milestone)` combination with no cache row, when `GET .../compliance-status` is called, then the response is `200` (never `404`) with `is_complete: false, missing_documents: []`.
+- [x] Boundary check: all DI registrations resolve successfully at startup (`app.Services.GetRequiredService<T>()` for every interface registered in this ticket, exercised via a startup smoke test) — no missing-registration runtime failure on first request.
+- [x] Error condition: the MassTransit outbox/consumer registration does not require a live Redis/broker connection to start the app in a test host (in-memory transport for tests, per §5.2's "no environment-variable gate" decision — verify the app starts cleanly under `WebApplicationFactory` without an external broker).
 
 #### Verification & Test Requirements
 
@@ -1179,7 +1179,7 @@ Per `02_technical_design.md` §3.3: `POST /api/v1/execution/webhooks/etmf` → `
 
 ---
 
-### [MIG-SUBJ-025] Golden-Master Test Harness (Fixture Loader & Assert)
+### [MIG-SUBJ-025] Golden-Master Test Harness (Fixture Loader & Assert) `[COMPLETED]`
 
 - **Layer:** Testing
 - **Complexity:** Medium (4h)
@@ -1208,14 +1208,14 @@ Per `02_technical_design.md` §6.1: `GoldenMasterFixtureLoader.LoadScenarios(inp
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given the `input_valid_nominal.json` / `output_expected_nominal.json` pair (17 `SCN-*` scenario IDs) plus the `input_valid_edge_cases.json` / `output_expected_nominal.json` pair (the same output file, per the design's file-pairing — 11 `EDGE-*` IDs), when `LoadScenarios` is called against each pair, then it returns exactly the scenario count present in each pair with no exceptions.
-- [ ] Given a deliberately-mismatched test fixture pair (one file has a `scenario_id` the other lacks, constructed as a test-only fixture pair for this ticket only — not a change to the real fixtures), when `LoadScenarios` is called, then it throws at load time rather than silently omitting the orphaned scenario.
-- [ ] Given an expected-body field value of `"<opaque>"`, when `BodyMatches` compares an actual response with any non-null value in that field, then it passes; given the actual field is `null`, then it fails.
-- [ ] Given an expected-body field value of `"<unchanged>"`, when `BodyMatches` is given a captured pre-state value and an actual post-state value that differ, then it fails; when they match, it passes.
-- [ ] Boundary check: `"<opaque-non-null>"` fails when the actual value is `null`, distinguishing it from plain `"<opaque>"` which (per the design's naming) would also require non-null — confirm against the actual fixture usage whether `<opaque>` alone ever legitimately allows `null`, and encode whichever behavior the fixtures actually exercise, not an assumed symmetric pair.
-- [ ] Error condition: `DbStateMatches`/`AuditLogContains` given an assertion that doesn't hold (e.g. expected `enrollment_index: 1`, actual `0`) produces a clear, scenario-ID-attributed failure message, not a generic assertion-library stack trace with no scenario context.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given the `input_valid_nominal.json` / `output_expected_nominal.json` pair (17 `SCN-*` scenario IDs) plus the `input_valid_edge_cases.json` / `output_expected_nominal.json` pair (the same output file, per the design's file-pairing — 11 `EDGE-*` IDs), when `LoadScenarios` is called against each pair, then it returns exactly the scenario count present in each pair with no exceptions. **Verified count correction:** the real `input_valid_nominal.json` declares 19 `SCN-*` ids, not 17 (`jq '.scenarios | length'` confirms 19; the 11 `EDGE-*` count is accurate) — `GoldenMasterFixtureLoaderTests` asserts against the real, verified counts (19/11/21). Discovering this also surfaced that `output_expected_nominal.json` is one shared file legitimately serving both input pairs (30 = 19 + 11 results), which is why the fail-fast check below is one-directional (input → output) rather than symmetric — see `GoldenMasterFixtureLoader`'s own remarks.
+- [x] Given a deliberately-mismatched test fixture pair (one file has a `scenario_id` the other lacks, constructed as a test-only fixture pair for this ticket only — not a change to the real fixtures), when `LoadScenarios` is called, then it throws at load time rather than silently omitting the orphaned scenario.
+- [x] Given an expected-body field value of `"<opaque>"`, when `BodyMatches` compares an actual response with any non-null value in that field, then it passes; given the actual field is `null`, then it fails.
+- [x] Given an expected-body field value of `"<unchanged>"`, when `BodyMatches` is given a captured pre-state value and an actual post-state value that differ, then it fails; when they match, it passes.
+- [x] Boundary check: `"<opaque-non-null>"` fails when the actual value is `null`, distinguishing it from plain `"<opaque>"` which (per the design's naming) would also require non-null — confirm against the actual fixture usage whether `<opaque>` alone ever legitimately allows `null`, and encode whichever behavior the fixtures actually exercise, not an assumed symmetric pair. **Finding:** across every real usage in `fixtures/output_expected_*.json`, plain `<opaque>` is used exclusively on fields (overwhelmingly `id`) that can never legitimately be null in a successful response — no real fixture exercises `<opaque>` tolerating null. `GoldenMasterAssert` therefore gives `<opaque>` and `<opaque-non-null>` identical non-null-enforcing behavior, matching both this AC's own explicit mandate for plain `<opaque>` and the fixtures' actual (non-symmetric-by-assumption, but not actually asymmetric in practice) usage.
+- [x] Error condition: `DbStateMatches`/`AuditLogContains` given an assertion that doesn't hold (e.g. expected `enrollment_index: 1`, actual `0`) produces a clear, scenario-ID-attributed failure message, not a generic assertion-library stack trace with no scenario context.
 
 #### Verification & Test Requirements
 
@@ -1263,7 +1263,7 @@ This ticket **is** the verification requirement — `dotnet test --filter "Fully
 
 ---
 
-### [MIG-SUBJ-027] Targeted Unit Coverage Beyond Fixtures
+### [MIG-SUBJ-027] Targeted Unit Coverage Beyond Fixtures `[COMPLETED]`
 
 - **Layer:** Testing
 - **Complexity:** Large (6h)
@@ -1300,12 +1300,12 @@ Audit checklist (per `02_technical_design.md` §6.2, cross-referenced against th
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given a code-coverage report run against the §6.2 checklist's 6 items, when reviewed, then all 6 are confirmed covered (by this ticket's new tests, or by citation of the originating ticket's existing tests — document which, in the PR description, not silently).
-- [ ] Given two sequential `SaveChangesAsync` calls persisting the same `ClinicalSubject` instance through `ExecutionDbContext` (not a generic test double), when their audit entries are inspected, then the second's `PredecessorHash` chains to the first's `BlockHash`.
-- [ ] Boundary check: the same Merkle-chain check performed independently for `SubjectConsent` and `SiteComplianceCache` — not just `ClinicalSubject` — since each is a distinct `EntityName` chain per MIG-SUBJ-007's per-entity-type chaining design.
-- [ ] Error condition: N/A — this is an audit/gap-fill ticket, not new failure-path logic.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given a code-coverage report run against the §6.2 checklist's 6 items, when reviewed, then all 6 are confirmed covered (by this ticket's new tests, or by citation of the originating ticket's existing tests — document which, in the PR description, not silently).
+- [x] Given two sequential `SaveChangesAsync` calls persisting the same `ClinicalSubject` instance through `ExecutionDbContext` (not a generic test double), when their audit entries are inspected, then the second's `PredecessorHash` chains to the first's `BlockHash`.
+- [x] Boundary check: the same Merkle-chain check performed independently for `SubjectConsent` and `SiteComplianceCache` — not just `ClinicalSubject` — since each is a distinct `EntityName` chain per MIG-SUBJ-007's per-entity-type chaining design.
+- [x] Error condition: N/A — this is an audit/gap-fill ticket, not new failure-path logic.
 
 #### Verification & Test Requirements
 

@@ -7,6 +7,10 @@
   <ItemGroup>
     <!-- ASP.NET Core & OpenTelemetry -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+    <!-- MIG-SUBJ-023: WebApplicationFactory(Program) for SubjectEndpointsRoutingTests, the first routing
+         test in this repo to need it; pinned to the same 10.0.11 shared-framework servicing release as the
+         other Microsoft.AspNetCore.* packages above. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
@@ -20,6 +24,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
     <PackageVersion Include="Neo4j.Driver" Version="5.28.1" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->

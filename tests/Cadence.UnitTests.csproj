@@ -15,6 +15,12 @@
     <RootNamespace>Cadence.UnitTests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- MIG-SUBJ-023: Microsoft.AspNetCore.OpenApi's XML-comment source generator flows transitively into
+         this project via the Cadence.Apps.Execution project reference (that package is not PrivateAssets
+         there), but the InterceptorsNamespaces opt-in its own package props would normally inject applies
+         only to a project referencing it directly, so this project needs the same opt-in explicitly,
+         exactly as the compiler's own CS9137 error names it. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,8 +37,13 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <!-- MIG-SUBJ-023: WebApplicationFactory<Program>/TestServer for SubjectEndpointsRoutingTests. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- MIG-SUBJ-021: MassTransit.Testing.ITestHarness for EConsentCompletedConsumerTests. -->
+    <PackageReference Include="MassTransit" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
