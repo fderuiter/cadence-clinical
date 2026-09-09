@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-28T20:31:58.723Z
+// Generated on: 2026-09-09T02:33:00.771Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -87,6 +87,15 @@ export interface ArmReorderItem {
 
 export interface ArmReorderRequest {
   arms: ArmReorderItem[];
+}
+
+export interface AstEditCheck {
+  id: string;
+  name: string;
+  ast_expression: Record<string, any>;
+  severity?: string;
+  query_message: string;
+  target_variable_ids?: string[];
 }
 
 export interface AttritionStep {
@@ -191,6 +200,18 @@ export interface CascadedFormTemplate {
   fields?: Record<string, any>[];
   auto_generated?: boolean;
 }
+
+export interface CdiscMetadata {
+  domain?: string;
+  variable_name?: string;
+  oid: string;
+  codelist_oid?: string | null;
+  ucum_unit?: string | null;
+  core_designation?: string;
+  sdtm_target?: string | null;
+}
+
+export type ClinicalDataType = "string" | "integer" | "float" | "date" | "datetime" | "time" | "boolean" | "codelist" | "text" | "repeat_log";
 
 export type CodeValidationState = "VALID" | "INVALID" | "DEGRADED";
 
@@ -337,6 +358,16 @@ export interface ConceptValidationReport {
   references?: ConceptReference[];
 }
 
+export interface ConstraintDefinition {
+  required?: boolean;
+  min_value?: number | null;
+  max_value?: number | null;
+  min_length?: number | null;
+  max_length?: number | null;
+  regex_pattern?: string | null;
+  allowed_values?: string[] | null;
+}
+
 export interface CreateArmRequest {
   id: string;
   version?: string;
@@ -446,6 +477,15 @@ export interface CriteriaBreakdownSummary {
   pass_rate_percentage?: number;
 }
 
+export interface CrossVisitDependency {
+  id: string;
+  trigger_visit_id: string;
+  trigger_variable_id: string;
+  trigger_condition: Record<string, any>;
+  target_visit_ids_to_spawn?: string[];
+  target_visit_ids_to_suppress?: string[];
+}
+
 export interface DAGJobStatusResponse {
   job_id: string;
   study_id?: string | null;
@@ -494,6 +534,27 @@ export interface DataElementPayload {
   data_type: string;
   allowable_units: string[];
   default_unit?: string | null;
+}
+
+export interface DataSchema {
+  schema_version?: string;
+  form_id: string;
+  name: string;
+  cdisc_form_oid: string;
+  variables?: VariableDefinition[];
+}
+
+export interface DerivedMathRule {
+  id: string;
+  target_variable_id: string;
+  formula_expression: string;
+  input_variable_ids?: string[];
+  unit_conversion?: Record<string, any>;
+}
+
+export interface DiffRequest {
+  base_form: TripartiteFormDefinition;
+  amended_form: TripartiteFormDefinition;
 }
 
 export interface DifferenceResult {
@@ -650,6 +711,17 @@ export interface FieldReference_Output {
   variable: string;
 }
 
+export interface FieldWidgetConfig {
+  variable_id: string;
+  widget?: WidgetType;
+  grid_column_span?: number;
+  placeholder?: string | null;
+  help_text?: string | null;
+  css_class?: string | null;
+  readonly?: boolean;
+  hidden?: boolean;
+}
+
 export interface FormItem {
   item_id: string;
   name: string;
@@ -701,6 +773,13 @@ export interface GenerateStartupTemplateResponse {
   study_id: string;
   generated_rules: PrerequisiteCriterionTemplate[];
   summary_by_country: Record<string, any>;
+}
+
+export interface GridSection {
+  id: string;
+  title: string;
+  columns?: number;
+  widgets?: FieldWidgetConfig[];
 }
 
 export interface HTTPValidationError {
@@ -789,15 +868,25 @@ export interface LinkVisitProcedureRequest {
   procedure_id: string;
 }
 
+export interface LogicSchema {
+  schema_version?: string;
+  form_id: string;
+  edit_checks?: AstEditCheck[];
+  derived_rules?: DerivedMathRule[];
+  cross_visit_dependencies?: CrossVisitDependency[];
+}
+
 export type LogicalOperator = "and" | "or" | "not";
 
-export interface MigrationDirective {
+export interface MigrationDirective_Input {
   directive_id: string;
   action: string;
   description: string;
   affected_cohort?: string;
   target_version: string;
 }
+
+export type MigrationMode = "prospective" | "retrospective";
 
 export interface NarrativeDelta {
   section_id: string;
@@ -843,6 +932,14 @@ export interface OperationalTicketBlueprint {
   context_payload?: Record<string, any>;
 }
 
+export interface PatientMigrationMatrix {
+  protocol_id: string;
+  from_version_tag: string;
+  to_version_tag: string;
+  directives?: packages__ddf__tripartite__MigrationDirective[];
+  effective_date?: string;
+}
+
 export interface PrerequisiteCriterionTemplate {
   country_code: string;
   facet: string;
@@ -885,7 +982,7 @@ export interface ProtocolAmendRequest {
   type?: string | null;
 }
 
-export interface ProtocolImpactAssessment {
+export interface ProtocolImpactAssessment_Input {
   assessment_id: string;
   study_id: string;
   base_version: string;
@@ -904,7 +1001,30 @@ export interface ProtocolImpactAssessment {
   regulatory_compliance: RegulatoryComplianceImpact;
   reconsent_gating_plan: ReConsentGatingPlan;
   operational_tickets?: OperationalTicketBlueprint[];
-  migration_directives?: MigrationDirective[];
+  migration_directives?: MigrationDirective_Input[];
+  created_at: string;
+}
+
+export interface ProtocolImpactAssessment_Output {
+  assessment_id: string;
+  study_id: string;
+  base_version: string;
+  amended_version: string;
+  amendment_type?: string;
+  is_substantial?: boolean;
+  requires_reconsent?: boolean;
+  patient_burden_delta?: number;
+  estimated_cost_usd?: number;
+  executive_summary: string;
+  graph_deltas?: EntityDiff[];
+  soa_deltas?: EntityDiff[];
+  narrative_deltas?: NarrativeDelta[];
+  data_capture_ecrf: DataCaptureEcrfImpact;
+  subject_management_rtsm: SubjectManagementRtsmImpact;
+  regulatory_compliance: RegulatoryComplianceImpact;
+  reconsent_gating_plan: ReConsentGatingPlan;
+  operational_tickets?: OperationalTicketBlueprint[];
+  migration_directives?: apps__designer__domain__cdisc__branch_models__MigrationDirective[];
   created_at: string;
 }
 
@@ -928,6 +1048,12 @@ export interface ProtocolRAGContextChunk {
   page_number: number;
   chunk_text: string;
   is_approved?: boolean;
+}
+
+export interface PublicationRequest {
+  form_definition: TripartiteFormDefinition;
+  reason_for_change: string;
+  step_up_signature_token: string;
 }
 
 export interface PublishStudyVersionRequest {
@@ -1059,7 +1185,7 @@ export interface SemanticDiffResponse {
   eligibility_diffs?: EntityDiff[];
   ecrf_form_diffs?: EntityDiff[];
   impact_summary: AmendmentImpactSummary;
-  migration_directives?: MigrationDirective[];
+  migration_directives?: apps__designer__domain__cdisc__branch_models__MigrationDirective[];
 }
 
 export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
@@ -1264,6 +1390,13 @@ export interface SynthesizedECRFForm {
   citation_marker?: string | null;
 }
 
+export interface SyntheticPayload {
+  payload_id: string;
+  test_scenario: string;
+  data: Record<string, any>;
+  expected_rule_outcomes: Record<string, any>;
+}
+
 export interface SyntheticSimulationSummary {
   simulated_subject_count: number;
   complete_data_fit_rate: number;
@@ -1292,7 +1425,7 @@ export interface TerminologySearchResponse {
 
 export interface TicketDispatchRequest {
   study_id: string;
-  impact_assessment?: ProtocolImpactAssessment | null;
+  impact_assessment?: ProtocolImpactAssessment_Input | null;
   base_version_tag?: string | null;
   amended_version_tag?: string | null;
   base_payload?: Record<string, any> | null;
@@ -1326,6 +1459,19 @@ export interface TransitionItemRequest {
   value?: string | null;
 }
 
+export interface TripartiteFormDefinition {
+  form_id: string;
+  protocol_id: string;
+  version_index?: number;
+  version_tag?: string;
+  data_schema: DataSchema;
+  ui_schema: UiSchema;
+  logic_schema: LogicSchema;
+  created_at?: string;
+  created_by?: string;
+  reason_for_change?: string;
+}
+
 export interface USDMProtocolExtractionResponse {
   study_title: string;
   protocol_id: string;
@@ -1338,6 +1484,33 @@ export interface USDMProtocolExtractionResponse {
   criteria?: ExtractedCriterion[];
   confidence_score: number;
   faithfulness_metadata?: FaithfulnessVerificationMetadata | null;
+}
+
+export interface UatEvidenceReport {
+  report_id: string;
+  form_id: string;
+  protocol_id: string;
+  executed_at?: string;
+  total_scenarios_evaluated: number;
+  scenarios_passed: number;
+  scenarios_failed: number;
+  rule_coverage_percentage: number;
+  execution_duration_ms: number;
+  gxp_compliance_verified?: boolean;
+  sha256_evidence_digest: string;
+}
+
+export interface UatExecutionRequest {
+  form_definition: TripartiteFormDefinition;
+  payloads?: SyntheticPayload[];
+}
+
+export interface UiSchema {
+  schema_version?: string;
+  form_id: string;
+  sections?: GridSection[];
+  default_viewport?: ViewportMode;
+  theme_tokens?: Record<string, any>;
 }
 
 export interface UpdateArmRequest {
@@ -1411,11 +1584,24 @@ export interface ValidationError {
   ctx?: Record<string, any>;
 }
 
+export interface VariableDefinition {
+  id: string;
+  name: string;
+  data_type?: ClinicalDataType;
+  cdisc: CdiscMetadata;
+  constraints?: ConstraintDefinition;
+  phi_pii_masked?: boolean;
+  sdv_tier?: string;
+  part11_reason_required?: boolean;
+}
+
 export interface VersionDiffResponse {
   added_nodes: DifferenceResult[];
   modified_nodes: DifferenceResult[];
   deleted_nodes: DifferenceResult[];
 }
+
+export type ViewportMode = "desktop_edc" | "mobile_epro" | "tablet_esource";
 
 export interface VisitAttributes {
   visit_type: string;
@@ -1466,6 +1652,16 @@ export interface VisitToArmAssignmentRequest {
 export interface VisitToEpochAssignmentRequest {
   epoch_id: string;
   visit_ids: string[];
+}
+
+export type WidgetType = "text_input" | "textarea" | "number_input" | "radio_group" | "select_dropdown" | "multi_select" | "date_picker" | "time_picker" | "slider_vas" | "body_map_coordinate" | "repeating_log_grid" | "medical_autocode" | "sensor_stream_card";
+
+export interface apps__designer__domain__cdisc__branch_models__MigrationDirective {
+  directive_id: string;
+  action: string;
+  description: string;
+  affected_cohort?: string;
+  target_version: string;
 }
 
 export interface apps__designer__domain__eligibility__models__ExpressionNode_Input {
@@ -1522,5 +1718,12 @@ export interface packages__ddf__rules__ast__FieldReference {
   form_id?: string | null;
   visit_id?: string | null;
   visit_relative?: string | null;
+}
+
+export interface packages__ddf__tripartite__MigrationDirective {
+  variable_id: string;
+  action: string;
+  migration_mode?: MigrationMode;
+  backfill_query_message?: string | null;
 }
 

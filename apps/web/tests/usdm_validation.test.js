@@ -55,7 +55,7 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     });
 
     expect(invalidArm.success).toBe(false);
-    expect(invalidArm.error.errors).toBeDefined();
+    expect(invalidArm.error.issues || invalidArm.error.errors).toBeDefined();
 
     // Invalid epoch properties: sequenceNumber is string instead of int
     const invalidEpoch = store.validateModel("epochs", {
