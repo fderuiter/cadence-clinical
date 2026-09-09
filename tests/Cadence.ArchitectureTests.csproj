@@ -42,6 +42,11 @@
          DI-resolved ExecutionDbContext, not just an ad-hoc one), so it transitively hits the same ambiguity
          as ExecutionApiFactory.cs itself. Left compiled into Cadence.UnitTests.csproj only. -->
     <Compile Remove="Execution\GoldenMaster\GoldenMasterFixtureLoaderTests.cs" />
+    <!-- MIG-SUBJ-026: same ambiguous-Program-reference collision as the three exclusions above.
+         SubjectGoldenMasterTests.cs uses ExecutionApiFactory (WebApplicationFactory<Program>) directly to
+         replay the golden-master fixtures, hitting the identical Cadence.Apps.Execution-vs-
+         Cadence.Apps.Designer Program ambiguity. Left compiled into Cadence.UnitTests.csproj only. -->
+    <Compile Remove="Execution\GoldenMaster\SubjectGoldenMasterTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

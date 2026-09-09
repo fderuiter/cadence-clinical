@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cadence.Apps.Execution.Domain.Subjects;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
@@ -59,13 +60,36 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
         // `Dictionary<string, object?>` value shape has no concrete CLR contract for EF Core's typed
         // `.ToJson()` owned-entity mapping to project onto, so this instead maps the private backing field
         // directly through a value converter (round-tripping via System.Text.Json).
-        builder.Property<Dictionary<string, object?>>("_stratFactors")
+        //
+        // MIG-SUBJ-026 fix: an explicit ValueComparer is required here and was missing. Without one, EF Core
+        // falls back to its default comparer for a mutable reference type with no overridden Equals --
+        // reference equality -- and ClinicalSubject.UpdateStratFactors mutates the SAME `_stratFactors`
+        // dictionary instance in place (Clear() + refill) rather than assigning a new one, so the change
+        // tracker's "original vs. current" snapshot comparison always saw the identical reference and
+        // concluded nothing had changed, silently dropping the column from the generated UPDATE. Confirmed
+        // directly: SCN-004-A's golden-master replay (seed strat_factors={"site":"A"}, PUT
+        // .../demographics with {"site":"B"}, then re-query) found the stored value still "A" after a
+        // strat-factors-only update that SubjectApplicationService.UpdateDemographicsAsync reported as
+        // successful (200, audited) -- the write silently no-op'd at the EF Core layer alone. This gap was
+        // never exercised by ClinicalSubjectConfigurationTests' own round-trip tests (create-then-reload
+        // only, never create-then-separately-mutate-then-save-then-reload) or caught under EF Core's InMemory
+        // provider (whose own change-tracking implementation does not depend on this comparer the same way).
+        // The fix compares/hashes/snapshots via the exact same JSON round-trip already used for the
+        // conversion itself, so behavior stays fully consistent with how the value is actually persisted.
+        var stratFactorsComparer = new ValueComparer<Dictionary<string, object?>>(
+            (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
+            v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),
+            v => JsonSerializer.Deserialize<Dictionary<string, object?>>(
+                JsonSerializer.Serialize(v, JsonSerializerOptions.Default), JsonSerializerOptions.Default) ?? new());
+
+        PropertyBuilder<Dictionary<string, object?>> stratFactorsProperty = builder.Property<Dictionary<string, object?>>("_stratFactors")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
                 v => JsonSerializer.Deserialize<Dictionary<string, object?>>(v, JsonSerializerOptions.Default) ?? new())
             .HasColumnName("strat_factors")
             .HasColumnType("jsonb");
+        stratFactorsProperty.Metadata.SetValueComparer(stratFactorsComparer);
 
         // Shadow EF concurrency token — distinct from Rule 5's enrollment-index lock above and from
         // SiteComplianceCache.Version (MIG-SUBJ-012), which is domain data, not an EF concurrency token.

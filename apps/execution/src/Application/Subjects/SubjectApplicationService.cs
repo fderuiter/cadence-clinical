@@ -91,8 +91,11 @@ public sealed class SubjectApplicationService(
 
         int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, ct).ConfigureAwait(false);
 
+        // MIG-SUBJ-026 fix: request.ArmId was previously dropped entirely -- see ClinicalSubject.Create's own
+        // remarks for the full finding (confirmed against SCN-001-A's golden-master fixture) and why this is
+        // the enrollment-time arm_id, not an encrypted/blinded randomization output.
         var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-            encryptedDemographics, stratFactors: null);
+            encryptedDemographics, stratFactors: null, request.ArmId);
         // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
         // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
         // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
@@ -395,8 +398,21 @@ public sealed class SubjectApplicationService(
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct).ConfigureAwait(false);
             if (gate is not { IsComplete: true })
             {
+                // MIG-SUBJ-026 fix: this audit write was never committed. IAuditLogWriter.WriteAsync only
+                // stages the entry on the shared DbContext's ChangeTracker (see its own doc comment: "commits
+                // inside the same SaveChangesAsync call") -- without an explicit SaveChangesAsync before
+                // returning, the pending entry was silently discarded the moment this scope's DbContext was
+                // disposed, so no BLOCKED_ENROLLMENT row was ever actually persisted. Confirmed independently
+                // two ways: (1) MIG-SUBJ-026's golden-master replay of INV-014/INV-015 (both exercise this
+                // exact blocked-enrollment branch, one via a direct service call, one via a real HTTP PATCH)
+                // found zero matching audit rows in either case; (2) SiteComplianceApplicationService
+                // .ActivateSiteAsync's own analogous blocked-activation branch (MIG-SUBJ-020) already calls
+                // `compliance.SaveChangesAsync(ct)` right after its own audit write, matching this method's
+                // own doc comment's claim that the blocked path is audited "before returning the failure
+                // result" -- this one call site just never actually added the save that claim depends on.
                 await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "BLOCKED_ENROLLMENT",
                     auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+                await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
                 return SubjectErrors.BlockedEnrollment(subject.SiteCode);
             }
         }
