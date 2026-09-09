@@ -34,7 +34,7 @@ public sealed class SubjectRepository(ExecutionDbContext context, ResiliencePipe
     public async Task<int> EnrollNextIndexAsync(StudyCode studyCode, CancellationToken cancellationToken)
     {
         var transaction = await Context.Database
-            .BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
             .ConfigureAwait(false);
 
         try

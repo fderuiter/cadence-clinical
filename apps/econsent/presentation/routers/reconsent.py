@@ -256,6 +256,7 @@ async def trigger_majority_reconsent(
         adult_version_index=payload.adult_version_index,
         subjects=raw_subjects,
         lead_time_days=payload.lead_time_days,
+        as_of_date=payload.as_of_date,
         created_by=user_id,
         reason_for_change=change_reason,
     )

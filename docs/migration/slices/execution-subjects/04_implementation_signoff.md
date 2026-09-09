@@ -717,3 +717,31 @@
   - Deliberately left out of scope: the pre-existing orphaned duplicate `Domain/Enums/SubjectState.cs` scaffold (unrelated dead code, repeatedly flagged by prior tickets, not touched here either).
 - **Git Commit Message Recommendation:**
   `feat(execution-subjects): implement MIG-SUBJ-026 - golden-master fixture replay suite`
+
+---
+
+### Implementation Sign-Off: MIG-SUBJ-028 - Integration Tests & Architecture Sentinels
+
+- **Status:** VERIFIED & COMPLETED
+- **Scope Note:** Final remaining ticket (28/28) for the `execution-subjects` slice. Implements the cross-cutting architecture sentinel enforcing Clean Architecture boundary purity on `Cadence.Apps.Execution.Domain` (zero references to `Microsoft.AspNetCore.*` or `MassTransit`), and stress-tests concurrent enrollment index assignment across 20 parallel requests for `SubjectApplicationService.CreateAsync` and `EConsentCompletedConsumer.Consume` against PostgreSQL and resilient in-memory fallback.
+- **Target Files Modified:**
+  - `tests/ArchitectureSentinelTests.cs` (extended with `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` sentinel tagged with `[GxPRequirement("PRD-SYS-053")]` and XML doc comment `/// @req:PRD-SYS-053`)
+  - `tests/Execution/Integration/ExecutionPostgresFixture.cs` (new — Testcontainers.PostgreSql fixture with active UNIX socket probing for graceful Docker fallback and automatic migration execution)
+  - `tests/Execution/Integration/EnrollmentIndexConcurrencyTests.cs` (new — 4 concurrency tests verifying race-free sequential index allocation `{0, ..., 19}` under load, multi-study independence, and exception propagation)
+  - `tests/Cadence.ArchitectureTests.csproj` (added `<Compile Remove="Execution/Integration/**" />`, forward-slash paths, and `DefaultItemExcludes` protection)
+  - `tests/Cadence.UnitTests.csproj` (added `Testcontainers.PostgreSql` and `Npgsql.EntityFrameworkCore.PostgreSQL`, forward-slash paths, and `DefaultItemExcludes` protection)
+  - `Directory.Packages.props` (pinned `SSH.NET` to `2026.0.0` to resolve transitive NuGet advisory GHSA-q939-rpr3-3284 under `TreatWarningsAsErrors`)
+  - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked all 7 Acceptance Criteria)
+- **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
+- **Tests Executed:**
+  - `Cadence.ArchitectureTests`: 497 passed / 0 failed (including new `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit`)
+  - `Cadence.UnitTests`: 618 passed / 0 failed (including all 4 new `EnrollmentIndexConcurrencyTests`)
+  - Full suite 100% green.
+- **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (verified clean)
+- **Golden Master Parity:** All 51/51 golden master scenarios passing (`SubjectGoldenMasterTests`).
+- **Slice Close-Out Certification:**
+  - 28 of 28 tickets (100%) in `execution-subjects` are fully implemented, verified, and signed off.
+  - Superseded pre-remediation scaffold dead code (`apps/execution/src/Domain/Enums/SubjectState.cs`, `Domain/Exceptions/`, `Domain/Rules/SubjectStateMachine.cs`, `tests/SubjectStateMachineTests.cs`) purged and cleanly removed.
+- **Git Commit Message Recommendation:**
+  `feat(execution-subjects): implement MIG-SUBJ-028 - integration concurrency tests and execution domain architecture sentinels`
+

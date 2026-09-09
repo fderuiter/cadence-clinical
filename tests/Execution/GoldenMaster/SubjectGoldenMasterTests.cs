@@ -11,6 +11,20 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Domain.Compliance;
+using Cadence.Apps.Execution.Domain.Ports;
+using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Core.Domain;
+using Cadence.Database;
+using Cadence.Testing;
+using Cadence.Testing.GoldenMaster;
+using Cadence.UnitTests.Execution;
+
 using FluentAssertions;
 
 using MassTransit;
@@ -26,20 +40,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using Xunit;
-
-using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Application.Subjects;
-using Cadence.Apps.Execution.Domain.Compliance;
-using Cadence.Apps.Execution.Domain.Ports;
-using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Apps.Execution.Infrastructure.Consumers;
-using Cadence.Apps.Execution.Infrastructure.Persistence;
-using Cadence.Apps.Execution.Infrastructure.Security;
-using Cadence.Core.Domain;
-using Cadence.Database;
-using Cadence.Testing;
-using Cadence.Testing.GoldenMaster;
-using Cadence.UnitTests.Execution;
 
 namespace Cadence.UnitTests.Execution.GoldenMaster;
 

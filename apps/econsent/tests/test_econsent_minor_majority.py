@@ -298,6 +298,7 @@ async def test_api_minor_milestone_evaluate_and_trigger_endpoints() -> None:
         "template_id": "tpl-peds-01",
         "adult_version_index": 2,
         "lead_time_days": 0,
+        "as_of_date": eval_payload["as_of_date"],
         "subjects": eval_payload["subjects"],
         "reason_for_change": "Age of majority reached milestone trigger",
     }

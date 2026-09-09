@@ -5,8 +5,9 @@
        must be set before the Sdk.props import, so the implicit Sdk="..." shorthand can't be used
        here (see https://go.microsoft.com/fwlink/?linkid=869650). -->
   <PropertyGroup>
-    <BaseIntermediateOutputPath>obj\UnitTests\</BaseIntermediateOutputPath>
-    <BaseOutputPath>bin\UnitTests\</BaseOutputPath>
+    <BaseIntermediateOutputPath>obj/UnitTests/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/UnitTests/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
@@ -44,6 +45,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <!-- MIG-SUBJ-021: MassTransit.Testing.ITestHarness for EConsentCompletedConsumerTests. -->
     <PackageReference Include="MassTransit" />
+    <!-- MIG-SUBJ-028: Testcontainers & Npgsql for integration concurrency testing against real PostgreSQL -->
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

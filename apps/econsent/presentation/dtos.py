@@ -4,7 +4,7 @@ Includes 21 CFR Part 11 multisig schemas, granular research options,
 template amendment diff models, re-consent tracking, withdrawal records, and CDISC ODM exports.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -569,6 +569,10 @@ class TriggerMajorityReconsentRequest(BaseModel):
     subjects: list[SubjectMilestoneInput]
     lead_time_days: int = Field(
         0, description="Lead time days (0 = only subjects who reached legal majority)"
+    )
+    as_of_date: date | None = Field(
+        None,
+        description="Reference date for majority evaluation (defaults to current date)",
     )
     reason_for_change: str = Field(
         "Participant reached legal age of majority - Adult re-consent required",

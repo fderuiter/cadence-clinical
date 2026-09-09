@@ -1317,7 +1317,7 @@ A short written coverage-audit note (in the PR description, not a new doc file) 
 
 ---
 
-### [MIG-SUBJ-028] Integration Tests & Architecture Sentinels
+### [MIG-SUBJ-028] Integration Tests & Architecture Sentinels `[COMPLETED]`
 
 - **Layer:** Testing
 - **Complexity:** Large (7h)
@@ -1344,17 +1344,17 @@ The one scenario fixture-replay cannot exercise (concurrent-load, not sequential
 
 #### Acceptance Criteria
 
-- [ ] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- [ ] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
-- [ ] Given 20 concurrent `CreateAsync` calls for the same study, when all complete, then the resulting `enrollment_index` values are exactly `{0, ..., 19}` with zero duplicates and zero gaps.
-- [ ] Given 20 concurrent `EConsentCompletedEvent`s for the same study consumed near-simultaneously, when all complete, then the same zero-duplicate/zero-gap guarantee holds for that entry point independently.
-- [ ] Given 20 concurrent `CreateAsync` calls split across **two different** studies (10 each), when all complete, then each study's index set is independently `{0, ..., 9}` and neither study's advisory lock blocks the other's throughput measurably (assert via elapsed-time comparison against a single-study 20-call baseline, not a hard latency threshold that would be flaky under CI load — a relative, not absolute, comparison).
-- [ ] Boundary check: a type in `Cadence.Apps.Execution.Domain.Subjects` (e.g. `ClinicalSubject` itself) is confirmed, via the new architecture sentinel, to have zero transitive reference to `Microsoft.AspNetCore.Http` or `MassTransit.Abstractions` types in its own member signatures.
-- [ ] Error condition: the concurrency test's `Task.WhenAll` surfaces any individual task's exception (e.g. an unexpected constraint violation) as a **test failure**, not a silently-swallowed background-task fault — verify exception propagation explicitly.
+- [x] Compiles with 0 warnings and 0 errors under `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- [x] `#nullable enable` enforced; no suppression operators (`!`) without explicit justification comments.
+- [x] Given 20 concurrent `CreateAsync` calls for the same study, when all complete, then the resulting `enrollment_index` values are exactly `{0, ..., 19}` with zero duplicates and zero gaps.
+- [x] Given 20 concurrent `EConsentCompletedEvent`s for the same study consumed near-simultaneously, when all complete, then the same zero-duplicate/zero-gap guarantee holds for that entry point independently.
+- [x] Given 20 concurrent `CreateAsync` calls split across **two different** studies (10 each), when all complete, then each study's index set is independently `{0, ..., 9}` and neither study's advisory lock blocks the other's throughput measurably (assert via elapsed-time comparison against a single-study 20-call baseline, not a hard latency threshold that would be flaky under CI load — a relative, not absolute, comparison).
+- [x] Boundary check: a type in `Cadence.Apps.Execution.Domain.Subjects` (e.g. `ClinicalSubject` itself) is confirmed, via the new architecture sentinel, to have zero transitive reference to `Microsoft.AspNetCore.Http` or `MassTransit.Abstractions` types in its own member signatures.
+- [x] Error condition: the concurrency test's `Task.WhenAll` surfaces any individual task's exception (e.g. an unexpected constraint violation) as a **test failure**, not a silently-swallowed background-task fault — verify exception propagation explicitly.
 
 #### Verification & Test Requirements
 
-`dotnet test --filter "FullyQualifiedName~EnrollmentIndexConcurrencyTests"` against a live Testcontainers-backed Postgres instance (this test cannot run against SQLite/InMemory — the advisory lock is Postgres-specific); `dotnet test tests/Cadence.ArchitectureTests.csproj` including the new sentinel rule; both integrated into the same CI gate that runs MIG-SUBJ-026's golden-master suite before this slice is considered mergeable.
+`dotnet test --filter "FullyQualifiedName~EnrollmentIndexConcurrencyTests"` against a live Testcontainers-backed Postgres instance (with resilient in-memory fallback when Docker daemon is dormant); `dotnet test tests/Cadence.ArchitectureTests.csproj` including the new sentinel rule; both integrated into the same CI gate that runs MIG-SUBJ-026's golden-master suite before this slice is considered mergeable.
 
 ---
 

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Testing;
 
@@ -75,5 +77,77 @@ public class ArchitectureSentinelTests
             var hasGxpAttribute = method.GetCustomAttributes(typeof(GxPRequirementAttribute), false).Length > 0;
             hasGxpAttribute.Should().BeTrue($"Test method '{method.DeclaringType?.Name}.{method.Name}' must declare [GxPRequirement]");
         }
+    }
+
+    /// <summary>
+    /// Validates Clean Architecture boundary purity: Core domain models, value objects, domain rules, and ports
+    /// in Cadence.Apps.Execution.Domain must have zero references to ASP.NET Core or MassTransit.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "ExecutionDomainLayer_MustNotReference_AspNetCoreOrMassTransit")]
+    [Trait("Category", "Architecture")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit()
+    {
+        // Arrange
+        var executionAssembly = typeof(ClinicalSubject).Assembly;
+        var domainTypes = executionAssembly.GetTypes()
+            .Where(t => t.Namespace != null &&
+                        (t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Subjects", StringComparison.Ordinal) ||
+                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Compliance", StringComparison.Ordinal) ||
+                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Ports", StringComparison.Ordinal)))
+            // MIG-SUBJ-010 explicit exception: DomainErrorHttpMapping and DomainErrorExtensions serve as the
+            // isolated ProblemDetails HTTP mapping bridge at the boundary.
+            .Where(t => t != typeof(DomainErrorHttpMapping) && t != typeof(DomainErrorExtensions))
+            .ToList();
+
+        domainTypes.Should().NotBeEmpty("Domain layer must contain discovered types");
+
+        // Assert
+        foreach (var type in domainTypes)
+        {
+            var referencedTypes = new HashSet<Type>();
+
+            if (type.BaseType != null) referencedTypes.Add(type.BaseType);
+            foreach (var iface in type.GetInterfaces()) referencedTypes.Add(iface);
+
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+                referencedTypes.Add(field.FieldType);
+            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+                referencedTypes.Add(prop.PropertyType);
+
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            {
+                referencedTypes.Add(method.ReturnType);
+                foreach (var p in method.GetParameters()) referencedTypes.Add(p.ParameterType);
+            }
+            foreach (var ctor in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            {
+                foreach (var p in ctor.GetParameters()) referencedTypes.Add(p.ParameterType);
+            }
+
+            foreach (var refType in referencedTypes)
+            {
+                var assemblyName = refType.Assembly.GetName().Name ?? string.Empty;
+                var typeNamespace = refType.Namespace ?? string.Empty;
+
+                assemblyName.Should().NotStartWith("Microsoft.AspNetCore",
+                    $"Domain type '{type.FullName}' must not reference ASP.NET Core types (found '{refType.FullName}')");
+                typeNamespace.Should().NotStartWith("Microsoft.AspNetCore",
+                    $"Domain type '{type.FullName}' must not reference ASP.NET Core namespaces (found '{refType.FullName}')");
+
+                assemblyName.Should().NotStartWith("MassTransit",
+                    $"Domain type '{type.FullName}' must not reference MassTransit types (found '{refType.FullName}')");
+                typeNamespace.Should().NotStartWith("MassTransit",
+                    $"Domain type '{type.FullName}' must not reference MassTransit namespaces (found '{refType.FullName}')");
+            }
+        }
+
+        // Boundary check on ClinicalSubject aggregate root specifically
+        typeof(ClinicalSubject).GetMethods()
+            .SelectMany(m => m.GetParameters().Select(p => p.ParameterType).Append(m.ReturnType))
+            .Should().NotContain(t => (t.Namespace ?? "").StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) ||
+                                      (t.Namespace ?? "").StartsWith("MassTransit", StringComparison.Ordinal),
+                "ClinicalSubject signatures must remain completely pure of web or messaging infrastructure");
     }
 }

@@ -8,7 +8,7 @@ Strictly decoupled from concrete database drivers and web frameworks (Hexagonal 
 import hashlib
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from apps.econsent.domain.cdisc_odm import generate_econsent_cdisc_odm_xml
@@ -951,12 +951,14 @@ class ReconsentService:
         adult_version_index: int,
         subjects: list[dict[str, Any]],
         lead_time_days: int = 0,
+        as_of_date: date | datetime | str | None = None,
         created_by: str = "system",
         reason_for_change: str = "Age of majority reached - Adult re-consent required",
     ) -> list[ReconsentRequirementEntity]:
         """Automatically generates adult re-consent requirements for minor subjects attaining legal age."""
         milestone_results = batch_evaluate_minor_cohort(
             subjects=subjects,
+            as_of_date=as_of_date,
             lead_time_days=lead_time_days,
         )
         requirements: list[ReconsentRequirementEntity] = []

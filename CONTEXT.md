@@ -20,6 +20,10 @@ A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial a
 
 A cryptographic integrity invariant governing 21 CFR Part 11 immutable audit trail hashing and Merkle block sealing. All audit event timestamps across .NET 10 microservices, background outbox workers, and external signing APIs must be strictly normalized to UTC Unix Epoch Milliseconds (`long`) or canonical ISO 8601 millisecond strings (`yyyy-MM-ddTHH:mm:ss.fffZ`) prior to computing SHA-256 digest chains, preventing cross-runtime timestamp serialization mismatches between Python 6-digit microsecond strings and .NET 7-digit tick strings.
 
+### PostgreSQL Advisory Lock Concurrency Gate
+
+A transactional concurrency control pattern implemented via `pg_advisory_xact_lock(hashtext(study_code))` within Entity Framework Core 10 repositories (`SubjectRepository.EnrollNextIndexAsync`). Guarantees strictly monotonic, gap-free sequential subject enrollment index assignment across concurrent HTTP or background pub/sub consumers targeting the same clinical protocol, eliminating race conditions under 21 CFR Part 11 and ICH GCP E6(R2) while allowing independent studies to enroll concurrently without inter-study blocking.
+
 ### Dual-Stack GxP Traceability Pipeline
 
 A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across heterogeneous test runners during architectural migration. The pipeline inspects both legacy Python tests (pytest docstrings) and modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting combined JUnit and Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`).
