@@ -30,7 +30,7 @@ graph TD
 
 High-level clinical system contracts, product scope, and functional specifications.
 
-- **[System Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Upstream digital data flow (DDF), clinical metadata management, eCRF data model requirements, and system traceability specifications (`Trace-1` through `Trace-N`).
+- **[Software Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Formally compliant with **ISO/IEC/IEEE 29148:2018** (Clauses 9.5 & 9.6) and **IEC 62304 Class C**, establishing the formal functional baseline across all 24 clinical subsystems, multi-service topology, universal GxP entity schemas, 6 master state lifecycles, atomic 4-part requirements (`SRS-XXX-XXX`), foundational traceability baseline (`Trace-1` through `Trace-34`), and the consolidated Requirements Traceability and Verification Matrix (RTVM).
 - **[Product Requirements Document (PRD)](SDLC/01_Product_Requirements_Document_PRD.md)** (`01_Product_Requirements_Document_PRD.md`): Functional capabilities, user roles, eClinical workflow definitions, and PRD requirement identifiers (`PRD-SYS-xxx`, `PRD-EDC-xxx`, `PRD-CTMS-xxx`, etc.).
 
 ---
@@ -116,7 +116,7 @@ When working on a new GitHub issue or modifying system functionality, follow thi
 
 1. **Requirement Level (`PRD` / `SRS`)**:
    - Check if the change introduces new user capabilities or modifies existing specifications.
-   - If so, update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` with a unique requirement ID (`PRD-SYS-xxx` or `Trace-x`).
+   - If so, update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` with a unique requirement ID (`PRD-SYS-xxx`, `SRS-XXX-xxx`, or `Trace-x`).
 2. **Architecture & Decision Level (`ADR`)**:
    - If the change introduces new dependencies, database model changes, shared package utilities, or gateway routes, create a new ADR using the CLI tool:
      ```bash
