@@ -11,20 +11,6 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Application.Subjects;
-using Cadence.Apps.Execution.Domain.Compliance;
-using Cadence.Apps.Execution.Domain.Ports;
-using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Apps.Execution.Infrastructure.Consumers;
-using Cadence.Apps.Execution.Infrastructure.Persistence;
-using Cadence.Apps.Execution.Infrastructure.Security;
-using Cadence.Core.Domain;
-using Cadence.Database;
-using Cadence.Testing;
-using Cadence.Testing.GoldenMaster;
-using Cadence.UnitTests.Execution;
-
 using FluentAssertions;
 
 using MassTransit;
@@ -40,6 +26,20 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using Xunit;
+
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Domain.Compliance;
+using Cadence.Apps.Execution.Domain.Ports;
+using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Core.Domain;
+using Cadence.Database;
+using Cadence.Testing;
+using Cadence.Testing.GoldenMaster;
+using Cadence.UnitTests.Execution;
 
 namespace Cadence.UnitTests.Execution.GoldenMaster;
 
@@ -328,6 +328,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     public static IEnumerable<object[]> NominalScenarios() =>
         GoldenMasterFixtureLoader.LoadScenarios(NominalInputPath, NominalOutputPath).Select(s => new object[] { s });
 
+    /// <summary>
+    /// Replays nominal golden master scenarios and verifies parity with fixture output.
+    /// @req:PRD-SUB-001
+    /// </summary>
     [Theory]
     [MemberData(nameof(NominalScenarios))]
     [GxPRequirement("PRD-SUB-001")]
@@ -336,6 +340,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     public static IEnumerable<object[]> EdgeCaseScenarios() =>
         GoldenMasterFixtureLoader.LoadScenarios(EdgeInputPath, NominalOutputPath).Select(s => new object[] { s });
 
+    /// <summary>
+    /// Replays edge case golden master scenarios and verifies parity with fixture output.
+    /// @req:PRD-SUB-001
+    /// </summary>
     [Theory]
     [MemberData(nameof(EdgeCaseScenarios))]
     [GxPRequirement("PRD-SUB-001")]
@@ -344,6 +352,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     public static IEnumerable<object[]> ErrorScenarios() =>
         GoldenMasterFixtureLoader.LoadScenarios(ErrorInputPath, ErrorOutputPath).Select(s => new object[] { s });
 
+    /// <summary>
+    /// Replays invalid validation error scenarios and verifies error status and ProblemDetails structure.
+    /// @req:PRD-SUB-001
+    /// </summary>
     [Theory]
     [MemberData(nameof(ErrorScenarios))]
     [GxPRequirement("PRD-SUB-001")]
