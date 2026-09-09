@@ -10,7 +10,7 @@ Cadence Clinical documentation is organized into a 6-layer hierarchy to maintain
 
 ```mermaid
 graph TD
-    Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md)"]
+    Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md, FRD.md)"]
     Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, Blueprint)"]
     Layer3["3. REST API Contract Reference<br/>(docs/api/* Microservice Catalogs)"]
     Layer4["4. Decision Records<br/>(docs/adr/ Domain Categories)"]
@@ -32,6 +32,7 @@ High-level clinical system contracts, product scope, and functional specificatio
 
 - **[Software Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Formally compliant with **ISO/IEC/IEEE 29148:2018** (Clauses 9.5 & 9.6) and **IEC 62304 Class C**, establishing the formal functional baseline across all 24 clinical subsystems, multi-service topology, universal GxP entity schemas, 6 master state lifecycles, atomic 4-part requirements (`SRS-XXX-XXX`), foundational traceability baseline (`Trace-1` through `Trace-34`), and the consolidated Requirements Traceability and Verification Matrix (RTVM).
 - **[Product Requirements Document (PRD)](SDLC/01_Product_Requirements_Document_PRD.md)** (`01_Product_Requirements_Document_PRD.md`): Functional capabilities, user roles, eClinical workflow definitions, and PRD requirement identifiers (`PRD-SYS-xxx`, `PRD-EDC-xxx`, `PRD-CTMS-xxx`, etc.).
+- **[Functional Product Specification & FRD](FUNCTIONAL_PRODUCT_SPECIFICATION.md)** (`FUNCTIONAL_PRODUCT_SPECIFICATION.md`): Reverse-engineered functional requirements document (CAD-SPEC-FRD-001) defining core domain capabilities, system actors, clinical user journeys, and end-to-end data pipelines across all operational subsystems.
 
 ---
 
