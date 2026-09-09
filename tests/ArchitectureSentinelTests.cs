@@ -95,6 +95,9 @@ public class ArchitectureSentinelTests
             .Where(t => t.Namespace != null &&
                         (t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Subjects", StringComparison.Ordinal) ||
                          t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Compliance", StringComparison.Ordinal) ||
+                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Observations", StringComparison.Ordinal) ||
+                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Forms", StringComparison.Ordinal) ||
+                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Queries", StringComparison.Ordinal) ||
                          t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Ports", StringComparison.Ordinal)))
             // MIG-SUBJ-010 explicit exception: DomainErrorHttpMapping and DomainErrorExtensions serve as the
             // isolated ProblemDetails HTTP mapping bridge at the boundary.

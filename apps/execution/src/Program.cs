@@ -2,6 +2,10 @@ using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Compliance;
+using Cadence.Apps.Execution.Application.EditChecks;
+using Cadence.Apps.Execution.Application.Forms;
+using Cadence.Apps.Execution.Application.Observations;
+using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
@@ -9,6 +13,8 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.EditChecks;
+using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
@@ -108,6 +114,11 @@ builder.Services.Configure<DemographicsEncryptionOptions>(builder.Configuration.
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
+builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
+builder.Services.AddSingleton<ILabRangeService, LabRangeService>();
+builder.Services.AddSingleton<IOutlierDetectionService, OutlierDetectionService>();
+builder.Services.AddScoped<IBatchEvaluationContextLoader, BatchEvaluationContextLoader>();
+builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING
@@ -135,12 +146,13 @@ builder.Services.AddDbContext<ExecutionDbContext>((sp, options) =>
         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
 });
 
-// The three repository ports (MIG-SUBJ-013/018/020), Scoped to match ExecutionDbContext's own lifetime --
-// each wraps the same scoped ExecutionDbContext instance plus the shared singleton ResiliencePipeline
-// registered above.
+// The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
+builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
+builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
+builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 
 // IAuditLogWriter (MIG-SUBJ-017's explicit-call audit seam, EfAuditLogWriter's own implementation
 // MIG-SUBJ-018/019/020 all call): Scoped, since it appends directly to the scoped ExecutionDbContext's own
@@ -187,6 +199,9 @@ builder.Services.AddSingleton<SystemAuditContextAccessor>();
 // this slice yet).
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
+builder.Services.AddScoped<IObservationApplicationService, ObservationApplicationService>();
+builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
+builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -246,13 +261,12 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
     .WithName("ExecutionHealthCheck")
     .WithSummary("Execution engine health probe.");
 
-// MIG-SUBJ-024: final wiring -- replaces the placeholder `MapGet("/subjects", ...)` stub every prior ticket
-// left in place with the two real route-group registrations, per `03_tickets.md`'s own instruction. Both
-// extension methods are self-contained (each declares its own absolute route paths internally, per
-// `02_technical_design.md` §3.3's own `MapSubjectEndpoints`/`MapSiteComplianceEndpoints` shape), so they are
-// mapped directly on `app` rather than nested inside an intermediate `MapGroup`.
+// Route-group registrations
 app.MapSubjectEndpoints();
 app.MapSiteComplianceEndpoints();
+app.MapObservationEndpoints();
+app.MapFormEndpoints();
+app.MapQueryEndpoints();
 
 await app.RunAsync();
 

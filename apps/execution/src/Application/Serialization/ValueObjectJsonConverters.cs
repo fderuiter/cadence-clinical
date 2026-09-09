@@ -1,26 +1,22 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 
 namespace Cadence.Apps.Execution.Application.Serialization;
 
 /// <summary>
-/// Wire-shape adapters for the five MIG-SUBJ-001 strongly-typed ID/code value objects
-/// (<see cref="SubjectId"/>, <see cref="SubjectConsentId"/>, <see cref="SubjectCode"/>,
-/// <see cref="StudyCode"/>, <see cref="SiteCode"/>). Without a custom converter, System.Text.Json
-/// serializes a <c>readonly record struct</c> wrapping one <c>Value</c>/<c>Guid</c> property as a
-/// nested <c>{ "value": ... }</c> object rather than the bare JSON string every response DTO in this
-/// slice (and every fixture in `fixtures/output_expected_nominal.json`) expects for fields like
-/// <c>subject_id</c>/<c>study_id</c>/<c>site_id</c>. Each converter here simply defers to the type's
-/// own <c>ToString()</c> override (MIG-SUBJ-001: "All five override <c>ToString()</c> to return the raw
-/// value") for writing, and to the type's own validating constructor for reading — no independent
-/// validation logic lives here. Registered once via <see cref="ExecutionJsonSerialization.Configure"/>.
-/// A <see langword="null"/> JSON token reaching a non-nullable field of one of these types throws
-/// <see cref="JsonException"/> rather than silently producing a default/empty instance; a genuinely
-/// absent value must instead be modeled as a nullable field (e.g. <c>SiteCode?</c>), which
-/// System.Text.Json handles automatically on top of these converters without any extra wiring.
+/// Wire-shape adapters for strongly-typed ID/code value objects and status enums across the Execution bounded context.
 /// @req:PRD-SUB-001
+/// @req:PRD-SYS-001
+/// @req:PRD-SYS-007
+/// @req:SRS-EDC-001
+/// @req:SRS-EDC-002
+/// @req:SRS-EDC-004
 /// </summary>
 public sealed class SubjectIdJsonConverter : JsonConverter<SubjectId>
 {
@@ -36,7 +32,6 @@ public sealed class SubjectIdJsonConverter : JsonConverter<SubjectId>
         writer.WriteStringValue(value.Value);
 }
 
-/// <summary>See <see cref="SubjectIdJsonConverter"/> — identical shape for the consent aggregate's key.</summary>
 public sealed class SubjectConsentIdJsonConverter : JsonConverter<SubjectConsentId>
 {
     public override SubjectConsentId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -51,7 +46,6 @@ public sealed class SubjectConsentIdJsonConverter : JsonConverter<SubjectConsent
         writer.WriteStringValue(value.Value);
 }
 
-/// <summary>See <see cref="SubjectIdJsonConverter"/> — string-wrapper variant for the domain subject code.</summary>
 public sealed class SubjectCodeJsonConverter : JsonConverter<SubjectCode>
 {
     public override SubjectCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -66,7 +60,6 @@ public sealed class SubjectCodeJsonConverter : JsonConverter<SubjectCode>
         writer.WriteStringValue(value.Value);
 }
 
-/// <summary>See <see cref="SubjectIdJsonConverter"/> — string-wrapper variant for the domain study code.</summary>
 public sealed class StudyCodeJsonConverter : JsonConverter<StudyCode>
 {
     public override StudyCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -81,9 +74,6 @@ public sealed class StudyCodeJsonConverter : JsonConverter<StudyCode>
         writer.WriteStringValue(value.Value);
 }
 
-/// <summary>See <see cref="SubjectIdJsonConverter"/> — string-wrapper variant for the domain site code;
-/// also transparently covers <c>SiteCode?</c> fields (System.Text.Json wraps any registered value-type
-/// converter for the corresponding nullable form automatically).</summary>
 public sealed class SiteCodeJsonConverter : JsonConverter<SiteCode>
 {
     public override SiteCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -96,4 +86,116 @@ public sealed class SiteCodeJsonConverter : JsonConverter<SiteCode>
 
     public override void Write(Utf8JsonWriter writer, SiteCode value, JsonSerializerOptions options) =>
         writer.WriteStringValue(value.Value);
+}
+
+public sealed class ObservationIdJsonConverter : JsonConverter<ObservationId>
+{
+    public override ObservationId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for ObservationId.")
+            : new ObservationId(Guid.Parse(raw));
+    }
+
+    public override void Write(Utf8JsonWriter writer, ObservationId value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class DomainCodeJsonConverter : JsonConverter<DomainCode>
+{
+    public override DomainCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for DomainCode.")
+            : new DomainCode(raw);
+    }
+
+    public override void Write(Utf8JsonWriter writer, DomainCode value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class TestCodeJsonConverter : JsonConverter<TestCode>
+{
+    public override TestCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for TestCode.")
+            : new TestCode(raw);
+    }
+
+    public override void Write(Utf8JsonWriter writer, TestCode value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class FormSubmissionIdJsonConverter : JsonConverter<FormSubmissionId>
+{
+    public override FormSubmissionId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for FormSubmissionId.")
+            : new FormSubmissionId(Guid.Parse(raw));
+    }
+
+    public override void Write(Utf8JsonWriter writer, FormSubmissionId value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class FormIdJsonConverter : JsonConverter<FormId>
+{
+    public override FormId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for FormId.")
+            : new FormId(raw);
+    }
+
+    public override void Write(Utf8JsonWriter writer, FormId value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class QueryIdJsonConverter : JsonConverter<QueryId>
+{
+    public override QueryId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return raw is null
+            ? throw new JsonException("Expected a non-null JSON string for QueryId.")
+            : new QueryId(Guid.Parse(raw));
+    }
+
+    public override void Write(Utf8JsonWriter writer, QueryId value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
+public sealed class FormSubmissionStatusJsonConverter : JsonConverter<FormSubmissionStatus>
+{
+    public override FormSubmissionStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return FormSubmissionStatusCodec.TryParse(raw, out var status)
+            ? status
+            : throw new JsonException($"Invalid FormSubmissionStatus value: '{raw}'.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, FormSubmissionStatus value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(FormSubmissionStatusCodec.ToCode(value));
+}
+
+public sealed class QueryStatusJsonConverter : JsonConverter<QueryStatus>
+{
+    public override QueryStatus Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? raw = reader.GetString();
+        return QueryStatusCodec.TryParse(raw, out var status)
+            ? status
+            : throw new JsonException($"Invalid QueryStatus value: '{raw}'.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, QueryStatus value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(QueryStatusCodec.ToCode(value));
 }
