@@ -29,6 +29,9 @@ exclude = [
     "apps/web",
     "apps/subject-portal",
     "apps/__pycache__",
+    "apps/gateway",
+    "apps/designer",
+    "apps/execution",
     "packages/ui",
     "packages/gateway-rewrite",
     "packages/usdm-schemas",
@@ -53,13 +56,10 @@ packages-ddf = { workspace = true }
 packages-engine-core = { workspace = true }
 apps-ai-gateway = { workspace = true }
 apps-ctms = { workspace = true }
-apps-designer = { workspace = true }
 apps-econsent = { workspace = true }
 apps-eisf = { workspace = true }
 apps-etmf = { workspace = true }
-apps-execution = { workspace = true }
 apps-fileshare = { workspace = true }
-apps-gateway = { workspace = true }
 apps-imaging = { workspace = true }
 apps-interop = { workspace = true }
 apps-notifications = { workspace = true }

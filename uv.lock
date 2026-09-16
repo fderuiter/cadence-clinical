@@ -14,12 +14,9 @@ resolution-markers = [
 members = [
     "apps-ai-gateway",
     "apps-ctms",
-    "apps-designer",
     "apps-econsent",
     "apps-eisf",
     "apps-etmf",
-    "apps-execution",
-    "apps-gateway",
     "apps-interop",
     "apps-notifications",
     "apps-org",
@@ -287,35 +284,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "apps-designer"
-version = "0.1.0"
-source = { editable = "apps/designer" }
-dependencies = [
-    { name = "docxcompose" },
-    { name = "docxtpl" },
-    { name = "fastapi" },
-    { name = "jinja2" },
-    { name = "neo4j" },
-    { name = "packages-security" },
-    { name = "pydantic" },
-    { name = "python-docx" },
-    { name = "weasyprint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "docxcompose", specifier = ">=2.2.0" },
-    { name = "docxtpl", specifier = ">=0.20.2" },
-    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
-    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
-    { name = "neo4j", specifier = ">=5.18.0" },
-    { name = "packages-security", editable = "packages/security" },
-    { name = "pydantic", specifier = ">=2.6.0" },
-    { name = "python-docx", specifier = ">=1.1.0" },
-    { name = "weasyprint", specifier = ">=61.0" },
-]
-
-[[package]]
 name = "apps-econsent"
 version = "0.1.0"
 source = { editable = "apps/econsent" }
@@ -394,78 +362,6 @@ requires-dist = [
     { name = "pymupdf", specifier = ">=1.24.0" },
     { name = "sqlalchemy", specifier = ">=2.0.28" },
     { name = "sqlmodel", specifier = ">=0.0.39" },
-]
-
-[[package]]
-name = "apps-execution"
-version = "0.1.0"
-source = { editable = "apps/execution" }
-dependencies = [
-    { name = "aioboto3" },
-    { name = "aiosmtplib" },
-    { name = "asyncpg" },
-    { name = "boto3" },
-    { name = "cryptography" },
-    { name = "fastapi" },
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "packages-database" },
-    { name = "packages-deid" },
-    { name = "packages-security" },
-    { name = "packages-storage" },
-    { name = "pydantic" },
-    { name = "pymupdf" },
-    { name = "python-docx" },
-    { name = "python-multipart" },
-    { name = "rapidfuzz" },
-    { name = "sqlalchemy" },
-    { name = "sqlmodel" },
-    { name = "weasyprint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aioboto3", specifier = ">=13.0.0" },
-    { name = "aiosmtplib", specifier = ">=3.0.1" },
-    { name = "asyncpg", specifier = ">=0.29.0" },
-    { name = "boto3", specifier = ">=1.34.0" },
-    { name = "cryptography", specifier = ">=4.5.0" },
-    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
-    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
-    { name = "jsonschema", specifier = ">=4.20.0" },
-    { name = "packages-database", editable = "packages/database" },
-    { name = "packages-deid", editable = "packages/deid" },
-    { name = "packages-security", editable = "packages/security" },
-    { name = "packages-storage", editable = "packages/storage" },
-    { name = "pydantic", specifier = ">=2.6.0" },
-    { name = "pymupdf", specifier = ">=1.24.0" },
-    { name = "python-docx", specifier = ">=1.1.0" },
-    { name = "python-multipart", specifier = ">=0.0.32" },
-    { name = "rapidfuzz", specifier = ">=3.14.5" },
-    { name = "sqlalchemy", specifier = ">=2.0.28" },
-    { name = "sqlmodel", specifier = ">=0.0.39" },
-    { name = "weasyprint", specifier = ">=61.0" },
-]
-
-[[package]]
-name = "apps-gateway"
-version = "0.1.0"
-source = { editable = "apps/gateway" }
-dependencies = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "packages-security" },
-    { name = "pydantic" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "packages-security", editable = "packages/security" },
-    { name = "pydantic", specifier = ">=2.6.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0,<0.52.0" },
 ]
 
 [[package]]
