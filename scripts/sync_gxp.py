@@ -403,9 +403,12 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
 
         # Run .NET test suites if dotnet is available
         import shutil
+
         if shutil.which("dotnet"):
             try:
-                print("\n▶  dotnet test Cadence.sln --logger trx;LogFileName=report_dotnet.trx")
+                print(
+                    "\n▶  dotnet test Cadence.sln --logger trx;LogFileName=report_dotnet.trx"
+                )
                 subprocess.run(
                     [
                         "dotnet",

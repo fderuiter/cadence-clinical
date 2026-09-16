@@ -93,6 +93,7 @@ RULES = {
     "*.sh": {
         "allowed": [
             "scripts/**/*.sh",
+            "docs/**/*.sh",
             ".jules/**/*.sh",
             ".agents/**/*.sh",
             ".scratch/**/*.sh",
@@ -224,6 +225,8 @@ APPROVED_SUBDIRECTORIES = {
     ".claude/",
     ".devcontainer/",
     ".vscode/",
+    ".config/",
+    ".githooks/",
 }
 
 

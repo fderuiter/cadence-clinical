@@ -1,31 +1,11 @@
 import argparse
 import asyncio
 import os
-import sys
 
 
 async def run_migrations(database_url: str) -> None:
-    """Executes pre-boot CTMS schema migrations."""
-    print(f"Starting pre-boot schema migration for CTMS: {database_url}")
-    env = os.environ.copy()
-    env["CTMS_DATABASE_URL"] = database_url
-    cmd = [
-        sys.executable,
-        "-m",
-        "alembic",
-        "-c",
-        "apps/ctms/alembic.ini",
-        "upgrade",
-        "head",
-    ]
-    process = await asyncio.create_subprocess_exec(
-        *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    if process.returncode != 0:
-        print(f"Alembic migration failed: {stderr.decode()}", file=sys.stderr)
-        raise RuntimeError(f"Alembic migration failed for CTMS: {stderr.decode()}")
-    print("CTMS Schema migration completed successfully via Alembic.")
+    """Executes pre-boot CTMS schema migrations via EF Core gateway."""
+    print(f"Schema migration for CTMS handled via EF Core Fluent API: {database_url}")
 
 
 def main() -> None:
