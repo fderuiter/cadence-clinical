@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Deid</RootNamespace>
+    <Description>Clinical data de-identification and PII/PHI detection engine supporting HIPAA, GDPR, and EU CTR profiles.</Description>
+  </PropertyGroup>
+</Project>

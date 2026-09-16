@@ -15,8 +15,6 @@ dependencies = [
     "sqlalchemy>=2.0.28",
     "sqlmodel>=0.0.39",
     "asyncpg>=0.29.0",
-    "packages-database",
-    "packages-security",
 ]
 
 [tool.hatch.build.targets.wheel]
