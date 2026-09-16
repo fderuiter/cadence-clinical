@@ -490,7 +490,7 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
             try:
                 with open(filepath, encoding="utf-8") as f:
                     content = f.read()
-            except Exception as e:
+            except Exception:
                 all_passed = False
                 continue
 
