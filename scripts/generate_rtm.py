@@ -632,11 +632,21 @@ def parse_trx_file(trx_path, results):
             if error_info is not None and error_info.text:
                 msg = error_info.text
 
-            results[(classname, name)] = {
+            res_dict = {
                 "status": status,
                 "message": msg,
                 "time": str(duration),
             }
+
+            results[(classname, name)] = res_dict
+            results[(classname, full_test_name)] = res_dict
+            results[("", name)] = res_dict
+            results[("", full_test_name)] = res_dict
+
+            base_name = name.split("(")[0]
+            if base_name != name:
+                results[(classname, base_name)] = res_dict
+                results[("", base_name)] = res_dict
     except Exception as e:
         print(f"Error parsing TRX file {trx_path}: {e}")
 
@@ -644,8 +654,24 @@ def parse_trx_file(trx_path, results):
 def parse_test_results(report_xml_path):
     results = {}
 
-    # 1. Parse main JUnit XML report if present
-    if os.path.exists(report_xml_path):
+    trx_files = []
+    if report_xml_path and os.path.exists(report_xml_path):
+        trx_files.append(report_xml_path)
+
+    search_dirs = [".", "TestResults", "tests/TestResults"]
+    for d in search_dirs:
+        if os.path.exists(d):
+            for root_dir, _, files in os.walk(d):
+                for f in files:
+                    if f.endswith(".trx"):
+                        full_p = os.path.join(root_dir, f)
+                        if full_p not in trx_files:
+                            trx_files.append(full_p)
+
+    for trx in trx_files:
+        parse_trx_file(trx, results)
+
+    if report_xml_path and os.path.exists(report_xml_path) and not results:
         try:
             tree = ET.parse(report_xml_path)  # nosec B314
             root = tree.getroot()
@@ -653,7 +679,7 @@ def parse_test_results(report_xml_path):
                 classname = testcase.get("classname", "")
                 name = testcase.get("name", "")
 
-                # Normalize classname to make it fully deterministic regardless of pytest execution path
+                # Normalize classname to make it fully deterministic regardless of execution path
                 if classname and not (
                     classname.startswith("tests.")
                     or classname.startswith("apps.")
@@ -692,23 +718,15 @@ def parse_test_results(report_xml_path):
                     status = "SKIPPED"
                     failure_message = skipped.text or skipped.get("message", "")
 
-                results[(classname, name)] = {
+                res_dict = {
                     "status": status,
                     "message": failure_message,
                     "time": testcase.get("time", "0.0"),
                 }
+                results[(classname, name)] = res_dict
+                results[("", name)] = res_dict
         except Exception as e:
             print(f"Error parsing XML report: {e}")
-    else:
-        print(f"Warning: Test report {report_xml_path} not found.")
-
-    # 2. Check and parse any .trx files (e.g. test_results.trx, report_dotnet.trx)
-    for candidate in ["test_results.trx", "report_dotnet.trx"]:
-        if os.path.exists(candidate):
-            parse_trx_file(candidate, results)
-
-    if report_xml_path.endswith(".trx") and os.path.exists(report_xml_path):
-        parse_trx_file(report_xml_path, results)
 
     return results
 
@@ -1099,7 +1117,13 @@ def generate_qualification_report(
     for sc in scenarios:
         matching_results = []
         for (classname, name), res in test_results.items():
-            if name == sc["test"] or name.startswith(sc["test"] + "["):
+            if (
+                name == sc["test"]
+                or name.startswith(sc["test"] + "[")
+                or name.startswith(sc["test"] + "(")
+                or name.endswith("." + sc["test"])
+                or f".{sc['test']}(" in name
+            ):
                 matching_results.append(res)
 
         if not matching_results:
@@ -1223,8 +1247,8 @@ def main():
         "--report-path",
         "-r",
         dest="report_path",
-        default="report.xml",
-        help="Path to pytest JUnit XML report file (default: report.xml)",
+        default="report_dotnet.trx",
+        help="Path to .NET xUnit TRX report file (default: report_dotnet.trx)",
     )
     parser.add_argument(
         "--validate",
