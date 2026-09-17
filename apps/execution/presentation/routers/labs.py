@@ -802,7 +802,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             age_low_val = float(age_low)
             data["age_low"] = age_low_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_low' must be a numeric value.",
@@ -817,7 +817,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             age_high_val = float(age_high)
             data["age_high"] = age_high_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_high' must be a numeric value.",
@@ -841,7 +841,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             low_bound_val = float(low_bound)
             data["low_bound"] = low_bound_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'low_bound' must be a numeric value.",
@@ -850,7 +850,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             high_bound_val = float(high_bound)
             data["high_bound"] = high_bound_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'high_bound' must be a numeric value.",
@@ -869,7 +869,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             critical_low_val = float(critical_low)
             data["critical_low"] = critical_low_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_low' must be a numeric value.",
@@ -878,7 +878,7 @@ def validate_lab_range_payload(data: dict[str, Any]) -> None:
         try:
             critical_high_val = float(critical_high)
             data["critical_high"] = critical_high_val
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_high' must be a numeric value.",
