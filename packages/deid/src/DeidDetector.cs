@@ -14,6 +14,7 @@ public class DeidDetector
     private static readonly Regex IpRegex = new(@"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b", RegexOptions.Compiled);
     private static readonly Regex AgeRegex = new(@"\b(?:age[sd]?|age of)\s*[:\- ]?\s*\d{1,3}\b|\b\d{1,3}\s*(?:years?\s*(?:of\s*age)?\s*old|-years?-old|yo|-yo)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency across de-identification detectors")]
     public List<DetectionResult> Detect(string text, ComplianceProfile profile = ComplianceProfile.HIPAA, List<string>? customTerms = null)
     {
         if (string.IsNullOrEmpty(text))

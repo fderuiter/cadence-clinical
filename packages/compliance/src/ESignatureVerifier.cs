@@ -30,6 +30,14 @@ public class ESignatureVerifier
 
         var text = System.Text.Encoding.UTF8.GetString(signedData);
 
+        foreach (var revoked in _revokedCerts)
+        {
+            if (!string.IsNullOrEmpty(revoked) && text.Contains(revoked, StringComparison.OrdinalIgnoreCase))
+            {
+                return new VerificationResult(false, "REVOKED_CERTIFICATE", $"Certificate {revoked} has been revoked.");
+            }
+        }
+
         if (text.Contains("mock", StringComparison.OrdinalIgnoreCase))
         {
             return new VerificationResult(false, "MOCK_SIGNATURE_DETECTED", "Mock signature detected and blocked.");

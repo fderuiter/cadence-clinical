@@ -14,6 +14,7 @@ public class StorageIntegrityException : System.Exception
     public StorageIntegrityException(string message) : base(message) { }
 }
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2326:Unused type parameters should be removed", Justification = "Type parameter T reserved for typed object storage implementations")]
 public interface IStoragePort<T>
 {
     Task<string> PutObjectAsync(

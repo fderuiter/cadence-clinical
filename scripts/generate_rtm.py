@@ -676,79 +676,79 @@ def parse_trx_file(trx_path, results):
 def parse_test_results(report_xml_path):
     results = {}
 
-    trx_files = []
     if report_xml_path and os.path.exists(report_xml_path):
-        trx_files.append(report_xml_path)
+        parse_trx_file(report_xml_path, results)
+        if not results:
+            try:
+                tree = ET.parse(report_xml_path)  # nosec B314
+                root = tree.getroot()
+                for testcase in root.iter("testcase"):
+                    classname = testcase.get("classname", "")
+                    name = testcase.get("name", "")
 
-    search_dirs = [".", "TestResults", "tests/TestResults"]
-    for d in search_dirs:
-        if os.path.exists(d):
-            for root_dir, _, files in os.walk(d):
-                for f in files:
-                    if f.endswith(".trx"):
-                        full_p = os.path.join(root_dir, f)
-                        if full_p not in trx_files:
-                            trx_files.append(full_p)
-
-    for trx in trx_files:
-        parse_trx_file(trx, results)
-
-    if report_xml_path and os.path.exists(report_xml_path) and not results:
-        try:
-            tree = ET.parse(report_xml_path)  # nosec B314
-            root = tree.getroot()
-            for testcase in root.iter("testcase"):
-                classname = testcase.get("classname", "")
-                name = testcase.get("name", "")
-
-                # Normalize classname to make it fully deterministic regardless of execution path
-                if classname and not (
-                    classname.startswith("tests.")
-                    or classname.startswith("apps.")
-                    or classname.startswith("packages.")
-                    or classname.startswith("scripts.")
-                ):
-                    if classname.startswith("validation."):
-                        classname = "tests." + classname
-                    elif classname in (
-                        "gxp_compliance_suite",
-                        "prd_compliance_traceability_suite",
-                        "dia_tmf_validation_suite",
-                        "environment_integrity_suite",
-                        "test_path_boundary_linter",
+                    # Normalize classname to make it fully deterministic regardless of execution path
+                    if classname and not (
+                        classname.startswith("tests.")
+                        or classname.startswith("apps.")
+                        or classname.startswith("packages.")
+                        or classname.startswith("scripts.")
                     ):
-                        classname = "tests.validation." + classname
-                    else:
-                        classname = "tests." + classname
+                        if classname.startswith("validation."):
+                            classname = "tests." + classname
+                        elif classname in (
+                            "gxp_compliance_suite",
+                            "prd_compliance_traceability_suite",
+                            "dia_tmf_validation_suite",
+                            "environment_integrity_suite",
+                            "test_path_boundary_linter",
+                        ):
+                            classname = "tests.validation." + classname
+                        else:
+                            classname = "tests." + classname
 
-                # Check for failure, error, skipped
-                status = "PASSED"
-                failure_message = ""
+                    # Check for failure, error, skipped
+                    status = "PASSED"
+                    failure_message = ""
 
-                failure = testcase.find("failure")
-                if failure is not None:
-                    status = "FAILED"
-                    failure_message = failure.text or failure.get("message", "")
+                    failure = testcase.find("failure")
+                    if failure is not None:
+                        status = "FAILED"
+                        failure_message = failure.text or failure.get("message", "")
 
-                error = testcase.find("error")
-                if error is not None:
-                    status = "ERROR"
-                    failure_message = error.text or error.get("message", "")
+                    error = testcase.find("error")
+                    if error is not None:
+                        status = "ERROR"
+                        failure_message = error.text or error.get("message", "")
 
-                skipped = testcase.find("skipped")
-                if skipped is not None:
-                    status = "SKIPPED"
-                    failure_message = skipped.text or skipped.get("message", "")
+                    skipped = testcase.find("skipped")
+                    if skipped is not None:
+                        status = "SKIPPED"
+                        failure_message = skipped.text or skipped.get("message", "")
 
-                res_dict = {
-                    "status": status,
-                    "message": failure_message,
-                    "time": testcase.get("time", "0.0"),
-                }
-                results[(classname, name)] = res_dict
-                results[("", name)] = res_dict
-        except Exception as e:
-            print(f"Error parsing XML report: {e}")
+                    res_dict = {
+                        "status": status,
+                        "message": failure_message,
+                        "time": testcase.get("time", "0.0"),
+                    }
+                    results[(classname, name)] = res_dict
+                    results[("", name)] = res_dict
+            except Exception as e:
+                print(f"Error parsing XML report: {e}")
+
+    if not results:
+        trx_files = []
+        search_dirs = [".", "TestResults", "tests/TestResults"]
+        for d in search_dirs:
+            if os.path.exists(d):
+                for root_dir, _, files in os.walk(d):
+                    for f in files:
+                        if f.endswith(".trx"):
+                            full_p = os.path.join(root_dir, f)
+                            if full_p not in trx_files:
+                                trx_files.append(full_p)
+
+        for trx in trx_files:
+            parse_trx_file(trx, results)
 
     return results
 

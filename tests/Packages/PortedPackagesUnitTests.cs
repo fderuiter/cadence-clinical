@@ -12,6 +12,7 @@ using Cadence.Deid;
 using Cadence.Hexagonal;
 using Cadence.Sentinels;
 using Cadence.Storage;
+using Cadence.Testing;
 using Cadence.ToolingCore;
 
 namespace Cadence.UnitTests.Packages;
@@ -19,6 +20,7 @@ namespace Cadence.UnitTests.Packages;
 public class PortedPackagesUnitTests
 {
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public void Compliance_AuditDigestCalculator_ComputesExpectedHash()
     {
         var digest = AuditDigestCalculator.ComputeAuditDigest(
@@ -40,6 +42,7 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public void Compliance_AuditChainVerifier_ValidatesIntactChain()
     {
         var rec = new ComplianceAuditLogRecord(
@@ -56,6 +59,7 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-049")]
     public void Deid_DeidDetector_DetectsAndRedactsEmail()
     {
         var detector = new DeidDetector();
@@ -70,6 +74,7 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-001")]
     public void Ddf_Models_ConstructsSuccessfully()
     {
         var item = new DDFItemIR(Id: "item-1", Name: "Height", Type: "integer");
@@ -80,6 +85,7 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-001")]
     public void Hexagonal_DomainPrimitives_And_ExceptionMapper_Work()
     {
         var exc = new EntityNotFoundException("Subject SUBJ-101 not found");
@@ -90,31 +96,34 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task Sentinels_Engine_ExecutesRegisteredCheck()
     {
         var engine = new SentinelEngine();
-        var result = await engine.ExecuteAllAsync();
+        var result = await engine.ExecuteAllAsync(ct: TestContext.Current.CancellationToken);
         result.Should().BeEmpty();
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task Storage_InMemoryBlobStore_StoresAndRetrievesPayload()
     {
         var store = new InMemoryBlobStore();
         var data = "Hello GxP Storage"u8.ToArray();
 
-        var hash = await store.PutObjectAsync("test/file.txt", data);
+        var hash = await store.PutObjectAsync("test/file.txt", data, ct: TestContext.Current.CancellationToken);
         hash.Should().NotBeNullOrWhiteSpace();
 
-        var exists = await store.ExistsAsync("test/file.txt");
+        var exists = await store.ExistsAsync("test/file.txt", TestContext.Current.CancellationToken);
         exists.Should().BeTrue();
 
-        var (retrieved, retrievedHash) = await store.GetObjectAsync("test/file.txt");
+        var (retrieved, retrievedHash) = await store.GetObjectAsync("test/file.txt", TestContext.Current.CancellationToken);
         retrievedHash.Should().Be(hash);
         retrieved.Should().Equal(data);
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-001")]
     public void ToolingCore_Handlers_ReturnsSuccessfulEnvelope()
     {
         var req = new FastTestRequest(Subsystem: "UnitTests");

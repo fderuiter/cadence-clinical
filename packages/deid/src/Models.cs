@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Cadence.Deid;
 
@@ -29,8 +30,7 @@ public enum ComplianceProfile
 
 public static class ProfileCategories
 {
-    public static readonly HashSet<string> AllCategories = new()
-    {
+    public static ImmutableHashSet<string> AllCategories { get; } = ImmutableHashSet.Create(
         DetectorCategory.Email,
         DetectorCategory.TelephoneFax,
         DetectorCategory.SsnNationalId,
@@ -45,10 +45,9 @@ public static class ProfileCategories
         DetectorCategory.CertificateLicense,
         DetectorCategory.VehicleIdentifiers,
         DetectorCategory.DeviceSerial
-    };
+    );
 
-    public static readonly HashSet<string> EuCtrCategories = new()
-    {
+    public static ImmutableHashSet<string> EuCtrCategories { get; } = ImmutableHashSet.Create(
         DetectorCategory.Email,
         DetectorCategory.TelephoneFax,
         DetectorCategory.SsnNationalId,
@@ -56,14 +55,14 @@ public static class ProfileCategories
         DetectorCategory.MedicalRecordAccount,
         DetectorCategory.Age,
         DetectorCategory.Custom
-    };
+    );
 
     public static HashSet<string> GetCategoriesForProfile(ComplianceProfile profile)
     {
         return profile switch
         {
-            ComplianceProfile.EU_CTR => EuCtrCategories,
-            _ => AllCategories
+            ComplianceProfile.EU_CTR => new HashSet<string>(EuCtrCategories),
+            _ => new HashSet<string>(AllCategories)
         };
     }
 }

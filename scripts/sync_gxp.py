@@ -88,6 +88,7 @@ os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 
 if "GXP_SIGNING_PRIVATE_KEY" not in os.environ or "GXP_SIGNING_CERT" not in os.environ:
     from packages.compliance.services.gxp_signer import generate_gxp_signing_credentials
+
     _priv, _cert = generate_gxp_signing_credentials("cadence-gxp-runner")
     os.environ["GXP_SIGNING_PRIVATE_KEY"] = _priv
     os.environ["GXP_SIGNING_CERT"] = _cert
@@ -233,6 +234,8 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 "dotnet",
                 "test",
                 "Cadence.sln",
+                "--no-restore",
+                "--no-build",
                 "--configuration",
                 "Release",
                 "--results-directory",

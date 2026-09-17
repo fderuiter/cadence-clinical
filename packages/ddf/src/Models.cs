@@ -14,6 +14,7 @@ public record ItemLocalization(
     string? Hint = null
 );
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S101:Types should name in PascalCase", Justification = "DDF acronym naming convention")]
 public record DDFItemIR(
     string Id,
     string Name,
@@ -25,6 +26,7 @@ public record DDFItemIR(
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>>? Localizations = null
 );
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S101:Types should name in PascalCase", Justification = "DDF acronym naming convention")]
 public record DDFStudyIR(
     string StudyId,
     string Name,
@@ -49,6 +51,7 @@ public record CompileOptions(
     bool StrictSchemaValidation = true
 );
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S101:Types should name in PascalCase", Justification = "DDF acronym naming convention")]
 public record DDFCompilationResult(
     string StudyId,
     string Name,

@@ -58,7 +58,7 @@ public static class AuditChainVerifier
             var userId = rec.UserId ?? "system";
             var tenantId = rec.TenantId ?? "tenant_default";
             var reason = rec.ChangeReason ?? "";
-            var tsStr = rec.Timestamp.ToString("o");
+            var tsStr = rec.Timestamp?.ToString("o") ?? "";
 
             var computed = AuditDigestCalculator.ComputeAuditDigest(
                 eventId: eventId,
