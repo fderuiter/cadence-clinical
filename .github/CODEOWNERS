@@ -25,11 +25,13 @@
 
 /packages/cli/             @clinical-platform/integration-and-routing
 /packages/compliance/    @clinical-platform/compliance-and-safety
+/packages/contracts/     @clinical-platform/integration-and-routing
 /packages/core-models/   @clinical-platform/integration-and-routing
 /packages/database/      @clinical-platform/clinical-operations
 /packages/ddf/           @clinical-platform/integration-and-routing
 /packages/deid/          @clinical-platform/security-and-privacy
 /packages/deidentification/ @clinical-platform/security-and-privacy
+/packages/engine_core/   @clinical-platform/integration-and-routing
 /packages/gateway-rewrite/ @clinical-platform/integration-and-routing
 /packages/hexagonal/     @clinical-platform/clinical-operations
 /packages/security/      @clinical-platform/security-and-privacy

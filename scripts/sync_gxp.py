@@ -5,7 +5,7 @@ This script is the single-command solution for keeping GxP compliance
 documentation in sync with the current test state. It automates the
 three-step workflow that the CI ``compliance`` job enforces:
 
-    1. Run the full pytest suite and emit ``report.xml``.
+    1. Run the .NET test suite and emit ``report_dotnet.trx``.
     2. Regenerate ``docs/SDLC/Requirements_Traceability_Matrix.md`` and
        ``docs/SDLC/IQ_OQ_PQ_Execution_Report.md`` from the test results.
     3. Stage the updated docs files ready for commit.
@@ -86,13 +86,20 @@ os.environ.setdefault(
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 
+if "GXP_SIGNING_PRIVATE_KEY" not in os.environ or "GXP_SIGNING_CERT" not in os.environ:
+    from packages.compliance.services.gxp_signer import generate_gxp_signing_credentials
+
+    _priv, _cert = generate_gxp_signing_credentials("cadence-gxp-runner")
+    os.environ["GXP_SIGNING_PRIVATE_KEY"] = _priv
+    os.environ["GXP_SIGNING_CERT"] = _cert
+
 # Files that must be committed to keep CI green and compliant.
 GXP_DOCS = [
     "docs/SDLC/Requirements_Traceability_Matrix.md",
     "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
     "docs/SDLC/runs",
 ]
-JUNIT_REPORT = "report.xml"
+TRX_REPORT = "report_dotnet.trx"
 REPO_ROOT = Path(__file__).parent.parent
 
 
@@ -204,11 +211,11 @@ def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
 
 
 def step_run_tests(dry_run: bool, full: bool = False) -> None:
-    """Execute the pytest suite and emit report.xml.
+    """Execute the .NET test suite and emit report_dotnet.trx.
 
     Args:
         dry_run: If True, skip running tests.
-        full: If True, force full test execution bypassing incremental cache.
+        full: If True, force full test execution.
 
     Raises:
         SystemExit: If tests fail.
@@ -221,211 +228,22 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
     print("STEP 1 / 3 — Running test suite")
     print("=" * 60)
 
-    # Incremental GxP verification fast-path
-    if not full and os.path.exists("report.xml") and not os.environ.get("CI"):
-        try:
-            from packages.testing.dependency_graph import TestDependencyGraph
-
-            res = subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True,
-                text=True,
-                cwd=REPO_ROOT,
-            )
-            modified_files = []
-            for line in res.stdout.splitlines():
-                if line.strip():
-                    f = line.strip().split(None, 1)[-1]
-                    if f.endswith(".py"):
-                        modified_files.append(REPO_ROOT / f)
-
-            if not modified_files:
-                print(
-                    "⚡ [incremental] No Python source files modified. Using cached test results."
-                )
-                return
-
-            graph = TestDependencyGraph(repo_root=REPO_ROOT)
-            affected_tests = graph.resolve_affected_tests(modified_files)
-
-            if affected_tests and len(affected_tests) <= 20:
-                print(
-                    f"⚡ [incremental] Running {len(affected_tests)} affected test target(s)..."
-                )
-
-                _run(
-                    [
-                        "uv",
-                        "run",
-                        "--all-extras",
-                        "pytest",
-                        "-q",
-                        "--no-cov",
-                        "--junitxml=report_delta.xml",
-                        *affected_tests,
-                    ]
-                )
-                if os.path.exists("report_delta.xml"):
-                    report_fragments = [
-                        p
-                        for p in [
-                            "report_main.xml",
-                            "report_sequential.xml",
-                            "report_notif.xml",
-                            "report_integration.xml",
-                            "report_qualification.xml",
-                            "report_delta.xml",
-                        ]
-                        if os.path.exists(p)
-                    ]
-                    _run(
-                        [
-                            sys.executable,
-                            "scripts/merge_junit.py",
-                            str(REPO_ROOT / JUNIT_REPORT),
-                            *[str(REPO_ROOT / p) for p in report_fragments],
-                        ]
-                    )
-                return
-        except Exception as exc:
-            print(f"⚠ Incremental test execution fallback to full run: {exc}")
-
     try:
-        # Run main tests with concurrency
         _run(
             [
-                "uv",
-                "run",
-                "--all-extras",
-                "pytest",
-                "-n",
-                "auto",
-                "--junitxml",
-                "report_main.xml",
-                "-q",
-                "--no-cov",
-                "--ignore=scripts/tests/test_layout_validator.py",
-                "--ignore=apps/notifications/tests/test_notifications.py",
-                "--ignore=apps/notifications/tests/test_notification_worker.py",
-                "--ignore=tests/validation",
-                "--ignore=scripts/tests/test_translation_recovery.py",
-                "--ignore=scripts/tests/test_translator.py",
-                "--ignore=apps/designer/tests/test_crf_builder_compliance.py",
-                "--ignore=apps/designer/tests/test_crf_requirements_mapping.py",
-                "--ignore=apps/designer/tests/test_study_versions.py",
-                "--ignore=apps/designer/tests/test_synopsis_router.py",
-                "--ignore=apps/execution/tests/test_pool_state_eviction.py",
-                "--ignore=apps/etmf/tests/test_etmf_qc_invariants.py",
-                "--ignore=apps/etmf/tests/test_etmf_triggers_compliance.py",
+                "dotnet",
+                "test",
+                "Cadence.sln",
+                "--no-restore",
+                "--no-build",
+                "--configuration",
+                "Release",
+                "--results-directory",
+                ".",
+                "--logger",
+                "trx;LogFileName=report_dotnet.trx",
             ]
         )
-        # Run translation, compliance layout, and sqlite migration tests sequentially
-        _run(
-            [
-                "uv",
-                "run",
-                "--all-extras",
-                "pytest",
-                "--junitxml",
-                "report_sequential.xml",
-                "-q",
-                "--no-cov",
-                "scripts/tests/test_translation_recovery.py",
-                "scripts/tests/test_translator.py",
-                "apps/designer/tests/test_crf_builder_compliance.py",
-                "apps/designer/tests/test_crf_requirements_mapping.py",
-                "apps/designer/tests/test_study_versions.py",
-                "apps/designer/tests/test_synopsis_router.py",
-                "apps/execution/tests/test_pool_state_eviction.py",
-                "apps/etmf/tests/test_etmf_qc_invariants.py",
-                "apps/etmf/tests/test_etmf_triggers_compliance.py",
-            ]
-        )
-
-        # Run notification tests sequentially
-        _run(
-            [
-                "uv",
-                "run",
-                "--all-extras",
-                "pytest",
-                "--junitxml",
-                "report_notif.xml",
-                "-q",
-                "--no-cov",
-                "apps/notifications/tests/test_notifications.py",
-                "apps/notifications/tests/test_notification_worker.py",
-            ]
-        )
-        # Run layout validator tests sequentially
-        _run(
-            [
-                "uv",
-                "run",
-                "--all-extras",
-                "pytest",
-                "--junitxml",
-                "report_integration.xml",
-                "-q",
-                "--no-cov",
-                "scripts/tests/test_layout_validator.py",
-            ]
-        )
-        # Run GxP qualification validation suite sequentially
-        _run(
-            [
-                "uv",
-                "run",
-                "--all-extras",
-                "pytest",
-                "tests/validation",
-                "-o",
-                "python_files=*_suite.py *_tests.py test_*.py",
-                "--junitxml",
-                "report_qualification.xml",
-                "-q",
-                "--no-cov",
-            ]
-        )
-        # Merge reports
-        _run(
-            [
-                sys.executable,
-                "scripts/merge_junit.py",
-                str(REPO_ROOT / JUNIT_REPORT),
-                str(REPO_ROOT / "report_main.xml"),
-                str(REPO_ROOT / "report_sequential.xml"),
-                str(REPO_ROOT / "report_notif.xml"),
-                str(REPO_ROOT / "report_integration.xml"),
-                str(REPO_ROOT / "report_qualification.xml"),
-            ]
-        )
-
-        # Run .NET test suites if dotnet is available
-        import shutil
-
-        if shutil.which("dotnet"):
-            try:
-                print(
-                    "\n▶  dotnet test Cadence.sln --logger trx;LogFileName=report_dotnet.trx"
-                )
-                subprocess.run(
-                    [
-                        "dotnet",
-                        "test",
-                        "Cadence.sln",
-                        "--configuration",
-                        "Release",
-                        "--logger",
-                        "trx;LogFileName=report_dotnet.trx",
-                        "--filter",
-                        "Category!=Integration",
-                    ],
-                    cwd=REPO_ROOT,
-                    check=False,
-                )
-            except Exception as exc:
-                print(f"⚠ .NET test execution notice: {exc}")
     except subprocess.CalledProcessError:
         print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
         sys.exit(1)
@@ -445,11 +263,19 @@ def step_generate_rtm(dry_run: bool, draft: bool = False) -> None:
     print("STEP 2 / 3 — Generating GxP compliance docs")
     print("=" * 60)
 
-    cmd = ["uv", "run", "--all-extras", "python", "scripts/generate_rtm.py"]
+    cmd = [
+        "uv",
+        "run",
+        "--all-extras",
+        "python",
+        "scripts/generate_rtm.py",
+        "--report",
+        TRX_REPORT,
+    ]
     if dry_run:
         cmd.append("--validate")
         print("⏭  [dry-run] Running generate_rtm.py --validate (read-only).")
-    if draft or (dry_run and not os.path.exists("report.xml")):
+    if draft or (dry_run and not os.path.exists(TRX_REPORT)):
         cmd.append("--draft")
 
     try:

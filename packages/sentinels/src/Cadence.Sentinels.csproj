@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Sentinels</RootNamespace>
+    <Description>Concurrent quality gate sentinel check engine and architecture validation runner.</Description>
+  </PropertyGroup>
+</Project>

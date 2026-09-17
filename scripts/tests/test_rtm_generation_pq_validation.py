@@ -9,11 +9,11 @@ def test_pq_all_tests_passed(tmp_path):
     """Test that all PQ scenarios are marked as Verified Compliant if all tests pass."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
-    <testcase classname="apps.execution.tests.test_study_versions" name="test_api_protocol_approval_and_immutability" time="0.010" />
-    <testcase classname="apps.execution.tests.test_subject_randomization_lifecycle" name="test_stratification_factors_locking" time="0.010" />
-    <testcase classname="apps.interop.tests.test_offline_sync" name="test_offline_sync_conflict_resolution" time="0.010" />
-    <testcase classname="apps.safety.tests.test_emergency_unblinding" name="test_unblind_success_authorized_access" time="0.010" />
+  <testsuite name="xUnit" errors="0" failures="0" skipped="0" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="Cadence.UnitTests.FormSubmissionStateTests" name="CompleteAndApprove_LocksFormInReadOnlyState" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation" time="0.010" />
+    <testcase classname="Cadence.UnitTests.EnrollmentIndexConcurrencyTests" name="CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock" time="0.010" />
   </testsuite>
 </testsuites>
 """
@@ -51,13 +51,13 @@ def test_pq_test_failed(tmp_path):
     """Test that if a mapped test fails, the associated scenario is marked as failed."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
-    <testcase classname="apps.execution.tests.test_study_versions" name="test_api_protocol_approval_and_immutability" time="0.010">
+  <testsuite name="xUnit" errors="0" failures="1" skipped="0" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="Cadence.UnitTests.FormSubmissionStateTests" name="CompleteAndApprove_LocksFormInReadOnlyState" time="0.010">
       <failure message="immutability failed">assertion error</failure>
     </testcase>
-    <testcase classname="apps.execution.tests.test_subject_randomization_lifecycle" name="test_stratification_factors_locking" time="0.010" />
-    <testcase classname="apps.interop.tests.test_offline_sync" name="test_offline_sync_conflict_resolution" time="0.010" />
-    <testcase classname="apps.safety.tests.test_emergency_unblinding" name="test_unblind_success_authorized_access" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation" time="0.010" />
+    <testcase classname="Cadence.UnitTests.EnrollmentIndexConcurrencyTests" name="CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock" time="0.010" />
   </testsuite>
 </testsuites>
 """
@@ -104,13 +104,13 @@ def test_pq_test_skipped(tmp_path):
     """Test that if a mapped test is skipped, the associated scenario is marked as skipped."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="pytest" errors="0" failures="0" skipped="1" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
-    <testcase classname="apps.execution.tests.test_study_versions" name="test_api_protocol_approval_and_immutability" time="0.010">
+  <testsuite name="xUnit" errors="0" failures="0" skipped="1" tests="4" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="Cadence.UnitTests.FormSubmissionStateTests" name="CompleteAndApprove_LocksFormInReadOnlyState" time="0.010">
       <skipped message="skipping for test" />
     </testcase>
-    <testcase classname="apps.execution.tests.test_subject_randomization_lifecycle" name="test_stratification_factors_locking" time="0.010" />
-    <testcase classname="apps.interop.tests.test_offline_sync" name="test_offline_sync_conflict_resolution" time="0.010" />
-    <testcase classname="apps.safety.tests.test_emergency_unblinding" name="test_unblind_success_authorized_access" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation" time="0.010" />
+    <testcase classname="Cadence.UnitTests.EnrollmentIndexConcurrencyTests" name="CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock" time="0.010" />
   </testsuite>
 </testsuites>
 """
@@ -148,10 +148,10 @@ def test_pq_test_missing_fail_fast(tmp_path):
     """Test that if a mapped test is missing, report generation fails and raises an error (unless in draft)."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="3" time="0.100" timestamp="2026-08-17T12:00:00">
-    <testcase classname="apps.execution.tests.test_subject_randomization_lifecycle" name="test_stratification_factors_locking" time="0.010" />
-    <testcase classname="apps.interop.tests.test_offline_sync" name="test_offline_sync_conflict_resolution" time="0.010" />
-    <testcase classname="apps.safety.tests.test_emergency_unblinding" name="test_unblind_success_authorized_access" time="0.010" />
+  <testsuite name="xUnit" errors="0" failures="0" skipped="0" tests="3" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation" time="0.010" />
+    <testcase classname="Cadence.UnitTests.EnrollmentIndexConcurrencyTests" name="CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock" time="0.010" />
   </testsuite>
 </testsuites>
 """
@@ -182,10 +182,10 @@ def test_pq_test_missing_draft_mode(tmp_path):
     """Test that draft mode bypasses the missing mapped test fail-fast check and outputs UNVERIFIED."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="3" time="0.100" timestamp="2026-08-17T12:00:00">
-    <testcase classname="apps.execution.tests.test_subject_randomization_lifecycle" name="test_stratification_factors_locking" time="0.010" />
-    <testcase classname="apps.interop.tests.test_offline_sync" name="test_offline_sync_conflict_resolution" time="0.010" />
-    <testcase classname="apps.safety.tests.test_emergency_unblinding" name="test_unblind_success_authorized_access" time="0.010" />
+  <testsuite name="xUnit" errors="0" failures="0" skipped="0" tests="3" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation" time="0.010" />
+    <testcase classname="Cadence.UnitTests.EnrollmentIndexConcurrencyTests" name="CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates" time="0.010" />
+    <testcase classname="Cadence.UnitTests.ClinicalSubjectTests" name="Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock" time="0.010" />
   </testsuite>
 </testsuites>
 """

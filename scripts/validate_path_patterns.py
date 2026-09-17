@@ -223,7 +223,9 @@ APPROVED_SUBDIRECTORIES = {
     # Standard editor/agent/container tooling config directories — not
     # "architectural" boundaries, but legitimately root-level.
     ".claude/",
+    ".config/",
     ".devcontainer/",
+    ".githooks/",
     ".vscode/",
     ".config/",
     ".githooks/",
