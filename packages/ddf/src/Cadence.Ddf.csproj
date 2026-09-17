@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Ddf</RootNamespace>
+    <Description>Digital Data Flow (DDF) compilation pipeline and Intermediate Representation (IR) domain models for Cadence.</Description>
+  </PropertyGroup>
+</Project>

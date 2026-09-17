@@ -26,10 +26,6 @@ dependencies = [
     "jsonschema>=4.20.0",
     "rapidfuzz>=3.14.5",
     "cryptography>=4.5.0",
-    "packages-database",
-    "packages-security",
-    "packages-deid",
-    "packages-storage",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -24,7 +24,9 @@ def test_fail_fast_without_report_and_draft_flag():
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
-            p for p in Path(".").glob("report*.*") if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
+            p
+            for p in Path(".").glob("report*.*")
+            if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
         ]
         backups = []
         for rf in report_files:
@@ -75,7 +77,9 @@ def test_success_with_draft_flag():
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
-            p for p in Path(".").glob("report*.*") if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
+            p
+            for p in Path(".").glob("report*.*")
+            if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
         ]
         backups = []
         for rf in report_files:

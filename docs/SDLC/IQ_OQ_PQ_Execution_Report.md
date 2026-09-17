@@ -11,8 +11,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2214
-- **Passed:** 2214 🟢
+- **Total Automated Test Cases Run:** 2246
+- **Passed:** 2246 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -147,18 +147,6 @@ nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
 openpyxl                 3.1.5
-packages-cli             0.1.0
-packages-compliance      0.1.0
-packages-database        0.1.0
-packages-ddf             0.1.0
-packages-deid            0.1.0
-packages-engine-core     0.1.0
-packages-hexagonal       0.1.0
-packages-security        0.1.0
-packages-sentinels       0.1.0
-packages-storage         0.1.0
-packages-testing         0.1.0
-packages-tooling-core    0.1.0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
@@ -987,6 +975,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectConsentId_New_ProducesUniqueValues` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_New_ProducesUniqueValues` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_ToString_ReturnsGuidValue` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditChainVerifier_ValidatesIntactChain` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditDigestCalculator_ComputesExpectedHash` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Ddf_Models_ConstructsSuccessfully` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Deid_DeidDetector_DetectsAndRedactsEmail` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Sentinels_Engine_ExecutesRegisteredCheck` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `CalculateAge_GivenNullBirthDate_ReturnsNull` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `CalculateAge_GivenNullObservationDate_ReturnsNull` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `CalculateAge_GivenOneDaySpan_ReturnsExactFixedDivisorValue` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1011,6 +1007,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `CompleteAndApprove_LocksFormInReadOnlyState` | `` | PRD-SYS-002, SRS-EDC-003 | 🟢 PASSED | < 1s |
 | `ComplianceStatusResponse_SerializesWithSpecSnakeCasePropertyNames` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `ComplianceStatus_EndToEnd_NoCacheRowExists_Returns200WithFalseAndEmptyDefaults` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `Compliance_AuditChainVerifier_ValidatesIntactChain` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Compliance_AuditDigestCalculator_ComputesExpectedHash` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Configure_HasUniqueIndexOnSubjectCode` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Configure_IgnoresComputedMissingDocumentsPropertyItself` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1056,6 +1054,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatHolds_DoesNotThrow` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `Ddf_Models_ConstructsSuccessfully` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `Decrypt_MalformedBase64_ThrowsDecryptionFailedWrappingFormatException` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Decrypt_OnFailure_ExceptionMessageDoesNotLeakPlaintextOrCiphertext` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Decrypt_TamperedCiphertextBody_ThrowsDecryptionFailed` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1063,6 +1062,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Decrypt_TamperedTag_ThrowsDecryptionFailed` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Decrypt_ValidJsonButNotAnObject_ThrowsWithSpecificMessage` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Decrypt_WithDifferentKey_ThrowsDecryptionFailed` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `Deid_DeidDetector_DetectsAndRedactsEmail` | `` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `DeleteDemographicsAsync_GivenPostRandomizationSubject_FailsWithSoftDeleteBlocked_DistinctFromLockedFactorMutation` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsUnderpopulatedWithClearedDemographics` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1169,6 +1169,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Guard_SameStateNoOp_AlwaysSucceeds` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Healthz_GivenTheFullyWiredCompositionRoot_StillReturnsTheUnchangedPreExistingResponse` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `HmacSigner_GeneratesDeterministicSignature_AndVerifiesCorrectly` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1259,6 +1260,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `SavingChangesAsync_GivenTwoDomainMutationsBeforeOneSaveChangesAsync_IncrementsShadowVersionOnlyOnce` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SavingChangesAsync_NeverIncrementsSiteComplianceCacheVersionDomainCounter` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SdvVerification_StateTransitions_MaintainStrictPart11Audit` | `` | PRD-SYS-042, SRS-EDC-001 | 🟢 PASSED | < 1s |
+| `Sentinels_Engine_ExecutesRegisteredCheck` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `SiteActivationRequest_ValueEquality_ComparesByStudyId` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SiteCode_AsNullableParameter_MayBeAbsent` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SiteCode_ValidValue_IsAccepted` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1267,6 +1269,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `SiteComplianceCaches_GivenMissingDocuments_RoundTripsAsNativeArrayInOrder` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SiteComplianceCaches_GivenVersionIncrementedTwiceBeforeOneSaveChangesAsync_PersistsFinalValueNotIntermediate` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SoftDeleteBlocked_ReturnsFixedCodeAndForbiddenType` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `StudyCode_AtMaxLength_IsAccepted` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `StudyCode_ExceedsMaxLength_Throws` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `StudyCode_WhitespaceOrEmpty_Throws` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1308,6 +1311,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `TransitionTo_SameState_NoOpSucceedsViaGuard` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -2465,6 +2469,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `SubjectConsentId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `SubjectId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `SubjectId_ToString_ReturnsGuidValue` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Deid_DeidDetector_DetectsAndRedactsEmail` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Deid_DeidDetector_DetectsAndRedactsEmail` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2511,28 +2531,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** ef92c012084d8e6f48488fd3017690662dc55545b34019ba8262af518f19ec89
+- **Cryptographic Hash (SHA-256):** eb86e141ae5e2316f19f060cbe808cd3a2226bc3ec9e8202a6ad1cba8b19c8ec
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUbupjiH5uZbPgTUmG7V6H49bmo2QwDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUNTsNOyU6Lf76+zfTnU355dQBDxswDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTE1MTU1NjQ2WhcNMjcwOTE2MTU1NjQ2WjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTE2MTYyMTIzWhcNMjcwOTE3MTYyMTIzWjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAMKNOLeMnrdCo1OJ0aMVGo1G2x/Miy/i
-MWds5dOhBDfYpFXZkfcaj57R1w7tZtzKattN06nOdzQIzp55bqbxV8+HU8zu+399
-d2ALloWJ+Tr1ninh0FtKSZnxle/IGGblJAGzMc02yFTm1Ue8CqmY1/QP3ICkLLz2
-fgECCvLeasEAlbnaxpgGpkn1SKWqJtZPJ+5TLQWDrCXvnd4C4A27XVveqIbIgAxI
-mGKEU0K6xhOa6tTFYjfOm3IxNimZ6pWg9AmTzw3RgzfP1LrmbXOVyOQdEShgNYLE
-RAYpLqYvvaRSPpd7B0ZaJQ2sQPJBGpIXL4cR2xWSM5ZKT8cbsMdRKa0CAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAdlexFvgnrfcYl2Uk/0Vw6j/dnF8Bwiz+LlKD2po4
-hg2OoHAFNVy4nl1zJyvNE3KzKiqAtKVHDd0hcWpYSWU+tOjss2uWc8gH6WskHDJB
-08edmuYBaEUnO/BDVwUJmitWjHGy3uBs0FGjwBpmblJdUITHpS1jW/qEwsV2PT4+
-vyGWKxN1MXmRZexPegULkDZc6IyIQE9141HY5jRSXziWkXt0YUzaKxTnKmu4/DKS
-WAigr2wT0jDHgmWdPS2B50vs9UFo8vPEHYhxs/rSWx+xbK2ZWawzi71V5Tmma6lS
-adCtDgeF7CBZYaE6hOqWF1L6KidO56DK7vvC5erBT6sg7w==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAKDiBKIppJoXPm/Ak4p8Ea6v8RKdmP2T
+j434+ZIje0OHaEL9ckE79rBSLMpYizXr0zvPGBD+jLtr6XLXqtgRpS5U/szFFdED
+gfKWwtjyVfVboq0QabWStYo5bJOssSZuEOaYhJbxmFOYfhJG3ywZhSNAGcTCGbrB
+DunGb/Edi7Q+M5u2vHuS0lUarEZfljUqifPkAO1wZ9L8jXgNjHFlH5v+2ts/D99d
+CDnlLzDeSjih6lJK4WmEzEJUx2BG9pNcfrXNEqTe8nGX2//qKzIkflKXF185gOsm
+7vUOLuG61aw0wdUq5QN+JTsGst0D6JaDcFHQgWyhOJ0E+IgwBOyQo0MCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEARn/WyYv/3hjqdN3AMjHHBA+ehkH5k23xnPt7hp9o
++lvLC2sgpP09QvJUsIp896TTC66mbwK/T1z365/N6fIEDOLIUaa+cw3PJpksnPRP
+kEqKXTgnOE9rLjjXuKaEaSuU5QW9lrX4x8DTMqRGVk79S7fo9NRvt3n6qjCfa0io
+R3roothrWDX9DC9BvP4C2wayPalwTxyFm+i86Vb2xooXRK2DH7nEep5jyoYd+5go
+E/gu9BDRPCs5HHwMnGTIiHC3AF2vVc5PbVy6z3eyNZS5IdEeAnp7WQVfGMYCMQWp
+3Jaf72+k9YVN8UnWJvSVtPlPspl6B8vu5XtfOVlguZpUAw==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-oHnQQzoEujaMuPPecK6c5cv+7/cViA9U069Ye/NfKtqllixFM9VWf5gvvJHDt+TT+m5WQKE159tg10N2iSqy36Dq0RKeKAgfy8wlfJqN29cgcUe4NTtdleh/PVTrkl/RrxdRmFjAQh7Gl9GSU4RQTLa+5jCphzzwKp4h3ZnJI2vCpA7pu8T6Mp4vEwLTFq5ZbiFdf66XkpdO4yOsUNxh7NtOeFzb3NVnsJ4kNtvUAcm4fo/0awHyHVXvD3X4xNsjzkuWW9PXEcWhnRTqSVHvqL/8uqQjS+lX3ceHLPFrXWS68LFFqDWWfUFag7pyRHzedpm3r35WAEDVijluK/KW+w==
+hoR19YyQ6izJZkF+CnRcwAOp7pttpGYWfEQTxxGuv8sFOWNsjPXk6SMj9cwRQKQXr2K99Cc4cu4KDKjPXkD7linRgzux7D4HiE3IlNUdWnv/jQUzVXJNHjzECN+giyXc0upxmYxI9m8OeL0KQSJqaEjs30HhzIZMfDTX7fCSXpqqDybSsZYzXELIL+cTIy9BG0/aejJvkmLIODj9OApkXS28Wy2IgZFzD3blnp/EiCTuvRYwC973mlIK5eaWZCs4YUWDjLfq9/iOlnyAsmASSZQbE3qo/1qr1nEuK0LtL95KSIGXVrQtPJ4Z9L/DhRNW+62uouPOezShJr/cbybIqw==
 -----END SIGNATURE-----

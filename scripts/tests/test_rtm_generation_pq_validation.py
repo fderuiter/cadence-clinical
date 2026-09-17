@@ -17,7 +17,7 @@ def test_pq_all_tests_passed(tmp_path):
   </testsuite>
 </testsuites>
 """
-    report_file = tmp_path / "report_dotnet.trx"
+    report_file = tmp_path / "report.xml"
     report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_all_passed"
@@ -61,7 +61,7 @@ def test_pq_test_failed(tmp_path):
   </testsuite>
 </testsuites>
 """
-    report_file = tmp_path / "report_dotnet.trx"
+    report_file = tmp_path / "report.xml"
     report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_failed"
@@ -114,7 +114,7 @@ def test_pq_test_skipped(tmp_path):
   </testsuite>
 </testsuites>
 """
-    report_file = tmp_path / "report_dotnet.trx"
+    report_file = tmp_path / "report.xml"
     report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_skipped"
@@ -155,7 +155,7 @@ def test_pq_test_missing_fail_fast(tmp_path):
   </testsuite>
 </testsuites>
 """
-    report_file = tmp_path / "report_dotnet.trx"
+    report_file = tmp_path / "report.xml"
     report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_missing"
@@ -189,7 +189,7 @@ def test_pq_test_missing_draft_mode(tmp_path):
   </testsuite>
 </testsuites>
 """
-    report_file = tmp_path / "report_dotnet.trx"
+    report_file = tmp_path / "report.xml"
     report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_draft"

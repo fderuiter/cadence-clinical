@@ -51,6 +51,7 @@
     <!-- MIG-SUBJ-028: Integration tests use Testcontainers.PostgreSql, which is not referenced by this project.
          Keep compiled into Cadence.UnitTests.csproj only. -->
     <Compile Remove="Execution/Integration/**" />
+    <Compile Remove="Packages/**" />
   </ItemGroup>
 
   <ItemGroup>
