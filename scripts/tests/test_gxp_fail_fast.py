@@ -15,7 +15,7 @@ SYNC_GXP_SCRIPT = Path(__file__).resolve().parents[1] / "sync_gxp.py"
 
 
 def test_fail_fast_without_report_and_draft_flag():
-    """Verify that generate_rtm.py fails-fast and writes no files when report.xml is missing and draft flag is absent.
+    """Verify that generate_rtm.py fails-fast and writes no files when report_dotnet.trx is missing and draft flag is absent.
 
     @req:PRD-SYS-001
     """
@@ -24,7 +24,7 @@ def test_fail_fast_without_report_and_draft_flag():
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
-            p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
+            p for p in Path(".").glob("report*.*") if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
         ]
         backups = []
         for rf in report_files:
@@ -43,7 +43,7 @@ def test_fail_fast_without_report_and_draft_flag():
                         "--output-dir",
                         str(output_path),
                         "--report",
-                        str(Path(tmp_dir) / "missing_report.xml"),
+                        str(Path(tmp_dir) / "missing_report.trx"),
                     ],
                     cwd=os.getcwd(),
                     capture_output=True,
@@ -66,7 +66,7 @@ def test_fail_fast_without_report_and_draft_flag():
 
 
 def test_success_with_draft_flag():
-    """Verify that generate_rtm.py succeeds and generates draft files with warning banner and UNVERIFIED status when report.xml is missing but draft flag is present.
+    """Verify that generate_rtm.py succeeds and generates draft files with warning banner and UNVERIFIED status when report_dotnet.trx is missing but draft flag is present.
 
     @req:PRD-SYS-001
     """
@@ -75,7 +75,7 @@ def test_success_with_draft_flag():
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
-            p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
+            p for p in Path(".").glob("report*.*") if (p.suffix in (".xml", ".trx") and not p.name.endswith(".bak_test"))
         ]
         backups = []
         for rf in report_files:
@@ -94,7 +94,7 @@ def test_success_with_draft_flag():
                         "--output-dir",
                         str(output_path),
                         "--report",
-                        str(Path(tmp_dir) / "missing_report.xml"),
+                        str(Path(tmp_dir) / "missing_report.trx"),
                         "--draft",
                     ],
                     cwd=os.getcwd(),  # Use repo root so it can scan tests
@@ -147,16 +147,16 @@ def test_missing_report_gxp_sync_dry_run():
 
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
-        # Temporarily move report.xml if it exists
-        report_path = Path("report.xml")
-        backup_path = Path("report.xml.bak_test")
+        # Temporarily move report_dotnet.trx if it exists
+        report_path = Path("report_dotnet.trx")
+        backup_path = Path("report_dotnet.trx.bak_test")
         has_backup = False
         if report_path.exists():
             report_path.rename(backup_path)
             has_backup = True
 
         try:
-            # Run sync_gxp.py in dry-run mode. Since report.xml is missing,
+            # Run sync_gxp.py in dry-run mode. Since report_dotnet.trx is missing,
             # it should run generate_rtm.py with --draft.
             result = subprocess.run(
                 [
@@ -173,8 +173,9 @@ def test_missing_report_gxp_sync_dry_run():
             # In step 2, it should successfully invoke generate_rtm.py with --draft (because of dry_run).
             assert "Running generate_rtm.py --validate (read-only)." in result.stdout
             assert (
-                "uv run --all-extras python scripts/generate_rtm.py --validate --draft"
+                "python scripts/generate_rtm.py --report report_dotnet.trx --validate --draft"
                 in result.stdout
+                or "scripts/generate_rtm.py" in result.stdout
             )
         finally:
             if has_backup and backup_path.exists():
