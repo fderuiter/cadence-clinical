@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Hexagonal</RootNamespace>
+    <Description>Enterprise Hexagonal Architecture kernel providing domain primitives, event dispatcher ports, repository ports, and RFC 7807 problem details error mapping.</Description>
+  </PropertyGroup>
+</Project>

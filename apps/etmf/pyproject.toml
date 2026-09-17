@@ -17,9 +17,6 @@ dependencies = [
     "asyncpg>=0.29.0",
     "PyMuPDF>=1.24.0",
     "cryptography>=4.5.0",
-    "packages-database",
-    "packages-security",
-    "packages-deid",
 ]
 
 [tool.hatch.build.targets.wheel]

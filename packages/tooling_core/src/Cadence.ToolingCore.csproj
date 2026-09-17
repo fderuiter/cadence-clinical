@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.ToolingCore</RootNamespace>
+    <Description>Unified execution contracts and handler operations for developer CLI and MCP tools.</Description>
+  </PropertyGroup>
+</Project>

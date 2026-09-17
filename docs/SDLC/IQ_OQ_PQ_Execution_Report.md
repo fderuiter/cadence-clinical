@@ -14,9 +14,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2590
+- **Total Automated Test Cases Run:** 2598
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 2590 ⚪
+- **Unverified (Draft):** 2598 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -148,18 +148,6 @@ nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
 openpyxl                 3.1.5
-packages-cli             0.1.0
-packages-compliance      0.1.0
-packages-database        0.1.0
-packages-ddf             0.1.0
-packages-deid            0.1.0
-packages-engine-core     0.1.0
-packages-hexagonal       0.1.0
-packages-security        0.1.0
-packages-sentinels       0.1.0
-packages-storage         0.1.0
-packages-testing         0.1.0
-packages-tooling-core    0.1.0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
@@ -244,7 +232,7 @@ uvicorn                  0.51.0
 uvloop                   0.22.1
 virtualenv               21.7.0
 watchfiles               1.2.0
-weasyprint               69.0
+weasyprint               70.0
 webencodings             0.5.1
 websockets               16.1.1
 wrapt                    1.17.3
@@ -694,6 +682,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `SubjectConsentId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `SubjectId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `SubjectId_ToString_ReturnsGuidValue` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Deid_DeidDetector_DetectsAndRedactsEmail` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2888,28 +2884,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 61e2f79c5cfee1e3ccc3b67abde92b70f26014299fa064076ea357aeffc4e8e2
+- **Cryptographic Hash (SHA-256):** d7e2a585b45026d9616b8df43a6f5a98d382b26ca97bcfff7d167e72fad498f4
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUMfqkSvnCty3532z0Ovlz9xX8eLYwDQYJKoZIhvcNAQEL
-BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
-bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA5
-MTUxNTQ0MzdaFw0yNzA5MTYxNTQ0MzdaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
-IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCv
-OzszuhYjaHA5wguG9ZvnfQroH2Bai17HtnPGA0ct8PlZljbvVOQQyha7+ciAqPLB
-wqcf/f3nUKVBP8iUcgNtsnAF5G4GTLrkXI2Ex7gczx4GMO7vrW9c+d5ReQQJBEpL
-zosK8LSFcCS7nipZkFqFTG0zYE1ADMkEh2Ojvhm7lGkxTFGONF1EHPZWVIL/eGCQ
-+Ss3DSl9OCHX4DiMZ2oUxg7BTSUOEmtMxgG+1aT+hL+mnOeqIiqY/yjpxHu5E0rF
-CLoo2Ep/2MrUHWnvOHT6C/GSDo6J798+EyRqfXwmr+9ckmHJ+D9PjoWFjlTJckB5
-ifb0Jl+ruJ/DdtFsQcznAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAA0wdO3r2ZPH
-ib3OnQgiSkZBQ90HLBEw+TBHzkD9eUJFiT2ruoDqZmWIvTpazdlcGccwQvlPWKBa
-b+/jjz+xnMShehj9lHPiB+Qi3gQikk0o6sxmtPzo3V8VRjVQBZKdwm1GmJA7m9fe
-cB/lDZxtqTMBMeCze84BROHAThCCQmjs1jtq3PCebCGGYhbEfuZ2zCQucAcah6b4
-dcClT9pmxs037XuV40fQnwxsKN3njNo54gXFqSsi+egrfaEF2xVvsVopvDb87y+1
-BM6ZylejrE6AYvIFmkW69uVKqgP9/Wm+iVOygR9DbCcwjVpLlii0BFBwkuTUTpv8
-NM1Rn0eHH50=
+MIIDTjCCAjagAwIBAgIUZEkk0iGs+py+YR4vmiVg2i1zs4MwDQYJKoZIhvcNAQEL
+BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
+ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
+dHdhcmUwHhcNMjYwOTE2MTkwMzM3WhcNMjcwOTE3MTkwMzM3WjBhMTswOQYDVQQD
+DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
+bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAKf5W6eTn2s2UxUywhIB9y29evrC2O8z
+dEdGgXSzOioP3F+6VdtthGwwHwaqT/QKCw9SuKFa5yAwRZMR526d7smXXuwX1TbC
+Jop7m2QLrT4ChfHdZ81fBpaHMmUH7xZ0RNEEiK34gtwv4mZ6/hsseztbtZAtGnY2
+1zPBgFQiEmGvXe92rxyDxSwBaSmD/CFrfYz0zcRrXw8MOLicSa/qnRRXlDQKq+mb
+j4ZqJ76dzclzvyQdBRc7ejTnA2bcwFF7neFz8pAcOapVwjWUBJYgUo1GQuec3wAp
+ymXMkGAai6aACMzqJIRGU8rJr+6Zc3sjpsL8g00xEr9Ee5U0dQcNpbECAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAJeiVGJ0RAxSQnDUcXa2Q+RP0+mIIuDtLn3MyENVd
+Cm6llxFF+iKJEwCo7W8YhDf0U/hFk9ylv7sv40NiPe6Jd0yHlTGlYGPh7QHPZrCA
+6O9oHPtiMooe+dqcg2+As1xGHNYtwmvmu6bdPeC8bDP+7WLyyhy8o366ZA9ThYYq
+w9Tv6f9n82rrd+sbk83jdIluKQ5FJvWS0HMbgn3Agl1cSWo8wWCklUMWFgvWlxFr
+JUVy6bEPFYOaQ89Edmx8uvJNrFoa2yiqw1xeS7jtatTTcRmfz+y+t3USz/rCErsK
+ocygeBc3RWLsUWdU3OQAQauyglivEk++1xrneQ1U7Y0PfQ==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-ZDkgWSH19swg5iXEwb2EphlUNZGkRir4iIznQIOaA98uim68onWIinHntuJQc52y70JYsP3v1d2SmjzHCkRzOTR9b4N2Z+D/QGFsOnCaAq7iBwvDNsqdBo1zedhWY6PTQU2HuaMVXmSJdgN2Pck0tcp8ixKOXuFVogTbKTJnS3hbZy84xcCJG17VSS7PA0uU/snVpUgag2+BFWuiKSdGgHqXvPF+/9k8CKV6CqaeYxPtc4nJnl8gclR4p4QIAPRgT+ozGcQoj+R5xsqO1qd+vulmjm/qxoMwSkCzKjwRivc3qnupdG74otdVa9tQGnwP/Uy+AfuCfuAjJOjUFZhnmg==
+Xb3QY3fQyl0boRflFSZ2pFzzhGxqAy907y38iu79yqD4cmBLLu5A45/iXQderLXXQO7qf5yCsDgVKwupKTDyPTWCZYzxyovxSFRhYleJtawUGVX912lERzmYIG7+XUeAbdPtCb9xRRLld33yP8/2epRAcD2zC43vmOCNN3gRLsh0eLctlHd7+0eIx3zjhGRcyWNSeAj5w11Crw9d/xNPfFNXgk62JN+osErtzZEHW4BDXrFTgXEX2sUJnoNrkvUNN5ylZHuEIMnMNz8JBuYjay+P33fNvhhWSTkKKPN2AiZcrAjEIfovT01i4JOj4vMNvqvKAPRTR074NoQ9Ta/EuA==
 -----END SIGNATURE-----

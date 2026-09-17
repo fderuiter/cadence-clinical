@@ -344,10 +344,14 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
     current_test = None
 
     ns_pattern = re.compile(r"^\s*namespace\s+([A-Za-z0-9_.]+)")
-    class_pattern = re.compile(r"^\s*(?:public|internal|sealed|abstract|\s)*class\s+([A-Za-z0-9_]+)")
+    class_pattern = re.compile(
+        r"^\s*(?:public|internal|sealed|abstract|\s)*class\s+([A-Za-z0-9_]+)"
+    )
     test_attr_pattern = re.compile(r"\[(?:Fact|Theory)(?:\(.*\))?\]")
     gxp_attr_pattern = re.compile(r'\[GxPRequirement\("([^"]+)"\)')
-    method_pattern = re.compile(r"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\(")
+    method_pattern = re.compile(
+        r"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\("
+    )
     req_doc_pattern = re.compile(r"@req:\s*([A-Za-z0-9_-]+)")
 
     for i, line in enumerate(lines):
@@ -377,7 +381,9 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
             method_match = method_pattern.search(stripped)
             if method_match:
                 test_name = method_match.group(1)
-                classname = f"{namespace}.{current_class}" if namespace else current_class
+                classname = (
+                    f"{namespace}.{current_class}" if namespace else current_class
+                )
 
                 normalized_tags = []
                 for tag in pending_tags:
@@ -398,11 +404,13 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
                     "tags": unique_tags,
                 }
                 for tag in unique_tags:
-                    test_mappings.setdefault(tag, []).append({
-                        "file": norm_rel_filepath,
-                        "test_name": test_name,
-                        "line": line_num,
-                    })
+                    test_mappings.setdefault(tag, []).append(
+                        {
+                            "file": norm_rel_filepath,
+                            "test_name": test_name,
+                            "line": line_num,
+                        }
+                    )
 
                 current_test = (classname, test_name, line_num)
                 pending_tags = []
@@ -425,11 +433,13 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
                     if ntag not in test_cases_all[(cname, tname)]["tags"]:
                         test_cases_all[(cname, tname)]["tags"].append(ntag)
                         test_cases_all[(cname, tname)]["tags"].sort()
-                        test_mappings.setdefault(ntag, []).append({
-                            "file": rel_filepath.replace("\\", "/"),
-                            "test_name": tname,
-                            "line": lnum,
-                        })
+                        test_mappings.setdefault(ntag, []).append(
+                            {
+                                "file": rel_filepath.replace("\\", "/"),
+                                "test_name": tname,
+                                "line": lnum,
+                            }
+                        )
 
 
 def scan_tests(tests_dirs=None):
@@ -453,7 +463,9 @@ def scan_tests(tests_dirs=None):
                 rel_filepath = os.path.relpath(filepath, start=os.getcwd())
 
                 if file.endswith(".cs") and not file.startswith("__"):
-                    _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all)
+                    _scan_csharp_file(
+                        filepath, rel_filepath, test_mappings, test_cases_all
+                    )
                 elif (
                     file.endswith(".py")
                     and not file.startswith("__")
@@ -594,14 +606,20 @@ def parse_trx_file(trx_path, results):
         unit_tests = root.findall(".//ns:UnitTest", ns) or root.findall(".//UnitTest")
         for ut in unit_tests:
             ut_id = ut.get("id")
-            test_method = ut.find("ns:TestMethod", ns) if ut.find("ns:TestMethod", ns) is not None else ut.find("TestMethod")
+            test_method = (
+                ut.find("ns:TestMethod", ns)
+                if ut.find("ns:TestMethod", ns) is not None
+                else ut.find("TestMethod")
+            )
             if test_method is not None:
                 cname = test_method.get("className", "")
                 mname = test_method.get("name", "")
                 if ut_id and cname and mname:
                     test_defs[ut_id] = (cname, mname)
 
-        unit_test_results = root.findall(".//ns:UnitTestResult", ns) or root.findall(".//UnitTestResult")
+        unit_test_results = root.findall(".//ns:UnitTestResult", ns) or root.findall(
+            ".//UnitTestResult"
+        )
         for utr in unit_test_results:
             test_id = utr.get("testId")
             full_test_name = utr.get("testName", "")
@@ -628,15 +646,29 @@ def parse_trx_file(trx_path, results):
                 status = "SKIPPED"
 
             msg = ""
-            error_info = utr.find(".//ns:ErrorInfo/ns:Message", ns) if utr.find(".//ns:ErrorInfo/ns:Message", ns) is not None else utr.find(".//ErrorInfo/Message")
+            error_info = (
+                utr.find(".//ns:ErrorInfo/ns:Message", ns)
+                if utr.find(".//ns:ErrorInfo/ns:Message", ns) is not None
+                else utr.find(".//ErrorInfo/Message")
+            )
             if error_info is not None and error_info.text:
                 msg = error_info.text
 
-            results[(classname, name)] = {
+            res_dict = {
                 "status": status,
                 "message": msg,
                 "time": str(duration),
             }
+
+            results[(classname, name)] = res_dict
+            results[(classname, full_test_name)] = res_dict
+            results[("", name)] = res_dict
+            results[("", full_test_name)] = res_dict
+
+            base_name = name.split("(")[0]
+            if base_name != name:
+                results[(classname, base_name)] = res_dict
+                results[("", base_name)] = res_dict
     except Exception as e:
         print(f"Error parsing TRX file {trx_path}: {e}")
 
@@ -644,71 +676,79 @@ def parse_trx_file(trx_path, results):
 def parse_test_results(report_xml_path):
     results = {}
 
-    # 1. Parse main JUnit XML report if present
-    if os.path.exists(report_xml_path):
-        try:
-            tree = ET.parse(report_xml_path)  # nosec B314
-            root = tree.getroot()
-            for testcase in root.iter("testcase"):
-                classname = testcase.get("classname", "")
-                name = testcase.get("name", "")
-
-                # Normalize classname to make it fully deterministic regardless of pytest execution path
-                if classname and not (
-                    classname.startswith("tests.")
-                    or classname.startswith("apps.")
-                    or classname.startswith("packages.")
-                    or classname.startswith("scripts.")
-                ):
-                    if classname.startswith("validation."):
-                        classname = "tests." + classname
-                    elif classname in (
-                        "gxp_compliance_suite",
-                        "prd_compliance_traceability_suite",
-                        "dia_tmf_validation_suite",
-                        "environment_integrity_suite",
-                        "test_path_boundary_linter",
-                    ):
-                        classname = "tests.validation." + classname
-                    else:
-                        classname = "tests." + classname
-
-                # Check for failure, error, skipped
-                status = "PASSED"
-                failure_message = ""
-
-                failure = testcase.find("failure")
-                if failure is not None:
-                    status = "FAILED"
-                    failure_message = failure.text or failure.get("message", "")
-
-                error = testcase.find("error")
-                if error is not None:
-                    status = "ERROR"
-                    failure_message = error.text or error.get("message", "")
-
-                skipped = testcase.find("skipped")
-                if skipped is not None:
-                    status = "SKIPPED"
-                    failure_message = skipped.text or skipped.get("message", "")
-
-                results[(classname, name)] = {
-                    "status": status,
-                    "message": failure_message,
-                    "time": testcase.get("time", "0.0"),
-                }
-        except Exception as e:
-            print(f"Error parsing XML report: {e}")
-    else:
-        print(f"Warning: Test report {report_xml_path} not found.")
-
-    # 2. Check and parse any .trx files (e.g. test_results.trx, report_dotnet.trx)
-    for candidate in ["test_results.trx", "report_dotnet.trx"]:
-        if os.path.exists(candidate):
-            parse_trx_file(candidate, results)
-
-    if report_xml_path.endswith(".trx") and os.path.exists(report_xml_path):
+    if report_xml_path and os.path.exists(report_xml_path):
         parse_trx_file(report_xml_path, results)
+        if not results:
+            try:
+                tree = ET.parse(report_xml_path)  # nosec B314
+                root = tree.getroot()
+                for testcase in root.iter("testcase"):
+                    classname = testcase.get("classname", "")
+                    name = testcase.get("name", "")
+
+                    # Normalize classname to make it fully deterministic regardless of execution path
+                    if classname and not (
+                        classname.startswith("tests.")
+                        or classname.startswith("apps.")
+                        or classname.startswith("packages.")
+                        or classname.startswith("scripts.")
+                    ):
+                        if classname.startswith("validation."):
+                            classname = "tests." + classname
+                        elif classname in (
+                            "gxp_compliance_suite",
+                            "prd_compliance_traceability_suite",
+                            "dia_tmf_validation_suite",
+                            "environment_integrity_suite",
+                            "test_path_boundary_linter",
+                        ):
+                            classname = "tests.validation." + classname
+                        else:
+                            classname = "tests." + classname
+
+                    # Check for failure, error, skipped
+                    status = "PASSED"
+                    failure_message = ""
+
+                    failure = testcase.find("failure")
+                    if failure is not None:
+                        status = "FAILED"
+                        failure_message = failure.text or failure.get("message", "")
+
+                    error = testcase.find("error")
+                    if error is not None:
+                        status = "ERROR"
+                        failure_message = error.text or error.get("message", "")
+
+                    skipped = testcase.find("skipped")
+                    if skipped is not None:
+                        status = "SKIPPED"
+                        failure_message = skipped.text or skipped.get("message", "")
+
+                    res_dict = {
+                        "status": status,
+                        "message": failure_message,
+                        "time": testcase.get("time", "0.0"),
+                    }
+                    results[(classname, name)] = res_dict
+                    results[("", name)] = res_dict
+            except Exception as e:
+                print(f"Error parsing XML report: {e}")
+
+    if not results:
+        trx_files = []
+        search_dirs = [".", "TestResults", "tests/TestResults"]
+        for d in search_dirs:
+            if os.path.exists(d):
+                for root_dir, _, files in os.walk(d):
+                    for f in files:
+                        if f.endswith(".trx"):
+                            full_p = os.path.join(root_dir, f)
+                            if full_p not in trx_files:
+                                trx_files.append(full_p)
+
+        for trx in trx_files:
+            parse_trx_file(trx, results)
 
     return results
 
@@ -1099,7 +1139,13 @@ def generate_qualification_report(
     for sc in scenarios:
         matching_results = []
         for (classname, name), res in test_results.items():
-            if name == sc["test"] or name.startswith(sc["test"] + "["):
+            if (
+                name == sc["test"]
+                or name.startswith(sc["test"] + "[")
+                or name.startswith(sc["test"] + "(")
+                or name.endswith("." + sc["test"])
+                or f".{sc['test']}(" in name
+            ):
                 matching_results.append(res)
 
         if not matching_results:
@@ -1223,8 +1269,8 @@ def main():
         "--report-path",
         "-r",
         dest="report_path",
-        default="report.xml",
-        help="Path to pytest JUnit XML report file (default: report.xml)",
+        default="report_dotnet.trx",
+        help="Path to .NET xUnit TRX report file (default: report_dotnet.trx)",
     )
     parser.add_argument(
         "--validate",

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Storage</RootNamespace>
+    <Description>GxP-compliant binary and object storage abstractions, presigned URL generation, and multipart upload lifecycle management.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Google.Apis.Drive.v3" />
+  </ItemGroup>
+</Project>
