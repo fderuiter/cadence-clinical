@@ -120,6 +120,7 @@ filterwarnings = [
     "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
     "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
     "ignore:The default datetime adapter is deprecated as of Python 3.12.*:DeprecationWarning",
+    "ignore:HarfBuzz-Subset will be required by future versions of WeasyPrint.*:DeprecationWarning",
     "ignore:Using `httpx` with `starlette.testclient` is deprecated.*:starlette.exceptions.StarletteDeprecationWarning",
 ]
 

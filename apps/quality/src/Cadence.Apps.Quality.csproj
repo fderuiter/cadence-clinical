@@ -1,16 +1,21 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <RootNamespace>Cadence.Apps.Quality</RootNamespace>
-    <Description>Cadence Quality Management System (QMS) EF Core persistence layer.</Description>
+    <Description>Cadence Clinical Quality Service (.NET 10 / C# 14 Minimal APIs).</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="FluentValidation" />
   </ItemGroup>
 </Project>
