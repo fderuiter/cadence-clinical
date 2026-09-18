@@ -129,7 +129,7 @@ class QualitySurveillanceRunner:
             try:
                 if r.get("AGE") is not None:
                     age_val = float(r.get("AGE"))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
             subjects_map[sub_id] = {
@@ -158,7 +158,7 @@ class QualitySurveillanceRunner:
             try:
                 if r.get("VSSTRESN") is not None:
                     val = float(r.get("VSSTRESN"))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
             if val is None:
                 continue
@@ -191,7 +191,7 @@ class QualitySurveillanceRunner:
             try:
                 if r.get("LBSTRESN") is not None:
                     val = float(r.get("LBSTRESN"))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
             if val is None:
                 continue
@@ -224,7 +224,7 @@ class QualitySurveillanceRunner:
             try:
                 if r.get("EGSTRESN") is not None:
                     val = float(r.get("EGSTRESN"))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
             if val is None:
                 continue

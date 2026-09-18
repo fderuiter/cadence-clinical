@@ -96,7 +96,7 @@ class DuplicatePatientRecordEngine:
             try:
                 val1 = float(v1[k])
                 val2 = float(v2[k])
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 continue
             scale = cls.SCALE_FACTORS.get(k, 10.0)
             norm_diff = min(1.0, abs(val1 - val2) / scale)

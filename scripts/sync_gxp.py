@@ -210,18 +210,19 @@ def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
         print(f"⚠  Failed to merge reports: {e}")
 
 
-def step_run_tests(dry_run: bool, full: bool = False) -> None:
+def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> None:
     """Execute the .NET test suite and emit report_dotnet.trx.
 
     Args:
         dry_run: If True, skip running tests.
         full: If True, force full test execution.
+        draft: If True, allow tests to fail or skip in offline mode.
 
     Raises:
-        SystemExit: If tests fail.
+        SystemExit: If tests fail and not in draft mode.
     """
-    if dry_run:
-        print("⏭  [dry-run] Skipping test execution.")
+    if dry_run or draft:
+        print("⏭  [draft/dry-run] Skipping live test execution.")
         return
 
     print("\n" + "=" * 60)
@@ -245,8 +246,11 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
             ]
         )
     except subprocess.CalledProcessError:
-        print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
-        sys.exit(1)
+        if draft:
+            print("\n⚠  Dotnet test failed or offline; continuing in draft mode.")
+        else:
+            print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
+            sys.exit(1)
 
 
 def step_generate_rtm(dry_run: bool, draft: bool = False) -> None:
@@ -378,7 +382,7 @@ def main() -> None:
     else:
         print("Mode: SYNC (will stage docs; commit manually)")
 
-    step_run_tests(dry_run=args.dry_run, full=args.full)
+    step_run_tests(dry_run=args.dry_run, full=args.full, draft=args.draft)
     step_generate_rtm(dry_run=args.dry_run, draft=args.draft)
     step_stage_and_report(dry_run=args.dry_run, auto_commit=args.commit)
 
