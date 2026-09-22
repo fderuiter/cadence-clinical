@@ -264,8 +264,6 @@ services:
       - GATEWAY_SECRET=internal-gateway-secret-12345 # pragma: allowlist secret
     expose:
       - "8000"
-    ports:
-      - "8000:8000"
     depends_on:
       keycloak:
         condition: service_healthy
