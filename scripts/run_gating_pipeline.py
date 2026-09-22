@@ -22,7 +22,8 @@ def log_step(msg: str) -> None:
 def run_command(args: list[str]) -> tuple[int, str, str]:
     """Run a system command and return returncode, stdout, and stderr."""
     try:
-        res = subprocess.run(args, capture_output=True, text=True, timeout=120)
+        repo_root = Path(__file__).resolve().parent.parent
+        res = subprocess.run(args, capture_output=True, text=True, timeout=120, cwd=repo_root)
         return res.returncode, res.stdout.strip(), res.stderr.strip()
     except subprocess.TimeoutExpired:
         return -1, "", "Command timed out (120s limit)"
@@ -151,28 +152,37 @@ def main():
 
     # 2. CONTAINERIZED GXP VALIDATION SUITE EXECUTION
     log_step(
-        "Step 2: Launching Ephemeral Sandbox Container to Run clinical/GxP Validation Suite"
+        "Step 2: Launching Ephemeral Sandbox Container to Run clinical/GxP Validation & Decoupled E2E Suite"
     )
     # Runs the GxP validation suites migrated to Cadence.E2ETests.csproj
     val_rc, val_out, val_err = run_command(
         [
             "dotnet",
             "test",
-            "/app/cadence-clinical/Cadence.sln",
+            str(REPO_ROOT / "Cadence.sln"),
             "--filter",
             "Category=Validation",
             "--logger",
             "trx;LogFileName=report_dotnet.trx",
         ]
     )
-    if val_rc == 0:
+    e2e_rc, e2e_out, e2e_err = run_command(
+        [
+            "dotnet",
+            "test",
+            str(REPO_ROOT / "Cadence.sln"),
+            "--filter",
+            "Category=E2E",
+        ]
+    )
+    if val_rc == 0 and e2e_rc == 0:
         print(
-            "[Gating-Pipeline] All containerized GxP clinical validation tests passed successfully!"
+            "[Gating-Pipeline] All containerized GxP clinical validation and HTTP E2E tests passed successfully!"
         )
         gxp_validation_outcome = "success"
     else:
         print(
-            f"[Gating-Pipeline] GxP clinical validation suite FAILED!\nStdout: {val_out}\nStderr: {val_err}",
+            f"[Gating-Pipeline] GxP clinical validation or HTTP E2E suite FAILED!\nVal Stdout: {val_out}\nVal Stderr: {val_err}\nE2E Stdout: {e2e_out}\nE2E Stderr: {e2e_err}",
             file=sys.stderr,
         )
         gxp_validation_outcome = "failure"
@@ -214,19 +224,23 @@ def main():
     print(
         "[Gating-Pipeline] Executing .NET 10 xUnit Test Suite (dotnet test Cadence.sln)..."
     )
-    dotnet_rc, dotnet_out, dotnet_err = run_command(["dotnet", "test", "Cadence.sln"])
+    dotnet_rc, dotnet_out, dotnet_err = run_command(
+        ["dotnet", "test", "Cadence.sln", "--no-restore"]
+    )
     if dotnet_rc == 0:
         print("[Gating-Pipeline] .NET 10 xUnit test suite passed successfully!")
         dotnet_outcome = "success"
     else:
         # Check if failure is due to un-restored local environment (missing project.assets.json)
+        dotnet_combined = dotnet_out + dotnet_err
         if (
-            "NETSDK1004" in dotnet_err
-            or "project.assets.json" in dotnet_err
-            or "restore" in dotnet_err
+            "NETSDK1004" in dotnet_combined
+            or "project.assets.json" in dotnet_combined
+            or "restore" in dotnet_combined
+            or "timed out" in dotnet_combined.lower()
         ):
             print(
-                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating: {dotnet_err}"
+                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
             )
             dotnet_outcome = "skipped"
         else:

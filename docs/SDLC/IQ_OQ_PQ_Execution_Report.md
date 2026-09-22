@@ -14,9 +14,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2622
+- **Total Automated Test Cases Run:** 2627
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 2622 ⚪
+- **Unverified (Draft):** 2627 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -261,6 +261,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `DomainLayerMustNotReferenceInfrastructureOrPresentationAssemblies` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `RegulatedTestSuitesMustFeatureGxPRequirementAttributes` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetFormSubmissionDetail_WhenFormNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.ObservationAndFormE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestTier1Feature01_CodingQueueAndFilter` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestTier1Feature02_MeddraAndWhodrugTraversal` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestTier1Feature03_SingleAndBatchCodingAssignment` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -299,6 +300,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `TestTier4Scenario03_MeddraUpversioningAndBatchCoding` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestTier4Scenario04_RegulatorySubmissionBundleGeneration` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestTier4Scenario05_FullLifecycleE2ETrialWorkflow` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetSiteComplianceSummary_WhenSiteNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.SiteComplianceE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `CreateSubject_WithValidPayload_Returns201Created` | `Cadence.E2ETests.E2E.SubjectE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetSubjectDetail_WhenSubjectNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.SubjectE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestCatalogCrossVersionIntegrity` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestMilestoneMandatoryArtifacts` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `TestSiteLevelClassificationDrift` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -759,6 +763,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2917,28 +2922,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 0e68e64646865680890a5fd942b6bdf74ff978c356600e38c4ceb9f36b86bc04
+- **Cryptographic Hash (SHA-256):** 2fcb60e8f2814d71023ba3cf0d9884905e7d80ac45fe5a73bc643b1a804521a6
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUZzHrCae8MW7a72EAzQwD5kmyWPEwDQYJKoZIhvcNAQEL
-BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
-bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA5
-MjExNjAyNTBaFw0yNzA5MjIxNjAyNTBaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
-IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCo
-833697bRaEEZJ+07uTUOKST2EWEbqjhYq/micjgU1vl5gPGF807jkDrQOlGreBgn
-FAI9WELhnS4kQBlyioaOSEr7YswouHXriEYzmUMOe4D8Kxp4yD0wzk+H1bA5jT8D
-3nC07QDlS57huy8gFtX72uiB/EjLl6sroSkCEEr2aAymr3nS4taX/zww8iUKGs3A
-uUy0Nt/1yjWzGSxkMzDA3n8kx4qnLrUuowerdVv7pKLgSPp4EQeLbp2qXeHHD4yB
-QDO3BmHNIZ34mEzGqETQXoHnWdrnElEAcrGmO9f2Oamz3oHzEq+4JZpXifZdZVkw
-UT5rCJMyL4rVUySwd+kbAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAAETTKGfXCVo
-UtOaN/TNwYFDW2z3U7igTl0M48nQrpt5gc+99caRToqsrF66vxIHxtpKe1wkn+K1
-araTtKGz62fKhwFOVM8h0BdHv74IlneL5URw5nMHx/gBrMtsRZ1q0ylb11a4MF7b
-E3+lP72hbbOorVzG8DZh/Amhb9FlqtkOJTSVuKIVgF69e0Pe8eV7Js4kSVUTa4DR
-zNnTQZkbn1OaZ2+pNxV27cArm6RP5W4qPS11p1CeMR8qClbMubt4yaK9yaip+7wH
-YjvsScd+ubULH1QIqvMkR4VMHA5/rSN5+EHwu8ei4NmLVWEV3fU43M7bSu4Vi0Ly
-XQQ8NEsSK8w=
+MIIDTjCCAjagAwIBAgIUN19mT9HrX+PZMx+ptGUsq8QT5l4wDQYJKoZIhvcNAQEL
+BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
+ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
+dHdhcmUwHhcNMjYwOTIxMTYxMzA4WhcNMjcwOTIyMTYxMzA4WjBhMTswOQYDVQQD
+DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
+bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBANldhODpfW7cI95W9u0mrvxA91Xqwgur
+AMM8uIQ7BlgOgo+apFo7fujN5m19VOA76tyuT4QUuHBtYcwekwa7IZiuaE1GwTFO
+KKQDWeYdDoRVfZ8zDkGV7/p355E1MfWsL6CGuoV6Zvj1U5AklEk6a02jNT/j0fR1
+YgWEaHggMHXBlrNZl19SlImn4gIs4TaPbCMeDfAHUbsRsx+3Iv2+qOLy28ITcX/2
+RUZbl5T/RoA1txGMh2goJLKLPFBxDaJacTIFUyLSTcN8m6kmqrysF6OW9yN28pZW
+yjuw5/6WEW7fX0oAezrmeaIh9rEvtMToxTOU3fRVvdY/t1HHAL3E4okCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAZYSuy7+yCsFrKPOJ3+i/3AjNtKoEf2uBdKtJnBdG
+/zDwOD/4GZNgOZQDwUAsTHNgQGz4rmMBDlEoRJzs44gZxwDG7BRKTuaxPQhQ1vaA
+WDKtyNeAcTxom0j2RYNpkbLp6FW5df9vTAWlwwPMpCLr1V67+Fm8nV6+0hsAB1a3
+SKKDtr7sEmIdesxqLRwiBC/ckjfw7us5ZqUP0I9wcSeMIDDkQC8slqNrqoMG4Z3M
+cbCNlEx/IRkFAa42ShPGtUvIPxpY2xzeVgSi9LCNJrheeWizI+I3V1oaRVtmafDF
+DtWgrNwV0m4V/8/Gewjby5F+4cv2xo5cbChhKi87vzWFqA==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-UKavf29DLVpOOeb6DrF/qc7eNOGD7s58aA+MTXk7qcTgEqsFGgiTKbVSx+ysdF4L4IXq4RCjSFJOkGsSX9VrrN8AOchhJe7svKHsk5S5mrYmOsln24wEr9ooWuK1KdWxe9T4tO3jBSFSjHC9mryVS39RAFnB4yamFDa7yrhI6myl7JWcDGqsSHRbfxS4Y3u51r/XrPbHQpYRImM7j7POS7PHpTy3vfgaKZnoo3N0kPCRlIuAxkwWvntkr99mgqak5RHd3YWdA250S51D/2qKi4LEc85/4Y+4wNxEn3Q0ICMrv9KAlAxFyRpVmn++++NgLYEaP3rmMpVPoQyEomXbBA==
+Xub6TBiMF6wfV3SQUne5kGoJrFDozCWSfdFZf5Oi/X96vJzEh7OVL/KMK7fD0xwS95HxthCW4K2k2BxWKxTqUFpTQgCWsnGXn/Vsrqdal+yMI/QxKjbDXUQMLcC1LGd1t8psyGkIwEyxp5SehbfYkEt8sSRsbcxOnojwLxs1xH+WVrilisW44xEVqiliGzgRiD8tK0O+V04GgIsqOAOS37/WU3nd7LULKCRaW9rOOF5aMy5khQACr0nDactuFrRRe2VIOimIGUDk1GmwgbRGQisBGaKxJrUjkmFELdn9zg3OCk4ccnxic1il3AbSGyY9q2uYwwVHB+EqEIL006K8bQ==
 -----END SIGNATURE-----

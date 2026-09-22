@@ -5,12 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 </Project>
-

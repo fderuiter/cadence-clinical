@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
+    <OutputType>Library</OutputType>
     <RootNamespace>Cadence.Apps.Fileshare</RootNamespace>
     <Description>Cadence Clinical Fileshare Service (.NET 10 / C# 14 Minimal APIs).</Description>
   </PropertyGroup>
@@ -9,6 +10,7 @@
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
