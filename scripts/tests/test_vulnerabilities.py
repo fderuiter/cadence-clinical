@@ -956,7 +956,6 @@ def test_execute_dotnet_audit_success(mock_which, mock_run):
     """Verify that execute_dotnet_audit executes dotnet list package with correct flags."""
     from unittest.mock import MagicMock
 
-
     mock_which.return_value = "/usr/bin/dotnet"
     mock_run_res = MagicMock()
     mock_run_res.returncode = 0
