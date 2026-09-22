@@ -1,9 +1,9 @@
 # ADR-2186: Object Storage Port and Envelope Security Architecture
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -25,23 +25,40 @@ We must decouple physical binary storage from relational metadata without compro
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): StoragePort Protocol & Relational Envelope Pattern**
-   - Abstract physical blob operations behind a generic PEP 695 `StoragePort[T]` protocol in `packages/storage`.
+### Option 1: **Option 1 (Selected): StoragePort Protocol & Relational Envelope Pattern**
+
+- **Overview:** - Abstract physical blob operations behind a generic PEP 695 `StoragePort[T]` protocol in `packages/storage`.
    - Store binary payloads in tenant-isolated S3/MinIO buckets.
    - Maintain all regulatory metadata (taxonomy codes, version indices, virus scan certifications, SHA-256 checksums, 21 CFR Part 11 signature manifests, and legal hold status) in PostgreSQL as a metadata envelope.
    - Use two-phase commits for uploads: 1) Allocate draft document envelope and issue pre-signed URL; 2) Client completes upload and triggers SHA-256 integrity verification to transition state to `COMMITTED`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Direct Gateway Streaming with In-DB Storage**
-   - Retain binary blobs in PostgreSQL but stream chunks via FastAPI streaming responses.
+### Option 2: **Option 2: Direct Gateway Streaming with In-DB Storage**
+
+- **Overview:** - Retain binary blobs in PostgreSQL but stream chunks via FastAPI streaming responses.
    - *Rejected:* Does not solve relational database bloat, WAL scaling, or high backup latencies.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option 3: Pure Object Store with Object Tags (No Relational Envelope)**
-   - Store metadata in S3 object metadata tags.
+### Option 3: **Option 3: Pure Object Store with Object Tags (No Relational Envelope)**
+
+- **Overview:** - Store metadata in S3 object metadata tags.
    - *Rejected:* S3 object tagging lacks ACID transactional guarantees, foreign key constraints to clinical trials/sites, and fast querying across millions of documents.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1 (StoragePort Protocol & Relational Envelope Pattern)** because it cleanly separates binary storage throughput from relational data integrity. It satisfies `PRD-DOC-001`, `PRD-DOC-002`, and `PRD-DOC-003` while maintaining strict GxP compliance.
+- **Chosen Option:** **Option 1 (StoragePort Protocol & Relational Envelope Pattern)** because it cleanly separates binary storage throughput from relational data integrity. It satisfies `PRD-DOC-001`, `PRD-DOC-002`, and `PRD-DOC-003` while maintaining strict GxP compliance.
+- **Justification:** Selected as primary architectural approach.
 
 ### Architectural Flow
 

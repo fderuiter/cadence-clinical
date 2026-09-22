@@ -25,20 +25,20 @@ We need to guarantee that once an electronic signature token (`X-Sig-Token`) is 
 ### Option 1: Centralized Redis Caching with Lazy Initialization and Fail-Safe Fallbacks (Selected)
 
 - **Overview:** Use Redis to store spent token states with a strict 60-second TTL. Connection is established lazily upon first use. Uses atomic `set(..., nx=True)` operations to prevent concurrent replays. Falls back gracefully to thread-safe in-memory cache if `REDIS_URL` is not configured or in case of transient Redis errors.
-- **Pros:**
+- ***Pros:***
   - ✅ High-performance distributed single-use verification under 15ms.
   - ✅ Automatic self-cleanup of spent tokens using Redis TTL.
   - ✅ Zero developer friction: gracefully falls back to thread-safe in-memory dictionary.
   - ✅ Fault-tolerant: degrades gracefully during outages instead of blocking investigator actions.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires managing a Redis instance/cluster in production.
 
 ### Option 2: Database-Backed State Storage
 
 - **Overview:** Store the token usage state in the relational PostgreSQL database table.
-- **Pros:**
+- ***Pros:***
   - ✅ Relational database is already part of the deployment.
-- **Cons:**
+- ***Cons:***
   - ❌ Substantially higher latency and database write amplification for short-lived, transient token states.
   - ❌ Requires manual cron job cleanup to prevent infinite table growth, introducing operational complexity.
 

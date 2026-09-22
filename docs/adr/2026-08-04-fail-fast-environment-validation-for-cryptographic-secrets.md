@@ -19,19 +19,31 @@ In a GxP-compliant clinical platform, the integrity and confidentiality of audit
 
 ## 3. Options Considered
 
-1. **Option 1: Module-Level Fail-Fast Initialization**
-   Validate required environment variables at import/load time. If a required secret is missing or empty, raise `RuntimeError` immediately.
+### Option 1: **Option 1: Module-Level Fail-Fast Initialization**
+
+- **Overview:** Validate required environment variables at import/load time. If a required secret is missing or empty, raise `RuntimeError` immediately.
    - _Pros:_ Complete safety; absolutely zero code path can execute cryptographic functions under an insecure state.
    - _Cons:_ Requires pytest context/harness files and CLI wrapper entrypoints to pre-define safe placeholder secrets in non-production scenarios.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Deferred Validation upon Usage**
-   Only validate the existence of keys when an audit log is written or an email is verified.
+### Option 2: **Option 2: Deferred Validation upon Usage**
+
+- **Overview:** Only validate the existence of keys when an audit log is written or an email is verified.
    - _Pros:_ Easier test isolation as modules can be imported without setting secrets.
    - _Cons:_ Introduces the risk of a running system starting up successfully but failing later when trying to execute operations, violating the fail-fast principle.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-We selected **Option 1 (Module-Level Fail-Fast Initialization)**. It guarantees maximal security compliance with **PRD-SYS-001**.
+- **Chosen Option:** Option 1
+- **Justification:** We selected **Option 1 (Module-Level Fail-Fast Initialization)**. It guarantees maximal security compliance with **PRD-SYS-001**.
 To resolve test and CLI integration hurdles, we:
 
 1. Provided default test-environment placeholders in `tests/conftest.py`.

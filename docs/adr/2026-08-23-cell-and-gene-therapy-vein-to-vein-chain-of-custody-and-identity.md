@@ -1,9 +1,9 @@
 # ADR-2206: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -28,16 +28,29 @@ Under **PRD-SCM-005** and **PRD-SCM-006**, the Cadence RTSM and Execution engine
 
 ## 3. Options Considered
 
-1. **Option A: Integrated Vein-to-Vein Domain within Execution Service (Selected)**
-   - Model `CGTChainOfCustody`, `CGTMilestoneEvent`, `CGTBedsideVerification`, `CGTDestructionCertificate`, and `CGTVialReturnReconciliation` in `apps/execution/database/models/rtsm.py`.
+### Option 1: **Option A: Integrated Vein-to-Vein Domain within Execution Service (Selected)**
+
+- **Overview:** - Model `CGTChainOfCustody`, `CGTMilestoneEvent`, `CGTBedsideVerification`, `CGTDestructionCertificate`, and `CGTVialReturnReconciliation` in `apps/execution/database/models/rtsm.py`.
    - Implement ISBT 128, barcode hashing, cryogenic tracking, and bedside gating in `apps/execution/rtsm_cgt.py`.
    - Expose REST API endpoints via `apps/execution/presentation/routers/rtsm.py`.
-2. **Option B: Standalone External CGT Track-and-Trace Service**
-   - Disadvantages: Fragmented relational data model, latency across bedside e-signatures, and increased integration complexity.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Standalone External CGT Track-and-Trace Service**
+
+- **Overview:** - Disadvantages: Fragmented relational data model, latency across bedside e-signatures, and increased integration complexity.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it natively inherits the validated GxP audit trigger foundation, enforces PostgreSQL transactional integrity, integrates seamlessly with subject visit scheduling and `TrialLockManager`, and ensures zero patient-batch mismatch.
+- **Chosen Option:** **Option A** because it natively inherits the validated GxP audit trigger foundation, enforces PostgreSQL transactional integrity, integrates seamlessly with subject visit scheduling and `TrialLockManager`, and ensures zero patient-batch mismatch.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Architectural Components:
 1. **ISBT 128 DIN Engine:** Deterministic facility-code, year, sequence, and ISO 7064 Mod 37-2 check character calculation.

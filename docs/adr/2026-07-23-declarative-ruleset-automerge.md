@@ -22,20 +22,20 @@ Realigned the required status check definitions in `.github/rulesets/main.json` 
 ### Option 1: Classic manual GitHub branch protection setup
 
 - **Overview:** Manually configure branch protection rules in the GitHub repository UI.
-- **Pros:**
+- ***Pros:***
   - Simple and does not require coding.
-- **Cons:**
+- ***Cons:***
   - Cannot version control branch rules inside the codebase.
   - Changes to protections are not subject to pull request review.
 
 ### Option 2: Declarative Repository Rulesets with Sync Script and Automerge Integration
 
 - **Overview:** Chosen option. Store in `.github/rulesets/main.json`, sync via GitHub API, and integrate with the existing CI/CD classifier.
-- **Pros:**
+- ***Pros:***
   - Rules are versioned, documented, and reviewed in Git.
   - Automated merge handles safe non-code files by programmatically approving and triggering auto-merge after CI passes.
   - Direct pushes to `main` are safely blocked.
-- **Cons:**
+- ***Cons:***
   - Requires maintaining a python sync script using the GitHub CLI (`gh api`).
 
 ## Trade-offs

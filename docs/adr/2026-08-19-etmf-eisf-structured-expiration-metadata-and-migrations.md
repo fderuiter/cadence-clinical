@@ -27,20 +27,20 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: Un-typed JSON metadata
 
 - **Overview:** Store issue date, expiration date, and owner inside the existing `metadata_json` column.
-- **Pros:**
+- ***Pros:***
   - ✅ Requires no schema migration.
-- **Cons:**
+- ***Cons:***
   - ❌ Cannot be cleanly indexed or queried across databases.
   - ❌ Cannot enforce type safety and constraints at the database layer.
 
 ### Option 2: First-Class Indexed Columns & Migration Runners (Selected)
 
 - **Overview:** Add indexed database columns and build idempotent pre-boot migration runners.
-- **Pros:**
+- ***Pros:***
   - ✅ Enables efficient, database-level index query operations.
   - ✅ Strong typing (date) and structured fields.
   - ✅ GxP compliant, secure, role-gated, and fully auditable.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires a database schema migration.
 
 ## 4. Decision Outcome

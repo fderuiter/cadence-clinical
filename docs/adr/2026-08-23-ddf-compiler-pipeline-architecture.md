@@ -1,9 +1,9 @@
 # ADR-2212: DDF Compiler Pipeline Architecture
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -20,13 +20,35 @@ The previous Digital Data Flow (DDF) compilation process in `apps/execution/tran
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: Create a shared, zero-database platform package (`packages.ddf`) with an explicit Intermediate Representation (IR), 5 isolated pipeline stages, and an injectable `AccessibilityValidatorPort`. Provide a thin `DDFJobRunner` adapter in `apps/execution` to manage database transactions and audit trails, while consolidating Designer rule ASTs.
-2. **Option B**: Maintain the compiler within `apps/execution` as helper functions, exposing execution HTTP endpoints for Designer preview flows.
-3. **Option C**: Dynamic DAG middleware engine streaming translation events.
+### Option 1: **Option A (Selected)**: Create a shared, zero-database platform package (`packages.ddf`) with an explicit Intermediate Representation (IR), 5 isolated pipeline stages, and an injectable `AccessibilityValidatorPort`. Provide a thin `DDFJobRunner` adapter in `apps/execution` to manage database transactions and audit trails, while consolidating Designer rule ASTs.
+
+- **Overview:** **Option A (Selected)**: Create a shared, zero-database platform package (`packages.ddf`) with an explicit Intermediate Representation (IR), 5 isolated pipeline stages, and an injectable `AccessibilityValidatorPort`. Provide a thin `DDFJobRunner` adapter in `apps/execution` to manage database transactions and audit trails, while consolidating Designer rule ASTs.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B**: Maintain the compiler within `apps/execution` as helper functions, exposing execution HTTP endpoints for Designer preview flows.
+
+- **Overview:** **Option B**: Maintain the compiler within `apps/execution` as helper functions, exposing execution HTTP endpoints for Designer preview flows.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C**: Dynamic DAG middleware engine streaming translation events.
+
+- **Overview:** **Option C**: Dynamic DAG middleware engine streaming translation events.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 We extract the DDF compiler into a dedicated package featuring:
 - **Pure In-Memory Interface**: `DDFCompiler.compile(study_id, payload, options) -> DDFCompilationResult`
 - **5 Pipeline Stages**:

@@ -1,9 +1,9 @@
 # ADR-2234: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard
 
-* **Status:** Accepted
-* **Date:** 2026-09-02
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-09-02
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -26,29 +26,45 @@ This decision record establishes the mandatory internal architecture, request di
 
 ## 3. Options Considered & Settled Architecture
 
-### 1. Service Internal Layering: Single-Assembly Clean Architecture
+### Option 1: Service Internal Layering: Single-Assembly Clean Architecture
 - **Decision:** Each microservice resides in a single assembly (`Cadence.Apps.<Service>.csproj`) strictly organized by namespaces:
   - `Cadence.Apps.<Service>.Domain`: Aggregates, entities, value objects, domain invariants, repository ports.
   - `Cadence.Apps.<Service>.Application`: Use case services, commands, queries, DTOs, FluentValidation rules.
   - `Cadence.Apps.<Service>.Infrastructure`: EF Core `DbContext`, repository adapters, external HTTP clients.
   - `Cadence.Apps.<Service>.Endpoints`: ASP.NET Core 10 Minimal API route definitions and filters.
-- **Rationale:** Avoids 60+ assembly solution bloat, drastically reduces compilation times, simplifies Native AOT trimming, and maintains clean dependency boundaries enforced by static architecture sentinels.
+- **Pros:**
+  - ✅ Avoids 60+ assembly solution bloat, drastically reduces compilation times, simplifies Native AOT trimming.
+  - ✅ Maintains clean dependency boundaries enforced by static architecture sentinels.
+- **Cons:**
+  - ❌ Requires strict namespace discipline within a single assembly.
 
-### 2. Request Dispatch: Direct Typed Application Services
+### Option 2: Request Dispatch: Direct Typed Application Services
 - **Decision:** Endpoints directly inject typed domain application services (e.g. `ISubjectApplicationService`) via primary constructors, rather than utilizing in-process reflection-based mediators (MediatR). Cross-cutting concerns (authentication, audit tracing) are applied via ASP.NET Core `IEndpointFilter`s.
-- **Rationale:** Ensures 100% Native AOT compatibility, zero reflection overhead, direct IDE navigation, and transparent call stacks.
+- **Pros:**
+  - ✅ Ensures 100% Native AOT compatibility, zero reflection overhead, direct IDE navigation, and transparent call stacks.
+- **Cons:**
+  - ❌ Replaces magic mediator dispatch with explicit endpoint-to-service dependencies.
 
-### 3. Cross-Service Event Spine: MassTransit + PostgreSQL Transactional Outbox
+### Option 3: Cross-Service Event Spine: MassTransit + PostgreSQL Transactional Outbox
 - **Decision:** All cross-service domain events are committed to PostgreSQL using MassTransit's EF Core Transactional Outbox pattern within the same database transaction that persists entity mutations.
-- **Rationale:** Eliminates the dual-write vulnerability. It is mathematically impossible for clinical data to persist without its corresponding domain event being scheduled for delivery.
+- **Pros:**
+  - ✅ Eliminates dual-write vulnerability; mathematically impossible for clinical data to persist without scheduled event delivery.
+- **Cons:**
+  - ❌ Requires outbox polling and event relay worker infrastructure.
 
-### 4. Error Handling: Strongly-Typed `Result<T, DomainError>` Monad
+### Option 4: Error Handling: Strongly-Typed `Result<T, DomainError>` Monad
 - **Decision:** Expected domain validation failures return `Result<TValue, DomainError>` records. Minimal API endpoints pattern-match on results to return `TypedResults.Ok(value)` or `TypedResults.Problem(error.ToProblemDetails())`.
-- **Rationale:** Zero exception-throwing allocation overhead on high-frequency clinical validations. Reserve computational exceptions strictly for unhandled infrastructure anomalies intercepted by global `IExceptionHandler`.
+- **Pros:**
+  - ✅ Zero exception-throwing allocation overhead on high-frequency clinical validations.
+- **Cons:**
+  - ❌ Requires explicit result matching in endpoint handlers.
 
-### 5. GxP Audit Trail: EF Core `SaveChangesInterceptor` with SHA-256 Merkle Chaining
+### Option 5: GxP Audit Trail: EF Core `SaveChangesInterceptor` with SHA-256 Merkle Chaining
 - **Decision:** Implement `GxPAuditInterceptor` (`ISaveChangesInterceptor`) in EF Core. Before committing, the interceptor automatically populates `CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex`, computes a SHA-256 hash digest chained to the previous audit entry, and writes to an append-only `AuditLogEntry` table.
-- **Rationale:** Guarantees tamper-evident audit records at the persistence boundary across all mutating operations without relying on fragile database triggers.
+- **Pros:**
+  - ✅ Guarantees tamper-evident audit records at the persistence boundary across all mutating operations without relying on fragile database triggers.
+- **Cons:**
+  - ❌ Interceptor computation adds minimal latency during `SaveChanges` calls.
 
 ---
 

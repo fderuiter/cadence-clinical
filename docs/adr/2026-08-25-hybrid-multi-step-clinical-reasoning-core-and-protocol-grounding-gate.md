@@ -1,9 +1,9 @@
 # ADR-2217: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate
 
-* **Status:** Accepted
-* **Date:** 2026-08-25
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-25
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,13 +21,35 @@ As Cadence Clinical Research Software expands its AI capabilities in `apps/ai_ga
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Stateless Multi-Step Planning Loop Engine with In-Flight Air-Gap Vault & Citation Verification Gate in `apps/ai_gateway`**: Implements a dedicated application service (`ClinicalReasoningService`) that orchestrates 5 discrete reasoning steps (Planning, Extraction, Synthesis, Verification, Draft Staging). Uses `DeidAirGapVault` for in-flight surrogate masking, `evaluate_rag_faithfulness` for citation scoring, and caller-managed `ExecutionStateContext`.
-2. **Option B: Stateful Database-Backed Session Persistence**: Storing multi-step reasoning states in PostgreSQL or Redis sessions across HTTP requests.
-3. **Option C: Direct Unvalidated LLM Pipeline**: Returning LLM completions directly to calling services without citation confidence gating or surrogate PHI masking.
+### Option 1: **Option A (Selected): Stateless Multi-Step Planning Loop Engine with In-Flight Air-Gap Vault & Citation Verification Gate in `apps/ai_gateway`**: Implements a dedicated application service (`ClinicalReasoningService`) that orchestrates 5 discrete reasoning steps (Planning, Extraction, Synthesis, Verification, Draft Staging). Uses `DeidAirGapVault` for in-flight surrogate masking, `evaluate_rag_faithfulness` for citation scoring, and caller-managed `ExecutionStateContext`.
+
+- **Overview:** **Option A (Selected): Stateless Multi-Step Planning Loop Engine with In-Flight Air-Gap Vault & Citation Verification Gate in `apps/ai_gateway`**: Implements a dedicated application service (`ClinicalReasoningService`) that orchestrates 5 discrete reasoning steps (Planning, Extraction, Synthesis, Verification, Draft Staging). Uses `DeidAirGapVault` for in-flight surrogate masking, `evaluate_rag_faithfulness` for citation scoring, and caller-managed `ExecutionStateContext`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Stateful Database-Backed Session Persistence**: Storing multi-step reasoning states in PostgreSQL or Redis sessions across HTTP requests.
+
+- **Overview:** **Option B: Stateful Database-Backed Session Persistence**: Storing multi-step reasoning states in PostgreSQL or Redis sessions across HTTP requests.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Direct Unvalidated LLM Pipeline**: Returning LLM completions directly to calling services without citation confidence gating or surrogate PHI masking.
+
+- **Overview:** **Option C: Direct Unvalidated LLM Pipeline**: Returning LLM completions directly to calling services without citation confidence gating or surrogate PHI masking.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 Option A preserves strict microservice statelessness, enforces GxP and HIPAA compliance at the AI Gateway boundary, guarantees protocol citation grounding with an explicit 85% confidence gate, and ensures human-in-the-loop governance through staged draft records.
 
 ## 5. Consequences & Trade-offs

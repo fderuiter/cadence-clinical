@@ -27,20 +27,20 @@ This cleanup relates directly to the system integrity, code quality, and maintai
 ### Option 1: Keep Legacy V1 Signatures and standalone renderers alongside modern pipelines
 
 - **Overview:** Retain the legacy code paths for legacy compatibility indefinitely.
-- **Pros:**
+- ***Pros:***
   - ✅ No immediate modification of legacy tests or unused legacy routers.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases technical debt and complicates codebase auditing.
   - ❌ Unused dictionary keys and duplicate structures are prone to style anomalies and lint errors.
 
 ### Option 2: Full Decommissioning of Legacy V1 Signatures and standalone frontend rendering code
 
 - **Overview:** Safely remove unused legacy paths, resolve style/lint errors, and update the API contract validation tests.
-- **Pros:**
+- ***Pros:***
   - ✅ Dramatically reduces complexity and technical debt.
   - ✅ Standardizes the rbac security model (e.g., in `packages/security/rbac.py`).
   - ✅ Enhances test performance and enforces strict bidirectional API contract testing.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires updating API contract whitelists and resolving existing test suite dependencies.
 
 ## 4. Decision Outcome

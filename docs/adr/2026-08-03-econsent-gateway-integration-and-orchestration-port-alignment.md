@@ -33,19 +33,19 @@ This decision implements and traces back to requirement **PRD-SYS-001**.
     - **CTMS**: Realigned to use host and internal ports `8007:8007`.
     - **Org**: Realigned to use host and internal ports `8012:8012` (completely avoiding the internal `8010` collision with eISF).
   - Update gateway URLs in environment configurations to route cleanly.
-- **Pros:**
+- ***Pros:***
   - ✅ Simple, transparent port-to-service mapping (host port matches container port).
   - ✅ All endpoints are fully discoverable through the central Gateway.
   - ✅ Eliminates port collision risks permanently.
-- **Cons:**
+- ***Cons:***
   - ❌ Local configuration files and environment vars referencing old ports must be updated.
 
 ### Option B: Keep Internal Container Ports with Static Mapping
 
 - **Overview:** Keep services running on non-matching internal container ports and only redirect via host-to-container mapping (e.g. `8012:8010` for `org` or `8007:8005` for `ctms`).
-- **Pros:**
+- ***Pros:***
   - ✅ Minimizes changes to internal service container commands.
-- **Cons:**
+- ***Cons:***
   - ❌ Causes significant confusion during debugging when a developer calls a container internally vs calling it from the host.
   - ❌ Increases configuration maintenance complexity.
 

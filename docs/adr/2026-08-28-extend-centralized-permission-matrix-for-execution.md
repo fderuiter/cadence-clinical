@@ -25,9 +25,9 @@ This ADR specifically relates to requirements under **PRD-SYS-001** and **Trace-
 ### Option 1: Ad-hoc Role Checking in Endpoint Routers
 
 - **Overview:** Enforce checks manually in routers or service layers using helper lists of authorized roles for each specific execution endpoint.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement for individual endpoints.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe risk of role drift and security gaps across endpoints.
   - ❌ Violates the centralized RBAC design pattern.
   - ❌ Documentation cannot easily be validated against code programmatically.
@@ -35,11 +35,11 @@ This ADR specifically relates to requirements under **PRD-SYS-001** and **Trace-
 ### Option 2: Centralized Declared Resource Keys in RBAC Permission Matrix [Selected]
 
 - **Overview:** Add centralized resource keys (`tsdv_config`, `form_submission`, `pi_signoff`, `medical_coding`, `trial_lock`, `export_unmasked`) directly to the centralized `ROLE_PERMISSIONS` dictionary in the shared `packages/security/rbac.py` package.
-- **Pros:**
+- ***Pros:***
   - ✅ Single source of truth for all resource authorization queries across all microservices.
   - ✅ Simplifies automated integration testing of permissions.
   - ✅ Allows 1:1 trace documentation mapping.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires editing the core security packages and updating the human-readable matrix documentation.
 
 ## 4. Decision Outcome

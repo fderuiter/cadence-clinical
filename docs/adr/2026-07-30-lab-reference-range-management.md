@@ -25,20 +25,20 @@ This decision implements requirements under Trace-1.
 
 Extend `ClinicalObservation` with new snapshot fields and define `LabReferenceRange` inheriting from `AuditedModel`. Introduce a helper function `upgrade_existing_tables` within the migration script (`migrate.py`) to inspect the database schema at pre-boot and safely run dialec-agnostic `ALTER TABLE` operations.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Clean, lightweight, and does not require complex third-party migration frameworks.
   - ✅ High compatibility across SQLite and PostgreSQL databases.
   - ✅ Ensures that triggers are deployed on the freshly added columns seamlessly.
-- **Cons:**
+- ***Cons:***
   - ❌ Manual handling of column detection and sql query generation.
 
 ### Option 2: Relying on full-schema recreates or separate tables
 
 Instead of altering `clinical_observations`, store evaluation results in a separate one-to-one or one-to-many table, or recreate the entire table.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Avoids altering existing tables.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe performance overhead during query/evaluation lookups.
   - ❌ Full table recreates are highly dangerous for live clinical production data.
 

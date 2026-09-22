@@ -19,12 +19,27 @@ To prevent database schema bloating and align with the design in ADR-117, we nee
 
 ## 3. Options Considered
 
-1. Option A (Selected): Inline pre-migration of legacy columns to JSON before performing the DROP COLUMN operation.
-2. Option B (Alternative): Manual migration script executed separately by operators before the database upgrade.
+### Option 1: Option A (Selected): Inline pre-migration of legacy columns to JSON before performing the DROP COLUMN operation.
+
+- **Overview:** Option A (Selected): Inline pre-migration of legacy columns to JSON before performing the DROP COLUMN operation.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Option B (Alternative): Manual migration script executed separately by operators before the database upgrade.
+
+- **Overview:** Option B (Alternative): Manual migration script executed separately by operators before the database upgrade.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it integrates the pre-migration directly into the startup migration utility (`upgrade_existing_tables` in `migrate.py`), ensuring that all tables are self-healed and satisfying PRD-LAB-001 without manual intervention.
+- **Chosen Option:** Option A because it integrates the pre-migration directly into the startup migration utility (`upgrade_existing_tables` in `migrate.py`), ensuring that all tables are self-healed and satisfying PRD-LAB-001 without manual intervention.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -19,12 +19,27 @@ Clinical Research Associate (CRA) monitoring requires unified Source Data Verifi
 
 ## 3. Options Considered
 
-1. **Modular SDV Transport & Helper Abstraction (Selected)**: Create dedicated `sdv_helper.py` and extend `sdv_transport_models.py` with optional legacy fields.
-2. Direct inline endpoint logic: Embed sign-off database operations inside route handlers without reusable helpers.
+### Option 1: **Modular SDV Transport & Helper Abstraction (Selected)**: Create dedicated `sdv_helper.py` and extend `sdv_transport_models.py` with optional legacy fields.
+
+- **Overview:** **Modular SDV Transport & Helper Abstraction (Selected)**: Create dedicated `sdv_helper.py` and extend `sdv_transport_models.py` with optional legacy fields.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Direct inline endpoint logic: Embed sign-off database operations inside route handlers without reusable helpers.
+
+- **Overview:** Direct inline endpoint logic: Embed sign-off database operations inside route handlers without reusable helpers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option 1 because reusable helper methods in `apps/execution/sdv_helper.py` enable consistent SDV verification across single and bulk routes while maintaining strict database isolation.
+- **Chosen Option:** Option 1
+- **Justification:** Chosen option 1 because reusable helper methods in `apps/execution/sdv_helper.py` enable consistent SDV verification across single and bulk routes while maintaining strict database isolation.
 
 ## 5. Consequences & Trade-offs
 

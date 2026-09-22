@@ -23,17 +23,30 @@ To solve this, we are introducing a thread-safe, in-memory cache layer (`Termino
 
 ## 3. Options Considered
 
-1. **Option A (Selected): In-Memory Cache with Python's Thread-Safe `threading.Lock`, Compound Keys, FIFO Eviction, and TTL**
-   - Implements custom, lightweight class `TerminologySearchCache` in `apps/designer/db.py`.
+### Option 1: **Option A (Selected): In-Memory Cache with Python's Thread-Safe `threading.Lock`, Compound Keys, FIFO Eviction, and TTL**
+
+- **Overview:** - Implements custom, lightweight class `TerminologySearchCache` in `apps/designer/db.py`.
    - Enforces a hard boundary of 1,000 cached records using a First-In-First-Out (FIFO) eviction strategy.
    - Leverages compound keys mapping query parameters (`term`, `from_record`, `page_size`) to prevent pagination collisons.
-2. **Option B: Heavy Redis-based Caching Layer**
-   - Integrates an external Redis container.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Heavy Redis-based Caching Layer**
+
+- **Overview:** - Integrates an external Redis container.
    - While scalable, it adds substantial architectural complexity, networking overhead, and deployment boundaries that are not required for our immediate memory footprint.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it is lightweight, requires zero additional external dependencies, ensures optimal memory bounds, and fully satisfies the sub-50ms query requirements under **PRD-MDR-007** while keeping the architecture elegant and maintainable.
+- **Chosen Option:** **Option A** because it is lightweight, requires zero additional external dependencies, ensures optimal memory bounds, and fully satisfies the sub-50ms query requirements under **PRD-MDR-007** while keeping the architecture elegant and maintainable.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Decisions:
 

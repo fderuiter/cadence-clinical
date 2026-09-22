@@ -1,9 +1,9 @@
 # ADR-2184: Localize datetime helpers in security package
 
-* **Status:** Accepted
-* **Date:** 2026-08-18
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-18
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,18 +21,34 @@ Reference requirement: PRD-SYS-001.
 
 ## 3. Options Considered
 
-1. Option A: Localize `get_utc_now()` and ISO datetime parsing/formatting helpers directly within `packages/security/datetime_helpers.py`. (Selected)
-2. Option B: Retain dependency on `packages/database` and pull database models and session dependencies into sidecar containers. (Rejected)
+### Option 1: Option A: Localize `get_utc_now()` and ISO datetime parsing/formatting helpers directly within `packages/security/datetime_helpers.py`. (Selected)
+
+- **Overview:** Option A: Localize `get_utc_now()` and ISO datetime parsing/formatting helpers directly within `packages/security/datetime_helpers.py`. (Selected)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Option B: Retain dependency on `packages/database` and pull database models and session dependencies into sidecar containers. (Rejected)
+
+- **Overview:** Option B: Retain dependency on `packages/database` and pull database models and session dependencies into sidecar containers. (Rejected)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A. Localizing datetime utility functions inside `packages/security/datetime_helpers.py` allows `packages/security` and downstream packages (such as `packages/deid`) to operate in build isolation without pulling in database dependencies.
+- **Chosen Option:** Option A. Localizing datetime utility functions inside `packages/security/datetime_helpers.py` allows `packages/security` and downstream packages (such as `packages/deid`) to operate in build isolation without pulling in database dependencies.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Clean build isolation for `packages/security` and sidecar containers without cross-package dependency cycles.
-* Positive: Zero runtime overhead or changes to cryptographic signature verification logic.
-* Negative: Minor duplication of utility functions across `packages/database` and `packages/security`.
+- **Positive Impact:** Clean build isolation for `packages/security` and sidecar containers without cross-package dependency cycles.
+- **Positive Impact:** Zero runtime overhead or changes to cryptographic signature verification logic.
+- **Negative Impact / Technical Debt:** Minor duplication of utility functions across `packages/database` and `packages/security`.
+- **Mitigation Strategy:** Managed via automated tests and verification.
 
 ## 6. Implementation & Verification
 

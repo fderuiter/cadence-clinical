@@ -25,20 +25,20 @@ A standard security check must be integrated into both local developer environme
 ### Option 1: Separate Local and CI Scan Utilities
 
 - **Overview:** Maintain different scanning tools or scripts for pre-commit checks and CI environments.
-- **Pros:**
+- ***Pros:***
   - ✅ Allows fine-tuned local scripts.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases maintenance overhead across different environments.
   - ❌ Discrepancies between local scans and CI checks create developer friction.
 
 ### Option 2: Unified Dual-Mode Script (Selected)
 
 - **Overview:** Enhance the main security auditing script (`scripts/audit_security.py`) to handle both modes. Locally, pre-commit passes specific changed file paths to run a targeted sweep. In CI, with no positional arguments, it defaults to a full recursive walk of the repository while consistently respecting path exclusions.
-- **Pros:**
+- ***Pros:***
   - ✅ Single source of truth for both local hooks and CI pipelines.
   - ✅ Ensures perfect parity in scanner logic, exclusion rules, and bypass comments (`# pragma: allowlist`).
   - ✅ Meets both developer velocity requirements and CI blocking sweep guarantees.
-- **Cons:**
+- ***Cons:***
   - ❌ Marginal complexity in script parameters to handle CLI positional arguments.
 
 ## 4. Decision Outcome

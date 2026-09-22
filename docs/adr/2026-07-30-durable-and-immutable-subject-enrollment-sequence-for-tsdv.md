@@ -19,14 +19,27 @@ Under Targeted Source Data Verification (TSDV), selecting the "first N enrolled 
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Persisted column `enrollment_index` on `ClinicalSubject`**
-   Add a nullable integer column `enrollment_index` to the `ClinicalSubject` table. The index is assigned dynamically during the creation transaction as `max(enrollment_index) + 1` for the study scope, making it permanent, immutable, and independent of alphabetical names or ID formats.
-2. **Option B (Alternative): Dynamic query from audit logs on every evaluation**
-   Dynamically fetch the subject's first insert event timestamp from `audit_logs` on every evaluation to compute the rank. This avoids schema changes but is highly non-performant and depends entirely on audit logs remaining present and untouched, which risks instability.
+### Option 1: **Option A (Selected): Dedicated Persisted column `enrollment_index` on `ClinicalSubject`**
+
+- **Overview:** Add a nullable integer column `enrollment_index` to the `ClinicalSubject` table. The index is assigned dynamically during the creation transaction as `max(enrollment_index) + 1` for the study scope, making it permanent, immutable, and independent of alphabetical names or ID formats.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative): Dynamic query from audit logs on every evaluation**
+
+- **Overview:** Dynamically fetch the subject's first insert event timestamp from `audit_logs` on every evaluation to compute the rank. This avoids schema changes but is highly non-performant and depends entirely on audit logs remaining present and untouched, which risks instability.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it ensures a high-performance, direct read of the immutable enrollment index, guarantees GxP stability for first-N sampling, and fully decouples subject names from the sampling logic to satisfy PRD-QRY-007.
+- **Chosen Option:** **Option A** because it ensures a high-performance, direct read of the immutable enrollment index, guarantees GxP stability for first-N sampling, and fully decouples subject names from the sampling logic to satisfy PRD-QRY-007.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

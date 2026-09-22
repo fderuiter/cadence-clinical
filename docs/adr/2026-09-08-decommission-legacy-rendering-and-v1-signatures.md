@@ -20,12 +20,27 @@ The platform is transitioning to a modern, unified architectural approach for cl
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: Decommission legacy V1 pathways completely, delete `index.js` under `apps/web/`, consolidate helpers into `apps/web/src/evaluator.js`, and perform linter cleanup on centralized security policies in `packages/security/rbac.py`.
-2. **Option B (Alternative)**: Retain legacy pathways as compatibility shims, increasing technical debt and maintenance complexity across the gateway and frontend assets.
+### Option 1: **Option A (Selected)**: Decommission legacy V1 pathways completely, delete `index.js` under `apps/web/`, consolidate helpers into `apps/web/src/evaluator.js`, and perform linter cleanup on centralized security policies in `packages/security/rbac.py`.
+
+- **Overview:** **Option A (Selected)**: Decommission legacy V1 pathways completely, delete `index.js` under `apps/web/`, consolidate helpers into `apps/web/src/evaluator.js`, and perform linter cleanup on centralized security policies in `packages/security/rbac.py`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative)**: Retain legacy pathways as compatibility shims, increasing technical debt and maintenance complexity across the gateway and frontend assets.
+
+- **Overview:** **Option B (Alternative)**: Retain legacy pathways as compatibility shims, increasing technical debt and maintenance complexity across the gateway and frontend assets.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it is the only way to satisfy regulatory GxP and FDA Part 11 compliance dynamically and cleanly across both frontend and backend systems, eliminating multi-path parsing vulnerabilities while significantly improving codebase maintainability.
+- **Chosen Option:** **Option A** because it is the only way to satisfy regulatory GxP and FDA Part 11 compliance dynamically and cleanly across both frontend and backend systems, eliminating multi-path parsing vulnerabilities while significantly improving codebase maintainability.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

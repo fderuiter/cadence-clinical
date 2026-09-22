@@ -24,19 +24,19 @@ Furthermore, running schema compilation in restricted non-production environment
 ### Option 1: Live Asynchronous Aggregation in Runtime Only
 
 - **Overview:** Fetch schemas asynchronously from active downstream services only when hitting the gateway `/openapi.json` endpoint.
-- **Pros:**
+- ***Pros:***
   - Simple, real-time updates of schemas.
-- **Cons:**
+- ***Cons:***
   - ❌ High latency and coupling in containerized environments.
   - ❌ Subject to startup race conditions and network instability.
 
 ### Option 2: Offline & Synchronous Pre-generation with Safe Preloads (Selected)
 
 - **Overview:** Customize `app.openapi` in `apps/gateway/main.py` to synchronously load and merge all 12 downstream platform microservices and the 3 native gateway services offline, backed by preloaded safe dummy environment variables (`AUDIT_LOG_SECRET_KEY`, `INBOUND_EMAIL_HMAC_SECRET`, `GATEWAY_SECRET`).
-- **Pros:**
+- ***Pros:***
   - ✅ 100% reliable, offline-capable verification pipeline.
   - ✅ Ensures API contracts are guaranteed build-time safe and validated before deployment.
-- **Cons:**
+- ***Cons:***
   - ❌ Minor initial execution overhead when importing modules.
 
 ## 4. Decision Outcome

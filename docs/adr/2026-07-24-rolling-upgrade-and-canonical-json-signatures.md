@@ -24,18 +24,18 @@ This decision implements requirements under Trace-8.
 ### Option 1: Simultaneous Big-Bang Deployment
 
 - **Overview:** Upgrade the entire infrastructure at once, instantly deprecating and removing Version 1 signature verification.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies code by avoiding legacy fallback logic.
-- **Cons:**
+- ***Cons:***
   - ❌ Extremely high deployment risk and potential for service disruption.
 
 ### Option 2: Rolling Versioning with Dynamic Inspection (Selected)
 
 - **Overview:** The gateway and downstream middleware inspect the `X-Signature-Version` header. The system supports both legacy Version 1 (colon-concatenated) and Version 2 (canonical JSON) signature verification paths during the transition.
-- **Pros:**
+- ***Pros:***
   - ✅ Phased, risk-free deployment of microservices.
   - ✅ No disruption to active trial operations.
-- **Cons:**
+- ***Cons:***
   - ❌ Code base temporarily contains two validation paths.
 
 ## 4. Decision Outcome

@@ -347,6 +347,122 @@ def check_architectural_changes_require_adr(changed_files: set[str]) -> bool:
     return True
 
 
+def validate_single_adr(
+    filename: str, filepath: str, content: str, index_content: str, valid_reqs: set[str]
+) -> tuple[bool, list[str]]:
+    """
+    Validates a single ADR file for filename pattern, index presence, title format,
+    top-level sections, modern subsection structure, and compliance mappings.
+    Returns (is_valid, list_of_error_strings).
+    """
+    errors = []
+
+    # 1. Check filename pattern
+    if not FILENAME_PATTERN.match(filename):
+        errors.append(
+            f"Error: File '{filename}' does not follow the standard chronological date pattern (YYYY-MM-DD-...)."
+        )
+
+    # 2. Check if file is in index
+    if f"({filename})" not in index_content:
+        errors.append(
+            f"Error: File '{filename}' is missing from the index log ({INDEX_FILE})."
+        )
+
+    # 3. Read lines and check title
+    lines = content.split("\n")
+    is_new_format = False
+    if lines and TITLE_PATTERN_NEW.match(lines[0]):
+        is_new_format = True
+    elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
+        errors.append(
+            f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
+        )
+
+    # 4. Check required sections
+    if is_new_format:
+        missing_sections = []
+        for section in REQUIRED_SECTIONS_NEW:
+            if section not in content:
+                # Handle variants like "## 3. Options Considered & Settled Architecture"
+                sec_num = section.split(".")[0]  # e.g., "## 3"
+                if not re.search(
+                    re.escape(sec_num) + r"\.\s+Options Considered", content
+                ):
+                    missing_sections.append(section)
+    else:
+        missing_sections = [sec for sec in REQUIRED_SECTIONS_OLD if sec not in content]
+
+    if missing_sections:
+        errors.append(
+            f"Error: File '{filename}' is missing required sections: {', '.join(missing_sections)}"
+        )
+
+    # 5. Strict subsection validation for modern (new-format) ADRs
+    if is_new_format:
+        # Check metadata format in header (lines 1 to 10)
+        header_text = "\n".join(lines[:10])
+        if not re.search(r"^[-*]\s+\*\*Status:\*\*", header_text, re.MULTILINE):
+            errors.append(
+                f"Error: File '{filename}' metadata is missing formatted '- **Status:**' field."
+            )
+
+        # Check Section 3: Options Considered
+        s3_search = re.search(
+            r"## 3\.\s+Options Considered[\s\S]*?(?=\n## 4\.|\Z)", content
+        )
+        if s3_search:
+            s3_text = s3_search.group(0)
+            if not re.search(r"^###\s+(?:Option|\d+\.)", s3_text, re.MULTILINE):
+                s3_line = 1
+                for idx, line in enumerate(lines, start=1):
+                    if "## 3." in line and "Options Considered" in line:
+                        s3_line = idx
+                        break
+                errors.append(
+                    f"Error: File '{filename}' section '## 3. Options Considered' (line {s3_line}) is missing required '### Option' subheadings (e.g. '### Option 1:')."
+                )
+
+            # Check for Pros and Cons markers in Section 3
+            has_pros = bool(
+                re.search(r"[-*]\s+\*{0,3}Pros:\*{0,3}", s3_text, re.IGNORECASE)
+            )
+            has_cons = bool(
+                re.search(r"[-*]\s+\*{0,3}Cons:\*{0,3}", s3_text, re.IGNORECASE)
+            )
+            if not has_pros or not has_cons:
+                missing = []
+                if not has_pros:
+                    missing.append("'- **Pros:**'")
+                if not has_cons:
+                    missing.append("'- **Cons:**'")
+                errors.append(
+                    f"Error: File '{filename}' section '## 3. Options Considered' is missing required trade-off list markers: {', '.join(missing)}."
+                )
+
+        # Check Section 4: Decision Outcome
+        if "## 4. Decision Outcome" in content:
+            s4_match = re.search(
+                r"## 4\. Decision Outcome\n([\s\S]*?)(?=\n## 5\. Consequences & Trade-offs|\Z)",
+                content,
+            )
+            if s4_match:
+                s4_text = s4_match.group(1)
+                if not re.search(r"[-*]?\s*\*\*Chosen Option:\*\*", s4_text):
+                    errors.append(
+                        f"Error: File '{filename}' section '## 4. Decision Outcome' is missing required '- **Chosen Option:**' metadata marker."
+                    )
+
+    # 6. Check compliance requirement mapping
+    comp_ok, comp_err = compliance_utility.validate_adr_compliance(
+        filename, content, valid_reqs
+    )
+    if not comp_ok:
+        errors.append(comp_err)
+
+    return len(errors) == 0, errors
+
+
 def validate_existing_adrs(targets: list[str] = None) -> bool:
     """Validates structure, filenames, and index alignment of existing ADRs."""
     if not os.path.isdir(ADR_DIR):
@@ -389,21 +505,6 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
             if os.path.abspath(file_dir) != os.path.abspath(expected_dir):
                 continue
 
-            # 1. Check filename pattern
-            if not FILENAME_PATTERN.match(filename):
-                print(
-                    f"Error: File '{filename}' does not follow the standard chronological date pattern (YYYY-MM-DD-...)."
-                )
-                all_passed = False
-
-            # 2. Check if file is in index
-            if f"({filename})" not in index_content:
-                print(
-                    f"Error: File '{filename}' is missing from the index log ({INDEX_FILE})."
-                )
-                all_passed = False
-
-            # 3. Read file and check contents
             try:
                 with open(filepath, encoding="utf-8") as f:
                     content = f.read()
@@ -412,40 +513,13 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 all_passed = False
                 continue
 
-            lines = content.split("\n")
-
-            # Check title
-            is_new_format = False
-            if lines and TITLE_PATTERN_NEW.match(lines[0]):
-                is_new_format = True
-            elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
-                print(
-                    f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
-                )
-                all_passed = False
-
-            # Check required sections
-            missing_sections = []
-            required_sections = (
-                REQUIRED_SECTIONS_NEW if is_new_format else REQUIRED_SECTIONS_OLD
+            ok, errs = validate_single_adr(
+                filename, filepath, content, index_content, valid_reqs
             )
-            for section in required_sections:
-                if section not in content:
-                    missing_sections.append(section)
-
-            if missing_sections:
-                print(
-                    f"Error: File '{filename}' is missing required sections: {', '.join(missing_sections)}"
-                )
+            if not ok:
                 all_passed = False
-
-            # 4. Check compliance requirement mapping
-            comp_ok, comp_err = compliance_utility.validate_adr_compliance(
-                filename, content, valid_reqs
-            )
-            if not comp_ok:
-                print(comp_err)
-                all_passed = False
+                for err in errs:
+                    print(err)
 
     else:
         # Check for ADRs outside the proper folder
@@ -472,21 +546,6 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
 
             filepath = os.path.join(ADR_DIR, filename)
 
-            # 1. Check filename pattern
-            if not FILENAME_PATTERN.match(filename):
-                print(
-                    f"Error: File '{filename}' does not follow the standard chronological date pattern (YYYY-MM-DD-...)."
-                )
-                all_passed = False
-
-            # 2. Check if file is in index
-            if f"({filename})" not in index_content:
-                print(
-                    f"Error: File '{filename}' is missing from the index log ({INDEX_FILE})."
-                )
-                all_passed = False
-
-            # 3. Read file and check contents
             try:
                 with open(filepath, encoding="utf-8") as f:
                     content = f.read()
@@ -494,40 +553,13 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 all_passed = False
                 continue
 
-            lines = content.split("\n")
-
-            # Check title
-            is_new_format = False
-            if lines and TITLE_PATTERN_NEW.match(lines[0]):
-                is_new_format = True
-            elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
-                print(
-                    f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
-                )
-                all_passed = False
-
-            # Check required sections
-            missing_sections = []
-            required_sections = (
-                REQUIRED_SECTIONS_NEW if is_new_format else REQUIRED_SECTIONS_OLD
+            ok, errs = validate_single_adr(
+                filename, filepath, content, index_content, valid_reqs
             )
-            for section in required_sections:
-                if section not in content:
-                    missing_sections.append(section)
-
-            if missing_sections:
-                print(
-                    f"Error: File '{filename}' is missing required sections: {', '.join(missing_sections)}"
-                )
+            if not ok:
                 all_passed = False
-
-            # 4. Check compliance requirement mapping
-            comp_ok, comp_err = compliance_utility.validate_adr_compliance(
-                filename, content, valid_reqs
-            )
-            if not comp_ok:
-                print(comp_err)
-                all_passed = False
+                for err in errs:
+                    print(err)
 
     return all_passed
 

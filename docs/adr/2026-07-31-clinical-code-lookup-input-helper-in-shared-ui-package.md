@@ -19,12 +19,27 @@ Phase 19 terminology integration and eCRF consolidation require standard accessi
 
 ## 3. Options Considered
 
-1. **Shared Package UI Helper Export (Selected)**: Export `createClinicalLookupInput` from `packages/ui/index.js` with Vitest suite.
-2. Ad-hoc template strings in individual Vue views without shared utility functions.
+### Option 1: **Shared Package UI Helper Export (Selected)**: Export `createClinicalLookupInput` from `packages/ui/index.js` with Vitest suite.
+
+- **Overview:** **Shared Package UI Helper Export (Selected)**: Export `createClinicalLookupInput` from `packages/ui/index.js` with Vitest suite.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Ad-hoc template strings in individual Vue views without shared utility functions.
+
+- **Overview:** Ad-hoc template strings in individual Vue views without shared utility functions.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option 1 because exporting `createClinicalLookupInput` from `@cadence/ui` promotes reuse, reduces duplicate layout code, and enforces standard clinical field styling.
+- **Chosen Option:** Option 1
+- **Justification:** Chosen option 1 because exporting `createClinicalLookupInput` from `@cadence/ui` promotes reuse, reduces duplicate layout code, and enforces standard clinical field styling.
 
 ## 5. Consequences & Trade-offs
 

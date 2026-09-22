@@ -26,18 +26,18 @@ This decision implements requirements under Trace-2.
 ### Option 1: Decentralized RBAC in each Microservice
 
 - **Overview:** Each service parses roles locally and implements its own permissions and masking.
-- **Pros:** No shared dependencies.
-- **Cons:** Duplicate code, inconsistent mappings, high risk of compliance leakage, difficult to maintain.
+- ***Pros:*** No shared dependencies.
+- ***Cons:*** Duplicate code, inconsistent mappings, high risk of compliance leakage, difficult to maintain.
 
 ### Option 2: Shared Declarative RBAC Toolkit in `packages/security` [Selected]
 
 - **Overview:** Centralize all canonical roles, a `ROLE_ALIASES` normalizer mapping, a declarative `ROLE_PERMISSIONS` matrix, and recursive `mask_payload` routines inside `packages/security/rbac.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ One single authoritative implementation for access control and data blinding.
   - ✅ Robust normalization maps variations (e.g., PI, Principal Investigator) to a set of 9 canonical roles.
   - ✅ FastAPI dependency helpers (`get_principal`, `require_permission`) simplify endpoint gating.
   - ✅ Schema-agnostic, recursive masking recursively processes dicts, lists, and Pydantic models.
-- **Cons:**
+- ***Cons:***
   - ❌ Shared package updates require redeploying dependent microservices.
 
 ## 4. Decision Outcome

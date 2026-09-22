@@ -22,20 +22,20 @@ To establish consistent, reproducible, and standardized packaging and wheel buil
 ### Option 1: Legacy Build Configurations
 
 - **Overview:** Use ad-hoc or standard implicit backend builds (setuptools/poetry/hatch) without strict packaging boundaries.
-- **Pros:**
+- ***Pros:***
   - ✅ No additional migration effort.
-- **Cons:**
+- ***Cons:***
   - ❌ Inconsistent wheel outputs and packaging targets.
   - ❌ Potential cross-package pollution and namespace import collisions.
 
 ### Option 2: Standardized Hatch Configurations (Selected)
 
 - **Overview:** Standardize on Hatch and configure pyproject.toml explicitly with build targets (wheel, sdist), namespace tracking paths, and strict metadata targets.
-- **Pros:**
+- ***Pros:***
   - ✅ Uniform build artifacts across all 19 python projects.
   - ✅ Explicitly defined search/namespace paths prevent import collisions.
   - ✅ Clean sdist and wheel configurations conformant to GxP audit standards.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires explicit build blocks across all pyproject.toml files.
 
 ## 4. Decision Outcome

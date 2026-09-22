@@ -24,20 +24,20 @@ This decision directly implements requirements under PRD-CRF-006.
 ### Option 1: Manually Define TypeScript Interfaces
 
 - **Overview:** Write manual union types for CDASH variables and hardcode the field configurations.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement initially.
-- **Cons:**
+- ***Cons:***
   - ❌ Extremely error-prone and labor-intensive to maintain across 1100+ unique CDISC variables.
   - ❌ Hard to keep in sync with upstream schema updates.
 
 ### Option 2: Automated Dynamic Type Generation from CDISC Schemas (Selected)
 
 - **Overview:** Build a dynamic codegen script (`packages/ui/scripts/generate-types.js`) that dynamically parses official CDASH and CDASHIG JSON schemas to generate union and interface types.
-- **Pros:**
+- ***Pros:***
   - ✅ Generates highly accurate unions representing over 1119 unique CDASH variables.
   - ✅ Very fast (well under 1.5 seconds) and fits into the workspace build cycle.
   - ✅ Vue SFC components can import and enforce these types directly.
-- **Cons:**
+- ***Cons:***
   - ❌ Code generation step must handle sanitization of bare/invalid values (such as `NaN`) in raw JSON schema source files.
 
 ## 4. Decision Outcome
