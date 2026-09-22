@@ -5,11 +5,10 @@ import tempfile
 import httpx
 import pytest
 import pytest_asyncio
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, TranslationJob
 from apps.execution.main import app
-from playwright.async_api import async_playwright
-
 from scripts.tests.test_translator import get_auth_headers
 
 
@@ -42,6 +41,11 @@ async def validate_layout_html(html_content: str):
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w", delete=False) as f:
         f.write(html_content)
         temp_path = f.name
+
+    try:
+        from playwright.async_api import async_playwright
+    except (ImportError, ModuleNotFoundError) as e:
+        pytest.skip(f"Playwright dependency not available: {e}")
 
     try:
         async with async_playwright() as p:
