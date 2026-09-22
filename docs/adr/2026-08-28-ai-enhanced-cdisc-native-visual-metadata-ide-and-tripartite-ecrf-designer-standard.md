@@ -1,9 +1,9 @@
 # ADR-2231: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirements:** `PRD-CRF-001`, `PRD-CRF-004`, `PRD-CRF-009`, `PRD-CRF-010`, `PRD-CRF-012`, `PRD-DDF-001`, `PRD-SYS-001`, `PRD-SYS-050`, `PRD-SYS-051`
 
 ---
@@ -30,19 +30,37 @@ To leapfrog the entire industry, the Cadence eCRF Designer is established not as
 
 ## 3. Options Considered
 
-1. **Option A (Selected) — AI-Enhanced Visual Metadata IDE & Tripartite JSON Schema Architecture**:
-   - Complete decoupling of Data, UI, and Logic schemas without relational DDL generation.
+### Option 1: **Option A (Selected) — AI-Enhanced Visual Metadata IDE & Tripartite JSON Schema Architecture**:
+
+- **Overview:** - Complete decoupling of Data, UI, and Logic schemas without relational DDL generation.
    - Isomorphic AST rule execution across browser JavaScript and backend Python runtimes.
    - Automated AI synthetic edge-case generation and 30-second 21 CFR Part 11 UAT evidence report.
    - In-Flight Patient Migration Matrix supporting prospective and retrospective amendment directives.
-2. **Option B — Relational DDL Code Generation & Scripting (Legacy Paradigm)**:
-   - Generate SQL table schemas and execute Python/C# scripts for rules.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B — Relational DDL Code Generation & Scripting (Legacy Paradigm)**:
+
+- **Overview:** - Generate SQL table schemas and execute Python/C# scripts for rules.
    - *Rejected*: Fragile mid-study amendments, severe security exposure (RCE), 8–12 week build latency.
-3. **Option C — Generic Drag-and-Drop Web Form Builder**:
-   - Utilize off-the-shelf form builders (Formik/JSONSchema-only) without clinical standards.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C — Generic Drag-and-Drop Web Form Builder**:
+
+- **Overview:** - Utilize off-the-shelf form builders (Formik/JSONSchema-only) without clinical standards.
    - *Rejected*: Lacks CDISC CDASH/SDTM metadata bindings, medical dictionary auto-coding, GxP audit trails, and clinical UAT qualification.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 

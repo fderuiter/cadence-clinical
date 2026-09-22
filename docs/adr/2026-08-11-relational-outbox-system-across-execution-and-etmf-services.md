@@ -22,17 +22,18 @@ To support robust, fault-tolerant, and transactionally secure inter-service inte
 
 ### Option 1: Direct Synchronous HTTP Dispatches within API Route Handlers
 
-- **Pros:** Simpler codebase, lower initial effort.
-- **Cons:** Introduces distributed transaction vulnerability, blocks HTTP worker threads during downstream delays, violates strict fault isolation.
+- ***Pros:*** Simpler codebase, lower initial effort.
+- ***Cons:*** Introduces distributed transaction vulnerability, blocks HTTP worker threads during downstream delays, violates strict fault isolation.
 
 ### Option 2: Database-Level Relational Outbox Pattern (Selected)
 
-- **Pros:** Assures transactional safety (ACID) locally. Guarantees eventually consistent state updates downstream via asynchronous polling and idempotent retries. Satisfies 21 CFR Part 11 audit guidelines fully.
-- **Cons:** Slightly increased implementation complexity and a brief eventual-consistency delay.
+- ***Pros:*** Assures transactional safety (ACID) locally. Guarantees eventually consistent state updates downstream via asynchronous polling and idempotent retries. Satisfies 21 CFR Part 11 audit guidelines fully.
+- ***Cons:*** Slightly increased implementation complexity and a brief eventual-consistency delay.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 2 (Relational Outbox Pattern)** because it is the only pattern that ensures atomic local writes alongside event tracking, guaranteeing GxP trace integrity and robust failure recovery under any database or network partition scenarios.
+- **Chosen Option:** **Option 2 (Relational Outbox Pattern)** because it is the only pattern that ensures atomic local writes alongside event tracking, guaranteeing GxP trace integrity and robust failure recovery under any database or network partition scenarios.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

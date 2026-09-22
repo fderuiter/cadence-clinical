@@ -1,9 +1,9 @@
 # ADR-2229: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture
 
-* **Status:** Superseded by [ADR-2234](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Superseded by [ADR-2234](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -34,24 +34,41 @@ Reference requirement: `PRD-SYS-001`, `PRD-SYS-004`, `PRD-SYS-042`.
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): Hybrid CQRS with Hexagonal Unit of Work and Dual-Defense Audit Logging**
-   - **Command Side:** Encapsulate domain aggregate mutations behind strict `RepositoryPort[T]` interfaces and an asynchronous `UnitOfWork` protocol that manages transaction lifecycles.
+### Option 1: **Option 1 (Selected): Hybrid CQRS with Hexagonal Unit of Work and Dual-Defense Audit Logging**
+
+- **Overview:** - **Command Side:** Encapsulate domain aggregate mutations behind strict `RepositoryPort[T]` interfaces and an asynchronous `UnitOfWork` protocol that manages transaction lifecycles.
    - **Query Side:** Implement specialized Read-Model Query Services and SQL-optimized projections for high-volume exports (SDTM/ADaM/Audit) without hydrating domain entity aggregates.
    - **GxP Audit Trail:** Combine application-level domain event dispatching (capturing structured business rationale and 21 CFR Part 11 signature manifests) with database-level trigger context (`cadence.current_user_id` / `cadence.current_change_reason`) and cryptographic block-sealing.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Pure Repository Port Pattern for All Read and Write Operations**
-   - Direct all queries and projections through generic repository ports.
+### Option 2: **Option 2: Pure Repository Port Pattern for All Read and Write Operations**
+
+- **Overview:** - Direct all queries and projections through generic repository ports.
    - *Trade-off:* Significant performance degradation and query inflexibility for complex multi-table joins in CDISC dataset generators.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option 3: Direct ORM Queries in Presentation Routers with Ad-Hoc Sessions**
-   - Keep analytical queries in FastAPI router functions.
+### Option 3: **Option 3: Direct ORM Queries in Presentation Routers with Ad-Hoc Sessions**
+
+- **Overview:** - Keep analytical queries in FastAPI router functions.
    - *Trade-off:* Boundary leakage, inability to unit test use cases without a live database, and high risk of regression.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-We chose **Option 1: Hybrid CQRS with Hexagonal Unit of Work and Dual-Defense GxP Audit Logging**.
+- **Chosen Option:** Option 1
+- **Justification:** We chose **Option 1: Hybrid CQRS with Hexagonal Unit of Work and Dual-Defense GxP Audit Logging**.
 
 ### Architecture Overview
 

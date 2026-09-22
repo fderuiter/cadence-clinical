@@ -32,16 +32,19 @@ This decision directly implements requirements under **Trace-3**.
 ## 3. Options Considered
 
 ### Option 1: Direct Mutations on Library Objects
-
 - **Overview**: Permit immediate overwrites of existing templates inside a single relational database.
 - **Pros**:
   - Simple schema with fewer records to maintain.
 - **Cons**:
   - ❌ Violates GxP reproducibility and 21 CFR Part 11 electronic records tracing. If a trial instantiates a Form, and the Form is directly modified, historical protocols become unreproducible.
   - ❌ No governance controls.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ### Option 2: Append-Only Graph-Native Versioning & Scoped Copy-on-Instantiation (Selected)
-
 - **Overview**: Define Global Library objects with a composite primary key / stable identifier concept in Neo4j. Modifying an object inserts a new version node linked via `PREVIOUS_VERSION` to the predecessor. Statuses transition through a strict state machine validated at runtime, and in-use objects are amended via an explicit `/amend` endpoint to clone them into successor draft versions.
 - **Pros**:
   - ✅ Full auditability of all historical changes.
@@ -51,10 +54,16 @@ This decision directly implements requirements under **Trace-3**.
   - Slightly higher database node footprint, mitigated by lightweight properties and JSON string serialization.
 
 ---
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 
-- **Chosen Option**: Option 2.
+- **Chosen Option:** Option 1
+- **Justification:** - **Chosen Option**: Option 2.
 - **Justification**: This aligns with the overall Cadence Clinical platform's GxP and multi-tenant baseline, ensuring total isolation, perfect traceability, and strict immutability.
 
 ---

@@ -24,12 +24,12 @@ To satisfy clinical auditability and platform usability requirements, the platfo
 
 ### Option 1: Inline Synchronous Request inside DB Transactions
 
-- **Pros:** Simple, immediate notification.
-- **Cons:** Network delays slow down user requests. If the notification service returns an error, the entire database transaction is rolled back, causing data loss in the ticketing service.
+- ***Pros:*** Simple, immediate notification.
+- ***Cons:*** Network delays slow down user requests. If the notification service returns an error, the entire database transaction is rolled back, causing data loss in the ticketing service.
 
 ### Option 2: Post-Commit Background Dispatch (FastAPI BackgroundTasks) (Chosen)
 
-- **Pros:**
+- ***Pros:***
   - Delivers high performance by executing notification dispatch asynchronously after the database transaction has committed.
   - Ensures that any network or transport failures are gracefully swallowed, logged, and isolated from the core ticketing transaction.
   - Safe and decoupled, utilizing FastAPI's native `BackgroundTasks` wrapper.
@@ -37,7 +37,8 @@ To satisfy clinical auditability and platform usability requirements, the platfo
 
 ## 4. Decision Outcome
 
-We adopted **Option 2**. We implemented a robust ticketing notifications integration with the following key components:
+- **Chosen Option:** Option 1
+- **Justification:** We adopted **Option 2**. We implemented a robust ticketing notifications integration with the following key components:
 
 1. **Foundational Client:** An async client `publish_notification` mirroring the execution service's implementation, signing requests using HMAC-SHA256 Gateway V2 headers and swallowing any transport/HTTP errors gracefully.
 2. **Recipient Policy:**

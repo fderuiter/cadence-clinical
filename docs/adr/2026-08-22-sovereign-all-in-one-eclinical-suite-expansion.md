@@ -1,9 +1,9 @@
 # ADR-2199: Sovereign All-in-One eClinical Suite Expansion
 
-* **Status:** Accepted
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement:** PRD-SYS-060
 
 ---
@@ -23,8 +23,9 @@ Cadence Clinical possesses a distinct architectural foundation: an automated **D
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Sovereign All-in-One eClinical Suite**
-   Build native microservices and deep functional engines across all 12 clinical domains sharing the unified USDM/DDF core:
+### Option 1: **Option A (Selected): Sovereign All-in-One eClinical Suite**
+
+- **Overview:** Build native microservices and deep functional engines across all 12 clinical domains sharing the unified USDM/DDF core:
    - **MDR / Protocol Design:** CDISC USDM v3/v4 graph, Biomedical Concepts, ICH M11 sync, automated PDF digitization.
    - **EDC / CDMS:** Dynamic subject schema projection, cross-domain anomaly detection, multi-tier SDV/SDR, database locks.
    - **Site Payments & Financials:** Automated trigger-to-payable engine from EDC/CTMS milestones, split payees, holdbacks, remittance advice.
@@ -35,13 +36,23 @@ Cadence Clinical possesses a distinct architectural foundation: an automated **D
    - **Clinical Data Repository (CDR) & Validated SCE:** Multi-source data lakehouse, automated SDTM/ADaM pipelines, containerized reproducible R/Python analysis workspaces.
    - **Connected Study Training:** Automated protocol amendment curricula, role qualification, and EDC write gating.
    - **Decentralized Clinical Trials (DCT):** Connected biometric sensors, wearables (CGM, actigraphy, spirometry), and telehealth integration.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Core Foundation with External Vendor Integrations**
-   Maintain only core MDR, EDC, and basic CTMS, while delegating Enterprise PV to Oracle Argus, Imaging to BioTelemetry, and RTSM to 4G Clinical.
+### Option 2: **Option B: Core Foundation with External Vendor Integrations**
+
+- **Overview:** Maintain only core MDR, EDC, and basic CTMS, while delegating Enterprise PV to Oracle Argus, Imaging to BioTelemetry, and RTSM to 4G Clinical.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option: Option A (Sovereign All-in-One eClinical Suite)** because it leverages Cadence's existing DDF/USDM compilation engine to deliver an unparalleled, zero-reconciliation experience that eliminates the multi-million-dollar integration overhead characteristic of legacy competitors.
+**- **Chosen Option:** Option A (Sovereign All-in-One eClinical Suite)** because it leverages Cadence's existing DDF/USDM compilation engine to deliver an unparalleled, zero-reconciliation experience that eliminates the multi-million-dollar integration overhead characteristic of legacy competitors.
 
 ## 5. Consequences & Trade-offs
 

@@ -1,9 +1,9 @@
 # ADR-2223: Specialized Science Safety Submissions CSM Forensics and AI Air Gap
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** Engineering Architecture Board, Pharmacovigilance Working Group, Data Science & Quality Committee
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** Engineering Architecture Board, Pharmacovigilance Working Group, Data Science & Quality Committee
 * **Requirements:** PRD-SYS-001, PRD-SAF-001, PRD-SAF-002, PRD-RBQM-001, PRD-IMG-001, PRD-AI-001
 
 ---
@@ -28,22 +28,38 @@ The platform requires:
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): NCI-CTCAE Evaluator + ICH E2B(R3) AS2 Gateway + CSM/pHash Forensics + Blinded Imaging Adjudication + PHI Air-Gap AI Vault**:
-   - Automated toxicity evaluator stages Grade 3/4 lab events for Safety Physician causality adjudication.
+### Option 1: **Option 1 (Selected): NCI-CTCAE Evaluator + ICH E2B(R3) AS2 Gateway + CSM/pHash Forensics + Blinded Imaging Adjudication + PHI Air-Gap AI Vault**:
+
+- **Overview:** - Automated toxicity evaluator stages Grade 3/4 lab events for Safety Physician causality adjudication.
    - Native AS2 S/MIME gateway transmits E2B(R3) ICSR XML with MDN verification.
    - CSM statistical forensicator runs Benford's Law Chi-Square, digit bias, and 64-bit DCT pHash (Hamming distance $\le 5$) image fraud sentinels.
    - Dual-reader RECIST 1.1 detects >20% SOD discordance triggering Adjudication Chair step-up sign-off.
    - In-flight `DeidAirGapVault` scrubs prompts with surrogate tokens and enforces `DRAFT_AI` Part 11 signature gates.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Fragmented Manual Operations**:
-   - Manual lab PDF review, manual web portal E2B upload, on-site only monitoring, and unrestricted cloud LLM prompts.
+### Option 2: **Option 2: Fragmented Manual Operations**:
 
-3. **Option 3: Black-Box Autonomous Execution**:
-   - Automated AI direct release without human electronic signatures and direct unsanitized data transmission.
+- **Overview:** - Manual lab PDF review, manual web portal E2B upload, on-site only monitoring, and unrestricted cloud LLM prompts.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Black-Box Autonomous Execution**:
+
+- **Overview:** - Automated AI direct release without human electronic signatures and direct unsanitized data transmission.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option:** Option 1 because it guarantees statutory pharmacovigilance compliance, uncompromised patient privacy, robust scientific endpoint validation, and rigorous risk-based quality surveillance.
+**- **Chosen Option:** ** Option 1 because it guarantees statutory pharmacovigilance compliance, uncompromised patient privacy, robust scientific endpoint validation, and rigorous risk-based quality surveillance.
 
 ## 5. Consequences & Trade-offs
 

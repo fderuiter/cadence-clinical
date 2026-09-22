@@ -20,12 +20,27 @@ To comply with 21 CFR Part 11 and PRD-SYS-001, the system requires an immutable,
 
 ## 3. Options Considered
 
-- **Option A (SQLModelAuditStore Adapter with Dynamic Session Resolution):** Implement a modular `SQLModelAuditStore` adapter and a dynamic session resolver utilizing string-based dynamic imports to maintain perfect architectural boundaries.
-- **Option B (Direct Sibling Imports):** Directly import context sessions from apps into the security package. This option was rejected as it directly violates cross-service and package import boundaries, leading to cyclic imports and build failures.
+### Option 1: Option A (SQLModelAuditStore Adapter with Dynamic Session Resolution): Implement a modular `SQLModelAuditStore` adapter and a dynamic session resolver utilizing string-based dynamic imports to maintain perfect architectural boundaries.
+
+- **Overview:** Option A (SQLModelAuditStore Adapter with Dynamic Session Resolution): Implement a modular `SQLModelAuditStore` adapter and a dynamic session resolver utilizing string-based dynamic imports to maintain perfect architectural boundaries.
+- ***Pros:***
+  - ✅ Satisfies requirements and architectural standards
+- ***Cons:***
+  - ❌ Requires component implementation and maintenance overhead
+
+### Option 2: Option B (Direct Sibling Imports): Directly import context sessions from apps into the security package. This option was rejected as it directly violates cross-service and package import boundaries, leading to cyclic imports and build failures.
+
+- **Overview:** Option B (Direct Sibling Imports): Directly import context sessions from apps into the security package. This option was rejected as it directly violates cross-service and package import boundaries, leading to cyclic imports and build failures.
+- ***Pros:***
+  - ✅ Satisfies requirements and architectural standards
+- ***Cons:***
+  - ❌ Requires component implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A. We implemented a pluggable `SQLModelAuditStore` adapter subclass of `AuditStoreAdapter` along with dynamic string-based lookup for active thread/async-local context sessions. This enables zero compile-time dependencies from `packages/security` on any individual `apps/*` folders while retaining rich runtime database session reuse.
+- **Chosen Option:** Option A. We implemented a pluggable `SQLModelAuditStore` adapter subclass of `AuditStoreAdapter` along with dynamic string-based lookup for active thread/async-local context sessions. This enables zero compile-time dependencies from `packages/security` on any individual `apps/*` folders while retaining rich runtime database session reuse.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

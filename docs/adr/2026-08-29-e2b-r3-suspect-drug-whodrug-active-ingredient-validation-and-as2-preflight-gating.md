@@ -29,16 +29,35 @@ This decision resolves requirements under `@req:PRD-SYS-048` and `@req:PRD-SYS-0
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Application-Level WHODrug Gating with Pre-Flight AS2 Interceptor**
-   - Pure application domain service with zero ORM leaks, strict validation before XML compilation and AS2 transmission.
-2. **Option B: Health Authority Gateway ACK B Post-Processing**
-   - _Rejected_: Waiting for regulatory agency rejections violates GxP compliance and risks regulatory enforcement actions.
-3. **Option C: Client-Side-Only Form Input Validation**
-   - _Rejected_: Fails defense-in-depth; direct API submissions, batch imports, or legacy migrations could bypass client checks.
+### Option 1: **Option A (Selected): Application-Level WHODrug Gating with Pre-Flight AS2 Interceptor**
+
+- **Overview:** - Pure application domain service with zero ORM leaks, strict validation before XML compilation and AS2 transmission.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Health Authority Gateway ACK B Post-Processing**
+
+- **Overview:** - _Rejected_: Waiting for regulatory agency rejections violates GxP compliance and risks regulatory enforcement actions.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Client-Side-Only Form Input Validation**
+
+- **Overview:** - _Rejected_: Fails defense-in-depth; direct API submissions, batch imports, or legacy migrations could bypass client checks.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Interceptor)**.
+- **Chosen Option:** **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Interceptor)**.
+- **Justification:** Selected as primary architectural approach.
 
 ```
 +-----------------------------------------------------------------------+

@@ -26,20 +26,20 @@ This decision implements requirements under Trace-6.
 ### Option 1: Monolithic operational workflows in apps/execution
 
 - **Overview:** Embed operational monitoring visits, recruitment trackers, and CRA allocations into the core execution database schema.
-- **Pros:**
+- ***Pros:***
   - ✅ Avoids deploying an extra microservice.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe schema bloating of the core execution relational database.
   - ❌ Complicates GxP change management and system validation.
 
 ### Option 2: Decentralized CTMS Microservice & Standalone UI Workspace (Selected)
 
 - **Overview:** Expose a modular FastAPI microservice (`apps/ctms`) with an isolated SQLite/PostgreSQL datastore, secured via Keycloak OIDC role-based routing at the gateway, and backed by comprehensive frontend demonstration tabs and packages/ui rendering.
-- **Pros:**
+- ***Pros:***
   - ✅ High modularity and clear architectural boundaries.
   - ✅ Robust mock-based offline demonstration workspace.
   - ✅ Decoupled system validation and clear separation of database scopes.
-- **Cons:**
+- ***Cons:***
   - ❌ Small overhead of maintaining dual datastore configurations and schema migrations.
 
 ## 4. Decision Outcome

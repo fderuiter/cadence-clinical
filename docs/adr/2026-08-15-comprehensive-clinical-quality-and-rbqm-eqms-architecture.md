@@ -24,14 +24,27 @@ This architecture directly addresses requirements `PRD-QLT-001` through `PRD-QLT
 
 ## 3. Options Considered
 
-1. **Monolithic Extension of CTMS/Execution:** Embed quality operations inside `apps/ctms` or `apps/execution`.
-   - _Cons:_ Relational leakage, complex schema invalidation, cross-app failure propagation.
-2. **Dedicated Modular eQMS Microservice in `apps/quality` with Hexagonal Architecture (Selected):**
-   - _Pros:_ Complete domain isolation, independent database schema and Alembic migrations, unified REST ingestion endpoint (`/api/v1/quality/ingest/event`), dedicated Vue 3 Quality Cockpit, and strict audit isolation.
+### Option 1: **Monolithic Extension of CTMS/Execution:** Embed quality operations inside `apps/ctms` or `apps/execution`.
+
+- **Overview:** - _Cons:_ Relational leakage, complex schema invalidation, cross-app failure propagation.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Dedicated Modular eQMS Microservice in `apps/quality` with Hexagonal Architecture (Selected):**
+
+- **Overview:** - _Pros:_ Complete domain isolation, independent database schema and Alembic migrations, unified REST ingestion endpoint (`/api/v1/quality/ingest/event`), dedicated Vue 3 Quality Cockpit, and strict audit isolation.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 2 (Dedicated Modular eQMS Microservice in `apps/quality`)**.
+- **Chosen Option:** **Option 2 (Dedicated Modular eQMS Microservice in `apps/quality`)**.
+- **Justification:** Selected as primary architectural approach.
 `apps/quality` acts as the single source of truth for clinical trial quality events, CAPAs, RBQM statistical scoring, clinical audits, and inspection readiness dossiers.
 
 ## 5. Consequences & Trade-offs

@@ -23,18 +23,18 @@ Requirements: PRD-SYS-001
 ### Option 1: Inline Endpoint Gating
 
 - **Overview:** Check for alert capabilities dynamically in API or background task handlers.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement inside individual routes.
-- **Cons:**
+- ***Cons:***
   - ❌ Fragments role validation and bypasses the centralized RBAC design pattern, violating PRD-SYS-001 centralization guidelines.
 
 ### Option 2: Centralized RBAC Matrix Extension [Selected]
 
 - **Overview:** Add `"alert"` action to `"ecoa_diary"` resource permissions across `ROLE_SYSADMIN`, `ROLE_SPONSOR_DM`, `ROLE_INVESTIGATOR`, `ROLE_CRC`, `ROLE_CRA_CANONICAL`, `"monitor"`, `"admin"`, and `"system"` roles directly in `packages/security/rbac.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ Preserves centralized, auditable, and unified role-to-permission mapping.
   - ✅ Automatically propagates to derived roles (`ROLE_PRINCIPAL_INVESTIGATOR`, etc.) before the base class instantiation block.
-- **Cons:**
+- ***Cons:***
   - ❌ Slightly increases the static footprint of the role permissions dictionary.
 
 ## 4. Decision Outcome

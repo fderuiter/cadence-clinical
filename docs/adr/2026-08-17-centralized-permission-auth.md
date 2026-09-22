@@ -1,6 +1,6 @@
 # ADR-097: Centralized Permission-Based Authorization and Dynamic Mappings
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-17
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -24,20 +24,20 @@ This decision implements requirements under Trace-7.
 ### Option 1: Decentralized authorization in each service
 
 - **Overview:** Keep role checks locally in eTMF, CTMS, and Quality routers.
-- **Pros:**
+- ***Pros:***
   - ✅ High isolation between services.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe duplication of RBAC tables.
   - ❌ Risk of authorization drifts between components.
 
 ### Option 2: Centralized RBAC using dynamic permission-based mappings (Selected)
 
 - **Overview:** Standardize on a unified role-permission schema inside `packages/security/rbac.py` and implement dynamic mappings (such as matching sponsor admin variations or mapping specific transition permissions to actions).
-- **Pros:**
+- ***Pros:***
   - ✅ Single source of truth for all role permissions.
   - ✅ Simplifies access verification down to `has_permission(principal, permission)`.
   - ✅ Facilitates GxP compliance and audit log tracing.
-- **Cons:**
+- ***Cons:***
   - ❌ Centralized changes can impact multiple downstream services if improperly coordinated.
 
 ## 4. Decision Outcome

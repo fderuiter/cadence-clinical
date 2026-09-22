@@ -25,20 +25,20 @@ To solve this, we implement an immediate, fast version-index comparison check (`
 ### Option 1: Reject and Return HTTP 400 Errors
 
 - **Overview:** Reject mismatching payloads immediately and drop the sync connection.
-- **Pros:**
+- ***Pros:***
   - ✅ Simple implementation.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe data-loss risk; raw patient-submitted responses could be lost on retry limits.
   - ❌ Blockages in multi-record queue syncing.
 
 ### Option 2: Quarantine, Compliant Audit Logging, and Suspension (Selected)
 
 - **Overview:** Route outdated submissions to `EPROSubmissionQuarantine`, log GxP-compliant `EPRO_QUARANTINED` audit entries, return `"QUARANTINED"` in sync loops, and flag local devices to suspend auto-sync and display user prompt warning banners.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates clinical database corruption risks completely.
   - ✅ Preserves raw clinical inputs securely for eventual manual correction/replay.
   - ✅ Complies fully with PRD-SYS-001.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires specialized quarantine tables and administrative replay tools.
 
 ## 4. Decision Outcome

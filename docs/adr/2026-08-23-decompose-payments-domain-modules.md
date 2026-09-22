@@ -1,9 +1,9 @@
 # ADR-2215: Decompose Payments Domain Modules
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -27,17 +27,30 @@ Requirements: `PRD-PAY-002`, `PRD-PAY-003`, `PRD-PAY-004`, `PRD-PAY-006`.
 
 ## 3. Options Considered
 
-1. **Option A (Decompose into Three Deep Domain Modules with Direct Session Queries):**
-   - Split `PaymentsService` into `SitePaymentLedgerEngine`, `BillingAndErpGateway`, and `ParticipantCompensationService`.
+### Option 1: **Option A (Decompose into Three Deep Domain Modules with Direct Session Queries):**
+
+- **Overview:** - Split `PaymentsService` into `SitePaymentLedgerEngine`, `BillingAndErpGateway`, and `ParticipantCompensationService`.
    - Delete `IPaymentsRepository` and `SQLAlchemyPaymentsRepository`, internalizing queries directly into the services.
    - Decompose the router into `site_ledger.py`, `billing_erp.py`, and `participant.py`, aggregated via `payments.py`.
-2. **Option B (Maintain Monolithic Service with Refactored Repository Interfaces):**
-   - Keep `PaymentsService` as a single facade while splitting repository interfaces into 3 sub-repositories.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Maintain Monolithic Service with Refactored Repository Interfaces):**
+
+- **Overview:** - Keep `PaymentsService` as a single facade while splitting repository interfaces into 3 sub-repositories.
    - Rejected: Leaves the 3,000+ line god-class intact and adds more intermediate pass-through layers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 
 1. `SitePaymentLedgerEngine` (`apps/payments/services/site_payment_ledger_engine.py`) owns contracts, fee schedules, split payee configs, trigger processing, payable approvals, and holdbacks.
 2. `BillingAndErpGateway` (`apps/payments/services/billing_and_erp_gateway.py`) owns self-billing cycles, PDF remittance generation/signing, ERP export, webhooks, and bank reconciliation.

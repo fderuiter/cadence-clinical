@@ -25,13 +25,13 @@ However, logging every read event results in a growing audit trail. Returning th
 
 ### Option 1: Unbounded Full-Table Retrieval with Self-Auditing
 
-- **Pros:** Simpler implementation.
-- **Cons:** Memory exhaustion, high network load, and poor query performance as ledger records scale.
+- ***Pros:*** Simpler implementation.
+- ***Cons:*** Memory exhaustion, high network load, and poor query performance as ledger records scale.
 
 ### Option 2: Paginated and Bounded Retrieval with Self-Auditing
 
-- **Pros:** Highly scalable, supports fine-grained time-range filtering (`start_time` and `end_time`), enforces strict request bounds (e.g. `limit` parameter gated to `[1, 250]`), and complies with GxP auditability.
-- **Cons:** Client consumers must adapt to structured `PaginatedTicketAuditLogResponse` paging envelopes.
+- ***Pros:*** Highly scalable, supports fine-grained time-range filtering (`start_time` and `end_time`), enforces strict request bounds (e.g. `limit` parameter gated to `[1, 250]`), and complies with GxP auditability.
+- ***Cons:*** Client consumers must adapt to structured `PaginatedTicketAuditLogResponse` paging envelopes.
 
 ## 4. Decision Outcome
 
