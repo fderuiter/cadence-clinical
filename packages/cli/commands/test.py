@@ -130,21 +130,15 @@ def run_test(
             )
         sys.exit(res.returncode)
 
-    # Build backend Pytest command
-    base_cmd = ["uv", "run", "pytest"]
-    if xdist and not watch:
-        base_cmd.extend(["-n", "auto"])
-    if failed_first:
-        base_cmd.append("--failed-first")
+    # Build backend dotnet test command
+    base_cmd = ["dotnet", "test", str(repo_root / "Cadence.sln")]
     if verbose:
-        base_cmd.append("-v")
-    if not coverage or fast or watch:
-        base_cmd.append("--no-cov")
+        base_cmd.extend(["--verbosity", "detailed"])
 
     if unit or fast and not integration:
-        base_cmd.extend(["-m", "not integration and not e2e"])
+        base_cmd.extend(["--filter", "Category!=E2E&Category!=Validation"])
     elif integration and not unit:
-        base_cmd.extend(["-m", "integration"])
+        base_cmd.extend(["--filter", "Category=E2E|Category=Validation"])
 
     target_path = None
     if service:

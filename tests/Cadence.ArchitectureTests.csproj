@@ -52,6 +52,8 @@
          Keep compiled into Cadence.UnitTests.csproj only. -->
     <Compile Remove="Execution/Integration/**" />
     <Compile Remove="Packages/**" />
+    <Compile Remove="E2E/**" />
+    <Compile Remove="Validation/**" />
   </ItemGroup>
 
   <ItemGroup>

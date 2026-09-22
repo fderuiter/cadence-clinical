@@ -149,9 +149,17 @@ def main():
     log_step(
         "Step 2: Launching Ephemeral Sandbox Container to Run clinical/GxP Validation Suite"
     )
-    # Runs the 5 clinical validation suites located in tests/validation/
+    # Runs the GxP validation suites migrated to Cadence.E2ETests.csproj
     val_rc, val_out, val_err = run_command(
-        ["uv", "run", "pytest", "tests/validation/", "--no-cov"]
+        [
+            "dotnet",
+            "test",
+            "/app/cadence-clinical/Cadence.sln",
+            "--filter",
+            "Category=Validation",
+            "--logger",
+            "trx;LogFileName=report_dotnet.trx",
+        ]
     )
     if val_rc == 0:
         print(
