@@ -1,4 +1,4 @@
-// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY.
+// This file is auto-generated from USDM models and OpenAPI specs. DO NOT EDIT DIRECTLY.
 import { z } from "zod";
 
 export const CodeSchema = z.object({
