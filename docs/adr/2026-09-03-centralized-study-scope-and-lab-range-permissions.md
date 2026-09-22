@@ -23,18 +23,18 @@ To enforce secure, multi-tenant trial security at the API Gateway and microservi
 ### Option 1: Inline study-scoping in every route handler
 
 - **Overview:** Check study-scoping explicitly inside every route handler function.
-- **Pros:**
+- ***Pros:***
   - ✅ High visibility on an endpoint-by-endpoint basis.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe code duplication, prone to security gaps if developers omit scope checks on new endpoints.
 
 ### Option 2: Centralized StudyScopeChecker dependency and role permission adjustments
 
 - **Overview:** Move `StudyScopeChecker` and `require_study_scope()` to the shared `packages/security/rbac.py` package, and add the `alert` action to existing `lab_range` resource permissions for targeted roles.
-- **Pros:**
+- ***Pros:***
   - ✅ 100% DRY compliance, eliminating local duplication in routing layer.
   - ✅ Clean, declarative security boundary across all execution and monitoring routers.
-- **Cons:**
+- ***Cons:***
   - ❌ Couples routing dependencies to packages/security, which is acceptable since it acts as our core RBAC engine.
 
 ## 4. Decision Outcome

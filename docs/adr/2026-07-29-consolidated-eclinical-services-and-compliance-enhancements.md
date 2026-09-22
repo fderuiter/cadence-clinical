@@ -20,12 +20,27 @@ Fifteen distinct feature branches (PRs #782 through #796) introduced enhancement
 
 ## 3. Options Considered
 
-1. Option A (Selected): Consolidate PRs #782 through #796 in a single topologically sequenced integration branch `feature/consolidate-prs-782-796`, resolving inter-PR conflicts, enforcing linting and GxP RTM generation.
-2. Option B: Merge PRs individually without unified validation, risking inter-PR merge regressions and broken client boundaries.
+### Option 1: Option A (Selected): Consolidate PRs #782 through #796 in a single topologically sequenced integration branch `feature/consolidate-prs-782-796`, resolving inter-PR conflicts, enforcing linting and GxP RTM generation.
+
+- **Overview:** Option A (Selected): Consolidate PRs #782 through #796 in a single topologically sequenced integration branch `feature/consolidate-prs-782-796`, resolving inter-PR conflicts, enforcing linting and GxP RTM generation.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Option B: Merge PRs individually without unified validation, risking inter-PR merge regressions and broken client boundaries.
+
+- **Overview:** Option B: Merge PRs individually without unified validation, risking inter-PR merge regressions and broken client boundaries.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A. Sequential topological integration ensures security foundations and legacy deprecations are established prior to feature service and UI integration.
+- **Chosen Option:** Option A. Sequential topological integration ensures security foundations and legacy deprecations are established prior to feature service and UI integration.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

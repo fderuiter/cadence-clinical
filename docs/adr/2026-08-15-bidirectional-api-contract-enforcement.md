@@ -1,6 +1,6 @@
 # ADR-095: Bidirectional API Contract Enforcement and Legacy Whitelisting
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-15
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -24,19 +24,19 @@ This decision implements requirements under PRD-MDR-001.
 ### Option 1: Full Strict Bidirectional Parity Enforced Instantly
 
 - **Overview:** Require all endpoints (legacy and new) to be documented immediately.
-- **Pros:**
+- ***Pros:***
   - ✅ Complete, absolute parity between the codebase and documentation.
-- **Cons:**
+- ***Cons:***
   - ❌ Blocks existing developers working on legacy paths, causing a massive bottleneck in development velocity.
 
 ### Option 2: Bidirectional Parity with Normalized Whitelisting for Legacy Endpoints (Selected)
 
 - **Overview:** Implement bidirectional route, method, and parameter validation, but register undocumented legacy endpoints in a static `WHITELISTED_ROUTES` registry to bypass enforcement during development transition phases.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates API drift on all new/updated endpoints.
   - ✅ Normalized route matching ensures version prefixes (e.g., `/api/v1`) are handled consistently.
   - ✅ Preserves developer velocity by not blocking legacy work.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires maintaining a temporary whitelist until legacy paths are fully documented.
 
 ## 4. Decision Outcome

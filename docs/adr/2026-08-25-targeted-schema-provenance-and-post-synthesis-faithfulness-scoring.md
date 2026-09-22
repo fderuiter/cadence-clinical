@@ -1,9 +1,9 @@
 # ADR-2217: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring
 
-* **Status:** Accepted
-* **Date:** 2026-08-25
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-25
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -27,18 +27,31 @@ Applicable system requirements: `PRD-CRF-004`, `PRD-DDF-001`, `PRD-SYS-001`, `PR
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Integrated Schema Provenance Metadata & Weighted Post-Synthesis Evaluator**
-   - Attach optional citation coordinate fields directly to `SynthesizedECRFForm`, `SynthesizedField`, `SoACellView`, and `SoACompiler`.
+### Option 1: **Option A (Selected): Integrated Schema Provenance Metadata & Weighted Post-Synthesis Evaluator**
+
+- **Overview:** - Attach optional citation coordinate fields directly to `SynthesizedECRFForm`, `SynthesizedField`, `SoACellView`, and `SoACompiler`.
    - Format citation markers deterministically using standardized version/section/page templates.
    - Execute `evaluate_synthesis_faithfulness` post-synthesis using a weighted calculation: Citation Validity (50%), Protocol Version Alignment (30%), and Lexical Grounding Overlap (20%).
-2. **Option B: External Post-Processing Pipeline & Async Verification Worker**
-   - Delegate provenance tracking and scoring to a secondary async service.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: External Post-Processing Pipeline & Async Verification Worker**
+
+- **Overview:** - Delegate provenance tracking and scoring to a secondary async service.
    - Pros: Decouples evaluation from synthesis engine.
    - Cons: Adds service boundary latency and complexity, preventing synchronous feedback in API responses.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces immediate, deterministic citation formatting and inline faithfulness evaluation during synthesis while guaranteeing sub-5s response SLAs and complete contract alignment across API DTOs.
+- **Chosen Option:** **Option A** because it enforces immediate, deterministic citation formatting and inline faithfulness evaluation during synthesis while guaranteeing sub-5s response SLAs and complete contract alignment across API DTOs.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -1,9 +1,9 @@
 # ADR-2199: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -30,19 +30,32 @@ Under **PRD-PVG-004**, **PRD-AGG-001**, **PRD-SYS-125**, **ICH E2F**, and **21 C
 
 ## 3. Options Considered
 
-1. **Option A: Integrated Microservice Architecture in `apps/safety` with Dedicated Compiler Services (Selected)**
-   - Implement `SubjectExposureCalculator` for exact interval/cumulative patient-year formulas:
+### Option 1: **Option A: Integrated Microservice Architecture in `apps/safety` with Dedicated Compiler Services (Selected)**
+
+- **Overview:** - Implement `SubjectExposureCalculator` for exact interval/cumulative patient-year formulas:
      $$\text{Patient-Years} = \frac{\sum \text{Dosing Duration (Days)}}{365.25}$$
    - Implement `RegulatorySnapshotManager` for SHA-256 Merkle root hashing and verification.
    - Implement `PeriodicSafetyReportCompiler` with automated MedDRA SOC/PT cross-tabulations, RSI threshold breach detection, and ICH XML serialization.
    - Implement `AggregateSafetyConsole.vue` in `apps/web` with 100% Vanilla CSS design tokens.
-2. **Option B: External Batch Analytics Warehouse Pipeline**
-   - Offload aggregate report compilation to an external reporting warehouse (e.g. Snowflake or Databricks).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: External Batch Analytics Warehouse Pipeline**
+
+- **Overview:** - Offload aggregate report compilation to an external reporting warehouse (e.g. Snowflake or Databricks).
    - Disadvantages: Breaks real-time operational workflow in Cadence, fragments 21 CFR Part 11 audit trails, complicates QPPV electronic signature re-authentication, and introduces synchronization latency.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it embeds regulatory compliance directly within the operational microservice architecture, maintains an unalterable audit ledger, ensures instantaneous compilation, and enables single-click QPPV electronic signatures and XML export.
+- **Chosen Option:** **Option A** because it embeds regulatory compliance directly within the operational microservice architecture, maintains an unalterable audit ledger, ensures instantaneous compilation, and enables single-click QPPV electronic signatures and XML export.
+- **Justification:** Selected as primary architectural approach.
 
 Key architectural characteristics:
 - **Snapshot Sealing:** Canonical JSON serialization sorted by key and hashed with SHA-256:

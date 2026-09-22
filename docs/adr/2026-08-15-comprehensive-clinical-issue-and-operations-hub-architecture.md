@@ -25,22 +25,39 @@ Reference: `PRD-TCK-001` (see `docs/SDLC/01_Product_Requirements_Document_PRD.md
 
 ## 3. Options Considered
 
-1. **Option 1: Decentralized In-App Ticketing (Status Quo)**
-   - Maintain separate discrepancy/issue queues inside EDC, CTMS, Safety, and eTMF.
+### Option 1: **Option 1: Decentralized In-App Ticketing (Status Quo)**
+
+- **Overview:** - Maintain separate discrepancy/issue queues inside EDC, CTMS, Safety, and eTMF.
    - *Rejected:* Prevents unified operational oversight, breaks cross-study reporting, duplicates SLA logic, and creates audit fragmentation during regulatory inspections.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Third-Party External Ticketing Integration (Jira/ServiceNow)**
-   - Proxy all clinical operations tickets to Jira or ServiceNow APIs.
+### Option 2: **Option 2: Third-Party External Ticketing Integration (Jira/ServiceNow)**
+
+- **Overview:** - Proxy all clinical operations tickets to Jira or ServiceNow APIs.
    - *Rejected:* Third-party SaaS tools lack native CDISC entity models, GxP Part 11 electronic signature workflows, protocol-amendment locks, and sub-100ms internal microservice SLA guarantees.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option 3 (Selected): Unified Clinical Issue & Operations Hub Microservice**
-   - Standalone `apps/tickets` service with REST API-first contracts, hexagonal architecture, and strict boundary isolation.
+### Option 3: **Option 3 (Selected): Unified Clinical Issue & Operations Hub Microservice**
+
+- **Overview:** - Standalone `apps/tickets` service with REST API-first contracts, hexagonal architecture, and strict boundary isolation.
    - Event-driven cross-app ingestion via internal Gateway HMAC authentication.
    - Integrated SLA engine, 5-Whys RCA, Part 11 eSignatures, and multi-channel notification dispatch.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 3 (Unified Clinical Issue & Operations Hub Microservice)**. It provides a standardized, Part 11-compliant operations nerve center across all clinical modules while adhering to our REST API-first and microservice decoupling standards.
+- **Chosen Option:** **Option 3 (Unified Clinical Issue & Operations Hub Microservice)**. It provides a standardized, Part 11-compliant operations nerve center across all clinical modules while adhering to our REST API-first and microservice decoupling standards.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

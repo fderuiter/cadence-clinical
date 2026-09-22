@@ -1,9 +1,9 @@
 # ADR-2221: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** Engineering Architecture Board, Clinical Operations Working Group
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** Engineering Architecture Board, Clinical Operations Working Group
 * **Requirements:** PRD-SYS-001, PRD-QRY-001, PRD-NOT-001
 
 ---
@@ -27,21 +27,37 @@ The platform requires:
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): Transactional Outbox + Dual-Target SLA Engine + Mandatory GxP Multi-Channel Dispatch + 14-Day Reopening Window**:
-   - Outbox pattern ensures exactly-once delivery with composite key deduplication.
+### Option 1: **Option 1 (Selected): Transactional Outbox + Dual-Target SLA Engine + Mandatory GxP Multi-Channel Dispatch + 14-Day Reopening Window**:
+
+- **Overview:** - Outbox pattern ensures exactly-once delivery with composite key deduplication.
    - Dual-milestone SLA timers (triage vs. resolution) with state-dependent clock pauses on external holds.
    - Safety/SLA alerts bypass mute preferences across In-App, responsive HTML Email, and HMAC-signed Webhooks.
    - Closed tickets are locked against reopening after 14 days, mandating Part 11 electronic signatures (`generic.close`/`generic.reopen`) during the active window.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Direct Synchronous HTTP Dispatches**:
-   - Tightly couples execution and anomaly workers to tickets API with risk of dropped events during service outages.
+### Option 2: **Option 2: Direct Synchronous HTTP Dispatches**:
 
-3. **Option 3: Manual Query Management & Static Deadlines**:
-   - No automated outbox, single static SLA deadlines without clock pausing, and optional manual email alerts.
+- **Overview:** - Tightly couples execution and anomaly workers to tickets API with risk of dropped events during service outages.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Manual Query Management & Static Deadlines**:
+
+- **Overview:** - No automated outbox, single static SLA deadlines without clock pausing, and optional manual email alerts.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option:** Option 1 because it guarantees transactional resilience, non-repudiable Part 11 audit trails, accurate monitor SLA tracking, and reliable safety notification delivery.
+**- **Chosen Option:** ** Option 1 because it guarantees transactional resilience, non-repudiable Part 11 audit trails, accurate monitor SLA tracking, and reliable safety notification delivery.
 
 ## 5. Consequences & Trade-offs
 

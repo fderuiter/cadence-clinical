@@ -24,18 +24,18 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: In-database BLOB storage
 
 - **Overview:** Save document binary contents in the primary database.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies transactions.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases database footprint significantly.
 
 ### Option 2: Microservice-isolated in-memory storage & dynamic watermarking
 
 - **Overview:** Expose a dedicated Documents router under the execution microservice using format-agnostic watermarking and background tasks for archival, referencing core Pydantic v2 schemas.
-- **Pros:**
+- ***Pros:***
   - ✅ Lightweight, format-agnostic, and self-contained.
   - ✅ Seamless integration with `AuditLog` table and `GatewayAuthMiddleware`.
-- **Cons:**
+- ***Cons:***
   - ❌ Relies on memory buffers for large files (mitigated via streaming responses).
 
 ## 4. Decision Outcome

@@ -1,9 +1,9 @@
 # ADR-2225: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -22,13 +22,35 @@ The Cadence Clinical API Gateway (`apps/gateway`) acts as the single reverse-pro
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Add dedicated proxy dispatch routing in `apps/gateway/main.py` for `imaging`, `payments`, and `ai_gateway`, serialize all Gateway synthetic errors via `packages.hexagonal.ProblemDetails` (`application/problem+json`), map connection errors to 502 and timeouts to 504, dynamically aggregate OpenAPI specs with component prefixes, and register service ports in `packages/cli/ports.py`.
-2. **Option B:** Leave specialized microservices behind independent host ports and client-side direct routing (Rejected - breaks API gateway unification, single sign-on security boundaries, and HMAC gateway signature propagation).
-3. **Option C:** Intercept and rewrite all downstream responses in the Gateway to enforce RFC 7807 (Rejected - degrades throughput and violates microservice autonomy).
+### Option 1: **Option A (Selected):** Add dedicated proxy dispatch routing in `apps/gateway/main.py` for `imaging`, `payments`, and `ai_gateway`, serialize all Gateway synthetic errors via `packages.hexagonal.ProblemDetails` (`application/problem+json`), map connection errors to 502 and timeouts to 504, dynamically aggregate OpenAPI specs with component prefixes, and register service ports in `packages/cli/ports.py`.
+
+- **Overview:** **Option A (Selected):** Add dedicated proxy dispatch routing in `apps/gateway/main.py` for `imaging`, `payments`, and `ai_gateway`, serialize all Gateway synthetic errors via `packages.hexagonal.ProblemDetails` (`application/problem+json`), map connection errors to 502 and timeouts to 504, dynamically aggregate OpenAPI specs with component prefixes, and register service ports in `packages/cli/ports.py`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B:** Leave specialized microservices behind independent host ports and client-side direct routing (Rejected - breaks API gateway unification, single sign-on security boundaries, and HMAC gateway signature propagation).
+
+- **Overview:** **Option B:** Leave specialized microservices behind independent host ports and client-side direct routing (Rejected - breaks API gateway unification, single sign-on security boundaries, and HMAC gateway signature propagation).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C:** Intercept and rewrite all downstream responses in the Gateway to enforce RFC 7807 (Rejected - degrades throughput and violates microservice autonomy).
+
+- **Overview:** **Option C:** Intercept and rewrite all downstream responses in the Gateway to enforce RFC 7807 (Rejected - degrades throughput and violates microservice autonomy).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces a clean, secure, and fully typed API gateway architecture that satisfies PRD-SYS-001, PRD-SYS-003, PRD-IMG-001, and PRD-PAY-002 while maintaining 100% RFC 7807 compliance across platform error boundaries.
+- **Chosen Option:** **Option A** because it enforces a clean, secure, and fully typed API gateway architecture that satisfies PRD-SYS-001, PRD-SYS-003, PRD-IMG-001, and PRD-PAY-002 while maintaining 100% RFC 7807 compliance across platform error boundaries.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -24,19 +24,19 @@ In Python 3.14+, `asyncio.iscoroutinefunction` is deprecated/removed and will tr
 ### Option 1: Use `inspect.iscoroutinefunction` (Selected)
 
 - **Overview:** Swap `asyncio.iscoroutinefunction` with the non-deprecated standard library `inspect.iscoroutinefunction` at the top-level module scope.
-- **Pros:**
+- ***Pros:***
   - ✅ Standard, clean, and robust alternative supported across Python versions.
   - ✅ Avoids inline imports of `asyncio`.
   - ✅ Fully PEP-8 compliant.
-- **Cons:**
+- ***Cons:***
   - None.
 
 ### Option 2: Wrap with try/except fallback
 
 - **Overview:** Check for `asyncio.iscoroutinefunction` and fallback to `inspect` or similar check.
-- **Pros:**
+- ***Pros:***
   - ✅ Backward compatible with very old Python runtimes.
-- **Cons:**
+- ***Cons:***
   - ❌ Unnecessary complexity since the workspace environment is standardizing on Python 3.14.
 
 ## 4. Decision Outcome

@@ -22,16 +22,16 @@ To satisfy PRD-SYS-001, we want to ensure high-fidelity compliance and quality s
 ### Option 1: Manual accessibility verification
 
 - **Overview:** Check accessibility using manual browser extensions.
-- **Pros:** Simple setup.
-- **Cons:** Cannot be automated or verified as part of CI/CD pipelines.
+- ***Pros:*** Simple setup.
+- ***Cons:*** Cannot be automated or verified as part of CI/CD pipelines.
 
 ### Option 2: Automated Playwright and axe-core pipeline (Selected)
 
 - **Overview:** Implement automated headless Playwright tests driving axe-core audits.
-- **Pros:**
+- ***Pros:***
   - ✅ Full automation on every PR.
   - ✅ High-fidelity offline and authenticated mock session support.
-- **Cons:** Requires running browser instances in CI environments.
+- ***Cons:*** Requires running browser instances in CI environments.
 
 ## 4. Decision Outcome
 

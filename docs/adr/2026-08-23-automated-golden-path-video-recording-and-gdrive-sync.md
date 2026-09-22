@@ -1,9 +1,9 @@
 # ADR-2210: Automated Golden Path Video Recording and GDrive Sync
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -23,13 +23,35 @@ Reference Requirement: `PRD-SYS-105`
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: Modular Playwright Golden Path Suites partitioned by persona with demonstration-speed pacing, Triple Sentinel interceptors, and a Python-driven Google Drive v3 client integrated into `cadence record`.
-2. **Option B**: Single monolithic end-to-end video recording script without modular persona partitioning.
-3. **Option C**: Client-side manual screen capture script with post-hoc manual Google Drive uploads.
+### Option 1: **Option A (Selected)**: Modular Playwright Golden Path Suites partitioned by persona with demonstration-speed pacing, Triple Sentinel interceptors, and a Python-driven Google Drive v3 client integrated into `cadence record`.
+
+- **Overview:** **Option A (Selected)**: Modular Playwright Golden Path Suites partitioned by persona with demonstration-speed pacing, Triple Sentinel interceptors, and a Python-driven Google Drive v3 client integrated into `cadence record`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B**: Single monolithic end-to-end video recording script without modular persona partitioning.
+
+- **Overview:** **Option B**: Single monolithic end-to-end video recording script without modular persona partitioning.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C**: Client-side manual screen capture script with post-hoc manual Google Drive uploads.
+
+- **Overview:** **Option C**: Client-side manual screen capture script with post-hoc manual Google Drive uploads.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because:
+- **Chosen Option:** **Option A** because:
+- **Justification:** Selected as primary architectural approach.
 * Persona-partitioned modular suites allow targeted re-recording, produce streamable file sizes, and isolate test failure domains.
 * The Python-based `GoogleDriveClient` in `packages/storage/gdrive.py` provides resilient resumable uploads, automatic folder creation, and SHA-256 integrity verification.
 * Integrating the workflow into `cadence record` provides developers and CI/CD with a single unified CLI interface (`cadence record run`, `cadence record setup-gdrive`, `cadence record list`).

@@ -19,12 +19,27 @@ The platform is moving towards a standardized Vue 3 single page application (SPA
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
-2. **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
+### Option 1: **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
+
+- **Overview:** **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
+
+- **Overview:** **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it completely removes duplicate code pathways, aligns with the Vue 3 modular structure, and simplifies the codebase. All necessary normalization and mapping are handled reactively in frontend modules. This satisfies PRD-SYS-001 by streamlining data flow and audit boundaries.
+- **Chosen Option:** **Option A** because it completely removes duplicate code pathways, aligns with the Vue 3 modular structure, and simplifies the codebase. All necessary normalization and mapping are handled reactively in frontend modules. This satisfies PRD-SYS-001 by streamlining data flow and audit boundaries.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

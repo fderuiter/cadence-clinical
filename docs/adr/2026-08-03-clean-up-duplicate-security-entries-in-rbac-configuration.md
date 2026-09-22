@@ -19,12 +19,27 @@ In previous development iterations, the RBAC configuration map `ROLE_PERMISSIONS
 
 ## 3. Options Considered
 
-1. Clean up duplicate entries directly by removing duplicated keys and standardizing formatting (Selected).
-2. Maintain duplicate keys with static analysis suppression comments (Rejected - leads to architectural debt).
+### Option 1: Clean up duplicate entries directly by removing duplicated keys and standardizing formatting (Selected).
+
+- **Overview:** Clean up duplicate entries directly by removing duplicated keys and standardizing formatting (Selected).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Maintain duplicate keys with static analysis suppression comments (Rejected - leads to architectural debt).
+
+- **Overview:** Maintain duplicate keys with static analysis suppression comments (Rejected - leads to architectural debt).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1 because it removes redundant duplicate entries directly and simplifies security configuration audits while ensuring complete maintainability of RBAC rules.
+- **Chosen Option:** Option 1 because it removes redundant duplicate entries directly and simplifies security configuration audits while ensuring complete maintainability of RBAC rules.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

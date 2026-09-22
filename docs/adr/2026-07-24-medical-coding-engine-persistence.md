@@ -25,9 +25,9 @@ This decision implements requirements under Trace-1.
 
 Store coding attributes directly in the observation/verbatim tables without distinct terminology entities.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Fewer relational tables.
-- **Cons:**
+- ***Cons:***
   - ❌ Massive data redundancy and spelling inconsistency across observations.
   - ❌ No centralized dictionary/vocabulary management or version upgrades.
 
@@ -35,11 +35,11 @@ Store coding attributes directly in the observation/verbatim tables without dist
 
 Define dedicated normalized tables for MedDRA hierarchies and WHODrug ingredients/records, managed by `DictionaryImportJob`. Apply the standard `AuditedModel` triggers, but provide a context flag `cadence.app_writing` that can be set to `'true'` to temporarily bypass row-by-row trigger logs during massive dictionary loads.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Enforces normalized database schemas with proper index lookups.
   - ✅ Standardizes the model layout, audit logs, and status transitions.
   - ✅ Bypasses auditing performance bottlenecks during bulk vocabulary loading while retaining full audit coverage for regular investigator coding assignments.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires more database tables and schema management.
 
 ---

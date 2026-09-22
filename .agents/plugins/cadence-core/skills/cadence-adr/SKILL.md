@@ -46,13 +46,23 @@ This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically 
 ## ADR Authoring Protocol
 
 1. **Scaffold**: Execute `create_adr.py` with valid `--domain` and `--req` parameters.
-2. **Author Sections**: Use `replace_file_content` to fill in:
-   - **Title**: Short noun phrase.
-   - **Status**: `PROPOSED`, `ACCEPTED`, `SUPERSEDED`, or `DEPRECATED`.
-   - **Context & Problem Statement**: The forces, requirements, and constraints.
-   - **Options Considered**: Specific alternatives with pros/cons.
-   - **Decision Outcome**: Selected option with justification.
-   - **Consequences**: Positive, negative, and GxP/compliance impacts.
-   - **Traceability**: Valid system requirement IDs (`PRD-SYS-xxx`).
-3. **Verify Compliance**: Run `uv run python scripts/validate_adrs.py` to confirm index alignment.
+2. **Author Sections**: Use `replace_file_content` or `edit_file` to fill in:
+   - **Header Metadata**: Hyphenated list items (`- **Status:**`, `- **Date:**`, `- **Authors:**`, `- **Deciders:**`).
+   - **Context & Problem Statement**: Background, forces, requirements, and constraints (`PRD-SYS-xxx`).
+   - **Decision Drivers & Constraints**: Bulleted list of criteria (`- **Driver 1:**`, `- **Driver 2:**`).
+   - **Options Considered**: Each option must be structured under an `### Option N: [Name]` subheading and include:
+     - `- **Overview:**` Brief description.
+     - `- **Pros:**` Bulleted list (`  - ✅ ...`).
+     - `- **Cons:**` Bulleted list (`  - ❌ ...`).
+   - **Decision Outcome**:
+     - `- **Chosen Option:** Option N`
+     - `- **Justification:**` Rationale tied to decision drivers.
+   - **Consequences & Trade-offs**:
+     - `- **Positive Impact:**`
+     - `- **Negative Impact / Technical Debt:**`
+     - `- **Mitigation Strategy:**`
+   - **Implementation & Verification**:
+     - `- **Affected Repositories / Services:**`
+     - `- **Verification Plan:**`
+3. **Verify Compliance**: Run `uv run python scripts/validate_adrs.py` to confirm index alignment, top-level section presence, and strict `### Option` subsection formatting.
 

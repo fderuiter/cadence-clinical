@@ -23,27 +23,27 @@ Previously, our backend test suite executed sequentially. In addition, the lack 
 ### Option 1: Sequential Testing on Single Shared Database
 
 - **Overview:** Keep tests sequential and shared on a single database.
-- **Pros:**
+- ***Pros:***
   - ✅ No orchestration complexity.
-- **Cons:**
+- ***Cons:***
   - ❌ Long feedback loops as test suite grows.
 
 ### Option 2: Parallel Testing with SQLite/In-Memory Mock Fallback
 
 - **Overview:** Run parallel tests locally and in CI using SQLite.
-- **Pros:**
+- ***Pros:***
   - ✅ Very fast setup.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates dialect parity with PostgreSQL, masking dialect-specific SQL errors and constraint behaviors.
 
 ### Option 3: PostgreSQL-Native Parallel Worker Routing with Caching (Selected)
 
 - **Overview:** Integrate `pytest-xdist` to provision dynamically isolated database partitions per test worker, implement unified caching layers, and restrict GxP compliance documentation hooks to a single coordinator process.
-- **Pros:**
+- ***Pros:***
   - ✅ Dramatically reduces feedback loop duration.
   - ✅ Fully maintains 100% PostgreSQL dialect parity.
   - ✅ Guarantees transaction isolation between parallel workers.
-- **Cons:**
+- ***Cons:***
   - ❌ Adds minor complexity to pytest setup and teardown.
 
 ## 4. Decision Outcome

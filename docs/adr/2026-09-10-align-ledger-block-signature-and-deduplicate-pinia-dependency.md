@@ -23,18 +23,18 @@ This decision implements and hardens requirements under PRD-CRF-006 and PRD-SYS-
 ### Option 1: Mock/Inline store configurations manually per test
 
 - **Overview:** Override test helper structures individually.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick workaround.
-- **Cons:**
+- ***Cons:***
   - ❌ Does not resolve root cause of double package allocation in monorepos.
 
 ### Option 2: Resolve type contracts and implement workspace aliases for Pinia/Vue (Selected)
 
 - **Overview:** Update `buildLedgerBlock` interface to 6 parameters and map local aliases for common singletons inside `apps/web/vite.config.js`.
-- **Pros:**
+- ***Pros:***
   - ✅ Solves root cause of double allocation/singleton resolution memory leak.
   - ✅ Guarantees TypeScript type-safety across compile gates.
-- **Cons:**
+- ***Cons:***
   - None.
 
 ## 4. Decision Outcome

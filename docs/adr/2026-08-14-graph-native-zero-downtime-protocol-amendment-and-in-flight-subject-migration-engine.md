@@ -26,21 +26,40 @@ Under 21 CFR Part 11, GAMP 5, and EU Annex 11, the platform must guarantee:
 
 ## 3. Options Considered
 
-1. **Graph-Native Immutable Branching & Dynamic Projection (Selected):**
-   - Protocol amendments clone the metadata subgraph into a new version node linked via `PREVIOUS_VERSION`.
+### Option 1: **Graph-Native Immutable Branching & Dynamic Projection (Selected):**
+
+- **Overview:** - Protocol amendments clone the metadata subgraph into a new version node linked via `PREVIOUS_VERSION`.
    - Execution engine dynamically resolves schemas per subject active version.
    - Historical visits remain stamped and rendered with original version schemas.
    - Re-consent gating blocks upcoming visit data entry until signed consent is recorded.
-2. **Global Database Schema Mutation & Retroactive SQL Migration:**
-   - Overwriting existing database tables to match the new protocol version and running bulk migration scripts.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Global Database Schema Mutation & Retroactive SQL Migration:**
+
+- **Overview:** - Overwriting existing database tables to match the new protocol version and running bulk migration scripts.
    - Rejected due to risk of historical data corruption, audit trail breakage, and mandatory system downtime.
-3. **Multi-Instance Study Duplication:**
-   - Spawning a completely new study instance for amended versions and requiring manual data transcription.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Multi-Instance Study Duplication:**
+
+- **Overview:** - Spawning a completely new study instance for amended versions and requiring manual data transcription.
    - Rejected due to high operational friction and error risk.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Graph-Native Immutable Branching & Dynamic Projection**.
+- **Chosen Option:** **Graph-Native Immutable Branching & Dynamic Projection**.
+- **Justification:** Selected as primary architectural approach.
 
 - `apps/designer/domain/amendment_service.py` clones the active study version subgraph (Arms, Epochs, Encounters/Visits, Activities, Rules) into a new `DRAFT_AMENDMENT` node.
 - `apps/execution/subject_lifecycle.py` enforces `validate_subject_version_gating` and raises `ReConsentRequiredException` when re-consent is missing.

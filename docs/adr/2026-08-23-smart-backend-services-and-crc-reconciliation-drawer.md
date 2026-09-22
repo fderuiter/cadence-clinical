@@ -1,5 +1,6 @@
 # ADR-2199: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer
 
+- **Status:** Accepted
 - **Status**: Accepted
 - **Date**: 2026-08-23
 - **Deciders**: Platform Architecture, Clinical Interoperability Team, GxP Compliance & Security
@@ -24,12 +25,27 @@ To enable secure, automated EHR polling without manual screen scraping or batch 
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: SMART on FHIR Backend Services with CDASH Mapping and Non-Destructive CRC Drawer
-2. **Option B**: Direct Background Database Merges without Human-in-the-Loop Gating (Rejected due to GxP risk)
+### Option 1: **Option A (Selected)**: SMART on FHIR Backend Services with CDASH Mapping and Non-Destructive CRC Drawer
+
+- **Overview:** **Option A (Selected)**: SMART on FHIR Backend Services with CDASH Mapping and Non-Destructive CRC Drawer
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B**: Direct Background Database Merges without Human-in-the-Loop Gating (Rejected due to GxP risk)
+
+- **Overview:** **Option B**: Direct Background Database Merges without Human-in-the-Loop Gating (Rejected due to GxP risk)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A.
+- **Chosen Option:** Option A.
+- **Justification:** Selected as primary architectural approach.
 
 ### 1. Asymmetric SMART Backend Services Authentication
 

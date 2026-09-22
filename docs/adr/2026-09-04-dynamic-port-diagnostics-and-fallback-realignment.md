@@ -24,18 +24,18 @@ This change is aligned with and traces back to **PRD-SYS-001**.
 ### Option 1: Static Configuration Mapping
 
 - **Overview:** Manually update all static port checklists, gateway fallbacks, and shared library defaults.
-- **Pros:**
+- ***Pros:***
   - Simple, no code execution needed for parsing.
-- **Cons:**
+- ***Cons:***
   - ❌ Does not resolve future drift or configuration changes dynamically.
 
 ### Option 2: Dynamic YAML Parsing and Fallback Realignment - Selected
 
 - **Overview:** Dynamically parse `docker/docker-compose.yml` to extract host-to-container port mappings, override local checks with those values, and align default gateway routing/shared client fallbacks.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates drift permanently and dynamically.
   - ✅ Zero manual updates required for port verification when orchestration configurations change.
-- **Cons:**
+- ***Cons:***
   - ❌ Slightly more complex parsing implementation.
 
 ## 4. Decision Outcome

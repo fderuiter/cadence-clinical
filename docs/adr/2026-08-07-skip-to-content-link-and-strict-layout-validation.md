@@ -24,19 +24,31 @@ We need a way to support bypass blocks via a skip-to-content link, global visual
 
 ## 3. Options Considered
 
-1. **Option A (Selected): First-Focusable Skip Link & Strict Validation Option Toggle**
-   - Place the "Skip to main content" link as the absolute first focusable element in the DOM inside `AppShell.vue`.
+### Option 1: **Option A (Selected): First-Focusable Skip Link & Strict Validation Option Toggle**
+
+- **Overview:** - Place the "Skip to main content" link as the absolute first focusable element in the DOM inside `AppShell.vue`.
    - Visual concealment via global stylesheet (`style.css`) using `.skip-link` utility.
    - Target the main content container with `id="main-content"` and add `tabindex="-1"`.
    - Update the custom `accessibility-matcher.js` to allow tests to deep-merge custom options, enabling individual tests (like `AppShell.spec.js`) to toggle strict landmark checks.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Strict Global Landmark Checks**
-   - Enforce landmark rules (`landmark-one-main`) globally for all component tests.
+### Option 2: **Option B: Strict Global Landmark Checks**
+
+- **Overview:** - Enforce landmark rules (`landmark-one-main`) globally for all component tests.
    - Negative: Breaks hundreds of isolated unit/fragment component tests.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it allows us to enforce strict layout accessibility validation specifically on shell/layout components while maintaining compatibility with simple fragment/component tests, and satisfying PRD-CRF-015.
+- **Chosen Option:** Option A because it allows us to enforce strict layout accessibility validation specifically on shell/layout components while maintaining compatibility with simple fragment/component tests, and satisfying PRD-CRF-015.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

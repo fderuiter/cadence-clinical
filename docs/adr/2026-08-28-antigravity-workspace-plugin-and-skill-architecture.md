@@ -1,9 +1,9 @@
 # ADR-2219: Antigravity Workspace Plugin and Skill Architecture
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -22,15 +22,27 @@ Reference system requirement: `PRD-SYS-053`.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Encapsulated Antigravity Workspace Plugin (`.agents/plugins/cadence-core`)**:
-   Bundle curated skills, rules (`.agents/plugins/cadence-core/rules/AGENTS.md`), and lifecycle hooks (`.agents/plugins/cadence-core/hooks.json`) into a single structured plugin. Prune incompatible external skills, introduce Cadence domain skills (`cadence-router`, `cadence-gxp-sync`, `cadence-adr`, `usdm-protocol-designer`), and standardize subagent and artifact patterns across all skills.
-2. **Option B: Flat Top-Level Customizations with Claude Compatibility**:
-   Maintain loose skills under `.agents` and adapt prompts with runtime environment conditional branches.
+### Option 1: **Option A (Selected): Encapsulated Antigravity Workspace Plugin (`.agents/plugins/cadence-core`)**:
+
+- **Overview:** Bundle curated skills, rules (`.agents/plugins/cadence-core/rules/AGENTS.md`), and lifecycle hooks (`.agents/plugins/cadence-core/hooks.json`) into a single structured plugin. Prune incompatible external skills, introduce Cadence domain skills (`cadence-router`, `cadence-gxp-sync`, `cadence-adr`, `usdm-protocol-designer`), and standardize subagent and artifact patterns across all skills.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Flat Top-Level Customizations with Claude Compatibility**:
+
+- **Overview:** Maintain loose skills under `.agents` and adapt prompts with runtime environment conditional branches.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. Packaging customizations into `.agents/plugins/cadence-core/` provides clean discovery encapsulation, enables native Antigravity lifecycle hooks and subagent roles, eliminates legacy external clutter, and tightly aligns all skills with the Cadence eClinical platform mission.
+- **Chosen Option:** **Option A**. Packaging customizations into `.agents/plugins/cadence-core/` provides clean discovery encapsulation, enables native Antigravity lifecycle hooks and subagent roles, eliminates legacy external clutter, and tightly aligns all skills with the Cadence eClinical platform mission.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

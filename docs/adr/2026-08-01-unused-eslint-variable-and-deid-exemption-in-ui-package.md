@@ -19,12 +19,27 @@ To satisfy PRD-SYS-001, we modified the shared frontend ui package in `packages/
 
 ## 3. Options Considered
 
-1. **Inline Eslint bypass and HTML data-deid-ignore bypass (Selected)**: Highly specific, zero side-effects, and doesn't pollute the actual visual layout.
-2. **Refactoring index.js structure**: Unnecessary complexity for a false-positive scanner match.
+### Option 1: **Inline Eslint bypass and HTML data-deid-ignore bypass (Selected)**: Highly specific, zero side-effects, and doesn't pollute the actual visual layout.
+
+- **Overview:** **Inline Eslint bypass and HTML data-deid-ignore bypass (Selected)**: Highly specific, zero side-effects, and doesn't pollute the actual visual layout.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Refactoring index.js structure**: Unnecessary complexity for a false-positive scanner match.
+
+- **Overview:** **Refactoring index.js structure**: Unnecessary complexity for a false-positive scanner match.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1 because it allows us to bypass both linting and DEID false-positive checks securely and safely, completely complying with PRD-SYS-001.
+- **Chosen Option:** Option 1 because it allows us to bypass both linting and DEID false-positive checks securely and safely, completely complying with PRD-SYS-001.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -24,20 +24,20 @@ To satisfy the system requirement **PRD-SYS-001** and ensure strict adherence to
 ### Option 1: Manually ignore the dictionary key duplication and import order violations using inline `# noqa` comments
 
 - **Overview:** Disable specific linter rules on a line-by-line basis to allow duplicates to persist.
-- **Pros:**
+- ***Pros:***
   - ✅ Leaves legacy code untouched.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases technical debt and ignores potential configuration bugs.
   - ❌ Violates strict GxP static check enforcements.
 
 ### Option 2: Clean up configuration, consolidate keys, and run global formatting alignment (Selected)
 
 - **Overview:** Remove duplicate dictionary keys from `rbac.py` and run automatic import sorting and code format alignment.
-- **Pros:**
+- ***Pros:***
   - ✅ Completely resolves Ruff rule `F601` violations.
   - ✅ Enhances clarity of role definitions in our security layer.
   - ✅ Satisfies all CI quality gate criteria.
-- **Cons:**
+- ***Cons:***
   - ❌ Modifying central security files requires verification and architectural check approvals.
 
 ## 4. Decision Outcome

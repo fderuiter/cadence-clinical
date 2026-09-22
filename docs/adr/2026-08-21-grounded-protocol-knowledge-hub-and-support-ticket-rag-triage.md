@@ -1,9 +1,9 @@
 # ADR-2192: Grounded Protocol Knowledge Hub and Support Ticket RAG Triage
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -20,13 +20,35 @@ Clinical Research Associates (CRAs) and site personnel frequently encounter ambi
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Vector Index in `apps/knowledge` + Tier 2 Grounded RAG Router in `apps/ai_gateway` + Fail-Closed Confidence Gating in `apps/tickets`**: Protocol PDFs are chunked preserving page numbers and section headers. RAG queries retrieve approved chunks, execute Tier 2 prompt templates requiring verbatim citation markers, compute mathematical faithfulness scores, and route tickets based on an 85% confidence gate.
-2. **Option B: Monolithic RAG Engine inside Tickets Microservice**: Embed vector databases and LLM orchestration directly within `apps/tickets`.
-3. **Option C: Direct Unstructured RAG without Structural Coordinate Extraction**: Ingest protocol documents as flat text without preserving page numbers or section titles.
+### Option 1: **Option A (Selected): Dedicated Vector Index in `apps/knowledge` + Tier 2 Grounded RAG Router in `apps/ai_gateway` + Fail-Closed Confidence Gating in `apps/tickets`**: Protocol PDFs are chunked preserving page numbers and section headers. RAG queries retrieve approved chunks, execute Tier 2 prompt templates requiring verbatim citation markers, compute mathematical faithfulness scores, and route tickets based on an 85% confidence gate.
+
+- **Overview:** **Option A (Selected): Dedicated Vector Index in `apps/knowledge` + Tier 2 Grounded RAG Router in `apps/ai_gateway` + Fail-Closed Confidence Gating in `apps/tickets`**: Protocol PDFs are chunked preserving page numbers and section headers. RAG queries retrieve approved chunks, execute Tier 2 prompt templates requiring verbatim citation markers, compute mathematical faithfulness scores, and route tickets based on an 85% confidence gate.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Monolithic RAG Engine inside Tickets Microservice**: Embed vector databases and LLM orchestration directly within `apps/tickets`.
+
+- **Overview:** **Option B: Monolithic RAG Engine inside Tickets Microservice**: Embed vector databases and LLM orchestration directly within `apps/tickets`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Direct Unstructured RAG without Structural Coordinate Extraction**: Ingest protocol documents as flat text without preserving page numbers or section titles.
+
+- **Overview:** **Option C: Direct Unstructured RAG without Structural Coordinate Extraction**: Ingest protocol documents as flat text without preserving page numbers or section titles.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 This architecture preserves microservice isolation, ensures full GxP traceability with exact page and section citations, guarantees fail-closed safety for unsupported inquiries, and provides seamless interactive document previews in the clinical UI.
 
 ## 5. Consequences & Trade-offs

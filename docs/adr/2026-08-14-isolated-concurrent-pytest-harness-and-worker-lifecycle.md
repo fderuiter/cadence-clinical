@@ -34,27 +34,44 @@ This change addresses requirement `PRD-SYS-001` (Unified System Architecture & O
 
 ## 3. Options Considered
 
-1. **Option A: Test-Run-UID Scoped Provisioning with Explicit Lifecycle Hooks (Selected)**
-   - Derive a unique 8-character alphanumeric run ID (`PYTEST_XDIST_TESTRUNUID` / `CADENCE_TEST_RUN_ID`) and propagate it via `pytest_configure_node(node)`.
+### Option 1: **Option A: Test-Run-UID Scoped Provisioning with Explicit Lifecycle Hooks (Selected)**
+
+- **Overview:** - Derive a unique 8-character alphanumeric run ID (`PYTEST_XDIST_TESTRUNUID` / `CADENCE_TEST_RUN_ID`) and propagate it via `pytest_configure_node(node)`.
    - Construct collision-free suffixes `_{run_uid}_{worker_id}` bounded within PostgreSQL's 63-byte identifier limit.
    - Restrict database schema creation strictly to worker processes and single-process runners inside `pytest_configure`.
    - Wrap all database operations with bounded timeouts (5s connection, 15–30s operation) via `asyncio.wait_for`.
    - Provide a background diagnostic tail monitor `_TestSessionMonitor` reporting slow test nodes (>15s).
    - Provide a standalone CLI tool `scripts/clean_test_dbs.py` to inspect and drop orphaned worker databases.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Docker-in-Docker Ephemeral Containers per Run**
-   - Spin up dedicated ephemeral PostgreSQL containers per test run.
+### Option 2: **Option B: Docker-in-Docker Ephemeral Containers per Run**
+
+- **Overview:** - Spin up dedicated ephemeral PostgreSQL containers per test run.
    - _Rejected:_ Adds significant CPU/memory container startup overhead and platform-specific complexity on macOS/Linux hosts.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option C: Pure In-Memory SQLite Mocking Globally**
-   - Eliminate live PostgreSQL testing entirely during unit/integration suites.
+### Option 3: **Option C: Pure In-Memory SQLite Mocking Globally**
+
+- **Overview:** - Eliminate live PostgreSQL testing entirely during unit/integration suites.
    - _Rejected:_ Violates GxP qualification and relational schema parity requirements for complex PostgreSQL-specific constraints, triggers, and Alembic migrations.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it ensures absolute multi-run isolation, zero controller overhead, bounded teardowns, and rapid sub-30-second execution of the entire 2,600+ test catalog while preserving GxP qualification standards.
+- **Chosen Option:** **Option A** because it ensures absolute multi-run isolation, zero controller overhead, bounded teardowns, and rapid sub-30-second execution of the entire 2,600+ test catalog while preserving GxP qualification standards.
+- **Justification:** Selected as primary architectural approach.
 
 ---
 
