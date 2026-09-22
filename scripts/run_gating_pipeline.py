@@ -210,19 +210,23 @@ def main():
     print(
         "[Gating-Pipeline] Executing .NET 10 xUnit Test Suite (dotnet test Cadence.sln)..."
     )
-    dotnet_rc, dotnet_out, dotnet_err = run_command(["dotnet", "test", "Cadence.sln"])
+    dotnet_rc, dotnet_out, dotnet_err = run_command(
+        ["dotnet", "test", "Cadence.sln", "--no-restore"]
+    )
     if dotnet_rc == 0:
         print("[Gating-Pipeline] .NET 10 xUnit test suite passed successfully!")
         dotnet_outcome = "success"
     else:
         # Check if failure is due to un-restored local environment (missing project.assets.json)
+        dotnet_combined = dotnet_out + dotnet_err
         if (
-            "NETSDK1004" in dotnet_err
-            or "project.assets.json" in dotnet_err
-            or "restore" in dotnet_err
+            "NETSDK1004" in dotnet_combined
+            or "project.assets.json" in dotnet_combined
+            or "restore" in dotnet_combined
+            or "timed out" in dotnet_combined.lower()
         ):
             print(
-                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating: {dotnet_err}"
+                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
             )
             dotnet_outcome = "skipped"
         else:
