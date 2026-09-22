@@ -1,9 +1,9 @@
 # ADR-2208: Participant Financial Wallet and EU CTR Lay Summary Portal
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -18,17 +18,33 @@ Describe the architectural context and problem statement. Reference the applicab
 
 ## 3. Options Considered
 
-1. Option A (Selected)
-2. Option B (Alternative)
+### Option 1: Option A (Selected)
+
+- **Overview:** Option A (Selected)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Option B (Alternative)
+
+- **Overview:** Option B (Alternative)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it satisfies PRD-SYS-127 while ensuring system maintainability.
+- **Chosen Option:** Option A because it satisfies PRD-SYS-127 while ensuring system maintainability.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Clear operational boundaries and compliance tracing.
-* Negative: Additional abstraction layer required.
+- **Positive Impact:** Clear operational boundaries and compliance tracing.
+- **Negative Impact / Technical Debt:** Additional abstraction layer required.
+- **Mitigation Strategy:** Managed via automated tests and verification.
 
 ## 6. Implementation & Verification
 

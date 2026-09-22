@@ -24,7 +24,6 @@ Prior to standardizing, microservices exhibited mixed responsibilities, direct d
 ## 3. Options Considered
 
 ### Option A: Standardized 4-Layer Flat Hexagonal Architecture (Chosen)
-
 Every microservice in `apps/` follows a standardized 4-layer flat directory hierarchy:
 
 ```
@@ -50,10 +49,16 @@ apps/<service_name>/
 2. **`application/` (Use Cases & Ports):** Defines driving and driven ports. Repository ports inherit from `packages.hexagonal.RepositoryPort[T]`. Application use cases implement `packages.hexagonal.UseCasePort`. Depend ONLY on `domain/` and `packages.hexagonal`.
 3. **`infrastructure/` (Adapters & Persistence):** Contains persistence models, database repositories, external HTTP client adapters, and event handlers. Maps database exceptions using `@map_database_exceptions` from `packages.database`. Depends on `domain/` and `application/`.
 4. **`presentation/` (Delivery Mechanism):** Contains FastAPI routers and Pydantic DTOs. Handles HTTP serialization, authentication via `packages.security`, and delegates execution to application use cases. Depends on `application/` and `domain/`.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Standardized 4-Layer Flat Hexagonal Architecture**.
+- **Chosen Option:** **Standardized 4-Layer Flat Hexagonal Architecture**.
+- **Justification:** Selected as primary architectural approach.
 
 - Base interface ports (`RepositoryPort`, `UseCasePort`) and base exceptions (`DomainError`, `EntityNotFoundError`, `EntityAlreadyExistsError`, `ValidationError`, `DatabaseError`) reside in `packages/hexagonal`.
 - Framework-dependent exception translation (`@map_database_exceptions`) resides in `packages/database`.

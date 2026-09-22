@@ -24,20 +24,20 @@ This decision implements requirements under Trace-13 and PRD-SYS-001.
 ### Option 1: Retain V1 Signatures as a Fallback
 
 - **Overview:** Keep legacy pathways active but deprioritized.
-- **Pros:**
+- ***Pros:***
   - ✅ Avoids potential breaking changes for old client versions.
-- **Cons:**
+- ***Cons:***
   - ❌ Leaves legacy security vulnerabilities open.
   - ❌ Increases the compliance validation scope for GxP audits.
 
 ### Option 2: Full Decommission of V1 and Standalone Rendering (Selected)
 
 - **Overview:** Delete V1 signing endpoints, remove standalone render configurations, and enforce unified V2 structures.
-- **Pros:**
+- ***Pros:***
   - ✅ Zero legacy overhead.
   - ✅ Clean compliance boundaries.
   - ✅ Fully satisfies PRD-SYS-001.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires updating tests and whitelists.
 
 ## 4. Decision Outcome

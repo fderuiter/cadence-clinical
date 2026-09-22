@@ -1,9 +1,9 @@
 # ADR-2190: Comprehensive Developer Tooling Overhaul
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -26,16 +26,29 @@ This decision addresses requirement **PRD-SYS-049** to establish an enterprise-g
 
 ## 3. Options Considered
 
-1. **Option A (Three-Tier Modernization Architecture - Selected)**:
-   - *Tier 1 (Inner Loop)*: Static AST reverse dependency graph with disk caching (`packages/testing/dependency_graph.py`) and pure in-memory SQLite/mock graph database harnesses for unit tests.
+### Option 1: **Option A (Three-Tier Modernization Architecture - Selected)**:
+
+- **Overview:** - *Tier 1 (Inner Loop)*: Static AST reverse dependency graph with disk caching (`packages/testing/dependency_graph.py`) and pure in-memory SQLite/mock graph database harnesses for unit tests.
    - *Tier 2 (Agent DX & CLI)*: Shared Pydantic command schemas (`packages/tooling_core`), auto-sensing dual-mode output in `TerminalDocument`, and MCP summary envelopes with zoom inspection tokens.
    - *Tier 3 (GxP Governance)*: Incremental JUnit XML verification caching (`scripts/sync_gxp.py`) and a unified `SentinelCheck` concurrent plugin engine in `packages/sentinels`.
-2. **Option B (Ad-hoc Script Optimizations)**:
-   - Retain individual scripts in `scripts/` and optimize test commands with ad-hoc flags without unifying contracts, MCP schemas, or caching architectures.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Ad-hoc Script Optimizations)**:
+
+- **Overview:** - Retain individual scripts in `scripts/` and optimize test commands with ad-hoc flags without unifying contracts, MCP schemas, or caching architectures.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. This establishes a cohesive, deep-module architecture across CLI, testing, and GxP synchronization layers while maintaining strict type safety and backward compatibility.
+- **Chosen Option:** **Option A**. This establishes a cohesive, deep-module architecture across CLI, testing, and GxP synchronization layers while maintaining strict type safety and backward compatibility.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

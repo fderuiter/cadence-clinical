@@ -1,6 +1,6 @@
 # ADR-096: Parallel Continuous Integration Workflows and Local Concurrent Verification
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-16
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -24,20 +24,20 @@ This decision implements requirements under PRD-QRY-001.
 ### Option 1: Retain Sequential Monolithic Execution
 
 - **Overview:** Keep executing all checks in a single sequence of steps in one job.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplest design with no orchestration tool required.
-- **Cons:**
+- ***Cons:***
   - ❌ Long wait times for linting results when integration steps fail first.
   - ❌ High GHA runner minute usage.
 
 ### Option 2: Full Job Parallelization in GHA and Concurrently Orchestration Locally
 
 - **Overview:** Split the monolithic GHA job into distinct concurrent jobs (`style`, `security`, `unit-tests`, `integration-tests`, `compliance`) and configure local validation scripts with `concurrently` to run parallel checks in the terminal.
-- **Pros:**
+- ***Pros:***
   - ✅ Dramatically reduced execution times (by over 50%).
   - ✅ Parallel checks are isolated, preventing single-domain failures from masking other issues.
   - ✅ Allows developers to get fast feedback locally with a single terminal command.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires installing `concurrently` as a devDependency in the root workspace.
 
 ## 4. Decision Outcome

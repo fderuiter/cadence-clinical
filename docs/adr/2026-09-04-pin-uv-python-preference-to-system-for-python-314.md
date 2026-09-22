@@ -73,8 +73,8 @@ dependency version in `uv.lock` needed to change.
 
 - **Overview:** Try to find a `pydantic` release that tolerates the
   `prefer_fwd_module` mismatch.
-- **Pros:** Looks like a one-line fix.
-- **Cons:** ❌ Doesn't address the actual defect — the installed `pydantic`
+- ***Pros:*** Looks like a one-line fix.
+- ***Cons:*** ❌ Doesn't address the actual defect — the installed `pydantic`
   version already works fine against a real Python 3.14; the bug is which
   _interpreter_ `uv` hands it, not which `pydantic` is installed. Any pin
   chosen to paper over one broken pre-release interpreter would be wrong
@@ -84,8 +84,8 @@ dependency version in `uv.lock` needed to change.
 ### Option 2: Pin `.python-version` to an exact patch (e.g. `3.14.6`)
 
 - **Overview:** Replace the bare `3.14` pin with a concrete final version.
-- **Pros:** Prevents `uv` from matching the cached rc2 build by version.
-- **Cons:** ❌ Goes stale the moment a newer patch (`3.14.7`, ...) is the
+- ***Pros:*** Prevents `uv` from matching the cached rc2 build by version.
+- ***Cons:*** ❌ Goes stale the moment a newer patch (`3.14.7`, ...) is the
   only one available on a given machine; every patch release would need a
   repo-wide edit. Doesn't stop the underlying cache-preference footgun from
   affecting any _other_ pinned version later downloaded pre-release.
@@ -99,7 +99,7 @@ dependency version in `uv.lock` needed to change.
   Python 3.14 was available yet, so `uv` fell back to a managed download —
   install one via the OS package manager, evict the stale managed
   interpreter (`uv python uninstall`), and re-sync.
-- **Pros:**
+- ***Pros:***
   - ✅ Fixes the root cause (interpreter selection), not a symptom.
   - ✅ Self-healing: turns a silent, deferred failure into an immediate,
     diagnosable one, with a best-effort automatic fix.
@@ -109,7 +109,7 @@ dependency version in `uv.lock` needed to change.
     `actions/setup-python@v7`; this change makes `uv` actually use it
     instead of any cache it (or a restored `actions/cache` entry) might
     hold.
-- **Cons:**
+- ***Cons:***
   - ❌ Relies on a system Python 3.14 existing or being installable
     (`apt`/`winget`/etc.); on a platform where neither is possible, the
     wizard now reports the failure loudly instead of silently succeeding

@@ -27,19 +27,19 @@ This decision outlines how we enforce these modular boundaries statically in our
 ### Option 1: Manual review of dependencies and keeping clinical scrubbing in security
 
 - **Overview:** Developers manually maintain `pyproject.toml` files and perform peer review on cross-package imports. Clinical text scrubbing remains coupled inside `packages/security`.
-- **Pros:**
+- ***Pros:***
   - ✅ No tooling overhead.
-- **Cons:**
+- ***Cons:***
   - ❌ Fragmented boundaries, human error in review, and runtime environment secret requirement leakage to lightweight utilities.
 
 ### Option 2: Automated AST validation with package-to-package manifest alignment
 
 - **Overview:** Consolidate all clinical de-identification and text scrubbing utilities into `packages/deid` and extend `/app/scripts/validate_imports.py` to statically verify all workspace package-to-package imports against local package `pyproject.toml` configurations.
-- **Pros:**
+- ***Pros:***
   - ✅ High reliability and robust compliance with PRD-SYS-001.
   - ✅ Fast, static check with zero runtime execution or side effects.
   - ✅ Eradicates clinical/security coupled logic.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires parsing and caching manifest files during the validation script execution.
 
 ## 4. Decision Outcome

@@ -1,9 +1,9 @@
 # ADR-2205: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -27,17 +27,30 @@ Under **PRD-SCM-001** and **GMP Annex 13**, the Cadence RTSM engine (`apps/execu
 
 ## 3. Options Considered
 
-1. **Option A: Integrated Audited Multi-Echelon Domain within Execution Service (Selected)**
-   - Model `SupplyNode`, `SupplyNodeInventory`, `TransferOrder`, `PackingManifest`, and `PredictiveResupplyForecast` as `AuditedModel` subclasses inside `apps/execution/database/models/rtsm.py`.
+### Option 1: **Option A: Integrated Audited Multi-Echelon Domain within Execution Service (Selected)**
+
+- **Overview:** - Model `SupplyNode`, `SupplyNodeInventory`, `TransferOrder`, `PackingManifest`, and `PredictiveResupplyForecast` as `AuditedModel` subclasses inside `apps/execution/database/models/rtsm.py`.
    - Implement pure-Python forecasting and hierarchy resolution in `apps/execution/rtsm_supply.py`.
    - Expose REST API endpoints via a modular FastAPI router (`apps/execution/presentation/routers/rtsm.py`).
-2. **Option B: Standalone External RTSM Microservice**
-   - Build a completely independent microservice for RTSM and supply chain.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Standalone External RTSM Microservice**
+
+- **Overview:** - Build a completely independent microservice for RTSM and supply chain.
    - Disadvantages: Increases deployment overhead, fragments the PostgreSQL GxP trigger ledger, and introduces distributed transaction complexities across clinical subjects and kit allocations.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it natively inherits the validated GxP audit trigger foundation, enforces PostgreSQL transactional integrity, integrates seamlessly with subject visit scheduling and `TrialLockManager`, and ensures strict double-blinding.
+- **Chosen Option:** **Option A** because it natively inherits the validated GxP audit trigger foundation, enforces PostgreSQL transactional integrity, integrates seamlessly with subject visit scheduling and `TrialLockManager`, and ensures strict double-blinding.
+- **Justification:** Selected as primary architectural approach.
 
 Key architectural characteristics:
 - **Hierarchy Representation:** Directed Acyclic Graph (DAG) with parent-child links from Manufacturer to Central Depot, Regional Depots, and Clinical Sites.

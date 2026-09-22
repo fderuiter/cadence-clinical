@@ -27,20 +27,20 @@ Furthermore, the eConsent Glossary component (`IcfSectionEditor.vue`) showed def
 ### Option 1: Standard Hover CSS Rules and Basic Alert Fallbacks
 
 - **Overview:** Keep standard `:hover` rules globally and fallback to `window.alert` for all glossary clicks across all platforms.
-- **Pros:**
+- ***Pros:***
   - Simple to implement.
-- **Cons:**
+- ***Cons:***
   - ❌ Sticky states remain unresolved on mobile/touch interfaces.
   - ❌ `alert()` creates an intrusive blocking dialog on mobile devices.
 
 ### Option 2: Dynamic body class `.can-hover` and tap toggles with click-outside listeners
 
 - **Overview:** Scope CSS hover styles under a `.can-hover` parent class. Dynamically append `.can-hover` to `document.body` by evaluating `window.matchMedia('(hover: hover)').matches`. Re-bind the glossary popover to support tap-to-toggle on mobile, and add a document-wide listener to dismiss active popovers when tapping outside.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates sticky hover states on mobile/touch devices entirely.
   - ✅ Keeps accessibility-oriented states (`:focus`, `:focus-visible`) intact on all environments.
   - ✅ Provides an intuitive tap-to-toggle and dismiss-outside flow for glossary definitions on mobile screens.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires a small initialization script execution upon loading pages.
 
 ## 4. Decision Outcome

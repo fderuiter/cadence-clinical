@@ -25,10 +25,10 @@ This decision implements requirements under Trace-7.
 ### Option 1: Inline Endpoint Verification
 
 - **Overview:** Implementing list, download, and completeness checks directly as localized API endpoints in eISF, integrating validation dependencies.
-- **Pros:**
+- ***Pros:***
   - ✅ Maximum localization and speed.
   - ✅ Easy to test in isolation.
-- **Cons:**
+- ***Cons:***
   - ❌ None, fits our microservice boundaries perfectly.
 
 ## 4. Decision Outcome

@@ -1,9 +1,9 @@
 # ADR-2227: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement:** `PRD-SYS-050`, `PRD-CRF-009`, `PRD-SYS-001`
 
 ---
@@ -23,16 +23,34 @@ Previously, `EcrfView.vue` grew into a >1,200-line monolithic component managing
 
 ## 3. Options Considered
 
-1. **Option A (Selected) - Decoupled Persona Composables & Centralized Capability Matrix**:
-   - Extract domain logic into dedicated, strongly-typed composables (`useSubjectEnrollment.ts`, `usePiSignoff.ts`, `useCrcWorkspace.ts`).
+### Option 1: **Option A (Selected) - Decoupled Persona Composables & Centralized Capability Matrix**:
+
+- **Overview:** - Extract domain logic into dedicated, strongly-typed composables (`useSubjectEnrollment.ts`, `usePiSignoff.ts`, `useCrcWorkspace.ts`).
    - Introduce a centralized capability-based access control helper in `auth.js` (`authStore.can('SUBJECT_ENROLL')`).
    - Keep views thin as compositional layout orchestrators using vanilla CSS semantic tokens.
-2. **Option B - Separate Standalone Vue Views per Persona**:
-   - Create separate routes (`/crc-ecrf`, `/cra-monitoring`, `/pi-signoff`).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B - Separate Standalone Vue Views per Persona**:
+
+- **Overview:** - Create separate routes (`/crc-ecrf`, `/cra-monitoring`, `/pi-signoff`).
    - *Downside*: Violates single-pane-of-glass UX for multi-role users and increases navigation friction in clinical sites.
-3. **Option C - Status Quo Monolith with Inline Helpers**:
-   - Keep all reactive state in `EcrfView.vue` script setup.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C - Status Quo Monolith with Inline Helpers**:
+
+- **Overview:** - Keep all reactive state in `EcrfView.vue` script setup.
    - *Downside*: Excessive component complexity, high regression risk, and poor testability.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 

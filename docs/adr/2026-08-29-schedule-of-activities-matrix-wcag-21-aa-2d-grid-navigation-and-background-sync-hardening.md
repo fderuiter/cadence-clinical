@@ -29,16 +29,35 @@ This decision resolves requirements under `@req:PRD-SYS-020` and WCAG 2.1 AA.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Native Vue 3 Composable (`useGridNavigation`) + WAI-ARIA Roles**
-   - Clean separation of concern, full testability, zero external runtime dependencies.
-2. **Option B: Third-Party Data Grid Component (e.g. AG-Grid / Handsontable)**
-   - _Rejected_: Massive bundle size overhead (>500KB), proprietary license friction, and difficulty styling with Vanilla CSS tokens.
-3. **Option C: Unstructured HTML Table with Click-Only Handlers**
-   - _Rejected_: Violates WCAG 2.1 AA accessibility regulations for clinical software.
+### Option 1: **Option A (Selected): Native Vue 3 Composable (`useGridNavigation`) + WAI-ARIA Roles**
+
+- **Overview:** - Clean separation of concern, full testability, zero external runtime dependencies.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Third-Party Data Grid Component (e.g. AG-Grid / Handsontable)**
+
+- **Overview:** - _Rejected_: Massive bundle size overhead (>500KB), proprietary license friction, and difficulty styling with Vanilla CSS tokens.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Unstructured HTML Table with Click-Only Handlers**
+
+- **Overview:** - _Rejected_: Violates WCAG 2.1 AA accessibility regulations for clinical software.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Native Vue 3 Composable + WAI-ARIA Matrix Roles)**.
+- **Chosen Option:** **Option A (Native Vue 3 Composable + WAI-ARIA Matrix Roles)**.
+- **Justification:** Selected as primary architectural approach.
 
 ### 1. Reusable 2D Grid Navigation Composable (`useGridNavigation.ts`)
 

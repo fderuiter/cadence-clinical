@@ -25,20 +25,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Synchronous Delivery on Creation
 
 - **Overview:** Send email, webhook, and in-app updates directly during the HTTP request thread in POST `/api/v1/notifications`.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplest implementation, no database updates or dispatcher worker needed.
-- **Cons:**
+- ***Cons:***
   - ❌ Webhook timeouts or SMTP latency directly block or fail user creation requests.
   - ❌ No automatic retries or error persistence.
 
 ### Option 2: Asynchronous Dispatcher with Channel-Level Persistence
 
 - **Overview:** Store individual delivery attempts/tasks in a separate relational table `notification_deliveries`. A background async worker handles independent dispatching, retries, and backoff scheduling.
-- **Pros:**
+- ***Pros:***
   - ✅ High reliability and absolute separation of concerns.
   - ✅ Failed webhooks or slow SMTP servers do not impact core performance.
   - ✅ Precise retry scheduling and error/diagnostic logging.
-- **Cons:**
+- ***Cons:***
   - ❌ Slight increase in architectural/schema complexity.
 
 ## 4. Decision Outcome

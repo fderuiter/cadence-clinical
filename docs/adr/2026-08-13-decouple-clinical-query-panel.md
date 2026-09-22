@@ -24,19 +24,19 @@ To decouple these responsibilities and adhere to clean presentation patterns und
 ### Option 1: Keep direct Pinia imports and mock Pinia in all component tests
 
 - **Overview:** Maintain the status quo where `ClinicalQueryPanel` resolves stores directly from the active Pinia instance.
-- **Pros:**
+- ***Pros:***
   - ✅ No changes to other consuming views like `EcrfView.vue`.
-- **Cons:**
+- ***Cons:***
   - ❌ Breaks package boundary clean separation.
   - ❌ Requires heavy mocking of auth and clinical stores in unit tests.
 
 ### Option 2: Decouple store dependency and pass down state as props (Selected)
 
 - **Overview:** Refactor `ClinicalQueryPanel` to accept `canManageQueries` and `queryLabel` as props. Consuming components such as `ClinicalFormField` and `EcrfView` can then bind these properties from the store context.
-- **Pros:**
+- ***Pros:***
   - ✅ Restores clean separation of concerns.
   - ✅ Simplifies unit testing by passing props directly.
-- **Cons:**
+- ***Cons:***
   - ❌ Slightly increases prop-drilling depth through layouts.
 
 ## 4. Decision Outcome

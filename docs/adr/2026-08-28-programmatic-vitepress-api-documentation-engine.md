@@ -1,9 +1,9 @@
 # ADR-2226: Programmatic VitePress API Documentation Engine
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -23,16 +23,35 @@ This decision addresses `@req:PRD-SYS-001` and `@req:PRD-SYS-053`.
 
 ## 3. Options Considered
 
-1. **Option 1 (Chosen): Native Static Markdown Generator (`scripts/generate_api_docs.py`)**  
-   Statically introspects each FastAPI application (`apps/*/main.py`), normalizes route definitions and Pydantic v2 schemas into structured Markdown files under `docs/api/`, and auto-registers them into VitePress sidebar groups.
-2. **Option 2: Embedded Interactive Swagger UI / Scalar Iframe**  
-   Embeds an interactive OpenAPI visualizer inside a single VitePress page. While interactive, it is opaque to VitePress's client-side text search and fails to index individual endpoints into search results.
-3. **Option 3: Manual Markdown API Documentation**  
-   Hand-crafting Markdown tables for each service. High maintenance overhead, prone to immediate drift, and violates CI quality gates.
+### Option 1: **Option 1 (Chosen): Native Static Markdown Generator (`scripts/generate_api_docs.py`)**
+
+- **Overview:** Statically introspects each FastAPI application (`apps/*/main.py`), normalizes route definitions and Pydantic v2 schemas into structured Markdown files under `docs/api/`, and auto-registers them into VitePress sidebar groups.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option 2: Embedded Interactive Swagger UI / Scalar Iframe**
+
+- **Overview:** Embeds an interactive OpenAPI visualizer inside a single VitePress page. While interactive, it is opaque to VitePress's client-side text search and fails to index individual endpoints into search results.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Manual Markdown API Documentation**
+
+- **Overview:** Hand-crafting Markdown tables for each service. High maintenance overhead, prone to immediate drift, and violates CI quality gates.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1 (Native Static Markdown Generator)** because it delivers fully searchable, deeply structured, and perpetually accurate API documentation across all 20+ microservices while integrating directly with the pre-build pipeline in `scripts/build-docs.js`.
+- **Chosen Option:** **Option 1 (Native Static Markdown Generator)** because it delivers fully searchable, deeply structured, and perpetually accurate API documentation across all 20+ microservices while integrating directly with the pre-build pipeline in `scripts/build-docs.js`.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -19,12 +19,27 @@ The shared UI package (`packages/ui`) lacked explicit devDependencies for the Vi
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Add explicit devDependencies for `vite` and `vitest` with matching pinned versions (`^8.1.5` and `^4.1.10` respectively) directly to `packages/ui/package.json`.
-2. **Option B (Alternative):** Configure peer dependency overrides or hoisting rules in the root `package.json`. This was rejected because explicit dependency definition in local package configurations provides cleaner package isolation and avoids unexpected package hoisting behaviors.
+### Option 1: **Option A (Selected):** Add explicit devDependencies for `vite` and `vitest` with matching pinned versions (`^8.1.5` and `^4.1.10` respectively) directly to `packages/ui/package.json`.
+
+- **Overview:** **Option A (Selected):** Add explicit devDependencies for `vite` and `vitest` with matching pinned versions (`^8.1.5` and `^4.1.10` respectively) directly to `packages/ui/package.json`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative):** Configure peer dependency overrides or hoisting rules in the root `package.json`. This was rejected because explicit dependency definition in local package configurations provides cleaner package isolation and avoids unexpected package hoisting behaviors.
+
+- **Overview:** **Option B (Alternative):** Configure peer dependency overrides or hoisting rules in the root `package.json`. This was rejected because explicit dependency definition in local package configurations provides cleaner package isolation and avoids unexpected package hoisting behaviors.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it directly resolves the package runner's dependency path mismatch, ensuring `vitest` is invoked with the expected compatible `vite` version, satisfying PRD-SYS-001 and restoring local and CI test execution.
+- **Chosen Option:** Option A because it directly resolves the package runner's dependency path mismatch, ensuring `vitest` is invoked with the expected compatible `vite` version, satisfying PRD-SYS-001 and restoring local and CI test execution.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -1,9 +1,9 @@
 # ADR-2193: Multimodal eTMF and eISF Document Intelligence and DIA Reference Model Classifier
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,13 +21,35 @@ Clinical Trial Master File (eTMF) and Investigator Site File (eISF) management r
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Domain-Driven Document Intelligence Pipeline with Multi-Signal Scoring and Dual-Attribution CRA Staging**: Implement modular domain services (`DocumentIntelligenceParser`, `DIAReferenceModelClassifier`, `RegulatoryMetadataExtractor`, `SignatureCompletenessAnalyzer`) within `apps/etmf` and `apps/eisf`. Use multi-signal confidence scoring (0.0 to 1.0) and integrate with `apps/ai_gateway` for structured inference while preserving complete offline deterministic execution. Stage artifacts in a dedicated CRA QC queue with 21 CFR Part 11 audit trails.
-2. **Option B: Purely External Cloud OCR & LLM Vendor Processing**: Offload all document parsing and classification to cloud vendor APIs without local domain layout rules or offline fallback.
-3. **Option C: Rigid Keyword Matching Without Multimodal Layout or Signature Intelligence**: Rely exclusively on exact substring alias maps and filename string matching.
+### Option 1: **Option A (Selected): Dedicated Domain-Driven Document Intelligence Pipeline with Multi-Signal Scoring and Dual-Attribution CRA Staging**: Implement modular domain services (`DocumentIntelligenceParser`, `DIAReferenceModelClassifier`, `RegulatoryMetadataExtractor`, `SignatureCompletenessAnalyzer`) within `apps/etmf` and `apps/eisf`. Use multi-signal confidence scoring (0.0 to 1.0) and integrate with `apps/ai_gateway` for structured inference while preserving complete offline deterministic execution. Stage artifacts in a dedicated CRA QC queue with 21 CFR Part 11 audit trails.
+
+- **Overview:** **Option A (Selected): Dedicated Domain-Driven Document Intelligence Pipeline with Multi-Signal Scoring and Dual-Attribution CRA Staging**: Implement modular domain services (`DocumentIntelligenceParser`, `DIAReferenceModelClassifier`, `RegulatoryMetadataExtractor`, `SignatureCompletenessAnalyzer`) within `apps/etmf` and `apps/eisf`. Use multi-signal confidence scoring (0.0 to 1.0) and integrate with `apps/ai_gateway` for structured inference while preserving complete offline deterministic execution. Stage artifacts in a dedicated CRA QC queue with 21 CFR Part 11 audit trails.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Purely External Cloud OCR & LLM Vendor Processing**: Offload all document parsing and classification to cloud vendor APIs without local domain layout rules or offline fallback.
+
+- **Overview:** **Option B: Purely External Cloud OCR & LLM Vendor Processing**: Offload all document parsing and classification to cloud vendor APIs without local domain layout rules or offline fallback.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Rigid Keyword Matching Without Multimodal Layout or Signature Intelligence**: Rely exclusively on exact substring alias maps and filename string matching.
+
+- **Overview:** **Option C: Rigid Keyword Matching Without Multimodal Layout or Signature Intelligence**: Rely exclusively on exact substring alias maps and filename string matching.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 Option A combines the speed and determinism of local layout and heuristic scoring with the semantic power of AI Gateway inference. It maintains strict GxP boundary isolation, ensures zero vendor lock-in, and guarantees 21 CFR Part 11 compliance by requiring human CRA adjudication on staged artifacts before final approval.
 
 ## 5. Consequences & Trade-offs

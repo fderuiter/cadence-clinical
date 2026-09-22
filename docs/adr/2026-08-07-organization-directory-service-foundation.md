@@ -26,20 +26,20 @@ This decision implements requirements under Trace-7.
 ### Option 1: Integrate with an Existing Service (e.g., CTMS or Execution)
 
 - **Overview:** Place the organization directory and delegation of authority tables within the CTMS or Execution microservices.
-- **Pros:**
+- ***Pros:***
   - ✅ Fewer microservices to deploy and maintain.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates clean service boundary and single-responsibility principles.
   - ❌ Increases coupling, making it harder to scale or adapt organization mappings independently.
 
 ### Option 2: Dedicated Organization Directory Microservice (Selected)
 
 - **Overview:** Build a standalone `apps/org` microservice with its own relational database management, schema setup, lifespan, and FastAPI endpoints.
-- **Pros:**
+- ***Pros:***
   - ✅ High modularity and clear responsibility boundaries.
   - ✅ Clean data models separating core operational directory registries from downstream capture databases.
   - ✅ Easily enforces GatewayAuthMiddleware identity propagation and site-scoping validation rules.
-- **Cons:**
+- ***Cons:***
   - ❌ Additional microservice component to run in the ecosystem.
 
 ## 4. Decision Outcome

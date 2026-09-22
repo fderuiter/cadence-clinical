@@ -25,12 +25,27 @@ This decision addresses the following requirements:
 
 ## 3. Options Considered
 
-1. **Integrated Multi-Language Versioning (Selected):** Represent translation as an audited, version-tracked entity `ConsentTranslation` referencing either a source clause or a template version. Add review workflow states (`DRAFT`, `IN_REVIEW`, `APPROVED`) and protect approved retrievals with a read-through cache with thread safety and stale-on-error fallback.
-2. **Dynamic In-Memory Localized Translation:** Perform live translation at runtime using an external translation provider. Rejected due to high latency, lack of deterministic human review, and compliance/reproducibility issues under GxP standards.
+### Option 1: **Integrated Multi-Language Versioning (Selected):** Represent translation as an audited, version-tracked entity `ConsentTranslation` referencing either a source clause or a template version. Add review workflow states (`DRAFT`, `IN_REVIEW`, `APPROVED`) and protect approved retrievals with a read-through cache with thread safety and stale-on-error fallback.
+
+- **Overview:** **Integrated Multi-Language Versioning (Selected):** Represent translation as an audited, version-tracked entity `ConsentTranslation` referencing either a source clause or a template version. Add review workflow states (`DRAFT`, `IN_REVIEW`, `APPROVED`) and protect approved retrievals with a read-through cache with thread safety and stale-on-error fallback.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Dynamic In-Memory Localized Translation:** Perform live translation at runtime using an external translation provider. Rejected due to high latency, lack of deterministic human review, and compliance/reproducibility issues under GxP standards.
+
+- **Overview:** **Dynamic In-Memory Localized Translation:** Perform live translation at runtime using an external translation provider. Rejected due to high latency, lack of deterministic human review, and compliance/reproducibility issues under GxP standards.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-We choose **Option 1 (Integrated Multi-Language Versioning)**.
+- **Chosen Option:** Option 1
+- **Justification:** We choose **Option 1 (Integrated Multi-Language Versioning)**.
 
 - **Database Model:** A `ConsentTranslation` model in `apps/econsent/models.py` tracking version indices, languages, translated content (title and text), and Part 11 metadata (`created_at`, `created_by`, `reason_for_change`).
 - **Review Workflow:** Status transition endpoints `DRAFT -> IN_REVIEW -> APPROVED` enforce valid paths and invalidate caches upon approval.

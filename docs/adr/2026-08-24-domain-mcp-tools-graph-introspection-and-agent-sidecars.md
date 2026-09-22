@@ -1,9 +1,9 @@
 # ADR-2193: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars
 
-* **Status:** Accepted
-* **Date:** 2026-08-24
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-24
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement ID:** PRD-SYS-054
 
 ---
@@ -29,13 +29,13 @@ Currently, agents face critical friction when interacting with deep clinical dom
 
 ### Option 1: Direct Database Scripting by Agents
 - **Overview:** Have agents write ad-hoc Python or bash scripts querying Neo4j and PostgreSQL.
-- **Pros:** No new MCP server tooling required.
-- **Cons:** High error rate, high token cost, security and GxP boundary violations.
+- ***Pros:*** No new MCP server tooling required.
+- ***Cons:*** High error rate, high token cost, security and GxP boundary violations.
 
 ### Option 2: Monolithic OpenAPI Rest Endpoints Only
 - **Overview:** Direct agents to make HTTP requests against backend microservices.
-- **Pros:** Reuses existing FastAPI REST routes.
-- **Cons:** Requires spinning up all microservices locally during test runs; lacks standardized MCP envelope and zoom token mechanics.
+- ***Pros:*** Reuses existing FastAPI REST routes.
+- ***Cons:*** Requires spinning up all microservices locally during test runs; lacks standardized MCP envelope and zoom token mechanics.
 
 ### Option 3: Native Domain-Specific MCP Tool Catalog & Progressive Zoom Registry (Selected)
 - **Overview:** Extend `CadenceMcpServer` with 4 typed clinical domain tools:
@@ -43,11 +43,11 @@ Currently, agents face critical friction when interacting with deep clinical dom
   2. `sdtm_pipeline_validate`: eCRF-to-SDTM domain mapping validation against CDISC Conformance Rules.
   3. `clinical_event_stream`: Reactive transactional outbox query and replay for event-driven integration testing.
   4. `synthetic_patient_generate`: GxP-compliant synthetic participant generation with longitudinal activity and lab profiles.
-- **Pros:**
+- ***Pros:***
   - Standardized JSON-RPC protocol interface accessible to any MCP client.
   - Progressive disclosure envelope avoids LLM context bloat.
   - Deterministic in-memory mock fallback ensures fast unit and contract tests.
-- **Cons:**
+- ***Cons:***
   - Requires maintaining MCP schemas alongside domain models.
 
 ## 4. Decision Outcome

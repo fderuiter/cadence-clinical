@@ -1,9 +1,9 @@
 # ADR-2184: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing
 
-* **Status:** Accepted
-* **Date:** 2026-08-18
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-18
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -19,17 +19,33 @@ Transaction auditing in the execution microservice previously lacked strict meta
 
 ## 3. Options Considered
 
-1. Metadata-bound entity filtering in transaction audit triggers + Abstract consent verification client port (Selected)
-2. Direct class-name checks without metadata inspection + concrete client coupling
+### Option 1: Metadata-bound entity filtering in transaction audit triggers + Abstract consent verification client port (Selected)
+
+- **Overview:** Metadata-bound entity filtering in transaction audit triggers + Abstract consent verification client port (Selected)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Direct class-name checks without metadata inspection + concrete client coupling
+
+- **Overview:** Direct class-name checks without metadata inspection + concrete client coupling
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1 because inspecting `AuditedModel` metadata guarantees safe entity filtering across shared ORM sessions, and `IConsentVerificationClient` provides a clean hexagonal port interface satisfying PRD-SYS-001.
+- **Chosen Option:** Option 1 because inspecting `AuditedModel` metadata guarantees safe entity filtering across shared ORM sessions, and `IConsentVerificationClient` provides a clean hexagonal port interface satisfying PRD-SYS-001.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Safe transaction auditing without cross-service entity pollution; testable consent verification client interface.
-* Negative: Small runtime metadata inspection overhead during session flushing.
+- **Positive Impact:** Safe transaction auditing without cross-service entity pollution; testable consent verification client interface.
+- **Negative Impact / Technical Debt:** Small runtime metadata inspection overhead during session flushing.
+- **Mitigation Strategy:** Managed via automated tests and verification.
 
 ## 6. Implementation & Verification
 

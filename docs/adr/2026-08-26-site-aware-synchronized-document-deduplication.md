@@ -24,18 +24,18 @@ Prior to this specification, the eTMF receiving contract lacked site-aware corre
 ### Option 1: Naive Version Bumping
 
 - **Overview:** Ingest and increment version index on every synchronization request.
-- **Pros:**
+- ***Pros:***
   - ✅ Simple to implement.
-- **Cons:**
+- ***Cons:***
   - ❌ Bloats storage and version history with identical copies.
 
 ### Option 2: Stable Correlation Key and Content-level Verification
 
 - **Overview:** Implement stable correlation identity and content checksum-based deduplication with redaction-derivative coordination.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates storage bloat from replayed synchronization events.
   - ✅ Ensures unredacted content cannot overwrite redacted derivatives.
-- **Cons:**
+- ***Cons:***
   - ❌ Slightly increased lookup overhead.
 
 ## 4. Decision Outcome
