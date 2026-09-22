@@ -11,12 +11,12 @@ from typing import Any
 import httpx
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import select, text
 
-from apps.gateway.main import generate_signature
 from apps.safety.database import db_manager
 from apps.safety.domain.narrative_models import (
     NarrativeSectionType,

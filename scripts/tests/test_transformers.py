@@ -1,9 +1,9 @@
 import time
 
-from fastapi.testclient import TestClient
-
 from apps.designer.db import MOCK_TERMINOLOGY, db_query_counts, terminology_cache
 from apps.designer.main import app
+from fastapi.testclient import TestClient
+
 from packages.testing.security import create_test_auth_headers
 
 client = TestClient(app)

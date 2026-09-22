@@ -6,8 +6,6 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 import pytest_asyncio
-from jose import jwt
-from sqlalchemy import select, text
 
 # Import both db_managers and bases
 from apps.execution.database.core import db_manager as exec_db_manager
@@ -24,6 +22,9 @@ from apps.execution.database.models import (
 from apps.execution.main import app as execution_app
 from apps.execution.queries_escalation import execute_query_escalation_cycle
 from apps.execution.trial_lock import TrialLockManager
+from jose import jwt
+from sqlalchemy import select, text
+
 from apps.notifications.database import db_manager as notif_db_manager
 from apps.notifications.main import app as notifications_app
 from apps.notifications.models import Base as NotifBase

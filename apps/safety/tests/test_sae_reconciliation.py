@@ -4,10 +4,10 @@ import uuid
 import httpx
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
-from apps.gateway.main import generate_signature
 from apps.safety.adapters import SafetyDatabaseAdapter
 from apps.safety.database import db_manager
 from apps.safety.domain.sae_icsr import MedDRACoding, SeriousAdverseEvent

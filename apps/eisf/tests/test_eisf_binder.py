@@ -8,6 +8,8 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
+from apps.execution.database.models import Base as ExecutionModelBase
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -18,8 +20,6 @@ from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base as EisfModelBase
 from apps.etmf.services.eisf_service import Base as ServiceBase
 from apps.etmf.services.eisf_service import EISFBinderService
-from apps.execution.database.models import Base as ExecutionModelBase
-from apps.gateway.main import generate_signature
 from packages.security.rbac import Principal
 
 

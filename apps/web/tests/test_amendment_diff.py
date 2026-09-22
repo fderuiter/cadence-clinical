@@ -13,7 +13,6 @@ from collections.abc import AsyncGenerator
 import httpx
 import pytest
 import pytest_asyncio
-
 from apps.designer.db import (
     MOCK_STUDIES,
     MOCK_STUDY_VERSIONS,

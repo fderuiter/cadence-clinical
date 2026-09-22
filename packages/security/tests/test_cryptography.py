@@ -1,5 +1,4 @@
 import pytest
-
 from apps.execution.cryptography import AllocationKeyManager
 
 

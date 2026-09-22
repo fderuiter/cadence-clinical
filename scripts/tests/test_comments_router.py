@@ -6,12 +6,12 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 import os
 import time
 
-from fastapi.testclient import TestClient
-
-import packages  # noqa: F401
 from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
 from apps.designer.main import app
 from apps.designer.presentation.routers.comments import MOCK_FORM_COMMENTS
+from fastapi.testclient import TestClient
+
+import packages  # noqa: F401
 from packages.security.signing import generate_gateway_signature
 
 client = TestClient(app)

@@ -8,11 +8,11 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from apps.gateway.main import generate_signature
 from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import pseudonymize_identifier, strip_pii_from_patient
 from apps.interop.main import app
