@@ -1921,16 +1921,20 @@ async function executeBulkReconsent() {
     });
 
     if (clinicalStore && clinicalStore.addLedgerBlock) {
-      await clinicalStore.addLedgerBlock(
-        "BULK_RECONSENT_EXECUTED",
-        {
-          subject_ids: selectedSubjectIds.value,
-          protocol_version: selectedAmendedVersion.value,
-          signature_type: bulkReconsentForm.value.signature_type,
-          signer_name: bulkReconsentForm.value.signer_name,
-        },
-        `Batch Part 11 signature authorized for ${selectedSubjectIds.value.length} subject(s). Gating unlocked across active sites.`
-      );
+      try {
+        await clinicalStore.addLedgerBlock(
+          "BULK_RECONSENT_EXECUTED",
+          {
+            subject_ids: selectedSubjectIds.value,
+            protocol_version: selectedAmendedVersion.value,
+            signature_type: bulkReconsentForm.value.signature_type,
+            signer_name: bulkReconsentForm.value.signer_name,
+          },
+          `Batch Part 11 signature authorized for ${selectedSubjectIds.value.length} subject(s). Gating unlocked across active sites.`
+        );
+      } catch (err) {
+        console.warn("Ledger block generation error during bulk reconsent:", err);
+      }
     }
 
     const subjectCount = selectedSubjectIds.value.length;
