@@ -70,8 +70,10 @@ def should_trigger_schema_generation(staged_files: list[str]) -> bool:
     for f in staged_files:
         if "apps/web/src/api/" in f:
             return True
+        # Trigger on C# source or project files under apps/ or packages/
         if f.endswith(".cs") or f.endswith(".csproj"):
-            return True
+            if "apps/" in f or "packages/" in f or "src/" in f:
+                return True
         if not f.endswith(".py"):
             continue
         parts = f.split(os.sep)

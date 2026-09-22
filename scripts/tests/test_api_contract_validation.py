@@ -1,7 +1,7 @@
 import pytest
 import yaml
-
 from apps.gateway.main import app as gateway_app
+
 from scripts.validate_schemas import discover_services
 from tests.contract_helpers import (
     assert_schema_parity,

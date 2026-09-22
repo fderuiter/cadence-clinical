@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 import usdm_model
-
 from apps.designer.content_assembly import (
     assemble_narrative_sections,
     assemble_rendered_protocol_document,

@@ -192,7 +192,7 @@ class EsourceIngestionService:
         try:
             if float(current_val) == float(candidate_value):
                 return current_val, DiscrepancyType.EXACT_MATCH
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
 
         return current_val, DiscrepancyType.VALUE_MISMATCH

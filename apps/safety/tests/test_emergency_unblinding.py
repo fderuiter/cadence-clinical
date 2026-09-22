@@ -4,12 +4,12 @@ import time
 import httpx
 import pytest
 import pytest_asyncio
-from jose import jwt
-from sqlalchemy import select
-
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, ClinicalSubject, SubjectRandomization
 from apps.execution.main import app
+from jose import jwt
+from sqlalchemy import select
+
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv(

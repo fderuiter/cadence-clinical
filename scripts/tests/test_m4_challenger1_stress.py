@@ -11,21 +11,6 @@ Focuses on Execution Service ACLs and CTMS Service ACLs:
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
-
-from apps.ctms.domain.acl.document_renderer_dto import (
-    CTMSDocumentRendererACL,
-    DocumentRenderRequestDTO,
-    DocumentRenderResponseDTO,
-)
-from apps.ctms.domain.acl.sync_engine_dto import (
-    CTMSSignatureValidationError,
-    CTMSSyncMetadataDTO,
-    CTMSSyncRecordDTO,
-    get_ctms_signature_payload,
-    reconcile_ctms_records,
-    verify_ctms_record_signature,
-)
 from apps.execution.domain.acl.designer_eligibility_dto import (
     DesignerEligibilityCriterionDTO,
     DesignerExpressionNodeDTO,
@@ -40,6 +25,21 @@ from apps.execution.domain.acl.protocol_version_ref_dto import (
 from apps.execution.domain.acl.usdm_validation_dto import (
     normalize_usdm_payload,
     validate_usdm_payload,
+)
+from pydantic import ValidationError
+
+from apps.ctms.domain.acl.document_renderer_dto import (
+    CTMSDocumentRendererACL,
+    DocumentRenderRequestDTO,
+    DocumentRenderResponseDTO,
+)
+from apps.ctms.domain.acl.sync_engine_dto import (
+    CTMSSignatureValidationError,
+    CTMSSyncMetadataDTO,
+    CTMSSyncRecordDTO,
+    get_ctms_signature_payload,
+    reconcile_ctms_records,
+    verify_ctms_record_signature,
 )
 from packages.security.signing import generate_canonical_signature
 

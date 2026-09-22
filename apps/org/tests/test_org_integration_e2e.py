@@ -12,14 +12,14 @@ from unittest.mock import AsyncMock, MagicMock
 import httpx
 import pytest
 import pytest_asyncio
+from apps.gateway.main import SERVICES
+from apps.gateway.main import app as gateway_app
 from fastapi.testclient import TestClient
 from jose import jwt
 
 from apps.eisf.database import db_manager as eisf_db_manager
 from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base as EisfBase
-from apps.gateway.main import SERVICES
-from apps.gateway.main import app as gateway_app
 from apps.org.database import db_manager as org_db_manager
 from apps.org.main import GATEWAY_SECRET
 from apps.org.main import app as org_app

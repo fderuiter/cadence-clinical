@@ -43,6 +43,7 @@ from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.telemetry import setup_telemetry
 
 DATABASE_URL = os.getenv("TICKETS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
@@ -60,6 +61,8 @@ app = FastAPI(
         shutdown_hooks=[stop_background_ticket_escalation],
     ),
 )
+
+setup_telemetry("tickets", app)
 
 register_rfc7807_handlers(app)
 

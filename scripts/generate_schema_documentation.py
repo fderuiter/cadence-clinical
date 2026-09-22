@@ -256,16 +256,19 @@ def get_designer_schema() -> list[dict[str, Any]]:
     Returns:
         A list of dictionaries representing graph node metadata.
     """
-    from apps.designer.domain.cdisc.usdm_models import (
-        Activity,
-        EligibilityCriterion,
-        Encounter,
-        StudyArm,
-        StudyEpoch,
-        StudyVersion,
-        USDMStudy,
-    )
-    from apps.designer.library import LibraryObjectBase
+    try:
+        from apps.designer.domain.cdisc.usdm_models import (
+            Activity,
+            EligibilityCriterion,
+            Encounter,
+            StudyArm,
+            StudyEpoch,
+            StudyVersion,
+            USDMStudy,
+        )
+        from apps.designer.library import LibraryObjectBase
+    except ImportError:
+        return []
 
     designer_models = [
         (USDMStudy, "Study", "Study", True, False),
@@ -1334,7 +1337,11 @@ def extract_all_service_schemas() -> dict[str, Any]:
     from apps.econsent.adapters.models import Base as EconsentBase
     from apps.eisf.infrastructure.models import Base as EisfBase
     from apps.etmf.infrastructure.models import Base as EtmfBase
-    from apps.execution.database.models import Base as ExecutionBase
+
+    try:
+        from apps.execution.database.models import Base as ExecutionBase
+    except ImportError:
+        ExecutionBase = None  # noqa: N806
     from apps.interop.infrastructure.models import Base as InteropBase
     from apps.notifications.infrastructure.models import Base as NotificationsBase
     from apps.org.infrastructure.models import Base as OrgBase
@@ -1343,17 +1350,21 @@ def extract_all_service_schemas() -> dict[str, Any]:
     from apps.tickets.infrastructure.models import Base as TicketsBase
 
     relational_services = [
-        ("execution", "Execution / EDC", ExecutionBase, "#0d9488"),
-        ("etmf", "eTMF", EtmfBase, "#d97706"),
-        ("safety", "Safety / Pharmacovigilance", SafetyBase, "#ef4444"),
-        ("org", "Organization Management", OrgBase, "#8b5cf6"),
-        ("eisf", "eISF", EisfBase, "#10b981"),
-        ("econsent", "eConsent", EconsentBase, "#3b82f6"),
-        ("interop", "Interoperability / EHR", InteropBase, "#ec4899"),
-        ("notifications", "Notifications", NotificationsBase, "#f59e0b"),
-        ("tickets", "Tickets / Support", TicketsBase, "#64748b"),
-        ("ctms", "CTMS", CtmsBase, "#0284c7"),
-        ("quality", "Quality / EQMS", QualityBase, "#84cc16"),
+        (s_id, s_name, base_cls, color)
+        for s_id, s_name, base_cls, color in [
+            ("execution", "Execution / EDC", ExecutionBase, "#0d9488"),
+            ("etmf", "eTMF", EtmfBase, "#d97706"),
+            ("safety", "Safety / Pharmacovigilance", SafetyBase, "#ef4444"),
+            ("org", "Organization Management", OrgBase, "#8b5cf6"),
+            ("eisf", "eISF", EisfBase, "#10b981"),
+            ("econsent", "eConsent", EconsentBase, "#3b82f6"),
+            ("interop", "Interoperability / EHR", InteropBase, "#ec4899"),
+            ("notifications", "Notifications", NotificationsBase, "#f59e0b"),
+            ("tickets", "Tickets / Support", TicketsBase, "#64748b"),
+            ("ctms", "CTMS", CtmsBase, "#0284c7"),
+            ("quality", "Quality / EQMS", QualityBase, "#84cc16"),
+        ]
+        if base_cls is not None
     ]
 
     services_meta: dict[str, Any] = {}
@@ -1389,7 +1400,10 @@ def generate_cdisc_usdm_compliance_catalog(
     Returns:
         A dictionary conforming to the CDISC USDM v3.0 protocol schema specification.
     """
-    from apps.designer.domain.cdisc.usdm_models import USDMStudy
+    try:
+        from apps.designer.domain.cdisc.usdm_models import USDMStudy
+    except ImportError:
+        USDMStudy = None  # noqa: N806
 
     if services is None:
         services = extract_all_service_schemas()
@@ -1504,7 +1518,10 @@ def export_cdisc_compliance_document(
     Returns:
         Tuple of (usdm_catalog_dict, written_path).
     """
-    from apps.designer.domain.cdisc.usdm_models import USDMStudy
+    try:
+        from apps.designer.domain.cdisc.usdm_models import USDMStudy
+    except ImportError:
+        USDMStudy = None  # noqa: N806
 
     if output_path is None:
         target_file = ROOT_DIR / "docs" / "CDISC" / "cdisc_usdm_compliance.json"
@@ -1516,7 +1533,7 @@ def export_cdisc_compliance_document(
     services = extract_all_service_schemas()
     usdm_doc = generate_cdisc_usdm_compliance_catalog(services)
 
-    if validate:
+    if validate and USDMStudy is not None:
         USDMStudy(**usdm_doc)
 
     target_file.parent.mkdir(parents=True, exist_ok=True)

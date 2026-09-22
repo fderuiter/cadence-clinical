@@ -7,11 +7,11 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
-from apps.gateway.main import generate_signature
 from apps.tickets.database import db_manager
 from apps.tickets.main import app
 from apps.tickets.models import (

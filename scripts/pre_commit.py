@@ -9,6 +9,7 @@ Requirements: PRD-SYS-049, ADR-2189
 
 from __future__ import annotations
 
+import shutil
 import stat
 import subprocess
 import sys
@@ -50,7 +51,7 @@ def get_staged_files(repo_root: Path | None = None) -> list[str]:
 def run_tier1_staged_checks(
     staged_files: list[str], repo_root: Path | None = None
 ) -> dict[str, Any]:
-    """Executes fast Tier 1 checks on staged Python and configuration files.
+    """Executes fast Tier 1 checks on staged Python, C#, and configuration files.
 
     Args:
         staged_files: List of staged file paths.
@@ -61,45 +62,86 @@ def run_tier1_staged_checks(
     """
     root = repo_root or REPO_ROOT
     py_files = [f for f in staged_files if f.endswith(".py")]
+    cs_files = [f for f in staged_files if f.endswith(".cs") or f.endswith(".csproj")]
 
-    if not py_files:
+    if not py_files and not cs_files:
         return {"passed": True, "staged_count": 0, "errors": []}
 
     errors: list[str] = []
 
-    # 1. Run ruff check --fix on staged python files
-    res_check = subprocess.run(
-        ["uv", "run", "--python", "3.14", "ruff", "check", "--fix", *py_files],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if res_check.returncode != 0:
-        errors.append(f"Ruff lint error:\n{res_check.stdout}\n{res_check.stderr}")
+    if py_files:
+        # 1. Run ruff check --fix on staged python files
+        res_check = subprocess.run(
+            ["uv", "run", "--python", "3.14", "ruff", "check", "--fix", *py_files],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res_check.returncode != 0:
+            errors.append(f"Ruff lint error:\n{res_check.stdout}\n{res_check.stderr}")
 
-    # 2. Run ruff format on staged python files
-    res_fmt = subprocess.run(
-        ["uv", "run", "--python", "3.14", "ruff", "format", *py_files],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if res_fmt.returncode != 0:
-        errors.append(f"Ruff format error:\n{res_fmt.stdout}\n{res_fmt.stderr}")
+        # 2. Run ruff format on staged python files
+        res_fmt = subprocess.run(
+            ["uv", "run", "--python", "3.14", "ruff", "format", *py_files],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res_fmt.returncode != 0:
+            errors.append(f"Ruff format error:\n{res_fmt.stdout}\n{res_fmt.stderr}")
 
-    # 3. Re-stage any auto-fixed files
-    subprocess.run(
-        ["git", "add", *py_files],
-        cwd=str(root),
-        capture_output=True,
-        check=False,
-    )
+        # 3. Re-stage any auto-fixed files
+        subprocess.run(
+            ["git", "add", *py_files],
+            cwd=str(root),
+            capture_output=True,
+            check=False,
+        )
+
+    if cs_files and shutil.which("dotnet"):
+        res_cs_fmt = subprocess.run(
+            [
+                "dotnet",
+                "format",
+                "whitespace",
+                "Cadence.sln",
+                "--verify-no-changes",
+                "--no-restore",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res_cs_fmt.returncode != 0:
+            errors.append(
+                f"C# formatting error (.editorconfig):\n{res_cs_fmt.stdout}\n{res_cs_fmt.stderr}"
+            )
+
+        res_cs_style = subprocess.run(
+            [
+                "dotnet",
+                "format",
+                "style",
+                "Cadence.sln",
+                "--verify-no-changes",
+                "--no-restore",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res_cs_style.returncode != 0:
+            errors.append(
+                f"C# Roslyn analyzer and code style error:\n{res_cs_style.stdout}\n{res_cs_style.stderr}"
+            )
 
     return {
         "passed": len(errors) == 0,
-        "staged_count": len(py_files),
+        "staged_count": len(py_files) + len(cs_files),
         "errors": errors,
     }
 

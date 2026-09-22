@@ -209,6 +209,15 @@ def load_service_spec(service_name: str) -> dict[str, Any] | None:
     except Exception:
         pass
 
+    if service_name == "gateway":
+        for file_name in ["gateway_openapi.json", "cdisc_openapi.json"]:
+            openapi_file = ROOT_DIR / "docs" / "openapi" / file_name
+            if openapi_file.exists():
+                try:
+                    return json.loads(openapi_file.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+
     openapi_file = ROOT_DIR / "docs" / "openapi" / f"{service_name}_openapi.json"
     if openapi_file.exists():
         try:

@@ -3,6 +3,7 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect
 
@@ -12,7 +13,6 @@ from apps.eisf.models import Base as EISFBase
 from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
 from apps.etmf.models import Base as ETMFBase
-from apps.gateway.main import generate_signature
 from packages.security.rbac import (
     ROLE_AUDITOR_CANONICAL,
     ROLE_CRA_CANONICAL,
