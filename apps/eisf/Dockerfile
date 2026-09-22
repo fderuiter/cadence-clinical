@@ -1,19 +1,19 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm AS builder
-WORKDIR /app
-ENV UV_COMPILE_BYTECODE=1
-COPY pyproject.toml uv.lock ./
-COPY packages/database ./packages/database
-COPY packages/security ./packages/security
-COPY apps/eisf ./apps/eisf
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-eisf
+# Central .NET 10 thin manifest for eISF microservice
+ARG APP_NAME=eisf
+ARG PROJECT_PATH=apps/eisf/src
 
-FROM python:3.14-slim-bookworm
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-bookworm-slim AS dev
+WORKDIR /workspace
+COPY Cadence.sln Directory.Build.props Directory.Packages.props .editorconfig global.json ./
+COPY . .
+CMD ["sh", "-c", "dotnet watch --project apps/eisf/src run"]
+
+FROM dev AS build
+RUN dotnet restore apps/eisf/src && dotnet publish apps/eisf/src -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-bookworm-slim AS runtime
 WORKDIR /app
-COPY --from=builder /app/.venv /app/.venv
-COPY packages/database /app/packages/database
-COPY packages/security /app/packages/security
-COPY apps/eisf /app/apps/eisf
-ENV PATH="/app/.venv/bin:$PATH"
+USER app
+COPY --from=build /app/publish .
 EXPOSE 8000
-CMD ["uvicorn", "apps.eisf.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["sh", "-c", "exec dotnet Cadence.Apps.Eisf.dll"]
