@@ -12,8 +12,13 @@ echo "[Pre-Commit] Executing Cadence Quality Sentinels..."
 # 1. Format check on C# files
 if command -v dotnet >/dev/null 2>&1; then
     echo "  Validating C# code style (.editorconfig)..."
-    if ! dotnet format Cadence.sln --verify-no-changes >/dev/null 2>&1; then
-        echo "::error:: C# formatting violations detected! Run 'dotnet format Cadence.sln' to auto-fix."
+    if ! dotnet format whitespace Cadence.sln --verify-no-changes --no-restore >/dev/null 2>&1; then
+        echo "::error:: C# formatting violations detected! Run 'dotnet format whitespace Cadence.sln' to auto-fix."
+        exit 1
+    fi
+    echo "  Validating C# Roslyn analyzer and code style rules..."
+    if ! dotnet format style Cadence.sln --verify-no-changes --no-restore >/dev/null 2>&1; then
+        echo "::error:: C# Roslyn style or analyzer violations detected! Run 'dotnet format style Cadence.sln' to auto-fix."
         exit 1
     fi
 fi
@@ -21,7 +26,7 @@ fi
 # 2. Validate Architectural Decision Records
 if [ -f "scripts/validate_adrs.py" ]; then
     echo "  Validating ADR index and requirement tags..."
-    python scripts/validate_adrs.py
+    python3 scripts/validate_adrs.py
 fi
 
 echo "[Pre-Commit] All quality sentinels passed."
