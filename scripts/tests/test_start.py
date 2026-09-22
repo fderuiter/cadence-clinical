@@ -5,8 +5,8 @@ from scripts import start
 
 
 def test_find_migration_script():
-    # Test with a service that has a migration script
-    migrate_path = start.find_migration_script("execution")
+    # Test with a service that has a migration script defined in registry
+    migrate_path = start.find_migration_script("etmf")
     assert migrate_path is not None
     assert "migrate.py" in migrate_path
 
@@ -20,12 +20,12 @@ def test_run_pre_boot_migrations_success(mock_run):
     mock_run.return_value = MagicMock(returncode=0)
 
     # Should run fine without raising any exceptions or calling sys.exit
-    start.run_pre_boot_migrations("execution", "apps/execution/database/migrate.py")
+    start.run_pre_boot_migrations("etmf", "apps/etmf/migrate.py")
 
     mock_run.assert_called_once()
     assert mock_run.call_args[0][0] == [
         sys.executable,
-        "apps/execution/database/migrate.py",
+        "apps/etmf/migrate.py",
     ]
     assert "PYTHONPATH" in mock_run.call_args[1]["env"]
 
@@ -35,12 +35,12 @@ def test_run_pre_boot_migrations_success(mock_run):
 def test_run_pre_boot_migrations_failure(mock_exit, mock_run):
     mock_run.return_value = MagicMock(returncode=42)
 
-    start.run_pre_boot_migrations("execution", "apps/execution/database/migrate.py")
+    start.run_pre_boot_migrations("etmf", "apps/etmf/migrate.py")
 
     mock_run.assert_called_once()
     assert mock_run.call_args[0][0] == [
         sys.executable,
-        "apps/execution/database/migrate.py",
+        "apps/etmf/migrate.py",
     ]
     assert "PYTHONPATH" in mock_run.call_args[1]["env"]
     mock_exit.assert_called_once_with(42)
@@ -49,59 +49,17 @@ def test_run_pre_boot_migrations_failure(mock_exit, mock_run):
 @patch("scripts.start.os.name", "posix")
 @patch("scripts.start.os.execvp")
 def test_run_web_server_posix_success(mock_exec):
-    start.run_web_server(
-        "designer", "127.0.0.1", 8080, ["--reload", "--log-level", "debug"]
-    )
+    start.run_web_server("designer", "127.0.0.1", 8001, ["--log-level", "debug"])
 
     mock_exec.assert_called_once_with(
-        "uvicorn",
+        "dotnet",
         [
-            "uvicorn",
-            "apps.designer.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8080",
-            "--reload",
+            "dotnet",
+            "run",
+            "--project",
+            "apps/designer/src/Cadence.Apps.Designer.csproj",
             "--log-level",
             "debug",
-        ],
-    )
-
-
-@patch("scripts.start.os.name", "posix")
-@patch("scripts.start.os.execvp")
-def test_run_web_server_posix_fallback(mock_exec):
-    # Simulate uvicorn not on path, triggering FileNotFoundError
-    mock_exec.side_effect = [FileNotFoundError, None]
-
-    start.run_web_server("designer", "127.0.0.1", 8080, ["--reload"])
-
-    assert mock_exec.call_count == 2
-    mock_exec.assert_any_call(
-        "uvicorn",
-        [
-            "uvicorn",
-            "apps.designer.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8080",
-            "--reload",
-        ],
-    )
-    mock_exec.assert_any_call(
-        sys.executable,
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "apps.designer.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8080",
-            "--reload",
         ],
     )
 
@@ -112,17 +70,16 @@ def test_run_web_server_posix_fallback(mock_exec):
 def test_run_web_server_nt(mock_exit, mock_run):
     mock_run.return_value = MagicMock(returncode=0)
 
-    start.run_web_server("designer", "127.0.0.1", 8080, [])
+    start.run_web_server("designer", "127.0.0.1", 8001, [])
 
     mock_run.assert_called_once_with(
         [
-            "uvicorn",
-            "apps.designer.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8080",
-        ]
+            "dotnet",
+            "run",
+            "--project",
+            "apps/designer/src/Cadence.Apps.Designer.csproj",
+        ],
+        env=start.os.environ,
     )
     mock_exit.assert_called_once_with(0)
 
@@ -131,25 +88,23 @@ def test_run_web_server_nt(mock_exit, mock_run):
 @patch("scripts.start.run_pre_boot_migrations")
 @patch("scripts.start.find_migration_script")
 def test_main_execution_service(mock_find, mock_migrate, mock_server):
-    mock_find.return_value = "apps/execution/database/migrate.py"
+    mock_find.return_value = None
 
     start.main(["execution", "--host", "0.0.0.0", "--port", "8002", "--reload"])  # nosec B104
 
     mock_find.assert_called_once_with("execution")
-    mock_migrate.assert_called_once_with(
-        "execution", "apps/execution/database/migrate.py"
-    )
+    mock_migrate.assert_not_called()
     mock_server.assert_called_once_with("execution", "0.0.0.0", 8002, ["--reload"])  # nosec B104
 
 
 @patch("scripts.start.run_web_server")
 @patch("scripts.start.run_pre_boot_migrations")
 @patch("scripts.start.find_migration_script")
-def test_main_designer_service(mock_find, mock_migrate, mock_server):
-    mock_find.return_value = None
+def test_main_etmf_service(mock_find, mock_migrate, mock_server):
+    mock_find.return_value = "apps/etmf/migrate.py"
 
-    start.main(["designer", "--host", "0.0.0.0", "--port", "8001"])  # nosec B104
+    start.main(["etmf", "--host", "0.0.0.0", "--port", "8003"])  # nosec B104
 
-    mock_find.assert_called_once_with("designer")
-    mock_migrate.assert_not_called()
-    mock_server.assert_called_once_with("designer", "0.0.0.0", 8001, [])  # nosec B104
+    mock_find.assert_called_once_with("etmf")
+    mock_migrate.assert_called_once_with("etmf", "apps/etmf/migrate.py")
+    mock_server.assert_called_once_with("etmf", "0.0.0.0", 8003, [])  # nosec B104
