@@ -3,10 +3,12 @@ import concurrent.futures
 import logging
 import os
 import time
+import uuid
 
 import httpx
 
 from packages.security.signing import generate_gateway_signature
+from packages.telemetry.tracer import inject_trace_context
 
 logger = logging.getLogger("packages.security.gateway_client")
 
@@ -30,7 +32,7 @@ def create_service_auth_headers(
         secret=secret,
         change_reason=change_reason,
     )
-    return {
+    headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -38,6 +40,12 @@ def create_service_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
+    inject_trace_context(headers)
+    if "traceparent" not in headers:
+        gen_trace_id = uuid.uuid4().hex
+        gen_span_id = uuid.uuid4().hex[:16]
+        headers["traceparent"] = f"00-{gen_trace_id}-{gen_span_id}-01"
+    return headers
 
 
 def run_async(coro):
@@ -117,7 +125,7 @@ class GatewayBaseClient:
             tenant_id=tenant_id,
         )
 
-        return {
+        headers = {
             "X-User-Id": user_id,
             "X-User-Roles": roles,
             "X-Gateway-Timestamp": timestamp,
@@ -125,6 +133,12 @@ class GatewayBaseClient:
             "X-Signature-Version": "2",
             "X-Change-Reason": change_reason,
         }
+        inject_trace_context(headers)
+        if "traceparent" not in headers:
+            gen_trace_id = uuid.uuid4().hex
+            gen_span_id = uuid.uuid4().hex[:16]
+            headers["traceparent"] = f"00-{gen_trace_id}-{gen_span_id}-01"
+        return headers
 
     async def request(
         self,
