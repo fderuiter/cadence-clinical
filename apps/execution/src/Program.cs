@@ -276,17 +276,12 @@ await app.RunAsync();
 // `tests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs` -- pure test-visibility plumbing, not
 // composition-root wiring. MIG-SUBJ-025's future `ExecutionApiFactory` needs this exact same marker too, so
 // it stays exactly as MIG-SUBJ-023 first added it.
-public partial class Program
+namespace Cadence.Apps.Execution
 {
-    // SonarAnalyzer S1118: a partial class whose only visible member (from this declaration's own vantage
-    // point) is the compiler-synthesized static `Main` would otherwise be flagged as a utility class that
-    // should either be `static` or explicitly guard its constructor. It cannot be made `static` here --
-    // C# requires every partial declaration of a type to agree on the `static` modifier, and the
-    // compiler-generated top-level-statement declaration is not static -- so an explicit `protected`
-    // constructor is the correct fix Sonar's own rule message names. `WebApplicationFactory<Program>` never
-    // actually constructs a `Program` (it only needs the type/assembly for reflection), so narrowing
-    // construction to `protected` changes nothing observable.
-    protected Program()
+    public partial class Program
     {
+        protected Program()
+        {
+        }
     }
 }

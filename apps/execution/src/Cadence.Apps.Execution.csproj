@@ -2,36 +2,12 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Apps.Execution</RootNamespace>
     <Description>Cadence EDC Execution Engine, clinical observation capture, and eCRF runtime.</Description>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Infrastructure\Persistence\**;Infrastructure\EditChecks\**;Infrastructure\Consumers\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
-    <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="Scalar.AspNetCore" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="FluentValidation" />
-    <!-- MIG-SUBJ-024: AddValidatorsFromAssemblyContaining<T>, used by Program.cs to register every
-         FluentValidation AbstractValidator<T> in this assembly in one call. -->
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="Polly" />
-    <!-- MIG-SUBJ-021: MassTransit + the EF Core transactional outbox (ADR-2234 / Rule 8 / MIG-06). -->
-    <PackageReference Include="MassTransit" />
-    <PackageReference Include="MassTransit.EntityFrameworkCore" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Design-time only: required for `dotnet ef migrations add`/`database update` (MIG-SUBJ-014). Never
-         needed at runtime, so it is excluded from the published output the same way the repo's own
-         analyzer packages are in Directory.Build.props. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <ProjectReference Include="..\..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 </Project>

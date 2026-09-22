@@ -90,9 +90,12 @@ app.MapReverseProxy();
 
 await app.RunAsync();
 
-public partial class Program
+namespace Cadence.Apps.Gateway
 {
-    protected Program()
+    public partial class Program
     {
+        protected Program()
+        {
+        }
     }
 }
