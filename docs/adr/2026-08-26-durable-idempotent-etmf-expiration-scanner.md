@@ -24,20 +24,20 @@ An asynchronous and robust mechanism is required to detect upcoming and past doc
 ### Option 1: Log-based tracking
 
 - **Overview:** Infer previous alerts from existing system or audit logs without a dedicated state table.
-- **Pros:**
+- ***Pros:***
   - ✅ No new database schema required.
-- **Cons:**
+- ***Cons:***
   - ❌ Unreliable across log retention rotations or format changes.
   - ❌ Hard to programmatically query and re-arm.
 
 ### Option 2: Persistent State Table (Selected)
 
 - **Overview:** Track alert-delivery state in a dedicated table `tmf_document_expiration_alert_states` with a database-level unique constraint on `(document_id, warning_window)`.
-- **Pros:**
+- ***Pros:***
   - ✅ Guaranteed database-level uniqueness/idempotency.
   - ✅ Clean and explicit support for "re-arming" (deleting a row allows alert re-emission).
   - ✅ Supports standard Part 11 audit fields (`created_at`, `created_by`, `reason_for_change`).
-- **Cons:**
+- ***Cons:***
   - ❌ Requires schema modifications.
 
 ## 4. Decision Outcome

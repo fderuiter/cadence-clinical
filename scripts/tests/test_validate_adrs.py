@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 
 from scripts.validate_adrs import (
@@ -130,7 +131,49 @@ def test_validate_existing_adrs_with_targets_valid():
     # If valid target files are passed, they should pass
     # Let's mock a valid index list and check a valid target
     targets = ["docs/adr/2026-07-24-test-new-dependency.md"]
-    mock_content = "# ADR-[NUMBER]: Test Dependency\n## 1. Context & Problem Statement\nImplements PRD-SYS-001.\n## 2. Decision Drivers & Constraints\n## 3. Options Considered\n## 4. Decision Outcome\n## 5. Consequences & Trade-offs\n## 6. Implementation & Verification\n"
+    mock_content = """# ADR-[NUMBER]: Test Dependency
+
+- **Status:** Accepted
+- **Date:** 2026-07-24
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
+
+---
+
+## 1. Context & Problem Statement
+
+Implements PRD-SYS-001.
+
+## 2. Decision Drivers & Constraints
+
+- **Driver 1:** Security
+
+## 3. Options Considered
+
+### Option 1: Primary Option
+
+- **Overview:** Option description.
+- **Pros:**
+  - ✅ Satisfies PRD-SYS-001
+- **Cons:**
+  - ❌ Small overhead
+
+## 4. Decision Outcome
+
+- **Chosen Option:** Option 1
+- **Justification:** Chosen option.
+
+## 5. Consequences & Trade-offs
+
+- **Positive Impact:** Good
+- **Negative Impact / Technical Debt:** Minimal
+- **Mitigation Strategy:** Tests
+
+## 6. Implementation & Verification
+
+- **Affected Repositories / Services:** tests/
+- **Verification Plan:** Unit tests
+"""
 
     def make_mock_file(content):
         m = MagicMock()
@@ -340,3 +383,233 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
         assert "new_file.py" in changed
         assert "untracked_file.py" in changed
         assert "should/not/be/here.py" not in changed
+
+
+def test_create_adr_scaffolding_canonical_template(tmp_path):
+    from scripts.create_adr import create_adr
+
+    test_adr_dir = tmp_path / "adr"
+    test_adr_dir.mkdir()
+    index_path = test_adr_dir / "index.md"
+    index_path.write_text("### 1. Core Platform & Execution Engine\n", encoding="utf-8")
+
+    with (
+        patch("scripts.create_adr.ADR_DIR", str(test_adr_dir)),
+        patch("scripts.create_adr.INDEX_FILE", str(index_path)),
+    ):
+        filepath = create_adr(
+            "Canonical Scaffolding Test", "core-platform", "PRD-SYS-001"
+        )
+        assert os.path.exists(filepath)
+
+        with open(filepath, encoding="utf-8") as f:
+            content = f.read()
+
+        # Verify canonical structure matching docs/adr/TEMPLATE.md
+        assert "- **Status:** Accepted" in content
+        assert "## 1. Context & Problem Statement" in content
+        assert "## 2. Decision Drivers & Constraints" in content
+        assert "## 3. Options Considered" in content
+        assert "### Option 1: Proposed Architecture" in content
+        assert "### Option 2: Alternative Architecture" in content
+        assert "- **Pros:**" in content
+        assert "- **Cons:**" in content
+        assert "## 4. Decision Outcome" in content
+        assert "- **Chosen Option:** Option 1" in content
+        assert "- **Justification:**" in content
+        assert "## 5. Consequences & Trade-offs" in content
+        assert "- **Positive Impact:**" in content
+        assert "- **Negative Impact / Technical Debt:**" in content
+        assert "- **Mitigation Strategy:**" in content
+        assert "## 6. Implementation & Verification" in content
+        assert "- **Affected Repositories / Services:**" in content
+        assert "- **Verification Plan:**" in content
+
+
+def test_validate_single_adr_strict_subsections_success():
+    from scripts.validate_adrs import validate_single_adr
+
+    filename = "2026-09-22-canonical-test.md"
+    content = """# ADR-999: Canonical Test Decision
+
+- **Status:** Accepted
+- **Date:** 2026-09-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
+
+---
+
+## 1. Context & Problem Statement
+
+Context description addressing PRD-SYS-001.
+
+## 2. Decision Drivers & Constraints
+
+- **Driver 1:** Security
+
+## 3. Options Considered
+
+### Option 1: First Approach
+
+- **Overview:** First option description.
+- **Pros:**
+  - ✅ Fast execution
+- **Cons:**
+  - ❌ Memory overhead
+
+### Option 2: Second Approach
+
+- **Overview:** Second option description.
+- **Pros:**
+  - ✅ Simple
+- **Cons:**
+  - ❌ Slow
+
+## 4. Decision Outcome
+
+- **Chosen Option:** Option 1
+- **Justification:** Superior performance.
+
+## 5. Consequences & Trade-offs
+
+- **Positive Impact:** Fast performance.
+- **Negative Impact / Technical Debt:** Memory usage.
+- **Mitigation Strategy:** Cache eviction.
+
+## 6. Implementation & Verification
+
+- **Affected Repositories / Services:** apps/execution/
+- **Verification Plan:** Unit tests under tests/.
+"""
+    index_content = f"- [2026-09-22: Canonical Test Decision]({filename})"
+    valid_reqs = {"PRD-SYS-001"}
+
+    ok, errors = validate_single_adr(
+        filename, filename, content, index_content, valid_reqs
+    )
+    assert ok is True
+    assert errors == []
+
+
+def test_validate_single_adr_strict_subsections_missing_options():
+    from scripts.validate_adrs import validate_single_adr
+
+    filename = "2026-09-22-missing-options.md"
+    content = """# ADR-999: Missing Options Decision
+
+- **Status:** Accepted
+
+## 1. Context & Problem Statement
+Implements PRD-SYS-001.
+## 2. Decision Drivers & Constraints
+## 3. Options Considered
+1. Option A (Selected)
+2. Option B (Alternative)
+## 4. Decision Outcome
+- **Chosen Option:** Option A
+## 5. Consequences & Trade-offs
+## 6. Implementation & Verification
+"""
+    index_content = f"({filename})"
+    valid_reqs = {"PRD-SYS-001"}
+
+    ok, errors = validate_single_adr(
+        filename, filename, content, index_content, valid_reqs
+    )
+    assert ok is False
+    assert any("missing required '### Option' subheadings" in err for err in errors)
+
+
+def test_validate_single_adr_strict_subsections_missing_pros_cons():
+    from scripts.validate_adrs import validate_single_adr
+
+    filename = "2026-09-22-missing-pros-cons.md"
+    content = """# ADR-999: Missing Pros Cons Decision
+
+- **Status:** Accepted
+
+## 1. Context & Problem Statement
+Implements PRD-SYS-001.
+## 2. Decision Drivers & Constraints
+## 3. Options Considered
+### Option 1: Approach A
+Overview without trade-off markers.
+## 4. Decision Outcome
+- **Chosen Option:** Option 1
+## 5. Consequences & Trade-offs
+## 6. Implementation & Verification
+"""
+    index_content = f"({filename})"
+    valid_reqs = {"PRD-SYS-001"}
+
+    ok, errors = validate_single_adr(
+        filename, filename, content, index_content, valid_reqs
+    )
+    assert ok is False
+    assert any("missing required trade-off list markers" in err for err in errors)
+
+
+def test_validate_single_adr_strict_subsections_missing_chosen_option():
+    from scripts.validate_adrs import validate_single_adr
+
+    filename = "2026-09-22-missing-chosen-option.md"
+    content = """# ADR-999: Missing Chosen Option Decision
+
+- **Status:** Accepted
+
+## 1. Context & Problem Statement
+Implements PRD-SYS-001.
+## 2. Decision Drivers & Constraints
+## 3. Options Considered
+### Option 1: Approach A
+- **Pros:** Good
+- **Cons:** Bad
+## 4. Decision Outcome
+Chosen option: Option 1 without bold list item.
+## 5. Consequences & Trade-offs
+## 6. Implementation & Verification
+"""
+    index_content = f"({filename})"
+    valid_reqs = {"PRD-SYS-001"}
+
+    ok, errors = validate_single_adr(
+        filename, filename, content, index_content, valid_reqs
+    )
+    assert ok is False
+    assert any(
+        "missing required '- **Chosen Option:**' metadata marker" in err
+        for err in errors
+    )
+
+
+def test_validate_single_adr_legacy_format_compatibility():
+    from scripts.validate_adrs import validate_single_adr
+
+    filename = "2023-01-01-legacy-adr.md"
+    content = """# ADR 2023-01-01: Legacy Unnumbered Decision
+
+## Status
+Accepted
+
+## Context
+Legacy context without requirement tagging.
+
+## Decision
+Legacy decision details.
+
+## Alternatives Considered
+- Option 1
+- Option 2
+
+## Trade-offs
+- Positive: Good
+- Negative: Bad
+"""
+    index_content = f"({filename})"
+    valid_reqs = set()
+
+    ok, errors = validate_single_adr(
+        filename, filename, content, index_content, valid_reqs
+    )
+    assert ok is True
+    assert errors == []

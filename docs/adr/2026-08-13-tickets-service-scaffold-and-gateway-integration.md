@@ -25,19 +25,19 @@ This decision implements requirements under Trace-8.
 ### Option 1: Store tickets within the execution core database
 
 - **Overview:** Add ticketing tables directly inside the core clinical database of `apps/execution`.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies setup by avoiding a new service and database.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates system service-isolation guidelines.
   - ❌ Couples support workflows to transactional EDC clinical trials data models.
 
 ### Option 2: Build a standalone Tickets service
 
 - **Overview:** Scaffold an independent FastAPI service utilizing `RelationalDatabaseManager` connected to its own isolated database configuration.
-- **Pros:**
+- ***Pros:***
   - ✅ High encapsulation, independent scalability, and absolute separation of concerns.
   - ✅ Focused GxP auditing with a dedicated `TicketAuditLog` model and immutable ledger constraints.
-- **Cons:**
+- ***Cons:***
   - ❌ Additional service configuration in Docker Compose.
 
 ## 4. Decision Outcome

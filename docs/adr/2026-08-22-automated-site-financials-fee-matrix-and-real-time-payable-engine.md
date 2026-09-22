@@ -1,9 +1,9 @@
 # ADR-2200: Automated Site Financials Fee Matrix and Real-Time Payable Engine
 
-* **Status:** Accepted
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,13 +21,35 @@ We need an automated site financial management system that connects versioned in
 
 ## 3. Options Considered
 
-1. **Real-Time Trigger-to-Payable Engine with Self-Billing & Split-Payee Ledgers (Selected)**: Study teams configure versioned fee matrices in `apps/designer` and `apps/ctms`. The payments engine evaluates real-time clinical events (`VisitCompleted`, `SdvSignedOff`, `MilestoneAchieved`) to compute exact scheduled payables, apply withholding deductions, allocate split payee percentages, and automatically generate monthly self-billing invoices and remittance advices.
-2. **Batch Manual Invoicing Workflow**: Sites submit manual PDF invoices for sponsor accountants to verify line-by-line against EDC exports.
-3. **Third-Party ERP Integration Only**: Delegate all financial calculations and tracking to external ERP software without native clinical trial context.
+### Option 1: **Real-Time Trigger-to-Payable Engine with Self-Billing & Split-Payee Ledgers (Selected)**: Study teams configure versioned fee matrices in `apps/designer` and `apps/ctms`. The payments engine evaluates real-time clinical events (`VisitCompleted`, `SdvSignedOff`, `MilestoneAchieved`) to compute exact scheduled payables, apply withholding deductions, allocate split payee percentages, and automatically generate monthly self-billing invoices and remittance advices.
+
+- **Overview:** **Real-Time Trigger-to-Payable Engine with Self-Billing & Split-Payee Ledgers (Selected)**: Study teams configure versioned fee matrices in `apps/designer` and `apps/ctms`. The payments engine evaluates real-time clinical events (`VisitCompleted`, `SdvSignedOff`, `MilestoneAchieved`) to compute exact scheduled payables, apply withholding deductions, allocate split payee percentages, and automatically generate monthly self-billing invoices and remittance advices.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Batch Manual Invoicing Workflow**: Sites submit manual PDF invoices for sponsor accountants to verify line-by-line against EDC exports.
+
+- **Overview:** **Batch Manual Invoicing Workflow**: Sites submit manual PDF invoices for sponsor accountants to verify line-by-line against EDC exports.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Third-Party ERP Integration Only**: Delegate all financial calculations and tracking to external ERP software without native clinical trial context.
+
+- **Overview:** **Third-Party ERP Integration Only**: Delegate all financial calculations and tracking to external ERP software without native clinical trial context.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Real-Time Trigger-to-Payable Engine with Self-Billing & Split-Payee Ledgers**.
+- **Chosen Option:** **Real-Time Trigger-to-Payable Engine with Self-Billing & Split-Payee Ledgers**.
+- **Justification:** Selected as primary architectural approach.
 - Eliminates site invoicing delays and accelerates study enrollment by providing prompt, transparent site reimbursements.
 - Natively synchronizes with EDC and CTMS monitoring visit reports.
 - Full GxP compliance with immutable financial audit trails.

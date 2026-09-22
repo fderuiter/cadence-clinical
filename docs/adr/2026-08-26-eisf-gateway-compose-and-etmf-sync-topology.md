@@ -29,20 +29,20 @@ This decision implements requirements under **Trace-16**.
 ### Option 1: Gateway-Routed Sync Proxying
 
 - **Overview:** Route all synchronization payloads through the public API Gateway endpoints, executing additional JWT validations on the synchronization loop.
-- **Pros:**
+- ***Pros:***
   - ✅ Reuses existing gateway routes.
-- **Cons:**
+- ***Cons:***
   - ❌ Adds routing hops and latency.
   - ❌ Exposes synchronization-specific interfaces to the public ingress space unnecessarily.
 
 ### Option 2: Direct Signed Service-to-Service Sync Topology
 
 - **Overview:** Use the gateway-signed service token convention to propagate synced documents directly from eISF to eTMF using downstream URLs, completely bypassing the gateway for internal worker flows.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates unnecessary gateway proxy overhead and public endpoint exposure.
   - ✅ Simplifies transactional integrity and exception logging in the synchronization code path.
   - ✅ Robust precedent: Aligns with interop/eCOA synchronization and the eTMF inbound-email webhook topology.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires configuring microservice URLs (`ETMF_URL`) directly in the downstream environments, which is already standard.
 
 ## 4. Decision Outcome

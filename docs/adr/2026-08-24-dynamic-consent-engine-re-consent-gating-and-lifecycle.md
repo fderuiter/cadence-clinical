@@ -1,9 +1,9 @@
 # ADR-2217: Dynamic Consent Engine Re-Consent Gating and Lifecycle
 
-* **Status:** Accepted
-* **Date:** 2026-08-24
-* **Authors:** @fderuiter
-* **Deciders:** Architecture Governance Board, Clinical Operations, Regulatory Compliance
+- **Status:** Accepted
+- **Date:** 2026-08-24
+- **Authors:** @fderuiter
+- **Deciders:** Architecture Governance Board, Clinical Operations, Regulatory Compliance
 
 ---
 
@@ -32,25 +32,42 @@ Requirements: `PRD-SYS-177`, `PRD-SYS-178`, `PRD-SYS-179`, `PRD-SUB-007`.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Local-Substitutable Pure Domain Engine (`DynamicConsentEngine`) with Layered Service Adapters & Cached Snapshot Evaluation.**
-   - Domain layer encapsulates pure dataclasses (`SubjectConsentSnapshot`, `EncounterContext`, `ConsentEvaluationVerdict`, `GranularConsentCapability`) and deterministic evaluation algorithms.
+### Option 1: **Option A (Selected): Local-Substitutable Pure Domain Engine (`DynamicConsentEngine`) with Layered Service Adapters & Cached Snapshot Evaluation.**
+
+- **Overview:** - Domain layer encapsulates pure dataclasses (`SubjectConsentSnapshot`, `EncounterContext`, `ConsentEvaluationVerdict`, `GranularConsentCapability`) and deterministic evaluation algorithms.
    - Application layer exposes `DynamicConsentService` for repository persistence, outbox event publishing, and 21 CFR Part 11 audit trails.
    - Presentation layer exposes `/api/v1/econsent/gating/evaluate` and `/api/v1/econsent/gating/capabilities`.
    - Execution microservice consumes cached consent snapshots invalidated via the clinical event spine.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Database-Bound Monolithic Consent Service.**
-   - The engine performs database queries inside its evaluation methods.
+### Option 2: **Option B: Database-Bound Monolithic Consent Service.**
+
+- **Overview:** - The engine performs database queries inside its evaluation methods.
    - *Rejected:* Violates pure domain boundaries, prevents in-memory local substitution, and degrades performance during high-throughput form data entry.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option C: Global Subject Lockout on Re-Consent Trigger.**
-   - Hard-locks the entire participant record upon amendment or majority milestone.
+### Option 3: **Option C: Global Subject Lockout on Re-Consent Trigger.**
+
+- **Overview:** - Hard-locks the entire participant record upon amendment or majority milestone.
    - *Rejected:* Violates GxP patient safety standards by preventing immediate adverse event entry and medical history documentation.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. We implement `DynamicConsentEngine` as a pure, local-substitutable domain component under `apps/econsent/domain/evaluator.py` paired with policy matrices and application service adapters.
+- **Chosen Option:** **Option A**. We implement `DynamicConsentEngine` as a pure, local-substitutable domain component under `apps/econsent/domain/evaluator.py` paired with policy matrices and application service adapters.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Architectural Specifications:
 1. **Engine Purity:** The domain engine takes immutable snapshot objects and returns a deterministic `ConsentEvaluationVerdict` with flags: `is_permitted`, `gating_reason`, `active_version_index`, `required_version_index`, `pending_milestones`, and `granted_capabilities`.

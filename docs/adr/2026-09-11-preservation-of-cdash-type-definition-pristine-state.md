@@ -26,18 +26,18 @@ We need to preserve the exact, pristine property quoting and layout in `packages
 ### Option 1: Re-format cdash.ts on Every Commit
 
 - **Overview:** Allow formatting to happen and manually adjust matching scripts to handle both quoted and unquoted attributes.
-- **Pros:**
+- ***Pros:***
   - ✅ Keeps Prettier completely default.
-- **Cons:**
+- ***Cons:***
   - ❌ High maintenance overhead and risk of mismatched keys.
 
 ### Option 2: Add CDASH Type Definition to Prettier Ignore Configuration (Selected)
 
 - **Overview:** Exclude `packages/ui/src/types/cdash.ts` from Prettier formatting using directory-agnostic glob patterns in `.prettierignore`.
-- **Pros:**
+- ***Pros:***
   - ✅ Preserves exact property quoting and pristine state for the CDASH schemas.
   - ✅ Restricts automatic formatting from introducing architectural file differences.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires tracking the ignore pattern at the repository root.
 
 ## 4. Decision Outcome

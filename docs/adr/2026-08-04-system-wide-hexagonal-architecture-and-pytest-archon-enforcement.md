@@ -19,12 +19,27 @@ Historically, our core microservices (specifically the Clinical Trial Metadata S
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Implement Hexagonal (Ports and Adapters) Architecture and enforce import boundary rules via build-time `pytest-archon` testing.
-2. **Option B:** Maintain legacy layered structures without automated import checking, relying purely on manual code reviews.
+### Option 1: **Option A (Selected):** Implement Hexagonal (Ports and Adapters) Architecture and enforce import boundary rules via build-time `pytest-archon` testing.
+
+- **Overview:** **Option A (Selected):** Implement Hexagonal (Ports and Adapters) Architecture and enforce import boundary rules via build-time `pytest-archon` testing.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B:** Maintain legacy layered structures without automated import checking, relying purely on manual code reviews.
+
+- **Overview:** **Option B:** Maintain legacy layered structures without automated import checking, relying purely on manual code reviews.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it formally separates the clinical engine's pure logic (**Domain**) from orchestration workflow logic (**Application**) and infrastructure technologies (**Adapter**), which complies with the operational verification rules of PRD-SYS-001.
+- **Chosen Option:** **Option A** because it formally separates the clinical engine's pure logic (**Domain**) from orchestration workflow logic (**Application**) and infrastructure technologies (**Adapter**), which complies with the operational verification rules of PRD-SYS-001.
+- **Justification:** Selected as primary architectural approach.
 
 Key implementations:
 

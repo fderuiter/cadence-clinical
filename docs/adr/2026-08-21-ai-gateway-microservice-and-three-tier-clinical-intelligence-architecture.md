@@ -1,9 +1,9 @@
 # ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -20,13 +20,35 @@ As Cadence Clinical Research Software incorporates artificial intelligence acros
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated `apps/ai_gateway` Microservice with Embedded Hexagonal LiteLLM Adapter and In-Flight `packages/deid` Air-Gap**: A standalone FastAPI microservice that encapsulates model routing, rate limiting, and prompt execution behind HMAC-authenticated endpoints. Inbound prompts are scrubbed in memory via `packages/deid`, holding surrogate token maps ephemerally during the request lifecycle. Standardized `AIAssistedRecordMixin` guarantees dual-attribution 21 CFR Part 11 audit records.
-2. **Option B: Embedded AI Router in API Gateway (`apps/gateway`)**: Integrating LLM calls and vector embeddings directly inside the OIDC reverse proxy.
-3. **Option C: Shared Library Package Imported by Each Service**: Each microservice manages its own model credentials and LLM SDK calls.
+### Option 1: **Option A (Selected): Dedicated `apps/ai_gateway` Microservice with Embedded Hexagonal LiteLLM Adapter and In-Flight `packages/deid` Air-Gap**: A standalone FastAPI microservice that encapsulates model routing, rate limiting, and prompt execution behind HMAC-authenticated endpoints. Inbound prompts are scrubbed in memory via `packages/deid`, holding surrogate token maps ephemerally during the request lifecycle. Standardized `AIAssistedRecordMixin` guarantees dual-attribution 21 CFR Part 11 audit records.
+
+- **Overview:** **Option A (Selected): Dedicated `apps/ai_gateway` Microservice with Embedded Hexagonal LiteLLM Adapter and In-Flight `packages/deid` Air-Gap**: A standalone FastAPI microservice that encapsulates model routing, rate limiting, and prompt execution behind HMAC-authenticated endpoints. Inbound prompts are scrubbed in memory via `packages/deid`, holding surrogate token maps ephemerally during the request lifecycle. Standardized `AIAssistedRecordMixin` guarantees dual-attribution 21 CFR Part 11 audit records.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Embedded AI Router in API Gateway (`apps/gateway`)**: Integrating LLM calls and vector embeddings directly inside the OIDC reverse proxy.
+
+- **Overview:** **Option B: Embedded AI Router in API Gateway (`apps/gateway`)**: Integrating LLM calls and vector embeddings directly inside the OIDC reverse proxy.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Shared Library Package Imported by Each Service**: Each microservice manages its own model credentials and LLM SDK calls.
+
+- **Overview:** **Option C: Shared Library Package Imported by Each Service**: Each microservice manages its own model credentials and LLM SDK calls.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 A dedicated `apps/ai_gateway` microservice strictly adheres to Cadence architectural standards, isolates resource-heavy AI dependencies (tokenizers, ONNX runtimes, vector math), provides independent horizontal scaling for local GPU/CPU compute, and ensures a single point of enforcement for privacy de-identification and GxP audit logging.
 
 ## 5. Consequences & Trade-offs

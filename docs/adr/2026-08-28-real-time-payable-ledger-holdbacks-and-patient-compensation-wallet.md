@@ -1,9 +1,9 @@
 # ADR-2222: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** Engineering Architecture Board, Clinical Operations Working Group, Finance Working Group
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** Engineering Architecture Board, Clinical Operations Working Group, Finance Working Group
 * **Requirements:** PRD-SYS-001, PRD-FIN-001, PRD-FIN-002, PRD-PAT-001
 
 ---
@@ -28,22 +28,38 @@ The platform requires:
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): Real-Time Payable Ledger + SDV Gating + Payee Splits + 10% Escrow Holdback + Patient Financial Wallet + EU CTR Lay Summary Portal**:
-   - Real-time EDC trigger-to-payable outbox processor checks procedure payment grids and holds unverified items in `PENDING_SDV` until CRA certification.
+### Option 1: **Option 1 (Selected): Real-Time Payable Ledger + SDV Gating + Payee Splits + 10% Escrow Holdback + Patient Financial Wallet + EU CTR Lay Summary Portal**:
+
+- **Overview:** - Real-time EDC trigger-to-payable outbox processor checks procedure payment grids and holds unverified items in `PENDING_SDV` until CRA certification.
    - Payee split rates allocate funds dynamically while reserving 10% in `HOLDBACK_RETAINED` escrow.
    - Dual Part 11 electronic signatures release holdbacks upon site closeout.
    - Patient Financial Wallet provides mobile receipt OCR, 1-click CRC approvals, and real-time $600 IRS 1099 threshold accumulator.
    - Secure patient lay summary portal records SHA-256 confirmed read-receipts in the GxP audit ledger.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Offline Monthly Spreadsheet Billing**:
-   - Monthly manual invoices submitted by sites with manual finance approval and untracked cash disbursements to patients.
+### Option 2: **Option 2: Offline Monthly Spreadsheet Billing**:
 
-3. **Option 3: Immediate Unverified Payouts**:
-   - Instant payment upon visit entry with no SDV verification gating or holdbacks.
+- **Overview:** - Monthly manual invoices submitted by sites with manual finance approval and untracked cash disbursements to patients.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Immediate Unverified Payouts**:
+
+- **Overview:** - Instant payment upon visit entry with no SDV verification gating or holdbacks.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option:** Option 1 because it guarantees contractual compliance, prevents pre-verification financial leakages, enforces tax compliance, protects participant privacy, and fulfills EU CTR transparency mandates.
+**- **Chosen Option:** ** Option 1 because it guarantees contractual compliance, prevents pre-verification financial leakages, enforces tax compliance, protects participant privacy, and fulfills EU CTR transparency mandates.
 
 ## 5. Consequences & Trade-offs
 

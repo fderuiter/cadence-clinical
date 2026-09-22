@@ -27,26 +27,59 @@ During the Phase 0 forensic gap analysis (AUD-NET10-001) of the Cadence Clinical
 
 ## 3. Options Considered
 
-### A. Financial Precision
+### Option 1: **(Selected) Universal C# 14 Decimal Standard:** Enforce strict C# 14 `decimal` (`System.Decimal`) mapped to PostgreSQL `numeric(18, 4)` with `MidpointRounding.ToEven` (banker's rounding) across all financial DTOs, domain models, and calculation engines.
 
-1. **(Selected) Universal C# 14 Decimal Standard:** Enforce strict C# 14 `decimal` (`System.Decimal`) mapped to PostgreSQL `numeric(18, 4)` with `MidpointRounding.ToEven` (banker's rounding) across all financial DTOs, domain models, and calculation engines.
-2. **Floating-Point with API Boundary Coercion:** Retain `double` internally and coerce to decimal at the HTTP serialization boundary. _Rejected: Internal domain calculation accumulation errors would remain._
+- **Overview:** **(Selected) Universal C# 14 Decimal Standard:** Enforce strict C# 14 `decimal` (`System.Decimal`) mapped to PostgreSQL `numeric(18, 4)` with `MidpointRounding.ToEven` (banker's rounding) across all financial DTOs, domain models, and calculation engines.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-### B. OpenAPI Gateway Discovery
+### Option 2: **Floating-Point with API Boundary Coercion:** Retain `double` internally and coerce to decimal at the HTTP serialization boundary. _Rejected: Internal domain calculation accumulation errors would remain._
 
-1. **(Selected) Dynamic HTTP Discovery & Precompiled Schema Fallback:** Gateway polls downstream `/openapi.json` endpoints asynchronously and merges them into the public schema, falling back to build-time generated OpenAPI artifacts in `docs/openapi/`.
-2. **Retain In-Process Module Reflection:** Keep `importlib` and stub out .NET services with Python placeholder files. _Rejected: Violates clean-break migration and introduces synthetic technical debt._
+- **Overview:** ### B. OpenAPI Gateway Discovery
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-### C. Quality Service Sequencing
+### Option 3: **(Selected) Dynamic HTTP Discovery & Precompiled Schema Fallback:** Gateway polls downstream `/openapi.json` endpoints asynchronously and merges them into the public schema, falling back to build-time generated OpenAPI artifacts in `docs/openapi/`.
 
-1. **(Selected) Tier 2 Realignment with Typed Contracts:** Demote `Cadence.Quality` to Tier 2 (migrating after `Cadence.Execution`), standardizing cross-service interactions on `IExecutionApiClient` in `Cadence.Contracts`.
-2. **Retain Tier 1 with Ad-hoc Mocks:** Keep `Cadence.Quality` in Tier 1 using loose HTTP string mocks. _Rejected: Fragile contracts fail to detect schema drift._
+- **Overview:** **(Selected) Dynamic HTTP Discovery & Precompiled Schema Fallback:** Gateway polls downstream `/openapi.json` endpoints asynchronously and merges them into the public schema, falling back to build-time generated OpenAPI artifacts in `docs/openapi/`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
----
+### Option 4: **Retain In-Process Module Reflection:** Keep `importlib` and stub out .NET services with Python placeholder files. _Rejected: Violates clean-break migration and introduces synthetic technical debt._
+
+- **Overview:** ### C. Quality Service Sequencing
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 5: **(Selected) Tier 2 Realignment with Typed Contracts:** Demote `Cadence.Quality` to Tier 2 (migrating after `Cadence.Execution`), standardizing cross-service interactions on `IExecutionApiClient` in `Cadence.Contracts`.
+
+- **Overview:** **(Selected) Tier 2 Realignment with Typed Contracts:** Demote `Cadence.Quality` to Tier 2 (migrating after `Cadence.Execution`), standardizing cross-service interactions on `IExecutionApiClient` in `Cadence.Contracts`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 6: **Retain Tier 1 with Ad-hoc Mocks:** Keep `Cadence.Quality` in Tier 1 using loose HTTP string mocks. _Rejected: Fragile contracts fail to detect schema drift._
+
+- **Overview:** ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-1. **Adopt Universal Decimal Precision Standard:** All currency, fees, withholding rates, overheads, and stipend records in `Cadence.Payments` must use `decimal` with explicit banker's rounding.
+- **Chosen Option:** Option 1
+- **Justification:** 1. **Adopt Universal Decimal Precision Standard:** All currency, fees, withholding rates, overheads, and stipend records in `Cadence.Payments` must use `decimal` with explicit banker's rounding.
 2. **Decouple Gateway Schema Discovery:** API Gateway discovers OpenAPI endpoints over standard HTTP (`GET /openapi.json`) or from static schema files, eliminating runtime Python module imports.
 3. **Reclassify Cadence.Quality as Tier 2:** `Cadence.Quality` is scheduled in Tier 2 following `Cadence.Execution`. Cross-service calls use typed `IExecutionApiClient` contracts.
 

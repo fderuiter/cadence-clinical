@@ -1,9 +1,9 @@
 # ADR-2214: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -28,17 +28,38 @@ A deep module is required to consolidate all AS2 transmission, S/MIME cryptograp
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Single Deep `RegulatoryTransmissionGateway` with Ports & Adapters Architecture**:
-   - Consolidate all transmission, cryptography, parsing, and ACK verification into `apps/safety/services/as2_gateway.py` and `apps/safety/services/as2_gateway_client.py`.
+### Option 1: **Option A (Selected): Single Deep `RegulatoryTransmissionGateway` with Ports & Adapters Architecture**:
+
+- **Overview:** - Consolidate all transmission, cryptography, parsing, and ACK verification into `apps/safety/services/as2_gateway.py` and `apps/safety/services/as2_gateway_client.py`.
    - Provide `HttpAS2GatewayAdapter` and `InMemoryAS2GatewayAdapter` satisfying `RegulatoryTransmissionPort`.
    - Absorb and delete shallow helper files and dead re-export shims.
    - Refactor `apps/safety/presentation/routers/safety.py` into a thin transport adapter passing raw byte payloads.
-2. **Option B: Split Outbound Transmission and Inbound Receipt Modules**: Separating outbound dispatch from inbound receipt parsing. Rejected because callers and tests would still have to manage intermediate data contracts across split modules.
-3. **Option C: Retain Shallow Helper Files Internally**: Keeping separate files and having a gateway class import them. Rejected because it fails the deletion test and preserves navigational friction.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Split Outbound Transmission and Inbound Receipt Modules**: Separating outbound dispatch from inbound receipt parsing. Rejected because callers and tests would still have to manage intermediate data contracts across split modules.
+
+- **Overview:** **Option B: Split Outbound Transmission and Inbound Receipt Modules**: Separating outbound dispatch from inbound receipt parsing. Rejected because callers and tests would still have to manage intermediate data contracts across split modules.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Retain Shallow Helper Files Internally**: Keeping separate files and having a gateway class import them. Rejected because it fails the deletion test and preserves navigational friction.
+
+- **Overview:** **Option C: Retain Shallow Helper Files Internally**: Keeping separate files and having a gateway class import them. Rejected because it fails the deletion test and preserves navigational friction.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 Option A eliminates shallow files, shrinks the router's surface area, encapsulates cryptographic and parsing complexity, enforces monotonic GxP lifecycle progression, and establishes authentic in-memory testability.
 
 ## 5. Consequences & Trade-offs

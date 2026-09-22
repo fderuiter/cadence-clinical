@@ -1,9 +1,9 @@
 # ADR-2195: Asynchronous Cross-Domain eCRF Anomaly Detection Worker
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,16 +21,37 @@ Clinical trial data capture involves complex interdependencies across distinct e
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Asynchronous Cross-Domain Evaluation Worker & Candidate Query Staging Engine in `apps/execution`**:
-   - The worker runs periodically with distributed advisory locking and can also be scheduled on post-submission hooks.
+### Option 1: **Option A (Selected): Dedicated Asynchronous Cross-Domain Evaluation Worker & Candidate Query Staging Engine in `apps/execution`**:
+
+- **Overview:** - The worker runs periodically with distributed advisory locking and can also be scheduled on post-submission hooks.
    - Combines deterministic domain correlation engines with optional HMAC-authenticated AI Gateway semantic reasoners.
    - Generates staged `CANDIDATE` queries in `clinical_queries`, exposed via REST endpoints (`/api/v1/execution/anomalies/*`) for Data Manager adjudication (`APPROVE` -> `OPEN`, `REJECT` -> `CANCELLED`).
-2. **Option B: Synchronous In-Line Validation on Every Submission**: Evaluating all cross-domain rules synchronously during form submission. Rejected due to latency spikes and database pool exhaustion.
-3. **Option C: Direct Auto-Creation of Active `OPEN` Queries**: Bypassing candidate staging and immediately creating active queries for site staff. Rejected due to GxP compliance risks and noise from potential false positives.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Synchronous In-Line Validation on Every Submission**: Evaluating all cross-domain rules synchronously during form submission. Rejected due to latency spikes and database pool exhaustion.
+
+- **Overview:** **Option B: Synchronous In-Line Validation on Every Submission**: Evaluating all cross-domain rules synchronously during form submission. Rejected due to latency spikes and database pool exhaustion.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Direct Auto-Creation of Active `OPEN` Queries**: Bypassing candidate staging and immediately creating active queries for site staff. Rejected due to GxP compliance risks and noise from potential false positives.
+
+- **Overview:** **Option C: Direct Auto-Creation of Active `OPEN` Queries**: Bypassing candidate staging and immediately creating active queries for site staff. Rejected due to GxP compliance risks and noise from potential false positives.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 Option A preserves system responsiveness, strictly complies with 21 CFR Part 11 human-in-the-loop oversight, isolates cross-domain evaluation logic, and provides seamless Data Manager review and candidate adjudication.
 
 ## 5. Consequences & Trade-offs

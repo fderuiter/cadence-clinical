@@ -20,12 +20,27 @@
 
 ## 3. Options Considered
 
-1. Centralized signature gating and RBAC permission registration (Selected).
-2. Ad-hoc per-endpoint signature validation logic in individual FastAPI routers.
+### Option 1: Centralized signature gating and RBAC permission registration (Selected).
+
+- **Overview:** Centralized signature gating and RBAC permission registration (Selected).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Ad-hoc per-endpoint signature validation logic in individual FastAPI routers.
+
+- **Overview:** Ad-hoc per-endpoint signature validation logic in individual FastAPI routers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option 1 because centralizing signature gating in `packages/security/gating.py` and security middleware guarantees uniform enforcement across all eClinical service boundaries.
+- **Chosen Option:** Option 1
+- **Justification:** Chosen option 1 because centralizing signature gating in `packages/security/gating.py` and security middleware guarantees uniform enforcement across all eClinical service boundaries.
 
 ## 5. Consequences & Trade-offs
 

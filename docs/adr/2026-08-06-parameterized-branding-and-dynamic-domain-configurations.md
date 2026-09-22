@@ -22,17 +22,29 @@ To resolve this fragmentation, we need to introduce platform-wide white-labeling
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Environment-Driven Parameters with Fail-Fast Validation**
-   - Load all branding strings, Keycloak configurations, and primary domain variables strictly via runtime and build-time environment variables (`BRAND_NAME`, `BRAND_DOMAIN`, `KEYCLOAK_REALM`, etc.).
+### Option 1: **Option A (Selected): Environment-Driven Parameters with Fail-Fast Validation**
+
+- **Overview:** - Load all branding strings, Keycloak configurations, and primary domain variables strictly via runtime and build-time environment variables (`BRAND_NAME`, `BRAND_DOMAIN`, `KEYCLOAK_REALM`, etc.).
    - Implement fail-fast startup assertions in the API Gateway and microservices.
    - Inject variables into web app bundle builds dynamically.
-2. **Option B: Database-Backed Branding Table**
-   - Store branding parameters in a shared database schema.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Database-Backed Branding Table**
+
+- **Overview:** - Store branding parameters in a shared database schema.
    - _Drawback:_ Introduces a database dependency for startup, requires complex caching/synchronization across all services, and complicates local developer offline-mode setup.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option: Option A** because it isolates branding configurations from database state, preserves schema integrity, and allows independent environment configuration.
+**- **Chosen Option:** Option A** because it isolates branding configurations from database state, preserves schema integrity, and allows independent environment configuration.
 
 Specifically:
 

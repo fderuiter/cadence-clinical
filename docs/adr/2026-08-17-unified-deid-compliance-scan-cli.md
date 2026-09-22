@@ -1,6 +1,6 @@
 # ADR-097: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-17
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -24,29 +24,29 @@ To ensure GxP and HIPAA compliance, clinical trial platforms must strictly preve
 ### Option 1: Manual Review and Code Audits
 
 - **Overview:** Rely on peer reviews and periodic compliance team audits.
-- **Pros:**
+- ***Pros:***
   - ✅ No technical configuration or maintenance required.
-- **Cons:**
+- ***Cons:***
   - ❌ Human error is common, and accidental leaks can easily bypass manual inspections.
   - ❌ High audit overhead and late detection of leaks.
 
 ### Option 2: Decentralized Package Scanners
 
 - **Overview:** Install standard global PII scanners (like git-secrets or similar) on each individual engineer's machine.
-- **Pros:**
+- ***Pros:***
   - ✅ Leverages existing tooling.
-- **Cons:**
+- ***Cons:***
   - ❌ Hard to distribute, maintain, and configure uniformly across all developer environments.
   - ❌ Doesn't integrate natively with our Python/Pydantic-based clinical domain patterns.
 
 ### Option 3: Built-in Python-based De-identification Scanner CLI and Hook (Selected)
 
 - **Overview:** Implement a custom package `packages/deid` containing PII/PHI detection rules based on compliance profiles (e.g. HIPAA) with a unified CLI, integrated into local pre-commit hooks and blocking CI jobs.
-- **Pros:**
+- ***Pros:***
   - ✅ Fully integrated with our existing clinical platform models and Pydantic rules.
   - ✅ Enforces the exact same compliance scan locally via pre-commit and remotely via CI.
   - ✅ Easily configurable via project structures and custom profiles.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires code maintenance for regex patterns and detectors.
 
 ## 4. Decision Outcome

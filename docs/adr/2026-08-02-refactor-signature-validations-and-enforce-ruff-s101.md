@@ -25,15 +25,15 @@ This decision implements requirements under Trace-13 and PRD-SYS-001.
 
 Keep using `assert` for electronic signatures on study versions and eTMF clinical documents.
 
-- **Pros:** Minor code changes, standard Python pattern.
-- **Cons:** ❌ High vulnerability of silent authorization bypass when optimized in production.
+- ***Pros:*** Minor code changes, standard Python pattern.
+- ***Cons:*** ❌ High vulnerability of silent authorization bypass when optimized in production.
 
 ### Option 2: Explicit Code Checks & Programmatic CI Linting (Selected)
 
 Replace `assert` statements on state-changing or critical signature verification paths with explicit conditional blocks raising `HTTPException` with appropriate auditing, while enforcing Ruff `S101` in production files with test exclusions.
 
-- **Pros:** ✅ Absolute safety under all Python optimization levels, standard REST API error delivery, and automated build prevention.
-- **Cons:** ❌ Slightly more verbose code patterns.
+- ***Pros:*** ✅ Absolute safety under all Python optimization levels, standard REST API error delivery, and automated build prevention.
+- ***Cons:*** ❌ Slightly more verbose code patterns.
 
 ## 4. Decision Outcome
 

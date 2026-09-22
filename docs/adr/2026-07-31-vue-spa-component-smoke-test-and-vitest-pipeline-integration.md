@@ -22,12 +22,27 @@ This decision addresses the following requirements:
 
 ## 3. Options Considered
 
-1. **JSDOM-based Component Smoke Testing in Vitest (Selected):** Configure `apps/web/vitest.config.js` with `fileURLToPath` setup resolution and add `trivial_component_smoke.test.js`.
-2. **Manual Component Verification:** Rely on manual browser checks. Rejected due to lack of automated CI enforcement.
+### Option 1: **JSDOM-based Component Smoke Testing in Vitest (Selected):** Configure `apps/web/vitest.config.js` with `fileURLToPath` setup resolution and add `trivial_component_smoke.test.js`.
+
+- **Overview:** **JSDOM-based Component Smoke Testing in Vitest (Selected):** Configure `apps/web/vitest.config.js` with `fileURLToPath` setup resolution and add `trivial_component_smoke.test.js`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Manual Component Verification:** Rely on manual browser checks. Rejected due to lack of automated CI enforcement.
+
+- **Overview:** **Manual Component Verification:** Rely on manual browser checks. Rejected due to lack of automated CI enforcement.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-We choose **Option 1 (JSDOM-based Component Smoke Testing in Vitest)**.
+- **Chosen Option:** Option 1
+- **Justification:** We choose **Option 1 (JSDOM-based Component Smoke Testing in Vitest)**.
 
 - **Configuration:** Update `apps/web/vitest.config.js` and `apps/web/vite.config.js` with absolute `setupFiles` resolution.
 - **Smoke Tests:** Add `apps/web/tests/trivial_component_smoke.test.js`.

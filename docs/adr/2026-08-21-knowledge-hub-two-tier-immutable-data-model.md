@@ -1,9 +1,9 @@
 # ADR-2188: Knowledge Hub Two-Tier Immutable Data Model
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement Reference:** PRD-KNB-001 | 21 CFR Part 11 | Trace-8
 
 ---
@@ -29,13 +29,35 @@ This record formalizes the relational database schema, version snapshotting mech
 
 ## 3. Options Considered
 
-1. **Option A (Selected: Two-Tier Head + Immutable Version Snapshot)**: `KnowledgeArticle` acts as an operational entity head holding active lifecycle state, slug, category FK, current published version pointer (`current_published_version_id`), and authorship metadata, linked 1-to-many to `KnowledgeArticleVersion` holding frozen snapshot content (markdown, HTML, FTS vectors).
-2. **Option B (Single-Table Version Rows)**: Every version edit creates a new independent row in `knowledge_articles` with a shared family ID.
-3. **Option C (Colocated Knowledge & Tickets DB)**: Replicate or merge `apps/tickets/` schema directly inside `apps/knowledge/`.
+### Option 1: **Option A (Selected: Two-Tier Head + Immutable Version Snapshot)**: `KnowledgeArticle` acts as an operational entity head holding active lifecycle state, slug, category FK, current published version pointer (`current_published_version_id`), and authorship metadata, linked 1-to-many to `KnowledgeArticleVersion` holding frozen snapshot content (markdown, HTML, FTS vectors).
+
+- **Overview:** **Option A (Selected: Two-Tier Head + Immutable Version Snapshot)**: `KnowledgeArticle` acts as an operational entity head holding active lifecycle state, slug, category FK, current published version pointer (`current_published_version_id`), and authorship metadata, linked 1-to-many to `KnowledgeArticleVersion` holding frozen snapshot content (markdown, HTML, FTS vectors).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Single-Table Version Rows)**: Every version edit creates a new independent row in `knowledge_articles` with a shared family ID.
+
+- **Overview:** **Option B (Single-Table Version Rows)**: Every version edit creates a new independent row in `knowledge_articles` with a shared family ID.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C (Colocated Knowledge & Tickets DB)**: Replicate or merge `apps/tickets/` schema directly inside `apps/knowledge/`.
+
+- **Overview:** **Option C (Colocated Knowledge & Tickets DB)**: Replicate or merge `apps/tickets/` schema directly inside `apps/knowledge/`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Two-Tier Head + Immutable Version Snapshot)** because it satisfies `PRD-KNB-001` with optimal read performance, strict immutability, and clean microservice boundaries.
+- **Chosen Option:** **Option A (Two-Tier Head + Immutable Version Snapshot)** because it satisfies `PRD-KNB-001` with optimal read performance, strict immutability, and clean microservice boundaries.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Architectural Specifications:
 * **Microservice Boundary**: `apps/knowledge/` exclusively manages categories, articles, version snapshots, contextual help mappings, and audit logs. Support tickets are delegated to `apps/tickets/` (port 8009).
