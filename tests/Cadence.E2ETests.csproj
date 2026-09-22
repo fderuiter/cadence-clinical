@@ -1,0 +1,40 @@
+<Project>
+  <!-- Cadence.E2ETests.csproj lives directly in tests/;
+       BaseIntermediateOutputPath and BaseOutputPath are customized to prevent collision on obj/ and bin/
+       during solution-wide builds. -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/E2ETests/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/E2ETests/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.E2ETests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
+    <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

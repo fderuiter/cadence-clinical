@@ -133,4 +133,35 @@ public class PortedPackagesUnitTests
         env.Data.Should().NotBeNull();
         env.Data!.Passed.Should().Be(1);
     }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-049")]
+    public async Task ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs()
+    {
+        var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "openapi_test_" + System.Guid.NewGuid().ToString("N"));
+        try
+        {
+            await Cadence.ToolingCore.OpenApi.OpenApiSpecExporter.ExportOpenApiSpecsAsync(tempDir);
+
+            System.IO.Directory.Exists(tempDir).Should().BeTrue();
+
+            var files = System.IO.Directory.GetFiles(tempDir, "*.json");
+            files.Should().Contain(f => f.EndsWith("gateway_openapi.json"));
+            files.Should().Contain(f => f.EndsWith("designer_openapi.json"));
+            files.Should().Contain(f => f.EndsWith("execution_openapi.json"));
+            files.Should().Contain(f => f.EndsWith("cdisc_openapi.json"));
+            files.Should().Contain(f => f.EndsWith("cadence_unified_openapi.json"));
+
+            var unifiedJson = await System.IO.File.ReadAllTextAsync(System.IO.Path.Combine(tempDir, "cadence_unified_openapi.json"));
+            unifiedJson.Should().Contain("\"openapi\": \"3.0.0\"");
+            unifiedJson.Should().Contain("Cadence Clinical Unified Gateway API");
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(tempDir))
+            {
+                System.IO.Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }

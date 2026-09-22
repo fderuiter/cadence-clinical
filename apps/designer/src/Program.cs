@@ -69,3 +69,14 @@ api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithSummary("Lists active CDISC USDM study protocol graph definitions.");
 
 await app.RunAsync();
+
+namespace Cadence.Apps.Designer
+{
+    public partial class Program
+    {
+        protected Program()
+        {
+        }
+    }
+}
+
