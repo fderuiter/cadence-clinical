@@ -1351,30 +1351,35 @@ def main():
 
     # 3. Read test results
     report_path = args.report_path
-    test_results = parse_test_results(report_path)
-    print(
-        f"Parsed test results from {report_path}. Found {len(test_results)} test execution outcomes."
-    )
-
     report_exists = os.path.exists(report_path) and os.path.getsize(report_path) > 0
+
     if not report_exists:
         if not args.draft:
             print(
-                f"ERROR: Required test report '{report_path}' is missing. Failing fast to protect GxP data integrity.",
+                f"ERROR: Required test report '{report_path}' is missing or empty. "
+                "Failing fast to protect GxP data integrity.\n"
+                f"Please execute test synchronization via 'uv run python scripts/sync_gxp.py' "
+                f"or run 'dotnet test Cadence.sln --logger \"trx;LogFileName={report_path}\"' "
+                "to generate test results, or pass '--draft' for unverified draft report generation.",
                 file=sys.stderr,
             )
             sys.exit(1)
         else:
             print(
-                f"Note: '{report_path}' is missing. Draft mode enabled — generating draft reports with UNVERIFIED statuses."
+                f"Note: Required test report '{report_path}' is missing or empty. Draft mode enabled — generating draft reports with UNVERIFIED statuses."
             )
+            test_results = {}
             for (classname, name), info in test_cases_all.items():
                 test_results[(classname, name)] = {
                     "status": "UNVERIFIED",
-                    "message": "Test report missing.",
+                    "message": "Test report missing or empty.",
                     "time": "0.0",
                 }
     else:
+        test_results = parse_test_results(report_path)
+        print(
+            f"Parsed test results from {report_path}. Found {len(test_results)} test execution outcomes."
+        )
         if args.draft:
             # If draft is enabled, make sure any missing test cases are explicitly marked UNVERIFIED instead of PASSED
             for (classname, name), info in test_cases_all.items():

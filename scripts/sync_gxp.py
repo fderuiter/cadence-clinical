@@ -210,6 +210,174 @@ def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
         print(f"⚠  Failed to merge reports: {e}")
 
 
+def get_required_test_assemblies(
+    repo_root: Path = REPO_ROOT, configuration: str = "Release"
+) -> list[Path]:
+    """Inspect the repository for required .NET test project output assemblies.
+
+    Args:
+        repo_root: Path to repository root.
+        configuration: Build configuration (e.g. 'Release' or 'Debug').
+
+    Returns:
+        List of absolute file paths to expected test assembly DLLs.
+    """
+    import xml.etree.ElementTree as ET
+
+    assemblies = []
+    tests_dir = repo_root / "tests"
+    if not tests_dir.exists():
+        return assemblies
+
+    for csproj in sorted(tests_dir.glob("*.csproj")):
+        try:
+            tree = ET.parse(csproj)  # nosec B314
+            root = tree.getroot()
+
+            is_test = False
+            for is_test_elem in root.findall(".//IsTestProject"):
+                if is_test_elem.text and is_test_elem.text.strip().lower() == "true":
+                    is_test = True
+                    break
+
+            if not is_test:
+                for pkg in root.findall(".//PackageReference"):
+                    if "xunit" in (pkg.get("Include") or "").lower():
+                        is_test = True
+                        break
+
+            if is_test:
+                assembly_name = csproj.stem
+                for elem in root.findall(".//AssemblyName"):
+                    if elem.text and elem.text.strip():
+                        assembly_name = elem.text.strip()
+                        break
+
+                tfm = "net10.0"
+                for elem in root.findall(".//TargetFramework"):
+                    if elem.text and elem.text.strip():
+                        tfm = elem.text.strip()
+                        break
+
+                base_output_path = "bin/"
+                for elem in root.findall(".//BaseOutputPath"):
+                    if elem.text and elem.text.strip():
+                        base_output_path = elem.text.strip()
+                        break
+
+                dll_path = (
+                    csproj.parent
+                    / base_output_path
+                    / configuration
+                    / tfm
+                    / f"{assembly_name}.dll"
+                )
+                assemblies.append(dll_path.resolve())
+        except Exception as e:
+            print(f"⚠ Failed to parse project file {csproj}: {e}")
+
+    return assemblies
+
+
+def check_test_assemblies_status(
+    repo_root: Path = REPO_ROOT, configuration: str = "Release"
+) -> tuple[bool, bool, list[Path]]:
+    """Check if required .NET test assembly binaries exist and are up to date.
+
+    Args:
+        repo_root: Path to repository root.
+        configuration: Build configuration (e.g. 'Release').
+
+    Returns:
+        Tuple of (missing: bool, stale: bool, required_assemblies: list[Path]).
+    """
+    required = get_required_test_assemblies(repo_root, configuration)
+    if not required:
+        default_unit = (
+            repo_root
+            / "tests"
+            / "bin"
+            / "UnitTests"
+            / configuration
+            / "net10.0"
+            / "Cadence.UnitTests.dll"
+        )
+        default_arch = (
+            repo_root
+            / "tests"
+            / "bin"
+            / "ArchitectureTests"
+            / configuration
+            / "net10.0"
+            / "Cadence.ArchitectureTests.dll"
+        )
+        default_e2e = (
+            repo_root
+            / "tests"
+            / "bin"
+            / "E2ETests"
+            / configuration
+            / "net10.0"
+            / "Cadence.E2ETests.dll"
+        )
+        required = [default_unit, default_arch, default_e2e]
+
+    missing_assemblies = [p for p in required if not p.is_file()]
+    if missing_assemblies:
+        return True, False, required
+
+    min_assembly_mtime = min(p.stat().st_mtime for p in required)
+
+    stale = False
+    source_dirs = [
+        repo_root / "apps",
+        repo_root / "packages",
+        repo_root / "tests",
+    ]
+    source_extensions = {".cs", ".csproj", ".props", ".targets", ".sln"}
+
+    for s_dir in source_dirs:
+        if not s_dir.exists():
+            continue
+        for root, dirs, files in os.walk(s_dir):
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in ("bin", "obj", ".venv", "node_modules", ".git")
+            ]
+            for f in files:
+                ext = Path(f).suffix.lower()
+                if ext in source_extensions:
+                    full_p = Path(root) / f
+                    try:
+                        if full_p.stat().st_mtime > min_assembly_mtime:
+                            stale = True
+                            break
+                    except OSError:
+                        pass
+            if stale:
+                break
+        if stale:
+            break
+
+    if not stale:
+        for root_file in [
+            "Cadence.sln",
+            "Directory.Build.props",
+            "Directory.Packages.props",
+        ]:
+            p = repo_root / root_file
+            if p.is_file():
+                try:
+                    if p.stat().st_mtime > min_assembly_mtime:
+                        stale = True
+                        break
+                except OSError:
+                    pass
+
+    return False, stale, required
+
+
 def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> None:
     """Execute the .NET test suite and emit report_dotnet.trx.
 
@@ -229,6 +397,47 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
     print("STEP 1 / 3 — Running test suite")
     print("=" * 60)
 
+    configuration = "Release"
+    missing, stale, _required = check_test_assemblies_status(REPO_ROOT, configuration)
+    should_build = full or missing or stale
+
+    if should_build:
+        if missing:
+            print("ℹ  [Preflight] Missing compiled test assemblies detected.")
+        elif stale:
+            print("ℹ  [Preflight] Test assemblies are stale relative to source files.")
+        elif full:
+            print("ℹ  [Preflight] Full rebuild requested.")
+
+        print("▶  Compiling solution binaries: dotnet build Cadence.sln --configuration Release --no-restore")
+        try:
+            _run(
+                [
+                    "dotnet",
+                    "build",
+                    "Cadence.sln",
+                    "--configuration",
+                    configuration,
+                    "--no-restore",
+                ]
+            )
+            print("✔  [Preflight] Solution build succeeded.")
+        except subprocess.CalledProcessError:
+            print("\n" + "!" * 70, file=sys.stderr)
+            print("✘  [PREFLIGHT ERROR] Failed to compile .NET test assemblies.", file=sys.stderr)
+            print("   Command: dotnet build Cadence.sln --configuration Release --no-restore", file=sys.stderr)
+            print("   If working in an offline environment without pre-restored packages,", file=sys.stderr)
+            print("   run compliance synchronization with '--draft' mode to bypass strict test execution:", file=sys.stderr)
+            print("     uv run python scripts/sync_gxp.py --draft", file=sys.stderr)
+            print("!" * 70 + "\n", file=sys.stderr)
+            if draft:
+                print("⚠  Build failed; continuing in draft mode.")
+                return
+            else:
+                sys.exit(1)
+    else:
+        print("✔  [Preflight] Test assemblies present and up-to-date. Skipping build step.")
+
     try:
         _run(
             [
@@ -238,7 +447,7 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
                 "--no-restore",
                 "--no-build",
                 "--configuration",
-                "Release",
+                configuration,
                 "--results-directory",
                 ".",
                 "--logger",
@@ -249,7 +458,11 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
         if draft:
             print("\n⚠  Dotnet test failed or offline; continuing in draft mode.")
         else:
-            print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
+            print("\n" + "!" * 70, file=sys.stderr)
+            print("✘  Dotnet test execution failed.", file=sys.stderr)
+            print("   Fix failing tests before syncing GxP docs, or run in '--draft' mode:", file=sys.stderr)
+            print("     uv run python scripts/sync_gxp.py --draft", file=sys.stderr)
+            print("!" * 70 + "\n", file=sys.stderr)
             sys.exit(1)
 
 

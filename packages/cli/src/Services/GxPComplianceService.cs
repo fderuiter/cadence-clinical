@@ -18,9 +18,18 @@ public static class GxPComplianceService
     {
         AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");
 
-        // 1. Run test suite to generate TRX
-        AnsiConsole.MarkupLine("  1. Executing .NET Test Suites & Generating TRX Report...");
-        var psi = new ProcessStartInfo("dotnet", "test Cadence.sln --logger \"trx;LogFileName=report_dotnet.trx\" --filter \"Category!=Integration\"")
+        var args = new System.Collections.Generic.List<string>();
+        if (dryRun)
+        {
+            args.Add("--dry-run");
+        }
+        if (commit)
+        {
+            args.Add("--commit");
+        }
+
+        var argStr = string.Join(" ", args);
+        var psi = new ProcessStartInfo("python3", string.IsNullOrEmpty(argStr) ? "scripts/sync_gxp.py" : $"scripts/sync_gxp.py {argStr}")
         {
             UseShellExecute = false
         };
@@ -31,39 +40,9 @@ public static class GxPComplianceService
             proc.WaitForExit();
             if (proc.ExitCode != 0)
             {
-                AnsiConsole.MarkupLine("[red]Test execution failed during GxP compliance sync![/]");
+                AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
                 return proc.ExitCode;
             }
-        }
-
-        // 2. Generate RTM report via python generator or native processor
-        AnsiConsole.MarkupLine("\n  2. Regenerating RTM and IQ/OQ/PQ Compliance Documents...");
-        var genPsi = new ProcessStartInfo("python3", "scripts/generate_rtm.py" + (dryRun ? " --validate" : ""))
-        {
-            UseShellExecute = false
-        };
-
-        using var genProc = Process.Start(genPsi);
-        if (genProc != null)
-        {
-            genProc.WaitForExit();
-            if (genProc.ExitCode != 0)
-            {
-                AnsiConsole.MarkupLine("[red]RTM document generation failed![/]");
-                return genProc.ExitCode;
-            }
-        }
-
-        if (commit && !dryRun)
-        {
-            AnsiConsole.MarkupLine("\n  3. Staging updated GxP compliance documentation...");
-            foreach (var doc in GxpDocs.Where(File.Exists))
-            {
-                var gitPsi = new ProcessStartInfo("git", $"add \"{doc}\"") { UseShellExecute = false };
-                using var gitProc = Process.Start(gitPsi);
-                gitProc?.WaitForExit();
-            }
-            AnsiConsole.MarkupLine("  [green][[OK]] GxP compliance documentation staged for commit.[/]");
         }
 
         AnsiConsole.MarkupLine("\n[bold green]GxP Compliance Synchronization Complete.[/]");
