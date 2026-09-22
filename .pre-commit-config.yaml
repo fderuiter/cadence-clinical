@@ -95,6 +95,13 @@ repos:
         language: system
         files: \.md$
 
+      - id: validate-environment-variables
+        name: Validate Environment Variables
+        entry: uv run --python 3.14 python scripts/extract_env_vars.py --check
+        language: system
+        files: ^(apps/|packages/|scripts/|\.env\.example$|docs/ENVIRONMENT_VARIABLES\.md$)
+        pass_filenames: false
+
       - id: validate-imports
         name: Cross-Service Import Validator
         entry: uv run --python 3.14 python scripts/validate_imports.py
