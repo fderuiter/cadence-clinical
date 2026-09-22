@@ -1,0 +1,34 @@
+# ==============================================================================
+# Cadence Clinical Research Software — Shared Base Docker Image & Runtime Baseline
+# Requirements: PRD-SYS-053, ADR-255
+# ==============================================================================
+
+ARG PYTHON_VERSION=3.14
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:python3.14-bookworm
+ARG RUNTIME_IMAGE=python:3.14-slim-bookworm
+
+# ------------------------------------------------------------------------------
+# 1. Base Runtime Stage with Native C-Libraries for PDF Rendering
+# ------------------------------------------------------------------------------
+FROM ${RUNTIME_IMAGE} AS pdf-base
+
+# Install native C-libraries for PDF rendering (WeasyPrint / Pango / Cairo / HarfBuzz)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libharfbuzz0b \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create standard non-root application user (UID 1000 / appuser)
+RUN groupadd -g 1000 appuser && \
+    useradd -r -u 1000 -g appuser appuser
+
+# ------------------------------------------------------------------------------
+# 2. Minimal Shared Runtime Base Stage for Non-PDF Services
+# ------------------------------------------------------------------------------
+FROM ${RUNTIME_IMAGE} AS runtime-base
+
+# Create standard non-root application user (UID 1000 / appuser)
+RUN groupadd -g 1000 appuser && \
+    useradd -r -u 1000 -g appuser appuser
