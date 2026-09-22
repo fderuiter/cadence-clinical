@@ -49,7 +49,14 @@ repos:
 
       - id: dotnet-format
         name: .NET C# Code Formatting Check (.editorconfig)
-        entry: dotnet format Cadence.sln --verify-no-changes
+        entry: dotnet format whitespace Cadence.sln --verify-no-changes --no-restore
+        language: system
+        files: \.(cs|csproj|sln)$
+        pass_filenames: false
+
+      - id: dotnet-format-style
+        name: .NET Roslyn Code Style & Analyzer Gate
+        entry: dotnet format style Cadence.sln --verify-no-changes --no-restore
         language: system
         files: \.(cs|csproj|sln)$
         pass_filenames: false
