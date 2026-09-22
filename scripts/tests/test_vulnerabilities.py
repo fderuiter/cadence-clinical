@@ -9,6 +9,8 @@ import json
 from unittest.mock import patch
 
 from scripts.validate_vulnerabilities import (
+    execute_dotnet_audit,
+    extract_active_dotnet_vulnerabilities,
     extract_active_frontend_vulnerabilities,
     extract_active_vulnerabilities,
     load_and_validate_ledger,
@@ -481,13 +483,22 @@ def test_load_and_validate_ledger_multiple_entries_same_id(tmp_path):
 @patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[])
 @patch("scripts.validate_vulnerabilities.execute_pip_audit")
 @patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch(
+    "scripts.validate_vulnerabilities.execute_dotnet_audit", return_value=("", "", 0)
+)
 @patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
 @patch("scripts.validate_vulnerabilities.extract_active_frontend_vulnerabilities")
+@patch(
+    "scripts.validate_vulnerabilities.extract_active_dotnet_vulnerabilities",
+    return_value=([], ""),
+)
 @patch("scripts.validate_vulnerabilities.sys.exit")
 def test_validate_vulnerabilities_compound_matching(
     mock_exit,
+    _mock_extract_dotnet,
     mock_extract_frontend,
     mock_extract_python,
+    _mock_execute_dotnet,
     mock_execute_pnpm,
     mock_execute_pip,
     _mock_config_scan,
@@ -563,13 +574,22 @@ def test_validate_vulnerabilities_compound_matching(
 @patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[])
 @patch("scripts.validate_vulnerabilities.execute_pip_audit")
 @patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch(
+    "scripts.validate_vulnerabilities.execute_dotnet_audit", return_value=("", "", 0)
+)
 @patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
 @patch("scripts.validate_vulnerabilities.extract_active_frontend_vulnerabilities")
+@patch(
+    "scripts.validate_vulnerabilities.extract_active_dotnet_vulnerabilities",
+    return_value=([], ""),
+)
 @patch("scripts.validate_vulnerabilities.sys.exit")
 def test_validate_vulnerabilities_multiple_identical_vuln_ids(
     mock_exit,
+    _mock_extract_dotnet,
     mock_extract_frontend,
     mock_extract_python,
+    _mock_execute_dotnet,
     mock_execute_pnpm,
     mock_execute_pip,
     _mock_config_scan,
@@ -928,3 +948,152 @@ def test_scan_for_inline_bypasses_comments_and_empty_lines(tmp_path):
         violations = scan_for_inline_bypasses()
         assert len(violations) == 1
         assert str(file) == violations[0][0]
+
+
+@patch("scripts.validate_vulnerabilities.subprocess.run")
+@patch("scripts.validate_vulnerabilities.shutil.which")
+def test_execute_dotnet_audit_success(mock_which, mock_run):
+    """Verify that execute_dotnet_audit executes dotnet list package with correct flags."""
+    from unittest.mock import MagicMock
+
+
+    mock_which.return_value = "/usr/bin/dotnet"
+    mock_run_res = MagicMock()
+    mock_run_res.returncode = 0
+    mock_run_res.stdout = '{"projects": []}'
+    mock_run_res.stderr = ""
+    mock_run.return_value = mock_run_res
+
+    stdout, stderr, code = execute_dotnet_audit()
+
+    assert stdout == '{"projects": []}'
+    assert stderr == ""
+    assert code == 0
+
+    cmd_args = mock_run.call_args[0][0]
+    assert "dotnet" in cmd_args
+    assert "list" in cmd_args
+    assert "package" in cmd_args
+    assert "--vulnerable" in cmd_args
+    assert "--include-transitive" in cmd_args
+    assert "--format" in cmd_args
+    assert "json" in cmd_args
+
+
+def test_extract_active_dotnet_vulnerabilities_invalid():
+    """Verify extract_active_dotnet_vulnerabilities handles empty or invalid output correctly."""
+    vulns, err = extract_active_dotnet_vulnerabilities("")
+    assert len(vulns) == 0
+    assert "No stdout returned" in err
+
+    vulns, err = extract_active_dotnet_vulnerabilities("{invalid_json")
+    assert len(vulns) == 0
+    assert "Failed to parse JSON" in err
+
+
+def test_extract_active_dotnet_vulnerabilities_valid():
+    """Verify extract_active_dotnet_vulnerabilities correctly extracts C# NuGet vulnerability findings."""
+    sample_audit = {
+        "version": 1,
+        "parameters": "--vulnerable --include-transitive",
+        "projects": [
+            {
+                "path": "/app/cadence-clinical/packages/cli/src/Cadence.Cli.csproj",
+                "frameworks": [
+                    {
+                        "framework": "net10.0",
+                        "topLevelPackages": [
+                            {
+                                "id": "SSH.NET",
+                                "requestedVersion": "2020.0.0",
+                                "resolvedVersion": "2020.0.0",
+                                "vulnerabilities": [
+                                    {
+                                        "severity": "High",
+                                        "advisoryurl": "https://github.com/advisories/GHSA-233c-3h49-8vhf",
+                                    }
+                                ],
+                            }
+                        ],
+                        "transitivePackages": [
+                            {
+                                "id": "System.Text.Json",
+                                "resolvedVersion": "8.0.0",
+                                "vulnerabilities": [
+                                    {
+                                        "severity": "Critical",
+                                        "advisoryurl": "https://nvd.nist.gov/vuln/detail/CVE-2024-21319",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    vulns, err = extract_active_dotnet_vulnerabilities(json.dumps(sample_audit))
+    assert not err
+    assert len(vulns) == 2
+
+    ssh_vuln = [v for v in vulns if v["package_name"] == "SSH.NET"][0]
+    assert ssh_vuln["vulnerability_id"] == "GHSA-233C-3H49-8VHF"
+    assert ssh_vuln["version"] == "2020.0.0"
+    assert ssh_vuln["severity"] == "High"
+
+    json_vuln = [v for v in vulns if v["package_name"] == "System.Text.Json"][0]
+    assert json_vuln["vulnerability_id"] == "CVE-2024-21319"
+    assert json_vuln["version"] == "8.0.0"
+    assert json_vuln["severity"] == "Critical"
+
+
+@patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.scan_for_inline_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_manifest_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.execute_pip_audit", return_value=("", "", 0))
+@patch("scripts.validate_vulnerabilities.execute_pnpm_audit", return_value=("", "", 0))
+@patch("scripts.validate_vulnerabilities.execute_dotnet_audit")
+@patch(
+    "scripts.validate_vulnerabilities.extract_active_vulnerabilities",
+    return_value=([], ""),
+)
+@patch(
+    "scripts.validate_vulnerabilities.extract_active_frontend_vulnerabilities",
+    return_value=([], ""),
+)
+@patch("scripts.validate_vulnerabilities.extract_active_dotnet_vulnerabilities")
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_validate_vulnerabilities_unapproved_dotnet_blocks_pipeline(
+    mock_exit,
+    mock_extract_dotnet,
+    _mock_extract_frontend,
+    _mock_extract_python,
+    mock_execute_dotnet,
+    _mock_execute_pnpm,
+    _mock_execute_pip,
+    _mock_config_scan,
+    _mock_manifest_scan,
+    _mock_inline_scan,
+    mock_load_ledger,
+):
+    """Verify that an unapproved .NET package vulnerability causes main() to exit with status code 1."""
+    from scripts.validate_vulnerabilities import main
+
+    mock_load_ledger.return_value = ([], [])
+    mock_execute_dotnet.return_value = ('{"projects": []}', "", 0)
+    mock_extract_dotnet.return_value = (
+        [
+            {
+                "vulnerability_id": "GHSA-9999-UNAPPROVED",
+                "package_name": "UnapprovedPackage",
+                "version": "1.0.0",
+                "severity": "High",
+                "description": "High risk vulnerability",
+            }
+        ],
+        "",
+    )
+
+    main()
+    mock_exit.assert_called_once_with(1)
