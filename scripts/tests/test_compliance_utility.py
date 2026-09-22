@@ -1,6 +1,4 @@
 import sys
-from pathlib import Path
-import pytest
 
 from scripts import compliance_utility
 
@@ -23,7 +21,10 @@ See [Illustrative Link](file:///`example`).
     assert urls_count == 2
     assert "file:///Volumes" not in sanitized
     assert "file:///d:" not in sanitized
-    assert "[SoA Matrix](apps/web/src/components/clinical/ClinicalSoAMatrix.vue)" in sanitized
+    assert (
+        "[SoA Matrix](apps/web/src/components/clinical/ClinicalSoAMatrix.vue)"
+        in sanitized
+    )
     assert "[ADR](docs/adr/2026-09-02-migration.md)" in sanitized
     assert "[External Link](https://example.com/docs)" in sanitized
     assert "file:///`example`" in sanitized
@@ -127,3 +128,56 @@ def test_cli_sanitize_flag(tmp_path, monkeypatch):
     assert files_mod == 1
     assert reqs_norm == 1
     assert md_file.read_text(encoding="utf-8") == "Implements PRD-SYS-001."
+
+
+def test_sanitize_content_ignores_english_sub_prefixes():
+    valid_reqs = {
+        "PRD-SUB-001",
+        "PRD-SUB-002",
+        "PRD-SUB-007",
+        "PRD-SUB-030",
+        "PRD-SUB-060",
+    }
+
+    content = """# Performance Specs
+
+Validation pipeline completes in sub-500ms followed by assertions in sub-1.5s.
+Report generation in sub-2 seconds.
+Execution completes in sub-30 seconds and sub-60-second synthesis.
+Sub-7 is a requirement ID: sub-7.
+"""
+
+    sanitized, urls_count, reqs_count = compliance_utility.sanitize_content(
+        content, valid_requirements=valid_reqs
+    )
+
+    assert "sub-500ms" in sanitized
+    assert "sub-1.5s" in sanitized
+    assert "sub-2 seconds" in sanitized
+    assert "sub-30 seconds" in sanitized
+    assert "sub-60-second" in sanitized
+    assert "PRD-SUB-007" in sanitized
+    assert reqs_count == 2
+
+
+def test_sanitize_docs_ignores_runs_and_ignored_files(tmp_path):
+    valid_reqs = {"PRD-SYS-001"}
+
+    runs_dir = tmp_path / "docs" / "SDLC" / "runs"
+    runs_dir.mkdir(parents=True)
+    report_file = runs_dir / "IQ_OQ_PQ_Execution_Report_20260922.md"
+    report_file.write_text("Satisfies SYS-001.", encoding="utf-8")
+
+    rtm_file = tmp_path / "docs" / "SDLC" / "Requirements_Traceability_Matrix.md"
+    rtm_file.write_text("Satisfies SYS-001.", encoding="utf-8")
+
+    files_mod, urls_fixed, reqs_norm = compliance_utility.sanitize_docs(
+        docs_dir=str(tmp_path / "docs"),
+        target_files=[str(report_file), str(rtm_file)],
+        valid_requirements=valid_reqs,
+    )
+
+    assert files_mod == 0
+    assert reqs_norm == 0
+    assert report_file.read_text(encoding="utf-8") == "Satisfies SYS-001."
+    assert rtm_file.read_text(encoding="utf-8") == "Satisfies SYS-001."

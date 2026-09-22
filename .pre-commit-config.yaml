@@ -94,6 +94,7 @@ repos:
         entry: uv run --python 3.14 python scripts/compliance_utility.py --sanitize
         language: system
         files: \.md$
+        exclude: ^docs/SDLC/runs/
         pass_filenames: true
 
       - id: validate-markdown

@@ -98,23 +98,35 @@ BASELINE_FILES = {
 }
 
 
+IGNORED_FILES = {
+    "Requirements_Traceability_Matrix.md",
+    "IQ_OQ_PQ_Execution_Report.md",
+}
+
+
+def _is_ignored_path(file_path: str) -> bool:
+    norm = os.path.normpath(file_path)
+    parts = norm.split(os.sep)
+    if any(p == "runs" or (p.startswith(".") and p != ".") for p in parts[:-1]):
+        return True
+    filename = parts[-1]
+    return filename in IGNORED_FILES
+
+
 def _sweep_markdown_files(path_or_dir: str) -> list[str]:
     """Helper to sweep a file or directory recursively for markdown files in deterministic order."""
     if not os.path.exists(path_or_dir):
         return []
     if os.path.isfile(path_or_dir):
-        return [path_or_dir]
+        return [path_or_dir] if not _is_ignored_path(path_or_dir) else []
     files_list = []
-    ignored_files = {
-        "Requirements_Traceability_Matrix.md",
-        "IQ_OQ_PQ_Execution_Report.md",
-    }
     for root, dirs, files in os.walk(path_or_dir):
         dirs[:] = [d for d in dirs if d != "runs" and not d.startswith(".")]
         dirs.sort()
         for f in sorted(files):
-            if f.endswith(".md") and f not in ignored_files:
-                files_list.append(os.path.join(root, f))
+            file_path = os.path.join(root, f)
+            if f.endswith(".md") and not _is_ignored_path(file_path):
+                files_list.append(file_path)
     return files_list
 
 
@@ -278,7 +290,7 @@ def validate_adr_compliance(
 
 
 WORKSTATION_URL_RE = re.compile(
-    r'file:///[^\s\)\"\']*?/cadence-clinical/([^\s\)\"\']+)'
+    r"file:///[^\s\)\"\']*?/cadence-clinical/([^\s\)\"\']+)"
 )
 PROTECTED_RE = re.compile(r"(```[\s\S]*?```|`[^`\n]+`|\]\([^\)]*\)|\[[^\]]+\]:\s*\S+)")
 
@@ -322,7 +334,7 @@ def sanitize_content(
     # 2. Normalize requirements in text sections outside protected blocks
     tokens = PROTECTED_RE.split(new_content)
     req_pattern = re.compile(
-        r'\b(?:(PRD)-([A-Za-z0-9]+)-([A-Za-z0-9]+)|(trace)[\s-]*(\d+)|(?<!PRD-)(?<!prd-)([A-Za-z0-9]+)-(\d+))\b',
+        r"\b(?:(PRD)-([A-Za-z0-9]+)-([A-Za-z0-9]+)|(trace)[\s-]*(\d+)|(?<!PRD-)(?<!prd-)([A-Za-z0-9]+)-(\d+))\b",
         re.IGNORECASE,
     )
 
@@ -357,9 +369,31 @@ def sanitize_content(
 
             # Case 3: Bare CAT-NUM
             if m.group(6):
-                cat = m.group(6).upper()
+                raw_cat = m.group(6)
+                cat = raw_cat.upper()
+                raw_num = m.group(7)
+
+                # Check text following the match for decimal points or unit suffixes
+                end_pos = m.end()
+                remainder = token[end_pos:] if end_pos < len(token) else ""
+
+                if (
+                    remainder.startswith(".")
+                    and len(remainder) > 1
+                    and remainder[1].isdigit()
+                ):
+                    return full_match
+
+                if raw_cat.lower() == "sub":
+                    if re.match(
+                        r"^(?:[\s-]*(?:s|ms|sec|seconds?|min|m|h|hrs?|gb|mb|kb|b)\b|-[a-zA-Z])",
+                        remainder,
+                        re.IGNORECASE,
+                    ):
+                        return full_match
+
                 try:
-                    num_int = int(m.group(7))
+                    num_int = int(raw_num)
                     key = (cat, num_int)
                     if key in bare_num_map:
                         normalized = bare_num_map[key]
@@ -390,7 +424,7 @@ def sanitize_file(
     if not os.path.isfile(file_path):
         return False, 0, 0
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         content = f.read()
 
     new_content, url_count, req_count = sanitize_content(
@@ -418,7 +452,11 @@ def sanitize_docs(
         valid_requirements = get_valid_requirements(docs_dir)
 
     if target_files:
-        files = [f for f in target_files if f.endswith(".md") and os.path.isfile(f)]
+        files = [
+            f
+            for f in target_files
+            if f.endswith(".md") and os.path.isfile(f) and not _is_ignored_path(f)
+        ]
     else:
         files = _sweep_markdown_files(docs_dir)
 
@@ -475,4 +513,3 @@ if __name__ == "__main__":
             f"{reqs_norm} requirement reference(s) normalized."
         )
         sys.exit(0)
-
