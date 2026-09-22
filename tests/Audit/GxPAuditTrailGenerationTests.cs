@@ -11,6 +11,7 @@ using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Apps.Quality.Domain;
 using Cadence.Apps.Quality.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -30,6 +31,7 @@ public class GxPAuditTrailGenerationTests
     private static readonly string TestUser = "compliance.auditor@cadence.clinical";
 
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public async Task CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -50,15 +52,15 @@ public class GxPAuditTrailGenerationTests
             ReasonForChange = "Initial study creation"
         };
         context.CtmsStudies.Add(study);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 1
         study.CreatedBy.Should().Be(TestUser);
         study.VersionIndex.Should().Be(1);
 
-        var auditEntries1 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).ToListAsync();
+        var auditEntries1 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).ToListAsync(TestContext.Current.CancellationToken);
         auditEntries1.Should().HaveCount(1);
-        var firstAudit = auditEntries1.First();
+        var firstAudit = auditEntries1[0];
         firstAudit.Action.Should().Be("Added");
         firstAudit.UserId.Should().Be(TestUser);
         firstAudit.PredecessorHash.Should().BeEmpty();
@@ -67,20 +69,21 @@ public class GxPAuditTrailGenerationTests
         // Act 2: Update CTMS study
         study.Status = "COMPLETED";
         study.ReasonForChange = "Study protocol completed";
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 2
         study.VersionIndex.Should().Be(2);
 
-        var auditEntries2 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).OrderBy(x => x.Timestamp).ToListAsync();
+        var auditEntries2 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).OrderBy(x => x.Timestamp).ToListAsync(TestContext.Current.CancellationToken);
         auditEntries2.Should().HaveCount(2);
-        var secondAudit = auditEntries2.Last();
+        var secondAudit = auditEntries2[auditEntries2.Count - 1];
         secondAudit.Action.Should().Be("Modified");
         secondAudit.PredecessorHash.Should().Be(firstAudit.BlockHash);
         secondAudit.BlockHash.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public async Task EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -107,19 +110,20 @@ public class GxPAuditTrailGenerationTests
             ReasonForChange = "Uploading trial protocol"
         };
         context.TmfDocuments.Add(doc);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 1
         doc.CreatedBy.Should().Be(TestUser);
         doc.VersionIndex.Should().Be(1);
 
-        var auditEntries = await context.AuditLogEntries.Where(x => x.EntityName == nameof(TmfDocument)).ToListAsync();
-        auditEntries.Should().HaveCount(1);
-        auditEntries.First().UserId.Should().Be(TestUser);
-        auditEntries.First().BlockHash.Should().NotBeNullOrEmpty();
+        var auditEntriesEtmf = await context.AuditLogEntries.Where(x => x.EntityName == nameof(TmfDocument)).ToListAsync(TestContext.Current.CancellationToken);
+        auditEntriesEtmf.Should().HaveCount(1);
+        auditEntriesEtmf[0].UserId.Should().Be(TestUser);
+        auditEntriesEtmf[0].BlockHash.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public async Task QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -144,19 +148,20 @@ public class GxPAuditTrailGenerationTests
             ReasonForChange = "Logging temperature deviation"
         };
         context.QualityDeviations.Add(deviation);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 1
         deviation.CreatedBy.Should().Be(TestUser);
         deviation.VersionIndex.Should().Be(1);
 
-        var auditEntries = await context.AuditLogEntries.Where(x => x.EntityName == nameof(QualityDeviation)).ToListAsync();
-        auditEntries.Should().HaveCount(1);
-        auditEntries.First().UserId.Should().Be(TestUser);
-        auditEntries.First().BlockHash.Should().NotBeNullOrEmpty();
+        var auditEntriesQuality = await context.AuditLogEntries.Where(x => x.EntityName == nameof(QualityDeviation)).ToListAsync(TestContext.Current.CancellationToken);
+        auditEntriesQuality.Should().HaveCount(1);
+        auditEntriesQuality[0].UserId.Should().Be(TestUser);
+        auditEntriesQuality[0].BlockHash.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-053")]
     public async Task FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -180,15 +185,15 @@ public class GxPAuditTrailGenerationTests
             ReasonForChange = "Uploading lab results"
         };
         context.FileRecords.Add(file);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 1
         file.CreatedBy.Should().Be(TestUser);
         file.VersionIndex.Should().Be(1);
 
-        var auditEntries = await context.AuditLogEntries.Where(x => x.EntityName == nameof(FileRecord)).ToListAsync();
-        auditEntries.Should().HaveCount(1);
-        auditEntries.First().UserId.Should().Be(TestUser);
-        auditEntries.First().BlockHash.Should().NotBeNullOrEmpty();
+        var auditEntriesFileshare = await context.AuditLogEntries.Where(x => x.EntityName == nameof(FileRecord)).ToListAsync(TestContext.Current.CancellationToken);
+        auditEntriesFileshare.Should().HaveCount(1);
+        auditEntriesFileshare[0].UserId.Should().Be(TestUser);
+        auditEntriesFileshare[0].BlockHash.Should().NotBeNullOrEmpty();
     }
 }

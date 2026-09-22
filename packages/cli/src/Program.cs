@@ -1,8 +1,7 @@
-using System;
-using System.Diagnostics;
-using System.IO;
+using Cadence.Cli.Commands;
 
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace Cadence.Cli;
 
@@ -16,262 +15,101 @@ public static class Program
 
         AnsiConsole.MarkupLine("[bold cyan]Cadence Clinical Research Software Platform[/] [grey](.NET 10 / C# 14)[/]\n");
 
-        if (args.Length == 0)
+        var app = new CommandApp();
+        app.Configure(config =>
         {
-            AnsiConsole.MarkupLine("[yellow]Usage:[/] [green]cadence[/] [cyan]<command>[/]");
-            AnsiConsole.MarkupLine("\n[bold]Available Commands:[/] ");
-            AnsiConsole.MarkupLine("  [cyan]check[/]                  Runs architecture sentinels and quality gates");
-            AnsiConsole.MarkupLine("  [cyan]doctor[/]                 Validates system dependencies and local datastores");
-            AnsiConsole.MarkupLine("  [cyan]gxp sync[/]               Executes test suites and regenerates RTM compliance docs");
-            AnsiConsole.MarkupLine("  [cyan]test[/]                   Runs fast unit tests or testcontainer integration suites");
-            AnsiConsole.MarkupLine("  [cyan]wizard onboarding[/]      Interactive full-stack (.NET/Node/Python) developer setup wizard");
-            AnsiConsole.MarkupLine("  [cyan]wizard dotnet[/]          Interactive .NET 10-only onboarding wizard (SDK, tools, certs)");
-            AnsiConsole.MarkupLine("  [cyan]wizard migrate[/]         Interactive microservice transcription & scaffolding wizard");
-            AnsiConsole.MarkupLine("  [cyan]wizard decommission[/]    Interactive legacy Python decommissioning & cleanup wizard");
-            return 0;
-        }
+            config.SetApplicationName("cadence");
 
-        string command = args[0].ToLowerInvariant();
-        switch (command)
-        {
-            case "doctor":
-                return RunDoctor();
+            config.AddCommand<DoctorCommand>("doctor")
+                .WithDescription("Validates system dependencies and local datastores");
 
-            case "check":
-                return RunCheck();
+            config.AddCommand<CheckCommand>("check")
+                .WithDescription("Runs architecture sentinels and quality gates");
 
-            case "test":
-                return RunTest(args);
+            config.AddCommand<TestCommand>("test")
+                .WithDescription("Runs fast unit tests or testcontainer integration suites");
 
-            case "gxp":
-                string gxpSub = args.Length > 1 ? args[1].ToLowerInvariant() : "sync";
-                return RunGxp(gxpSub);
+            config.AddCommand<DevCommand>("dev")
+                .WithDescription("Launches multi-service developer process orchestrator");
 
-            case "wizard":
-                string subCommand = args.Length > 1 ? args[1].ToLowerInvariant() : "";
-                string[] wizardArgs = args.Length > 2 ? args[2..] : [];
-                return RunWizard(subCommand, wizardArgs);
+            config.AddCommand<FixCommand>("fix")
+                .WithDescription("Executes self-healing auto-formatting and ADR validation pipeline");
 
-            default:
-                AnsiConsole.MarkupLine($"[red]Unknown command:[/] {command}");
-                return 1;
-        }
-    }
-
-    private static int RunProcess(string fileName, string arguments)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            UseShellExecute = false
-        };
-
-        using var process = Process.Start(psi);
-        if (process == null) return 1;
-        process.WaitForExit();
-        return process.ExitCode;
-    }
-
-    private static int RunDoctor()
-    {
-        AnsiConsole.MarkupLine("[cyan]=== Cadence Clinical System Diagnostics ===[/]\n");
-
-        // 1. .NET SDK
-        try
-        {
-            var psi = new ProcessStartInfo("dotnet", "--version") { RedirectStandardOutput = true, UseShellExecute = false };
-            using var p = Process.Start(psi);
-            string output = p?.StandardOutput.ReadToEnd().Trim() ?? "";
-            p?.WaitForExit();
-            if (output.StartsWith("10."))
-                AnsiConsole.MarkupLine($"  .NET 10 SDK: [green]Active ({output})[/]");
-            else if (!string.IsNullOrEmpty(output))
-                AnsiConsole.MarkupLine($"  .NET SDK: [yellow]Active ({output}) - .NET 10 preview recommended[/]");
-            else
-                AnsiConsole.MarkupLine("  .NET 10 SDK: [red]Not Found[/]");
-        }
-        catch
-        {
-            AnsiConsole.MarkupLine("  .NET 10 SDK: [red]Not Found[/]");
-        }
-
-        // 2. Central Package Management
-        bool cpm = File.Exists("Directory.Packages.props");
-        AnsiConsole.MarkupLine($"  Central Package Management: {(cpm ? "[green]Enforced[/]" : "[red]Missing[/]")}");
-
-        // 3. PostgreSQL connectivity
-        try
-        {
-            using var client = new System.Net.Sockets.TcpClient();
-            var asyncResult = client.BeginConnect("127.0.0.1", 5432, null, null);
-            bool success = asyncResult.AsyncWaitHandle.WaitOne(500, false);
-            if (success && client.Connected)
-                AnsiConsole.MarkupLine("  PostgreSQL (5432): [green]Connected[/]");
-            else
-                AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable (start via docker compose up -d postgres)[/]");
-        }
-        catch
-        {
-            AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
-        }
-
-        // 4. Neo4j connectivity
-        try
-        {
-            using var client = new System.Net.Sockets.TcpClient();
-            var asyncResult = client.BeginConnect("127.0.0.1", 7687, null, null);
-            bool success = asyncResult.AsyncWaitHandle.WaitOne(500, false);
-            if (success && client.Connected)
-                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [green]Connected[/]");
-            else
-                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable (start via docker compose up -d neo4j)[/]");
-        }
-        catch
-        {
-            AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable[/]");
-        }
-
-        return 0;
-    }
-
-    private static int RunCheck()
-    {
-        AnsiConsole.MarkupLine("[cyan]Executing Cadence Architecture Sentinels & Quality Gates...[/]\n");
-
-        AnsiConsole.MarkupLine("  1. Validating C# Code Formatting & Roslyn Style Rules (.editorconfig)...");
-        int formatExit = RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore");
-        if (formatExit != 0)
-        {
-            AnsiConsole.MarkupLine("  [red]Formatting check failed! Run 'dotnet format Cadence.sln' to auto-fix.[/]");
-            return formatExit;
-        }
-
-        int styleExit = RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore");
-        if (styleExit != 0)
-        {
-            AnsiConsole.MarkupLine("  [red]Roslyn analyzer/style check failed! Run 'dotnet format style Cadence.sln' to auto-fix.[/]");
-            return styleExit;
-        }
-        AnsiConsole.MarkupLine("  [green][OK] Code style and Roslyn rules compliant.[/]");
-
-        AnsiConsole.MarkupLine("\n  2. Validating Architectural Decision Records (ADRs)...");
-        int adrExit = RunProcess("python", "scripts/validate_adrs.py");
-        if (adrExit != 0)
-        {
-            AnsiConsole.MarkupLine("  [red]ADR validation failed! Check docs/adr/ and index.md.[/]");
-            return adrExit;
-        }
-        AnsiConsole.MarkupLine("  [green][OK] ADRs compliant.[/]");
-
-        AnsiConsole.MarkupLine("\n  3. Executing Clean Architecture Sentinel Unit Tests...");
-        int archExit = RunProcess("dotnet", "test tests/Cadence.ArchitectureTests.csproj --no-build");
-        if (archExit != 0)
-        {
-            AnsiConsole.MarkupLine("  [red]Architecture boundary violations detected![/]");
-            return archExit;
-        }
-        AnsiConsole.MarkupLine("  [green][OK] Clean Architecture boundaries preserved.[/]");
-
-        AnsiConsole.MarkupLine("\n[bold green]All quality sentinels passed.[/]");
-        return 0;
-    }
-
-    private static int RunTest(string[] args)
-    {
-        string filter = "";
-        for (int i = 1; i < args.Length; i++)
-        {
-            string arg = args[i].ToLowerInvariant();
-            if (arg == "--fast")
+            config.AddBranch("gxp", gxp =>
             {
-                filter = "--filter \"Category!=Integration\"";
-            }
-            else if (arg == "--integration")
+                gxp.SetDescription("GxP regulatory compliance management");
+                gxp.AddCommand<GxPSyncCommand>("sync")
+                    .WithDescription("Executes test suites and regenerates RTM compliance docs");
+                gxp.AddCommand<GxPValidateCommand>("validate")
+                    .WithDescription("Validates RTM compliance matrix against design requirements");
+            });
+
+            config.AddBranch("db", db =>
             {
-                filter = "--filter \"Category=Integration\"";
-            }
-        }
+                db.SetDescription("Database management and migrations");
+                db.AddCommand<DbResetCommand>("reset")
+                    .WithDescription("Resets PostgreSQL, SQLite, and Neo4j datastores");
+                db.AddCommand<DbMigrateCommand>("migrate")
+                    .WithDescription("Runs pre-boot EF Core database migrations");
+                db.AddCommand<DbStatusCommand>("status")
+                    .WithDescription("Checks status of local databases");
+            });
 
-        AnsiConsole.MarkupLine($"[cyan]Executing .NET Test Suites {(string.IsNullOrEmpty(filter) ? "(All)" : filter)}...[/]\n");
-        return RunProcess("dotnet", $"test Cadence.sln {filter}".Trim());
-    }
+            config.AddBranch("scaffold", scaffold =>
+            {
+                scaffold.SetDescription("Architecture scaffolding tools");
+                scaffold.AddCommand<ScaffoldServiceCommand>("service")
+                    .WithDescription("Scaffolds a new C# Clean Architecture microservice");
+                scaffold.AddCommand<ScaffoldAdrCommand>("adr")
+                    .WithDescription("Scaffolds a new Architectural Decision Record (ADR)");
+            });
 
-    private static int RunGxp(string subCommand)
-    {
-        if (subCommand == "validate")
-        {
-            AnsiConsole.MarkupLine("[cyan]Validating Requirements Traceability Matrix (read-only)...[/]\n");
-            return RunProcess("python", "scripts/generate_rtm.py --validate");
-        }
+            config.AddBranch("setup", setup =>
+            {
+                setup.SetDescription("Environment and credentials setup");
+                setup.AddCommand<SetupCredentialsCommand>("credentials")
+                    .WithDescription("Configures local development credentials and secrets");
+            });
 
-        AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");
-        return RunProcess("python", "scripts/sync_gxp.py");
-    }
+            config.AddBranch("record", record =>
+            {
+                record.SetDescription("E2E recording and media tools");
+                record.AddCommand<RecordSetupGDriveCommand>("setup-gdrive")
+                    .WithDescription("Configures Google Drive integration for session recordings");
+                record.AddCommand<RecordListCommand>("list")
+                    .WithDescription("Lists recorded session videos");
+                record.AddCommand<RecordRunCommand>("run")
+                    .WithDescription("Runs Playwright E2E recording session");
+            });
 
-    private static int RunWizard(string subCommand, string[] extraArgs)
-    {
-        bool isWindows = OperatingSystem.IsWindows();
-        string scriptDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "scripts");
-        if (!Directory.Exists(scriptDir))
-        {
-            scriptDir = Path.GetFullPath("scripts");
-        }
+            config.AddBranch("cdisc", cdisc =>
+            {
+                cdisc.SetDescription("CDISC / USDM data standards tools");
+                cdisc.AddCommand<CdiscExportCommand>("export")
+                    .WithDescription("Exports USDM / CDISC compliance artifacts");
+            });
 
-        string scriptName = subCommand switch
-        {
-            "onboarding" => isWindows ? "setup_wizard.ps1" : "setup_wizard.sh",
-            "dotnet" => isWindows ? "setup_dotnet_wizard.ps1" : "setup_dotnet_wizard.sh",
-            "migrate" => isWindows ? "migrate_service_wizard.ps1" : "migrate_service_wizard.sh",
-            "decommission" => isWindows ? "decommission_service_wizard.ps1" : "decommission_service_wizard.sh",
-            _ => ""
-        };
+            config.AddBranch("mcp", mcp =>
+            {
+                mcp.SetDescription("Model Context Protocol (MCP) AI integration server");
+                mcp.AddCommand<McpServerCommand>("server")
+                    .WithDescription("Starts Model Context Protocol stdio JSON-RPC server");
+            });
 
-        if (string.IsNullOrEmpty(scriptName))
-        {
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select a [cyan]Cadence Developer Wizard[/]:")
-                    .AddChoices(
-                        "1. Onboarding (Full-Stack: .NET + Node + Python)",
-                        "2. .NET Only (SDK, Global Tools, Dev Certs)",
-                        "3. Migrate Service (Scaffold Clean Architecture)",
-                        "4. Decommission Service (Retire Legacy Python)",
-                        "5. Exit"));
+            config.AddBranch("wizard", wizard =>
+            {
+                wizard.SetDescription("Interactive onboarding and scaffolding wizards");
+                wizard.AddCommand<WizardOnboardingCommand>("onboarding")
+                    .WithDescription("Interactive full-stack developer setup wizard");
+                wizard.AddCommand<WizardDotnetCommand>("dotnet")
+                    .WithDescription("Interactive .NET 10 onboarding wizard");
+                wizard.AddCommand<WizardMigrateCommand>("migrate")
+                    .WithDescription("Interactive microservice transcription wizard");
+                wizard.AddCommand<WizardDecommissionCommand>("decommission")
+                    .WithDescription("Interactive Python decommissioning wizard");
+            });
+        });
 
-            if (selected.StartsWith('1')) return RunWizard("onboarding", []);
-            if (selected.StartsWith('2')) return RunWizard("dotnet", []);
-            if (selected.StartsWith('3')) return RunWizard("migrate", []);
-            if (selected.StartsWith('4')) return RunWizard("decommission", []);
-            return 0;
-        }
-
-        string scriptPath = Path.Combine(scriptDir, scriptName);
-        if (!File.Exists(scriptPath))
-        {
-            AnsiConsole.MarkupLine($"[red]Wizard script not found at:[/] {scriptPath}");
-            return 1;
-        }
-
-        // The migrate and decommission wizards take a single positional service name on
-        // Windows; the onboarding and dotnet wizards take switches that are forwarded as-is.
-        bool isServiceWizard = subCommand is "migrate" or "decommission";
-        string windowsExtra = isServiceWizard && extraArgs.Length > 0
-            ? $"-ServiceName {extraArgs[0]}"
-            : string.Join(' ', extraArgs);
-        string arguments = isWindows
-            ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\" {windowsExtra}"
-            : $"\"{scriptPath}\" {string.Join(' ', extraArgs)}";
-
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = isWindows ? "powershell.exe" : "bash",
-            Arguments = arguments,
-            UseShellExecute = false
-        };
-
-        using var process = Process.Start(processInfo);
-        process?.WaitForExit();
-        return process?.ExitCode ?? 0;
+        return app.Run(args);
     }
 }
