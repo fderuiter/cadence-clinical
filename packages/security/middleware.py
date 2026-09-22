@@ -207,340 +207,415 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             Response: The HTTP response from the downstream handler, or a 401/403/400
                       JSON response if validation fails.
         """
-        if (
-            request.url.path
-            in (
-                "/health",
-                "/api/v1/etmf/inbound-email",
-                "/api/v1/fileshare/audit/playback",
-                "/api/v1/files/audit/playback",
-            )
-            or request.url.path.startswith("/api/v1/fileshare/guest/")
-            or request.url.path.startswith("/api/v1/files/guest/")
-            or request.url.path.startswith("/api/v1/fileshare/files/guest/")
-        ):
-            user_hdr = request.headers.get("X-User-Id")
-            if user_hdr:
-                current_user_id.set(user_hdr)
-                request.state.user_id = user_hdr
-            return await call_next(request)
+        import uuid
 
-        is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
+        from opentelemetry import context, trace
 
-        user_id = request.headers.get("X-User-Id")
-        roles = request.headers.get("X-User-Roles")
-        timestamp = request.headers.get("X-Gateway-Timestamp")
-        signature = request.headers.get("X-Gateway-Signature")
+        from packages.telemetry.tracer import extract_trace_context
 
-        if not all([user_id, roles, timestamp, signature]):
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code,
-                content={"detail": "Missing gateway authentication headers"},
-            )
+        traceparent = request.headers.get("traceparent")
+        tracestate = request.headers.get("tracestate")
 
-        try:
-            ts = float(timestamp)
-            if abs(time.time() - ts) > 300:
-                status_code = 403 if is_mutation else 401
-                return JSONResponse(
-                    status_code=status_code,
-                    content={"detail": "Gateway signature expired"},
-                )
-        except ValueError:
-            status_code = 400 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code, content={"detail": "Invalid gateway timestamp"}
-            )
-
-        version = request.headers.get("X-Signature-Version")
-        if not version or version not in ("2", "v2"):
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "detail": "Missing or obsolete signature format. Version 2 signature is required."
-                },
-            )
-
-        change_reason = request.headers.get("X-Change-Reason")
-        if not change_reason:
-            if request.method in ("GET", "HEAD", "OPTIONS"):
-                change_reason = ""
-            else:
-                status_code = 403 if is_mutation else 401
-                return JSONResponse(
-                    status_code=status_code,
-                    content={"detail": "Missing change justification reason"},
-                )
-
-        if change_reason and len(change_reason) > 255:
-            status_code = 400 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code,
-                content={"detail": "Change reason exceeds 255 characters"},
-            )
-
-        # Retrieve optional scope headers from API gateway and normalize them using the shared helper
-        from packages.security.signing import normalize_scope_values
-
-        raw_site_id = request.headers.get("X-Site-Id")
-        raw_sponsor_id = request.headers.get("X-Sponsor-Id")
-        raw_unblinded = request.headers.get("X-Unblinded-Access")
-
-        site_id, sponsor_id, unblinded_access = normalize_scope_values(
-            raw_site_id, raw_sponsor_id, raw_unblinded
-        )
-
-        # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
-        tenant_id = request.headers.get("X-Tenant-Id")
-        if tenant_id is None or not str(tenant_id).strip():
-            tenant_id = "tenant_default"
+        if not traceparent:
+            gen_trace_id = uuid.uuid4().hex
+            gen_span_id = uuid.uuid4().hex[:16]
+            traceparent = f"00-{gen_trace_id}-{gen_span_id}-01"
+            headers_to_extract = {"traceparent": traceparent}
+            if tracestate:
+                headers_to_extract["tracestate"] = tracestate
         else:
-            tenant_id = str(tenant_id).strip()
+            headers_to_extract = dict(request.headers)
 
-        sig_token = request.headers.get("X-Sig-Token")
+        extracted_telemetry_ctx = extract_trace_context(headers_to_extract)
+        telemetry_token = context.attach(extracted_telemetry_ctx)
 
-        from packages.security.signing import verify_gateway_signature
-
-        is_valid_sig = verify_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            signature=signature,
-            secret=self.gateway_secret,
-            change_reason=change_reason,
-            site_id=site_id,
-            sponsor_id=sponsor_id,
-            unblinded_access=unblinded_access,
-            tenant_id=tenant_id,
-            sig_token=sig_token,
-        )
-
-        if not is_valid_sig:
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code, content={"detail": "Invalid gateway signature"}
-            )
-
-        body_json = None
-        if is_mutation:
-            body_bytes = await request.body()
-            if body_bytes:
-                try:
-                    import json
-
-                    body_json = json.loads(body_bytes)
-                except Exception:
-                    pass
-
-                # Restore body receive for Starlette downstream
-                async def receive():
-                    return {
-                        "type": "http.request",
-                        "body": body_bytes,
-                        "more_body": False,
-                    }
-
-                request._receive = receive
-
-        from packages.security.gating import is_path_signature_gated
-        from packages.security.regulated_actions import resolve_regulated_action
-
-        expected_semantic = resolve_regulated_action(
-            request.method, request.url.path, body_json
-        )
-        path_lower = request.url.path.lower()
-        is_signature_gated = (expected_semantic is not None) or is_path_signature_gated(
-            path_lower
-        )
-
-        if is_signature_gated and is_mutation:
-            success, result = verify_sig_token(
-                sig_token=sig_token,
-                user_id=user_id,
-                request_path=request.url.path,
-                secret=self.gateway_secret,
-                replay_cache=downstream_replay_cache,
-                expected_semantic_action=expected_semantic.value
-                if expected_semantic
-                else None,
-            )
-            if not success:
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": str(result),
-                    },
+        def _inject_trace_headers(resp: Response) -> Response:
+            current_span = trace.get_current_span()
+            span_ctx = current_span.get_span_context() if current_span else None
+            if span_ctx and span_ctx.is_valid:
+                resp.headers["traceparent"] = (
+                    f"00-{format(span_ctx.trace_id, '032x')}-{format(span_ctx.span_id, '016x')}-01"
                 )
-
-            sig_payload = result
-
-            # Check batch binding if path is batch-sign-off or if token contains batch_id
-            token_batch_id = sig_payload.get("batch_id")
-            if "batch-sign-off" in path_lower:
-                if not token_batch_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token is not bound to a batch.",
-                        },
-                    )
-
-                req_study_id = body_json.get("study_id")
-                req_target_type = body_json.get("target_type")
-                req_target_ids = body_json.get("target_ids")
-                req_signing_reason = body_json.get("signing_reason")
-
-                if not all(
-                    [
-                        req_study_id,
-                        req_target_type,
-                        req_target_ids is not None,
-                        req_signing_reason,
-                    ]
-                ):
-                    return JSONResponse(
-                        status_code=400,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Missing batch sign-off fields for validation.",
-                        },
-                    )
-
-                # Compute canonical batch binding
-                norm_study = str(req_study_id).strip()
-                norm_type = str(req_target_type).strip().upper()
-                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
-                norm_ids = ",".join(sorted_ids)
-                norm_reason = str(req_signing_reason).strip()
-
-                binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
-                computed_batch_id = hashlib.sha256(
-                    binding_str.encode("utf-8")
-                ).hexdigest()
-
-                if token_batch_id != computed_batch_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token batch binding mismatch.",
-                        },
-                    )
-            elif "sdv/bulk-sign-off" in path_lower:
-                if not token_batch_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token is not bound to a batch.",
-                        },
-                    )
-
-                req_study_id = body_json.get("study_id")
-                req_scope = body_json.get("scope")
-                req_target_ids = body_json.get("target_ids")
-                req_reason = body_json.get("reason_for_change")
-
-                if (
-                    not req_study_id
-                    or not req_scope
-                    or req_target_ids is None
-                    or not req_target_ids
-                    or not req_reason
-                    or not str(req_reason).strip()
-                ):
-                    return JSONResponse(
-                        status_code=400,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Missing bulk sign-off fields for validation.",
-                        },
-                    )
-
-                norm_study = str(req_study_id).strip()
-                norm_scope = str(req_scope).strip()
-                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
-                norm_reason = str(req_reason).strip()
-
-                binding_str = f"{norm_study}:{norm_scope}:{sorted_ids}:{norm_reason}"
-                computed_batch_id = hashlib.sha256(
-                    binding_str.encode("utf-8")
-                ).hexdigest()
-
-                if token_batch_id != computed_batch_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token batch binding mismatch.",
-                        },
-                    )
-
-        from packages.security.permissions import (
-            get_permissions_for_roles,
-        )
-
-        role_list = [r.strip() for r in (roles or "").split(",") if r.strip()]
-        granted_permissions = get_permissions_for_roles(role_list)
-
-        request.state.user_id = user_id
-        request.state.roles = roles
-        request.state.permissions = granted_permissions
-        request.state.change_reason = change_reason
-        request.state.site_id = site_id
-        request.state.sponsor_id = sponsor_id
-        request.state.unblinded_access = unblinded_access
-        request.state.tenant_id = tenant_id
-
-        # Extract IP address for context injection
-        ip_address = request.headers.get(
-            "x-forwarded-for", request.client.host if request.client else "127.0.0.1"
-        )
-        if "," in ip_address:
-            ip_address = ip_address.split(",")[0].strip()
-
-        from packages.security.context import (
-            current_site_id,
-            current_sponsor_id,
-            current_tenant_id,
-            current_unblinded_access,
-        )
-
-        # Set the thread-safe context variables
-        user_token = current_user_id.set(user_id)
-        reason_token = current_change_reason.set(change_reason or "system_operation")
-        ip_token = current_ip_address.set(ip_address)
-        ts_token = current_timestamp.set(
-            datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
-        )
-        site_token = current_site_id.set(site_id)
-        sponsor_token = current_sponsor_id.set(sponsor_id)
-        unblinded_token = current_unblinded_access.set(unblinded_access)
-        tenant_token = current_tenant_id.set(tenant_id)
+            elif traceparent:
+                resp.headers["traceparent"] = traceparent
+            if tracestate and "tracestate" not in resp.headers:
+                resp.headers["tracestate"] = tracestate
+            return resp
 
         try:
-            return await call_next(request)
+            if (
+                request.url.path
+                in (
+                    "/health",
+                    "/api/v1/etmf/inbound-email",
+                    "/api/v1/fileshare/audit/playback",
+                    "/api/v1/files/audit/playback",
+                )
+                or request.url.path.startswith("/api/v1/fileshare/guest/")
+                or request.url.path.startswith("/api/v1/files/guest/")
+                or request.url.path.startswith("/api/v1/fileshare/files/guest/")
+            ):
+                user_hdr = request.headers.get("X-User-Id")
+                if user_hdr:
+                    current_user_id.set(user_hdr)
+                    request.state.user_id = user_hdr
+                resp = await call_next(request)
+                return _inject_trace_headers(resp)
+
+            is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
+
+            user_id = request.headers.get("X-User-Id")
+            roles = request.headers.get("X-User-Roles")
+            timestamp = request.headers.get("X-Gateway-Timestamp")
+            signature = request.headers.get("X-Gateway-Signature")
+
+            if not all([user_id, roles, timestamp, signature]):
+                status_code = 403 if is_mutation else 401
+                return _inject_trace_headers(
+                    JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Missing gateway authentication headers"},
+                    )
+                )
+
+            try:
+                ts = float(timestamp)
+                if abs(time.time() - ts) > 300:
+                    status_code = 403 if is_mutation else 401
+                    return _inject_trace_headers(
+                        JSONResponse(
+                            status_code=status_code,
+                            content={"detail": "Gateway signature expired"},
+                        )
+                    )
+            except ValueError:
+                status_code = 400 if is_mutation else 401
+                return _inject_trace_headers(
+                    JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Invalid gateway timestamp"},
+                    )
+                )
+
+            version = request.headers.get("X-Signature-Version")
+            if not version or version not in ("2", "v2"):
+                status_code = 403 if is_mutation else 401
+                return _inject_trace_headers(
+                    JSONResponse(
+                        status_code=status_code,
+                        content={
+                            "detail": "Missing or obsolete signature format. Version 2 signature is required."
+                        },
+                    )
+                )
+
+            change_reason = request.headers.get("X-Change-Reason")
+            if not change_reason:
+                if request.method in ("GET", "HEAD", "OPTIONS"):
+                    change_reason = ""
+                else:
+                    status_code = 403 if is_mutation else 401
+                    return _inject_trace_headers(
+                        JSONResponse(
+                            status_code=status_code,
+                            content={"detail": "Missing change justification reason"},
+                        )
+                    )
+
+            if change_reason and len(change_reason) > 255:
+                status_code = 400 if is_mutation else 401
+                return _inject_trace_headers(
+                    JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Change reason exceeds 255 characters"},
+                    )
+                )
+
+            # Retrieve optional scope headers from API gateway and normalize them using the shared helper
+            from packages.security.signing import normalize_scope_values
+
+            raw_site_id = request.headers.get("X-Site-Id")
+            raw_sponsor_id = request.headers.get("X-Sponsor-Id")
+            raw_unblinded = request.headers.get("X-Unblinded-Access")
+
+            site_id, sponsor_id, unblinded_access = normalize_scope_values(
+                raw_site_id, raw_sponsor_id, raw_unblinded
+            )
+
+            # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
+            tenant_id = request.headers.get("X-Tenant-Id")
+            if tenant_id is None or not str(tenant_id).strip():
+                tenant_id = "tenant_default"
+            else:
+                tenant_id = str(tenant_id).strip()
+
+            sig_token = request.headers.get("X-Sig-Token")
+
+            from packages.security.signing import verify_gateway_signature
+
+            is_valid_sig = verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=self.gateway_secret,
+                change_reason=change_reason,
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
+                sig_token=sig_token,
+            )
+
+            if not is_valid_sig:
+                status_code = 403 if is_mutation else 401
+                return _inject_trace_headers(
+                    JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Invalid gateway signature"},
+                    )
+                )
+
+            body_json = None
+            if is_mutation:
+                body_bytes = await request.body()
+                if body_bytes:
+                    try:
+                        import json
+
+                        body_json = json.loads(body_bytes)
+                    except Exception:
+                        pass
+
+                    # Restore body receive for Starlette downstream
+                    async def receive():
+                        return {
+                            "type": "http.request",
+                            "body": body_bytes,
+                            "more_body": False,
+                        }
+
+                    request._receive = receive
+
+            from packages.security.gating import is_path_signature_gated
+            from packages.security.regulated_actions import resolve_regulated_action
+
+            expected_semantic = resolve_regulated_action(
+                request.method, request.url.path, body_json
+            )
+            path_lower = request.url.path.lower()
+            is_signature_gated = (
+                expected_semantic is not None
+            ) or is_path_signature_gated(path_lower)
+
+            if is_signature_gated and is_mutation:
+                success, result = verify_sig_token(
+                    sig_token=sig_token,
+                    user_id=user_id,
+                    request_path=request.url.path,
+                    secret=self.gateway_secret,
+                    replay_cache=downstream_replay_cache,
+                    expected_semantic_action=expected_semantic.value
+                    if expected_semantic
+                    else None,
+                )
+                if not success:
+                    return _inject_trace_headers(
+                        JSONResponse(
+                            status_code=401,
+                            content={
+                                "detail": "REAUTHENTICATION_REQUIRED",
+                                "error": "REAUTHENTICATION_REQUIRED",
+                                "message": str(result),
+                            },
+                        )
+                    )
+
+                sig_payload = result
+
+                # Check batch binding if path is batch-sign-off or if token contains batch_id
+                token_batch_id = sig_payload.get("batch_id")
+                if "batch-sign-off" in path_lower:
+                    if not token_batch_id:
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=401,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Signature token is not bound to a batch.",
+                                },
+                            )
+                        )
+
+                    req_study_id = body_json.get("study_id")
+                    req_target_type = body_json.get("target_type")
+                    req_target_ids = body_json.get("target_ids")
+                    req_signing_reason = body_json.get("signing_reason")
+
+                    if not all(
+                        [
+                            req_study_id,
+                            req_target_type,
+                            req_target_ids is not None,
+                            req_signing_reason,
+                        ]
+                    ):
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=400,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Missing batch sign-off fields for validation.",
+                                },
+                            )
+                        )
+
+                    # Compute canonical batch binding
+                    norm_study = str(req_study_id).strip()
+                    norm_type = str(req_target_type).strip().upper()
+                    sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
+                    norm_ids = ",".join(sorted_ids)
+                    norm_reason = str(req_signing_reason).strip()
+
+                    binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+                    computed_batch_id = hashlib.sha256(
+                        binding_str.encode("utf-8")
+                    ).hexdigest()
+
+                    if token_batch_id != computed_batch_id:
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=401,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Signature token batch binding mismatch.",
+                                },
+                            )
+                        )
+                elif "sdv/bulk-sign-off" in path_lower:
+                    if not token_batch_id:
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=401,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Signature token is not bound to a batch.",
+                                },
+                            )
+                        )
+
+                    req_study_id = body_json.get("study_id")
+                    req_scope = body_json.get("scope")
+                    req_target_ids = body_json.get("target_ids")
+                    req_reason = body_json.get("reason_for_change")
+
+                    if (
+                        not req_study_id
+                        or not req_scope
+                        or req_target_ids is None
+                        or not req_target_ids
+                        or not req_reason
+                        or not str(req_reason).strip()
+                    ):
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=400,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Missing bulk sign-off fields for validation.",
+                                },
+                            )
+                        )
+
+                    norm_study = str(req_study_id).strip()
+                    norm_scope = str(req_scope).strip()
+                    sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
+                    norm_reason = str(req_reason).strip()
+
+                    binding_str = (
+                        f"{norm_study}:{norm_scope}:{sorted_ids}:{norm_reason}"
+                    )
+                    computed_batch_id = hashlib.sha256(
+                        binding_str.encode("utf-8")
+                    ).hexdigest()
+
+                    if token_batch_id != computed_batch_id:
+                        return _inject_trace_headers(
+                            JSONResponse(
+                                status_code=401,
+                                content={
+                                    "detail": "REAUTHENTICATION_REQUIRED",
+                                    "error": "REAUTHENTICATION_REQUIRED",
+                                    "message": "Signature token batch binding mismatch.",
+                                },
+                            )
+                        )
+
+            from packages.security.permissions import (
+                get_permissions_for_roles,
+            )
+
+            role_list = [r.strip() for r in (roles or "").split(",") if r.strip()]
+            granted_permissions = get_permissions_for_roles(role_list)
+
+            request.state.user_id = user_id
+            request.state.roles = roles
+            request.state.permissions = granted_permissions
+            request.state.change_reason = change_reason
+            request.state.site_id = site_id
+            request.state.sponsor_id = sponsor_id
+            request.state.unblinded_access = unblinded_access
+            request.state.tenant_id = tenant_id
+
+            # Extract IP address for context injection
+            ip_address = request.headers.get(
+                "x-forwarded-for",
+                request.client.host if request.client else "127.0.0.1",
+            )
+            if "," in ip_address:
+                ip_address = ip_address.split(",")[0].strip()
+
+            from packages.security.context import (
+                current_site_id,
+                current_sponsor_id,
+                current_tenant_id,
+                current_unblinded_access,
+            )
+
+            # Set the thread-safe context variables
+            user_token = current_user_id.set(user_id)
+            reason_token = current_change_reason.set(
+                change_reason or "system_operation"
+            )
+            ip_token = current_ip_address.set(ip_address)
+            ts_token = current_timestamp.set(
+                datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+            )
+            site_token = current_site_id.set(site_id)
+            sponsor_token = current_sponsor_id.set(sponsor_id)
+            unblinded_token = current_unblinded_access.set(unblinded_access)
+            tenant_token = current_tenant_id.set(tenant_id)
+
+            try:
+                resp = await call_next(request)
+                return _inject_trace_headers(resp)
+            finally:
+                # Clean up the context variables to prevent context leakage across tasks
+                current_user_id.reset(user_token)
+                current_change_reason.reset(reason_token)
+                current_ip_address.reset(ip_token)
+                current_timestamp.reset(ts_token)
+                current_site_id.reset(site_token)
+                current_sponsor_id.reset(sponsor_token)
+                current_unblinded_access.reset(unblinded_token)
+                current_tenant_id.reset(tenant_token)
         finally:
-            # Clean up the context variables to prevent context leakage across tasks
-            current_user_id.reset(user_token)
-            current_change_reason.reset(reason_token)
-            current_ip_address.reset(ip_token)
-            current_timestamp.reset(ts_token)
-            current_site_id.reset(site_token)
-            current_sponsor_id.reset(sponsor_token)
-            current_unblinded_access.reset(unblinded_token)
-            current_tenant_id.reset(tenant_token)
+            context.detach(telemetry_token)
 
 
 def require_gateway_permission(required_permission: PermissionEnum) -> Callable:
