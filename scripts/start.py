@@ -1,21 +1,36 @@
 #!/usr/bin/env python
 """
 Unified startup CLI wrapper for Cadence Clinical microservices.
-Automatically identifies and runs pre-boot initialization routines/migrations
-for relational services before starting their web servers, while bypassing
-migrations for schema-less or self-initializing services.
+Automatically queries the central service manifest registry, identifies and runs
+pre-boot initialization routines/migrations for relational services before starting
+their web servers or .NET runners.
 """
 
 import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# Add repo root to sys.path if not present
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from packages.cli.registry import get_service_profile
 
 
 def find_migration_script(service: str) -> str | None:
     """
-    Locates custom pre-boot migration scripts dynamically for the given service.
+    Locates custom pre-boot migration scripts from the central service registry.
     """
+    try:
+        profile = get_service_profile(service)
+        if profile.migration_script and os.path.exists(profile.migration_script):
+            return profile.migration_script
+    except KeyError:
+        pass
+
     possible_paths = [
         os.path.join("apps", service, "database", "migrate.py"),
         os.path.join("apps", service, "migrate.py"),
@@ -33,8 +48,7 @@ def run_pre_boot_migrations(service: str, migrate_path: str) -> None:
     print(f"[{service.upper()}] Pre-boot: Relational database detected.")
     print(f"[{service.upper()}] Pre-boot: Running migrations via '{migrate_path}'...")
 
-    env = {**os.environ, "PYTHONPATH": os.getcwd()}
-    # Run using current virtual env Python
+    env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
     res = subprocess.run([sys.executable, migrate_path], env=env)
 
     if res.returncode != 0:
@@ -50,40 +64,42 @@ def run_pre_boot_migrations(service: str, migrate_path: str) -> None:
 
 def run_web_server(service: str, host: str, port: int, extra_args: list[str]) -> None:
     """
-    Launches the uvicorn web server. Replaces the current process on Unix systems
-    to preserve signal propagation (SIGTERM/SIGINT) as PID 1, or falls back to
-    subprocess.run.
+    Launches the target service runtime executable (dotnet, uvicorn, pnpm).
+    Replaces current process on Unix systems to preserve signal propagation.
     """
-    print(f"[{service.upper()}] Launching web server on {host}:{port}...")
+    try:
+        profile = get_service_profile(service)
+    except KeyError as e:
+        print(f"[{service.upper()}] Startup error: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    uvicorn_cmd = [
-        "uvicorn",
-        f"apps.{service}.main:app",
-        "--host",
-        host,
-        "--port",
-        str(port),
-    ] + extra_args
+    print(
+        f"[{profile.name.upper()}] Launching {profile.runtime} runner on {host}:{port} "
+        f"({profile.project_path})..."
+    )
 
+    cmd = profile.get_start_command(
+        host=host, port=port, reload=False, extra_args=extra_args
+    )
+    env = profile.get_environment(host=host, port=port, repo_root=REPO_ROOT)
+    os.environ.update(env)
+
+    binary = cmd[0]
     if os.name != "nt":
         try:
-            os.execvp("uvicorn", uvicorn_cmd)
+            os.execvp(binary, cmd)
         except FileNotFoundError:
-            # Fallback if uvicorn is not in PATH (e.g. running outside of fully configured venv path)
-            python_uvicorn_cmd = [
-                sys.executable,
-                "-m",
-                "uvicorn",
-                f"apps.{service}.main:app",
-                "--host",
-                host,
-                "--port",
-                str(port),
-            ] + extra_args
-            os.execvp(sys.executable, python_uvicorn_cmd)
+            if binary == "uvicorn":
+                python_uvicorn_cmd = [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                ] + cmd[1:]
+                os.execvp(sys.executable, python_uvicorn_cmd)
+            else:
+                raise
     else:
-        # Fallback for Windows where execvp is not available/replaces process differently
-        res = subprocess.run(uvicorn_cmd)
+        res = subprocess.run(cmd, env=os.environ)
         sys.exit(res.returncode)
 
 
@@ -120,6 +136,12 @@ def main(args_list: list[str] | None = None) -> None:
     service = parsed.service
     host = parsed.host
     port = parsed.port
+
+    try:
+        get_service_profile(service)
+    except KeyError as e:
+        print(f"[{service.upper()}] Startup error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     migrate_path = find_migration_script(service)
     if migrate_path:

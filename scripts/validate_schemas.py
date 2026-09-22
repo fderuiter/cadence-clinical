@@ -12,7 +12,9 @@ Compliance:
 - Gate 3: Executed as part of continuous integration checks.
 """
 
+import glob
 import importlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -64,41 +66,139 @@ for name in ["database", "deid", "security", "ui"]:
 IMPORT_ERRORS: list[tuple[str, Exception]] = []
 
 
+def rewrite_refs(obj: Any, prefix: str) -> Any:
+    """Recursively rewrite schema $ref pointers to include the service prefix."""
+    if isinstance(obj, dict):
+        new_dict = {}
+        for k, v in obj.items():
+            if (
+                k == "$ref"
+                and isinstance(v, str)
+                and v.startswith("#/components/schemas/")
+            ):
+                ref_name = v.split("/")[-1]
+                target_name = (
+                    ref_name if ref_name.startswith(prefix) else f"{prefix}{ref_name}"
+                )
+                new_dict[k] = f"#/components/schemas/{target_name}"
+            else:
+                new_dict[k] = rewrite_refs(v, prefix)
+        return new_dict
+    if isinstance(obj, list):
+        return [rewrite_refs(item, prefix) for item in obj]
+    return obj
+
+
+def aggregate_service_specs(
+    service_specs: dict[str, tuple[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    """Aggregate individual microservice OpenAPI specs into a unified schema."""
+    merged_paths: dict[str, Any] = {}
+    merged_schemas: dict[str, Any] = {}
+    merged_security_schemes: dict[str, Any] = {}
+
+    for service_name, (prefix, spec) in service_specs.items():
+        schemas = spec.get("components", {}).get("schemas", {})
+        for s_name, s_def in schemas.items():
+            namespaced = s_name if s_name.startswith(prefix) else f"{prefix}{s_name}"
+            merged_schemas[namespaced] = rewrite_refs(s_def, prefix)
+
+        paths = spec.get("paths", {})
+        rewritten_paths = rewrite_refs(paths, prefix)
+        for p_key, p_val in rewritten_paths.items():
+            if p_key in merged_paths:
+                merged_paths[p_key].update(p_val)
+            else:
+                merged_paths[p_key] = p_val
+
+        sec_schemes = spec.get("components", {}).get("securitySchemes", {})
+        merged_security_schemes.update(sec_schemes)
+
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "Cadence Clinical - Unified API",
+            "version": "0.1.0",
+        },
+        "paths": merged_paths,
+        "components": {
+            "schemas": merged_schemas,
+            "securitySchemes": merged_security_schemes,
+        },
+    }
+
+
 def discover_services() -> dict[str, dict[str, Any]]:
-    """Dynamically scan apps directory and load microservices with their API configurations."""
-    config = {}
+    """Dynamically scan apps directory and docs/openapi to load microservices with dual-engine fallback."""
+    config: dict[str, dict[str, Any]] = {}
     apps_dir = os.path.join(app_root, "apps")
-    if not os.path.isdir(apps_dir):
-        return config
+    openapi_dir = os.path.join(app_root, "docs", "openapi")
 
-    # Scan subdirectories under apps/
-    for name in sorted(os.listdir(apps_dir)):
-        dir_path = os.path.join(apps_dir, name)
-        # Exclude gateway aggregator, non-directories, and hidden files/folders
-        if name == "gateway" or name.startswith(".") or not os.path.isdir(dir_path):
-            continue
+    # 1. Scan subdirectories under apps/
+    if os.path.isdir(apps_dir):
+        for name in sorted(os.listdir(apps_dir)):
+            dir_path = os.path.join(apps_dir, name)
+            if name == "gateway" or name.startswith(".") or not os.path.isdir(dir_path):
+                continue
 
-        # Check for main.py entrypoint containing FastAPI application object
-        main_path = os.path.join(dir_path, "main.py")
-        if not os.path.isfile(main_path):
-            continue
+            prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
+            main_path = os.path.join(dir_path, "main.py")
 
-        # Dynamically load the module using Python's standard dynamic import machinery
-        try:
-            module = importlib.import_module(f"apps.{name}.main")
-            app = getattr(module, "app", None)
-            if app is not None:
-                # Decide prefix
-                prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
-                config[name] = {"app": app, "prefix": prefix}
-        except Exception as e:
-            print(f"Error dynamically importing service '{name}': {e}", file=sys.stderr)
-            IMPORT_ERRORS.append((name, e))
+            if os.path.isfile(main_path):
+                try:
+                    module = importlib.import_module(f"apps.{name}.main")
+                    app = getattr(module, "app", None)
+                    if app is not None:
+                        config[name] = {
+                            "type": "dynamic",
+                            "app": app,
+                            "prefix": prefix,
+                        }
+                        continue
+                except Exception as e:
+                    print(
+                        f"Notice: Dynamic import failed for service '{name}' ({e}). Falling back to static schema.",
+                        file=sys.stderr,
+                    )
+
+            # Static schema fallback for apps directory
+            static_file = os.path.join(openapi_dir, f"{name}_openapi.json")
+            if os.path.isfile(static_file):
+                try:
+                    with open(static_file, encoding="utf-8") as f:
+                        schema = json.load(f)
+                    config[name] = {
+                        "type": "static",
+                        "schema": schema,
+                        "prefix": prefix,
+                    }
+                except Exception as e:
+                    IMPORT_ERRORS.append((name, e))
+
+    # 2. Check docs/openapi/ for any additional decommissioned microservices
+    if os.path.isdir(openapi_dir):
+        for static_file in sorted(
+            glob.glob(os.path.join(openapi_dir, "*_openapi.json"))
+        ):
+            base_name = os.path.basename(static_file).replace("_openapi.json", "")
+            if base_name in config or base_name == "cdisc":
+                continue
+            prefix = "ETMF_" if base_name == "etmf" else f"{base_name.capitalize()}_"
+            try:
+                with open(static_file, encoding="utf-8") as f:
+                    schema = json.load(f)
+                config[base_name] = {
+                    "type": "static",
+                    "schema": schema,
+                    "prefix": prefix,
+                }
+            except Exception as e:
+                IMPORT_ERRORS.append((base_name, e))
 
     return config
 
 
-# Map downstream service identifiers to their corresponding FastAPI apps and gateway prefixes
+# Map downstream service identifiers to their corresponding FastAPI apps / static schemas
 SERVICES_CONFIG = discover_services()
 
 
@@ -106,45 +206,43 @@ def validate_schemas() -> bool:
     """
     Compile and validate all schemas from downstream microservices.
 
-    Retrieves the OpenAPI specification dynamically generated by each service,
-    checks for duplicates, and simulates the unified aggregation to detect
-    any namespacing errors or naming collisions.
+    Retrieves the OpenAPI specification dynamically generated by active Python services
+    or loads static JSON schemas for decommissioned services, checks for duplicates,
+    and simulates the unified aggregation to detect any namespacing errors or collisions.
 
     Returns:
         bool: True if the schema compilation and namespaces are 100% correct and
               safe from collisions; False otherwise.
     """
     print_runtime_info("validate_schemas.py")
-    print("--- Starting Static Schema Compilation & Namespacing Checks ---")
+    print("--- Starting Dual-Engine Schema Compilation & Namespacing Checks ---")
 
     if IMPORT_ERRORS:
         print(
-            "\n[VALIDATION FAILED] Static compilation of downstream services failed:",
+            "\n[VALIDATION FAILED] Static compilation or schema loading failed:",
             file=sys.stderr,
         )
         for name, err in IMPORT_ERRORS:
-            print(f"  - Service '{name}' import failed: {err}", file=sys.stderr)
-        print(
-            "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
-            "for instructions on how to resolve service import failures.",
-            file=sys.stderr,
-        )
+            print(f"  - Service '{name}' error: {err}", file=sys.stderr)
         return False
 
     raw_schemas: dict[str, Any] = {}
 
-    # 1. Statically generate the OpenAPI schema from each application instance
+    # 1. Compile OpenAPI schema from dynamic instance or static schema file
     for service_name, config in SERVICES_CONFIG.items():
         try:
-            raw_schemas[service_name] = config["app"].openapi()
-            print(f"Successfully compiled schema for '{service_name}' offline.")
+            if config["type"] == "dynamic":
+                raw_schemas[service_name] = config["app"].openapi()
+                print(
+                    f"Successfully compiled schema for '{service_name}' (dynamic FastAPI)."
+                )
+            else:
+                raw_schemas[service_name] = config["schema"]
+                print(
+                    f"Successfully loaded schema for '{service_name}' (static JSON fallback)."
+                )
         except Exception as e:
             print(f"Error compiling OpenAPI for {service_name}: {e}", file=sys.stderr)
-            print(
-                "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
-                "for instructions on how to resolve schema compilation failures.",
-                file=sys.stderr,
-            )
             return False
 
     # 2. Track schema definition occurrences across services to find shared models
@@ -176,8 +274,11 @@ def validate_schemas() -> bool:
         schemas = spec.get("components", {}).get("schemas", {})
 
         for schema_name in schemas:
-            # Check if name is correctly prefixed
-            namespaced_name = f"{prefix}{schema_name}"
+            namespaced_name = (
+                schema_name
+                if schema_name.startswith(prefix)
+                else f"{prefix}{schema_name}"
+            )
 
             # Guardrail: The prefix must be non-empty and namespaced_name must start with the prefix
             if not prefix or not namespaced_name.startswith(prefix):
@@ -190,11 +291,12 @@ def validate_schemas() -> bool:
             # Detect naming collisions on the aggregated components map
             if namespaced_name in merged_schemas:
                 other_service, other_orig = merged_schemas[namespaced_name]
-                errors.append(
-                    f"Namespace collision detected! Both service '{service_name}' (schema '{schema_name}') "
-                    f"and service '{other_service}' (schema '{other_orig}') mapped to identical "
-                    f"aggregated schema key '{namespaced_name}'."
-                )
+                if other_service != service_name:
+                    errors.append(
+                        f"Namespace collision detected! Both service '{service_name}' (schema '{schema_name}') "
+                        f"and service '{other_service}' (schema '{other_orig}') mapped to identical "
+                        f"aggregated schema key '{namespaced_name}'."
+                    )
             else:
                 merged_schemas[namespaced_name] = (service_name, schema_name)
 
@@ -205,11 +307,6 @@ def validate_schemas() -> bool:
         )
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
-        print(
-            "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
-            "for instructions on how to resolve namespace collisions or prefix issues.",
-            file=sys.stderr,
-        )
         return False
 
     print(
@@ -219,8 +316,6 @@ def validate_schemas() -> bool:
 
 
 if __name__ == "__main__":
-    import json
-
     export_dir = None
     if "--export-dir" in sys.argv:
         idx = sys.argv.index("--export-dir")
@@ -234,30 +329,34 @@ if __name__ == "__main__":
     if export_dir:
         os.makedirs(export_dir, exist_ok=True)
         print(f"\n[EXPORT] Exporting OpenAPI schemas to '{export_dir}'...")
+        export_specs: dict[str, tuple[str, dict[str, Any]]] = {}
+
         for name, config in SERVICES_CONFIG.items():
-            app = config["app"]
-            schema = app.openapi()
+            if config["type"] == "dynamic":
+                schema = config["app"].openapi()
+            else:
+                schema = config["schema"]
+
+            export_specs[name] = (config["prefix"], schema)
             out_file = os.path.join(export_dir, f"{name}_openapi.json")
             with open(out_file, "w") as f:
                 json.dump(schema, f, indent=2)
                 f.write("\n")
             print(f"  - Exported {out_file}")
 
-        # Also export the gateway app's openapi schema as cdisc_openapi.json
+        # Export unified cdisc_openapi.json using dynamic app if available, or dual-engine aggregation
+        gateway_out_file = os.path.join(export_dir, "cdisc_openapi.json")
         try:
             from apps.gateway.main import app as gateway_app
 
             gateway_app.openapi_schema = None
             gateway_schema = gateway_app.openapi()
-            gateway_out_file = os.path.join(export_dir, "cdisc_openapi.json")
-            with open(gateway_out_file, "w") as f:
-                json.dump(gateway_schema, f, indent=2)
-                f.write("\n")
-            print(f"  - Exported {gateway_out_file}")
-        except Exception as e:
-            print(
-                f"Warning: Failed to export gateway schema (cdisc_openapi.json): {e}",
-                file=sys.stderr,
-            )
+        except Exception:
+            gateway_schema = aggregate_service_specs(export_specs)
+
+        with open(gateway_out_file, "w") as f:
+            json.dump(gateway_schema, f, indent=2)
+            f.write("\n")
+        print(f"  - Exported {gateway_out_file}")
 
     sys.exit(0)

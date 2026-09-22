@@ -117,6 +117,54 @@ class TestDevOrchestrator(unittest.TestCase):
         self.assertNotIn("-d", cmd)
         self.assertNotIn("--no-detach", cmd)
 
+    def test_build_compose_command_hybrid_profile(self):
+        action, profiles, cmd = dev_orchestrator.build_compose_command(
+            action_or_profile="hybrid",
+            secondary=None,
+            profiles_opt=None,
+            compose_file="/app/cadence-clinical/docker/docker-compose.yml",
+            extra_args=[],
+        )
+        self.assertEqual(action, "up")
+        self.assertEqual(profiles, ["hybrid"])
+        self.assertEqual(
+            cmd,
+            [
+                "docker",
+                "compose",
+                "-f",
+                "/app/cadence-clinical/docker/docker-compose.yml",
+                "--profile",
+                "hybrid",
+                "up",
+                "-d",
+            ],
+        )
+
+    def test_build_compose_command_dotnet_profile(self):
+        action, profiles, cmd = dev_orchestrator.build_compose_command(
+            action_or_profile="dotnet",
+            secondary=None,
+            profiles_opt=None,
+            compose_file="/app/cadence-clinical/docker/docker-compose.yml",
+            extra_args=[],
+        )
+        self.assertEqual(action, "up")
+        self.assertEqual(profiles, ["dotnet"])
+        self.assertEqual(
+            cmd,
+            [
+                "docker",
+                "compose",
+                "-f",
+                "/app/cadence-clinical/docker/docker-compose.yml",
+                "--profile",
+                "dotnet",
+                "up",
+                "-d",
+            ],
+        )
+
     def test_main_dry_run(self):
         ret = dev_orchestrator.main(["designer", "--dry-run"])
         self.assertEqual(ret, 0)
