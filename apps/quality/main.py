@@ -61,6 +61,7 @@ from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal
+from packages.telemetry import setup_telemetry
 
 DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -78,6 +79,8 @@ app = FastAPI(
         base_metadata=Base.metadata,
     ),
 )
+
+setup_telemetry("quality", app)
 
 app.add_middleware(GatewayAuthMiddleware)
 register_rfc7807_handlers(app)

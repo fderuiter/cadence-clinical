@@ -133140,7 +133140,6 @@
         ],
         "title": "ValidationError"
       }
-    },
-    "securitySchemes": {}
+    }
   }
 }

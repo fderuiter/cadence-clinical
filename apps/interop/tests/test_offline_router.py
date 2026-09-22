@@ -10,9 +10,6 @@ import uuid
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
-
-import packages  # noqa: F401
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     AuditLog,
@@ -21,6 +18,9 @@ from apps.execution.database.models import (
     SyncedBatchIdempotencyKey,
 )
 from apps.execution.main import app
+from sqlalchemy import select
+
+import packages  # noqa: F401
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv(

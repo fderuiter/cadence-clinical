@@ -7,12 +7,12 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 
 from apps.eisf.database import db_manager
 from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base
-from apps.gateway.main import generate_signature
 from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 
 

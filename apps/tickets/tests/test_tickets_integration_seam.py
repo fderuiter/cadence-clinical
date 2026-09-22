@@ -12,10 +12,10 @@ from unittest.mock import patch
 import httpx
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.gateway.main import generate_signature
 from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.main import app as notifications_app
 from apps.notifications.models import Base as NotificationsBase

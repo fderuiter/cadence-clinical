@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Sync OpenAPI Specification inside docs/SDLC/03_API_Integration_Specification.md.
 
-This script aggregates the OpenAPI specifications of the active services
-(designer and execution) completely in-memory (offline) and replaces the
-yaml block under Section 7 of docs/SDLC/03_API_Integration_Specification.md.
+This script aggregates the OpenAPI specifications of all microservices
+completely in-memory (offline) and replaces the yaml block under Section 7 of
+docs/SDLC/03_API_Integration_Specification.md.
 """
 
+import glob
+import json
 import os
 import sys
 
@@ -29,32 +31,6 @@ os.environ.setdefault(
 os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
 os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
-
-import glob
-import json
-import os
-import sys
-from typing import Any
-
-# Set up python path for local imports and package paths
-app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if app_root not in sys.path:
-    sys.path.insert(0, app_root)
-
-packages_dir = os.path.join(app_root, "packages")
-for name in ["database", "deid", "security", "ui"]:
-    pkg_path = os.path.join(packages_dir, name)
-    if pkg_path not in sys.path:
-        sys.path.insert(0, pkg_path)
-
-os.environ.setdefault("AUDIT_LOG_SECRET_KEY", "dev-secret-key-12345")
-os.environ.setdefault(
-    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
-)
-os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
-os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
-os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
-
 
 def rewrite_refs(obj: Any, prefix: str) -> Any:
     """Recursively rewrite schema $ref pointers to include the service prefix."""
@@ -81,6 +57,14 @@ def rewrite_refs(obj: Any, prefix: str) -> Any:
 
 def aggregate_from_openapi_files() -> dict[str, Any]:
     """Aggregate individual OpenAPI JSON files from docs/openapi/ into a unified specification."""
+    cdisc_file = os.path.join(app_root, "docs", "openapi", "cdisc_openapi.json")
+    if os.path.exists(cdisc_file):
+        try:
+            with open(cdisc_file, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load cdisc_openapi.json: {e}", file=sys.stderr)
+
     openapi_dir = os.path.join(app_root, "docs", "openapi")
     merged_paths: dict[str, Any] = {}
     merged_schemas: dict[str, Any] = {}
@@ -131,16 +115,7 @@ def aggregate_from_openapi_files() -> dict[str, Any]:
 
 def main():
     print("Generating and merging OpenAPI specifications statically...")
-    try:
-        from apps.gateway.main import app as gateway_app
-
-        gateway_app.openapi_schema = None
-        aggregated_spec = gateway_app.openapi()
-    except (ImportError, Exception) as e:
-        print(
-            f"Gateway entrypoint unavailable ({e}). Aggregating OpenAPI schemas directly from docs/openapi/*.json..."
-        )
-        aggregated_spec = aggregate_from_openapi_files()
+    aggregated_spec = aggregate_from_openapi_files()
 
     brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     # Create the aggregated structure

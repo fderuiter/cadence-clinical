@@ -46,9 +46,6 @@ from typing import Any
 import httpx
 import pytest
 import pytest_asyncio
-from jose import jwt
-from sqlalchemy import select
-
 from apps.execution.biostat import (
     read_xpt,
     serialize_to_csv,
@@ -81,6 +78,9 @@ from apps.execution.services.lab_ingestion_service import (
 )
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit
+from jose import jwt
+from sqlalchemy import select
+
 from packages.security.rbac_helpers import build_gateway_headers
 
 GATEWAY_SECRET = os.getenv(

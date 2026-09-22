@@ -40,6 +40,8 @@ ROW_KEYS: dict[str, str] = {
     "Cadence Architecture & Sentinels": "cadence",
     "Hexagonal Contract Verification": "contracts",
     "Linting & Formatting": "lint",
+    ".NET 10 xUnit Tests": "dotnet_test",
+    "Dotnet Tests": "dotnet_test",
     "Backend Tests & Coverage": "test",
     "Frontend Checks": "frontend",
     "ADR Validation": "adr",
@@ -59,6 +61,7 @@ FIX_COMMANDS: dict[str, str] = {
     "cadence": "`uv run cadence fix`",
     "contracts": "`uv run python scripts/verify_contracts.py`",
     "lint": "`uv run ruff check . --fix && uv run ruff format .`",
+    "dotnet_test": "`dotnet test Cadence.sln`",
     "test": "`uv run pytest -n auto`",
     "frontend": "`pnpm -r format && pnpm -r lint`",
     "adr": "`uv run python scripts/validate_adrs.py`",
@@ -186,6 +189,7 @@ def merge_outcomes(
     merged: dict[str, str] = {}
     for key in [
         "lint",
+        "dotnet_test",
         "test",
         "frontend",
         "adr",
@@ -365,6 +369,7 @@ def build_comment_body(
         ("Cadence Architecture & Sentinels", "cadence"),
         ("Hexagonal Contract Verification", "contracts"),
         ("Linting & Formatting (Ruff)", "lint"),
+        (".NET 10 xUnit Tests", "dotnet_test"),
         ("Backend Tests & Coverage (pytest)", "test"),
         ("Requirements Traceability", "traceability"),
         ("Frontend Checks (pnpm check)", "frontend"),
@@ -627,6 +632,9 @@ def main() -> None:
             "cadence": os.environ.get("CADENCE_OUTCOME", ""),
             "contracts": os.environ.get("CONTRACTS_OUTCOME", ""),
             "lint": os.environ.get("LINTING_OUTCOME", ""),
+            "dotnet_test": os.environ.get(
+                "DOTNET_TEST_OUTCOME", os.environ.get("DOTNET_OUTCOME", "")
+            ),
             "test": os.environ.get("TEST_OUTCOME", ""),
             "frontend": os.environ.get("FRONTEND_OUTCOME", ""),
             "adr": os.environ.get("ADR_OUTCOME", ""),

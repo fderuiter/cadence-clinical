@@ -3,15 +3,15 @@
 Requirements: PRD-SYS-001
 """
 
-from fastapi.testclient import TestClient
-
-import packages  # noqa: F401
 from apps.designer.main import app
 from apps.designer.services.quality_sentinel import (
     ProtocolQualitySentinel,
     count_syllables_word,
 )
 from apps.designer.tests.test_synopsis_router import _make_auth_headers
+from fastapi.testclient import TestClient
+
+import packages  # noqa: F401
 
 client = TestClient(app)
 
@@ -407,6 +407,7 @@ def test_quality_sentinel_router_endpoint_dependency_override() -> None:
 
     from apps.designer.dependencies import get_quality_sentinel
     from apps.designer.domain.cdisc.sentinel_models import ProtocolQualityScore
+
     from packages.security.rbac import Principal, get_principal
 
     class MockProtocolQualitySentinel:

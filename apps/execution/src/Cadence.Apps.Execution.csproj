@@ -23,6 +23,9 @@
     <!-- MIG-SUBJ-021: MassTransit + the EF Core transactional outbox (ADR-2234 / Rule 8 / MIG-06). -->
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
 
   <ItemGroup>

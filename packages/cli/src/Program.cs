@@ -139,14 +139,21 @@ public static class Program
     {
         AnsiConsole.MarkupLine("[cyan]Executing Cadence Architecture Sentinels & Quality Gates...[/]\n");
 
-        AnsiConsole.MarkupLine("  1. Validating C# Code Formatting (.editorconfig)...");
-        int formatExit = RunProcess("dotnet", "format Cadence.sln --verify-no-changes");
+        AnsiConsole.MarkupLine("  1. Validating C# Code Formatting & Roslyn Style Rules (.editorconfig)...");
+        int formatExit = RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore");
         if (formatExit != 0)
         {
             AnsiConsole.MarkupLine("  [red]Formatting check failed! Run 'dotnet format Cadence.sln' to auto-fix.[/]");
             return formatExit;
         }
-        AnsiConsole.MarkupLine("  [green][OK] Code style compliant.[/]");
+
+        int styleExit = RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore");
+        if (styleExit != 0)
+        {
+            AnsiConsole.MarkupLine("  [red]Roslyn analyzer/style check failed! Run 'dotnet format style Cadence.sln' to auto-fix.[/]");
+            return styleExit;
+        }
+        AnsiConsole.MarkupLine("  [green][OK] Code style and Roslyn rules compliant.[/]");
 
         AnsiConsole.MarkupLine("\n  2. Validating Architectural Decision Records (ADRs)...");
         int adrExit = RunProcess("python", "scripts/validate_adrs.py");

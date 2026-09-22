@@ -6,7 +6,6 @@ logic propagation, invalid syntax rejections, and aggregate eligibility outcomes
 """
 
 import pytest
-
 from apps.designer.domain.eligibility import (
     ComparisonOperator,
     EligibilityCriterion,

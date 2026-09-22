@@ -54,6 +54,7 @@ typecheck: ## Run static type checking for repository contracts
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
 	uv run --python 3.14 ruff check . --exclude apps/execution/database/models.py
+	dotnet format style Cadence.sln --verify-no-changes --no-restore
 
 format: ## Format C# code, frontend code, and Python scripts
 	pnpm -r format

@@ -62,70 +62,47 @@ for name in ["database", "deid", "security", "ui"]:
         sys.path.insert(0, pkg_path)
 
 
+import json
+import subprocess
+
 # Track dynamic import errors for diagnostic reporting
 IMPORT_ERRORS: list[tuple[str, Exception]] = []
 
 
-def rewrite_refs(obj: Any, prefix: str) -> Any:
-    """Recursively rewrite schema $ref pointers to include the service prefix."""
-    if isinstance(obj, dict):
-        new_dict = {}
-        for k, v in obj.items():
-            if (
-                k == "$ref"
-                and isinstance(v, str)
-                and v.startswith("#/components/schemas/")
-            ):
-                ref_name = v.split("/")[-1]
-                target_name = (
-                    ref_name if ref_name.startswith(prefix) else f"{prefix}{ref_name}"
-                )
-                new_dict[k] = f"#/components/schemas/{target_name}"
-            else:
-                new_dict[k] = rewrite_refs(v, prefix)
-        return new_dict
-    if isinstance(obj, list):
-        return [rewrite_refs(item, prefix) for item in obj]
-    return obj
+def load_csharp_service_spec(service_name: str) -> dict[str, Any] | None:
+    """Attempts to extract OpenAPI JSON from ASP.NET Core 10 service or falls back to stored JSON."""
+    service_dir = os.path.join(app_root, "apps", service_name)
+    csproj_path = None
+    if os.path.isdir(service_dir):
+        for root, _, files in os.walk(service_dir):
+            for file in files:
+                if file.endswith(".csproj"):
+                    csproj_path = os.path.join(root, file)
+                    break
+            if csproj_path:
+                break
 
+    if csproj_path:
+        try:
+            result = subprocess.run(
+                ["dotnet", "run", "--project", csproj_path, "--no-build", "--", "--export-openapi"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip().startswith("{"):
+                return json.loads(result.stdout)
+        except Exception:
+            pass
 
-def aggregate_service_specs(
-    service_specs: dict[str, tuple[str, dict[str, Any]]],
-) -> dict[str, Any]:
-    """Aggregate individual microservice OpenAPI specs into a unified schema."""
-    merged_paths: dict[str, Any] = {}
-    merged_schemas: dict[str, Any] = {}
-    merged_security_schemes: dict[str, Any] = {}
-
-    for service_name, (prefix, spec) in service_specs.items():
-        schemas = spec.get("components", {}).get("schemas", {})
-        for s_name, s_def in schemas.items():
-            namespaced = s_name if s_name.startswith(prefix) else f"{prefix}{s_name}"
-            merged_schemas[namespaced] = rewrite_refs(s_def, prefix)
-
-        paths = spec.get("paths", {})
-        rewritten_paths = rewrite_refs(paths, prefix)
-        for p_key, p_val in rewritten_paths.items():
-            if p_key in merged_paths:
-                merged_paths[p_key].update(p_val)
-            else:
-                merged_paths[p_key] = p_val
-
-        sec_schemes = spec.get("components", {}).get("securitySchemes", {})
-        merged_security_schemes.update(sec_schemes)
-
-    return {
-        "openapi": "3.1.0",
-        "info": {
-            "title": "Cadence Clinical - Unified API",
-            "version": "0.1.0",
-        },
-        "paths": merged_paths,
-        "components": {
-            "schemas": merged_schemas,
-            "securitySchemes": merged_security_schemes,
-        },
-    }
+    openapi_file = os.path.join(app_root, "docs", "openapi", f"{service_name}_openapi.json")
+    if os.path.isfile(openapi_file):
+        try:
+            with open(openapi_file, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load spec file '{openapi_file}': {e}", file=sys.stderr)
+    return None
 
 
 def discover_services() -> dict[str, dict[str, Any]]:
@@ -134,52 +111,34 @@ def discover_services() -> dict[str, dict[str, Any]]:
     apps_dir = os.path.join(app_root, "apps")
     openapi_dir = os.path.join(app_root, "docs", "openapi")
 
-    # 1. Scan subdirectories under apps/
     if os.path.isdir(apps_dir):
         for name in sorted(os.listdir(apps_dir)):
             dir_path = os.path.join(apps_dir, name)
-            if name == "gateway" or name.startswith(".") or not os.path.isdir(dir_path):
+            if name in ("gateway", "web", "subject-portal") or name.startswith(".") or name.startswith("__") or not os.path.isdir(dir_path):
                 continue
 
             prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
-            main_path = os.path.join(dir_path, "main.py")
 
+            main_path = os.path.join(dir_path, "main.py")
+            app = None
             if os.path.isfile(main_path):
                 try:
                     module = importlib.import_module(f"apps.{name}.main")
                     app = getattr(module, "app", None)
-                    if app is not None:
-                        config[name] = {
-                            "type": "dynamic",
-                            "app": app,
-                            "prefix": prefix,
-                        }
-                        continue
-                except Exception as e:
-                    print(
-                        f"Notice: Dynamic import failed for service '{name}' ({e}). Falling back to static schema.",
-                        file=sys.stderr,
-                    )
+                except Exception:
+                    pass
 
-            # Static schema fallback for apps directory
-            static_file = os.path.join(openapi_dir, f"{name}_openapi.json")
-            if os.path.isfile(static_file):
-                try:
-                    with open(static_file, encoding="utf-8") as f:
-                        schema = json.load(f)
-                    config[name] = {
-                        "type": "static",
-                        "schema": schema,
-                        "prefix": prefix,
-                    }
-                except Exception as e:
-                    IMPORT_ERRORS.append((name, e))
+            if app is not None:
+                config[name] = {"app": app, "type": "python", "prefix": prefix}
+            else:
+                spec = load_csharp_service_spec(name)
+                if spec is not None:
+                    config[name] = {"spec": spec, "type": "csharp", "prefix": prefix}
+                else:
+                    IMPORT_ERRORS.append((name, RuntimeError(f"Could not load OpenAPI schema for service '{name}'")))
 
-    # 2. Check docs/openapi/ for any additional decommissioned microservices
     if os.path.isdir(openapi_dir):
-        for static_file in sorted(
-            glob.glob(os.path.join(openapi_dir, "*_openapi.json"))
-        ):
+        for static_file in sorted(glob.glob(os.path.join(openapi_dir, "*_openapi.json"))):
             base_name = os.path.basename(static_file).replace("_openapi.json", "")
             if base_name in config or base_name == "cdisc":
                 continue
@@ -187,18 +146,34 @@ def discover_services() -> dict[str, dict[str, Any]]:
             try:
                 with open(static_file, encoding="utf-8") as f:
                     schema = json.load(f)
-                config[base_name] = {
-                    "type": "static",
-                    "schema": schema,
-                    "prefix": prefix,
-                }
+                config[base_name] = {"spec": schema, "type": "static", "prefix": prefix}
             except Exception as e:
                 IMPORT_ERRORS.append((base_name, e))
 
     return config
 
 
-# Map downstream service identifiers to their corresponding FastAPI apps / static schemas
+def rewrite_refs(obj: Any, prefix: str, schema_map: dict[str, str] | None = None) -> Any:
+    """Recursively rewrite $ref schema pointers to match namespaced schema keys."""
+    if isinstance(obj, dict):
+        new_obj = {}
+        for k, v in obj.items():
+            if k == "$ref" and isinstance(v, str) and v.startswith("#/components/schemas/"):
+                ref_name = v.split("/")[-1]
+                target_name = (
+                    schema_map.get(ref_name) if schema_map and ref_name in schema_map
+                    else (ref_name if ref_name.startswith(prefix) else f"{prefix}{ref_name}")
+                )
+                new_obj[k] = f"#/components/schemas/{target_name}"
+            else:
+                new_obj[k] = rewrite_refs(v, prefix, schema_map)
+        return new_obj
+    elif isinstance(obj, list):
+        return [rewrite_refs(item, prefix, schema_map) for item in obj]
+    else:
+        return obj
+
+
 SERVICES_CONFIG = discover_services()
 
 
@@ -231,15 +206,15 @@ def validate_schemas() -> bool:
     # 1. Compile OpenAPI schema from dynamic instance or static schema file
     for service_name, config in SERVICES_CONFIG.items():
         try:
-            if config["type"] == "dynamic":
+            if config.get("type") in ("python", "dynamic"):
                 raw_schemas[service_name] = config["app"].openapi()
                 print(
                     f"Successfully compiled schema for '{service_name}' (dynamic FastAPI)."
                 )
             else:
-                raw_schemas[service_name] = config["schema"]
+                raw_schemas[service_name] = config.get("spec") or config.get("schema")
                 print(
-                    f"Successfully loaded schema for '{service_name}' (static JSON fallback)."
+                    f"Successfully loaded schema for '{service_name}' (C# / static fallback)."
                 )
         except Exception as e:
             print(f"Error compiling OpenAPI for {service_name}: {e}", file=sys.stderr)
@@ -332,31 +307,59 @@ if __name__ == "__main__":
         export_specs: dict[str, tuple[str, dict[str, Any]]] = {}
 
         for name, config in SERVICES_CONFIG.items():
-            if config["type"] == "dynamic":
-                schema = config["app"].openapi()
-            else:
-                schema = config["schema"]
-
+            schema = config["app"].openapi() if config.get("type") in ("python", "dynamic") else (config.get("spec") or config.get("schema"))
             export_specs[name] = (config["prefix"], schema)
             out_file = os.path.join(export_dir, f"{name}_openapi.json")
-            with open(out_file, "w") as f:
+            with open(out_file, "w", encoding="utf-8") as f:
                 json.dump(schema, f, indent=2)
                 f.write("\n")
             print(f"  - Exported {out_file}")
 
-        # Export unified cdisc_openapi.json using dynamic app if available, or dual-engine aggregation
+        # Export the aggregated gateway schema as cdisc_openapi.json from all microservice specs
         gateway_out_file = os.path.join(export_dir, "cdisc_openapi.json")
         try:
-            from apps.gateway.main import app as gateway_app
+            aggregated_paths = {}
+            aggregated_schemas = {}
+            for name, config in SERVICES_CONFIG.items():
+                spec = config["app"].openapi() if config.get("type") in ("python", "dynamic") else (config.get("spec") or config.get("schema"))
+                prefix = config["prefix"]
 
-            gateway_app.openapi_schema = None
-            gateway_schema = gateway_app.openapi()
-        except Exception:
-            gateway_schema = aggregate_service_specs(export_specs)
+                schemas = spec.get("components", {}).get("schemas", {})
+                schema_map = {}
+                for s_name in schemas:
+                    target_name = s_name if s_name.startswith(prefix) else f"{prefix}{s_name}"
+                    schema_map[s_name] = target_name
 
-        with open(gateway_out_file, "w") as f:
-            json.dump(gateway_schema, f, indent=2)
-            f.write("\n")
-        print(f"  - Exported {gateway_out_file}")
+                raw_paths = spec.get("paths", {})
+                rewritten_paths = rewrite_refs(raw_paths, prefix, schema_map)
+                for p, p_val in rewritten_paths.items():
+                    aggregated_paths[p] = p_val
+
+                for s_name, s_val in schemas.items():
+                    target_name = schema_map[s_name]
+                    rewritten_s_val = rewrite_refs(s_val, prefix, schema_map)
+                    aggregated_schemas[target_name] = rewritten_s_val
+
+            gateway_schema = {
+                "openapi": "3.1.0",
+                "info": {
+                    "title": "Cadence Clinical - Unified API",
+                    "version": "0.1.0"
+                },
+                "paths": aggregated_paths,
+                "components": {
+                    "schemas": aggregated_schemas
+                }
+            }
+
+            with open(gateway_out_file, "w", encoding="utf-8") as f:
+                json.dump(gateway_schema, f, indent=2)
+                f.write("\n")
+            print(f"  - Exported {gateway_out_file}")
+        except Exception as e:
+            print(
+                f"Warning: Failed to export gateway schema (cdisc_openapi.json): {e}",
+                file=sys.stderr,
+            )
 
     sys.exit(0)
