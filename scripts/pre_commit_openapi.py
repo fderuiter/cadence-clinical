@@ -64,11 +64,13 @@ def should_trigger_schema_generation(staged_files: list[str]) -> bool:
         staged_files: A list of staged file paths.
 
     Returns:
-        bool: True if any staged file is an API route, Pydantic model, or schema
-              definition, or any frontend API client change; False otherwise.
+        bool: True if any staged file is an API route, Pydantic model, .NET C# endpoint/project,
+              or schema definition, or any frontend API client change; False otherwise.
     """
     for f in staged_files:
         if "apps/web/src/api/" in f:
+            return True
+        if f.endswith(".cs") or f.endswith(".csproj"):
             return True
         if not f.endswith(".py"):
             continue
@@ -102,7 +104,7 @@ def check_and_run_exporter() -> int:
     staged_files = get_staged_files()
     if not should_trigger_schema_generation(staged_files):
         print(
-            "No API routes, Pydantic models, or schema definitions modified. Bypassing schema compilation."
+            "No API routes, Pydantic models, .NET endpoints, or schema definitions modified. Bypassing schema compilation."
         )
         return 0
 
@@ -114,15 +116,16 @@ def check_and_run_exporter() -> int:
     else:
         python_path = os.path.join(app_root, ".venv", "bin", "python")
 
-    # Verify virtual environment existence and required packages
-    venv_exists = os.path.exists(python_path)
-    dependencies_installed = False
+    python_exec = python_path if os.path.exists(python_path) else sys.executable
 
-    if venv_exists:
+    has_python_staged = any(f.endswith(".py") for f in staged_files)
+
+    # Only perform strict Python package dependency check if Python source files are staged
+    if has_python_staged:
+        dependencies_installed = False
         try:
-            # Check if core dependencies are importable in the virtual environment
             check_result = subprocess.run(
-                [python_path, "-c", "import fastapi, pydantic, sqlalchemy, neo4j"],
+                [python_exec, "-c", "import fastapi, pydantic, sqlalchemy"],
                 capture_output=True,
             )
             if check_result.returncode == 0:
@@ -130,41 +133,40 @@ def check_and_run_exporter() -> int:
         except subprocess.SubprocessError:
             pass
 
-    if not venv_exists or not dependencies_installed:
-        print("=" * 80, file=sys.stderr)
+        if not dependencies_installed:
+            print("=" * 80, file=sys.stderr)
+            print(
+                "[ERROR] Git Pre-Commit Hook: Missing Required Python Dependencies!",
+                file=sys.stderr,
+            )
+            print("=" * 80, file=sys.stderr)
+            print(
+                "The local Python virtual environment is either missing or does not have",
+                file=sys.stderr,
+            )
+            print("all required microservice dependencies installed.", file=sys.stderr)
+            print(
+                "\nTo resolve this, please run one of the following commands in the workspace root:",
+                file=sys.stderr,
+            )
+            print("    pnpm run setup:dev", file=sys.stderr)
+            print("  or", file=sys.stderr)
+            print("    uv sync --all-extras", file=sys.stderr)
+            print("=" * 80, file=sys.stderr)
+            return 1
+    else:
         print(
-            "[ERROR] Git Pre-Commit Hook: Missing Required Python Dependencies!",
-            file=sys.stderr,
+            "Bypassing Python virtual environment dependency checks (only .NET or frontend files changed)."
         )
-        print("=" * 80, file=sys.stderr)
-        print(
-            "The local Python virtual environment is either missing or does not have",
-            file=sys.stderr,
-        )
-        print("all required microservice dependencies installed.", file=sys.stderr)
-        print(
-            "\nTo resolve this, please run one of the following commands in the workspace root:",
-            file=sys.stderr,
-        )
-        print("    pnpm run setup:dev", file=sys.stderr)
-        print("  or", file=sys.stderr)
-        print("    uv sync --all-extras", file=sys.stderr)
-        print(
-            "\nThis will initialize the local python virtual environment (.venv) and install",
-            file=sys.stderr,
-        )
-        print("all required microservice import dependencies.", file=sys.stderr)
-        print("=" * 80, file=sys.stderr)
-        return 1
 
-    # Run the validation and export script using the virtual environment's python
+    # Run the validation and export script using the selected Python executable
     validate_script = os.path.join(app_root, "scripts", "validate_schemas.py")
     export_dir = os.path.join(app_root, "docs", "openapi")
 
     print(f"Running schema validation and exporting to '{export_dir}'...")
     try:
         export_result = subprocess.run(
-            [python_path, validate_script, "--export-dir", export_dir],
+            [python_exec, validate_script, "--export-dir", export_dir],
             capture_output=True,
             text=True,
         )

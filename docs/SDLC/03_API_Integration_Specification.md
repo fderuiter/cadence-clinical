@@ -1076,605 +1076,13 @@ servers:
 - url: http://localhost:8000/api/v1
   description: Local Dev Gateway Proxy
 paths:
-  /api/v1/cdisc/products:
-    get:
-      tags:
-      - CDISC Standards
-      summary: List Cdisc Products
-      description: 'List available CDISC products and standards catalogs.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_list_cdisc_products_api_v1_cdisc_products_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/Gateway_CdiscProductSummary'
-                type: array
-                title: Response List Cdisc Products Api V1 Cdisc Products Get
-  /api/v1/cdisc/cdash/{domain_code}:
-    get:
-      tags:
-      - CDISC Standards
-      summary: Get Cdash Domain Definition
-      description: 'Retrieve CDASH domain specification definition.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_cdash_domain_definition_api_v1_cdisc_cdash__domain_code__get
-      parameters:
-      - name: domain_code
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Domain Code
-      - name: version
-        in: query
-        required: false
-        schema:
-          type: string
-          description: CDASHIG version
-          default: '2.3'
-          title: Version
-        description: CDASHIG version
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_CdashDomainDefinition'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/cdisc/sdtm/{domain_code}:
-    get:
-      tags:
-      - CDISC Standards
-      summary: Get Sdtm Domain Definition
-      description: 'Retrieve SDTM domain specification definition.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_sdtm_domain_definition_api_v1_cdisc_sdtm__domain_code__get
-      parameters:
-      - name: domain_code
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Domain Code
-      - name: version
-        in: query
-        required: false
-        schema:
-          type: string
-          description: SDTMIG version
-          default: '3.4'
-          title: Version
-        description: SDTMIG version
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_SdtmDomainDefinition'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/cdisc/codelists/{codelist_code}:
-    get:
-      tags:
-      - CDISC Standards
-      summary: Get Controlled Terminology Codelist
-      description: 'Retrieve controlled terminology codelist definition with local cache check.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_controlled_terminology_codelist_api_v1_cdisc_codelists__codelist_code__get
-      parameters:
-      - name: codelist_code
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Codelist Code
-      - name: package
-        in: query
-        required: false
-        schema:
-          type: string
-          description: CT package name
-          default: cdashct-2024-09-27
-          title: Package
-        description: CT package name
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_CodelistDefinition'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/usdm/import:
-    post:
-      tags:
-      - USDM Data Flow
-      summary: Import Usdm Protocol Spec
-      description: 'Import CDISC USDM JSON protocol specification into Study Designer.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_import_usdm_protocol_spec_api_v1_usdm_import_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_UsdmImportRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_UsdmImportResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/usdm/export/{study_id}:
-    get:
-      tags:
-      - USDM Data Flow
-      summary: Export Usdm Protocol Spec
-      description: 'Export study specification from Neo4j into CDISC USDM v3.0 JSON.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_export_usdm_protocol_spec_api_v1_usdm_export__study_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_UsdmExportResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/epro/submit:
-    post:
-      tags:
-      - eCOA
-      summary: Submit Epro Entry
-      description: 'Submit a single participant ePRO/eCOA diary submission.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_submit_epro_entry_api_v1_ecoa_epro_submit_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_EPROOfflineEntry'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_EPROSubmitResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/epro/sync:
-    post:
-      tags:
-      - eCOA
-      summary: Sync Epro Entries
-      description: 'Bulk sync offline participant ePRO submissions.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_sync_epro_entries_api_v1_ecoa_epro_sync_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_EPROBulkSyncRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_EPROBulkSyncResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/instruments/{id}:
-    get:
-      tags:
-      - eCOA
-      summary: Get Instrument
-      description: 'Retrieve an eCOA instrument definition by ID.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_instrument_api_v1_ecoa_instruments__id__get
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_InstrumentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/assignments/subject/{subject_id}:
-    get:
-      tags:
-      - eCOA
-      summary: Get Subject Assignments
-      description: 'Retrieve all assignments for a given subject.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_subject_assignments_api_v1_ecoa_assignments_subject__subject_id__get
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Gateway_SubjectAssignmentResponse'
-                title: Response Get Subject Assignments Api V1 Ecoa Assignments Subject  Subject Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/subjects/{subject_id}/compliance:
-    get:
-      tags:
-      - eCOA
-      summary: Get Subject Compliance
-      description: 'Retrieve/compute eCOA compliance status metrics for a subject.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_subject_compliance_api_v1_ecoa_subjects__subject_id__compliance_get
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_SubjectComplianceResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/subjects/{subject_id}/instruments:
-    get:
-      tags:
-      - eCOA
-      summary: Get Subject Instruments
-      description: 'Retrieve all unique assigned instruments for a given subject.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_subject_instruments_api_v1_ecoa_subjects__subject_id__instruments_get
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Gateway_InstrumentResponse'
-                title: Response Get Subject Instruments Api V1 Ecoa Subjects  Subject Id  Instruments Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/subjects/{subject_id}/notifications:
-    get:
-      tags:
-      - eCOA
-      summary: Get Subject Notifications
-      description: 'Retrieve all notifications for a given subject.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_get_subject_notifications_api_v1_ecoa_subjects__subject_id__notifications_get
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Gateway_SubjectNotificationResponse'
-                title: Response Get Subject Notifications Api V1 Ecoa Subjects  Subject Id  Notifications Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/notifications/{notification_id}/acknowledge:
-    post:
-      tags:
-      - eCOA
-      summary: Acknowledge Notification
-      description: 'Acknowledge/read a notification.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_acknowledge_notification_api_v1_ecoa_notifications__notification_id__acknowledge_post
-      parameters:
-      - name: notification_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Notification Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_AcknowledgeNotificationRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_SubjectNotificationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/instruments:
-    post:
-      tags:
-      - eCOA
-      summary: Create Instrument
-      description: 'Author a new eCOA questionnaire/diary definition.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_create_instrument_api_v1_ecoa_instruments_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_InstrumentCreate'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_InstrumentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/ecoa/assignments:
-    post:
-      tags:
-      - eCOA
-      summary: Create Subject Assignment
-      description: 'Assign an eCOA instrument to a subject with due/recurrence window data.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Gateway_create_subject_assignment_api_v1_ecoa_assignments_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_SubjectAssignmentCreate'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_SubjectAssignmentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/auth/signature-verification:
-    post:
-      summary: Signature Verification
-      description: 'POST /api/v1/auth/signature-verification
-
-        Verifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.
-
-        Enforces step-up authentication using ACR (Authentication Context Class Reference),
-
-        max_age bounds, and direct password re-verification.
-
-        Issues a short-lived (60-second) sig_token bound to user and action.'
-      operationId: Gateway_signature_verification_api_v1_auth_signature_verification_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Gateway_SignatureVerificationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema: {}
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/auth/demo-session:
-    post:
-      summary: Create Demo Session
-      operationId: Gateway_create_demo_session_api_v1_auth_demo_session_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              anyOf:
-              - $ref: '#/components/schemas/Gateway_DemoSessionRequest'
-              - type: 'null'
-              title: Body
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Create Demo Session Api V1 Auth Demo Session Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /api/v1/auth/demo:
-    post:
-      summary: Create Demo Session
-      operationId: Gateway_create_demo_session_api_v1_auth_demo_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              anyOf:
-              - $ref: '#/components/schemas/Gateway_DemoSessionRequest'
-              - type: 'null'
-              title: Body
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Create Demo Session Api V1 Auth Demo Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Gateway_HTTPValidationError'
-  /ai_gateway/api/v1/ai/generate:
+  /api/v1/ai/generate:
     post:
       tags:
       - Inference
       summary: Execute AI text generation or structured extraction
       description: "Generate completion text or structured JSON data conforming to a requested schema.\n\nArgs:\n    payload: GenerationRequestDTO containing prompt/messages, tier, and optional schema.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    GenerationResponseDTO with content, structured data, token usage, and telemetry.\n\nRaises:\n    HTTPException: If payload is missing prompt/messages or inference fails."
-      operationId: Ai_gateway_generate_completion_api_v1_ai_generate_post
+      operationId: generate_completion_api_v1_ai_generate_post
       requestBody:
         content:
           application/json:
@@ -1694,13 +1102,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
-  /ai_gateway/api/v1/ai/embed:
+  /api/v1/ai/embed:
     post:
       tags:
       - Inference
       summary: Generate dense vector embeddings for input texts
       description: "Generate float vector embeddings for input text strings.\n\nArgs:\n    payload: EmbeddingRequestDTO containing batch of text strings and model tier.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    EmbeddingResponseDTO containing generated float vectors and usage metrics.\n\nRaises:\n    HTTPException: If embedding generation encounters an upstream error."
-      operationId: Ai_gateway_generate_embeddings_api_v1_ai_embed_post
+      operationId: generate_embeddings_api_v1_ai_embed_post
       requestBody:
         content:
           application/json:
@@ -1720,13 +1128,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
-  /ai_gateway/api/v1/ai/tiers:
+  /api/v1/ai/tiers:
     get:
       tags:
       - Inference
       summary: Retrieve active configuration and model mapping across execution tiers
       description: "List all available execution tiers and active model configurations.\n\nArgs:\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    List of TierInfoDTO describing active tier mappings and capabilities."
-      operationId: Ai_gateway_list_tiers_api_v1_ai_tiers_get
+      operationId: list_tiers_api_v1_ai_tiers_get
       responses:
         '200':
           description: Successful Response
@@ -1737,7 +1145,7 @@ paths:
                   $ref: '#/components/schemas/Ai_gateway_TierInfoDTO'
                 type: array
                 title: Response List Tiers Api V1 Ai Tiers Get
-  /ai_gateway/api/v1/ai/rag/protocol-triage:
+  /api/v1/ai/rag/protocol-triage:
     post:
       tags:
       - Clinical RAG
@@ -1752,7 +1160,7 @@ paths:
         - Mathematical faithfulness calculation (85% confidence gate)
 
         - Fail-closed behavior on missing or unapproved protocol context'
-      operationId: Ai_gateway_triage_protocol_query_api_v1_ai_rag_protocol_triage_post
+      operationId: triage_protocol_query_api_v1_ai_rag_protocol_triage_post
       requestBody:
         content:
           application/json:
@@ -1772,7 +1180,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
-  /ai_gateway/api/v1/ai/reasoning/multi-step:
+  /api/v1/ai/reasoning/multi-step:
     post:
       tags:
       - Clinical Reasoning
@@ -1793,7 +1201,7 @@ paths:
         - Staging generated clinical records into draft state requiring human e-signature
 
         - Mandatory tenant and audit context validation'
-      operationId: Ai_gateway_execute_multi_step_reasoning_api_v1_ai_reasoning_multi_step_post
+      operationId: execute_multi_step_reasoning_api_v1_ai_reasoning_multi_step_post
       requestBody:
         content:
           application/json:
@@ -1813,13 +1221,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
-  /ai_gateway/api/v1/ai/reasoning/plan:
+  /api/v1/ai/reasoning/plan:
     post:
       tags:
       - Clinical Reasoning
       summary: Initialize or advance a caller-managed multi-step clinical reasoning plan
       description: Initialize or advance a multi-step clinical reasoning loop statelessly.
-      operationId: Ai_gateway_plan_clinical_reasoning_api_v1_ai_reasoning_plan_post
+      operationId: plan_clinical_reasoning_api_v1_ai_reasoning_plan_post
       requestBody:
         content:
           application/json:
@@ -1839,11 +1247,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
-  /ai_gateway/healthz:
+  /healthz:
     get:
       summary: Health Check
       description: Service health check endpoint.
-      operationId: Ai_gateway_health_check_healthz_get
+      operationId: health_check_healthz_get
       responses:
         '200':
           description: Successful Response
@@ -1854,11 +1262,11 @@ paths:
                   type: string
                 type: object
                 title: Response Health Check Healthz Get
-  /ai_gateway/health:
+  /health:
     get:
       summary: Health Check
       description: Service health check endpoint.
-      operationId: Ai_gateway_health_check_health_get
+      operationId: health_check_health_get
       responses:
         '200':
           description: Successful Response
@@ -1869,7 +1277,7 @@ paths:
                   type: string
                 type: object
                 title: Response Health Check Health Get
-  /ctms/api/v1/ctms/doa/delegate:
+  /api/v1/ctms/doa/delegate:
     post:
       tags:
       - DOA
@@ -1878,7 +1286,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Ctms_delegate_site_tasks_api_v1_ctms_doa_delegate_post
+      operationId: delegate_site_tasks_api_v1_ctms_doa_delegate_post
       requestBody:
         content:
           application/json:
@@ -1900,7 +1308,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/doa/revoke:
+  /api/v1/ctms/doa/revoke:
     post:
       tags:
       - DOA
@@ -1909,7 +1317,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Ctms_revoke_site_tasks_api_v1_ctms_doa_revoke_post
+      operationId: revoke_site_tasks_api_v1_ctms_doa_revoke_post
       requestBody:
         content:
           application/json:
@@ -1931,7 +1339,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/doa/sign-off:
+  /api/v1/ctms/doa/sign-off:
     post:
       tags:
       - DOA
@@ -1940,7 +1348,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Ctms_sign_off_delegation_api_v1_ctms_doa_sign_off_post
+      operationId: sign_off_delegation_api_v1_ctms_doa_sign_off_post
       requestBody:
         content:
           application/json:
@@ -1962,7 +1370,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/doa/sites/{site_id}/log:
+  /api/v1/ctms/doa/sites/{site_id}/log:
     get:
       tags:
       - DOA
@@ -1971,7 +1379,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Ctms_get_site_doa_log_api_v1_ctms_doa_sites__site_id__log_get
+      operationId: get_site_doa_log_api_v1_ctms_doa_sites__site_id__log_get
       parameters:
       - name: site_id
         in: path
@@ -1992,7 +1400,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/doa/sites/{site_id}/export-pdf:
+  /api/v1/ctms/doa/sites/{site_id}/export-pdf:
     get:
       tags:
       - DOA
@@ -2001,7 +1409,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Ctms_export_site_doa_pdf_api_v1_ctms_doa_sites__site_id__export_pdf_get
+      operationId: export_site_doa_pdf_api_v1_ctms_doa_sites__site_id__export_pdf_get
       parameters:
       - name: site_id
         in: path
@@ -2021,13 +1429,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/rules/presets:
+  /api/v1/ctms/startup/rules/presets:
     get:
       tags:
       - CTMS Site Startup
       summary: Get Jurisdiction Rule Presets
       description: Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.
-      operationId: Ctms_get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get
+      operationId: get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get
       responses:
         '200':
           description: Successful Response
@@ -2041,13 +1449,13 @@ paths:
                   type: array
                 type: object
                 title: Response Get Jurisdiction Rule Presets Api V1 Ctms Startup Rules Presets Get
-  /ctms/api/v1/ctms/startup/rules:
+  /api/v1/ctms/startup/rules:
     post:
       tags:
       - CTMS Site Startup
       summary: Create Or Update Country Prerequisite Rule
       description: Configures a country-specific prerequisite criterion for site activation.
-      operationId: Ctms_create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post
+      operationId: create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post
       requestBody:
         required: true
         content:
@@ -2072,7 +1480,7 @@ paths:
       - CTMS Site Startup
       summary: List Country Prerequisite Rules
       description: Retrieves country-specific prerequisite rules matrix for a study.
-      operationId: Ctms_list_country_prerequisite_rules_api_v1_ctms_startup_rules_get
+      operationId: list_country_prerequisite_rules_api_v1_ctms_startup_rules_get
       parameters:
       - name: study_id
         in: query
@@ -2104,12 +1512,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/milestones:
+  /api/v1/ctms/startup/milestones:
     post:
       tags:
       - CTMS Site Startup
       summary: Create Or Update Country Milestone
-      operationId: Ctms_create_or_update_country_milestone_api_v1_ctms_startup_milestones_post
+      operationId: create_or_update_country_milestone_api_v1_ctms_startup_milestones_post
       requestBody:
         required: true
         content:
@@ -2133,7 +1541,7 @@ paths:
       tags:
       - CTMS Site Startup
       summary: List Country Milestones
-      operationId: Ctms_list_country_milestones_api_v1_ctms_startup_milestones_get
+      operationId: list_country_milestones_api_v1_ctms_startup_milestones_get
       parameters:
       - name: study_id
         in: query
@@ -2165,12 +1573,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/documents:
+  /api/v1/ctms/startup/documents:
     post:
       tags:
       - CTMS Site Startup
       summary: Submit Essential Document
-      operationId: Ctms_submit_essential_document_api_v1_ctms_startup_documents_post
+      operationId: submit_essential_document_api_v1_ctms_startup_documents_post
       requestBody:
         required: true
         content:
@@ -2194,7 +1602,7 @@ paths:
       tags:
       - CTMS Site Startup
       summary: List Essential Documents
-      operationId: Ctms_list_essential_documents_api_v1_ctms_startup_documents_get
+      operationId: list_essential_documents_api_v1_ctms_startup_documents_get
       parameters:
       - name: study_id
         in: query
@@ -2226,12 +1634,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/documents/{document_id}/review:
+  /api/v1/ctms/startup/documents/{document_id}/review:
     post:
       tags:
       - CTMS Site Startup
       summary: Review Essential Document
-      operationId: Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_post
+      operationId: review_essential_document_api_v1_ctms_startup_documents__document_id__review_post
       parameters:
       - name: document_id
         in: path
@@ -2262,7 +1670,7 @@ paths:
       tags:
       - CTMS Site Startup
       summary: Review Essential Document
-      operationId: Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_put
+      operationId: review_essential_document_api_v1_ctms_startup_documents__document_id__review_put
       parameters:
       - name: document_id
         in: path
@@ -2289,13 +1697,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/sites/{site_id}/greenlight:
+  /api/v1/ctms/startup/sites/{site_id}/greenlight:
     get:
       tags:
       - CTMS Site Startup
       summary: Evaluate Site Greenlight
       description: Evaluates real-time site activation readiness across the 6 key operational facets.
-      operationId: Ctms_evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get
+      operationId: evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get
       parameters:
       - name: site_id
         in: path
@@ -2331,13 +1739,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/certify:
+  /api/v1/ctms/startup/sites/{site_id}/greenlight/certify:
     post:
       tags:
       - CTMS Site Startup
       summary: Certify Site Greenlight
       description: Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.
-      operationId: Ctms_certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post
+      operationId: certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post
       parameters:
       - name: site_id
         in: path
@@ -2373,13 +1781,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/override:
+  /api/v1/ctms/startup/sites/{site_id}/greenlight/override:
     post:
       tags:
       - CTMS Site Startup
       summary: Override Site Greenlight
       description: Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.
-      operationId: Ctms_override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post
+      operationId: override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post
       parameters:
       - name: site_id
         in: path
@@ -2406,13 +1814,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token:
+  /api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token:
     post:
       tags:
       - CTMS Site Startup
       summary: Verify Site Greenlight Token Endpoint
       description: Verifies cryptographic validity and binding of a Site Greenlight Activation Token.
-      operationId: Ctms_verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post
+      operationId: verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post
       parameters:
       - name: site_id
         in: path
@@ -2439,12 +1847,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations:
+  /api/v1/ctms/deviations:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Log Protocol Deviation
-      operationId: Ctms_log_protocol_deviation_api_v1_ctms_deviations_post
+      operationId: log_protocol_deviation_api_v1_ctms_deviations_post
       requestBody:
         required: true
         content:
@@ -2468,7 +1876,7 @@ paths:
       tags:
       - CTMS Protocol Deviations
       summary: List Protocol Deviations
-      operationId: Ctms_list_protocol_deviations_api_v1_ctms_deviations_get
+      operationId: list_protocol_deviations_api_v1_ctms_deviations_get
       parameters:
       - name: study_id
         in: query
@@ -2508,12 +1916,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/{deviation_id}/rca:
+  /api/v1/ctms/deviations/{deviation_id}/rca:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Perform Root Cause Analysis
-      operationId: Ctms_perform_root_cause_analysis_api_v1_ctms_deviations__deviation_id__rca_post
+      operationId: perform_root_cause_analysis_api_v1_ctms_deviations__deviation_id__rca_post
       parameters:
       - name: deviation_id
         in: path
@@ -2540,12 +1948,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/{deviation_id}/escalate-capa:
+  /api/v1/ctms/deviations/{deviation_id}/escalate-capa:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Escalate To Quality Capa
-      operationId: Ctms_escalate_to_quality_capa_api_v1_ctms_deviations__deviation_id__escalate_capa_post
+      operationId: escalate_to_quality_capa_api_v1_ctms_deviations__deviation_id__escalate_capa_post
       parameters:
       - name: deviation_id
         in: path
@@ -2566,12 +1974,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/{deviation_id}/resolve:
+  /api/v1/ctms/deviations/{deviation_id}/resolve:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Resolve Protocol Deviation
-      operationId: Ctms_resolve_protocol_deviation_api_v1_ctms_deviations__deviation_id__resolve_post
+      operationId: resolve_protocol_deviation_api_v1_ctms_deviations__deviation_id__resolve_post
       parameters:
       - name: deviation_id
         in: path
@@ -2592,12 +2000,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/{deviation_id}/action-items:
+  /api/v1/ctms/deviations/{deviation_id}/action-items:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Create Deviation Action Item
-      operationId: Ctms_create_deviation_action_item_api_v1_ctms_deviations__deviation_id__action_items_post
+      operationId: create_deviation_action_item_api_v1_ctms_deviations__deviation_id__action_items_post
       parameters:
       - name: deviation_id
         in: path
@@ -2624,12 +2032,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/action-items/{action_item_id}/complete:
+  /api/v1/ctms/deviations/action-items/{action_item_id}/complete:
     post:
       tags:
       - CTMS Protocol Deviations
       summary: Complete Deviation Action Item
-      operationId: Ctms_complete_deviation_action_item_api_v1_ctms_deviations_action_items__action_item_id__complete_post
+      operationId: complete_deviation_action_item_api_v1_ctms_deviations_action_items__action_item_id__complete_post
       parameters:
       - name: action_item_id
         in: path
@@ -2656,12 +2064,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/deviations/action-items:
+  /api/v1/ctms/deviations/action-items:
     get:
       tags:
       - CTMS Protocol Deviations
       summary: List Deviation Action Items
-      operationId: Ctms_list_deviation_action_items_api_v1_ctms_deviations_action_items_get
+      operationId: list_deviation_action_items_api_v1_ctms_deviations_action_items_get
       parameters:
       - name: deviation_id
         in: query
@@ -2695,12 +2103,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/rbqm/kri:
+  /api/v1/ctms/rbqm/kri:
     post:
       tags:
       - CTMS RBQM
       summary: Record Kri Metric
-      operationId: Ctms_record_kri_metric_api_v1_ctms_rbqm_kri_post
+      operationId: record_kri_metric_api_v1_ctms_rbqm_kri_post
       requestBody:
         required: true
         content:
@@ -2724,7 +2132,7 @@ paths:
       tags:
       - CTMS RBQM
       summary: List Kri Metrics
-      operationId: Ctms_list_kri_metrics_api_v1_ctms_rbqm_kri_get
+      operationId: list_kri_metrics_api_v1_ctms_rbqm_kri_get
       parameters:
       - name: study_id
         in: query
@@ -2756,12 +2164,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/rbqm/sites/{site_id}/evaluate-risk:
+  /api/v1/ctms/rbqm/sites/{site_id}/evaluate-risk:
     post:
       tags:
       - CTMS RBQM
       summary: Evaluate Site Risk Score
-      operationId: Ctms_evaluate_site_risk_score_api_v1_ctms_rbqm_sites__site_id__evaluate_risk_post
+      operationId: evaluate_site_risk_score_api_v1_ctms_rbqm_sites__site_id__evaluate_risk_post
       parameters:
       - name: site_id
         in: path
@@ -2788,12 +2196,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/rbqm/sites/{site_id}/risk-score:
+  /api/v1/ctms/rbqm/sites/{site_id}/risk-score:
     get:
       tags:
       - CTMS RBQM
       summary: Get Site Risk Score
-      operationId: Ctms_get_site_risk_score_api_v1_ctms_rbqm_sites__site_id__risk_score_get
+      operationId: get_site_risk_score_api_v1_ctms_rbqm_sites__site_id__risk_score_get
       parameters:
       - name: site_id
         in: path
@@ -2817,12 +2225,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/templates:
+  /api/v1/ctms/financials/templates:
     post:
       tags:
       - CTMS Financials
       summary: Create Budget Template
-      operationId: Ctms_create_budget_template_api_v1_ctms_financials_templates_post
+      operationId: create_budget_template_api_v1_ctms_financials_templates_post
       requestBody:
         required: true
         content:
@@ -2846,7 +2254,7 @@ paths:
       tags:
       - CTMS Financials
       summary: List Budget Templates
-      operationId: Ctms_list_budget_templates_api_v1_ctms_financials_templates_get
+      operationId: list_budget_templates_api_v1_ctms_financials_templates_get
       parameters:
       - name: study_id
         in: query
@@ -2872,12 +2280,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/templates/{template_id}:
+  /api/v1/ctms/financials/templates/{template_id}:
     get:
       tags:
       - CTMS Financials
       summary: Get Budget Template
-      operationId: Ctms_get_budget_template_api_v1_ctms_financials_templates__template_id__get
+      operationId: get_budget_template_api_v1_ctms_financials_templates__template_id__get
       parameters:
       - name: template_id
         in: path
@@ -2898,12 +2306,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/grants/{grant_id}/apply-template:
+  /api/v1/ctms/financials/grants/{grant_id}/apply-template:
     post:
       tags:
       - CTMS Financials
       summary: Apply Template To Grant
-      operationId: Ctms_apply_template_to_grant_api_v1_ctms_financials_grants__grant_id__apply_template_post
+      operationId: apply_template_to_grant_api_v1_ctms_financials_grants__grant_id__apply_template_post
       parameters:
       - name: grant_id
         in: path
@@ -2933,12 +2341,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/procedure-grids:
+  /api/v1/ctms/financials/procedure-grids:
     post:
       tags:
       - CTMS Financials
       summary: Add Procedure Payment Grid
-      operationId: Ctms_add_procedure_payment_grid_api_v1_ctms_financials_procedure_grids_post
+      operationId: add_procedure_payment_grid_api_v1_ctms_financials_procedure_grids_post
       requestBody:
         required: true
         content:
@@ -2962,7 +2370,7 @@ paths:
       tags:
       - CTMS Financials
       summary: List Procedure Grids
-      operationId: Ctms_list_procedure_grids_api_v1_ctms_financials_procedure_grids_get
+      operationId: list_procedure_grids_api_v1_ctms_financials_procedure_grids_get
       parameters:
       - name: grant_id
         in: query
@@ -3001,12 +2409,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/grants/{grant_id}/calculate-visit:
+  /api/v1/ctms/financials/grants/{grant_id}/calculate-visit:
     get:
       tags:
       - CTMS Financials
       summary: Calculate Visit Payable
-      operationId: Ctms_calculate_visit_payable_api_v1_ctms_financials_grants__grant_id__calculate_visit_get
+      operationId: calculate_visit_payable_api_v1_ctms_financials_grants__grant_id__calculate_visit_get
       parameters:
       - name: grant_id
         in: path
@@ -3056,12 +2464,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/grants/{grant_id}/amend:
+  /api/v1/ctms/financials/grants/{grant_id}/amend:
     post:
       tags:
       - CTMS Financials
       summary: Execute Contract Amendment
-      operationId: Ctms_execute_contract_amendment_api_v1_ctms_financials_grants__grant_id__amend_post
+      operationId: execute_contract_amendment_api_v1_ctms_financials_grants__grant_id__amend_post
       parameters:
       - name: grant_id
         in: path
@@ -3088,12 +2496,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/grants/{grant_id}/amendments:
+  /api/v1/ctms/financials/grants/{grant_id}/amendments:
     get:
       tags:
       - CTMS Financials
       summary: List Grant Amendments
-      operationId: Ctms_list_grant_amendments_api_v1_ctms_financials_grants__grant_id__amendments_get
+      operationId: list_grant_amendments_api_v1_ctms_financials_grants__grant_id__amendments_get
       parameters:
       - name: grant_id
         in: path
@@ -3117,12 +2525,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/amendments/{amendment_id}:
+  /api/v1/ctms/financials/amendments/{amendment_id}:
     get:
       tags:
       - CTMS Financials
       summary: Get Grant Amendment
-      operationId: Ctms_get_grant_amendment_api_v1_ctms_financials_amendments__amendment_id__get
+      operationId: get_grant_amendment_api_v1_ctms_financials_amendments__amendment_id__get
       parameters:
       - name: amendment_id
         in: path
@@ -3143,12 +2551,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/exchange-rates:
+  /api/v1/ctms/financials/exchange-rates:
     get:
       tags:
       - CTMS Financials
       summary: List Exchange Rates
-      operationId: Ctms_list_exchange_rates_api_v1_ctms_financials_exchange_rates_get
+      operationId: list_exchange_rates_api_v1_ctms_financials_exchange_rates_get
       responses:
         '200':
           description: Successful Response
@@ -3163,7 +2571,7 @@ paths:
       tags:
       - CTMS Financials
       summary: Set Exchange Rate
-      operationId: Ctms_set_exchange_rate_api_v1_ctms_financials_exchange_rates_post
+      operationId: set_exchange_rate_api_v1_ctms_financials_exchange_rates_post
       requestBody:
         content:
           application/json:
@@ -3183,12 +2591,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/convert:
+  /api/v1/ctms/financials/convert:
     post:
       tags:
       - CTMS Financials
       summary: Convert Currency
-      operationId: Ctms_convert_currency_api_v1_ctms_financials_convert_post
+      operationId: convert_currency_api_v1_ctms_financials_convert_post
       requestBody:
         content:
           application/json:
@@ -3208,12 +2616,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/adjustments:
+  /api/v1/ctms/financials/adjustments:
     post:
       tags:
       - CTMS Financials
       summary: Create Budget Adjustment
-      operationId: Ctms_create_budget_adjustment_api_v1_ctms_financials_adjustments_post
+      operationId: create_budget_adjustment_api_v1_ctms_financials_adjustments_post
       requestBody:
         required: true
         content:
@@ -3237,7 +2645,7 @@ paths:
       tags:
       - CTMS Financials
       summary: List Budget Adjustments
-      operationId: Ctms_list_budget_adjustments_api_v1_ctms_financials_adjustments_get
+      operationId: list_budget_adjustments_api_v1_ctms_financials_adjustments_get
       parameters:
       - name: grant_id
         in: query
@@ -3279,12 +2687,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/adjustments/{adjustment_id}/approve:
+  /api/v1/ctms/financials/adjustments/{adjustment_id}/approve:
     post:
       tags:
       - CTMS Financials
       summary: Approve Budget Adjustment
-      operationId: Ctms_approve_budget_adjustment_api_v1_ctms_financials_adjustments__adjustment_id__approve_post
+      operationId: approve_budget_adjustment_api_v1_ctms_financials_adjustments__adjustment_id__approve_post
       parameters:
       - name: adjustment_id
         in: path
@@ -3305,12 +2713,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/invoices:
+  /api/v1/ctms/financials/invoices:
     post:
       tags:
       - CTMS Financials
       summary: Create Batch Invoice
-      operationId: Ctms_create_batch_invoice_api_v1_ctms_financials_invoices_post
+      operationId: create_batch_invoice_api_v1_ctms_financials_invoices_post
       requestBody:
         required: true
         content:
@@ -3334,7 +2742,7 @@ paths:
       tags:
       - CTMS Financials
       summary: List Invoices
-      operationId: Ctms_list_invoices_api_v1_ctms_financials_invoices_get
+      operationId: list_invoices_api_v1_ctms_financials_invoices_get
       parameters:
       - name: study_id
         in: query
@@ -3366,12 +2774,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/financials/invoices/{invoice_id}/approve:
+  /api/v1/ctms/financials/invoices/{invoice_id}/approve:
     post:
       tags:
       - CTMS Financials
       summary: Approve And Disburse Invoice
-      operationId: Ctms_approve_and_disburse_invoice_api_v1_ctms_financials_invoices__invoice_id__approve_post
+      operationId: approve_and_disburse_invoice_api_v1_ctms_financials_invoices__invoice_id__approve_post
       parameters:
       - name: invoice_id
         in: path
@@ -3392,12 +2800,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/shipments/receive:
+  /api/v1/ctms/ip/shipments/receive:
     post:
       tags:
       - CTMS IP Accountability
       summary: Receive Ip Shipment
-      operationId: Ctms_receive_ip_shipment_api_v1_ctms_ip_shipments_receive_post
+      operationId: receive_ip_shipment_api_v1_ctms_ip_shipments_receive_post
       requestBody:
         content:
           application/json:
@@ -3420,12 +2828,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/kits:
+  /api/v1/ctms/ip/kits:
     get:
       tags:
       - CTMS IP Accountability
       summary: List Ip Kits
-      operationId: Ctms_list_ip_kits_api_v1_ctms_ip_kits_get
+      operationId: list_ip_kits_api_v1_ctms_ip_kits_get
       parameters:
       - name: study_id
         in: query
@@ -3465,12 +2873,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/kits/{kit_id}/dispense:
+  /api/v1/ctms/ip/kits/{kit_id}/dispense:
     post:
       tags:
       - CTMS IP Accountability
       summary: Dispense Ip Kit
-      operationId: Ctms_dispense_ip_kit_api_v1_ctms_ip_kits__kit_id__dispense_post
+      operationId: dispense_ip_kit_api_v1_ctms_ip_kits__kit_id__dispense_post
       parameters:
       - name: kit_id
         in: path
@@ -3497,12 +2905,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/kits/{kit_id}/reconcile:
+  /api/v1/ctms/ip/kits/{kit_id}/reconcile:
     post:
       tags:
       - CTMS IP Accountability
       summary: Reconcile Returned Kit
-      operationId: Ctms_reconcile_returned_kit_api_v1_ctms_ip_kits__kit_id__reconcile_post
+      operationId: reconcile_returned_kit_api_v1_ctms_ip_kits__kit_id__reconcile_post
       parameters:
       - name: kit_id
         in: path
@@ -3529,12 +2937,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/excursions:
+  /api/v1/ctms/ip/excursions:
     post:
       tags:
       - CTMS IP Accountability
       summary: Log Temperature Excursion
-      operationId: Ctms_log_temperature_excursion_api_v1_ctms_ip_excursions_post
+      operationId: log_temperature_excursion_api_v1_ctms_ip_excursions_post
       requestBody:
         content:
           application/json:
@@ -3554,12 +2962,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/excursions/{excursion_id}/disposition:
+  /api/v1/ctms/ip/excursions/{excursion_id}/disposition:
     post:
       tags:
       - CTMS IP Accountability
       summary: Disposition Temperature Excursion
-      operationId: Ctms_disposition_temperature_excursion_api_v1_ctms_ip_excursions__excursion_id__disposition_post
+      operationId: disposition_temperature_excursion_api_v1_ctms_ip_excursions__excursion_id__disposition_post
       parameters:
       - name: excursion_id
         in: path
@@ -3586,12 +2994,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/ip/destruction-certificates:
+  /api/v1/ctms/ip/destruction-certificates:
     post:
       tags:
       - CTMS IP Accountability
       summary: Generate Destruction Certificate
-      operationId: Ctms_generate_destruction_certificate_api_v1_ctms_ip_destruction_certificates_post
+      operationId: generate_destruction_certificate_api_v1_ctms_ip_destruction_certificates_post
       requestBody:
         content:
           application/json:
@@ -3611,12 +3019,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/etmf-sync:
+  /api/v1/ctms/etmf-sync:
     post:
       tags:
       - CTMS eTMF Sync
       summary: Sync Artifact To Etmf
-      operationId: Ctms_sync_artifact_to_etmf_api_v1_ctms_etmf_sync_post
+      operationId: sync_artifact_to_etmf_api_v1_ctms_etmf_sync_post
       requestBody:
         required: true
         content:
@@ -3640,7 +3048,7 @@ paths:
       tags:
       - CTMS eTMF Sync
       summary: List Etmf Sync Records
-      operationId: Ctms_list_etmf_sync_records_api_v1_ctms_etmf_sync_get
+      operationId: list_etmf_sync_records_api_v1_ctms_etmf_sync_get
       parameters:
       - name: study_id
         in: query
@@ -3672,12 +3080,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/studies:
+  /api/v1/ctms/studies:
     get:
       tags:
       - CTMS
       summary: List Studies
-      operationId: Ctms_list_studies_api_v1_ctms_studies_get
+      operationId: list_studies_api_v1_ctms_studies_get
       responses:
         '200':
           description: Successful Response
@@ -3692,7 +3100,7 @@ paths:
       tags:
       - CTMS
       summary: Create Study
-      operationId: Ctms_create_study_api_v1_ctms_studies_post
+      operationId: create_study_api_v1_ctms_studies_post
       requestBody:
         content:
           application/json:
@@ -3712,12 +3120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/audit-logs:
+  /api/v1/ctms/audit-logs:
     get:
       tags:
       - CTMS
       summary: Get Audit Trail
-      operationId: Ctms_get_audit_trail_api_v1_ctms_audit_logs_get
+      operationId: get_audit_trail_api_v1_ctms_audit_logs_get
       responses:
         '200':
           description: Successful Response
@@ -3728,12 +3136,12 @@ paths:
                   $ref: '#/components/schemas/Ctms_CTMSAuditLogResponse'
                 type: array
                 title: Response Get Audit Trail Api V1 Ctms Audit Logs Get
-  /ctms/api/v1/ctms/monitoring-visits:
+  /api/v1/ctms/monitoring-visits:
     post:
       tags:
       - CTMS
       summary: Schedule Monitoring Visit
-      operationId: Ctms_schedule_monitoring_visit_api_v1_ctms_monitoring_visits_post
+      operationId: schedule_monitoring_visit_api_v1_ctms_monitoring_visits_post
       requestBody:
         required: true
         content:
@@ -3757,7 +3165,7 @@ paths:
       tags:
       - CTMS
       summary: List Monitoring Visits
-      operationId: Ctms_list_monitoring_visits_api_v1_ctms_monitoring_visits_get
+      operationId: list_monitoring_visits_api_v1_ctms_monitoring_visits_get
       parameters:
       - name: study_id
         in: query
@@ -3807,12 +3215,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/{visit_id}/complete:
+  /api/v1/ctms/monitoring-visits/{visit_id}/complete:
     post:
       tags:
       - CTMS
       summary: Complete Monitoring Visit
-      operationId: Ctms_complete_monitoring_visit_api_v1_ctms_monitoring_visits__visit_id__complete_post
+      operationId: complete_monitoring_visit_api_v1_ctms_monitoring_visits__visit_id__complete_post
       parameters:
       - name: visit_id
         in: path
@@ -3839,12 +3247,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/{visit_id}/letters:
+  /api/v1/ctms/monitoring-visits/{visit_id}/letters:
     get:
       tags:
       - CTMS
       summary: Get Monitoring Visit Letters
-      operationId: Ctms_get_monitoring_visit_letters_api_v1_ctms_monitoring_visits__visit_id__letters_get
+      operationId: get_monitoring_visit_letters_api_v1_ctms_monitoring_visits__visit_id__letters_get
       parameters:
       - name: visit_id
         in: path
@@ -3868,12 +3276,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}:
+  /api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}:
     get:
       tags:
       - CTMS
       summary: Get Monitoring Visit Letter By Type
-      operationId: Ctms_get_monitoring_visit_letter_by_type_api_v1_ctms_monitoring_visits__visit_id__letters__letter_type__get
+      operationId: get_monitoring_visit_letter_by_type_api_v1_ctms_monitoring_visits__visit_id__letters__letter_type__get
       parameters:
       - name: visit_id
         in: path
@@ -3900,12 +3308,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/{visit_id}/sign-off:
+  /api/v1/ctms/monitoring-visits/{visit_id}/sign-off:
     post:
       tags:
       - CTMS
       summary: Sign Off Monitoring Visit
-      operationId: Ctms_sign_off_monitoring_visit_api_v1_ctms_monitoring_visits__visit_id__sign_off_post
+      operationId: sign_off_monitoring_visit_api_v1_ctms_monitoring_visits__visit_id__sign_off_post
       parameters:
       - name: visit_id
         in: path
@@ -3926,12 +3334,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/recruitment:
+  /api/v1/ctms/recruitment:
     post:
       tags:
       - CTMS
       summary: Record Recruitment
-      operationId: Ctms_record_recruitment_api_v1_ctms_recruitment_post
+      operationId: record_recruitment_api_v1_ctms_recruitment_post
       requestBody:
         required: true
         content:
@@ -3955,7 +3363,7 @@ paths:
       tags:
       - CTMS
       summary: List Recruitment Records
-      operationId: Ctms_list_recruitment_records_api_v1_ctms_recruitment_get
+      operationId: list_recruitment_records_api_v1_ctms_recruitment_get
       parameters:
       - name: study_id
         in: query
@@ -3989,12 +3397,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/site-milestones:
+  /api/v1/ctms/site-milestones:
     post:
       tags:
       - CTMS
       summary: Create Site Milestone
-      operationId: Ctms_create_site_milestone_api_v1_ctms_site_milestones_post
+      operationId: create_site_milestone_api_v1_ctms_site_milestones_post
       requestBody:
         required: true
         content:
@@ -4018,7 +3426,7 @@ paths:
       tags:
       - CTMS
       summary: List Site Milestones
-      operationId: Ctms_list_site_milestones_api_v1_ctms_site_milestones_get
+      operationId: list_site_milestones_api_v1_ctms_site_milestones_get
       parameters:
       - name: study_id
         in: query
@@ -4052,12 +3460,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/site-milestones/{milestone_id}:
+  /api/v1/ctms/site-milestones/{milestone_id}:
     put:
       tags:
       - CTMS
       summary: Update Site Milestone
-      operationId: Ctms_update_site_milestone_api_v1_ctms_site_milestones__milestone_id__put
+      operationId: update_site_milestone_api_v1_ctms_site_milestones__milestone_id__put
       parameters:
       - name: milestone_id
         in: path
@@ -4084,12 +3492,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/cra-allocations:
+  /api/v1/ctms/cra-allocations:
     post:
       tags:
       - CTMS
       summary: Allocate Cra
-      operationId: Ctms_allocate_cra_api_v1_ctms_cra_allocations_post
+      operationId: allocate_cra_api_v1_ctms_cra_allocations_post
       requestBody:
         required: true
         content:
@@ -4113,7 +3521,7 @@ paths:
       tags:
       - CTMS
       summary: List Cra Allocations
-      operationId: Ctms_list_cra_allocations_api_v1_ctms_cra_allocations_get
+      operationId: list_cra_allocations_api_v1_ctms_cra_allocations_get
       parameters:
       - name: study_id
         in: query
@@ -4163,12 +3571,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/cra-allocations/{allocation_id}:
+  /api/v1/ctms/cra-allocations/{allocation_id}:
     put:
       tags:
       - CTMS
       summary: Update Cra Allocation
-      operationId: Ctms_update_cra_allocation_api_v1_ctms_cra_allocations__allocation_id__put
+      operationId: update_cra_allocation_api_v1_ctms_cra_allocations__allocation_id__put
       parameters:
       - name: allocation_id
         in: path
@@ -4195,12 +3603,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/cra-allocations/workload:
+  /api/v1/ctms/cra-allocations/workload:
     get:
       tags:
       - CTMS
       summary: Retrieve Workload Summaries
-      operationId: Ctms_retrieve_workload_summaries_api_v1_ctms_cra_allocations_workload_get
+      operationId: retrieve_workload_summaries_api_v1_ctms_cra_allocations_workload_get
       responses:
         '200':
           description: Successful Response
@@ -4211,12 +3619,12 @@ paths:
                   $ref: '#/components/schemas/Ctms_CRAWorkloadItem'
                 type: array
                 title: Response Retrieve Workload Summaries Api V1 Ctms Cra Allocations Workload Get
-  /ctms/api/v1/ctms/grants:
+  /api/v1/ctms/grants:
     post:
       tags:
       - CTMS
       summary: Create Grant
-      operationId: Ctms_create_grant_api_v1_ctms_grants_post
+      operationId: create_grant_api_v1_ctms_grants_post
       requestBody:
         required: true
         content:
@@ -4240,7 +3648,7 @@ paths:
       tags:
       - CTMS
       summary: List Grants
-      operationId: Ctms_list_grants_api_v1_ctms_grants_get
+      operationId: list_grants_api_v1_ctms_grants_get
       parameters:
       - name: study_id
         in: query
@@ -4274,12 +3682,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}:
+  /api/v1/ctms/grants/{grant_id}:
     get:
       tags:
       - CTMS
       summary: Get Grant
-      operationId: Ctms_get_grant_api_v1_ctms_grants__grant_id__get
+      operationId: get_grant_api_v1_ctms_grants__grant_id__get
       parameters:
       - name: grant_id
         in: path
@@ -4304,7 +3712,7 @@ paths:
       tags:
       - CTMS
       summary: Update Grant
-      operationId: Ctms_update_grant_api_v1_ctms_grants__grant_id__put
+      operationId: update_grant_api_v1_ctms_grants__grant_id__put
       parameters:
       - name: grant_id
         in: path
@@ -4331,12 +3739,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}/budget-items:
+  /api/v1/ctms/grants/{grant_id}/budget-items:
     post:
       tags:
       - CTMS
       summary: Create Budget Line Item
-      operationId: Ctms_create_budget_line_item_api_v1_ctms_grants__grant_id__budget_items_post
+      operationId: create_budget_line_item_api_v1_ctms_grants__grant_id__budget_items_post
       parameters:
       - name: grant_id
         in: path
@@ -4367,7 +3775,7 @@ paths:
       tags:
       - CTMS
       summary: List Budget Line Items
-      operationId: Ctms_list_budget_line_items_api_v1_ctms_grants__grant_id__budget_items_get
+      operationId: list_budget_line_items_api_v1_ctms_grants__grant_id__budget_items_get
       parameters:
       - name: grant_id
         in: path
@@ -4391,12 +3799,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}/milestones:
+  /api/v1/ctms/grants/{grant_id}/milestones:
     post:
       tags:
       - CTMS
       summary: Create Payment Milestone
-      operationId: Ctms_create_payment_milestone_api_v1_ctms_grants__grant_id__milestones_post
+      operationId: create_payment_milestone_api_v1_ctms_grants__grant_id__milestones_post
       parameters:
       - name: grant_id
         in: path
@@ -4427,7 +3835,7 @@ paths:
       tags:
       - CTMS
       summary: List Payment Milestones
-      operationId: Ctms_list_payment_milestones_api_v1_ctms_grants__grant_id__milestones_get
+      operationId: list_payment_milestones_api_v1_ctms_grants__grant_id__milestones_get
       parameters:
       - name: grant_id
         in: path
@@ -4451,12 +3859,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger:
+  /api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger:
     post:
       tags:
       - CTMS
       summary: Trigger Manual Milestone
-      operationId: Ctms_trigger_manual_milestone_api_v1_ctms_grants__grant_id__milestones__milestone_id__trigger_post
+      operationId: trigger_manual_milestone_api_v1_ctms_grants__grant_id__milestones__milestone_id__trigger_post
       parameters:
       - name: grant_id
         in: path
@@ -4483,12 +3891,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}/evaluate:
+  /api/v1/ctms/grants/{grant_id}/evaluate:
     post:
       tags:
       - CTMS
       summary: Evaluate Grant Milestones
-      operationId: Ctms_evaluate_grant_milestones_api_v1_ctms_grants__grant_id__evaluate_post
+      operationId: evaluate_grant_milestones_api_v1_ctms_grants__grant_id__evaluate_post
       parameters:
       - name: grant_id
         in: path
@@ -4518,12 +3926,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/grants/{grant_id}/payables:
+  /api/v1/ctms/grants/{grant_id}/payables:
     get:
       tags:
       - CTMS
       summary: List Investigator Payables
-      operationId: Ctms_list_investigator_payables_api_v1_ctms_grants__grant_id__payables_get
+      operationId: list_investigator_payables_api_v1_ctms_grants__grant_id__payables_get
       parameters:
       - name: grant_id
         in: path
@@ -4547,12 +3955,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/sync:
+  /api/v1/ctms/monitoring-visits/sync:
     post:
       tags:
       - CTMS
       summary: Sync Monitoring Visit
-      operationId: Ctms_sync_monitoring_visit_api_v1_ctms_monitoring_visits_sync_post
+      operationId: sync_monitoring_visit_api_v1_ctms_monitoring_visits_sync_post
       requestBody:
         content:
           application/json:
@@ -4574,12 +3982,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/monitoring-visits/bulk-sync:
+  /api/v1/ctms/monitoring-visits/bulk-sync:
     post:
       tags:
       - CTMS
       summary: Bulk Sync Monitoring Visits
-      operationId: Ctms_bulk_sync_monitoring_visits_api_v1_ctms_monitoring_visits_bulk_sync_post
+      operationId: bulk_sync_monitoring_visits_api_v1_ctms_monitoring_visits_bulk_sync_post
       requestBody:
         content:
           application/json:
@@ -4604,13 +4012,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/resupply-events:
+  /api/v1/ctms/resupply-events:
     get:
       tags:
       - CTMS
       summary: List Ctms Resupply Events
       description: List pending/all resupply events from downstream execution, applying site boundaries and manager-level role checks.
-      operationId: Ctms_list_ctms_resupply_events_api_v1_ctms_resupply_events_get
+      operationId: list_ctms_resupply_events_api_v1_ctms_resupply_events_get
       parameters:
       - name: study_id
         in: query
@@ -4652,13 +4060,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/resupply-events/{event_id}/confirm:
+  /api/v1/ctms/resupply-events/{event_id}/confirm:
     post:
       tags:
       - CTMS
       summary: Approve Ctms Resupply Event
       description: Approve resupply event, securely signing and delegating downstream.
-      operationId: Ctms_approve_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__confirm_post
+      operationId: approve_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__confirm_post
       parameters:
       - name: event_id
         in: path
@@ -4685,13 +4093,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/api/v1/ctms/resupply-events/{event_id}/reject:
+  /api/v1/ctms/resupply-events/{event_id}/reject:
     post:
       tags:
       - CTMS
       summary: Reject Ctms Resupply Event
       description: Reject resupply event, securely signing and delegating downstream.
-      operationId: Ctms_reject_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__reject_post
+      operationId: reject_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__reject_post
       parameters:
       - name: event_id
         in: path
@@ -4718,22 +4126,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ctms_HTTPValidationError'
-  /ctms/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Ctms_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /designer/api/v1/synopsis/export:
+  /api/v1/synopsis/export:
     post:
       tags:
       - Synopsis
@@ -4742,7 +4135,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Designer_export_synopsis_document_api_v1_synopsis_export_post
+      operationId: export_synopsis_document_api_v1_synopsis_export_post
       requestBody:
         content:
           application/json:
@@ -4762,7 +4155,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/synopsis/render/{study_id}:
+  /api/v1/synopsis/render/{study_id}:
     get:
       tags:
       - Synopsis
@@ -4771,7 +4164,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Designer_render_synopsis_download_api_v1_synopsis_render__study_id__get
+      operationId: render_synopsis_download_api_v1_synopsis_render__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -4800,7 +4193,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/sentinel/evaluate:
+  /api/v1/designer/sentinel/evaluate:
     post:
       tags:
       - QualitySentinel
@@ -4809,7 +4202,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Designer_evaluate_protocol_quality_endpoint_api_v1_designer_sentinel_evaluate_post
+      operationId: evaluate_protocol_quality_endpoint_api_v1_designer_sentinel_evaluate_post
       requestBody:
         content:
           application/json:
@@ -4831,7 +4224,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/cascade/propagate:
+  /api/v1/designer/cascade/propagate:
     post:
       tags:
       - ArtifactCascade
@@ -4840,7 +4233,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Designer_propagate_cascade_endpoint_api_v1_designer_cascade_propagate_post
+      operationId: propagate_cascade_endpoint_api_v1_designer_cascade_propagate_post
       parameters:
       - name: amendment_version
         in: query
@@ -4870,7 +4263,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/export/m11/{study_id}:
+  /api/v1/designer/export/m11/{study_id}:
     get:
       tags:
       - ProtocolExport
@@ -4879,7 +4272,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Designer_export_protocol_m11_endpoint_api_v1_designer_export_m11__study_id__get
+      operationId: export_protocol_m11_endpoint_api_v1_designer_export_m11__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -4908,13 +4301,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/forms/{form_id}/comments:
+  /api/v1/designer/forms/{form_id}/comments:
     get:
       tags:
       - FormComments
       summary: Get Form Comments
       description: Fetch all review comments for a given form.
-      operationId: Designer_get_form_comments_api_v1_designer_forms__form_id__comments_get
+      operationId: get_form_comments_api_v1_designer_forms__form_id__comments_get
       parameters:
       - name: form_id
         in: path
@@ -4943,7 +4336,7 @@ paths:
       - FormComments
       summary: Post Form Comment
       description: Post a new review comment anchored to a field_id.
-      operationId: Designer_post_form_comment_api_v1_designer_forms__form_id__comments_post
+      operationId: post_form_comment_api_v1_designer_forms__form_id__comments_post
       parameters:
       - name: form_id
         in: path
@@ -4970,13 +4363,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/comments/{comment_id}/resolve:
+  /api/v1/designer/comments/{comment_id}/resolve:
     patch:
       tags:
       - FormComments
       summary: Resolve Comment
       description: Mark a comment thread/item as resolved and log a GxP audit event.
-      operationId: Designer_resolve_comment_api_v1_designer_comments__comment_id__resolve_patch
+      operationId: resolve_comment_api_v1_designer_comments__comment_id__resolve_patch
       parameters:
       - name: comment_id
         in: path
@@ -4997,7 +4390,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/extract:
+  /api/v1/designer/digitization/extract:
     post:
       tags:
       - protocol_digitization
@@ -5006,7 +4399,7 @@ paths:
 
 
         Accepts PDF, DOCX, or text files.'
-      operationId: Designer_extract_protocol_digitization_api_v1_designer_digitization_extract_post
+      operationId: extract_protocol_digitization_api_v1_designer_digitization_extract_post
       requestBody:
         content:
           multipart/form-data:
@@ -5026,13 +4419,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/sample:
+  /api/v1/designer/digitization/sample:
     get:
       tags:
       - protocol_digitization
       summary: Get Sample Protocol Extraction
       description: Returns a canonical pre-extracted USDM v4.0 study structure for instant review and sandboxing.
-      operationId: Designer_get_sample_protocol_extraction_api_v1_designer_digitization_sample_get
+      operationId: get_sample_protocol_extraction_api_v1_designer_digitization_sample_get
       responses:
         '200':
           description: Successful Response
@@ -5040,7 +4433,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_USDMProtocolExtractionResponse'
-  /designer/api/v1/designer/studies/{study_id}/commit-usdm:
+  /api/v1/designer/studies/{study_id}/commit-usdm:
     post:
       tags:
       - protocol_digitization
@@ -5049,7 +4442,7 @@ paths:
 
 
         Guarantees 21 CFR Part 11 audit attribution and GxP change justification.'
-      operationId: Designer_commit_usdm_to_study_api_v1_designer_studies__study_id__commit_usdm_post
+      operationId: commit_usdm_to_study_api_v1_designer_studies__study_id__commit_usdm_post
       parameters:
       - name: study_id
         in: path
@@ -5076,7 +4469,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/dag/jobs:
+  /api/v1/designer/digitization/dag/jobs:
     post:
       tags:
       - protocol_digitization
@@ -5087,7 +4480,7 @@ paths:
         Decomposes ingestion into checkpointed transformations (layout parsing, SoA extraction,
 
         biomedical concept mapping, eCRF synthesis, and USDM compilation) with schema validation gates.'
-      operationId: Designer_start_digitization_dag_job_api_v1_designer_digitization_dag_jobs_post
+      operationId: start_digitization_dag_job_api_v1_designer_digitization_dag_jobs_post
       requestBody:
         content:
           multipart/form-data:
@@ -5107,13 +4500,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/dag/jobs/{job_id}:
+  /api/v1/designer/digitization/dag/jobs/{job_id}:
     get:
       tags:
       - protocol_digitization
       summary: Get Digitization Dag Job Status
       description: Retrieves real-time execution status, stage checkpoints, and progress for a DAG job.
-      operationId: Designer_get_digitization_dag_job_status_api_v1_designer_digitization_dag_jobs__job_id__get
+      operationId: get_digitization_dag_job_status_api_v1_designer_digitization_dag_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -5134,13 +4527,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/dag/jobs/{job_id}/resume:
+  /api/v1/designer/digitization/dag/jobs/{job_id}/resume:
     post:
       tags:
       - protocol_digitization
       summary: Resume Digitization Dag Job
       description: Resumes execution of a paused or failed DAG digitization job from a specified checkpoint.
-      operationId: Designer_resume_digitization_dag_job_api_v1_designer_digitization_dag_jobs__job_id__resume_post
+      operationId: resume_digitization_dag_job_api_v1_designer_digitization_dag_jobs__job_id__resume_post
       parameters:
       - name: job_id
         in: path
@@ -5169,13 +4562,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/digitization/dag/jobs/{job_id}/compile-usdm:
+  /api/v1/designer/digitization/dag/jobs/{job_id}/stages/{stage}/correct:
+    post:
+      tags:
+      - protocol_digitization
+      summary: Submit Stage Correction Endpoint
+      description: Submits manual corrections and electronic signature for a flagged stage gate, resuming execution.
+      operationId: submit_stage_correction_endpoint_api_v1_designer_digitization_dag_jobs__job_id__stages__stage__correct_post
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      - name: stage
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Designer_DigitizationStage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_SubmitStageCorrectionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_DAGJobStatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/designer/digitization/dag/jobs/{job_id}/compile-usdm:
     post:
       tags:
       - protocol_digitization
       summary: Compile Usdm From Dag Job
       description: Commits the finalized USDM model generated by a completed DAG job into Neo4j with Part 11 audit attribution.
-      operationId: Designer_compile_usdm_from_dag_job_api_v1_designer_digitization_dag_jobs__job_id__compile_usdm_post
+      operationId: compile_usdm_from_dag_job_api_v1_designer_digitization_dag_jobs__job_id__compile_usdm_post
       parameters:
       - name: job_id
         in: path
@@ -5202,7 +4633,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/branch:
+  /api/v1/designer/amendments/branch:
     post:
       tags:
       - DesignerAmendments
@@ -5211,7 +4642,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
-      operationId: Designer_branch_protocol_amendment_endpoint_api_v1_designer_amendments_branch_post
+      operationId: branch_protocol_amendment_endpoint_api_v1_designer_amendments_branch_post
       requestBody:
         content:
           application/json:
@@ -5231,7 +4662,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/diff:
+  /api/v1/designer/amendments/diff:
     post:
       tags:
       - DesignerAmendments
@@ -5240,7 +4671,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
-      operationId: Designer_compute_semantic_diff_endpoint_api_v1_designer_amendments_diff_post
+      operationId: compute_semantic_diff_endpoint_api_v1_designer_amendments_diff_post
       requestBody:
         content:
           application/json:
@@ -5260,7 +4691,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/{study_id}/diff:
+  /api/v1/designer/amendments/{study_id}/diff:
     get:
       tags:
       - DesignerAmendments
@@ -5269,7 +4700,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
-      operationId: Designer_get_study_semantic_diff_endpoint_api_v1_designer_amendments__study_id__diff_get
+      operationId: get_study_semantic_diff_endpoint_api_v1_designer_amendments__study_id__diff_get
       parameters:
       - name: study_id
         in: path
@@ -5304,7 +4735,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/impact:
+  /api/v1/designer/amendments/impact:
     post:
       tags:
       - DesignerAmendments
@@ -5313,7 +4744,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
-      operationId: Designer_compute_amendment_impact_endpoint_api_v1_designer_amendments_impact_post
+      operationId: compute_amendment_impact_endpoint_api_v1_designer_amendments_impact_post
       requestBody:
         content:
           application/json:
@@ -5333,7 +4764,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/analyze-ripple:
+  /api/v1/designer/amendments/analyze-ripple:
     post:
       tags:
       - DesignerAmendments
@@ -5342,7 +4773,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007, PRD-SYS-051'
-      operationId: Designer_analyze_ripple_effects_endpoint_api_v1_designer_amendments_analyze_ripple_post
+      operationId: analyze_ripple_effects_endpoint_api_v1_designer_amendments_analyze_ripple_post
       requestBody:
         content:
           application/json:
@@ -5355,14 +4786,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Designer_ProtocolImpactAssessment'
+                $ref: '#/components/schemas/Designer_ProtocolImpactAssessment-Output'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/amendments/dispatch-tickets:
+  /api/v1/designer/amendments/dispatch-tickets:
     post:
       tags:
       - DesignerAmendments
@@ -5371,7 +4802,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007, PRD-SYS-051'
-      operationId: Designer_dispatch_operational_tickets_endpoint_api_v1_designer_amendments_dispatch_tickets_post
+      operationId: dispatch_operational_tickets_endpoint_api_v1_designer_amendments_dispatch_tickets_post
       requestBody:
         content:
           application/json:
@@ -5391,11 +4822,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}:
+  /api/v1/studies/{study_id}:
     get:
       summary: Get Legacy Study
       description: "Returns the legacy internal projection with no USDM formatting.\n\nArgs:\n    study_id = get_study_projection(study_id)"
-      operationId: Designer_get_legacy_study_api_v1_studies__study_id__get
+      operationId: get_legacy_study_api_v1_studies__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -5418,11 +4849,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v2/studies/{study_id}/usdm:
+  /api/v2/studies/{study_id}/usdm:
     get:
       summary: Get Usdm Study
       description: "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    format (str, optional): Output format.\n\nReturns:\n    Any: Mapped USDM data (as dict or serialized Response).\n\nRaises:\n    HTTPException: If the study is not found or validation fails."
-      operationId: Designer_get_usdm_study_api_v2_studies__study_id__usdm_get
+      operationId: get_usdm_study_api_v2_studies__study_id__usdm_get
       parameters:
       - name: study_id
         in: path
@@ -5459,7 +4890,7 @@ paths:
 
 
         Requirements: Phase 2 Ingestion'
-      operationId: Designer_import_usdm_study_api_v2_studies__study_id__usdm_post
+      operationId: import_usdm_study_api_v2_studies__study_id__usdm_post
       parameters:
       - name: study_id
         in: path
@@ -5489,11 +4920,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/admin/cache/clear:
+  /api/admin/cache/clear:
     post:
       summary: Clear Cache
       description: "Flushes the controlled terminology cache.\n\nReturns:\n    Dict[str, str]: A success message indicating the cache was cleared."
-      operationId: Designer_clear_cache_api_admin_cache_clear_post
+      operationId: clear_cache_api_admin_cache_clear_post
       responses:
         '200':
           description: Successful Response
@@ -5504,11 +4935,11 @@ paths:
                   type: string
                 type: object
                 title: Response Clear Cache Api Admin Cache Clear Post
-  /designer/api/admin/cache/status:
+  /api/admin/cache/status:
     get:
       summary: Cache Status
       description: "Returns the current size and status of the terminology cache.\n\nReturns:\n    Dict[str, int]: The status dictionary containing size and max_size."
-      operationId: Designer_cache_status_api_admin_cache_status_get
+      operationId: cache_status_api_admin_cache_status_get
       responses:
         '200':
           description: Successful Response
@@ -5519,11 +4950,11 @@ paths:
                   type: integer
                 type: object
                 title: Response Cache Status Api Admin Cache Status Get
-  /designer/api/v1/studies/{study_id}/alignment-validation:
+  /api/v1/studies/{study_id}/alignment-validation:
     get:
       summary: Validate Study Alignment
       description: "Generate an alignment validation report for a specific clinical study.\n\nAnalyzes trace links dynamically to ensure the\nStudy Data Requirements (SDR) align with Metadata Requirements (MDR).\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyAlignmentReport: The structured validation report."
-      operationId: Designer_validate_study_alignment_api_v1_studies__study_id__alignment_validation_get
+      operationId: validate_study_alignment_api_v1_studies__study_id__alignment_validation_get
       parameters:
       - name: study_id
         in: path
@@ -5544,11 +4975,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/terminology-validation:
+  /api/v1/studies/{study_id}/terminology-validation:
     get:
       summary: Validate Study Terminology Endpoint
       description: "Generate a terminology validation report for a specific clinical study.\n\nTraverses study concept references and aggregates validation outcomes\nsuch as identifying affected elements and references.\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyTerminologyValidationReport: The structured validation report."
-      operationId: Designer_validate_study_terminology_endpoint_api_v1_studies__study_id__terminology_validation_get
+      operationId: validate_study_terminology_endpoint_api_v1_studies__study_id__terminology_validation_get
       parameters:
       - name: study_id
         in: path
@@ -5569,11 +5000,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/ct-validation:
+  /api/v1/studies/{study_id}/ct-validation:
     get:
       summary: Validate Study Ct Endpoint
       description: "Generate a controlled terminology (CT) validation report for a specific clinical study.\n\nTraverses study concept references and aggregates validation outcomes\nsuch as identifying affected elements and references.\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyTerminologyValidationReport: The structured validation report."
-      operationId: Designer_validate_study_ct_endpoint_api_v1_studies__study_id__ct_validation_get
+      operationId: validate_study_ct_endpoint_api_v1_studies__study_id__ct_validation_get
       parameters:
       - name: study_id
         in: path
@@ -5594,11 +5025,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/terminology/validate/{code}:
+  /api/v1/terminology/validate/{code}:
     get:
       summary: Validate Single Code
       description: "Validates a single terminology concept code.\n\nArgs:\n    code (str): The concept code to validate.\n\nReturns:\n    ConceptValidationReport: Validation status and metadata."
-      operationId: Designer_validate_single_code_api_v1_terminology_validate__code__get
+      operationId: validate_single_code_api_v1_terminology_validate__code__get
       parameters:
       - name: code
         in: path
@@ -5619,11 +5050,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/terminology/search:
+  /api/v1/terminology/search:
     get:
       summary: Search Terminology
       description: "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n    bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.\n    refresh (bool, optional): Whether to refresh the cache. Defaults to False.\n\nReturns:\n    TerminologySearchResponse: Search results and status."
-      operationId: Designer_search_terminology_api_v1_terminology_search_get
+      operationId: search_terminology_api_v1_terminology_search_get
       parameters:
       - name: term
         in: query
@@ -5674,11 +5105,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/differences:
+  /api/v1/studies/{study_id}/differences:
     get:
       summary: Study Differences
       description: "Get human-readable field-level differences between two version actions of a study.\n\nThis endpoint uses a decoupled, API-first in-memory diffing architecture. Instead of\nrelying on a direct database connection (which led to 503 errors and tight coupling),\nit fetches full study payloads from an external registry. The comparison logic runs\nentirely in-memory by flattening nested dictionary structures to dynamically identify\nadded, modified, and deleted fields. This ensures high availability and fast execution\nwithout maintaining direct database connections.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    action_id1 (str): The ID of the first action version.\n    action_id2 (str): The ID of the second action version.\n\nReturns:\n    List[DifferenceResult]: A list of field-level differences."
-      operationId: Designer_study_differences_api_v1_studies__study_id__differences_get
+      operationId: study_differences_api_v1_studies__study_id__differences_get
       parameters:
       - name: study_id
         in: path
@@ -5714,10 +5145,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/sections/{section_id}/transition:
+  /api/v1/studies/{study_id}/sections/{section_id}/transition:
     post:
       summary: Transition Section
-      operationId: Designer_transition_section_api_v1_studies__study_id__sections__section_id__transition_post
+      operationId: transition_section_api_v1_studies__study_id__sections__section_id__transition_post
       parameters:
       - name: study_id
         in: path
@@ -5750,10 +5181,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/sections/{section_id}/status:
+  /api/v1/studies/{study_id}/sections/{section_id}/status:
     get:
       summary: Get Section Review Status
-      operationId: Designer_get_section_review_status_api_v1_studies__study_id__sections__section_id__status_get
+      operationId: get_section_review_status_api_v1_studies__study_id__sections__section_id__status_get
       parameters:
       - name: study_id
         in: path
@@ -5779,10 +5210,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/sections/{section_id}/threads:
+  /api/v1/studies/{study_id}/sections/{section_id}/threads:
     post:
       summary: Create Thread Endpoint
-      operationId: Designer_create_thread_endpoint_api_v1_studies__study_id__sections__section_id__threads_post
+      operationId: create_thread_endpoint_api_v1_studies__study_id__sections__section_id__threads_post
       parameters:
       - name: study_id
         in: path
@@ -5817,7 +5248,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Threads Endpoint
-      operationId: Designer_get_threads_endpoint_api_v1_studies__study_id__sections__section_id__threads_get
+      operationId: get_threads_endpoint_api_v1_studies__study_id__sections__section_id__threads_get
       parameters:
       - name: study_id
         in: path
@@ -5847,10 +5278,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/threads/{thread_id}/comments:
+  /api/v1/studies/{study_id}/threads/{thread_id}/comments:
     post:
       summary: Add Comment Endpoint
-      operationId: Designer_add_comment_endpoint_api_v1_studies__study_id__threads__thread_id__comments_post
+      operationId: add_comment_endpoint_api_v1_studies__study_id__threads__thread_id__comments_post
       parameters:
       - name: study_id
         in: path
@@ -5883,10 +5314,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/threads/{thread_id}/resolve:
+  /api/v1/studies/{study_id}/threads/{thread_id}/resolve:
     post:
       summary: Resolve Thread Endpoint
-      operationId: Designer_resolve_thread_endpoint_api_v1_studies__study_id__threads__thread_id__resolve_post
+      operationId: resolve_thread_endpoint_api_v1_studies__study_id__threads__thread_id__resolve_post
       parameters:
       - name: study_id
         in: path
@@ -5913,10 +5344,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/blocks/{block_id}/suggestions:
+  /api/v1/studies/{study_id}/blocks/{block_id}/suggestions:
     post:
       summary: Create Suggestion Endpoint
-      operationId: Designer_create_suggestion_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_post
+      operationId: create_suggestion_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_post
       parameters:
       - name: study_id
         in: path
@@ -5951,7 +5382,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Suggestions Endpoint
-      operationId: Designer_get_suggestions_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_get
+      operationId: get_suggestions_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_get
       parameters:
       - name: study_id
         in: path
@@ -5981,10 +5412,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/suggestions/{suggestion_id}/decision:
+  /api/v1/studies/{study_id}/suggestions/{suggestion_id}/decision:
     post:
       summary: Decide Suggestion Endpoint
-      operationId: Designer_decide_suggestion_endpoint_api_v1_studies__study_id__suggestions__suggestion_id__decision_post
+      operationId: decide_suggestion_endpoint_api_v1_studies__study_id__suggestions__suggestion_id__decision_post
       parameters:
       - name: study_id
         in: path
@@ -6017,10 +5448,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/ingestion/upload:
+  /api/v1/designer/ingestion/upload:
     post:
       summary: Upload Protocol Ingestion
-      operationId: Designer_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post
+      operationId: upload_protocol_ingestion_api_v1_designer_ingestion_upload_post
       requestBody:
         content:
           multipart/form-data:
@@ -6039,10 +5470,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/ingestion/jobs/{job_id}:
+  /api/v1/designer/ingestion/jobs/{job_id}:
     get:
       summary: Get Ingestion Job Status
-      operationId: Designer_get_ingestion_job_status_api_v1_designer_ingestion_jobs__job_id__get
+      operationId: get_ingestion_job_status_api_v1_designer_ingestion_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -6062,10 +5493,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/ingestion/candidates/{candidate_id}:
+  /api/v1/designer/ingestion/candidates/{candidate_id}:
     get:
       summary: Get Ingestion Candidate
-      operationId: Designer_get_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__get
+      operationId: get_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__get
       parameters:
       - name: candidate_id
         in: path
@@ -6085,10 +5516,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/ingestion/candidates/{candidate_id}/items/{item_id}/transition:
+  /api/v1/designer/ingestion/candidates/{candidate_id}/items/{item_id}/transition:
     post:
       summary: Transition Ingestion Item
-      operationId: Designer_transition_ingestion_item_api_v1_designer_ingestion_candidates__candidate_id__items__item_id__transition_post
+      operationId: transition_ingestion_item_api_v1_designer_ingestion_candidates__candidate_id__items__item_id__transition_post
       parameters:
       - name: candidate_id
         in: path
@@ -6120,10 +5551,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/ingestion/candidates/{candidate_id}/promote:
+  /api/v1/designer/ingestion/candidates/{candidate_id}/promote:
     post:
       summary: Promote Ingestion Candidate
-      operationId: Designer_promote_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__promote_post
+      operationId: promote_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__promote_post
       parameters:
       - name: candidate_id
         in: path
@@ -6149,10 +5580,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}:
     delete:
       summary: Retire Arm Endpoint
-      operationId: Designer_retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete
+      operationId: retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete
       parameters:
       - name: study_id
         in: path
@@ -6187,7 +5618,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Arm Endpoint
-      operationId: Designer_get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get
+      operationId: get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get
       parameters:
       - name: study_id
         in: path
@@ -6222,7 +5653,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     put:
       summary: Update Arm Endpoint
-      operationId: Designer_update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put
+      operationId: update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put
       parameters:
       - name: study_id
         in: path
@@ -6261,10 +5692,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}:
     delete:
       summary: Retire Epoch Endpoint
-      operationId: Designer_retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete
+      operationId: retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete
       parameters:
       - name: study_id
         in: path
@@ -6299,7 +5730,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Epoch Endpoint
-      operationId: Designer_get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get
+      operationId: get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get
       parameters:
       - name: study_id
         in: path
@@ -6334,7 +5765,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     put:
       summary: Update Epoch Endpoint
-      operationId: Designer_update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put
+      operationId: update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put
       parameters:
       - name: study_id
         in: path
@@ -6373,10 +5804,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}:
     delete:
       summary: Retire Visit Endpoint
-      operationId: Designer_retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete
+      operationId: retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete
       parameters:
       - name: study_id
         in: path
@@ -6411,7 +5842,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Visit Endpoint
-      operationId: Designer_get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get
+      operationId: get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get
       parameters:
       - name: study_id
         in: path
@@ -6446,7 +5877,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     put:
       summary: Update Visit Endpoint
-      operationId: Designer_update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put
+      operationId: update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put
       parameters:
       - name: study_id
         in: path
@@ -6485,10 +5916,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}:
     delete:
       summary: Retire Procedure Endpoint
-      operationId: Designer_retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete
+      operationId: retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete
       parameters:
       - name: study_id
         in: path
@@ -6523,7 +5954,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Procedure Endpoint
-      operationId: Designer_get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get
+      operationId: get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get
       parameters:
       - name: study_id
         in: path
@@ -6558,7 +5989,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     put:
       summary: Update Procedure Endpoint
-      operationId: Designer_update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put
+      operationId: update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put
       parameters:
       - name: study_id
         in: path
@@ -6597,10 +6028,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}:
     delete:
       summary: Retire Timing Window Endpoint
-      operationId: Designer_retire_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__delete
+      operationId: retire_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__delete
       parameters:
       - name: study_id
         in: path
@@ -6635,7 +6066,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Timing Window Endpoint
-      operationId: Designer_get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get
+      operationId: get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get
       parameters:
       - name: study_id
         in: path
@@ -6670,7 +6101,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     put:
       summary: Update Timing Window Endpoint
-      operationId: Designer_update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put
+      operationId: update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put
       parameters:
       - name: study_id
         in: path
@@ -6709,10 +6140,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit:
+  /api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit:
     delete:
       summary: Retire Epoch Visit Endpoint
-      operationId: Designer_retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete
+      operationId: retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete
       parameters:
       - name: study_id
         in: path
@@ -6747,7 +6178,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     post:
       summary: Link Epoch Visit Endpoint
-      operationId: Designer_link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post
+      operationId: link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post
       parameters:
       - name: study_id
         in: path
@@ -6780,10 +6211,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure:
+  /api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure:
     delete:
       summary: Retire Visit Procedure Endpoint
-      operationId: Designer_retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete
+      operationId: retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete
       parameters:
       - name: study_id
         in: path
@@ -6818,7 +6249,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     post:
       summary: Link Visit Procedure Endpoint
-      operationId: Designer_link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post
+      operationId: link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post
       parameters:
       - name: study_id
         in: path
@@ -6851,10 +6282,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/links/timing:
+  /api/v1/studies/{study_id}/versions/{version_id}/links/timing:
     delete:
       summary: Retire Timing Endpoint
-      operationId: Designer_retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete
+      operationId: retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete
       parameters:
       - name: study_id
         in: path
@@ -6889,7 +6320,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     post:
       summary: Link Timing Endpoint
-      operationId: Designer_link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post
+      operationId: link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post
       parameters:
       - name: study_id
         in: path
@@ -6922,10 +6353,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability:
+  /api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability:
     delete:
       summary: Retire Arm Applicability Endpoint
-      operationId: Designer_retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete
+      operationId: retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete
       parameters:
       - name: study_id
         in: path
@@ -6960,7 +6391,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     post:
       summary: Link Arm Applicability Endpoint
-      operationId: Designer_link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post
+      operationId: link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post
       parameters:
       - name: study_id
         in: path
@@ -6993,7 +6424,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/export:
+  /api/v1/studies/{study_id}/export:
     get:
       summary: Export Protocol
       description: 'Assembles a study version''s data, maps it to a canonical USDM content model,
@@ -7001,7 +6432,7 @@ paths:
         and renders the resulting clinical protocol document as a structurally valid
 
         PDF or DOCX document using shared layout templates.'
-      operationId: Designer_export_protocol_api_v1_studies__study_id__export_get
+      operationId: export_protocol_api_v1_studies__study_id__export_get
       parameters:
       - name: study_id
         in: path
@@ -7035,7 +6466,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/sign-off:
+  /api/v1/studies/{study_id}/versions/{version_id}/sign-off:
     post:
       summary: Approve Study Version Endpoint
       description: 'Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
@@ -7047,7 +6478,7 @@ paths:
         Locked statuses (APPROVED, SIGNED) block any subsequent edits via immutability checks across both Neo4j and mock databases.
 
         Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously.'
-      operationId: Designer_approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__sign_off_post
+      operationId: approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__sign_off_post
       parameters:
       - name: study_id
         in: path
@@ -7082,7 +6513,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/approve:
+  /api/v1/studies/{study_id}/versions/{version_id}/approve:
     post:
       summary: Approve Study Version Endpoint
       description: 'Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
@@ -7094,7 +6525,7 @@ paths:
         Locked statuses (APPROVED, SIGNED) block any subsequent edits via immutability checks across both Neo4j and mock databases.
 
         Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously.'
-      operationId: Designer_approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__approve_post
+      operationId: approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__approve_post
       parameters:
       - name: study_id
         in: path
@@ -7129,11 +6560,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/publish:
+  /api/v1/studies/{study_id}/versions/{version_id}/publish:
     post:
       summary: Publish Study Version Endpoint
       description: "Two-Phase Study Version State Machine:\n1. transition target version status to 'PENDING_PUBLISH'\n2. synchronously call downstream execution setup / clinical migration\n3. if downstream succeeds, transition target version status to 'ACTIVE'\n4. if downstream fails or times out (15s window), rollback status to 'DRAFT',\n   record exact execution error to audit trail, release lock resources,\n   and return validation error to initiating researcher."
-      operationId: Designer_publish_study_version_endpoint_api_v1_studies__study_id__versions__version_id__publish_post
+      operationId: publish_study_version_endpoint_api_v1_studies__study_id__versions__version_id__publish_post
       parameters:
       - name: study_id
         in: path
@@ -7166,11 +6597,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/eligibility-criteria:
+  /api/v1/studies/{study_id}/eligibility-criteria:
     get:
       summary: List Eligibility Criteria
       description: Retrieves all active eligibility criteria for a specific clinical study.
-      operationId: Designer_list_eligibility_criteria_api_v1_studies__study_id__eligibility_criteria_get
+      operationId: list_eligibility_criteria_api_v1_studies__study_id__eligibility_criteria_get
       parameters:
       - name: study_id
         in: path
@@ -7197,7 +6628,7 @@ paths:
     post:
       summary: Create Eligibility Criterion Endpoint
       description: Creates a new eligibility criterion for a specific clinical study, parsing and validating the DSL.
-      operationId: Designer_create_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria_post
+      operationId: create_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria_post
       parameters:
       - name: study_id
         in: path
@@ -7224,11 +6655,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}:
+  /api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}:
     get:
       summary: Get Eligibility Criterion Detail
       description: Retrieves details for a specific eligibility criterion by ID.
-      operationId: Designer_get_eligibility_criterion_detail_api_v1_studies__study_id__eligibility_criteria__criterion_id__get
+      operationId: get_eligibility_criterion_detail_api_v1_studies__study_id__eligibility_criteria__criterion_id__get
       parameters:
       - name: study_id
         in: path
@@ -7258,7 +6689,7 @@ paths:
     put:
       summary: Update Eligibility Criterion Endpoint
       description: Updates an eligibility criterion for a specific clinical study, parsing and validating the DSL.
-      operationId: Designer_update_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria__criterion_id__put
+      operationId: update_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria__criterion_id__put
       parameters:
       - name: study_id
         in: path
@@ -7291,11 +6722,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mappings/upload:
+  /api/v1/mappings/upload:
     post:
       summary: Upload Mapping Csv
       description: "Validates a CSV mapping configuration to ensure target names meet standard W3C XML naming specifications.\n\nRaises:\n    HTTPException: If the CSV format is invalid or if target XML names violate naming rules."
-      operationId: Designer_upload_mapping_csv_api_v1_mappings_upload_post
+      operationId: upload_mapping_csv_api_v1_mappings_upload_post
       requestBody:
         content:
           multipart/form-data:
@@ -7314,13 +6745,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/usdm/validate:
+  /api/v1/designer/usdm/validate:
     post:
       summary: Validate Usdm Endpoint
       description: 'Validates a USDM JSON or YAML payload, normalizes shape differences, and returns a detailed validation report.
 
         If the payload is invalid, raises a structured HTTP 422 ProblemDetails response.'
-      operationId: Designer_validate_usdm_endpoint_api_v1_designer_usdm_validate_post
+      operationId: validate_usdm_endpoint_api_v1_designer_usdm_validate_post
       parameters:
       - name: override
         in: query
@@ -7344,11 +6775,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/round-trip:
+  /api/v1/designer/round-trip:
     post:
       summary: Run Round Trip Endpoint
       description: "Orchestrates USDM\u2192internal\u2192USDM and internal\u2192USDM\u2192internal round trips.\nReturns classification, fidelity details, source format, detected/resolved version, and mapping diagnostics."
-      operationId: Designer_run_round_trip_endpoint_api_v1_designer_round_trip_post
+      operationId: run_round_trip_endpoint_api_v1_designer_round_trip_post
       requestBody:
         content:
           application/json:
@@ -7369,11 +6800,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/concepts:
+  /api/v1/mdr/concepts:
     get:
       summary: Get Concepts
       description: Fetches a paginated list of Biomedical Concepts.
-      operationId: Designer_get_concepts_api_v1_mdr_concepts_get
+      operationId: get_concepts_api_v1_mdr_concepts_get
       parameters:
       - name: terminology
         in: query
@@ -7423,7 +6854,7 @@ paths:
     post:
       summary: Create Concept
       description: Creates a new Biomedical Concept inside the MDR graph repository.
-      operationId: Designer_create_concept_api_v1_mdr_concepts_post
+      operationId: create_concept_api_v1_mdr_concepts_post
       requestBody:
         required: true
         content:
@@ -7449,11 +6880,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/concepts/{id}:
+  /api/v1/mdr/concepts/{id}:
     put:
       summary: Update Concept
       description: Updates an existing concept, creating a new audit history and incrementing version index.
-      operationId: Designer_update_concept_api_v1_mdr_concepts__id__put
+      operationId: update_concept_api_v1_mdr_concepts__id__put
       parameters:
       - name: id
         in: path
@@ -7489,7 +6920,7 @@ paths:
     delete:
       summary: Delete Concept
       description: Deletes an existing Biomedical Concept if it is not referenced by an Active-Recruiting study.
-      operationId: Designer_delete_concept_api_v1_mdr_concepts__id__delete
+      operationId: delete_concept_api_v1_mdr_concepts__id__delete
       parameters:
       - name: id
         in: path
@@ -7513,11 +6944,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/concepts/{id}/rename:
+  /api/v1/mdr/concepts/{id}/rename:
     post:
       summary: Rename Concept
       description: Renames an existing Biomedical Concept if it is not referenced by an Active-Recruiting study.
-      operationId: Designer_rename_concept_api_v1_mdr_concepts__id__rename_post
+      operationId: rename_concept_api_v1_mdr_concepts__id__rename_post
       parameters:
       - name: id
         in: path
@@ -7544,11 +6975,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/library:
+  /api/v1/mdr/library:
     post:
       summary: Create Library Object Endpoint
       description: Creates a new Global Library object under the authenticated sponsor's scope.
-      operationId: Designer_create_library_object_endpoint_api_v1_mdr_library_post
+      operationId: create_library_object_endpoint_api_v1_mdr_library_post
       requestBody:
         required: true
         content:
@@ -7597,7 +7028,7 @@ paths:
       description: 'Lists latest global library objects under the authenticated sponsor.
 
         Supports Stripe-style cursor-based pagination.'
-      operationId: Designer_list_library_objects_endpoint_api_v1_mdr_library_get
+      operationId: list_library_objects_endpoint_api_v1_mdr_library_get
       parameters:
       - name: object_type
         in: query
@@ -7636,11 +7067,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/library/{id}:
+  /api/v1/mdr/library/{id}:
     get:
       summary: Get Library Object Endpoint
       description: Retrieves the latest version or a specific version of a global library object.
-      operationId: Designer_get_library_object_endpoint_api_v1_mdr_library__id__get
+      operationId: get_library_object_endpoint_api_v1_mdr_library__id__get
       parameters:
       - name: id
         in: path
@@ -7684,7 +7115,7 @@ paths:
     put:
       summary: Update Library Object Endpoint
       description: Updates a global library object by creating a new version.
-      operationId: Designer_update_library_object_endpoint_api_v1_mdr_library__id__put
+      operationId: update_library_object_endpoint_api_v1_mdr_library__id__put
       parameters:
       - name: id
         in: path
@@ -7735,11 +7166,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/library/{id}/amend:
+  /api/v1/mdr/library/{id}/amend:
     post:
       summary: Amend Library Object Endpoint
       description: Initiates an amendment on a library object that is in use by creating a successor draft version.
-      operationId: Designer_amend_library_object_endpoint_api_v1_mdr_library__id__amend_post
+      operationId: amend_library_object_endpoint_api_v1_mdr_library__id__amend_post
       parameters:
       - name: id
         in: path
@@ -7778,11 +7209,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/library/{id}/history:
+  /api/v1/mdr/library/{id}/history:
     get:
       summary: Get Library Object History Endpoint
       description: Retrieves the complete version history of a global library object.
-      operationId: Designer_get_library_object_history_endpoint_api_v1_mdr_library__id__history_get
+      operationId: get_library_object_history_endpoint_api_v1_mdr_library__id__history_get
       parameters:
       - name: id
         in: path
@@ -7817,13 +7248,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/mdr/library/{id}/transition:
+  /api/v1/mdr/library/{id}/transition:
     post:
       summary: Transition Library Object Endpoint
       description: 'Transitions the lifecycle status of a global library object.
 
         Enforces a strict role-gated ALLOWED_LIBRARY_TRANSITIONS map.'
-      operationId: Designer_transition_library_object_endpoint_api_v1_mdr_library__id__transition_post
+      operationId: transition_library_object_endpoint_api_v1_mdr_library__id__transition_post
       parameters:
       - name: id
         in: path
@@ -7862,13 +7293,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions:
+  /api/v1/studies/{study_id}/versions:
     post:
       summary: Post Study Version
       description: 'Establishes a new StudyVersion node under a clinical study.
 
         Enforces that concurrent creation with duplicate index or tag fails with 409 Conflict.'
-      operationId: Designer_post_study_version_api_v1_studies__study_id__versions_post
+      operationId: post_study_version_api_v1_studies__study_id__versions_post
       parameters:
       - name: study_id
         in: path
@@ -7897,11 +7328,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/rules:
+  /api/v1/studies/{study_id}/rules:
     get:
       summary: Get Study Rules
       description: Retrieves all non-soft-deleted active rules for a specific clinical study.
-      operationId: Designer_get_study_rules_api_v1_studies__study_id__rules_get
+      operationId: get_study_rules_api_v1_studies__study_id__rules_get
       parameters:
       - name: study_id
         in: path
@@ -7929,7 +7360,7 @@ paths:
     post:
       summary: Create Study Rule
       description: Creates a new rule for a clinical study, enforcing auth and X-Change-Reason.
-      operationId: Designer_create_study_rule_api_v1_studies__study_id__rules_post
+      operationId: create_study_rule_api_v1_studies__study_id__rules_post
       parameters:
       - name: study_id
         in: path
@@ -7958,11 +7389,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/rules/{rule_id}:
+  /api/v1/studies/{study_id}/rules/{rule_id}:
     get:
       summary: Get Study Rule By Id
       description: Retrieves a specific rule by ID.
-      operationId: Designer_get_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__get
+      operationId: get_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__get
       parameters:
       - name: study_id
         in: path
@@ -7994,7 +7425,7 @@ paths:
     put:
       summary: Update Study Rule By Id
       description: Updates a rule's parameters, incrementing version index.
-      operationId: Designer_update_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__put
+      operationId: update_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__put
       parameters:
       - name: study_id
         in: path
@@ -8032,7 +7463,7 @@ paths:
     delete:
       summary: Delete Study Rule By Id
       description: Soft-deletes a rule, retaining its historical properties in audit.
-      operationId: Designer_delete_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__delete
+      operationId: delete_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__delete
       parameters:
       - name: study_id
         in: path
@@ -8062,13 +7493,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/rules/preview:
+  /api/v1/studies/{study_id}/rules/preview:
     post:
       summary: Compile Preview Rule
       description: 'Read-only compile and validation preview route.
 
         Detects unknown field references and circular skip-logic dependencies.'
-      operationId: Designer_compile_preview_rule_api_v1_studies__study_id__rules_preview_post
+      operationId: compile_preview_rule_api_v1_studies__study_id__rules_preview_post
       parameters:
       - name: study_id
         in: path
@@ -8095,13 +7526,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/rules/validate:
+  /api/v1/studies/{study_id}/rules/validate:
     post:
       summary: Compile Validate Rule
       description: 'Read-only compile and validation preview route.
 
         Detects unknown field references and circular skip-logic dependencies.'
-      operationId: Designer_compile_validate_rule_api_v1_studies__study_id__rules_validate_post
+      operationId: compile_validate_rule_api_v1_studies__study_id__rules_validate_post
       parameters:
       - name: study_id
         in: path
@@ -8128,13 +7559,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/designer/protocols/{id}/amend:
+  /api/designer/protocols/{id}/amend:
     post:
       summary: Amend Protocol
       description: 'Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
 
         Creates a transaction-safe DRAFT successor with incremented version index.'
-      operationId: Designer_amend_protocol_api_designer_protocols__id__amend_post
+      operationId: amend_protocol_api_designer_protocols__id__amend_post
       parameters:
       - name: id
         in: path
@@ -8163,10 +7594,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/blocks:
+  /api/v1/studies/{study_id}/versions/{version_id}/blocks:
     post:
       summary: Create Block Endpoint
-      operationId: Designer_create_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks_post
+      operationId: create_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks_post
       parameters:
       - name: study_id
         in: path
@@ -8201,7 +7632,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Blocks Endpoint
-      operationId: Designer_list_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_get
+      operationId: list_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_get
       parameters:
       - name: study_id
         in: path
@@ -8231,10 +7662,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}:
+  /api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}:
     put:
       summary: Update Block Endpoint
-      operationId: Designer_update_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__put
+      operationId: update_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__put
       parameters:
       - name: study_id
         in: path
@@ -8275,7 +7706,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     delete:
       summary: Delete Block Endpoint
-      operationId: Designer_delete_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__delete
+      operationId: delete_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__delete
       parameters:
       - name: study_id
         in: path
@@ -8310,7 +7741,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: Get Block Endpoint
-      operationId: Designer_get_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__get
+      operationId: get_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__get
       parameters:
       - name: study_id
         in: path
@@ -8343,10 +7774,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder:
+  /api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder:
     post:
       summary: Reorder Blocks Endpoint
-      operationId: Designer_reorder_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_reorder_post
+      operationId: reorder_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_reorder_post
       parameters:
       - name: study_id
         in: path
@@ -8379,10 +7810,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/arms:
+  /api/v1/studies/{study_id}/versions/{version_id}/arms:
     post:
       summary: Create Arm Endpoint
-      operationId: Designer_create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post
+      operationId: create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post
       parameters:
       - name: study_id
         in: path
@@ -8417,7 +7848,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Arms Endpoint
-      operationId: Designer_list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get
+      operationId: list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get
       parameters:
       - name: study_id
         in: path
@@ -8447,10 +7878,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/epochs:
+  /api/v1/studies/{study_id}/versions/{version_id}/epochs:
     post:
       summary: Create Epoch Endpoint
-      operationId: Designer_create_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs_post
+      operationId: create_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs_post
       parameters:
       - name: study_id
         in: path
@@ -8485,7 +7916,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Epochs Endpoint
-      operationId: Designer_list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get
+      operationId: list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get
       parameters:
       - name: study_id
         in: path
@@ -8515,10 +7946,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/visits:
+  /api/v1/studies/{study_id}/versions/{version_id}/visits:
     post:
       summary: Create Visit Endpoint
-      operationId: Designer_create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post
+      operationId: create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post
       parameters:
       - name: study_id
         in: path
@@ -8553,7 +7984,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Visits Endpoint
-      operationId: Designer_list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get
+      operationId: list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get
       parameters:
       - name: study_id
         in: path
@@ -8583,10 +8014,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/procedures:
+  /api/v1/studies/{study_id}/versions/{version_id}/procedures:
     post:
       summary: Create Procedure Endpoint
-      operationId: Designer_create_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures_post
+      operationId: create_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures_post
       parameters:
       - name: study_id
         in: path
@@ -8621,7 +8052,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Procedures Endpoint
-      operationId: Designer_list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get
+      operationId: list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get
       parameters:
       - name: study_id
         in: path
@@ -8651,10 +8082,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/timing-windows:
+  /api/v1/studies/{study_id}/versions/{version_id}/timing-windows:
     post:
       summary: Create Timing Window Endpoint
-      operationId: Designer_create_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_post
+      operationId: create_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_post
       parameters:
       - name: study_id
         in: path
@@ -8689,7 +8120,7 @@ paths:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
     get:
       summary: List Timing Windows Endpoint
-      operationId: Designer_list_timing_windows_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_get
+      operationId: list_timing_windows_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_get
       parameters:
       - name: study_id
         in: path
@@ -8719,10 +8150,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/soa-projection:
+  /api/v1/studies/{study_id}/versions/{version_id}/soa-projection:
     get:
       summary: Get Soa Projection Endpoint
-      operationId: Designer_get_soa_projection_endpoint_api_v1_studies__study_id__versions__version_id__soa_projection_get
+      operationId: get_soa_projection_endpoint_api_v1_studies__study_id__versions__version_id__soa_projection_get
       parameters:
       - name: study_id
         in: path
@@ -8749,10 +8180,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder:
+  /api/v1/studies/{study_id}/versions/{version_id}/arms/reorder:
     post:
       summary: Reorder Arms Endpoint
-      operationId: Designer_reorder_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_reorder_post
+      operationId: reorder_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_reorder_post
       parameters:
       - name: study_id
         in: path
@@ -8787,10 +8218,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder:
+  /api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder:
     post:
       summary: Reorder Epochs Endpoint
-      operationId: Designer_reorder_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_reorder_post
+      operationId: reorder_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_reorder_post
       parameters:
       - name: study_id
         in: path
@@ -8825,10 +8256,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder:
+  /api/v1/studies/{study_id}/versions/{version_id}/visits/reorder:
     post:
       summary: Reorder Visits Endpoint
-      operationId: Designer_reorder_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_reorder_post
+      operationId: reorder_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_reorder_post
       parameters:
       - name: study_id
         in: path
@@ -8863,10 +8294,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder:
+  /api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder:
     post:
       summary: Reorder Procedures Endpoint
-      operationId: Designer_reorder_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_reorder_post
+      operationId: reorder_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_reorder_post
       parameters:
       - name: study_id
         in: path
@@ -8901,10 +8332,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities:
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/activities:
     post:
       summary: Assign Activities To Visit Endpoint
-      operationId: Designer_assign_activities_to_visit_endpoint_api_v1_studies__study_id__versions__version_id__assignments_activities_post
+      operationId: assign_activities_to_visit_endpoint_api_v1_studies__study_id__versions__version_id__assignments_activities_post
       parameters:
       - name: study_id
         in: path
@@ -8939,10 +8370,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms:
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/arms:
     post:
       summary: Assign Visits To Arm Endpoint
-      operationId: Designer_assign_visits_to_arm_endpoint_api_v1_studies__study_id__versions__version_id__assignments_arms_post
+      operationId: assign_visits_to_arm_endpoint_api_v1_studies__study_id__versions__version_id__assignments_arms_post
       parameters:
       - name: study_id
         in: path
@@ -8977,10 +8408,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs:
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs:
     post:
       summary: Assign Visits To Epoch Endpoint
-      operationId: Designer_assign_visits_to_epoch_endpoint_api_v1_studies__study_id__versions__version_id__assignments_epochs_post
+      operationId: assign_visits_to_epoch_endpoint_api_v1_studies__study_id__versions__version_id__assignments_epochs_post
       parameters:
       - name: study_id
         in: path
@@ -9015,7 +8446,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/versions/diff:
+  /api/v1/studies/{study_id}/versions/diff:
     get:
       summary: Get Versions Diff Endpoint
       description: 'Exposes graph-native, form-level version-diff API.
@@ -9023,7 +8454,7 @@ paths:
         Identifies additions, modifications, and deletions of forms.
 
         Returns HTTP 400 Bad Request if either version is nonexistent or unrelated.'
-      operationId: Designer_get_versions_diff_endpoint_api_v1_studies__study_id__versions_diff_get
+      operationId: get_versions_diff_endpoint_api_v1_studies__study_id__versions_diff_get
       parameters:
       - name: study_id
         in: path
@@ -9060,13 +8491,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/library-instances:
+  /api/v1/studies/{study_id}/library-instances:
     post:
       summary: Instantiate Library Object Endpoint
       description: 'Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
 
         Enforces that the library object and study both belong to/are accessible by the authenticated sponsor.'
-      operationId: Designer_instantiate_library_object_endpoint_api_v1_studies__study_id__library_instances_post
+      operationId: instantiate_library_object_endpoint_api_v1_studies__study_id__library_instances_post
       parameters:
       - name: study_id
         in: path
@@ -9093,7 +8524,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/library-instances/{instance_id}:
+  /api/v1/studies/{study_id}/library-instances/{instance_id}:
     put:
       summary: Update Library Instance Endpoint
       description: 'Updates the payload of an instantiated library object inside a study.
@@ -9101,7 +8532,7 @@ paths:
         Verifies that target study belongs to or is accessible by the authenticated sponsor,
 
         leaving the global library source immutable.'
-      operationId: Designer_update_library_instance_endpoint_api_v1_studies__study_id__library_instances__instance_id__put
+      operationId: update_library_instance_endpoint_api_v1_studies__study_id__library_instances__instance_id__put
       parameters:
       - name: study_id
         in: path
@@ -9134,11 +8565,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/studies/{study_id}/library-instances/{instance_id}/diff:
+  /api/v1/studies/{study_id}/library-instances/{instance_id}/diff:
     get:
       summary: Get Library Instance Diff Endpoint
       description: Returns field-level dot-notated differences between the library instance payload and its linked source version.
-      operationId: Designer_get_library_instance_diff_endpoint_api_v1_studies__study_id__library_instances__instance_id__diff_get
+      operationId: get_library_instance_diff_endpoint_api_v1_studies__study_id__library_instances__instance_id__diff_get
       parameters:
       - name: study_id
         in: path
@@ -9168,13 +8599,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/startup-matrix/presets:
+  /api/v1/designer/startup-matrix/presets:
     get:
       tags:
       - StartupPrerequisiteMatrix
       summary: Get Startup Presets Endpoint
       description: Retrieves standard statutory startup criteria presets across international jurisdictions.
-      operationId: Designer_get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get
+      operationId: get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get
       responses:
         '200':
           description: Successful Response
@@ -9188,13 +8619,13 @@ paths:
                   type: array
                 type: object
                 title: Response Get Startup Presets Endpoint Api V1 Designer Startup Matrix Presets Get
-  /designer/api/v1/designer/startup-matrix/jurisdictions:
+  /api/v1/designer/startup-matrix/jurisdictions:
     get:
       tags:
       - StartupPrerequisiteMatrix
       summary: Get Supported Jurisdictions Endpoint
       description: Lists supported international jurisdictions with regulatory and ethics governance frameworks.
-      operationId: Designer_get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get
+      operationId: get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get
       responses:
         '200':
           description: Successful Response
@@ -9205,13 +8636,13 @@ paths:
                   $ref: '#/components/schemas/Designer_JurisdictionInfo'
                 type: array
                 title: Response Get Supported Jurisdictions Endpoint Api V1 Designer Startup Matrix Jurisdictions Get
-  /designer/api/v1/designer/startup-matrix/generate-template:
+  /api/v1/designer/startup-matrix/generate-template:
     post:
       tags:
       - StartupPrerequisiteMatrix
       summary: Generate Startup Template Endpoint
       description: Generates country-specific startup prerequisite criteria matrix for study protocol design.
-      operationId: Designer_generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post
+      operationId: generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post
       requestBody:
         content:
           application/json:
@@ -9231,13 +8662,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/cohort-feasibility/evaluate:
+  /api/v1/designer/cohort-feasibility/evaluate:
     post:
       tags:
       - Cohort Feasibility Engine
       summary: Trigger multi-criteria cohort reasoning and synthetic feasibility simulation
       description: "Executes multi-criteria cohort reasoning and synthetic subject profile feasibility simulation.\n\nSupports:\n- Asynchronous background worker execution guarded by PostgreSQL advisory locks (non-blocking)\n- De-identification scrubbing on evaluation context and prompts (packages/deid)\n- Grounded RAG protocol criteria matching (packages/compliance)\n- Three-valued logic (3VL) evaluation under complete, partial, and missing data scenarios\n- Granular node-level fit trace explanations\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest payload.\n    background_tasks: FastAPI BackgroundTasks queue.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob when asynchronous background processing is requested,\n    or CohortFeasibilityReport when executed synchronously."
-      operationId: Designer_evaluate_cohort_feasibility_endpoint_api_v1_designer_cohort_feasibility_evaluate_post
+      operationId: evaluate_cohort_feasibility_endpoint_api_v1_designer_cohort_feasibility_evaluate_post
       requestBody:
         content:
           application/json:
@@ -9260,13 +8691,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/cohort-feasibility/jobs/{job_id}:
+  /api/v1/designer/cohort-feasibility/jobs/{job_id}:
     get:
       tags:
       - Cohort Feasibility Engine
       summary: Poll status and results of an asynchronous cohort feasibility job
       description: "Retrieves asynchronous cohort feasibility job status and report.\n\nArgs:\n    job_id: Unique job identifier to query.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob status wrapper and report.\n\nRaises:\n    HTTPException: If the job with job_id is not found (404)."
-      operationId: Designer_get_feasibility_job_status_endpoint_api_v1_designer_cohort_feasibility_jobs__job_id__get
+      operationId: get_feasibility_job_status_endpoint_api_v1_designer_cohort_feasibility_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -9287,13 +8718,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/api/v1/designer/cohort-feasibility/synthetic-simulate:
+  /api/v1/designer/cohort-feasibility/synthetic-simulate:
     post:
       tags:
       - Cohort Feasibility Engine
       summary: Simulate cohort feasibility under missing data scenarios using 3-valued logic
       description: "Directly executes synthetic patient population simulation under missing data conditions.\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest parameters.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityReport containing simulation results."
-      operationId: Designer_simulate_synthetic_feasibility_endpoint_api_v1_designer_cohort_feasibility_synthetic_simulate_post
+      operationId: simulate_synthetic_feasibility_endpoint_api_v1_designer_cohort_feasibility_synthetic_simulate_post
       requestBody:
         content:
           application/json:
@@ -9313,40 +8744,216 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_HTTPValidationError'
-  /designer/health:
-    get:
-      summary: Health Check
-      description: "Service health check endpoint.\n\nReturns a basic JSON payload indicating the service is operational.\n\nReturns:\n    Dict[str, str]: The health status payload."
-      operationId: Designer_health_check_health_get
+  /api/v1/designer/studies/{study_id}/forms/compile:
+    post:
+      tags:
+      - Tripartite eCRF Designer
+      summary: Compile Form Schema
+      description: Compile and validate a Tripartite Form Definition.
+      operationId: compile_form_schema_api_v1_designer_studies__study_id__forms_compile_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                additionalProperties:
-                  type: string
                 type: object
-                title: Response Health Check Health Get
-  /econsent/health:
+                additionalProperties: true
+                title: Response Compile Form Schema Api V1 Designer Studies  Study Id  Forms Compile Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/designer/library/smart-blocks:
     get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Econsent_health_check_health_get
+      tags:
+      - Tripartite eCRF Designer
+      summary: List Smart Blocks
+      description: List pre-configured CDISC clinical Smart Blocks.
+      operationId: list_smart_blocks_api_v1_designer_library_smart_blocks_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                additionalProperties:
-                  type: string
+                items:
+                  additionalProperties: true
+                  type: object
+                type: array
+                title: Response List Smart Blocks Api V1 Designer Library Smart Blocks Get
+  /api/v1/designer/library/smart-blocks/{block_id}/instantiate:
+    post:
+      tags:
+      - Tripartite eCRF Designer
+      summary: Instantiate Smart Block
+      description: Instantiate a CDISC Smart Block into a complete Tripartite Form Schema.
+      operationId: instantiate_smart_block_api_v1_designer_library_smart_blocks__block_id__instantiate_post
+      parameters:
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
+      - name: form_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Form Id
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/designer/studies/{study_id}/amendments/diff:
+    post:
+      tags:
+      - Tripartite eCRF Designer
+      summary: Calculate Amendment Diff
+      description: Calculate structural diff between base and amended form versions.
+      operationId: calculate_amendment_diff_api_v1_designer_studies__study_id__amendments_diff_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_DiffRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_PatientMigrationMatrix'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/designer/studies/{study_id}/forms/{form_id}/uat/execute:
+    post:
+      tags:
+      - Tripartite eCRF Designer
+      summary: Execute Uat Simulation
+      description: Execute synthetic UAT simulation suite and generate 21 CFR Part 11 Evidence Report.
+      operationId: execute_uat_simulation_api_v1_designer_studies__study_id__forms__form_id__uat_execute_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_UatExecutionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_UatEvidenceReport'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/designer/studies/{study_id}/forms/{form_id}/publish:
+    post:
+      tags:
+      - Tripartite eCRF Designer
+      summary: Publish And Seal Form
+      description: Publish and cryptographically seal form definition with step-up electronic signature.
+      operationId: publish_and_seal_form_api_v1_designer_studies__study_id__forms__form_id__publish_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
+      - name: X-User-Id
+        in: header
+        required: false
+        schema:
+          type: string
+          default: system
+          title: X-User-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_PublicationRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
                 type: object
-                title: Response Health Check Health Get
-  /econsent/api/v1/econsent/documents:
+                additionalProperties: true
+                title: Response Publish And Seal Form Api V1 Designer Studies  Study Id  Forms  Form Id  Publish Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /api/v1/econsent/documents:
     post:
       summary: Create Consent Document
-      operationId: Econsent_create_consent_document_api_v1_econsent_documents_post
+      operationId: create_consent_document_api_v1_econsent_documents_post
       requestBody:
         content:
           application/json:
@@ -9366,10 +8973,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/documents/{id}:
+  /api/v1/econsent/documents/{id}:
     get:
       summary: Get Consent Document
-      operationId: Econsent_get_consent_document_api_v1_econsent_documents__id__get
+      operationId: get_consent_document_api_v1_econsent_documents__id__get
       parameters:
       - name: id
         in: path
@@ -9390,10 +8997,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/clauses:
+  /api/v1/econsent/clauses:
     post:
       summary: Create Consent Clause
-      operationId: Econsent_create_consent_clause_api_v1_econsent_clauses_post
+      operationId: create_consent_clause_api_v1_econsent_clauses_post
       requestBody:
         required: true
         content:
@@ -9415,7 +9022,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: List Consent Clauses
-      operationId: Econsent_list_consent_clauses_api_v1_econsent_clauses_get
+      operationId: list_consent_clauses_api_v1_econsent_clauses_get
       parameters:
       - name: study_id
         in: query
@@ -9456,10 +9063,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/clauses/{clause_id}:
+  /api/v1/econsent/clauses/{clause_id}:
     put:
       summary: Update Consent Clause
-      operationId: Econsent_update_consent_clause_api_v1_econsent_clauses__clause_id__put
+      operationId: update_consent_clause_api_v1_econsent_clauses__clause_id__put
       parameters:
       - name: clause_id
         in: path
@@ -9488,7 +9095,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: Get Consent Clause
-      operationId: Econsent_get_consent_clause_api_v1_econsent_clauses__clause_id__get
+      operationId: get_consent_clause_api_v1_econsent_clauses__clause_id__get
       parameters:
       - name: clause_id
         in: path
@@ -9517,10 +9124,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates:
+  /api/v1/econsent/templates:
     post:
       summary: Create Consent Template
-      operationId: Econsent_create_consent_template_api_v1_econsent_templates_post
+      operationId: create_consent_template_api_v1_econsent_templates_post
       requestBody:
         required: true
         content:
@@ -9542,7 +9149,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: List Consent Templates
-      operationId: Econsent_list_consent_templates_api_v1_econsent_templates_get
+      operationId: list_consent_templates_api_v1_econsent_templates_get
       parameters:
       - name: study_id
         in: query
@@ -9583,10 +9190,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/archival-status/{correlation_id}:
+  /api/v1/econsent/archival-status/{correlation_id}:
     get:
       summary: Get Archival Status Endpoint
-      operationId: Econsent_get_archival_status_endpoint_api_v1_econsent_archival_status__correlation_id__get
+      operationId: get_archival_status_endpoint_api_v1_econsent_archival_status__correlation_id__get
       parameters:
       - name: correlation_id
         in: path
@@ -9607,10 +9214,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/archival-status:
+  /api/v1/econsent/archival-status:
     get:
       summary: Get Archival Status Query Endpoint
-      operationId: Econsent_get_archival_status_query_endpoint_api_v1_econsent_archival_status_get
+      operationId: get_archival_status_query_endpoint_api_v1_econsent_archival_status_get
       parameters:
       - name: correlation_id
         in: query
@@ -9657,10 +9264,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent:
+  /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent:
     post:
       summary: Capture Subject Consent
-      operationId: Econsent_capture_subject_consent_api_v1_econsent_templates__template_id__versions__version_index__capture_consent_post
+      operationId: capture_subject_consent_api_v1_econsent_templates__template_id__versions__version_index__capture_consent_post
       parameters:
       - name: template_id
         in: path
@@ -9693,10 +9300,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/subjects/{subject_pseudonym}/consent-status:
+  /api/v1/econsent/subjects/{subject_pseudonym}/consent-status:
     get:
       summary: Get Subject Consent Status Endpoint
-      operationId: Econsent_get_subject_consent_status_endpoint_api_v1_econsent_subjects__subject_pseudonym__consent_status_get
+      operationId: get_subject_consent_status_endpoint_api_v1_econsent_subjects__subject_pseudonym__consent_status_get
       parameters:
       - name: subject_pseudonym
         in: path
@@ -9725,10 +9332,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks:
+  /api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks:
     post:
       summary: Create Or Update Comprehension Check
-      operationId: Econsent_create_or_update_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_post
+      operationId: create_or_update_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_post
       parameters:
       - name: template_id
         in: path
@@ -9763,7 +9370,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: Get Comprehension Check
-      operationId: Econsent_get_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_get
+      operationId: get_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_get
       parameters:
       - name: template_id
         in: path
@@ -9790,10 +9397,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers:
+  /api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers:
     post:
       summary: Submit Comprehension Answers Endpoint
-      operationId: Econsent_submit_comprehension_answers_endpoint_api_v1_econsent_templates__template_id__versions__version_index__submit_answers_post
+      operationId: submit_comprehension_answers_endpoint_api_v1_econsent_templates__template_id__versions__version_index__submit_answers_post
       parameters:
       - name: template_id
         in: path
@@ -9826,10 +9433,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/versions/{version_index}/sign:
+  /api/v1/econsent/templates/{template_id}/versions/{version_index}/sign:
     post:
       summary: Sign Consent Template Endpoint
-      operationId: Econsent_sign_consent_template_endpoint_api_v1_econsent_templates__template_id__versions__version_index__sign_post
+      operationId: sign_consent_template_endpoint_api_v1_econsent_templates__template_id__versions__version_index__sign_post
       parameters:
       - name: template_id
         in: path
@@ -9862,10 +9469,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/translations:
+  /api/v1/econsent/translations:
     post:
       summary: Create Consent Translation
-      operationId: Econsent_create_consent_translation_api_v1_econsent_translations_post
+      operationId: create_consent_translation_api_v1_econsent_translations_post
       requestBody:
         required: true
         content:
@@ -9887,7 +9494,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: List Consent Translations
-      operationId: Econsent_list_consent_translations_api_v1_econsent_translations_get
+      operationId: list_consent_translations_api_v1_econsent_translations_get
       parameters:
       - name: source_id
         in: query
@@ -9944,10 +9551,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/translations/{translation_id}:
+  /api/v1/econsent/translations/{translation_id}:
     put:
       summary: Update Consent Translation
-      operationId: Econsent_update_consent_translation_api_v1_econsent_translations__translation_id__put
+      operationId: update_consent_translation_api_v1_econsent_translations__translation_id__put
       parameters:
       - name: translation_id
         in: path
@@ -9976,7 +9583,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: Get Consent Translation
-      operationId: Econsent_get_consent_translation_api_v1_econsent_translations__translation_id__get
+      operationId: get_consent_translation_api_v1_econsent_translations__translation_id__get
       parameters:
       - name: translation_id
         in: path
@@ -10005,10 +9612,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/translations/{translation_id}/transition:
+  /api/v1/econsent/translations/{translation_id}/transition:
     post:
       summary: Transition Consent Translation
-      operationId: Econsent_transition_consent_translation_api_v1_econsent_translations__translation_id__transition_post
+      operationId: transition_consent_translation_api_v1_econsent_translations__translation_id__transition_post
       parameters:
       - name: translation_id
         in: path
@@ -10035,10 +9642,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/approved-content:
+  /api/v1/econsent/templates/{template_id}/approved-content:
     get:
       summary: Get Approved Composed Template
-      operationId: Econsent_get_approved_composed_template_api_v1_econsent_templates__template_id__approved_content_get
+      operationId: get_approved_composed_template_api_v1_econsent_templates__template_id__approved_content_get
       parameters:
       - name: template_id
         in: path
@@ -10075,10 +9682,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}:
+  /api/v1/econsent/templates/{template_id}:
     put:
       summary: Update Consent Template
-      operationId: Econsent_update_consent_template_api_v1_econsent_templates__template_id__put
+      operationId: update_consent_template_api_v1_econsent_templates__template_id__put
       parameters:
       - name: template_id
         in: path
@@ -10107,7 +9714,7 @@ paths:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
     get:
       summary: Get Consent Template
-      operationId: Econsent_get_consent_template_api_v1_econsent_templates__template_id__get
+      operationId: get_consent_template_api_v1_econsent_templates__template_id__get
       parameters:
       - name: template_id
         in: path
@@ -10136,10 +9743,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/compose:
+  /api/v1/econsent/templates/{template_id}/compose:
     get:
       summary: Compose Consent Template
-      operationId: Econsent_compose_consent_template_api_v1_econsent_templates__template_id__compose_get
+      operationId: compose_consent_template_api_v1_econsent_templates__template_id__compose_get
       parameters:
       - name: template_id
         in: path
@@ -10168,10 +9775,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/publish:
+  /api/v1/econsent/templates/{template_id}/publish:
     post:
       summary: Publish Consent Template
-      operationId: Econsent_publish_consent_template_api_v1_econsent_templates__template_id__publish_post
+      operationId: publish_consent_template_api_v1_econsent_templates__template_id__publish_post
       parameters:
       - name: template_id
         in: path
@@ -10192,11 +9799,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/templates/{template_id}/diff/{base_version}/{target_version}:
+  /api/v1/econsent/templates/{template_id}/diff/{base_version}/{target_version}:
     get:
       summary: Diff Template Versions
       description: Computes semantic delta and substantive change analysis between two template versions.
-      operationId: Econsent_diff_template_versions_api_v1_econsent_templates__template_id__diff__base_version___target_version__get
+      operationId: diff_template_versions_api_v1_econsent_templates__template_id__diff__base_version___target_version__get
       parameters:
       - name: template_id
         in: path
@@ -10229,13 +9836,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/trigger/{template_id}:
+  /api/v1/econsent/reconsent/trigger/{template_id}:
     post:
       tags:
       - Re-Consent
       summary: Trigger Reconsent
       description: Triggers re-consent requirements for all active enrolled subjects under an amended ICF.
-      operationId: Econsent_trigger_reconsent_api_v1_econsent_reconsent_trigger__template_id__post
+      operationId: trigger_reconsent_api_v1_econsent_reconsent_trigger__template_id__post
       parameters:
       - name: template_id
         in: path
@@ -10265,13 +9872,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/pending/{study_id}:
+  /api/v1/econsent/reconsent/pending/{study_id}:
     get:
       tags:
       - Re-Consent
       summary: Get Pending Reconsents
       description: Retrieves all pending re-consent requirements for a study or subject.
-      operationId: Econsent_get_pending_reconsents_api_v1_econsent_reconsent_pending__study_id__get
+      operationId: get_pending_reconsents_api_v1_econsent_reconsent_pending__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -10303,13 +9910,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/complete/{requirement_id}:
+  /api/v1/econsent/reconsent/complete/{requirement_id}:
     post:
       tags:
       - Re-Consent
       summary: Complete Reconsent
       description: Marks a re-consent requirement as completed following subject e-signature.
-      operationId: Econsent_complete_reconsent_api_v1_econsent_reconsent_complete__requirement_id__post
+      operationId: complete_reconsent_api_v1_econsent_reconsent_complete__requirement_id__post
       parameters:
       - name: requirement_id
         in: path
@@ -10338,13 +9945,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/minor-milestones/evaluate:
+  /api/v1/econsent/reconsent/minor-milestones/evaluate:
     post:
       tags:
       - Re-Consent
       summary: Evaluate Minor Milestones
       description: Evaluates minor subjects against jurisdiction legal age of majority rules.
-      operationId: Econsent_evaluate_minor_milestones_api_v1_econsent_reconsent_minor_milestones_evaluate_post
+      operationId: evaluate_minor_milestones_api_v1_econsent_reconsent_minor_milestones_evaluate_post
       requestBody:
         content:
           application/json:
@@ -10364,13 +9971,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/minor-milestones/trigger:
+  /api/v1/econsent/reconsent/minor-milestones/trigger:
     post:
       tags:
       - Re-Consent
       summary: Trigger Majority Reconsent
       description: Generates mandatory adult re-consent tasks for minor subjects who turned legal age.
-      operationId: Econsent_trigger_majority_reconsent_api_v1_econsent_reconsent_minor_milestones_trigger_post
+      operationId: trigger_majority_reconsent_api_v1_econsent_reconsent_minor_milestones_trigger_post
       requestBody:
         content:
           application/json:
@@ -10393,13 +10000,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/reconsent/minor-milestones/pending/{study_id}:
+  /api/v1/econsent/reconsent/minor-milestones/pending/{study_id}:
     get:
       tags:
       - Re-Consent
       summary: Get Pending Majority Reconsents
       description: Retrieves pending adult re-consent requirements resulting from age-of-majority transitions.
-      operationId: Econsent_get_pending_majority_reconsents_api_v1_econsent_reconsent_minor_milestones_pending__study_id__get
+      operationId: get_pending_majority_reconsents_api_v1_econsent_reconsent_minor_milestones_pending__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -10431,13 +10038,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/withdrawal:
+  /api/v1/econsent/withdrawal:
     post:
       tags:
       - Withdrawal
       summary: Withdraw Subject Consent
       description: Formally revokes/withdraws a subject's consent and records 21 CFR Part 11 audit records.
-      operationId: Econsent_withdraw_subject_consent_api_v1_econsent_withdrawal_post
+      operationId: withdraw_subject_consent_api_v1_econsent_withdrawal_post
       requestBody:
         content:
           application/json:
@@ -10457,13 +10064,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/withdrawal/{study_id}/{subject_pseudonym}:
+  /api/v1/econsent/withdrawal/{study_id}/{subject_pseudonym}:
     get:
       tags:
       - Withdrawal
       summary: Get Subject Withdrawal Status
       description: Retrieves the withdrawal record for a subject if one exists.
-      operationId: Econsent_get_subject_withdrawal_status_api_v1_econsent_withdrawal__study_id___subject_pseudonym__get
+      operationId: get_subject_withdrawal_status_api_v1_econsent_withdrawal__study_id___subject_pseudonym__get
       parameters:
       - name: study_id
         in: path
@@ -10490,13 +10097,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/export/cdisc-odm/{study_id}/{subject_pseudonym}/{template_id}/{version_index}:
+  /api/v1/econsent/export/cdisc-odm/{study_id}/{subject_pseudonym}/{template_id}/{version_index}:
     get:
       tags:
       - Export
       summary: Export Subject Cdisc Odm
       description: Exports clinical eConsent records in standard CDISC ODM v1.3.2/v2.0 XML.
-      operationId: Econsent_export_subject_cdisc_odm_api_v1_econsent_export_cdisc_odm__study_id___subject_pseudonym___template_id___version_index__get
+      operationId: export_subject_cdisc_odm_api_v1_econsent_export_cdisc_odm__study_id___subject_pseudonym___template_id___version_index__get
       parameters:
       - name: study_id
         in: path
@@ -10535,13 +10142,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/export/certificate/{study_id}/{subject_pseudonym}/{template_id}/{version_index}:
+  /api/v1/econsent/export/certificate/{study_id}/{subject_pseudonym}/{template_id}/{version_index}:
     get:
       tags:
       - Export
       summary: Export Verifiable Certificate
       description: Generates a standalone, tamper-evident HTML consent certificate.
-      operationId: Econsent_export_verifiable_certificate_api_v1_econsent_export_certificate__study_id___subject_pseudonym___template_id___version_index__get
+      operationId: export_verifiable_certificate_api_v1_econsent_export_certificate__study_id___subject_pseudonym___template_id___version_index__get
       parameters:
       - name: study_id
         in: path
@@ -10580,13 +10187,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/options/{template_id}/{version_index}:
+  /api/v1/econsent/options/{template_id}/{version_index}:
     post:
       tags:
       - Granular Options
       summary: Create Granular Option
       description: Configures a granular optional research choice on a template version.
-      operationId: Econsent_create_granular_option_api_v1_econsent_options__template_id___version_index__post
+      operationId: create_granular_option_api_v1_econsent_options__template_id___version_index__post
       parameters:
       - name: template_id
         in: path
@@ -10624,7 +10231,7 @@ paths:
       - Granular Options
       summary: List Granular Options
       description: Lists all configured granular research options for a template version.
-      operationId: Econsent_list_granular_options_api_v1_econsent_options__template_id___version_index__get
+      operationId: list_granular_options_api_v1_econsent_options__template_id___version_index__get
       parameters:
       - name: template_id
         in: path
@@ -10654,13 +10261,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/audit:
+  /api/v1/econsent/audit:
     get:
       tags:
       - Audit Trail
       summary: List Audit Logs
       description: Retrieves 21 CFR Part 11 immutable audit trail records.
-      operationId: Econsent_list_audit_logs_api_v1_econsent_audit_get
+      operationId: list_audit_logs_api_v1_econsent_audit_get
       parameters:
       - name: document_id
         in: query
@@ -10709,13 +10316,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/readability/analyze:
+  /api/v1/econsent/readability/analyze:
     post:
       tags:
       - Readability Harmonization
       summary: Compute real-time readability metrics for consent text
       description: "Computes Flesch-Kincaid Grade Level, Flesch Reading Ease, and Dale-Chall readability indices.\n\nArgs:\n    payload: ReadabilityAnalysisRequest containing narrative or clause text.\n\nReturns:\n    ReadabilityAnalysisResponse with calculated grade levels, word counts, and target indicators."
-      operationId: Econsent_analyze_readability_api_v1_econsent_readability_analyze_post
+      operationId: analyze_readability_api_v1_econsent_readability_analyze_post
       requestBody:
         content:
           application/json:
@@ -10735,13 +10342,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/readability/harmonize:
+  /api/v1/econsent/readability/harmonize:
     post:
       tags:
       - Readability Harmonization
       summary: Generate patient-friendly medical jargon substitutions via AI Gateway Tier 2
       description: "Analyzes text for complex clinical jargon and suggests plain-language substitutions.\n\nArgs:\n    payload: ReadabilityHarmonizationRequest containing original text and target reading level.\n\nReturns:\n    ReadabilityHarmonizationResponse with candidate substitutions, harmonized text, and delta scores."
-      operationId: Econsent_harmonize_readability_api_v1_econsent_readability_harmonize_post
+      operationId: harmonize_readability_api_v1_econsent_readability_harmonize_post
       requestBody:
         content:
           application/json:
@@ -10761,13 +10368,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /econsent/api/v1/econsent/clauses/{clause_id}/harmonize:
+  /api/v1/econsent/clauses/{clause_id}/harmonize:
     post:
       tags:
       - Readability Harmonization
       summary: Apply plain-language readability harmonization to a clause with IRB amendment linking
       description: "Applies harmonized text to an ICF clause, incrementing version index and logging 21 CFR Part 11 audit trail.\n\nArgs:\n    request: Request object for extracting user_id and change_reason.\n    clause_id: Identifier of the consent clause being harmonized.\n    payload: ClauseHarmonizationApplyRequest with harmonized text and audit reason.\n    session: Active asynchronous database session.\n\nReturns:\n    ClauseHarmonizationApplyResponse with updated version index and new readability metrics.\n\nRaises:\n    HTTPException: If clause_id is not found or auditor role attempts mutation."
-      operationId: Econsent_apply_clause_harmonization_api_v1_econsent_clauses__clause_id__harmonize_post
+      operationId: apply_clause_harmonization_api_v1_econsent_clauses__clause_id__harmonize_post
       parameters:
       - name: clause_id
         in: path
@@ -10794,25 +10401,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Econsent_HTTPValidationError'
-  /eisf/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Eisf_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /eisf/api/v1/eisf/sites/{site_id}/binder:
+  /api/v1/eisf/sites/{site_id}/binder:
     get:
       summary: Get Site Eisf Binder
-      operationId: Eisf_get_site_eisf_binder_api_v1_eisf_sites__site_id__binder_get
+      operationId: get_site_eisf_binder_api_v1_eisf_sites__site_id__binder_get
       parameters:
       - name: site_id
         in: path
@@ -10836,10 +10428,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/sites/{site_id}/documents/{doc_id}:
+  /api/v1/eisf/sites/{site_id}/documents/{doc_id}:
     get:
       summary: Get Site Document Detail
-      operationId: Eisf_get_site_document_detail_api_v1_eisf_sites__site_id__documents__doc_id__get
+      operationId: get_site_document_detail_api_v1_eisf_sites__site_id__documents__doc_id__get
       parameters:
       - name: site_id
         in: path
@@ -10866,10 +10458,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/sites/{site_id}/documents/{doc_id}/download:
+  /api/v1/eisf/sites/{site_id}/documents/{doc_id}/download:
     get:
       summary: Download Site Document
-      operationId: Eisf_download_site_document_api_v1_eisf_sites__site_id__documents__doc_id__download_get
+      operationId: download_site_document_api_v1_eisf_sites__site_id__documents__doc_id__download_get
       parameters:
       - name: site_id
         in: path
@@ -10895,10 +10487,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/sites/{site_id}/documents/upload:
+  /api/v1/eisf/sites/{site_id}/documents/upload:
     post:
       summary: Upload Site Document
-      operationId: Eisf_upload_site_document_api_v1_eisf_sites__site_id__documents_upload_post
+      operationId: upload_site_document_api_v1_eisf_sites__site_id__documents_upload_post
       parameters:
       - name: site_id
         in: path
@@ -10925,10 +10517,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/binders/{site_id}:
+  /api/v1/eisf/binders/{site_id}:
     get:
       summary: Get Site Binder Endpoint
-      operationId: Eisf_get_site_binder_endpoint_api_v1_eisf_binders__site_id__get
+      operationId: get_site_binder_endpoint_api_v1_eisf_binders__site_id__get
       parameters:
       - name: site_id
         in: path
@@ -10952,10 +10544,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/documents:
+  /api/v1/eisf/documents:
     get:
       summary: List Documents
-      operationId: Eisf_list_documents_api_v1_eisf_documents_get
+      operationId: list_documents_api_v1_eisf_documents_get
       parameters:
       - name: study_id
         in: query
@@ -11011,7 +10603,7 @@ paths:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
     post:
       summary: Create Document
-      operationId: Eisf_create_document_api_v1_eisf_documents_post
+      operationId: create_document_api_v1_eisf_documents_post
       requestBody:
         required: true
         content:
@@ -11031,10 +10623,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/ingest:
+  /api/v1/eisf/ingest:
     post:
       summary: Ingest Document
-      operationId: Eisf_ingest_document_api_v1_eisf_ingest_post
+      operationId: ingest_document_api_v1_eisf_ingest_post
       requestBody:
         content:
           application/json:
@@ -11054,15 +10646,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/events/publish:
+  /events/publish:
     post:
+      tags:
+      - eTMF
       summary: Ingest Document
-      operationId: Eisf_ingest_document_events_publish_post
+      operationId: ingest_document_events_publish_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Eisf_EISFIngestionRequest'
+              $ref: '#/components/schemas/ETMF_IngestionRequest'
         required: true
       responses:
         '201':
@@ -11070,17 +10664,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Eisf_DocumentResponse'
+                additionalProperties: true
+                type: object
+                title: Response Ingest Document Events Publish Post
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/documents/{document_id}:
+                $ref: '#/components/schemas/ETMF_HTTPValidationError'
+  /api/v1/eisf/documents/{document_id}:
     get:
       summary: Get Document
-      operationId: Eisf_get_document_api_v1_eisf_documents__document_id__get
+      operationId: get_document_api_v1_eisf_documents__document_id__get
       parameters:
       - name: document_id
         in: path
@@ -11103,7 +10699,7 @@ paths:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
     put:
       summary: Update Document
-      operationId: Eisf_update_document_api_v1_eisf_documents__document_id__put
+      operationId: update_document_api_v1_eisf_documents__document_id__put
       parameters:
       - name: document_id
         in: path
@@ -11132,7 +10728,7 @@ paths:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
     delete:
       summary: Delete Document
-      operationId: Eisf_delete_document_api_v1_eisf_documents__document_id__delete
+      operationId: delete_document_api_v1_eisf_documents__document_id__delete
       parameters:
       - name: document_id
         in: path
@@ -11159,10 +10755,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/documents/{document_id}/download:
+  /api/v1/eisf/documents/{document_id}/download:
     get:
       summary: Download Document
-      operationId: Eisf_download_document_api_v1_eisf_documents__document_id__download_get
+      operationId: download_document_api_v1_eisf_documents__document_id__download_get
       parameters:
       - name: document_id
         in: path
@@ -11182,10 +10778,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/completeness:
+  /api/v1/eisf/completeness:
     get:
       summary: Get Binder Completeness
-      operationId: Eisf_get_binder_completeness_api_v1_eisf_completeness_get
+      operationId: get_binder_completeness_api_v1_eisf_completeness_get
       parameters:
       - name: study_id
         in: query
@@ -11218,10 +10814,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/sync:
+  /api/v1/eisf/sync:
     post:
       summary: Sync Documents
-      operationId: Eisf_sync_documents_api_v1_eisf_sync_post
+      operationId: sync_documents_api_v1_eisf_sync_post
       requestBody:
         content:
           application/json:
@@ -11241,11 +10837,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/intelligence/analyze:
+  /api/v1/eisf/intelligence/analyze:
     post:
       summary: Analyze site document intelligence, recommend eISF section, and cross-map to eTMF
       description: Run multimodal intelligence pipeline for site-level document.
-      operationId: Eisf_eisf_analyze_document_endpoint_api_v1_eisf_intelligence_analyze_post
+      operationId: eisf_analyze_document_endpoint_api_v1_eisf_intelligence_analyze_post
       requestBody:
         content:
           application/json:
@@ -11265,11 +10861,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /eisf/api/v1/eisf/sites/{site_id}/documents/{doc_id}/analyze:
+  /api/v1/eisf/sites/{site_id}/documents/{doc_id}/analyze:
     post:
       summary: Run intelligence analysis on an existing site-scoped eISF document
       description: Analyze an existing eISF document.
-      operationId: Eisf_eisf_analyze_existing_document_endpoint_api_v1_eisf_sites__site_id__documents__doc_id__analyze_post
+      operationId: eisf_analyze_existing_document_endpoint_api_v1_eisf_sites__site_id__documents__doc_id__analyze_post
       parameters:
       - name: site_id
         in: path
@@ -11296,7 +10892,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eisf_HTTPValidationError'
-  /etmf/api/v1/archive/studies/{study_id}/export:
+  /api/v1/archive/studies/{study_id}/export:
     post:
       tags:
       - Archive
@@ -11305,7 +10901,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: ETMF_initiate_study_archival_api_v1_archive_studies__study_id__export_post
+      operationId: initiate_study_archival_api_v1_archive_studies__study_id__export_post
       parameters:
       - name: study_id
         in: path
@@ -11326,7 +10922,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/archive/jobs/{job_id}:
+  /api/v1/archive/jobs/{job_id}:
     get:
       tags:
       - Archive
@@ -11335,7 +10931,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: ETMF_get_archive_job_status_api_v1_archive_jobs__job_id__get
+      operationId: get_archive_job_status_api_v1_archive_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -11356,7 +10952,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/archive/download/{job_id}:
+  /api/v1/archive/download/{job_id}:
     get:
       tags:
       - Archive
@@ -11365,7 +10961,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: ETMF_download_archive_package_api_v1_archive_download__job_id__get
+      operationId: download_archive_package_api_v1_archive_download__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -11385,7 +10981,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/inspection-readiness:
+  /api/v1/etmf/studies/{study_id}/inspection-readiness:
     get:
       tags:
       - Inspection & EMS
@@ -11396,7 +10992,7 @@ paths:
         Evaluates Expected Document List (EDL) completion, zone matrix distribution,
 
         QC review bottlenecks, Part 11 electronic signature compliance, and expiration risks.'
-      operationId: ETMF_get_study_inspection_readiness_api_v1_etmf_studies__study_id__inspection_readiness_get
+      operationId: get_study_inspection_readiness_api_v1_etmf_studies__study_id__inspection_readiness_get
       parameters:
       - name: study_id
         in: path
@@ -11417,7 +11013,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/ems-export:
+  /api/v1/etmf/studies/{study_id}/ems-export:
     get:
       tags:
       - Inspection & EMS
@@ -11428,7 +11024,7 @@ paths:
         Generates a compliant ZIP package containing `tmf-ems.xml`, `tmf-ems.json`,
 
         `checksums.sha256`, and all document version assets organized in standard DIA hierarchy.'
-      operationId: ETMF_export_study_tmf_ems_api_v1_etmf_studies__study_id__ems_export_get
+      operationId: export_study_tmf_ems_api_v1_etmf_studies__study_id__ems_export_get
       parameters:
       - name: study_id
         in: path
@@ -11458,13 +11054,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/audit-logs/verify-chain:
+  /api/v1/etmf/audit-logs/verify-chain:
     post:
       tags:
       - Inspection & EMS
       summary: Verify Audit Ledger Chain
       description: Cryptographically inspects and verifies the full Merkle block ledger chain for tampering detection.
-      operationId: ETMF_verify_audit_ledger_chain_api_v1_etmf_audit_logs_verify_chain_post
+      operationId: verify_audit_ledger_chain_api_v1_etmf_audit_logs_verify_chain_post
       responses:
         '200':
           description: Successful Response
@@ -11472,13 +11068,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_AuditChainVerificationResponse'
-  /etmf/api/v1/etmf/documents/{document_id}/verify-signature:
+  /api/v1/etmf/documents/{document_id}/verify-signature:
     post:
       tags:
       - Inspection & EMS
       summary: Verify Document Signature Endpoint
       description: Verifies the electronic signature and SHA-256 cryptographic digest integrity on a document.
-      operationId: ETMF_verify_document_signature_endpoint_api_v1_etmf_documents__document_id__verify_signature_post
+      operationId: verify_document_signature_endpoint_api_v1_etmf_documents__document_id__verify_signature_post
       parameters:
       - name: document_id
         in: path
@@ -11499,13 +11095,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/analyze:
+  /api/v1/etmf/intelligence/analyze:
     post:
       tags:
       - Document Intelligence
       summary: Execute end-to-end multimodal document intelligence pipeline
       description: Run layout parsing, DIA taxonomy classification, metadata extraction, and signature verification.
-      operationId: ETMF_analyze_document_endpoint_api_v1_etmf_intelligence_analyze_post
+      operationId: analyze_document_endpoint_api_v1_etmf_intelligence_analyze_post
       requestBody:
         content:
           application/json:
@@ -11525,13 +11121,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/classify:
+  /api/v1/etmf/intelligence/classify:
     post:
       tags:
       - Document Intelligence
       summary: Execute multi-signal DIA Reference Model taxonomy classification
       description: Classify document content against DIA TMF Reference Model v3.2.0.
-      operationId: ETMF_classify_document_endpoint_api_v1_etmf_intelligence_classify_post
+      operationId: classify_document_endpoint_api_v1_etmf_intelligence_classify_post
       requestBody:
         content:
           application/json:
@@ -11553,13 +11149,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/extract-metadata:
+  /api/v1/etmf/intelligence/extract-metadata:
     post:
       tags:
       - Document Intelligence
       summary: Extract regulatory and trial metadata from document
       description: Extract protocol, site, investigator, and date metadata.
-      operationId: ETMF_extract_metadata_endpoint_api_v1_etmf_intelligence_extract_metadata_post
+      operationId: extract_metadata_endpoint_api_v1_etmf_intelligence_extract_metadata_post
       requestBody:
         content:
           application/json:
@@ -11579,13 +11175,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/verify-signatures:
+  /api/v1/etmf/intelligence/verify-signatures:
     post:
       tags:
       - Document Intelligence
       summary: Verify regulatory signature completeness
       description: Analyze signature lines, manifestations, and completeness for an artifact.
-      operationId: ETMF_verify_signatures_endpoint_api_v1_etmf_intelligence_verify_signatures_post
+      operationId: verify_signatures_endpoint_api_v1_etmf_intelligence_verify_signatures_post
       requestBody:
         content:
           application/json:
@@ -11605,13 +11201,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/stage-qc:
+  /api/v1/etmf/intelligence/stage-qc:
     post:
       tags:
       - Document Intelligence
       summary: Ingest and stage classified artifact into CRA Quality Control queue
       description: Analyze, ingest, and stage document with TECHNICAL_QC status for CRA review.
-      operationId: ETMF_stage_classified_artifact_endpoint_api_v1_etmf_intelligence_stage_qc_post
+      operationId: stage_classified_artifact_endpoint_api_v1_etmf_intelligence_stage_qc_post
       requestBody:
         content:
           application/json:
@@ -11633,13 +11229,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/qc-queue:
+  /api/v1/etmf/intelligence/qc-queue:
     get:
       tags:
       - Document Intelligence
       summary: List pending documents staged in CRA Quality Control queue
       description: Retrieve staged QC items.
-      operationId: ETMF_get_qc_queue_endpoint_api_v1_etmf_intelligence_qc_queue_get
+      operationId: get_qc_queue_endpoint_api_v1_etmf_intelligence_qc_queue_get
       parameters:
       - name: study_id
         in: query
@@ -11667,13 +11263,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/intelligence/qc-review/{doc_id}:
+  /api/v1/etmf/intelligence/qc-review/{doc_id}:
     post:
       tags:
       - Document Intelligence
       summary: Execute CRA Quality Control review decision (Accept, Override, Reject)
       description: Adjudicate staged document classification with 21 CFR Part 11 audit trail.
-      operationId: ETMF_cra_qc_review_endpoint_api_v1_etmf_intelligence_qc_review__doc_id__post
+      operationId: cra_qc_review_endpoint_api_v1_etmf_intelligence_qc_review__doc_id__post
       parameters:
       - name: doc_id
         in: path
@@ -11700,13 +11296,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/taxonomy:
+  /api/v1/etmf/taxonomy:
     get:
       tags:
       - Taxonomy
       summary: Get Taxonomy Catalog
       description: Expose the full static DIA TMF catalog as a browsable tree.
-      operationId: ETMF_get_taxonomy_catalog_api_v1_etmf_taxonomy_get
+      operationId: get_taxonomy_catalog_api_v1_etmf_taxonomy_get
       parameters:
       - name: version
         in: query
@@ -11731,13 +11327,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/classify:
+  /api/v1/etmf/classify:
     post:
       tags:
       - Taxonomy
       summary: Suggest Classification
       description: Provide automatic classification/auto-filing suggestions for a document.
-      operationId: ETMF_suggest_classification_api_v1_etmf_classify_post
+      operationId: suggest_classification_api_v1_etmf_classify_post
       requestBody:
         content:
           application/json:
@@ -11757,13 +11353,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/taxonomy/classify:
+  /api/v1/etmf/taxonomy/classify:
     post:
       tags:
       - Taxonomy
       summary: Suggest Classification
       description: Provide automatic classification/auto-filing suggestions for a document.
-      operationId: ETMF_suggest_classification_api_v1_etmf_taxonomy_classify_post
+      operationId: suggest_classification_api_v1_etmf_taxonomy_classify_post
       requestBody:
         content:
           application/json:
@@ -11783,13 +11379,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/auto-file:
+  /api/v1/etmf/auto-file:
     post:
       tags:
       - Taxonomy
       summary: Auto File Suggestion
       description: Provide automatic classification/auto-filing suggestions for a document with study scope.
-      operationId: ETMF_auto_file_suggestion_api_v1_etmf_auto_file_post
+      operationId: auto_file_suggestion_api_v1_etmf_auto_file_post
       requestBody:
         content:
           application/json:
@@ -11809,28 +11405,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/health:
-    get:
-      tags:
-      - eTMF
-      summary: Health Check
-      operationId: ETMF_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /etmf/api/v1/etmf/ingest:
+  /api/v1/etmf/ingest:
     post:
       tags:
       - eTMF
       summary: Ingest Document
-      operationId: ETMF_ingest_document_api_v1_etmf_ingest_post
+      operationId: ingest_document_api_v1_etmf_ingest_post
       requestBody:
         content:
           application/json:
@@ -11852,39 +11432,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/events/publish:
-    post:
-      tags:
-      - eTMF
-      summary: Ingest Document
-      operationId: ETMF_ingest_document_events_publish_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ETMF_IngestionRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Ingest Document Events Publish Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents:
+  /api/v1/etmf/documents:
     get:
       tags:
       - eTMF
       summary: List Documents
-      operationId: ETMF_list_documents_api_v1_etmf_documents_get
+      operationId: list_documents_api_v1_etmf_documents_get
       parameters:
       - name: study_id
         in: query
@@ -11942,12 +11495,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}:
+  /api/v1/etmf/documents/{document_id}:
     get:
       tags:
       - eTMF
       summary: View Document
-      operationId: ETMF_view_document_api_v1_etmf_documents__document_id__get
+      operationId: view_document_api_v1_etmf_documents__document_id__get
       parameters:
       - name: document_id
         in: path
@@ -11968,12 +11521,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/versions:
+  /api/v1/etmf/documents/{document_id}/versions:
     get:
       tags:
       - eTMF
       summary: Get Document Versions
-      operationId: ETMF_get_document_versions_api_v1_etmf_documents__document_id__versions_get
+      operationId: get_document_versions_api_v1_etmf_documents__document_id__versions_get
       parameters:
       - name: document_id
         in: path
@@ -11994,12 +11547,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/download:
+  /api/v1/etmf/documents/{document_id}/download:
     get:
       tags:
       - eTMF
       summary: Download Document
-      operationId: ETMF_download_document_api_v1_etmf_documents__document_id__download_get
+      operationId: download_document_api_v1_etmf_documents__document_id__download_get
       parameters:
       - name: document_id
         in: path
@@ -12028,12 +11581,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/watermark:
+  /api/v1/etmf/documents/{document_id}/watermark:
     get:
       tags:
       - eTMF
       summary: Download Watermarked Document
-      operationId: ETMF_download_watermarked_document_api_v1_etmf_documents__document_id__watermark_get
+      operationId: download_watermarked_document_api_v1_etmf_documents__document_id__watermark_get
       parameters:
       - name: document_id
         in: path
@@ -12053,12 +11606,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/audit-logs:
+  /api/v1/etmf/audit-logs:
     get:
       tags:
       - eTMF
       summary: Get Audit Trail
-      operationId: ETMF_get_audit_trail_api_v1_etmf_audit_logs_get
+      operationId: get_audit_trail_api_v1_etmf_audit_logs_get
       parameters:
       - name: user_id
         in: query
@@ -12146,12 +11699,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/edl:
+  /api/v1/etmf/edl:
     get:
       tags:
       - eTMF
       summary: List Expectations
-      operationId: ETMF_list_expectations_api_v1_etmf_edl_get
+      operationId: list_expectations_api_v1_etmf_edl_get
       parameters:
       - name: study_id
         in: query
@@ -12201,7 +11754,7 @@ paths:
       tags:
       - eTMF
       summary: Create Expectation
-      operationId: ETMF_create_expectation_api_v1_etmf_edl_post
+      operationId: create_expectation_api_v1_etmf_edl_post
       requestBody:
         required: true
         content:
@@ -12221,12 +11774,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/edl/{edl_id}:
+  /api/v1/etmf/edl/{edl_id}:
     put:
       tags:
       - eTMF
       summary: Update Expectation
-      operationId: ETMF_update_expectation_api_v1_etmf_edl__edl_id__put
+      operationId: update_expectation_api_v1_etmf_edl__edl_id__put
       parameters:
       - name: edl_id
         in: path
@@ -12253,13 +11806,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/seed-edl:
+  /api/v1/etmf/studies/{study_id}/seed-edl:
     post:
       tags:
       - eTMF
       summary: Seed Edl Endpoint
       description: Seed Expected Document List (EDL) for a study across DIA TMF zones and milestones.
-      operationId: ETMF_seed_edl_endpoint_api_v1_etmf_studies__study_id__seed_edl_post
+      operationId: seed_edl_endpoint_api_v1_etmf_studies__study_id__seed_edl_post
       parameters:
       - name: study_id
         in: path
@@ -12291,12 +11844,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/completeness:
+  /api/v1/etmf/completeness:
     get:
       tags:
       - eTMF
       summary: Check Completeness
-      operationId: ETMF_check_completeness_api_v1_etmf_completeness_get
+      operationId: check_completeness_api_v1_etmf_completeness_get
       parameters:
       - name: study_id
         in: query
@@ -12337,12 +11890,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/redact:
+  /api/v1/etmf/documents/{document_id}/redact:
     post:
       tags:
       - eTMF
       summary: Redact Document Endpoint
-      operationId: ETMF_redact_document_endpoint_api_v1_etmf_documents__document_id__redact_post
+      operationId: redact_document_endpoint_api_v1_etmf_documents__document_id__redact_post
       parameters:
       - name: document_id
         in: path
@@ -12369,12 +11922,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/auto-redact:
+  /api/v1/etmf/documents/{document_id}/auto-redact:
     post:
       tags:
       - eTMF
       summary: Auto Redact Document Endpoint
-      operationId: ETMF_auto_redact_document_endpoint_api_v1_etmf_documents__document_id__auto_redact_post
+      operationId: auto_redact_document_endpoint_api_v1_etmf_documents__document_id__auto_redact_post
       parameters:
       - name: document_id
         in: path
@@ -12401,12 +11954,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/manual-redact:
+  /api/v1/etmf/documents/{document_id}/manual-redact:
     post:
       tags:
       - eTMF
       summary: Manual Redact Document Endpoint
-      operationId: ETMF_manual_redact_document_endpoint_api_v1_etmf_documents__document_id__manual_redact_post
+      operationId: manual_redact_document_endpoint_api_v1_etmf_documents__document_id__manual_redact_post
       parameters:
       - name: document_id
         in: path
@@ -12433,24 +11986,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/test-exception:
+  /api/v1/etmf/test-exception:
     get:
       tags:
       - eTMF
       summary: Test Exception Route
-      operationId: ETMF_test_exception_route_api_v1_etmf_test_exception_get
+      operationId: test_exception_route_api_v1_etmf_test_exception_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-  /etmf/api/v1/etmf/documents/{document_id}/transition:
+  /api/v1/etmf/documents/{document_id}/transition:
     post:
       tags:
       - eTMF
       summary: Transition Document Status Endpoint
-      operationId: ETMF_transition_document_status_endpoint_api_v1_etmf_documents__document_id__transition_post
+      operationId: transition_document_status_endpoint_api_v1_etmf_documents__document_id__transition_post
       parameters:
       - name: document_id
         in: path
@@ -12479,12 +12032,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/expiration:
+  /api/v1/etmf/documents/{document_id}/expiration:
     put:
       tags:
       - eTMF
       summary: Update Document Expiration Endpoint
-      operationId: ETMF_update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put
+      operationId: update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put
       parameters:
       - name: document_id
         in: path
@@ -12511,12 +12064,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/approve:
+  /api/v1/etmf/documents/{document_id}/approve:
     post:
       tags:
       - eTMF
       summary: Sign Document Endpoint
-      operationId: ETMF_sign_document_endpoint_api_v1_etmf_documents__document_id__approve_post
+      operationId: sign_document_endpoint_api_v1_etmf_documents__document_id__approve_post
       parameters:
       - name: document_id
         in: path
@@ -12543,12 +12096,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/sign-off:
+  /api/v1/etmf/documents/{document_id}/sign-off:
     post:
       tags:
       - eTMF
       summary: Sign Document Endpoint
-      operationId: ETMF_sign_document_endpoint_api_v1_etmf_documents__document_id__sign_off_post
+      operationId: sign_document_endpoint_api_v1_etmf_documents__document_id__sign_off_post
       parameters:
       - name: document_id
         in: path
@@ -12575,12 +12128,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history:
+  /api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history:
     get:
       tags:
       - eTMF
       summary: Get Artifact History
-      operationId: ETMF_get_artifact_history_api_v1_etmf_studies__study_id__artifacts__artifact_type__history_get
+      operationId: get_artifact_history_api_v1_etmf_studies__study_id__artifacts__artifact_type__history_get
       parameters:
       - name: study_id
         in: path
@@ -12610,12 +12163,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/transitions:
+  /api/v1/etmf/documents/{document_id}/transitions:
     get:
       tags:
       - eTMF
       summary: Get Document Transition History
-      operationId: ETMF_get_document_transition_history_api_v1_etmf_documents__document_id__transitions_get
+      operationId: get_document_transition_history_api_v1_etmf_documents__document_id__transitions_get
       parameters:
       - name: document_id
         in: path
@@ -12639,12 +12192,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/inbound-email:
+  /api/v1/etmf/inbound-email:
     post:
       tags:
       - eTMF
       summary: Receive Inbound Email
-      operationId: ETMF_receive_inbound_email_api_v1_etmf_inbound_email_post
+      operationId: receive_inbound_email_api_v1_etmf_inbound_email_post
       responses:
         '201':
           description: Successful Response
@@ -12654,12 +12207,12 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Receive Inbound Email Api V1 Etmf Inbound Email Post
-  /etmf/api/v1/etmf/studies/{study_id}/binder/structure:
+  /api/v1/etmf/studies/{study_id}/binder/structure:
     get:
       tags:
       - eTMF
       summary: Get Binder Structure
-      operationId: ETMF_get_binder_structure_api_v1_etmf_studies__study_id__binder_structure_get
+      operationId: get_binder_structure_api_v1_etmf_studies__study_id__binder_structure_get
       parameters:
       - name: study_id
         in: path
@@ -12700,12 +12253,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/binder:
+  /api/v1/etmf/studies/{study_id}/binder:
     get:
       tags:
       - eTMF
       summary: Export Regulatory Binder
-      operationId: ETMF_export_regulatory_binder_api_v1_etmf_studies__study_id__binder_get
+      operationId: export_regulatory_binder_api_v1_etmf_studies__study_id__binder_get
       parameters:
       - name: study_id
         in: path
@@ -12734,12 +12287,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/studies/{study_id}/archive:
+  /api/v1/etmf/studies/{study_id}/archive:
     post:
       tags:
       - eTMF
       summary: Bulk Archive Study Documents
-      operationId: ETMF_bulk_archive_study_documents_api_v1_etmf_studies__study_id__archive_post
+      operationId: bulk_archive_study_documents_api_v1_etmf_studies__study_id__archive_post
       parameters:
       - name: study_id
         in: path
@@ -12766,12 +12319,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/documents/{document_id}/qc-history:
+  /api/v1/etmf/documents/{document_id}/qc-history:
     get:
       tags:
       - eTMF
       summary: Get Document Qc History
-      operationId: ETMF_get_document_qc_history_api_v1_etmf_documents__document_id__qc_history_get
+      operationId: get_document_qc_history_api_v1_etmf_documents__document_id__qc_history_get
       parameters:
       - name: document_id
         in: path
@@ -12795,12 +12348,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /etmf/api/v1/etmf/locks/trial/lock:
+  /api/v1/etmf/locks/trial/lock:
     post:
       tags:
       - eTMF
       summary: Etmf Lock Trial Endpoint
-      operationId: ETMF_etmf_lock_trial_endpoint_api_v1_etmf_locks_trial_lock_post
+      operationId: etmf_lock_trial_endpoint_api_v1_etmf_locks_trial_lock_post
       responses:
         '200':
           description: Successful Response
@@ -12811,12 +12364,12 @@ paths:
                   type: string
                 type: object
                 title: Response Etmf Lock Trial Endpoint Api V1 Etmf Locks Trial Lock Post
-  /etmf/api/v1/etmf/locks/trial/unlock:
+  /api/v1/etmf/locks/trial/unlock:
     post:
       tags:
       - eTMF
       summary: Etmf Unlock Trial Endpoint
-      operationId: ETMF_etmf_unlock_trial_endpoint_api_v1_etmf_locks_trial_unlock_post
+      operationId: etmf_unlock_trial_endpoint_api_v1_etmf_locks_trial_unlock_post
       responses:
         '200':
           description: Successful Response
@@ -12827,12 +12380,10 @@ paths:
                   type: string
                 type: object
                 title: Response Etmf Unlock Trial Endpoint Api V1 Etmf Locks Trial Unlock Post
-  /etmf/api/v1/admin/outbox:
+  /api/v1/admin/outbox:
     get:
-      tags:
-      - eTMF
-      summary: Etmf Admin Outbox Endpoint
-      operationId: ETMF_etmf_admin_outbox_endpoint_api_v1_admin_outbox_get
+      summary: Execution Admin Outbox Endpoint
+      operationId: execution_admin_outbox_endpoint_api_v1_admin_outbox_get
       parameters:
       - name: status
         in: query
@@ -12860,236 +12411,14 @@ paths:
                 items:
                   type: object
                   additionalProperties: true
-                title: Response Etmf Admin Outbox Endpoint Api V1 Admin Outbox Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ETMF_HTTPValidationError'
-  /execution/api/v1/execution/locks/lock:
-    post:
-      tags:
-      - DataLock
-      summary: Lock Data Endpoint
-      description: 'Execute study, site, subject, visit, form, or field-level data lock or freeze operation.
-
-
-        Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17'
-      operationId: Execution_lock_data_endpoint_api_v1_execution_locks_lock_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_DataLockRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DataLockResponse'
+                title: Response Execution Admin Outbox Endpoint Api V1 Admin Outbox Get
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/unlock:
-    post:
-      tags:
-      - DataLock
-      summary: Unlock Data Endpoint
-      description: 'Execute GxP data unlock override operation enforcing >= 50 chars justification.
-
-
-        Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17'
-      operationId: Execution_unlock_data_endpoint_api_v1_execution_locks_unlock_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_DataLockRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DataLockResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/status/{form_id}:
-    get:
-      tags:
-      - DataLock
-      summary: Get Form Lock Status Endpoint
-      description: 'Retrieve active data locks for specified eCRF form submission.
-
-
-        Requirements: PRD-SYS-001, Trace-1, Trace-17'
-      operationId: Execution_get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get
-      parameters:
-      - name: form_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Form Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_DataLockRecord'
-                title: Response Get Form Lock Status Endpoint Api V1 Execution Locks Status  Form Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks:
-    get:
-      summary: Get Lock Status
-      description: Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial.
-      operationId: Execution_get_lock_status_api_v1_execution_locks_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LockStatusResponse'
-  /execution/api/v1/execution/locks/tree:
-    get:
-      tags:
-      - DataLock
-      summary: Get Lock Hierarchy Tree Endpoint
-      description: Retrieve complete lock status tree across Study -> Sites -> Subjects -> Visits -> Forms hierarchy.
-      operationId: Execution_get_lock_hierarchy_tree_endpoint_api_v1_execution_locks_tree_get
-      parameters:
-      - name: study_id
-        in: query
-        required: false
-        schema:
-          type: string
-          description: Study ID to query
-          default: STUDY-001
-          title: Study Id
-        description: Study ID to query
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Lock Hierarchy Tree Endpoint Api V1 Execution Locks Tree Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/signatures/sign:
-    post:
-      tags:
-      - Signatures
-      summary: Sign Payload Endpoint
-      description: 'Signs a given string payload using the secure backend PKCS#7 signer.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_sign_payload_endpoint_api_v1_execution_signatures_sign_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SignRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SignResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/signatures/verify:
-    post:
-      tags:
-      - Signatures
-      summary: Verify Signature Endpoint
-      description: 'Verifies a PKCS#7 signed document payload using the ESignatureVerifier and trust store.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_verify_signature_endpoint_api_v1_execution_signatures_verify_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_VerifyRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_VerifyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/signatures/batch-sign-off:
-    post:
-      tags:
-      - Signatures
-      summary: Batch Signature Sign Off Endpoint
-      description: 'Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_batch_signature_sign_off_endpoint_api_v1_execution_signatures_batch_sign_off_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_BatchSignatureRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_BatchSignatureResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/publish:
+  /api/v1/execution/amendments/publish:
     post:
       tags:
       - Amendments
@@ -13098,7 +12427,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Execution_publish_amendment_endpoint_api_v1_execution_amendments_publish_post
+      operationId: publish_amendment_endpoint_api_v1_execution_amendments_publish_post
       requestBody:
         content:
           application/json:
@@ -13118,7 +12447,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/summary/{study_id}/{version}:
+  /api/v1/execution/amendments/summary/{study_id}/{version}:
     get:
       tags:
       - Amendments
@@ -13127,7 +12456,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Execution_get_amendment_summary_endpoint_api_v1_execution_amendments_summary__study_id___version__get
+      operationId: get_amendment_summary_endpoint_api_v1_execution_amendments_summary__study_id___version__get
       parameters:
       - name: study_id
         in: path
@@ -13156,7 +12485,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/{study_id}/subject-impact:
+  /api/v1/execution/amendments/{study_id}/subject-impact:
     get:
       tags:
       - Amendments
@@ -13165,7 +12494,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
-      operationId: Execution_get_subject_impact_analysis_api_v1_execution_amendments__study_id__subject_impact_get
+      operationId: get_subject_impact_analysis_api_v1_execution_amendments__study_id__subject_impact_get
       parameters:
       - name: study_id
         in: path
@@ -13203,7 +12532,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/validate-gating:
+  /api/v1/execution/amendments/validate-gating:
     post:
       tags:
       - Amendments
@@ -13212,7 +12541,7 @@ paths:
 
 
         Requirements: PRD-SUB-007'
-      operationId: Execution_validate_gating_endpoint_api_v1_execution_amendments_validate_gating_post
+      operationId: validate_gating_endpoint_api_v1_execution_amendments_validate_gating_post
       requestBody:
         content:
           application/json:
@@ -13234,7 +12563,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/reconsent:
+  /api/v1/execution/amendments/reconsent:
     post:
       tags:
       - Amendments
@@ -13243,7 +12572,7 @@ paths:
 
 
         Requirements: PRD-SUB-007, PRD-SYS-001'
-      operationId: Execution_register_subject_reconsent_api_v1_execution_amendments_reconsent_post
+      operationId: register_subject_reconsent_api_v1_execution_amendments_reconsent_post
       requestBody:
         content:
           application/json:
@@ -13265,7 +12594,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/bulk-reconsent:
+  /api/v1/execution/amendments/bulk-reconsent:
     post:
       tags:
       - Amendments
@@ -13274,7 +12603,7 @@ paths:
 
 
         Requirements: PRD-SUB-007, PRD-SYS-001'
-      operationId: Execution_register_bulk_subject_reconsent_api_v1_execution_amendments_bulk_reconsent_post
+      operationId: register_bulk_subject_reconsent_api_v1_execution_amendments_bulk_reconsent_post
       requestBody:
         content:
           application/json:
@@ -13296,7 +12625,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/amendments/verify-training-gate:
+  /api/v1/execution/amendments/verify-training-gate:
     post:
       tags:
       - Amendments
@@ -13305,7 +12634,7 @@ paths:
 
 
         Requirements: PRD-TRN-002'
-      operationId: Execution_verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post
+      operationId: verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post
       requestBody:
         content:
           application/json:
@@ -13327,13 +12656,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/anomalies/evaluate:
+  /api/v1/execution/anomalies/evaluate:
     post:
       tags:
       - Anomalies
       summary: Evaluate Anomalies
       description: Evaluates cross-domain clinical data for a subject and stages detected candidate queries.
-      operationId: Execution_evaluate_anomalies_api_v1_execution_anomalies_evaluate_post
+      operationId: evaluate_anomalies_api_v1_execution_anomalies_evaluate_post
       requestBody:
         content:
           application/json:
@@ -13353,13 +12682,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/anomalies/candidates:
+  /api/v1/execution/anomalies/candidates:
     get:
       tags:
       - Anomalies
       summary: List Candidate Queries
       description: Lists staged CANDIDATE clinical queries flagged by the anomaly worker for review.
-      operationId: Execution_list_candidate_queries_api_v1_execution_anomalies_candidates_get
+      operationId: list_candidate_queries_api_v1_execution_anomalies_candidates_get
       parameters:
       - name: study_id
         in: query
@@ -13407,13 +12736,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/anomalies/candidates/{query_id}/adjudicate:
+  /api/v1/execution/anomalies/candidates/{query_id}/adjudicate:
     post:
       tags:
       - Anomalies
       summary: Adjudicate Candidate Query
       description: 'Adjudicates a staged CANDIDATE query: promotes to OPEN or dismisses to CANCELLED.'
-      operationId: Execution_adjudicate_candidate_query_api_v1_execution_anomalies_candidates__query_id__adjudicate_post
+      operationId: adjudicate_candidate_query_api_v1_execution_anomalies_candidates__query_id__adjudicate_post
       parameters:
       - name: query_id
         in: path
@@ -13440,7 +12769,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/auditor/token/generate:
+  /api/v1/execution/anonymization/scan-phi:
+    post:
+      tags:
+      - Anonymization
+      summary: Scan Phi Endpoint
+      description: 'Scan text payload for Protected Health Information (PHI) identifiers.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: scan_phi_endpoint_api_v1_execution_anonymization_scan_phi_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_PHIScanRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Scan Phi Endpoint Api V1 Execution Anonymization Scan Phi Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/anonymization/redact-pdf:
+    post:
+      tags:
+      - Anonymization
+      summary: Redact Pdf Endpoint
+      description: 'Apply non-destructive PHI redaction overlays to PDF document.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: redact_pdf_endpoint_api_v1_execution_anonymization_redact_pdf_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_RedactPDFRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Redact Pdf Endpoint Api V1 Execution Anonymization Redact Pdf Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/auditor/token/generate:
     post:
       tags:
       - Auditor
@@ -13449,7 +12840,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Execution_generate_auditor_token_endpoint_api_v1_execution_auditor_token_generate_post
+      operationId: generate_auditor_token_endpoint_api_v1_execution_auditor_token_generate_post
       requestBody:
         content:
           application/json:
@@ -13471,7 +12862,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/auditor/inspect/audit-trail/{study_id}:
+  /api/v1/execution/auditor/inspect/audit-trail/{study_id}:
     get:
       tags:
       - Auditor
@@ -13480,7 +12871,7 @@ paths:
 
 
         Requirements: PRD-SYS-001'
-      operationId: Execution_inspect_study_audit_trail_endpoint_api_v1_execution_auditor_inspect_audit_trail__study_id__get
+      operationId: inspect_study_audit_trail_endpoint_api_v1_execution_auditor_inspect_audit_trail__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -13512,7 +12903,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers:
+  /api/v1/execution/cec/dossiers:
     post:
       tags:
       - CEC Adjudication
@@ -13521,7 +12912,7 @@ paths:
 
 
         @req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199'
-      operationId: Execution_create_and_package_dossier_api_v1_execution_cec_dossiers_post
+      operationId: create_and_package_dossier_api_v1_execution_cec_dossiers_post
       requestBody:
         required: true
         content:
@@ -13551,7 +12942,7 @@ paths:
 
 
         @req:PRD-CEC-002'
-      operationId: Execution_list_dossiers_api_v1_execution_cec_dossiers_get
+      operationId: list_dossiers_api_v1_execution_cec_dossiers_get
       parameters:
       - name: study_id
         in: query
@@ -13609,7 +13000,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers/{dossier_id}:
+  /api/v1/execution/cec/dossiers/{dossier_id}:
     get:
       tags:
       - CEC Adjudication
@@ -13618,7 +13009,7 @@ paths:
 
 
         @req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199'
-      operationId: Execution_get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get
+      operationId: get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get
       parameters:
       - name: dossier_id
         in: path
@@ -13649,7 +13040,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers/{dossier_id}/full:
+  /api/v1/execution/cec/dossiers/{dossier_id}/full:
     get:
       tags:
       - CEC Adjudication
@@ -13658,7 +13049,7 @@ paths:
 
 
         @req:PRD-CEC-002, @req:PRD-SYS-001'
-      operationId: Execution_get_dossier_full_api_v1_execution_cec_dossiers__dossier_id__full_get
+      operationId: get_dossier_full_api_v1_execution_cec_dossiers__dossier_id__full_get
       parameters:
       - name: dossier_id
         in: path
@@ -13679,7 +13070,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers/{dossier_id}/assessments:
+  /api/v1/execution/cec/dossiers/{dossier_id}/assessments:
     post:
       tags:
       - CEC Adjudication
@@ -13688,7 +13079,7 @@ paths:
 
 
         @req:PRD-CEC-002, @req:ADR-2199'
-      operationId: Execution_submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post
+      operationId: submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post
       parameters:
       - name: dossier_id
         in: path
@@ -13717,7 +13108,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers/{dossier_id}/chair-adjudicate:
+  /api/v1/execution/cec/dossiers/{dossier_id}/chair-adjudicate:
     post:
       tags:
       - CEC Adjudication
@@ -13726,7 +13117,7 @@ paths:
 
 
         @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199'
-      operationId: Execution_adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post
+      operationId: adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post
       parameters:
       - name: dossier_id
         in: path
@@ -13755,7 +13146,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/dossiers/{dossier_id}/writeback:
+  /api/v1/execution/cec/dossiers/{dossier_id}/writeback:
     post:
       tags:
       - CEC Adjudication
@@ -13764,7 +13155,7 @@ paths:
 
 
         @req:PRD-CEC-003'
-      operationId: Execution_trigger_edc_writeback_api_v1_execution_cec_dossiers__dossier_id__writeback_post
+      operationId: trigger_edc_writeback_api_v1_execution_cec_dossiers__dossier_id__writeback_post
       parameters:
       - name: dossier_id
         in: path
@@ -13785,7 +13176,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/charters/{study_id}:
+  /api/v1/execution/cec/charters/{study_id}:
     get:
       tags:
       - CEC Adjudication
@@ -13794,7 +13185,7 @@ paths:
 
 
         @req:PRD-SYS-124'
-      operationId: Execution_get_study_charter_api_v1_execution_cec_charters__study_id__get
+      operationId: get_study_charter_api_v1_execution_cec_charters__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -13815,7 +13206,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/charters:
+  /api/v1/execution/cec/charters:
     post:
       tags:
       - CEC Adjudication
@@ -13824,7 +13215,7 @@ paths:
 
 
         @req:PRD-SYS-124'
-      operationId: Execution_create_or_update_charter_api_v1_execution_cec_charters_post
+      operationId: create_or_update_charter_api_v1_execution_cec_charters_post
       requestBody:
         content:
           application/json:
@@ -13844,7 +13235,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/meetings:
+  /api/v1/execution/cec/meetings:
     post:
       tags:
       - CEC Adjudication
@@ -13853,7 +13244,7 @@ paths:
 
 
         @req:PRD-SYS-124'
-      operationId: Execution_record_meeting_quorum_api_v1_execution_cec_meetings_post
+      operationId: record_meeting_quorum_api_v1_execution_cec_meetings_post
       requestBody:
         content:
           application/json:
@@ -13875,7 +13266,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/meetings/{study_id}:
+  /api/v1/execution/cec/meetings/{study_id}:
     get:
       tags:
       - CEC Adjudication
@@ -13884,7 +13275,7 @@ paths:
 
 
         @req:PRD-SYS-124'
-      operationId: Execution_list_study_meetings_api_v1_execution_cec_meetings__study_id__get
+      operationId: list_study_meetings_api_v1_execution_cec_meetings__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -13909,7 +13300,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/cec/sdtm-ce/compile:
+  /api/v1/execution/cec/sdtm-ce/compile:
     post:
       tags:
       - CEC Adjudication
@@ -13918,7 +13309,7 @@ paths:
 
 
         @req:PRD-CEC-003, @req:PRD-SYS-001'
-      operationId: Execution_compile_sdtm_ce_dataset_api_v1_execution_cec_sdtm_ce_compile_post
+      operationId: compile_sdtm_ce_dataset_api_v1_execution_cec_sdtm_ce_compile_post
       requestBody:
         content:
           application/json:
@@ -13938,3739 +13329,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/safety/dispatch:
-    post:
-      tags:
-      - Safety
-      summary: Dispatch Safety Report Endpoint
-      description: 'Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_dispatch_safety_report_endpoint_api_v1_execution_safety_dispatch_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SafetyDispatchRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SafetyDispatchResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/safety/reconcile:
-    post:
-      tags:
-      - Safety
-      summary: Reconcile Sae Cases Endpoint
-      description: 'Execute automated EDC AE to Safety ICSR case reconciliation.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_reconcile_sae_cases_endpoint_api_v1_execution_safety_reconcile_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SAEReconcileRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Reconcile Sae Cases Endpoint Api V1 Execution Safety Reconcile Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/eisf/upload:
-    post:
-      tags:
-      - eISF
-      summary: Upload Eisf Document Endpoint
-      description: 'Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_upload_eisf_document_endpoint_api_v1_execution_eisf_upload_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_UploadEISFDocumentRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_EISFDocumentRecord'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/eisf/binder/{study_id}/{site_id}:
-    get:
-      tags:
-      - eISF
-      summary: Get Site Regulatory Binder Endpoint
-      description: 'Retrieve site-isolated regulatory binder documents for specified study and site.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_get_site_regulatory_binder_endpoint_api_v1_execution_eisf_binder__study_id___site_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      - name: site_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Site Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_EISFDocumentRecord'
-                title: Response Get Site Regulatory Binder Endpoint Api V1 Execution Eisf Binder  Study Id   Site Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/anonymization/scan-phi:
-    post:
-      tags:
-      - Anonymization
-      summary: Scan Phi Endpoint
-      description: 'Scan text payload for Protected Health Information (PHI) identifiers.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_scan_phi_endpoint_api_v1_execution_anonymization_scan_phi_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_PHIScanRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Scan Phi Endpoint Api V1 Execution Anonymization Scan Phi Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/anonymization/redact-pdf:
-    post:
-      tags:
-      - Anonymization
-      summary: Redact Pdf Endpoint
-      description: 'Apply non-destructive PHI redaction overlays to PDF document.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_redact_pdf_endpoint_api_v1_execution_anonymization_redact_pdf_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_RedactPDFRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Redact Pdf Endpoint Api V1 Execution Anonymization Redact Pdf Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/assignment:
-    post:
-      tags:
-      - DOA
-      summary: Add Doa Assignment Endpoint
-      description: 'Add site personnel task delegation entry to Delegation of Authority log.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_add_doa_assignment_endpoint_api_v1_execution_doa_assignment_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_AddDOAAssignmentRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/sign-off:
-    post:
-      tags:
-      - DOA
-      summary: Sign Off Doa Assignment Endpoint
-      description: 'Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_sign_off_doa_assignment_endpoint_api_v1_execution_doa_sign_off_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_DOASignOffRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/log/{study_id}/{site_id}:
-    get:
-      tags:
-      - DOA
-      summary: Get Site Doa Log Endpoint
-      description: 'Retrieve site-isolated Delegation of Authority log entries.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_get_site_doa_log_endpoint_api_v1_execution_doa_log__study_id___site_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      - name: site_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Site Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
-                title: Response Get Site Doa Log Endpoint Api V1 Execution Doa Log  Study Id   Site Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/delegate:
-    post:
-      tags:
-      - DOA
-      summary: Delegate Task Endpoint
-      operationId: Execution_delegate_task_endpoint_api_v1_execution_doa_delegate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_DelegateTaskRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/endorse:
-    post:
-      tags:
-      - DOA
-      summary: Approve Delegation Endpoint
-      operationId: Execution_approve_delegation_endpoint_api_v1_execution_doa_endorse_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ApproveDelegationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/endorse_task:
-    post:
-      tags:
-      - DOA
-      summary: Approve Task Endpoint
-      operationId: Execution_approve_task_endpoint_api_v1_execution_doa_endorse_task_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ApproveTaskDelegationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/revoke:
-    post:
-      tags:
-      - DOA
-      summary: Revoke Delegation Endpoint
-      operationId: Execution_revoke_delegation_endpoint_api_v1_execution_doa_revoke_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_RevokeDelegationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/staff:
-    post:
-      tags:
-      - DOA
-      summary: Create Staff Endpoint
-      operationId: Execution_create_staff_endpoint_api_v1_execution_doa_staff_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SiteStaffMemberRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SiteStaffMemberResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/doa/audit-logs:
-    get:
-      tags:
-      - DOA
-      summary: Get Audit Logs Endpoint
-      operationId: Execution_get_audit_logs_endpoint_api_v1_execution_doa_audit_logs_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/Execution_DOAAuditLogResponse'
-                type: array
-                title: Response Get Audit Logs Endpoint Api V1 Execution Doa Audit Logs Get
-  /execution/api/v1/execution/doa/delegations:
-    get:
-      tags:
-      - DOA
-      summary: Get Delegations Endpoint
-      operationId: Execution_get_delegations_endpoint_api_v1_execution_doa_delegations_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
-                type: array
-                title: Response Get Delegations Endpoint Api V1 Execution Doa Delegations Get
-  /execution/api/v1/offline/sync-batch:
-    post:
-      tags:
-      - Offline Sync
-      summary: Sync Offline Batch
-      description: 'Ingest batch of queued offline eCRF/ePRO deltas idempotently.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_sync_offline_batch_api_v1_offline_sync_batch_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_OfflineBatchSyncRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_OfflineBatchSyncResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/offline/sync:
-    post:
-      tags:
-      - Offline Sync
-      summary: Offline Sync Endpoint
-      description: 'Synchronize queued offline delta transactions.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_offline_sync_endpoint_api_v1_execution_offline_sync_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              additionalProperties: true
-              type: object
-              title: Payload
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Offline Sync Endpoint Api V1 Execution Offline Sync Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/documents/upload:
-    post:
-      tags:
-      - Documents
-      summary: Upload Document
-      description: 'Upload regulated document, compute SHA-256 hash, and record GxP audit trail.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_upload_document_api_v1_documents_upload_post
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Execution_Body_upload_document_api_v1_documents_upload_post'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_DocumentUploadResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/documents/{doc_id}:
-    get:
-      tags:
-      - Documents
-      summary: Download Document
-      description: 'Stream file content with dynamic watermarking.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_download_document_api_v1_documents__doc_id__get
-      parameters:
-      - name: doc_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Doc Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema: {}
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/documents/{doc_id}/versions:
-    get:
-      tags:
-      - Documents
-      summary: List Document Versions
-      description: 'RETURN complete version history list.
-
-
-        Requirements: PRD-SYS-001'
-      operationId: Execution_list_document_versions_api_v1_documents__doc_id__versions_get
-      parameters:
-      - name: doc_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Doc Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_DocumentMetadataResponse'
-                title: Response List Document Versions Api V1 Documents  Doc Id  Versions Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/tsdv/config:
-    post:
-      tags:
-      - SDV/TSDV
-      summary: Create Or Update Tsdv Config
-      description: 'CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.
-
-
-        Restricts config writes to CRA/Data Manager roles WITH GxP change justifications.'
-      operationId: Execution_create_or_update_tsdv_config_api_v1_execution_tsdv_config_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TSDVConfigCreate'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TSDVConfigResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/tsdv/config/{study_id}:
-    get:
-      tags:
-      - SDV/TSDV
-      summary: Get Tsdv Config
-      description: Retrieve existing TSDV configuration for a study.
-      operationId: Execution_get_tsdv_config_api_v1_execution_tsdv_config__study_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TSDVConfigResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/tsdv/required:
-    get:
-      tags:
-      - SDV/TSDV
-      summary: Evaluate Tsdv Rule
-      description: 'Evaluate Targeted SDV (TSDV) requirement for a given context.
-
-
-        Calculates deterministic sampling decisions and returns component results with an audit explanation.'
-      operationId: Execution_evaluate_tsdv_rule_api_v1_execution_tsdv_required_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      - name: subject_id
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      - name: domain
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Domain
-      - name: enrollment_index
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Enrollment Index
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TSDVEvaluationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/sdv/signoff:
-    post:
-      tags:
-      - SDV/TSDV
-      summary: Sdv Signoff
-      description: CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.
-      operationId: Execution_sdv_signoff_api_v1_execution_sdv_signoff_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SDVSignOffRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SDVSignOffResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/sdv/bulk-sign-off:
-    post:
-      tags:
-      - SDV/TSDV
-      summary: Bulk Sdv Signoff
-      description: CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes.
-      operationId: Execution_bulk_sdv_signoff_api_v1_execution_sdv_bulk_sign_off_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_BulkSdvSignOffRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_BulkSdvSignOffResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/generate:
-    post:
-      tags:
-      - SDV/TSDV
-      summary: Bulk Generate Queries
-      description: CRA/monitor-gated bulk query generation endpoint.
-      operationId: Execution_bulk_generate_queries_api_v1_execution_queries_generate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_BulkQueryGenerationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_BulkQueryGenerationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}/randomize:
-    post:
-      tags:
-      - Randomization
-      summary: Randomize Subject Endpoint
-      description: Execute GxP compliant subject randomization allocation and block-index advancement.
-      operationId: Execution_randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectRandomizationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/hierarchy:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Supply Hierarchy Endpoint
-      description: Returns the complete multi-echelon supply hierarchy tree and stock rollup for a study.
-      operationId: Execution_get_supply_hierarchy_endpoint_api_v1_execution_rtsm_hierarchy_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_MultiEchelonRollup'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/nodes:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Create Supply Node Endpoint
-      description: Registers or updates a supply node in the clinical supply hierarchy.
-      operationId: Execution_create_supply_node_endpoint_api_v1_execution_rtsm_nodes_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SupplyNodeCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SupplyNodeResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/nodes/{node_id}/inventory:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Node Inventory Endpoint
-      description: Lists inventory records and stock levels for a specific supply node.
-      operationId: Execution_get_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_get
-      parameters:
-      - name: node_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Node Id
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_SupplyNodeInventoryResponse'
-                title: Response Get Node Inventory Endpoint Api V1 Execution Rtsm Nodes  Node Id  Inventory Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/nodes/{node_id}/inventory/adjust:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Adjust Node Inventory Endpoint
-      description: Adjusts or initializes stock levels for a supply node.
-      operationId: Execution_adjust_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_adjust_post
-      parameters:
-      - name: node_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Node Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SupplyNodeInventoryAdjustRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SupplyNodeInventoryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/forecast/site:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Forecast Site Resupply Endpoint
-      description: Executes a predictive demand and resupply forecast for a clinical site.
-      operationId: Execution_forecast_site_resupply_endpoint_api_v1_execution_rtsm_forecast_site_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_PredictiveForecastRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_PredictiveForecastResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/forecast/study:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Forecast Study Resupply Endpoint
-      description: Generates concurrent predictive forecasts across all active clinical sites in a study.
-      operationId: Execution_forecast_study_resupply_endpoint_api_v1_execution_rtsm_forecast_study_post
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: horizon_days
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 365
-          minimum: 7
-          default: 60
-          title: Horizon Days
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_PredictiveForecastResponse'
-                title: Response Forecast Study Resupply Endpoint Api V1 Execution Rtsm Forecast Study Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/transfer-orders:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Create Transfer Order Endpoint
-      description: Creates a stock transfer order between supply nodes.
-      operationId: Execution_create_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TransferOrderCreateRequest'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TransferOrderResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Transfer Orders Endpoint
-      description: Lists active transfer orders with optional filtering.
-      operationId: Execution_list_transfer_orders_endpoint_api_v1_execution_rtsm_transfer_orders_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: source_node_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Source Node Id
-      - name: destination_node_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Destination Node Id
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_TransferOrderResponse'
-                title: Response List Transfer Orders Endpoint Api V1 Execution Rtsm Transfer Orders Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/transfer-orders/{order_id}/approve:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Approve Transfer Order Endpoint
-      description: Approves a transfer order for warehouse packing.
-      operationId: Execution_approve_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__approve_post
-      parameters:
-      - name: order_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Order Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TransferOrderApprovalRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TransferOrderResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/transfer-orders/{order_id}/manifest:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Generate Packing Manifest Endpoint
-      description: Generates a formal GxP packing manifest binding serialized kits to an approved transfer order.
-      operationId: Execution_generate_packing_manifest_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__manifest_post
-      parameters:
-      - name: order_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Order Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_PackingManifestCreateRequest'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_PackingManifestResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/transfer-orders/{order_id}/ship:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Ship Transfer Order Endpoint
-      description: Marks a transfer order shipped, moves inventory to in-transit, and dispatches depot notification.
-      operationId: Execution_ship_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__ship_post
-      parameters:
-      - name: order_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Order Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TransferOrderShipRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TransferOrderResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/transfer-orders/{order_id}/receive:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Receive Transfer Order Endpoint
-      description: Marks a transfer order delivered/received at destination node, transferring in-transit stock to on-hand.
-      operationId: Execution_receive_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__receive_post
-      parameters:
-      - name: order_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Order Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TransferOrderReceiveRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TransferOrderResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/stability-budgets:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Create Stability Budget Endpoint
-      description: Configures allowable thermal excursion limits and Arrhenius activation parameters for a kit type or lot.
-      operationId: Execution_create_stability_budget_endpoint_api_v1_execution_rtsm_stability_budgets_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_StabilityBudgetCreateRequest'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_StabilityBudgetResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Stability Budgets Endpoint
-      description: Lists defined drug stability budgets for a clinical study.
-      operationId: Execution_list_stability_budgets_endpoint_api_v1_execution_rtsm_stability_budgets_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_StabilityBudgetResponse'
-                title: Response List Stability Budgets Endpoint Api V1 Execution Rtsm Stability Budgets Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cold-chain/loggers:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Register Temperature Logger Endpoint
-      description: Registers a temperature data logger device bound to a shipment or storage facility.
-      operationId: Execution_register_temperature_logger_endpoint_api_v1_execution_rtsm_cold_chain_loggers_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_TemperatureLoggerRegisterRequest'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_TemperatureLoggerResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Temperature Loggers Endpoint
-      description: Lists registered temperature loggers for a study.
-      operationId: Execution_list_temperature_loggers_endpoint_api_v1_execution_rtsm_cold_chain_loggers_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_TemperatureLoggerResponse'
-                title: Response List Temperature Loggers Endpoint Api V1 Execution Rtsm Cold Chain Loggers Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cold-chain/ingest:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Ingest Temperature Logger File Endpoint
-      description: Ingests a digital logger file (CSV, XML, JSON), calculates Arrhenius MKT, and enforces automated kit quarantine.
-      operationId: Execution_ingest_temperature_logger_file_endpoint_api_v1_execution_rtsm_cold_chain_ingest_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LoggerIngestionRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ExcursionEvaluationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cold-chain/evaluate-mkt:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Evaluate Mkt Direct Endpoint
-      description: Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> / PDA TR 39.
-      operationId: Execution_evaluate_mkt_direct_endpoint_api_v1_execution_rtsm_cold_chain_evaluate_mkt_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_MktCalculationDirectRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_MktCalculationDirectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cold-chain/evaluations:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Excursion Evaluations Endpoint
-      description: Lists cold chain excursion evaluation audit records.
-      operationId: Execution_list_excursion_evaluations_endpoint_api_v1_execution_rtsm_cold_chain_evaluations_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: entity_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional filter by transfer order or node ID
-          title: Entity Id
-        description: Optional filter by transfer order or node ID
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_ExcursionEvaluationResponse'
-                title: Response List Excursion Evaluations Endpoint Api V1 Execution Rtsm Cold Chain Evaluations Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/kits:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Create Kit Endpoint
-      description: Registers an investigational product kit into the blinded RTSM inventory catalog.
-      operationId: Execution_create_kit_endpoint_api_v1_execution_rtsm_kits_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_IPKitCreateRequest'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_IPKitResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Kits Endpoint
-      description: Lists investigational product kits.
-      operationId: Execution_list_kits_endpoint_api_v1_execution_rtsm_kits_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional node/site ID filter
-          title: Node Id
-        description: Optional node/site ID filter
-      - name: lot_number
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional lot number filter
-          title: Lot Number
-        description: Optional lot number filter
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional status filter (e.g. AVAILABLE, QUARANTINED)
-          title: Status
-        description: Optional status filter (e.g. AVAILABLE, QUARANTINED)
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_IPKitResponse'
-                title: Response List Kits Endpoint Api V1 Execution Rtsm Kits Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/kits/quarantine:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Quarantine Kits Endpoint
-      description: Manually places investigational product kits in QUARANTINED status with Part 11 electronic audit trail.
-      operationId: Execution_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_quarantine_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_KitQuarantineRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  anyOf:
-                  - type: string
-                  - type: integer
-                type: object
-                title: Response Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Quarantine Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/kits/release-quarantine:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Release Quarantine Kits Endpoint
-      description: Authorizes QA disposition release of quarantined kits back into available inventory.
-      operationId: Execution_release_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_release_quarantine_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_KitReleaseQuarantineRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  anyOf:
-                  - type: string
-                  - type: integer
-                type: object
-                title: Response Release Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Release Quarantine Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/lots/extend-expiry:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Extend Lot Expiry Endpoint
-      description: Executes automated lot expiration extension workflow, updating kits across all sites and depots.
-      operationId: Execution_extend_lot_expiry_endpoint_api_v1_execution_rtsm_lots_extend_expiry_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LotExpiryExtensionRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LotExpiryExtensionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/lots/extensions:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Lot Expiry Extensions Endpoint
-      description: Lists lot expiration extension audit records.
-      operationId: Execution_list_lot_expiry_extensions_endpoint_api_v1_execution_rtsm_lots_extensions_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: lot_number
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional lot number filter
-          title: Lot Number
-        description: Optional lot number filter
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_LotExpiryExtensionResponse'
-                title: Response List Lot Expiry Extensions Endpoint Api V1 Execution Rtsm Lots Extensions Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/relabeling-tasks:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Relabeling Tasks Endpoint
-      description: Lists physical re-labeling action tasks across facilities.
-      operationId: Execution_list_relabeling_tasks_endpoint_api_v1_execution_rtsm_relabeling_tasks_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional node/site ID filter
-          title: Node Id
-        description: Optional node/site ID filter
-      - name: lot_number
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional lot number filter
-          title: Lot Number
-        description: Optional lot number filter
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional status filter
-          title: Status
-        description: Optional status filter
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
-                title: Response List Relabeling Tasks Endpoint Api V1 Execution Rtsm Relabeling Tasks Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/relabeling-tasks/{task_id}/complete:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Complete Relabeling Task Endpoint
-      description: Records completion of a physical kit re-labeling task with electronic signature justification.
-      operationId: Execution_complete_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__complete_post
-      parameters:
-      - name: task_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Task Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ReLabelingTaskCompleteRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/relabeling-tasks/{task_id}/verify:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Verify Relabeling Task Endpoint
-      description: Dual QA verification of completed re-labeling task with barcode verification hash.
-      operationId: Execution_verify_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__verify_post
-      parameters:
-      - name: task_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Task Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ReLabelingTaskVerifyRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/apheresis:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Initialize Apheresis Endpoint
-      description: Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest.
-      operationId: Execution_initialize_apheresis_endpoint_api_v1_execution_rtsm_cgt_apheresis_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTApheresisCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/milestone:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Record Cgt Milestone Endpoint
-      description: Records a cryogenic transit milestone with GPS coordinates and temperature logging.
-      operationId: Execution_record_cgt_milestone_endpoint_api_v1_execution_rtsm_cgt_milestone_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTMilestoneCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTMilestoneResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/manufacturing-bind:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Bind Manufacturing Batch Endpoint
-      description: Binds manufacturing batch record to original subject identity and regenerates barcode.
-      operationId: Execution_bind_manufacturing_batch_endpoint_api_v1_execution_rtsm_cgt_manufacturing_bind_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTManufacturingBindRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/bedside-verify:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Bedside Dual Verification Endpoint
-      description: Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF.
-      operationId: Execution_bedside_dual_verification_endpoint_api_v1_execution_rtsm_cgt_bedside_verify_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTBedsideVerificationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTBedsideVerificationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/infuse:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Execute Infusion Endpoint
-      description: Records cellular drug infusion administration, gated by the bedside verification unlock token.
-      operationId: Execution_execute_infusion_endpoint_api_v1_execution_rtsm_cgt_infuse_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTInfusionExecuteRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/returns:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Log Vial Return Endpoint
-      description: Logs returned kit/vial accountability and calculates patient adherence compliance.
-      operationId: Execution_log_vial_return_endpoint_api_v1_execution_rtsm_cgt_returns_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/destruction-certificate:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Generate Destruction Certificate Endpoint
-      description: Generates a formal Certificate of Destruction with dual witness electronic signatures.
-      operationId: Execution_generate_destruction_certificate_endpoint_api_v1_execution_rtsm_cgt_destruction_certificate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTDestructionCertificateCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTDestructionCertificateResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/verify-barcode:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Verify Cgt Barcode Endpoint
-      description: Verifies cryptographic authenticity and entity bindings for a scanned barcode.
-      operationId: Execution_verify_cgt_barcode_endpoint_api_v1_execution_rtsm_cgt_verify_barcode_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CGTBarcodeVerifyRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTBarcodeVerifyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/chain-of-custody/{study_id}/{subject_id}:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Subject Cgt Traceability Endpoint
-      description: Retrieves full Vein-to-Vein traceability ledger for a subject.
-      operationId: Execution_get_subject_cgt_traceability_endpoint_api_v1_execution_rtsm_cgt_chain_of_custody__study_id___subject_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CGTFullTraceabilityResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/certificates/{study_id}:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Destruction Certificates Endpoint
-      description: Lists all Certificates of Destruction for a study.
-      operationId: Execution_list_destruction_certificates_endpoint_api_v1_execution_rtsm_cgt_certificates__study_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_CGTDestructionCertificateResponse'
-                title: Response List Destruction Certificates Endpoint Api V1 Execution Rtsm Cgt Certificates  Study Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/cgt/reconciliations/{study_id}:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: List Vial Reconciliations Endpoint
-      description: Lists all product return and accountability reconciliation records for a study.
-      operationId: Execution_list_vial_reconciliations_endpoint_api_v1_execution_rtsm_cgt_reconciliations__study_id__get
-      parameters:
-      - name: study_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationResponse'
-                title: Response List Vial Reconciliations Endpoint Api V1 Execution Rtsm Cgt Reconciliations  Study Id  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/config:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Create Or Update Adaptive Config Endpoint
-      description: Registers or updates adaptive oncology dose-escalation or RAR trial design parameters.
-      operationId: Execution_create_or_update_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_AdaptiveTrialConfigDTO'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-                title: Response Create Or Update Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Adaptive Config Endpoint
-      description: Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history.
-      operationId: Execution_get_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/cohorts/evaluate:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Evaluate Adaptive Cohort Endpoint
-      description: Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3).
-      operationId: Execution_evaluate_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_evaluate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CohortEvaluationInput'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CohortEvaluationResult'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/cohorts/transition:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Transition Adaptive Cohort Endpoint
-      description: Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging.
-      operationId: Execution_transition_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_transition_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CohortTransitionRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CohortTransitionLogResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/cohorts/history:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Adaptive Cohorts History Endpoint
-      description: Returns the immutable 21 CFR Part 11 audited transition log history for a study.
-      operationId: Execution_get_adaptive_cohorts_history_endpoint_api_v1_execution_rtsm_adaptive_cohorts_history_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_CohortTransitionLogResponse'
-                title: Response Get Adaptive Cohorts History Endpoint Api V1 Execution Rtsm Adaptive Cohorts History Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/rar/evaluate:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Evaluate Rar Endpoint
-      description: Calculates dynamic Response-Adaptive Randomization allocation weights across active arms.
-      operationId: Execution_evaluate_rar_endpoint_api_v1_execution_rtsm_adaptive_rar_evaluate_post
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_RAREvaluationResult'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/rar/arms:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Expand Or Terminate Rar Arm Endpoint
-      description: Seamlessly adds or terminates a treatment arm in RAR with zero study downtime.
-      operationId: Execution_expand_or_terminate_rar_arm_endpoint_api_v1_execution_rtsm_adaptive_rar_arms_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_RARExpandOrTerminateArmRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_RAREvaluationResult'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/rar/state:
-    get:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Get Rar State Endpoint
-      description: Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states.
-      operationId: Execution_get_rar_state_endpoint_api_v1_execution_rtsm_adaptive_rar_state_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Clinical study identifier
-          title: Study Id
-        description: Clinical study identifier
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Rar State Endpoint Api V1 Execution Rtsm Adaptive Rar State Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/boin/calculate-boundaries:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Calculate Boin Boundaries Endpoint
-      description: Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d).
-      operationId: Execution_calculate_boin_boundaries_endpoint_api_v1_execution_rtsm_adaptive_boin_calculate_boundaries_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_BoinBoundariesCalculationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_BoinBoundariesCalculationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/adaptive/crm/posterior:
-    post:
-      tags:
-      - RTSM Multi-Echelon Supply
-      summary: Calculate Crm Posterior Endpoint
-      description: Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method.
-      operationId: Execution_calculate_crm_posterior_endpoint_api_v1_execution_rtsm_adaptive_crm_posterior_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CrmPosteriorCalculationRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CrmPosteriorCalculationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}/unblind:
-    post:
-      tags:
-      - Unblinding
-      summary: Unblind Subject
-      description: "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction."
-      operationId: Execution_unblind_subject_api_v1_execution_subjects__subject_id__unblind_post
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_UnblindRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectUnblindResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries:
-    get:
-      tags:
-      - Queries
-      summary: List Queries
-      description: Retrieve a list of clinical queries with optional filtering.
-      operationId: Execution_list_queries_api_v1_execution_queries_get
-      parameters:
-      - name: study_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Study Id
-      - name: subject_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Subject Id
-      - name: visit_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Visit Id
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-                title: Response List Queries Api V1 Execution Queries Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    post:
-      tags:
-      - Queries
-      summary: Open Query
-      description: Raise a new clinical query on a specific field coordinate.
-      operationId: Execution_open_query_api_v1_execution_queries_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_QueryCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/{query_id}:
-    get:
-      tags:
-      - Queries
-      summary: Get Query
-      description: Query a single clinical query by ID, returning its full audit history.
-      operationId: Execution_get_query_api_v1_execution_queries__query_id__get
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    patch:
-      tags:
-      - Queries
-      summary: Update Query State
-      description: Transition a query through the designated state sequence and perform role checks.
-      operationId: Execution_update_query_state_api_v1_execution_queries__query_id__patch
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_QueryUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/{query_id}/respond:
-    post:
-      tags:
-      - Queries
-      summary: Respond Query
-      description: Submit an investigator response/answer to an open or reopened clinical query.
-      operationId: Execution_respond_query_api_v1_execution_queries__query_id__respond_post
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_QueryRespond'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/{query_id}/close:
-    post:
-      tags:
-      - Queries
-      summary: Close Query
-      description: Close an answered query (resolving the discrepancy loop).
-      operationId: Execution_close_query_api_v1_execution_queries__query_id__close_post
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/{query_id}/reopen:
-    post:
-      tags:
-      - Queries
-      summary: Reopen Query
-      description: Reopen an answered or closed clinical query for further clarification.
-      operationId: Execution_reopen_query_api_v1_execution_queries__query_id__reopen_post
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      requestBody:
-        content:
-          application/json:
-            schema:
-              anyOf:
-              - $ref: '#/components/schemas/Execution_QueryReopen'
-              - type: 'null'
-              title: Payload
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/{query_id}/cancel:
-    post:
-      tags:
-      - Queries
-      summary: Cancel Query
-      description: Cancel a clinical query raised in error.
-      operationId: Execution_cancel_query_api_v1_execution_queries__query_id__cancel_post
-      parameters:
-      - name: query_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Query Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_QueryCancel'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/queries/sync:
-    post:
-      tags:
-      - Queries
-      summary: Sync Queries
-      description: Synchronize clinical query local ledger blocks to the target database.
-      operationId: Execution_sync_queries_api_v1_execution_queries_sync_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SyncRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Sync Queries Api V1 Execution Queries Sync Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/dictionaries/import:
-    post:
-      tags:
-      - Dictionaries
-      summary: Import Dictionary
-      description: Imports raw dictionary files and schedules a background parsing task.
-      operationId: Execution_import_dictionary_api_v1_dictionaries_import_post
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Execution_Body_import_dictionary_api_v1_dictionaries_import_post'
-        required: true
-      responses:
-        '202':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_JobStatusResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/dictionaries/jobs/{job_id}:
-    get:
-      tags:
-      - Dictionaries
-      summary: Get Dictionary Import Job
-      description: Query the execution status, progress, and import counts of a dictionary import job by ID.
-      operationId: Execution_get_dictionary_import_job_api_v1_dictionaries_jobs__job_id__get
-      parameters:
-      - name: job_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Job Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_JobStatusResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/dictionaries/meddra/code:
-    get:
-      tags:
-      - Dictionaries
-      summary: Get Meddra Code
-      description: Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
-      operationId: Execution_get_meddra_code_api_v1_dictionaries_meddra_code_get
-      parameters:
-      - name: term
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Term
-      - name: version
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          default: '26.0'
-          title: Version
-      - name: target_level
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/Execution_MedDRATargetLevelEnum'
-          - type: 'null'
-          default: LLT
-          title: Target Level
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_MedDRACodeLookupResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/dictionaries/whodrug/code:
-    get:
-      tags:
-      - Dictionaries
-      summary: Get Whodrug Code
-      description: Performs coding or interactive lookup on WHODrug database using version-aware matcher.
-      operationId: Execution_get_whodrug_code_api_v1_dictionaries_whodrug_code_get
-      parameters:
-      - name: term
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Term
-      - name: version
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Version
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_WHODrugCodeLookupResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/dictionaries/ucum/convert:
-    post:
-      tags:
-      - Dictionaries
-      summary: Post Ucum Convert
-      description: Standardizes numeric values and verifies scale compatibility between source and target codes.
-      operationId: Execution_post_ucum_convert_api_v1_dictionaries_ucum_convert_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_UCUMConvertRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_UCUMConvertResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ProblemDetails'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/impact-analysis:
-    post:
-      tags:
-      - Dictionaries
-      summary: Post Impact Analysis
-      description: Manually triggers up-versioning impact analysis on existing coded assignments.
-      operationId: Execution_post_impact_analysis_api_v1_execution_coding_impact_analysis_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ImpactAnalysisRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ImpactAnalysisResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments:
-    get:
-      tags:
-      - Dictionaries
-      summary: List Coding Assignments
-      description: Lists and filters medical coding assignments.
-      operationId: Execution_list_coding_assignments_api_v1_execution_coding_assignments_get
-      parameters:
-      - name: observation_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Observation Id
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-      - name: verbatim_text
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Verbatim Text
-      - name: dictionary_type
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Dictionary Type
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
-                title: Response List Coding Assignments Api V1 Execution Coding Assignments Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments/{assignment_id}:
-    get:
-      tags:
-      - Dictionaries
-      summary: Get Coding Assignment
-      description: Retrieves a single medical coding assignment by ID.
-      operationId: Execution_get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get
-      parameters:
-      - name: assignment_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Assignment Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments/{assignment_id}/suggest:
-    post:
-      tags:
-      - Dictionaries
-      summary: Post Suggest Coding
-      description: Generates AI Tier 1 semantic coding suggestions for an assignment.
-      operationId: Execution_post_suggest_coding_api_v1_execution_coding_assignments__assignment_id__suggest_post
-      parameters:
-      - name: assignment_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Assignment Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments/{assignment_id}/action:
-    post:
-      tags:
-      - Dictionaries
-      summary: Process Coding Action
-      description: Accepts a suggestion or submits a manual override, persisting results and updating the ledger.
-      operationId: Execution_process_coding_action_api_v1_execution_coding_assignments__assignment_id__action_post
-      parameters:
-      - name: assignment_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Assignment Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_CoderActionRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments/batch-assign:
-    post:
-      tags:
-      - Dictionaries
-      summary: Post Batch Assign
-      description: Performs batch medical coding assignment across multiple assignments with GxP audit logging.
-      operationId: Execution_post_batch_assign_api_v1_execution_coding_assignments_batch_assign_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_BatchAssignRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_BatchAssignResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/assignments/{assignment_id}/raise-query:
-    post:
-      tags:
-      - Dictionaries
-      summary: Post Raise Coding Query
-      description: Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record.
-      operationId: Execution_post_raise_coding_query_api_v1_execution_coding_assignments__assignment_id__raise_query_post
-      parameters:
-      - name: assignment_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Assignment Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_RaiseQueryRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_RaiseQueryResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/coding/queue:
-    get:
-      tags:
-      - Dictionaries
-      summary: Get Coding Queue
-      description: Retrieves the active coding queue.
-      operationId: Execution_get_coding_queue_api_v1_execution_coding_queue_get
-      parameters:
-      - name: observation_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Observation Id
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-      - name: verbatim_text
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Verbatim Text
-      - name: dictionary_type
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Dictionary Type
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
-                title: Response Get Coding Queue Api V1 Execution Coding Queue Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/biostat/sdtm/{domain}:
-    get:
-      tags:
-      - CDISC Exports
-      summary: Export Sdtm Domain
-      description: Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.
-      operationId: Execution_export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get
-      parameters:
-      - name: domain
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Domain
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: The unique study identifier
-          title: Study Id
-        description: The unique study identifier
-      - name: format
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Target export format: json, xpt, odm, csv'
-          default: json
-          title: Format
-        description: 'Target export format: json, xpt, odm, csv'
-      - name: version
-        in: query
-        required: false
-        schema:
-          type: string
-          description: SAS XPT version if format is xpt (v5 or v8)
-          default: v5
-          title: Version
-        description: SAS XPT version if format is xpt (v5 or v8)
-      - name: privacy_profile
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-          default: SAFE_HARBOR
-          title: Privacy Profile
-        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-      - name: salt
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: HMAC pseudonymization salt
-          title: Salt
-        description: HMAC pseudonymization salt
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                title: Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/biostat/adam/{dataset}:
-    get:
-      tags:
-      - CDISC Exports
-      summary: Export Adam Dataset
-      description: Exports ADaM dataset data (ADSL, ADAE, ADVS) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.
-      operationId: Execution_export_adam_dataset_api_v1_execution_biostat_adam__dataset__get
-      parameters:
-      - name: dataset
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Dataset
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: The unique study identifier
-          title: Study Id
-        description: The unique study identifier
-      - name: format
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Target export format: json, xpt, odm, csv'
-          default: json
-          title: Format
-        description: 'Target export format: json, xpt, odm, csv'
-      - name: version
-        in: query
-        required: false
-        schema:
-          type: string
-          description: SAS XPT version if format is xpt (v5 or v8)
-          default: v5
-          title: Version
-        description: SAS XPT version if format is xpt (v5 or v8)
-      - name: privacy_profile
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-          default: SAFE_HARBOR
-          title: Privacy Profile
-        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-      - name: salt
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: HMAC pseudonymization salt
-          title: Salt
-        description: HMAC pseudonymization salt
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                title: Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/biostat/bundle:
-    get:
-      tags:
-      - CDISC Exports
-      summary: Export Biostat Bundle
-      description: Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML.
-      operationId: Execution_export_biostat_bundle_api_v1_execution_biostat_bundle_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          description: The unique study identifier
-          title: Study Id
-        description: The unique study identifier
-      - name: format
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Target export format: json, zip, csv_zip, odm'
-          default: json
-          title: Format
-        description: 'Target export format: json, zip, csv_zip, odm'
-      - name: privacy_profile
-        in: query
-        required: false
-        schema:
-          type: string
-          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-          default: SAFE_HARBOR
-          title: Privacy Profile
-        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
-      - name: salt
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: HMAC pseudonymization salt
-          title: Salt
-        description: HMAC pseudonymization salt
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                title: Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/exports/wizard:
-    post:
-      tags:
-      - CDISC Exports
-      summary: Execute Export Wizard
-      description: Executes a parameterized export job from the Regulatory Export Wizard.
-      operationId: Execution_execute_export_wizard_api_v1_execution_exports_wizard_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ExportBundleRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                title: Response Execute Export Wizard Api V1 Execution Exports Wizard Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/ingest:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Ingest Lab Batch Endpoint
-      description: Ingest central or local laboratory batch data (CSV, HL7 v2.x, FHIR JSON, CDISC LAB, or Local Manual).
-      operationId: Execution_ingest_lab_batch_endpoint_api_v1_execution_labs_ingest_post
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabBatchIngestResult'
-  /execution/api/v1/execution/labs/batch-status:
-    get:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Get Batch Status Endpoint
-      description: Retrieve status and metrics for previous lab batch ingestion jobs.
-      operationId: Execution_get_batch_status_endpoint_api_v1_execution_labs_batch_status_get
-      parameters:
-      - name: batch_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional batch ID to query
-          title: Batch Id
-        description: Optional batch ID to query
-      - name: study_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Optional study ID filter
-          title: Study Id
-        description: Optional study ID filter
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                anyOf:
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/Execution_LabBatchIngestResult'
-                - $ref: '#/components/schemas/Execution_LabBatchIngestResult'
-                title: Response Get Batch Status Endpoint Api V1 Execution Labs Batch Status Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/batch-status/{batch_id}:
-    get:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Get Batch Status By Id Endpoint
-      description: Query execution status and statistics of a specific laboratory batch by ID.
-      operationId: Execution_get_batch_status_by_id_endpoint_api_v1_execution_labs_batch_status__batch_id__get
-      parameters:
-      - name: batch_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Batch Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabBatchIngestResult'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/certifications:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Create Local Lab Certification
-      description: Register a local laboratory certification and accreditation.
-      operationId: Execution_create_local_lab_certification_api_v1_execution_labs_certifications_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LocalLabCertificationCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: List Local Lab Certifications
-      description: List local laboratory certifications with optional filters.
-      operationId: Execution_list_local_lab_certifications_api_v1_execution_labs_certifications_get
-      parameters:
-      - name: study_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Filter by study ID
-          title: Study Id
-        description: Filter by study ID
-      - name: site_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Filter by site ID
-          title: Site Id
-        description: Filter by site ID
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Filter by certification status
-          title: Status
-        description: Filter by certification status
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
-                title: Response List Local Lab Certifications Api V1 Execution Labs Certifications Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/certifications/{cert_id}:
-    put:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Update Local Lab Certification
-      description: Update an existing local laboratory certification.
-      operationId: Execution_update_local_lab_certification_api_v1_execution_labs_certifications__cert_id__put
-      parameters:
-      - name: cert_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Cert Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LocalLabCertificationUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/certifications/verify:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Verify Local Lab Certification Endpoint
-      description: Verify if a site has active, unexpired local lab certification for an observation date.
-      operationId: Execution_verify_local_lab_certification_endpoint_api_v1_execution_labs_certifications_verify_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/toxicity/review-queue:
-    get:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: List Staged Ae Review Queue
-      description: Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.
-      operationId: Execution_list_staged_ae_review_queue_api_v1_execution_labs_toxicity_review_queue_get
-      parameters:
-      - name: study_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Filter by study ID
-          title: Study Id
-        description: Filter by study ID
-      - name: site_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Filter by site ID
-          title: Site Id
-        description: Filter by site ID
-      - name: review_status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
-          default: STAGED_FOR_INVESTIGATOR_REVIEW
-          title: Review Status
-        description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_StagedAdverseEventReviewResponse'
-                title: Response List Staged Ae Review Queue Api V1 Execution Labs Toxicity Review Queue Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/toxicity/review/{review_id}/action:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Action Staged Ae Review
-      description: Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).
-      operationId: Execution_action_staged_ae_review_api_v1_execution_labs_toxicity_review__review_id__action_post
-      parameters:
-      - name: review_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Review Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_StagedAdverseEventActionRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_StagedAdverseEventActionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/toxicity/evaluate:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Evaluate Toxicity Realtime
-      description: Evaluate and simulate CTCAE v5.0 / DAIDS v2.1 toxicity grading in real time.
-      operationId: Execution_evaluate_toxicity_realtime_api_v1_execution_labs_toxicity_evaluate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LabToxicityEvaluateRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabToxicityEvaluateResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/labs/loinc-catalog:
-    get:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Get Loinc Catalog Endpoint
-      description: Retrieve standardized LOINC catalog mappings.
-      operationId: Execution_get_loinc_catalog_endpoint_api_v1_execution_labs_loinc_catalog_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LoincCatalogResponse'
-  /execution/api/v1/execution/labs/convert-unit:
-    post:
-      tags:
-      - Laboratory Governance & Ingestion
-      summary: Convert Unit Endpoint
-      description: Convert laboratory measurement between conventional and SI units.
-      operationId: Execution_convert_unit_endpoint_api_v1_execution_labs_convert_unit_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LoincConvertRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LoincConvertResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/parse-udi:
+  /api/v1/execution/devices/parse-udi:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -17682,7 +13341,7 @@ paths:
 
 
         @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_parse_udi_api_v1_execution_devices_parse_udi_post
+      operationId: parse_udi_api_v1_execution_devices_parse_udi_post
       requestBody:
         content:
           application/json:
@@ -17702,7 +13361,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/inventory:
+  /api/v1/execution/devices/inventory:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -17711,7 +13370,7 @@ paths:
 
 
         @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_register_inventory_api_v1_execution_devices_inventory_post
+      operationId: register_inventory_api_v1_execution_devices_inventory_post
       requestBody:
         required: true
         content:
@@ -17742,7 +13401,7 @@ paths:
 
 
         @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_list_inventory_api_v1_execution_devices_inventory_get
+      operationId: list_inventory_api_v1_execution_devices_inventory_get
       parameters:
       - name: study_id
         in: query
@@ -17818,7 +13477,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/dispense:
+  /api/v1/execution/devices/dispense:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -17830,7 +13489,7 @@ paths:
 
 
         @req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_dispense_api_v1_execution_devices_dispense_post
+      operationId: dispense_api_v1_execution_devices_dispense_post
       requestBody:
         content:
           application/json:
@@ -17850,7 +13509,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/deficiencies:
+  /api/v1/execution/devices/deficiencies:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -17859,7 +13518,7 @@ paths:
 
 
         @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_log_deficiency_api_v1_execution_devices_deficiencies_post
+      operationId: log_deficiency_api_v1_execution_devices_deficiencies_post
       requestBody:
         required: true
         content:
@@ -17887,7 +13546,7 @@ paths:
 
 
         @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_list_deficiencies_api_v1_execution_devices_deficiencies_get
+      operationId: list_deficiencies_api_v1_execution_devices_deficiencies_get
       parameters:
       - name: study_id
         in: query
@@ -17933,7 +13592,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/deficiencies/{deficiency_id}:
+  /api/v1/execution/devices/deficiencies/{deficiency_id}:
     get:
       tags:
       - Medical Device & IVD Suite
@@ -17942,7 +13601,7 @@ paths:
 
 
         @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get
+      operationId: get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get
       parameters:
       - name: deficiency_id
         in: path
@@ -17963,7 +13622,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/quarantine:
+  /api/v1/execution/devices/quarantine:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -17972,7 +13631,7 @@ paths:
 
 
         @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_initiate_quarantine_api_v1_execution_devices_quarantine_post
+      operationId: initiate_quarantine_api_v1_execution_devices_quarantine_post
       requestBody:
         required: true
         content:
@@ -18000,7 +13659,7 @@ paths:
 
 
         @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_list_quarantines_api_v1_execution_devices_quarantine_get
+      operationId: list_quarantines_api_v1_execution_devices_quarantine_get
       parameters:
       - name: study_id
         in: query
@@ -18046,7 +13705,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/quarantine/release:
+  /api/v1/execution/devices/quarantine/release:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18055,7 +13714,7 @@ paths:
 
 
         @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_release_quarantine_api_v1_execution_devices_quarantine_release_post
+      operationId: release_quarantine_api_v1_execution_devices_quarantine_release_post
       requestBody:
         content:
           application/json:
@@ -18075,7 +13734,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/summary:
+  /api/v1/execution/devices/summary:
     get:
       tags:
       - Medical Device & IVD Suite
@@ -18084,7 +13743,7 @@ paths:
 
 
         @req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
-      operationId: Execution_get_device_summary_api_v1_execution_devices_summary_get
+      operationId: get_device_summary_api_v1_execution_devices_summary_get
       parameters:
       - name: study_id
         in: query
@@ -18107,7 +13766,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/gudid/lookup:
+  /api/v1/execution/devices/gudid/lookup:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18116,7 +13775,7 @@ paths:
 
 
         @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post
+      operationId: lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post
       requestBody:
         content:
           application/json:
@@ -18136,7 +13795,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/verify-udi:
+  /api/v1/execution/devices/verify-udi:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18145,7 +13804,7 @@ paths:
 
 
         @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_verify_udi_endpoint_api_v1_execution_devices_verify_udi_post
+      operationId: verify_udi_endpoint_api_v1_execution_devices_verify_udi_post
       parameters:
       - name: raw_barcode
         in: query
@@ -18210,7 +13869,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/specimens:
+  /api/v1/execution/devices/ivd/specimens:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18219,7 +13878,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post
+      operationId: register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post
       requestBody:
         required: true
         content:
@@ -18247,7 +13906,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get
+      operationId: list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get
       parameters:
       - name: study_id
         in: query
@@ -18305,7 +13964,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/specimens/{specimen_id}:
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}:
     get:
       tags:
       - Medical Device & IVD Suite
@@ -18314,7 +13973,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get
+      operationId: get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get
       parameters:
       - name: specimen_id
         in: path
@@ -18335,7 +13994,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/specimens/{specimen_id}/chain-of-custody:
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/chain-of-custody:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18344,7 +14003,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
-      operationId: Execution_log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post
+      operationId: log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post
       parameters:
       - name: specimen_id
         in: path
@@ -18371,7 +14030,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/specimens/{specimen_id}/freeze-thaw:
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/freeze-thaw:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18380,7 +14039,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209'
-      operationId: Execution_log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post
+      operationId: log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post
       parameters:
       - name: specimen_id
         in: path
@@ -18407,7 +14066,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/specimens/{specimen_id}/integrity-check:
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/integrity-check:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18416,7 +14075,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209'
-      operationId: Execution_sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post
+      operationId: sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post
       parameters:
       - name: specimen_id
         in: path
@@ -18443,7 +14102,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/devices/ivd/assays/performance:
+  /api/v1/execution/devices/ivd/assays/performance:
     post:
       tags:
       - Medical Device & IVD Suite
@@ -18452,7 +14111,7 @@ paths:
 
 
         @req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209'
-      operationId: Execution_compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post
+      operationId: compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post
       requestBody:
         content:
           application/json:
@@ -18472,68 +14131,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/health:
-    get:
-      summary: Health Check
-      description: "Service health check endpoint.\n\nReturns a basic JSON payload indicating the service is operational.\n\nReturns:\n    dict[str, str]: The health status payload."
-      operationId: Execution_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /execution/events/study-published:
+  /api/v1/dictionaries/import:
     post:
-      summary: Study Published
-      description: "Ingest study publication events and trigger layout generation asynchronously.\n\nArgs:\n    event (StudyEvent): The incoming study event payload.\n    background_tasks (BackgroundTasks): FastAPI background task manager.\n\nReturns:\n    dict[str, str]: A status message confirming job acceptance."
-      operationId: Execution_study_published_events_study_published_post
+      tags:
+      - Dictionaries
+      summary: Import Dictionary
+      description: Imports raw dictionary files and schedules a background parsing task.
+      operationId: import_dictionary_api_v1_dictionaries_import_post
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Execution_StudyEvent'
+              $ref: '#/components/schemas/Execution_Body_import_dictionary_api_v1_dictionaries_import_post'
         required: true
       responses:
-        '200':
+        '202':
           description: Successful Response
           content:
             application/json:
               schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Study Published Events Study Published Post
+                $ref: '#/components/schemas/Execution_JobStatusResponse'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/translation/jobs:
+  /api/v1/dictionaries/jobs/{job_id}:
     get:
-      summary: List Translation Jobs
-      description: Retrieve a list of historical translation jobs.
-      operationId: Execution_list_translation_jobs_api_v1_execution_translation_jobs_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/Execution_TranslationJobResponse'
-                type: array
-                title: Response List Translation Jobs Api V1 Execution Translation Jobs Get
-  /execution/api/v1/execution/translation/jobs/{job_id}:
-    get:
-      summary: Get Translation Job
-      description: Query the execution status, output metadata, and error messages of a single translation job by ID.
-      operationId: Execution_get_translation_job_api_v1_execution_translation_jobs__job_id__get
+      tags:
+      - Dictionaries
+      summary: Get Dictionary Import Job
+      description: Query the execution status, progress, and import counts of a dictionary import job by ID.
+      operationId: get_dictionary_import_job_api_v1_dictionaries_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -18547,709 +14177,189 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution_TranslationJobResponse'
+                $ref: '#/components/schemas/Execution_JobStatusResponse'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects:
-    post:
-      summary: Create Subject
-      description: Create a new clinical subject pseudonymously.
-      operationId: Execution_create_subject_api_v1_execution_subjects_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectCreate'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}/consents:
-    post:
-      summary: Record Subject Consent Endpoint
-      description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
-      operationId: Execution_record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consents_post
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectConsentRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectConsentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}/consent:
-    post:
-      summary: Record Subject Consent Endpoint
-      description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
-      operationId: Execution_record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consent_post
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectConsentRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectConsentResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/webhooks/etmf:
-    post:
-      summary: Etmf Completeness Webhook
-      description: Receive and process completeness webhook events from eTMF to update local compliance cache.
-      operationId: Execution_etmf_completeness_webhook_api_v1_execution_webhooks_etmf_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ETMFCompletenessWebhookPayload'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Etmf Completeness Webhook Api V1 Execution Webhooks Etmf Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/sites/{site_id}/activate:
-    post:
-      summary: Activate Site Endpoint
-      description: Attempt site activation in the Execution Engine, validating compliance from the local cache.
-      operationId: Execution_activate_site_endpoint_api_v1_execution_sites__site_id__activate_post
-      parameters:
-      - name: site_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Site Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SiteActivationRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-                title: Response Activate Site Endpoint Api V1 Execution Sites  Site Id  Activate Post
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/sites/{site_id}/compliance-status:
+  /api/v1/dictionaries/meddra/code:
     get:
-      summary: Get Site Compliance Status
-      description: Retrieve site compliance status from the local cache.
-      operationId: Execution_get_site_compliance_status_api_v1_execution_sites__site_id__compliance_status_get
+      tags:
+      - Dictionaries
+      summary: Get Meddra Code
+      description: Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+      operationId: get_meddra_code_api_v1_dictionaries_meddra_code_get
       parameters:
-      - name: site_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Site Id
-      - name: study_id
+      - name: term
         in: query
         required: true
         schema:
           type: string
-          description: The clinical study ID
-          title: Study Id
-        description: The clinical study ID
-      - name: milestone
-        in: query
-        required: false
-        schema:
-          type: string
-          description: The milestone to check
-          default: SITE_ACTIVATION
-          title: Milestone
-        description: The milestone to check
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ComplianceStatusResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}/screening:
-    post:
-      summary: Evaluate And Transition Screening
-      description: Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition.
-      operationId: Execution_evaluate_and_transition_screening_api_v1_execution_subjects__subject_id__screening_post
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      requestBody:
-        content:
-          application/json:
-            schema:
-              anyOf:
-              - $ref: '#/components/schemas/Execution_SubjectScreeningRequest'
-              - type: 'null'
-              title: Payload
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectScreeningResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/subjects/{id}/state:
-    patch:
-      summary: Update Subject State Endpoint
-      operationId: Execution_update_subject_state_endpoint_subjects__id__state_patch
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectStateUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{id}/state:
-    patch:
-      summary: Update Subject State Endpoint
-      operationId: Execution_update_subject_state_endpoint_api_v1_execution_subjects__id__state_patch
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectStateUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/subjects/{id}/demographics:
-    put:
-      summary: Update Subject Demographics Endpoint
-      operationId: Execution_update_subject_demographics_endpoint_subjects__id__demographics_put
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectDemographicsUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    delete:
-      summary: Delete Subject Demographics Endpoint
-      operationId: Execution_delete_subject_demographics_endpoint_subjects__id__demographics_delete
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{id}/demographics:
-    put:
-      summary: Update Subject Demographics Endpoint
-      operationId: Execution_update_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_put
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_SubjectDemographicsUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    delete:
-      summary: Delete Subject Demographics Endpoint
-      operationId: Execution_delete_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_delete
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/visits:
-    post:
-      summary: Create Visit
-      description: Create a new clinical visit.
-      operationId: Execution_create_visit_api_v1_execution_visits_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_VisitCreate'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_VisitResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/subjects/{subject_id}:
-    get:
-      summary: Get Subject Detail
-      description: Retrieve detailed subject information, applying dynamic blinding redaction & site isolation.
-      operationId: Execution_get_subject_detail_api_v1_execution_subjects__subject_id__get
-      parameters:
-      - name: subject_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Subject Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_SubjectDetailResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/visits/{visit_id}:
-    get:
-      summary: Get Visit Detail
-      description: Retrieve detailed visit information, applying dynamic blinding redaction & site isolation.
-      operationId: Execution_get_visit_detail_api_v1_execution_visits__visit_id__get
-      parameters:
-      - name: visit_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Visit Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_VisitDetailResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/observations:
-    post:
-      summary: Create Observation
-      description: CREATE a new clinical observation, performing unit normalization and outlier checks.
-      operationId: Execution_create_observation_api_v1_execution_observations_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_ObservationCreate'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_ObservationResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/unit-conversion:
-    post:
-      summary: Post Unit Conversion Execution
-      description: Translate incoming values using UCUM mapping rules (Execution API).
-      operationId: Execution_post_unit_conversion_execution_api_v1_execution_unit_conversion_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_UnitConversionRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_UnitConversionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      summary: Get Unit Conversion Execution
-      description: Translate incoming values using UCUM mapping rules via GET (Execution API).
-      operationId: Execution_get_unit_conversion_execution_api_v1_execution_unit_conversion_get
-      parameters:
-      - name: value
-        in: query
-        required: true
-        schema:
-          type: number
-          title: Value
-      - name: from_unit
-        in: query
-        required: true
-        schema:
-          type: string
-          title: From Unit
-      - name: to_unit
-        in: query
-        required: true
-        schema:
-          type: string
-          title: To Unit
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_UnitConversionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/dictionary/unit-conversion:
-    post:
-      summary: Post Unit Conversion Dictionary
-      description: Translate incoming values using UCUM mapping rules (Dictionary API).
-      operationId: Execution_post_unit_conversion_dictionary_dictionary_unit_conversion_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_UnitConversionRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_UnitConversionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      summary: Get Unit Conversion Dictionary
-      description: Translate incoming values using UCUM mapping rules via GET (Dictionary API).
-      operationId: Execution_get_unit_conversion_dictionary_dictionary_unit_conversion_get
-      parameters:
-      - name: value
-        in: query
-        required: true
-        schema:
-          type: number
-          title: Value
-      - name: from_unit
-        in: query
-        required: true
-        schema:
-          type: string
-          title: From Unit
-      - name: to_unit
-        in: query
-        required: true
-        schema:
-          type: string
-          title: To Unit
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_UnitConversionResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/outliers/recalculate:
-    post:
-      summary: Trigger Outlier Recalculation
-      description: Trigger cohort-wide outlier recalculation on-demand.
-      operationId: Execution_trigger_outlier_recalculation_api_v1_execution_outliers_recalculate_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_OutlierRecalculateRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_OutlierRecalculateResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/lab-ranges:
-    post:
-      summary: Create Lab Range
-      description: CREATE a new lab reference range, validating all range invariants.
-      operationId: Execution_create_lab_range_api_v1_execution_lab_ranges_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LabReferenceRangeCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    get:
-      summary: List Lab Ranges
-      description: List and filter reference ranges.
-      operationId: Execution_list_lab_ranges_api_v1_execution_lab_ranges_get
-      parameters:
-      - name: study_id
+          title: Term
+      - name: version
         in: query
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
-          title: Study Id
-      - name: test_code
+          default: '26.0'
+          title: Version
+      - name: target_level
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Execution_MedDRATargetLevelEnum'
+          - type: 'null'
+          default: LLT
+          title: Target Level
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_MedDRACodeLookupResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/dictionaries/whodrug/code:
+    get:
+      tags:
+      - Dictionaries
+      summary: Get Whodrug Code
+      description: Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+      operationId: get_whodrug_code_api_v1_dictionaries_whodrug_code_get
+      parameters:
+      - name: term
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Term
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Version
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_WHODrugCodeLookupResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/dictionaries/ucum/convert:
+    post:
+      tags:
+      - Dictionaries
+      summary: Post Ucum Convert
+      description: Standardizes numeric values and verifies scale compatibility between source and target codes.
+      operationId: post_ucum_convert_api_v1_dictionaries_ucum_convert_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_UCUMConvertRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_UCUMConvertResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ProblemDetails'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/coding/impact-analysis:
+    post:
+      tags:
+      - Dictionaries
+      summary: Post Impact Analysis
+      description: Manually triggers up-versioning impact analysis on existing coded assignments.
+      operationId: post_impact_analysis_api_v1_execution_coding_impact_analysis_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ImpactAnalysisRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ImpactAnalysisResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/coding/assignments:
+    get:
+      tags:
+      - Dictionaries
+      summary: List Coding Assignments
+      description: Lists and filters medical coding assignments.
+      operationId: list_coding_assignments_api_v1_execution_coding_assignments_get
+      parameters:
+      - name: observation_id
         in: query
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
-          title: Test Code
-      - name: source
+          title: Observation Id
+      - name: status
         in: query
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
-          title: Source
-      - name: lab_source
+          title: Status
+      - name: verbatim_text
         in: query
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
-          title: Lab Source
-      - name: include_deleted
+          title: Verbatim Text
+      - name: dictionary_type
         in: query
         required: false
         schema:
-          type: boolean
-          default: false
-          title: Include Deleted
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dictionary Type
       responses:
         '200':
           description: Successful Response
@@ -19258,103 +14368,113 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
-                title: Response List Lab Ranges Api V1 Execution Lab Ranges Get
+                  $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
+                title: Response List Coding Assignments Api V1 Execution Coding Assignments Get
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/lab-ranges/{range_id}:
+  /api/v1/execution/coding/assignments/{assignment_id}:
     get:
-      summary: Get Lab Range
-      description: Retrieve a single lab reference range.
-      operationId: Execution_get_lab_range_api_v1_execution_lab_ranges__range_id__get
+      tags:
+      - Dictionaries
+      summary: Get Coding Assignment
+      description: Retrieves a single medical coding assignment by ID.
+      operationId: get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get
       parameters:
-      - name: range_id
+      - name: assignment_id
         in: path
         required: true
         schema:
           type: string
-          title: Range Id
+          title: Assignment Id
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-    put:
-      summary: Update Lab Range
-      description: UPDATE an existing lab reference range, validating all range invariants on the merged state.
-      operationId: Execution_update_lab_range_api_v1_execution_lab_ranges__range_id__put
-      parameters:
-      - name: range_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Range Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_LabReferenceRangeUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-    delete:
-      summary: Delete Lab Range
-      description: Soft-delete a lab reference range by setting is_deleted = True.
-      operationId: Execution_delete_lab_range_api_v1_execution_lab_ranges__range_id__delete
-      parameters:
-      - name: range_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Range Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/lab-ranges/recalculate:
+  /api/v1/execution/coding/assignments/{assignment_id}/suggest:
     post:
-      summary: Trigger Lab Range Recalculation
-      description: Trigger cohort-wide reference range evaluation and recalculation on-demand.
-      operationId: Execution_trigger_lab_range_recalculation_api_v1_execution_lab_ranges_recalculate_post
+      tags:
+      - Dictionaries
+      summary: Post Suggest Coding
+      description: Generates AI Tier 1 semantic coding suggestions for an assignment.
+      operationId: post_suggest_coding_api_v1_execution_coding_assignments__assignment_id__suggest_post
+      parameters:
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Assignment Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/coding/assignments/{assignment_id}/action:
+    post:
+      tags:
+      - Dictionaries
+      summary: Process Coding Action
+      description: Accepts a suggestion or submits a manual override, persisting results and updating the ledger.
+      operationId: process_coding_action_api_v1_execution_coding_assignments__assignment_id__action_post
+      parameters:
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Assignment Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CoderActionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/coding/assignments/batch-assign:
+    post:
+      tags:
+      - Dictionaries
+      summary: Post Batch Assign
+      description: Performs batch medical coding assignment across multiple assignments with GxP audit logging.
+      operationId: post_batch_assign_api_v1_execution_coding_assignments_batch_assign_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Execution_LabRangeRecalculateRequest'
+              $ref: '#/components/schemas/Execution_BatchAssignRequest'
         required: true
       responses:
         '200':
@@ -19362,25 +14482,402 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Execution_LabRangeRecalculateResponse'
+                $ref: '#/components/schemas/Execution_BatchAssignResponse'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/export:
+  /api/v1/execution/coding/assignments/{assignment_id}/raise-query:
+    post:
+      tags:
+      - Dictionaries
+      summary: Post Raise Coding Query
+      description: Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record.
+      operationId: post_raise_coding_query_api_v1_execution_coding_assignments__assignment_id__raise_query_post
+      parameters:
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Assignment Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_RaiseQueryRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_RaiseQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/coding/queue:
     get:
-      summary: Get Cdisc Export Execution
-      description: Export stored clinical subject observations in CDISC ODM XML format (Execution API).
-      operationId: Execution_get_cdisc_export_execution_api_v1_execution_export_get
+      tags:
+      - Dictionaries
+      summary: Get Coding Queue
+      description: Retrieves the active coding queue.
+      operationId: get_coding_queue_api_v1_execution_coding_queue_get
+      parameters:
+      - name: observation_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observation Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: verbatim_text
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Verbatim Text
+      - name: dictionary_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dictionary Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_CodingAssignmentResponse'
+                title: Response Get Coding Queue Api V1 Execution Coding Queue Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/assignment:
+    post:
+      tags:
+      - DOA
+      summary: Add Doa Assignment Endpoint
+      description: 'Add site personnel task delegation entry to Delegation of Authority log.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: add_doa_assignment_endpoint_api_v1_execution_doa_assignment_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_AddDOAAssignmentRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/sign-off:
+    post:
+      tags:
+      - DOA
+      summary: Sign Off Doa Assignment Endpoint
+      description: 'Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: sign_off_doa_assignment_endpoint_api_v1_execution_doa_sign_off_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_DOASignOffRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/log/{study_id}/{site_id}:
+    get:
+      tags:
+      - DOA
+      summary: Get Site Doa Log Endpoint
+      description: 'Retrieve site-isolated Delegation of Authority log entries.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: get_site_doa_log_endpoint_api_v1_execution_doa_log__study_id___site_id__get
       parameters:
       - name: study_id
-        in: query
+        in: path
         required: true
         schema:
           type: string
           title: Study Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_DOAAssignmentRecord'
+                title: Response Get Site Doa Log Endpoint Api V1 Execution Doa Log  Study Id   Site Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/delegate:
+    post:
+      tags:
+      - DOA
+      summary: Delegate Task Endpoint
+      operationId: delegate_task_endpoint_api_v1_execution_doa_delegate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_DelegateTaskRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/endorse:
+    post:
+      tags:
+      - DOA
+      summary: Approve Delegation Endpoint
+      operationId: approve_delegation_endpoint_api_v1_execution_doa_endorse_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ApproveDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/endorse_task:
+    post:
+      tags:
+      - DOA
+      summary: Approve Task Endpoint
+      operationId: approve_task_endpoint_api_v1_execution_doa_endorse_task_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ApproveTaskDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/revoke:
+    post:
+      tags:
+      - DOA
+      summary: Revoke Delegation Endpoint
+      operationId: revoke_delegation_endpoint_api_v1_execution_doa_revoke_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_RevokeDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/staff:
+    post:
+      tags:
+      - DOA
+      summary: Create Staff Endpoint
+      operationId: create_staff_endpoint_api_v1_execution_doa_staff_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SiteStaffMemberRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SiteStaffMemberResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/doa/audit-logs:
+    get:
+      tags:
+      - DOA
+      summary: Get Audit Logs Endpoint
+      operationId: get_audit_logs_endpoint_api_v1_execution_doa_audit_logs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Execution_DOAAuditLogResponse'
+                type: array
+                title: Response Get Audit Logs Endpoint Api V1 Execution Doa Audit Logs Get
+  /api/v1/execution/doa/delegations:
+    get:
+      tags:
+      - DOA
+      summary: Get Delegations Endpoint
+      operationId: get_delegations_endpoint_api_v1_execution_doa_delegations_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Execution_DOADelegationRecordResponse'
+                type: array
+                title: Response Get Delegations Endpoint Api V1 Execution Doa Delegations Get
+  /api/v1/documents/upload:
+    post:
+      tags:
+      - Documents
+      summary: Upload Document
+      description: 'Upload regulated document, compute SHA-256 hash, and record GxP audit trail.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: upload_document_api_v1_documents_upload_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Execution_Body_upload_document_api_v1_documents_upload_post'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DocumentUploadResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/documents/{doc_id}:
+    get:
+      tags:
+      - Documents
+      summary: Download Document
+      description: 'Stream file content with dynamic watermarking.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: download_document_api_v1_documents__doc_id__get
+      parameters:
+      - name: doc_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Doc Id
       responses:
         '200':
           description: Successful Response
@@ -19393,18 +14890,350 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/dictionary/export:
+  /api/v1/documents/{doc_id}/versions:
     get:
-      summary: Get Cdisc Export Dictionary
-      description: Export stored clinical subject observations in CDISC ODM XML format (Dictionary API).
-      operationId: Execution_get_cdisc_export_dictionary_dictionary_export_get
+      tags:
+      - Documents
+      summary: List Document Versions
+      description: 'RETURN complete version history list.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: list_document_versions_api_v1_documents__doc_id__versions_get
+      parameters:
+      - name: doc_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Doc Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_DocumentMetadataResponse'
+                title: Response List Document Versions Api V1 Documents  Doc Id  Versions Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/eisf/upload:
+    post:
+      tags:
+      - eISF
+      summary: Upload Eisf Document Endpoint
+      description: 'Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: upload_eisf_document_endpoint_api_v1_execution_eisf_upload_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_UploadEISFDocumentRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_EISFDocumentRecord'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/eisf/binder/{study_id}/{site_id}:
+    get:
+      tags:
+      - eISF
+      summary: Get Site Regulatory Binder Endpoint
+      description: 'Retrieve site-isolated regulatory binder documents for specified study and site.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: get_site_regulatory_binder_endpoint_api_v1_execution_eisf_binder__study_id___site_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_EISFDocumentRecord'
+                title: Response Get Site Regulatory Binder Endpoint Api V1 Execution Eisf Binder  Study Id   Site Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/biostat/sdtm/{domain}:
+    get:
+      tags:
+      - CDISC Exports
+      summary: Export Sdtm Domain
+      description: Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.
+      operationId: export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Domain
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: The unique study identifier
+          title: Study Id
+        description: The unique study identifier
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Target export format: json, xpt, odm, csv'
+          default: json
+          title: Format
+        description: 'Target export format: json, xpt, odm, csv'
+      - name: version
+        in: query
+        required: false
+        schema:
+          type: string
+          description: SAS XPT version if format is xpt (v5 or v8)
+          default: v5
+          title: Version
+        description: SAS XPT version if format is xpt (v5 or v8)
+      - name: privacy_profile
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+          default: SAFE_HARBOR
+          title: Privacy Profile
+        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+      - name: salt
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: HMAC pseudonymization salt
+          title: Salt
+        description: HMAC pseudonymization salt
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/biostat/adam/{dataset}:
+    get:
+      tags:
+      - CDISC Exports
+      summary: Export Adam Dataset
+      description: Exports ADaM dataset data (ADSL, ADAE, ADVS) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.
+      operationId: export_adam_dataset_api_v1_execution_biostat_adam__dataset__get
+      parameters:
+      - name: dataset
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: The unique study identifier
+          title: Study Id
+        description: The unique study identifier
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Target export format: json, xpt, odm, csv'
+          default: json
+          title: Format
+        description: 'Target export format: json, xpt, odm, csv'
+      - name: version
+        in: query
+        required: false
+        schema:
+          type: string
+          description: SAS XPT version if format is xpt (v5 or v8)
+          default: v5
+          title: Version
+        description: SAS XPT version if format is xpt (v5 or v8)
+      - name: privacy_profile
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+          default: SAFE_HARBOR
+          title: Privacy Profile
+        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+      - name: salt
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: HMAC pseudonymization salt
+          title: Salt
+        description: HMAC pseudonymization salt
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/biostat/bundle:
+    get:
+      tags:
+      - CDISC Exports
+      summary: Export Biostat Bundle
+      description: Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML.
+      operationId: export_biostat_bundle_api_v1_execution_biostat_bundle_get
       parameters:
       - name: study_id
         in: query
         required: true
         schema:
           type: string
+          description: The unique study identifier
           title: Study Id
+        description: The unique study identifier
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Target export format: json, zip, csv_zip, odm'
+          default: json
+          title: Format
+        description: 'Target export format: json, zip, csv_zip, odm'
+      - name: privacy_profile
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+          default: SAFE_HARBOR
+          title: Privacy Profile
+        description: 'Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED'
+      - name: salt
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: HMAC pseudonymization salt
+          title: Salt
+        description: HMAC pseudonymization salt
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/exports/wizard:
+    post:
+      tags:
+      - CDISC Exports
+      summary: Execute Export Wizard
+      description: Executes a parameterized export job from the Regulatory Export Wizard.
+      operationId: execute_export_wizard_api_v1_execution_exports_wizard_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ExportBundleRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Response Execute Export Wizard Api V1 Execution Exports Wizard Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/export:
+    get:
+      tags:
+      - CDISC Exports
+      summary: Export Study Cdisc Odm Xml
+      description: Export all study observations, subjects, visits, and forms as CDISC ODM XML.
+      operationId: export_study_cdisc_odm_xml_api_v1_execution_export_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: The clinical study ID to export
+          title: Study Id
+        description: The clinical study ID to export
       responses:
         '200':
           description: Successful Response
@@ -19417,11 +15246,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/form-submissions:
+  /api/v1/execution/form-submissions:
     post:
+      tags:
+      - Forms
       summary: Create Form Submission
       description: Create a new FormSubmission in DRAFT status.
-      operationId: Execution_create_form_submission_api_v1_execution_form_submissions_post
+      operationId: create_form_submission_api_v1_execution_form_submissions_post
       requestBody:
         required: true
         content:
@@ -19442,9 +15273,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
     get:
+      tags:
+      - Forms
       summary: List Form Submissions
       description: List form submissions with filters.
-      operationId: Execution_list_form_submissions_api_v1_execution_form_submissions_get
+      operationId: list_form_submissions_api_v1_execution_form_submissions_get
       parameters:
       - name: study_id
         in: query
@@ -19501,11 +15334,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/form-submissions/{submission_id}/complete:
+  /api/v1/execution/form-submissions/{submission_id}/complete:
     post:
+      tags:
+      - Forms
       summary: Complete Form Submission
       description: Transition a FormSubmission from DRAFT to COMPLETED.
-      operationId: Execution_complete_form_submission_api_v1_execution_form_submissions__submission_id__complete_post
+      operationId: complete_form_submission_api_v1_execution_form_submissions__submission_id__complete_post
       parameters:
       - name: submission_id
         in: path
@@ -19526,11 +15361,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/form-submissions/{submission_id}/approve:
+  /api/v1/execution/form-submissions/{submission_id}/approve:
     post:
+      tags:
+      - Forms
       summary: Approve Form Submission
       description: PI Approve/Sign-off a completed FormSubmission.
-      operationId: Execution_approve_form_submission_api_v1_execution_form_submissions__submission_id__approve_post
+      operationId: approve_form_submission_api_v1_execution_form_submissions__submission_id__approve_post
       parameters:
       - name: submission_id
         in: path
@@ -19557,11 +15394,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/batch-sign-off:
+  /api/v1/execution/batch-sign-off:
     post:
+      tags:
+      - Forms
       summary: Post Batch Sign Off
       description: Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off.
-      operationId: Execution_post_batch_sign_off_api_v1_execution_batch_sign_off_post
+      operationId: post_batch_sign_off_api_v1_execution_batch_sign_off_post
       requestBody:
         content:
           application/json:
@@ -19581,11 +15420,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/form-submissions/{submission_id}:
+  /api/v1/execution/form-submissions/{submission_id}:
     get:
+      tags:
+      - Forms
       summary: Get Form Submission
       description: Retrieve a single form submission by ID.
-      operationId: Execution_get_form_submission_api_v1_execution_form_submissions__submission_id__get
+      operationId: get_form_submission_api_v1_execution_form_submissions__submission_id__get
       parameters:
       - name: submission_id
         in: path
@@ -19606,11 +15447,782 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/site/{site_id}/freeze:
+  /api/v1/execution/labs/ingest:
     post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Ingest Lab Batch Endpoint
+      description: Ingest central or local laboratory batch data (CSV, HL7 v2.x, FHIR JSON, CDISC LAB, or Local Manual).
+      operationId: ingest_lab_batch_endpoint_api_v1_execution_labs_ingest_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabBatchIngestResult'
+  /api/v1/execution/labs/batch-status:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Get Batch Status Endpoint
+      description: Retrieve status and metrics for previous lab batch ingestion jobs.
+      operationId: get_batch_status_endpoint_api_v1_execution_labs_batch_status_get
+      parameters:
+      - name: batch_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional batch ID to query
+          title: Batch Id
+        description: Optional batch ID to query
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional study ID filter
+          title: Study Id
+        description: Optional study ID filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/Execution_LabBatchIngestResult'
+                - $ref: '#/components/schemas/Execution_LabBatchIngestResult'
+                title: Response Get Batch Status Endpoint Api V1 Execution Labs Batch Status Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/batch-status/{batch_id}:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Get Batch Status By Id Endpoint
+      description: Query execution status and statistics of a specific laboratory batch by ID.
+      operationId: get_batch_status_by_id_endpoint_api_v1_execution_labs_batch_status__batch_id__get
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabBatchIngestResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/certifications:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Create Local Lab Certification
+      description: Register or update a local site laboratory regulatory certification (CLIA, CAP, ISO 15189).
+      operationId: create_local_lab_certification_api_v1_execution_labs_certifications_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LocalLabCertificationCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: List Local Lab Certifications
+      description: Retrieve laboratory accreditation certifications across sites.
+      operationId: list_local_lab_certifications_api_v1_execution_labs_certifications_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by site ID
+          title: Site Id
+        description: Filter by site ID
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by certification status
+          title: Status
+        description: Filter by certification status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
+                title: Response List Local Lab Certifications Api V1 Execution Labs Certifications Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/certifications/{cert_id}:
+    put:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Update Local Lab Certification
+      description: Update certification credentials and renewal dates for a specific site lab.
+      operationId: update_local_lab_certification_api_v1_execution_labs_certifications__cert_id__put
+      parameters:
+      - name: cert_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Cert Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LocalLabCertificationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LocalLabCertificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/certifications/{site_id}/verify:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Verify Local Lab Certification Gate
+      description: Pre-flight GxP verification check validating that an active lab certification is in place.
+      operationId: verify_local_lab_certification_gate_api_v1_execution_labs_certifications__site_id__verify_post
+      parameters:
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/certifications/verify:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Verify Local Lab Certification Gate
+      description: Pre-flight GxP verification check validating that an active lab certification is in place.
+      operationId: verify_local_lab_certification_gate_api_v1_execution_labs_certifications_verify_post
+      parameters:
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LocalLabCertificationVerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/toxicity/review-queue:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: List Staged Ae Review Queue
+      description: Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.
+      operationId: list_staged_ae_review_queue_api_v1_execution_labs_toxicity_review_queue_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by site ID
+          title: Site Id
+        description: Filter by site ID
+      - name: review_status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
+          default: STAGED_FOR_INVESTIGATOR_REVIEW
+          title: Review Status
+        description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_StagedAdverseEventReviewResponse'
+                title: Response List Staged Ae Review Queue Api V1 Execution Labs Toxicity Review Queue Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/toxicity/review/{review_id}/action:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Action Staged Ae Review
+      description: Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).
+      operationId: action_staged_ae_review_api_v1_execution_labs_toxicity_review__review_id__action_post
+      parameters:
+      - name: review_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Review Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_StagedAdverseEventActionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_StagedAdverseEventActionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/toxicity/evaluate:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Evaluate Lab Toxicity Endpoint
+      description: Evaluate CTCAE v5.0 Grade, Hy's Law criteria, and delta checks for a single lab observation.
+      operationId: evaluate_lab_toxicity_endpoint_api_v1_execution_labs_toxicity_evaluate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LabToxicityEvaluateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabToxicityEvaluateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/labs/loinc-catalog:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Get Loinc Catalog Endpoint
+      description: Return dictionary of standardized LOINC mappings and CDISC Biomedical Concept bindings.
+      operationId: get_loinc_catalog_endpoint_api_v1_execution_labs_loinc_catalog_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LoincCatalogResponse'
+  /api/v1/execution/labs/convert-unit:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Convert Unit Endpoint
+      description: Convert laboratory measurement between conventional and SI units.
+      operationId: convert_unit_endpoint_api_v1_execution_labs_convert_unit_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LoincConvertRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LoincConvertResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/lab-ranges:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Create Lab Range
+      description: Create a new lab reference range.
+      operationId: create_lab_range_api_v1_execution_lab_ranges_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LabReferenceRangeCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: List Lab Ranges
+      description: List lab reference ranges matching filters.
+      operationId: list_lab_ranges_api_v1_execution_lab_ranges_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: test_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by test code
+          title: Test Code
+        description: Filter by test code
+      - name: source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by source
+          title: Source
+        description: Filter by source
+      - name: lab_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by lab source
+          title: Lab Source
+        description: Filter by lab source
+      - name: include_deleted
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Include deleted ranges
+          default: false
+          title: Include Deleted
+        description: Include deleted ranges
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+                title: Response List Lab Ranges Api V1 Execution Lab Ranges Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/lab-ranges/{range_id}:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Get Lab Range
+      description: Retrieve a single lab reference range.
+      operationId: get_lab_range_api_v1_execution_lab_ranges__range_id__get
+      parameters:
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    put:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Update Lab Range
+      description: Update an existing lab reference range.
+      operationId: update_lab_range_api_v1_execution_lab_ranges__range_id__put
+      parameters:
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LabReferenceRangeUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    delete:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Delete Lab Range
+      description: Soft-delete a lab reference range by setting is_deleted = True.
+      operationId: delete_lab_range_api_v1_execution_lab_ranges__range_id__delete
+      parameters:
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabReferenceRangeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/lab-ranges/recalculate:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Trigger Lab Range Recalculation
+      description: Trigger cohort-wide reference range evaluation and recalculation on-demand.
+      operationId: trigger_lab_range_recalculation_api_v1_execution_lab_ranges_recalculate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LabRangeRecalculateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LabRangeRecalculateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/locks/lock:
+    post:
+      tags:
+      - DataLock
+      summary: Lock Data Endpoint
+      description: 'Execute study, site, subject, visit, form, or field-level data lock or freeze operation.
+
+
+        Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17'
+      operationId: lock_data_endpoint_api_v1_execution_locks_lock_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_DataLockRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DataLockResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/locks/unlock:
+    post:
+      tags:
+      - DataLock
+      summary: Unlock Data Endpoint
+      description: 'Execute GxP data unlock override operation enforcing >= 50 chars justification.
+
+
+        Requirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17'
+      operationId: unlock_data_endpoint_api_v1_execution_locks_unlock_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_DataLockRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_DataLockResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/locks/status/{form_id}:
+    get:
+      tags:
+      - DataLock
+      summary: Get Form Lock Status Endpoint
+      description: 'Retrieve active data locks for specified eCRF form submission.
+
+
+        Requirements: PRD-SYS-001, Trace-1, Trace-17'
+      operationId: get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get
+      parameters:
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_DataLockRecord'
+                title: Response Get Form Lock Status Endpoint Api V1 Execution Locks Status  Form Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/locks:
+    get:
+      tags:
+      - DataLock
+      summary: Get Lock Status
+      description: Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial.
+      operationId: get_lock_status_api_v1_execution_locks_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LockStatusResponse'
+  /api/v1/execution/locks/tree:
+    get:
+      tags:
+      - DataLock
+      summary: Get Lock Hierarchy Tree Endpoint
+      description: Retrieve complete lock status tree across Study -> Sites -> Subjects -> Visits -> Forms hierarchy.
+      operationId: get_lock_hierarchy_tree_endpoint_api_v1_execution_locks_tree_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Study ID to query
+          default: STUDY-001
+          title: Study Id
+        description: Study ID to query
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Lock Hierarchy Tree Endpoint Api V1 Execution Locks Tree Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/locks/site/{site_id}/freeze:
+    post:
+      tags:
+      - DataLock
       summary: Lock Site Endpoint
       description: Locks or freezes a specific site.
-      operationId: Execution_lock_site_endpoint_api_v1_execution_locks_site__site_id__freeze_post
+      operationId: lock_site_endpoint_api_v1_execution_locks_site__site_id__freeze_post
       parameters:
       - name: site_id
         in: path
@@ -19634,11 +16246,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/site/{site_id}/lock:
+  /api/v1/execution/locks/site/{site_id}/lock:
     post:
+      tags:
+      - DataLock
       summary: Lock Site Endpoint
       description: Locks or freezes a specific site.
-      operationId: Execution_lock_site_endpoint_api_v1_execution_locks_site__site_id__lock_post
+      operationId: lock_site_endpoint_api_v1_execution_locks_site__site_id__lock_post
       parameters:
       - name: site_id
         in: path
@@ -19662,11 +16276,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/site/{site_id}/unfreeze:
+  /api/v1/execution/locks/site/{site_id}/unfreeze:
     post:
+      tags:
+      - DataLock
       summary: Unlock Site Endpoint
       description: Unlocks or unfreezes a specific site.
-      operationId: Execution_unlock_site_endpoint_api_v1_execution_locks_site__site_id__unfreeze_post
+      operationId: unlock_site_endpoint_api_v1_execution_locks_site__site_id__unfreeze_post
       parameters:
       - name: site_id
         in: path
@@ -19690,11 +16306,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/site/{site_id}/unlock:
+  /api/v1/execution/locks/site/{site_id}/unlock:
     post:
+      tags:
+      - DataLock
       summary: Unlock Site Endpoint
       description: Unlocks or unfreezes a specific site.
-      operationId: Execution_unlock_site_endpoint_api_v1_execution_locks_site__site_id__unlock_post
+      operationId: unlock_site_endpoint_api_v1_execution_locks_site__site_id__unlock_post
       parameters:
       - name: site_id
         in: path
@@ -19718,11 +16336,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/visit/{visit_id}/freeze:
+  /api/v1/execution/locks/visit/{visit_id}/freeze:
     post:
+      tags:
+      - DataLock
       summary: Lock Visit Endpoint
       description: Locks or freezes a specific visit.
-      operationId: Execution_lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__freeze_post
+      operationId: lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__freeze_post
       parameters:
       - name: visit_id
         in: path
@@ -19746,11 +16366,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/visit/{visit_id}/lock:
+  /api/v1/execution/locks/visit/{visit_id}/lock:
     post:
+      tags:
+      - DataLock
       summary: Lock Visit Endpoint
       description: Locks or freezes a specific visit.
-      operationId: Execution_lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__lock_post
+      operationId: lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__lock_post
       parameters:
       - name: visit_id
         in: path
@@ -19774,11 +16396,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/visit/{visit_id}/unfreeze:
+  /api/v1/execution/locks/visit/{visit_id}/unfreeze:
     post:
+      tags:
+      - DataLock
       summary: Unlock Visit Endpoint
       description: Unlocks or unfreezes a specific visit.
-      operationId: Execution_unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unfreeze_post
+      operationId: unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unfreeze_post
       parameters:
       - name: visit_id
         in: path
@@ -19802,11 +16426,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/visit/{visit_id}/unlock:
+  /api/v1/execution/locks/visit/{visit_id}/unlock:
     post:
+      tags:
+      - DataLock
       summary: Unlock Visit Endpoint
       description: Unlocks or unfreezes a specific visit.
-      operationId: Execution_unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unlock_post
+      operationId: unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unlock_post
       parameters:
       - name: visit_id
         in: path
@@ -19830,11 +16456,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/form/{form_id}/freeze:
+  /api/v1/execution/locks/form/{form_id}/freeze:
     post:
+      tags:
+      - DataLock
       summary: Lock Form Endpoint
       description: Locks or freezes a specific form.
-      operationId: Execution_lock_form_endpoint_api_v1_execution_locks_form__form_id__freeze_post
+      operationId: lock_form_endpoint_api_v1_execution_locks_form__form_id__freeze_post
       parameters:
       - name: form_id
         in: path
@@ -19858,11 +16486,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/form/{form_id}/lock:
+  /api/v1/execution/locks/form/{form_id}/lock:
     post:
+      tags:
+      - DataLock
       summary: Lock Form Endpoint
       description: Locks or freezes a specific form.
-      operationId: Execution_lock_form_endpoint_api_v1_execution_locks_form__form_id__lock_post
+      operationId: lock_form_endpoint_api_v1_execution_locks_form__form_id__lock_post
       parameters:
       - name: form_id
         in: path
@@ -19886,11 +16516,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/form/{form_id}/unfreeze:
+  /api/v1/execution/locks/form/{form_id}/unfreeze:
     post:
+      tags:
+      - DataLock
       summary: Unlock Form Endpoint
       description: Unlocks or unfreezes a specific form.
-      operationId: Execution_unlock_form_endpoint_api_v1_execution_locks_form__form_id__unfreeze_post
+      operationId: unlock_form_endpoint_api_v1_execution_locks_form__form_id__unfreeze_post
       parameters:
       - name: form_id
         in: path
@@ -19914,11 +16546,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/form/{form_id}/unlock:
+  /api/v1/execution/locks/form/{form_id}/unlock:
     post:
+      tags:
+      - DataLock
       summary: Unlock Form Endpoint
       description: Unlocks or unfreezes a specific form.
-      operationId: Execution_unlock_form_endpoint_api_v1_execution_locks_form__form_id__unlock_post
+      operationId: unlock_form_endpoint_api_v1_execution_locks_form__form_id__unlock_post
       parameters:
       - name: form_id
         in: path
@@ -19942,11 +16576,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/subject/{subject_id}/freeze:
+  /api/v1/execution/locks/subject/{subject_id}/freeze:
     post:
+      tags:
+      - DataLock
       summary: Lock Subject Endpoint
       description: Locks or freezes a specific subject.
-      operationId: Execution_lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__freeze_post
+      operationId: lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__freeze_post
       parameters:
       - name: subject_id
         in: path
@@ -19970,11 +16606,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/subject/{subject_id}/lock:
+  /api/v1/execution/locks/subject/{subject_id}/lock:
     post:
+      tags:
+      - DataLock
       summary: Lock Subject Endpoint
       description: Locks or freezes a specific subject.
-      operationId: Execution_lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__lock_post
+      operationId: lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__lock_post
       parameters:
       - name: subject_id
         in: path
@@ -19998,11 +16636,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/subject/{subject_id}/unfreeze:
+  /api/v1/execution/locks/subject/{subject_id}/unfreeze:
     post:
+      tags:
+      - DataLock
       summary: Unlock Subject Endpoint
       description: Unlocks or unfreezes a specific subject.
-      operationId: Execution_unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unfreeze_post
+      operationId: unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unfreeze_post
       parameters:
       - name: subject_id
         in: path
@@ -20026,11 +16666,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/subject/{subject_id}/unlock:
+  /api/v1/execution/locks/subject/{subject_id}/unlock:
     post:
+      tags:
+      - DataLock
       summary: Unlock Subject Endpoint
       description: Unlocks or unfreezes a specific subject.
-      operationId: Execution_unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unlock_post
+      operationId: unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unlock_post
       parameters:
       - name: subject_id
         in: path
@@ -20054,11 +16696,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/locks/trial/freeze:
+  /api/v1/execution/locks/trial/freeze:
     post:
+      tags:
+      - DataLock
       summary: Lock Trial Endpoint
       description: Locks or freezes the trial/study.
-      operationId: Execution_lock_trial_endpoint_api_v1_execution_locks_trial_freeze_post
+      operationId: lock_trial_endpoint_api_v1_execution_locks_trial_freeze_post
       responses:
         '200':
           description: Successful Response
@@ -20069,11 +16713,13 @@ paths:
                   type: string
                 type: object
                 title: Response Lock Trial Endpoint Api V1 Execution Locks Trial Freeze Post
-  /execution/api/v1/execution/locks/trial/lock:
+  /api/v1/execution/locks/trial/lock:
     post:
+      tags:
+      - DataLock
       summary: Lock Trial Endpoint
       description: Locks or freezes the trial/study.
-      operationId: Execution_lock_trial_endpoint_api_v1_execution_locks_trial_lock_post
+      operationId: lock_trial_endpoint_api_v1_execution_locks_trial_lock_post
       responses:
         '200':
           description: Successful Response
@@ -20084,11 +16730,13 @@ paths:
                   type: string
                 type: object
                 title: Response Lock Trial Endpoint Api V1 Execution Locks Trial Lock Post
-  /execution/api/v1/execution/locks/trial/unfreeze:
+  /api/v1/execution/locks/trial/unfreeze:
     post:
+      tags:
+      - DataLock
       summary: Unlock Trial Endpoint
       description: Unlocks or unfreezes the trial/study.
-      operationId: Execution_unlock_trial_endpoint_api_v1_execution_locks_trial_unfreeze_post
+      operationId: unlock_trial_endpoint_api_v1_execution_locks_trial_unfreeze_post
       responses:
         '200':
           description: Successful Response
@@ -20099,11 +16747,13 @@ paths:
                   type: string
                 type: object
                 title: Response Unlock Trial Endpoint Api V1 Execution Locks Trial Unfreeze Post
-  /execution/api/v1/execution/locks/trial/unlock:
+  /api/v1/execution/locks/trial/unlock:
     post:
+      tags:
+      - DataLock
       summary: Unlock Trial Endpoint
       description: Unlocks or unfreezes the trial/study.
-      operationId: Execution_unlock_trial_endpoint_api_v1_execution_locks_trial_unlock_post
+      operationId: unlock_trial_endpoint_api_v1_execution_locks_trial_unlock_post
       responses:
         '200':
           description: Successful Response
@@ -20114,16 +16764,2054 @@ paths:
                   type: string
                 type: object
                 title: Response Unlock Trial Endpoint Api V1 Execution Locks Trial Unlock Post
-  /execution/api/v1/execution/rtsm/dispense:
+  /api/v1/execution/observations:
     post:
+      tags:
+      - Observations
+      summary: Create Observation
+      description: CREATE a new clinical observation, performing unit normalization and outlier checks.
+      operationId: create_observation_api_v1_execution_observations_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ObservationCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ObservationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /unit-conversion:
+    post:
+      tags:
+      - Observations
+      summary: Post Unit Conversion Execution
+      description: Translate incoming values using UCUM mapping rules (Execution API).
+      operationId: post_unit_conversion_execution_unit_conversion_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_UnitConversionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_UnitConversionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - Observations
+      summary: Get Unit Conversion Execution
+      description: Translate incoming values using UCUM mapping rules via GET (Execution API).
+      operationId: get_unit_conversion_execution_unit_conversion_get
+      parameters:
+      - name: value
+        in: query
+        required: true
+        schema:
+          type: number
+          title: Value
+      - name: from_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: From Unit
+      - name: to_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: To Unit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_UnitConversionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/outliers/recalculate:
+    post:
+      tags:
+      - Observations
+      summary: Trigger Outlier Recalculation
+      description: Trigger cohort-wide outlier recalculation on-demand.
+      operationId: trigger_outlier_recalculation_api_v1_execution_outliers_recalculate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_OutlierRecalculateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_OutlierRecalculateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/offline/sync-batch:
+    post:
+      tags:
+      - Offline Sync
+      summary: Sync Offline Batch
+      description: 'Ingest batch of queued offline eCRF/ePRO deltas idempotently.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: sync_offline_batch_api_v1_offline_sync_batch_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_OfflineBatchSyncRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_OfflineBatchSyncResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/offline/sync:
+    post:
+      tags:
+      - Offline Sync
+      summary: Offline Sync Endpoint
+      description: 'Synchronize queued offline delta transactions.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: offline_sync_endpoint_api_v1_execution_offline_sync_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+              title: Payload
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Offline Sync Endpoint Api V1 Execution Offline Sync Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries:
+    get:
+      tags:
+      - Queries
+      summary: List Queries
+      description: Retrieve a list of clinical queries with optional filtering.
+      operationId: list_queries_api_v1_execution_queries_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+      - name: subject_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+      - name: visit_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+                title: Response List Queries Api V1 Execution Queries Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    post:
+      tags:
+      - Queries
+      summary: Open Query
+      description: Raise a new clinical query on a specific field coordinate.
+      operationId: open_query_api_v1_execution_queries_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_QueryCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/{query_id}:
+    get:
+      tags:
+      - Queries
+      summary: Get Query
+      description: Query a single clinical query by ID, returning its full audit history.
+      operationId: get_query_api_v1_execution_queries__query_id__get
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    patch:
+      tags:
+      - Queries
+      summary: Update Query State
+      description: Transition a query through the designated state sequence and perform role checks.
+      operationId: update_query_state_api_v1_execution_queries__query_id__patch
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_QueryUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/{query_id}/respond:
+    post:
+      tags:
+      - Queries
+      summary: Respond Query
+      description: Submit an investigator response/answer to an open or reopened clinical query.
+      operationId: respond_query_api_v1_execution_queries__query_id__respond_post
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_QueryRespond'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/{query_id}/close:
+    post:
+      tags:
+      - Queries
+      summary: Close Query
+      description: Close an answered query (resolving the discrepancy loop).
+      operationId: close_query_api_v1_execution_queries__query_id__close_post
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/{query_id}/reopen:
+    post:
+      tags:
+      - Queries
+      summary: Reopen Query
+      description: Reopen an answered or closed clinical query for further clarification.
+      operationId: reopen_query_api_v1_execution_queries__query_id__reopen_post
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/Execution_QueryReopen'
+              - type: 'null'
+              title: Payload
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/{query_id}/cancel:
+    post:
+      tags:
+      - Queries
+      summary: Cancel Query
+      description: Cancel a clinical query raised in error.
+      operationId: cancel_query_api_v1_execution_queries__query_id__cancel_post
+      parameters:
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_QueryCancel'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ClinicalQueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/sync:
+    post:
+      tags:
+      - Queries
+      summary: Sync Queries
+      description: Synchronize clinical query local ledger blocks to the target database.
+      operationId: sync_queries_api_v1_execution_queries_sync_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SyncRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Sync Queries Api V1 Execution Queries Sync Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/randomize:
+    post:
+      tags:
+      - Randomization
+      summary: Randomize Subject Endpoint
+      description: Execute GxP compliant subject randomization allocation and block-index advancement.
+      operationId: randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectRandomizationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/hierarchy:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Supply Hierarchy Endpoint
+      description: Returns the complete multi-echelon supply hierarchy tree and stock rollup for a study.
+      operationId: get_supply_hierarchy_endpoint_api_v1_execution_rtsm_hierarchy_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_MultiEchelonRollup'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/nodes:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Create Supply Node Endpoint
+      description: Registers or updates a supply node in the clinical supply hierarchy.
+      operationId: create_supply_node_endpoint_api_v1_execution_rtsm_nodes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SupplyNodeCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SupplyNodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/nodes/{node_id}/inventory:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Node Inventory Endpoint
+      description: Lists inventory records and stock levels for a specific supply node.
+      operationId: get_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_get
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Node Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_SupplyNodeInventoryResponse'
+                title: Response Get Node Inventory Endpoint Api V1 Execution Rtsm Nodes  Node Id  Inventory Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/nodes/{node_id}/inventory/adjust:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Adjust Node Inventory Endpoint
+      description: Adjusts or initializes stock levels for a supply node.
+      operationId: adjust_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_adjust_post
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Node Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SupplyNodeInventoryAdjustRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SupplyNodeInventoryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/forecast/site:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Forecast Site Resupply Endpoint
+      description: Executes a predictive demand and resupply forecast for a clinical site.
+      operationId: forecast_site_resupply_endpoint_api_v1_execution_rtsm_forecast_site_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_PredictiveForecastRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_PredictiveForecastResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/forecast/study:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Forecast Study Resupply Endpoint
+      description: Generates concurrent predictive forecasts across all active clinical sites in a study.
+      operationId: forecast_study_resupply_endpoint_api_v1_execution_rtsm_forecast_study_post
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: horizon_days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 365
+          minimum: 7
+          default: 60
+          title: Horizon Days
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_PredictiveForecastResponse'
+                title: Response Forecast Study Resupply Endpoint Api V1 Execution Rtsm Forecast Study Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/transfer-orders:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Create Transfer Order Endpoint
+      description: Creates a stock transfer order between supply nodes.
+      operationId: create_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TransferOrderCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TransferOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Transfer Orders Endpoint
+      description: Lists active transfer orders with optional filtering.
+      operationId: list_transfer_orders_endpoint_api_v1_execution_rtsm_transfer_orders_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: source_node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Node Id
+      - name: destination_node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Destination Node Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_TransferOrderResponse'
+                title: Response List Transfer Orders Endpoint Api V1 Execution Rtsm Transfer Orders Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/transfer-orders/{order_id}/approve:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Approve Transfer Order Endpoint
+      description: Approves a transfer order for warehouse packing.
+      operationId: approve_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__approve_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TransferOrderApprovalRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TransferOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/transfer-orders/{order_id}/manifest:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Generate Packing Manifest Endpoint
+      description: Generates a formal GxP packing manifest binding serialized kits to an approved transfer order.
+      operationId: generate_packing_manifest_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__manifest_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_PackingManifestCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_PackingManifestResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/transfer-orders/{order_id}/ship:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Ship Transfer Order Endpoint
+      description: Marks a transfer order shipped, moves inventory to in-transit, and dispatches depot notification.
+      operationId: ship_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__ship_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TransferOrderShipRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TransferOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/transfer-orders/{order_id}/receive:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Receive Transfer Order Endpoint
+      description: Marks a transfer order delivered/received at destination node, transferring in-transit stock to on-hand.
+      operationId: receive_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__receive_post
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TransferOrderReceiveRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TransferOrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/stability-budgets:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Create Stability Budget Endpoint
+      description: Configures allowable thermal excursion limits and Arrhenius activation parameters for a kit type or lot.
+      operationId: create_stability_budget_endpoint_api_v1_execution_rtsm_stability_budgets_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_StabilityBudgetCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_StabilityBudgetResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Stability Budgets Endpoint
+      description: Lists defined drug stability budgets for a clinical study.
+      operationId: list_stability_budgets_endpoint_api_v1_execution_rtsm_stability_budgets_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_StabilityBudgetResponse'
+                title: Response List Stability Budgets Endpoint Api V1 Execution Rtsm Stability Budgets Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cold-chain/loggers:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Register Temperature Logger Endpoint
+      description: Registers a temperature data logger device bound to a shipment or storage facility.
+      operationId: register_temperature_logger_endpoint_api_v1_execution_rtsm_cold_chain_loggers_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TemperatureLoggerRegisterRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TemperatureLoggerResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Temperature Loggers Endpoint
+      description: Lists registered temperature loggers for a study.
+      operationId: list_temperature_loggers_endpoint_api_v1_execution_rtsm_cold_chain_loggers_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_TemperatureLoggerResponse'
+                title: Response List Temperature Loggers Endpoint Api V1 Execution Rtsm Cold Chain Loggers Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cold-chain/ingest:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Ingest Temperature Logger File Endpoint
+      description: Ingests a digital logger file (CSV, XML, JSON), calculates Arrhenius MKT, and enforces automated kit quarantine.
+      operationId: ingest_temperature_logger_file_endpoint_api_v1_execution_rtsm_cold_chain_ingest_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LoggerIngestionRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ExcursionEvaluationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cold-chain/evaluate-mkt:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Evaluate Mkt Direct Endpoint
+      description: Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> / PDA TR 39.
+      operationId: evaluate_mkt_direct_endpoint_api_v1_execution_rtsm_cold_chain_evaluate_mkt_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_MktCalculationDirectRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_MktCalculationDirectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cold-chain/evaluations:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Excursion Evaluations Endpoint
+      description: Lists cold chain excursion evaluation audit records.
+      operationId: list_excursion_evaluations_endpoint_api_v1_execution_rtsm_cold_chain_evaluations_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: entity_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional filter by transfer order or node ID
+          title: Entity Id
+        description: Optional filter by transfer order or node ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_ExcursionEvaluationResponse'
+                title: Response List Excursion Evaluations Endpoint Api V1 Execution Rtsm Cold Chain Evaluations Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/kits:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Create Kit Endpoint
+      description: Registers an investigational product kit into the blinded RTSM inventory catalog.
+      operationId: create_kit_endpoint_api_v1_execution_rtsm_kits_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_IPKitCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_IPKitResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Kits Endpoint
+      description: Lists investigational product kits.
+      operationId: list_kits_endpoint_api_v1_execution_rtsm_kits_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional node/site ID filter
+          title: Node Id
+        description: Optional node/site ID filter
+      - name: lot_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional lot number filter
+          title: Lot Number
+        description: Optional lot number filter
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional status filter (e.g. AVAILABLE, QUARANTINED)
+          title: Status
+        description: Optional status filter (e.g. AVAILABLE, QUARANTINED)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_IPKitResponse'
+                title: Response List Kits Endpoint Api V1 Execution Rtsm Kits Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/kits/quarantine:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Quarantine Kits Endpoint
+      description: Manually places investigational product kits in QUARANTINED status with Part 11 electronic audit trail.
+      operationId: quarantine_kits_endpoint_api_v1_execution_rtsm_kits_quarantine_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_KitQuarantineRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  anyOf:
+                  - type: string
+                  - type: integer
+                type: object
+                title: Response Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Quarantine Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/kits/release-quarantine:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Release Quarantine Kits Endpoint
+      description: Authorizes QA disposition release of quarantined kits back into available inventory.
+      operationId: release_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_release_quarantine_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_KitReleaseQuarantineRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  anyOf:
+                  - type: string
+                  - type: integer
+                type: object
+                title: Response Release Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Release Quarantine Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/lots/extend-expiry:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Extend Lot Expiry Endpoint
+      description: Executes automated lot expiration extension workflow, updating kits across all sites and depots.
+      operationId: extend_lot_expiry_endpoint_api_v1_execution_rtsm_lots_extend_expiry_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_LotExpiryExtensionRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_LotExpiryExtensionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/lots/extensions:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Lot Expiry Extensions Endpoint
+      description: Lists lot expiration extension audit records.
+      operationId: list_lot_expiry_extensions_endpoint_api_v1_execution_rtsm_lots_extensions_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: lot_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional lot number filter
+          title: Lot Number
+        description: Optional lot number filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_LotExpiryExtensionResponse'
+                title: Response List Lot Expiry Extensions Endpoint Api V1 Execution Rtsm Lots Extensions Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/relabeling-tasks:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Relabeling Tasks Endpoint
+      description: Lists physical re-labeling action tasks across facilities.
+      operationId: list_relabeling_tasks_endpoint_api_v1_execution_rtsm_relabeling_tasks_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional node/site ID filter
+          title: Node Id
+        description: Optional node/site ID filter
+      - name: lot_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional lot number filter
+          title: Lot Number
+        description: Optional lot number filter
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional status filter
+          title: Status
+        description: Optional status filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
+                title: Response List Relabeling Tasks Endpoint Api V1 Execution Rtsm Relabeling Tasks Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/relabeling-tasks/{task_id}/complete:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Complete Relabeling Task Endpoint
+      description: Records completion of a physical kit re-labeling task with electronic signature justification.
+      operationId: complete_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__complete_post
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ReLabelingTaskCompleteRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/relabeling-tasks/{task_id}/verify:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Verify Relabeling Task Endpoint
+      description: Dual QA verification of completed re-labeling task with barcode verification hash.
+      operationId: verify_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__verify_post
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ReLabelingTaskVerifyRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ReLabelingTaskResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/apheresis:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Initialize Apheresis Endpoint
+      description: Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest.
+      operationId: initialize_apheresis_endpoint_api_v1_execution_rtsm_cgt_apheresis_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTApheresisCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/milestone:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Record Cgt Milestone Endpoint
+      description: Records a cryogenic transit milestone with GPS coordinates and temperature logging.
+      operationId: record_cgt_milestone_endpoint_api_v1_execution_rtsm_cgt_milestone_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTMilestoneCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTMilestoneResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/manufacturing-bind:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Bind Manufacturing Batch Endpoint
+      description: Binds manufacturing batch record to original subject identity and regenerates barcode.
+      operationId: bind_manufacturing_batch_endpoint_api_v1_execution_rtsm_cgt_manufacturing_bind_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTManufacturingBindRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/bedside-verify:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Bedside Dual Verification Endpoint
+      description: Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF.
+      operationId: bedside_dual_verification_endpoint_api_v1_execution_rtsm_cgt_bedside_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTBedsideVerificationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTBedsideVerificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/infuse:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Execute Infusion Endpoint
+      description: Records cellular drug infusion administration, gated by the bedside verification unlock token.
+      operationId: execute_infusion_endpoint_api_v1_execution_rtsm_cgt_infuse_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTInfusionExecuteRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTChainOfCustodyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/returns:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Log Vial Return Endpoint
+      description: Logs returned kit/vial accountability and calculates patient adherence compliance.
+      operationId: log_vial_return_endpoint_api_v1_execution_rtsm_cgt_returns_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/destruction-certificate:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Generate Destruction Certificate Endpoint
+      description: Generates a formal Certificate of Destruction with dual witness electronic signatures.
+      operationId: generate_destruction_certificate_endpoint_api_v1_execution_rtsm_cgt_destruction_certificate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTDestructionCertificateCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTDestructionCertificateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/verify-barcode:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Verify Cgt Barcode Endpoint
+      description: Verifies cryptographic authenticity and entity bindings for a scanned barcode.
+      operationId: verify_cgt_barcode_endpoint_api_v1_execution_rtsm_cgt_verify_barcode_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CGTBarcodeVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTBarcodeVerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/chain-of-custody/{study_id}/{subject_id}:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Subject Cgt Traceability Endpoint
+      description: Retrieves full Vein-to-Vein traceability ledger for a subject.
+      operationId: get_subject_cgt_traceability_endpoint_api_v1_execution_rtsm_cgt_chain_of_custody__study_id___subject_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CGTFullTraceabilityResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/certificates/{study_id}:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Destruction Certificates Endpoint
+      description: Lists all Certificates of Destruction for a study.
+      operationId: list_destruction_certificates_endpoint_api_v1_execution_rtsm_cgt_certificates__study_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_CGTDestructionCertificateResponse'
+                title: Response List Destruction Certificates Endpoint Api V1 Execution Rtsm Cgt Certificates  Study Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/cgt/reconciliations/{study_id}:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: List Vial Reconciliations Endpoint
+      description: Lists all product return and accountability reconciliation records for a study.
+      operationId: list_vial_reconciliations_endpoint_api_v1_execution_rtsm_cgt_reconciliations__study_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_CGTVialReturnReconciliationResponse'
+                title: Response List Vial Reconciliations Endpoint Api V1 Execution Rtsm Cgt Reconciliations  Study Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/config:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Create Or Update Adaptive Config Endpoint
+      description: Registers or updates adaptive oncology dose-escalation or RAR trial design parameters.
+      operationId: create_or_update_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_AdaptiveTrialConfigDTO'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create Or Update Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Adaptive Config Endpoint
+      description: Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history.
+      operationId: get_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/cohorts/evaluate:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Evaluate Adaptive Cohort Endpoint
+      description: Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3).
+      operationId: evaluate_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_evaluate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CohortEvaluationInput'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CohortEvaluationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/cohorts/transition:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Transition Adaptive Cohort Endpoint
+      description: Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging.
+      operationId: transition_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_transition_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CohortTransitionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CohortTransitionLogResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/cohorts/history:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Adaptive Cohorts History Endpoint
+      description: Returns the immutable 21 CFR Part 11 audited transition log history for a study.
+      operationId: get_adaptive_cohorts_history_endpoint_api_v1_execution_rtsm_adaptive_cohorts_history_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_CohortTransitionLogResponse'
+                title: Response Get Adaptive Cohorts History Endpoint Api V1 Execution Rtsm Adaptive Cohorts History Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/rar/evaluate:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Evaluate Rar Endpoint
+      description: Calculates dynamic Response-Adaptive Randomization allocation weights across active arms.
+      operationId: evaluate_rar_endpoint_api_v1_execution_rtsm_adaptive_rar_evaluate_post
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_RAREvaluationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/rar/arms:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Expand Or Terminate Rar Arm Endpoint
+      description: Seamlessly adds or terminates a treatment arm in RAR with zero study downtime.
+      operationId: expand_or_terminate_rar_arm_endpoint_api_v1_execution_rtsm_adaptive_rar_arms_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_RARExpandOrTerminateArmRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_RAREvaluationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/rar/state:
+    get:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Get Rar State Endpoint
+      description: Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states.
+      operationId: get_rar_state_endpoint_api_v1_execution_rtsm_adaptive_rar_state_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Clinical study identifier
+          title: Study Id
+        description: Clinical study identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Rar State Endpoint Api V1 Execution Rtsm Adaptive Rar State Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/boin/calculate-boundaries:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Calculate Boin Boundaries Endpoint
+      description: Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d).
+      operationId: calculate_boin_boundaries_endpoint_api_v1_execution_rtsm_adaptive_boin_calculate_boundaries_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_BoinBoundariesCalculationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_BoinBoundariesCalculationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/adaptive/crm/posterior:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
+      summary: Calculate Crm Posterior Endpoint
+      description: Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method.
+      operationId: calculate_crm_posterior_endpoint_api_v1_execution_rtsm_adaptive_crm_posterior_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_CrmPosteriorCalculationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_CrmPosteriorCalculationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/dispense:
+    post:
+      tags:
+      - RTSM Multi-Echelon Supply
       summary: Dispense Kit Endpoint
-      description: 'End-point to dispense investigational product (IP) kits against site inventory.
-
-
-        Checks site locks early, calls dispense_kit_transaction, and handles commits atomically.
-
-        Launches resupply alerts via fastapi background tasks post-commit if triggered.'
-      operationId: Execution_dispense_kit_endpoint_api_v1_execution_rtsm_dispense_post
+      description: End-point to dispense investigational product (IP) kits against site inventory.
+      operationId: dispense_kit_endpoint_api_v1_execution_rtsm_dispense_post
       requestBody:
         content:
           application/json:
@@ -20143,119 +18831,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/migration-rules:
-    post:
-      summary: Create Migration Rule
-      description: Create a new protocol version migration rule.
-      operationId: Execution_create_migration_rule_api_v1_execution_migration_rules_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Execution_MigrationRuleCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_MigrationRuleResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/rtsm/resupply-events:
     get:
-      summary: List Migration Rules
-      description: List migration rules for a clinical study.
-      operationId: Execution_list_migration_rules_api_v1_execution_migration_rules_get
-      parameters:
-      - name: study_id
-        in: query
-        required: true
-        schema:
-          type: string
-          title: Study Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Execution_MigrationRuleResponse'
-                title: Response List Migration Rules Api V1 Execution Migration Rules Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/audit/integrity:
-    get:
-      summary: Get Execution Audit Integrity
-      description: 'Verify the GxP clinical execution ledger integrity via block-sealing validation.
-
-
-        Ensures that chronological audit logs, block-level seals, and sequential chaining
-
-        remain structurally unbroken.'
-      operationId: Execution_get_execution_audit_integrity_api_v1_execution_audit_integrity_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Get Execution Audit Integrity Api V1 Execution Audit Integrity Get
-  /execution/api/v1/admin/outbox:
-    get:
-      summary: Execution Admin Outbox Endpoint
-      operationId: Execution_execution_admin_outbox_endpoint_api_v1_admin_outbox_get
-      parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-      - name: event_type
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Event Type
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
-                title: Response Execution Admin Outbox Endpoint Api V1 Admin Outbox Get
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/resupply-events:
-    get:
+      tags:
+      - RTSM Multi-Echelon Supply
       summary: List Resupply Events Endpoint
-      description: Lists all active resupply events, filtered by query params and user's site-level/study-level authorization.
-      operationId: Execution_list_resupply_events_endpoint_api_v1_execution_rtsm_resupply_events_get
+      description: List resupply events filtered by role and site permissions.
+      operationId: list_resupply_events_endpoint_api_v1_execution_rtsm_resupply_events_get
       parameters:
       - name: study_id
         in: query
@@ -20297,11 +18879,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/resupply-events/{event_id}/confirm:
+  /api/v1/execution/rtsm/resupply-events/{event_id}/confirm:
     post:
+      tags:
+      - RTSM Multi-Echelon Supply
       summary: Approve Resupply Event Endpoint
       description: Approve a resupply event to trigger shipment generation.
-      operationId: Execution_approve_resupply_event_endpoint_api_v1_execution_rtsm_resupply_events__event_id__confirm_post
+      operationId: approve_resupply_event_endpoint_api_v1_execution_rtsm_resupply_events__event_id__confirm_post
       parameters:
       - name: event_id
         in: path
@@ -20328,11 +18912,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /execution/api/v1/execution/rtsm/resupply-events/{event_id}/reject:
+  /api/v1/execution/rtsm/resupply-events/{event_id}/reject:
     post:
+      tags:
+      - RTSM Multi-Echelon Supply
       summary: Reject Resupply Event Endpoint
       description: Reject a resupply event.
-      operationId: Execution_reject_resupply_event_endpoint_api_v1_execution_rtsm_resupply_events__event_id__reject_post
+      operationId: reject_resupply_event_endpoint_api_v1_execution_rtsm_resupply_events__event_id__reject_post
       parameters:
       - name: event_id
         in: path
@@ -20359,7 +18945,1088 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Execution_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/upload/presigned-url:
+  /events/study-published:
+    post:
+      tags:
+      - Rules & Migrations
+      summary: Study Published
+      description: Ingest study publication events and trigger layout generation asynchronously.
+      operationId: study_published_events_study_published_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_StudyEvent'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Study Published Events Study Published Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/translation/jobs:
+    get:
+      tags:
+      - Rules & Migrations
+      summary: List Translation Jobs
+      description: Retrieve a list of historical translation jobs.
+      operationId: list_translation_jobs_api_v1_execution_translation_jobs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Execution_TranslationJobResponse'
+                type: array
+                title: Response List Translation Jobs Api V1 Execution Translation Jobs Get
+  /api/v1/execution/translation/jobs/{job_id}:
+    get:
+      tags:
+      - Rules & Migrations
+      summary: Get Translation Job
+      description: Query the execution status, output metadata, and error messages of a single translation job by ID.
+      operationId: get_translation_job_api_v1_execution_translation_jobs__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TranslationJobResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/migration-rules:
+    post:
+      tags:
+      - Rules & Migrations
+      summary: Create Migration Rule
+      description: Create a new protocol version migration rule.
+      operationId: create_migration_rule_api_v1_execution_migration_rules_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_MigrationRuleCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_MigrationRuleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      tags:
+      - Rules & Migrations
+      summary: List Migration Rules
+      description: List migration rules for a clinical study.
+      operationId: list_migration_rules_api_v1_execution_migration_rules_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution_MigrationRuleResponse'
+                title: Response List Migration Rules Api V1 Execution Migration Rules Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/safety/dispatch:
+    post:
+      tags:
+      - Safety
+      summary: Dispatch Safety Report Endpoint
+      description: 'Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: dispatch_safety_report_endpoint_api_v1_execution_safety_dispatch_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SafetyDispatchRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SafetyDispatchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/safety/reconcile:
+    post:
+      tags:
+      - Safety
+      summary: Reconcile Sae Cases Endpoint
+      description: 'Execute automated EDC AE to Safety ICSR case reconciliation.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: reconcile_sae_cases_endpoint_api_v1_execution_safety_reconcile_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SAEReconcileRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Reconcile Sae Cases Endpoint Api V1 Execution Safety Reconcile Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/tsdv/config:
+    post:
+      tags:
+      - SDV/TSDV
+      summary: Create Or Update Tsdv Config
+      description: 'CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.
+
+
+        Restricts config writes to CRA/Data Manager roles WITH GxP change justifications.'
+      operationId: create_or_update_tsdv_config_api_v1_execution_tsdv_config_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_TSDVConfigCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TSDVConfigResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/tsdv/config/{study_id}:
+    get:
+      tags:
+      - SDV/TSDV
+      summary: Get Tsdv Config
+      description: Retrieve existing TSDV configuration for a study.
+      operationId: get_tsdv_config_api_v1_execution_tsdv_config__study_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TSDVConfigResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/tsdv/required:
+    get:
+      tags:
+      - SDV/TSDV
+      summary: Evaluate Tsdv Rule
+      description: 'Evaluate Targeted SDV (TSDV) requirement for a given context.
+
+
+        Calculates deterministic sampling decisions and returns component results with an audit explanation.'
+      operationId: evaluate_tsdv_rule_api_v1_execution_tsdv_required_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: subject_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      - name: domain
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+      - name: enrollment_index
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Enrollment Index
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_TSDVEvaluationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/sdv/signoff:
+    post:
+      tags:
+      - SDV/TSDV
+      summary: Sdv Signoff
+      description: CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.
+      operationId: sdv_signoff_api_v1_execution_sdv_signoff_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SDVSignOffRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SDVSignOffResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/sdv/bulk-sign-off:
+    post:
+      tags:
+      - SDV/TSDV
+      summary: Bulk Sdv Signoff
+      description: CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes.
+      operationId: bulk_sdv_signoff_api_v1_execution_sdv_bulk_sign_off_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_BulkSdvSignOffRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_BulkSdvSignOffResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/queries/generate:
+    post:
+      tags:
+      - SDV/TSDV
+      summary: Bulk Generate Queries
+      description: CRA/monitor-gated bulk query generation endpoint.
+      operationId: bulk_generate_queries_api_v1_execution_queries_generate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_BulkQueryGenerationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_BulkQueryGenerationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/signatures/sign:
+    post:
+      tags:
+      - Signatures
+      summary: Sign Payload Endpoint
+      description: 'Signs a given string payload using the secure backend PKCS#7 signer.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: sign_payload_endpoint_api_v1_execution_signatures_sign_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SignRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SignResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/signatures/verify:
+    post:
+      tags:
+      - Signatures
+      summary: Verify Signature Endpoint
+      description: 'Verifies a PKCS#7 signed document payload using the ESignatureVerifier and trust store.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: verify_signature_endpoint_api_v1_execution_signatures_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_VerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_VerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/signatures/batch-sign-off:
+    post:
+      tags:
+      - Signatures
+      summary: Batch Signature Sign Off Endpoint
+      description: 'Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
+
+
+        Requirements: PRD-SYS-001'
+      operationId: batch_signature_sign_off_endpoint_api_v1_execution_signatures_batch_sign_off_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_BatchSignatureRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_BatchSignatureResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects:
+    post:
+      tags:
+      - Subjects
+      summary: Create Subject
+      operationId: create_subject_api_v1_execution_subjects_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/consents:
+    post:
+      tags:
+      - Subjects
+      summary: Record Subject Consent Endpoint
+      operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consents_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectConsentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectConsentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/consent:
+    post:
+      tags:
+      - Subjects
+      summary: Record Subject Consent Endpoint
+      operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consent_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectConsentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectConsentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/sites/{site_id}/compliance-status:
+    get:
+      tags:
+      - Subjects
+      summary: Get Site Compliance Status
+      operationId: get_site_compliance_status_api_v1_execution_sites__site_id__compliance_status_get
+      parameters:
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: The clinical study ID
+          title: Study Id
+        description: The clinical study ID
+      - name: milestone
+        in: query
+        required: false
+        schema:
+          type: string
+          description: The milestone to check
+          default: SITE_ACTIVATION
+          title: Milestone
+        description: The milestone to check
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_ComplianceStatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/webhooks/etmf:
+    post:
+      tags:
+      - Subjects
+      summary: Etmf Completeness Webhook
+      operationId: etmf_completeness_webhook_api_v1_execution_webhooks_etmf_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_ETMFCompletenessWebhookPayload'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Etmf Completeness Webhook Api V1 Execution Webhooks Etmf Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/sites/{site_id}/activate:
+    post:
+      tags:
+      - Subjects
+      summary: Activate Site Endpoint
+      operationId: activate_site_endpoint_api_v1_execution_sites__site_id__activate_post
+      parameters:
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SiteActivationRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Activate Site Endpoint Api V1 Execution Sites  Site Id  Activate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/screening:
+    post:
+      tags:
+      - Subjects
+      summary: Evaluate And Transition Screening
+      operationId: evaluate_and_transition_screening_api_v1_execution_subjects__subject_id__screening_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/Execution_SubjectScreeningRequest'
+              - type: 'null'
+              title: Payload
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectScreeningResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}:
+    get:
+      tags:
+      - Subjects
+      summary: Get Subject Detail
+      operationId: get_subject_detail_api_v1_execution_subjects__subject_id__get
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /subjects/{id}/state:
+    patch:
+      tags:
+      - Subjects
+      summary: Update Subject State Endpoint
+      operationId: update_subject_state_endpoint_subjects__id__state_patch
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectStateUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{id}/state:
+    patch:
+      tags:
+      - Subjects
+      summary: Update Subject State Endpoint
+      operationId: update_subject_state_endpoint_api_v1_execution_subjects__id__state_patch
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectStateUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /subjects/{id}/demographics:
+    put:
+      tags:
+      - Subjects
+      summary: Update Subject Demographics Endpoint
+      operationId: update_subject_demographics_endpoint_subjects__id__demographics_put
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectDemographicsUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    delete:
+      tags:
+      - Subjects
+      summary: Delete Subject Demographics Endpoint
+      operationId: delete_subject_demographics_endpoint_subjects__id__demographics_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{id}/demographics:
+    put:
+      tags:
+      - Subjects
+      summary: Update Subject Demographics Endpoint
+      operationId: update_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_put
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_SubjectDemographicsUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    delete:
+      tags:
+      - Subjects
+      summary: Delete Subject Demographics Endpoint
+      operationId: delete_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/unblind:
+    post:
+      tags:
+      - Unblinding
+      summary: Unblind Subject
+      description: "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction."
+      operationId: unblind_subject_api_v1_execution_subjects__subject_id__unblind_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_UnblindRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_SubjectUnblindResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/visits:
+    post:
+      tags:
+      - Visits
+      summary: Create Visit
+      operationId: create_visit_api_v1_execution_visits_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_VisitCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_VisitResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/visits/{visit_id}:
+    get:
+      tags:
+      - Visits
+      summary: Get Visit Detail
+      operationId: get_visit_detail_api_v1_execution_visits__visit_id__get
+      parameters:
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_VisitDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /dictionary/export:
+    get:
+      summary: Get Cdisc Export Dictionary
+      description: Export stored clinical subject observations in CDISC ODM XML format (Dictionary API).
+      operationId: get_cdisc_export_dictionary_dictionary_export_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: The clinical study ID to export
+          title: Study Id
+        description: The clinical study ID to export
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /dictionary/unit-conversion:
+    post:
+      summary: Post Unit Conversion Dictionary
+      description: Translate incoming values using UCUM mapping rules (Dictionary API).
+      operationId: post_unit_conversion_dictionary_dictionary_unit_conversion_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution_UnitConversionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_UnitConversionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+    get:
+      summary: Get Unit Conversion Dictionary
+      description: Translate incoming values using UCUM mapping rules via GET (Dictionary API).
+      operationId: get_unit_conversion_dictionary_dictionary_unit_conversion_get
+      parameters:
+      - name: value
+        in: query
+        required: true
+        schema:
+          type: number
+          title: Value
+      - name: from_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: From Unit
+      - name: to_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: To Unit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_UnitConversionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution_HTTPValidationError'
+  /api/v1/execution/audit/integrity:
+    get:
+      summary: Get Execution Audit Integrity
+      description: 'Verify the GxP clinical execution ledger integrity via block-sealing validation.
+
+
+        Ensures that chronological audit logs, block-level seals, and sequential chaining
+
+        remain structurally unbroken.'
+      operationId: get_execution_audit_integrity_api_v1_execution_audit_integrity_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Get Execution Audit Integrity Api V1 Execution Audit Integrity Get
+  /api/v1/fileshare/files/upload/presigned-url:
     post:
       tags:
       - Fileshare
@@ -20368,7 +20035,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_get_upload_url_api_v1_fileshare_files_upload_presigned_url_post
+      operationId: get_upload_url_api_v1_fileshare_files_upload_presigned_url_post
       requestBody:
         content:
           application/json:
@@ -20388,7 +20055,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/upload-url:
+  /api/v1/fileshare/files/upload-url:
     post:
       tags:
       - Fileshare
@@ -20397,7 +20064,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_get_upload_url_api_v1_fileshare_files_upload_url_post
+      operationId: get_upload_url_api_v1_fileshare_files_upload_url_post
       requestBody:
         content:
           application/json:
@@ -20417,7 +20084,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/upload-complete:
+  /api/v1/fileshare/files/{file_id}/upload-complete:
     post:
       tags:
       - Fileshare
@@ -20426,7 +20093,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__upload_complete_post
+      operationId: complete_file_upload_api_v1_fileshare_files__file_id__upload_complete_post
       parameters:
       - name: file_id
         in: path
@@ -20455,7 +20122,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/complete-upload:
+  /api/v1/fileshare/files/{file_id}/complete-upload:
     post:
       tags:
       - Fileshare
@@ -20464,7 +20131,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post
+      operationId: complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post
       parameters:
       - name: file_id
         in: path
@@ -20493,7 +20160,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/complete:
+  /api/v1/fileshare/files/{file_id}/complete:
     post:
       tags:
       - Fileshare
@@ -20502,7 +20169,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__complete_post
+      operationId: complete_file_upload_api_v1_fileshare_files__file_id__complete_post
       parameters:
       - name: file_id
         in: path
@@ -20531,7 +20198,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/abort-upload:
+  /api/v1/fileshare/files/{file_id}/abort-upload:
     post:
       tags:
       - Fileshare
@@ -20540,7 +20207,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_abort_file_upload_api_v1_fileshare_files__file_id__abort_upload_post
+      operationId: abort_file_upload_api_v1_fileshare_files__file_id__abort_upload_post
       parameters:
       - name: file_id
         in: path
@@ -20569,7 +20236,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/stream-url:
+  /api/v1/fileshare/files/{file_id}/stream-url:
     get:
       tags:
       - Fileshare
@@ -20587,7 +20254,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_stream_url_api_v1_fileshare_files__file_id__stream_url_get
+      operationId: get_stream_url_api_v1_fileshare_files__file_id__stream_url_get
       parameters:
       - name: file_id
         in: path
@@ -20614,7 +20281,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/download-url:
+  /api/v1/fileshare/files/{file_id}/download-url:
     get:
       tags:
       - Fileshare
@@ -20623,7 +20290,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_get_download_url_api_v1_fileshare_files__file_id__download_url_get
+      operationId: get_download_url_api_v1_fileshare_files__file_id__download_url_get
       parameters:
       - name: file_id
         in: path
@@ -20651,13 +20318,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/preview-url:
+  /api/v1/fileshare/files/{file_id}/preview-url:
     get:
       tags:
       - Fileshare
       summary: Get Preview Url
       description: Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).
-      operationId: Fileshare_get_preview_url_api_v1_fileshare_files__file_id__preview_url_get
+      operationId: get_preview_url_api_v1_fileshare_files__file_id__preview_url_get
       parameters:
       - name: file_id
         in: path
@@ -20685,7 +20352,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}:
+  /api/v1/fileshare/files/{file_id}:
     get:
       tags:
       - Fileshare
@@ -20694,7 +20361,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_file_record_api_v1_fileshare_files__file_id__get
+      operationId: get_file_record_api_v1_fileshare_files__file_id__get
       parameters:
       - name: file_id
         in: path
@@ -20725,7 +20392,7 @@ paths:
         Gated on FileRecord.is_on_hold being False; returns 409 if file is on hold.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_delete_file_record_api_v1_fileshare_files__file_id__delete
+      operationId: delete_file_record_api_v1_fileshare_files__file_id__delete
       parameters:
       - name: file_id
         in: path
@@ -20754,7 +20421,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/hold:
+  /api/v1/fileshare/files/{file_id}/hold:
     post:
       tags:
       - Fileshare
@@ -20765,7 +20432,7 @@ paths:
         Requires super_admin or data_manager role.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_place_file_on_hold_api_v1_fileshare_files__file_id__hold_post
+      operationId: place_file_on_hold_api_v1_fileshare_files__file_id__hold_post
       parameters:
       - name: file_id
         in: path
@@ -20802,7 +20469,7 @@ paths:
         Requires super_admin or data_manager role.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_remove_file_from_hold_api_v1_fileshare_files__file_id__hold_delete
+      operationId: remove_file_from_hold_api_v1_fileshare_files__file_id__hold_delete
       parameters:
       - name: file_id
         in: path
@@ -20831,7 +20498,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/audit-logs:
+  /api/v1/fileshare/files/{file_id}/audit-logs:
     get:
       tags:
       - Fileshare
@@ -20840,7 +20507,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_get_file_audit_logs_api_v1_fileshare_files__file_id__audit_logs_get
+      operationId: get_file_audit_logs_api_v1_fileshare_files__file_id__audit_logs_get
       parameters:
       - name: file_id
         in: path
@@ -20864,7 +20531,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/activity:
+  /api/v1/fileshare/files/{file_id}/activity:
     get:
       tags:
       - Fileshare
@@ -20873,7 +20540,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11'
-      operationId: Fileshare_get_file_activity_feed_api_v1_fileshare_files__file_id__activity_get
+      operationId: get_file_activity_feed_api_v1_fileshare_files__file_id__activity_get
       parameters:
       - name: file_id
         in: path
@@ -20932,7 +20599,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/approve:
+  /api/v1/fileshare/files/{file_id}/approve:
     post:
       tags:
       - Fileshare
@@ -20941,7 +20608,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_approve_document_endpoint_api_v1_fileshare_files__file_id__approve_post
+      operationId: approve_document_endpoint_api_v1_fileshare_files__file_id__approve_post
       parameters:
       - name: file_id
         in: path
@@ -20968,7 +20635,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/reject:
+  /api/v1/fileshare/files/{file_id}/reject:
     post:
       tags:
       - Fileshare
@@ -20977,7 +20644,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_reject_document_endpoint_api_v1_fileshare_files__file_id__reject_post
+      operationId: reject_document_endpoint_api_v1_fileshare_files__file_id__reject_post
       parameters:
       - name: file_id
         in: path
@@ -21004,7 +20671,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/rescind-approval:
+  /api/v1/fileshare/files/{file_id}/rescind-approval:
     post:
       tags:
       - Fileshare
@@ -21013,7 +20680,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_rescind_approval_endpoint_api_v1_fileshare_files__file_id__rescind_approval_post
+      operationId: rescind_approval_endpoint_api_v1_fileshare_files__file_id__rescind_approval_post
       parameters:
       - name: file_id
         in: path
@@ -21040,7 +20707,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/upload-revision:
+  /api/v1/fileshare/files/{file_id}/upload-revision:
     post:
       tags:
       - Fileshare
@@ -21049,7 +20716,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11'
-      operationId: Fileshare_upload_revision_endpoint_api_v1_fileshare_files__file_id__upload_revision_post
+      operationId: upload_revision_endpoint_api_v1_fileshare_files__file_id__upload_revision_post
       parameters:
       - name: file_id
         in: path
@@ -21076,7 +20743,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files:
+  /api/v1/fileshare/files:
     get:
       tags:
       - Fileshare
@@ -21085,7 +20752,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_list_files_api_v1_fileshare_files_get
+      operationId: list_files_api_v1_fileshare_files_get
       parameters:
       - name: study_id
         in: query
@@ -21141,7 +20808,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/grants:
+  /api/v1/fileshare/files/{file_id}/grants:
     get:
       tags:
       - Fileshare
@@ -21150,7 +20817,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_list_share_grants_api_v1_fileshare_files__file_id__grants_get
+      operationId: list_share_grants_api_v1_fileshare_files__file_id__grants_get
       parameters:
       - name: file_id
         in: path
@@ -21182,7 +20849,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_create_share_grant_api_v1_fileshare_files__file_id__grants_post
+      operationId: create_share_grant_api_v1_fileshare_files__file_id__grants_post
       parameters:
       - name: file_id
         in: path
@@ -21209,7 +20876,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/guest-links:
+  /api/v1/fileshare/files/{file_id}/guest-links:
     get:
       tags:
       - Fileshare
@@ -21218,7 +20885,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_list_guest_links_api_v1_fileshare_files__file_id__guest_links_get
+      operationId: list_guest_links_api_v1_fileshare_files__file_id__guest_links_get
       parameters:
       - name: file_id
         in: path
@@ -21250,7 +20917,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_create_guest_link_api_v1_fileshare_files__file_id__guest_links_post
+      operationId: create_guest_link_api_v1_fileshare_files__file_id__guest_links_post
       parameters:
       - name: file_id
         in: path
@@ -21277,7 +20944,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/grants/{grant_id}:
+  /api/v1/fileshare/files/{file_id}/grants/{grant_id}:
     delete:
       tags:
       - Fileshare
@@ -21286,7 +20953,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_delete_share_grant_api_v1_fileshare_files__file_id__grants__grant_id__delete
+      operationId: delete_share_grant_api_v1_fileshare_files__file_id__grants__grant_id__delete
       parameters:
       - name: file_id
         in: path
@@ -21320,7 +20987,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/{file_id}/guest-links/{guest_link_id}:
+  /api/v1/fileshare/files/{file_id}/guest-links/{guest_link_id}:
     delete:
       tags:
       - Fileshare
@@ -21329,7 +20996,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_revoke_guest_link_api_v1_fileshare_files__file_id__guest_links__guest_link_id__delete
+      operationId: revoke_guest_link_api_v1_fileshare_files__file_id__guest_links__guest_link_id__delete
       parameters:
       - name: file_id
         in: path
@@ -21363,7 +21030,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/files/guest/{token}:
+  /api/v1/fileshare/files/guest/{token}:
     get:
       tags:
       - Fileshare
@@ -21372,7 +21039,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_guest_file_download_api_v1_fileshare_files_guest__token__get
+      operationId: get_guest_file_download_api_v1_fileshare_files_guest__token__get
       parameters:
       - name: token
         in: path
@@ -21393,7 +21060,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/upload/presigned-url:
+  /api/v1/files/upload/presigned-url:
     post:
       tags:
       - Fileshare
@@ -21402,7 +21069,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_get_upload_url_api_v1_files_upload_presigned_url_post
+      operationId: get_upload_url_api_v1_files_upload_presigned_url_post
       requestBody:
         content:
           application/json:
@@ -21422,7 +21089,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/upload-url:
+  /api/v1/files/upload-url:
     post:
       tags:
       - Fileshare
@@ -21431,7 +21098,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_get_upload_url_api_v1_files_upload_url_post
+      operationId: get_upload_url_api_v1_files_upload_url_post
       requestBody:
         content:
           application/json:
@@ -21451,7 +21118,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/upload-complete:
+  /api/v1/files/{file_id}/upload-complete:
     post:
       tags:
       - Fileshare
@@ -21460,7 +21127,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_files__file_id__upload_complete_post
+      operationId: complete_file_upload_api_v1_files__file_id__upload_complete_post
       parameters:
       - name: file_id
         in: path
@@ -21489,7 +21156,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/complete-upload:
+  /api/v1/files/{file_id}/complete-upload:
     post:
       tags:
       - Fileshare
@@ -21498,7 +21165,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_files__file_id__complete_upload_post
+      operationId: complete_file_upload_api_v1_files__file_id__complete_upload_post
       parameters:
       - name: file_id
         in: path
@@ -21527,7 +21194,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/complete:
+  /api/v1/files/{file_id}/complete:
     post:
       tags:
       - Fileshare
@@ -21536,7 +21203,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002'
-      operationId: Fileshare_complete_file_upload_api_v1_files__file_id__complete_post
+      operationId: complete_file_upload_api_v1_files__file_id__complete_post
       parameters:
       - name: file_id
         in: path
@@ -21565,7 +21232,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/abort-upload:
+  /api/v1/files/{file_id}/abort-upload:
     post:
       tags:
       - Fileshare
@@ -21574,7 +21241,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_abort_file_upload_api_v1_files__file_id__abort_upload_post
+      operationId: abort_file_upload_api_v1_files__file_id__abort_upload_post
       parameters:
       - name: file_id
         in: path
@@ -21603,7 +21270,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/stream-url:
+  /api/v1/files/{file_id}/stream-url:
     get:
       tags:
       - Fileshare
@@ -21621,7 +21288,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_stream_url_api_v1_files__file_id__stream_url_get
+      operationId: get_stream_url_api_v1_files__file_id__stream_url_get
       parameters:
       - name: file_id
         in: path
@@ -21648,7 +21315,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/download-url:
+  /api/v1/files/{file_id}/download-url:
     get:
       tags:
       - Fileshare
@@ -21657,7 +21324,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_get_download_url_api_v1_files__file_id__download_url_get
+      operationId: get_download_url_api_v1_files__file_id__download_url_get
       parameters:
       - name: file_id
         in: path
@@ -21685,13 +21352,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/preview-url:
+  /api/v1/files/{file_id}/preview-url:
     get:
       tags:
       - Fileshare
       summary: Get Preview Url
       description: Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).
-      operationId: Fileshare_get_preview_url_api_v1_files__file_id__preview_url_get
+      operationId: get_preview_url_api_v1_files__file_id__preview_url_get
       parameters:
       - name: file_id
         in: path
@@ -21719,7 +21386,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}:
+  /api/v1/files/{file_id}:
     get:
       tags:
       - Fileshare
@@ -21728,7 +21395,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_file_record_api_v1_files__file_id__get
+      operationId: get_file_record_api_v1_files__file_id__get
       parameters:
       - name: file_id
         in: path
@@ -21759,7 +21426,7 @@ paths:
         Gated on FileRecord.is_on_hold being False; returns 409 if file is on hold.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_delete_file_record_api_v1_files__file_id__delete
+      operationId: delete_file_record_api_v1_files__file_id__delete
       parameters:
       - name: file_id
         in: path
@@ -21788,7 +21455,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/hold:
+  /api/v1/files/{file_id}/hold:
     post:
       tags:
       - Fileshare
@@ -21799,7 +21466,7 @@ paths:
         Requires super_admin or data_manager role.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_place_file_on_hold_api_v1_files__file_id__hold_post
+      operationId: place_file_on_hold_api_v1_files__file_id__hold_post
       parameters:
       - name: file_id
         in: path
@@ -21836,7 +21503,7 @@ paths:
         Requires super_admin or data_manager role.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_remove_file_from_hold_api_v1_files__file_id__hold_delete
+      operationId: remove_file_from_hold_api_v1_files__file_id__hold_delete
       parameters:
       - name: file_id
         in: path
@@ -21865,7 +21532,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/audit-logs:
+  /api/v1/files/{file_id}/audit-logs:
     get:
       tags:
       - Fileshare
@@ -21874,7 +21541,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_get_file_audit_logs_api_v1_files__file_id__audit_logs_get
+      operationId: get_file_audit_logs_api_v1_files__file_id__audit_logs_get
       parameters:
       - name: file_id
         in: path
@@ -21898,7 +21565,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/activity:
+  /api/v1/files/{file_id}/activity:
     get:
       tags:
       - Fileshare
@@ -21907,7 +21574,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11'
-      operationId: Fileshare_get_file_activity_feed_api_v1_files__file_id__activity_get
+      operationId: get_file_activity_feed_api_v1_files__file_id__activity_get
       parameters:
       - name: file_id
         in: path
@@ -21966,7 +21633,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/approve:
+  /api/v1/files/{file_id}/approve:
     post:
       tags:
       - Fileshare
@@ -21975,7 +21642,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_approve_document_endpoint_api_v1_files__file_id__approve_post
+      operationId: approve_document_endpoint_api_v1_files__file_id__approve_post
       parameters:
       - name: file_id
         in: path
@@ -22002,7 +21669,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/reject:
+  /api/v1/files/{file_id}/reject:
     post:
       tags:
       - Fileshare
@@ -22011,7 +21678,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_reject_document_endpoint_api_v1_files__file_id__reject_post
+      operationId: reject_document_endpoint_api_v1_files__file_id__reject_post
       parameters:
       - name: file_id
         in: path
@@ -22038,7 +21705,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/rescind-approval:
+  /api/v1/files/{file_id}/rescind-approval:
     post:
       tags:
       - Fileshare
@@ -22047,7 +21714,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_rescind_approval_endpoint_api_v1_files__file_id__rescind_approval_post
+      operationId: rescind_approval_endpoint_api_v1_files__file_id__rescind_approval_post
       parameters:
       - name: file_id
         in: path
@@ -22074,7 +21741,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/upload-revision:
+  /api/v1/files/{file_id}/upload-revision:
     post:
       tags:
       - Fileshare
@@ -22083,7 +21750,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11'
-      operationId: Fileshare_upload_revision_endpoint_api_v1_files__file_id__upload_revision_post
+      operationId: upload_revision_endpoint_api_v1_files__file_id__upload_revision_post
       parameters:
       - name: file_id
         in: path
@@ -22110,7 +21777,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files:
+  /api/v1/files:
     get:
       tags:
       - Fileshare
@@ -22119,7 +21786,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_list_files_api_v1_files_get
+      operationId: list_files_api_v1_files_get
       parameters:
       - name: study_id
         in: query
@@ -22175,7 +21842,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/grants:
+  /api/v1/files/{file_id}/grants:
     get:
       tags:
       - Fileshare
@@ -22184,7 +21851,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_list_share_grants_api_v1_files__file_id__grants_get
+      operationId: list_share_grants_api_v1_files__file_id__grants_get
       parameters:
       - name: file_id
         in: path
@@ -22216,7 +21883,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_create_share_grant_api_v1_files__file_id__grants_post
+      operationId: create_share_grant_api_v1_files__file_id__grants_post
       parameters:
       - name: file_id
         in: path
@@ -22243,7 +21910,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/guest-links:
+  /api/v1/files/{file_id}/guest-links:
     get:
       tags:
       - Fileshare
@@ -22252,7 +21919,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_list_guest_links_api_v1_files__file_id__guest_links_get
+      operationId: list_guest_links_api_v1_files__file_id__guest_links_get
       parameters:
       - name: file_id
         in: path
@@ -22284,7 +21951,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_create_guest_link_api_v1_files__file_id__guest_links_post
+      operationId: create_guest_link_api_v1_files__file_id__guest_links_post
       parameters:
       - name: file_id
         in: path
@@ -22311,7 +21978,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/grants/{grant_id}:
+  /api/v1/files/{file_id}/grants/{grant_id}:
     delete:
       tags:
       - Fileshare
@@ -22320,7 +21987,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003'
-      operationId: Fileshare_delete_share_grant_api_v1_files__file_id__grants__grant_id__delete
+      operationId: delete_share_grant_api_v1_files__file_id__grants__grant_id__delete
       parameters:
       - name: file_id
         in: path
@@ -22354,7 +22021,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/{file_id}/guest-links/{guest_link_id}:
+  /api/v1/files/{file_id}/guest-links/{guest_link_id}:
     delete:
       tags:
       - Fileshare
@@ -22363,7 +22030,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_revoke_guest_link_api_v1_files__file_id__guest_links__guest_link_id__delete
+      operationId: revoke_guest_link_api_v1_files__file_id__guest_links__guest_link_id__delete
       parameters:
       - name: file_id
         in: path
@@ -22397,7 +22064,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/guest/{token}:
+  /api/v1/files/guest/{token}:
     get:
       tags:
       - Fileshare Guest Access
@@ -22406,7 +22073,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_external_guest_file_download_api_v1_files_guest__token__get
+      operationId: get_external_guest_file_download_api_v1_files_guest__token__get
       parameters:
       - name: token
         in: path
@@ -22427,7 +22094,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/audit/playback:
+  /api/v1/fileshare/audit/playback:
     post:
       tags:
       - Fileshare Audit
@@ -22436,7 +22103,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_record_playback_checkpoint_api_v1_fileshare_audit_playback_post
+      operationId: record_playback_checkpoint_api_v1_fileshare_audit_playback_post
       requestBody:
         content:
           application/json:
@@ -22456,7 +22123,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/files/audit/playback:
+  /api/v1/files/audit/playback:
     post:
       tags:
       - Fileshare Audit
@@ -22465,7 +22132,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11'
-      operationId: Fileshare_record_playback_checkpoint_api_v1_files_audit_playback_post
+      operationId: record_playback_checkpoint_api_v1_files_audit_playback_post
       requestBody:
         content:
           application/json:
@@ -22485,7 +22152,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/api/v1/fileshare/guest/{token}:
+  /api/v1/fileshare/guest/{token}:
     get:
       tags:
       - Fileshare Guest Access
@@ -22494,7 +22161,7 @@ paths:
 
 
         Requirements: PRD-SYS-001, PRD-DOC-001'
-      operationId: Fileshare_get_external_guest_file_download_api_v1_fileshare_guest__token__get
+      operationId: get_external_guest_file_download_api_v1_fileshare_guest__token__get
       parameters:
       - name: token
         in: path
@@ -22515,22 +22182,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Fileshare_HTTPValidationError'
-  /fileshare/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Fileshare_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /imaging/api/v1/imaging/upload:
+  /api/v1/imaging/upload:
     post:
       tags:
       - Medical Imaging
@@ -22541,7 +22193,7 @@ paths:
         @req:PRD-IMG-001
 
         @req:PRD-IMG-002'
-      operationId: Imaging_upload_dicom_api_v1_imaging_upload_post
+      operationId: upload_dicom_api_v1_imaging_upload_post
       requestBody:
         content:
           multipart/form-data:
@@ -22561,7 +22213,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/deidentify:
+  /api/v1/imaging/deidentify:
     post:
       tags:
       - Medical Imaging
@@ -22573,7 +22225,7 @@ paths:
 
 
         @req:PRD-IMG-002'
-      operationId: Imaging_deidentify_in_flight_api_v1_imaging_deidentify_post
+      operationId: deidentify_in_flight_api_v1_imaging_deidentify_post
       requestBody:
         content:
           multipart/form-data:
@@ -22592,7 +22244,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/studies:
+  /api/v1/imaging/studies:
     get:
       tags:
       - Medical Imaging
@@ -22601,7 +22253,7 @@ paths:
 
 
         @req:PRD-IMG-001'
-      operationId: Imaging_list_studies_api_v1_imaging_studies_get
+      operationId: list_studies_api_v1_imaging_studies_get
       parameters:
       - name: study_id
         in: query
@@ -22684,7 +22336,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/studies/{study_uid}:
+  /api/v1/imaging/studies/{study_uid}:
     get:
       tags:
       - Medical Imaging
@@ -22693,7 +22345,7 @@ paths:
 
 
         @req:PRD-IMG-001'
-      operationId: Imaging_get_study_detail_api_v1_imaging_studies__study_uid__get
+      operationId: get_study_detail_api_v1_imaging_studies__study_uid__get
       parameters:
       - name: study_uid
         in: path
@@ -22714,7 +22366,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/instances/{sop_instance_uid}/file:
+  /api/v1/imaging/instances/{sop_instance_uid}/file:
     get:
       tags:
       - Medical Imaging
@@ -22723,7 +22375,7 @@ paths:
 
 
         @req:PRD-IMG-001'
-      operationId: Imaging_download_instance_file_api_v1_imaging_instances__sop_instance_uid__file_get
+      operationId: download_instance_file_api_v1_imaging_instances__sop_instance_uid__file_get
       parameters:
       - name: sop_instance_uid
         in: path
@@ -22743,7 +22395,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/instances/{sop_instance_uid}/presigned-url:
+  /api/v1/imaging/instances/{sop_instance_uid}/presigned-url:
     get:
       tags:
       - Medical Imaging
@@ -22752,7 +22404,7 @@ paths:
 
 
         @req:PRD-IMG-001'
-      operationId: Imaging_get_presigned_download_url_api_v1_imaging_instances__sop_instance_uid__presigned_url_get
+      operationId: get_presigned_download_url_api_v1_imaging_instances__sop_instance_uid__presigned_url_get
       parameters:
       - name: sop_instance_uid
         in: path
@@ -22773,7 +22425,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/certificates/{certificate_id}/verify:
+  /api/v1/imaging/certificates/{certificate_id}/verify:
     get:
       tags:
       - Medical Imaging
@@ -22782,7 +22434,7 @@ paths:
 
 
         @req:PRD-IMG-002'
-      operationId: Imaging_verify_certificate_api_v1_imaging_certificates__certificate_id__verify_get
+      operationId: verify_certificate_api_v1_imaging_certificates__certificate_id__verify_get
       parameters:
       - name: certificate_id
         in: path
@@ -22803,7 +22455,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/series/{series_instance_uid}/mpr-metadata:
+  /api/v1/imaging/series/{series_instance_uid}/mpr-metadata:
     get:
       tags:
       - Medical Imaging
@@ -22814,7 +22466,7 @@ paths:
         @req:PRD-IMG-001
 
         @req:PRD-IMG-004'
-      operationId: Imaging_get_series_mpr_metadata_api_v1_imaging_series__series_instance_uid__mpr_metadata_get
+      operationId: get_series_mpr_metadata_api_v1_imaging_series__series_instance_uid__mpr_metadata_get
       parameters:
       - name: series_instance_uid
         in: path
@@ -22835,7 +22487,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/annotations:
+  /api/v1/imaging/annotations:
     post:
       tags:
       - Medical Imaging
@@ -22846,7 +22498,7 @@ paths:
         @req:PRD-IMG-004
 
         @req:PRD-SYS-001'
-      operationId: Imaging_create_caliper_annotation_api_v1_imaging_annotations_post
+      operationId: create_caliper_annotation_api_v1_imaging_annotations_post
       requestBody:
         required: true
         content:
@@ -22874,7 +22526,7 @@ paths:
 
 
         @req:PRD-IMG-004'
-      operationId: Imaging_list_caliper_annotations_api_v1_imaging_annotations_get
+      operationId: list_caliper_annotations_api_v1_imaging_annotations_get
       parameters:
       - name: study_envelope_id
         in: query
@@ -22957,7 +22609,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/annotations/{annotation_id}:
+  /api/v1/imaging/annotations/{annotation_id}:
     delete:
       tags:
       - Medical Imaging
@@ -22968,7 +22620,7 @@ paths:
         @req:PRD-IMG-004
 
         @req:PRD-SYS-001'
-      operationId: Imaging_delete_caliper_annotation_api_v1_imaging_annotations__annotation_id__delete
+      operationId: delete_caliper_annotation_api_v1_imaging_annotations__annotation_id__delete
       parameters:
       - name: annotation_id
         in: path
@@ -22991,7 +22643,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/response-evaluations/recist:
+  /api/v1/imaging/response-evaluations/recist:
     post:
       tags:
       - Medical Imaging
@@ -23000,7 +22652,7 @@ paths:
 
 
         @req:PRD-IMG-004'
-      operationId: Imaging_evaluate_recist_response_api_v1_imaging_response_evaluations_recist_post
+      operationId: evaluate_recist_response_api_v1_imaging_response_evaluations_recist_post
       requestBody:
         content:
           application/json:
@@ -23020,7 +22672,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/response-evaluations/lugano:
+  /api/v1/imaging/response-evaluations/lugano:
     post:
       tags:
       - Medical Imaging
@@ -23029,7 +22681,7 @@ paths:
 
 
         @req:PRD-IMG-004'
-      operationId: Imaging_evaluate_lugano_response_api_v1_imaging_response_evaluations_lugano_post
+      operationId: evaluate_lugano_response_api_v1_imaging_response_evaluations_lugano_post
       requestBody:
         content:
           application/json:
@@ -23049,7 +22701,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/subjects/{subject_id}/timepoints:
+  /api/v1/imaging/subjects/{subject_id}/timepoints:
     get:
       tags:
       - Medical Imaging
@@ -23058,7 +22710,7 @@ paths:
 
 
         @req:PRD-IMG-004'
-      operationId: Imaging_get_subject_timepoints_trajectory_api_v1_imaging_subjects__subject_id__timepoints_get
+      operationId: get_subject_timepoints_trajectory_api_v1_imaging_subjects__subject_id__timepoints_get
       parameters:
       - name: subject_id
         in: path
@@ -23079,7 +22731,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/subjects/{subject_id}/timepoints/evaluate:
+  /api/v1/imaging/subjects/{subject_id}/timepoints/evaluate:
     post:
       tags:
       - Medical Imaging
@@ -23090,7 +22742,7 @@ paths:
         @req:PRD-IMG-004
 
         @req:PRD-SYS-001'
-      operationId: Imaging_evaluate_and_lock_timepoint_api_v1_imaging_subjects__subject_id__timepoints_evaluate_post
+      operationId: evaluate_and_lock_timepoint_api_v1_imaging_subjects__subject_id__timepoints_evaluate_post
       parameters:
       - name: subject_id
         in: path
@@ -23117,7 +22769,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions:
+  /api/v1/imaging/adjudication/sessions:
     post:
       tags:
       - Medical Imaging
@@ -23128,7 +22780,7 @@ paths:
         @req:PRD-IMG-003
 
         @req:PRD-SYS-001'
-      operationId: Imaging_create_adjudication_session_api_v1_imaging_adjudication_sessions_post
+      operationId: create_adjudication_session_api_v1_imaging_adjudication_sessions_post
       requestBody:
         required: true
         content:
@@ -23156,7 +22808,7 @@ paths:
 
 
         @req:PRD-IMG-003'
-      operationId: Imaging_list_adjudication_sessions_api_v1_imaging_adjudication_sessions_get
+      operationId: list_adjudication_sessions_api_v1_imaging_adjudication_sessions_get
       parameters:
       - name: study_id
         in: query
@@ -23206,7 +22858,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}:
+  /api/v1/imaging/adjudication/sessions/{session_id}:
     get:
       tags:
       - Medical Imaging
@@ -23215,7 +22867,7 @@ paths:
 
 
         @req:PRD-IMG-003'
-      operationId: Imaging_get_adjudication_session_api_v1_imaging_adjudication_sessions__session_id__get
+      operationId: get_adjudication_session_api_v1_imaging_adjudication_sessions__session_id__get
       parameters:
       - name: session_id
         in: path
@@ -23236,7 +22888,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}/assessments:
+  /api/v1/imaging/adjudication/sessions/{session_id}/assessments:
     post:
       tags:
       - Medical Imaging
@@ -23247,7 +22899,7 @@ paths:
         @req:PRD-IMG-003
 
         @req:PRD-IMG-005'
-      operationId: Imaging_submit_reader_assessment_api_v1_imaging_adjudication_sessions__session_id__assessments_post
+      operationId: submit_reader_assessment_api_v1_imaging_adjudication_sessions__session_id__assessments_post
       parameters:
       - name: session_id
         in: path
@@ -23274,7 +22926,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}/sign-off:
+  /api/v1/imaging/adjudication/sessions/{session_id}/sign-off:
     post:
       tags:
       - Medical Imaging
@@ -23285,7 +22937,7 @@ paths:
         @req:PRD-IMG-005
 
         @req:PRD-SYS-001'
-      operationId: Imaging_sign_off_adjudication_api_v1_imaging_adjudication_sessions__session_id__sign_off_post
+      operationId: sign_off_adjudication_api_v1_imaging_adjudication_sessions__session_id__sign_off_post
       parameters:
       - name: session_id
         in: path
@@ -23312,7 +22964,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}/edc-binding:
+  /api/v1/imaging/adjudication/sessions/{session_id}/edc-binding:
     get:
       tags:
       - Medical Imaging
@@ -23321,7 +22973,7 @@ paths:
 
 
         @req:PRD-IMG-006'
-      operationId: Imaging_get_edc_ecrf_tumor_binding_api_v1_imaging_adjudication_sessions__session_id__edc_binding_get
+      operationId: get_edc_ecrf_tumor_binding_api_v1_imaging_adjudication_sessions__session_id__edc_binding_get
       parameters:
       - name: session_id
         in: path
@@ -23342,7 +22994,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}/export-sdtm:
+  /api/v1/imaging/adjudication/sessions/{session_id}/export-sdtm:
     get:
       tags:
       - Medical Imaging
@@ -23351,7 +23003,7 @@ paths:
 
 
         @req:PRD-IMG-006'
-      operationId: Imaging_export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__export_sdtm_get
+      operationId: export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__export_sdtm_get
       parameters:
       - name: session_id
         in: path
@@ -23372,7 +23024,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/api/v1/imaging/adjudication/sessions/{session_id}/sdtm:
+  /api/v1/imaging/adjudication/sessions/{session_id}/sdtm:
     get:
       tags:
       - Medical Imaging
@@ -23381,7 +23033,7 @@ paths:
 
 
         @req:PRD-IMG-006'
-      operationId: Imaging_export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__sdtm_get
+      operationId: export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__sdtm_get
       parameters:
       - name: session_id
         in: path
@@ -23402,41 +23054,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Imaging_HTTPValidationError'
-  /imaging/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Imaging_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /interop/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Interop_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /interop/api/v1/interop/fhir/semantic-map:
+  /api/v1/interop/fhir/semantic-map:
     post:
       summary: Fhir Semantic Map
       description: Execute hybrid FHIR-to-CDISC semantic interoperability mapping.
-      operationId: Interop_fhir_semantic_map_api_v1_interop_fhir_semantic_map_post
+      operationId: fhir_semantic_map_api_v1_interop_fhir_semantic_map_post
       requestBody:
         content:
           application/json:
@@ -23456,11 +23078,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/fhir/concept-maps:
+  /api/v1/interop/fhir/concept-maps:
     get:
       summary: List Concept Maps
       description: Retrieve the catalog of supported FHIR-to-CDISC ConceptMaps.
-      operationId: Interop_list_concept_maps_api_v1_interop_fhir_concept_maps_get
+      operationId: list_concept_maps_api_v1_interop_fhir_concept_maps_get
       responses:
         '200':
           description: Successful Response
@@ -23468,11 +23090,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_ConceptMapListResponse'
-  /interop/api/v1/interop/fhir/prefill:
+  /api/v1/interop/fhir/prefill:
     post:
       summary: Fhir Prefill
       description: Ingest a standard FHIR Bundle payload and return mapped CDASH eCRF fields.
-      operationId: Interop_fhir_prefill_api_v1_interop_fhir_prefill_post
+      operationId: fhir_prefill_api_v1_interop_fhir_prefill_post
       requestBody:
         content:
           application/json:
@@ -23494,11 +23116,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/fhir/pre-screen:
+  /api/v1/interop/fhir/pre-screen:
     post:
       summary: Fhir Pre Screen
       description: Advisory FHIR eligibility pre-screening endpoint.
-      operationId: Interop_fhir_pre_screen_api_v1_interop_fhir_pre_screen_post
+      operationId: fhir_pre_screen_api_v1_interop_fhir_pre_screen_post
       requestBody:
         content:
           application/json:
@@ -23518,11 +23140,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/submit:
+  /api/v1/interop/epro/submit:
     post:
       summary: Epro Submit
       description: Submit a single participant diary/survey entry.
-      operationId: Interop_epro_submit_api_v1_interop_epro_submit_post
+      operationId: epro_submit_api_v1_interop_epro_submit_post
       requestBody:
         content:
           application/json:
@@ -23544,11 +23166,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/sync:
+  /api/v1/interop/epro/sync:
     post:
       summary: Epro Sync
       description: Bulk sync endpoint for offline queues.
-      operationId: Interop_epro_sync_api_v1_interop_epro_sync_post
+      operationId: epro_sync_api_v1_interop_epro_sync_post
       requestBody:
         content:
           application/json:
@@ -23570,11 +23192,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/instruments:
+  /api/v1/interop/instruments:
     post:
       summary: Create Instrument
       description: Author a new eCOA questionnaire/diary definition.
-      operationId: Interop_create_instrument_api_v1_interop_instruments_post
+      operationId: create_instrument_api_v1_interop_instruments_post
       requestBody:
         content:
           application/json:
@@ -23594,11 +23216,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/assignments:
+  /api/v1/interop/assignments:
     post:
       summary: Create Subject Assignment
       description: Assign an eCOA instrument to a subject with due/recurrence window data.
-      operationId: Interop_create_subject_assignment_api_v1_interop_assignments_post
+      operationId: create_subject_assignment_api_v1_interop_assignments_post
       requestBody:
         content:
           application/json:
@@ -23618,11 +23240,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/instruments/{id}:
+  /api/v1/interop/instruments/{id}:
     get:
       summary: Get Instrument
       description: Retrieve an Instrument definition by ID.
-      operationId: Interop_get_instrument_api_v1_interop_instruments__id__get
+      operationId: get_instrument_api_v1_interop_instruments__id__get
       parameters:
       - name: id
         in: path
@@ -23643,11 +23265,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/assignments/subject/{subject_id}:
+  /api/v1/interop/assignments/subject/{subject_id}:
     get:
       summary: Get Subject Assignments
       description: Retrieve all assignments for a given subject.
-      operationId: Interop_get_subject_assignments_api_v1_interop_assignments_subject__subject_id__get
+      operationId: get_subject_assignments_api_v1_interop_assignments_subject__subject_id__get
       parameters:
       - name: subject_id
         in: path
@@ -23671,11 +23293,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/subjects/{subject_id}/instruments:
+  /api/v1/interop/subjects/{subject_id}/instruments:
     get:
       summary: Get Subject Assigned Instruments
       description: Retrieve all unique assigned instruments for a given subject.
-      operationId: Interop_get_subject_assigned_instruments_api_v1_interop_subjects__subject_id__instruments_get
+      operationId: get_subject_assigned_instruments_api_v1_interop_subjects__subject_id__instruments_get
       parameters:
       - name: subject_id
         in: path
@@ -23699,11 +23321,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/subjects/{subject_id}/compliance:
+  /api/v1/interop/subjects/{subject_id}/compliance:
     get:
       summary: Get Subject Compliance
       description: Retrieve/compute eCOA compliance status metrics for a subject.
-      operationId: Interop_get_subject_compliance_api_v1_interop_subjects__subject_id__compliance_get
+      operationId: get_subject_compliance_api_v1_interop_subjects__subject_id__compliance_get
       parameters:
       - name: subject_id
         in: path
@@ -23724,11 +23346,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/reminders/compute:
+  /api/v1/interop/reminders/compute:
     post:
       summary: Compute Reminders
       description: Compute due reminders from assignment schedules on demand.
-      operationId: Interop_compute_reminders_api_v1_interop_reminders_compute_post
+      operationId: compute_reminders_api_v1_interop_reminders_compute_post
       parameters:
       - name: subject_id
         in: query
@@ -23753,11 +23375,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/subjects/{subject_id}/notifications:
+  /api/v1/interop/subjects/{subject_id}/notifications:
     get:
       summary: Get Subject Notifications
       description: Retrieve all notifications for a given subject.
-      operationId: Interop_get_subject_notifications_api_v1_interop_subjects__subject_id__notifications_get
+      operationId: get_subject_notifications_api_v1_interop_subjects__subject_id__notifications_get
       parameters:
       - name: subject_id
         in: path
@@ -23781,11 +23403,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/notifications/{notification_id}/acknowledge:
+  /api/v1/interop/notifications/{notification_id}/acknowledge:
     post:
       summary: Acknowledge Notification
       description: Acknowledge/read a notification.
-      operationId: Interop_acknowledge_notification_api_v1_interop_notifications__notification_id__acknowledge_post
+      operationId: acknowledge_notification_api_v1_interop_notifications__notification_id__acknowledge_post
       parameters:
       - name: notification_id
         in: path
@@ -23812,11 +23434,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/quarantine:
+  /api/v1/interop/epro/quarantine:
     get:
       summary: List Quarantined Submissions
       description: Retrieve all quarantined ePRO submissions for clinical trial managers.
-      operationId: Interop_list_quarantined_submissions_api_v1_interop_epro_quarantine_get
+      operationId: list_quarantined_submissions_api_v1_interop_epro_quarantine_get
       parameters:
       - name: status
         in: query
@@ -23842,11 +23464,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/quarantine/{id}:
+  /api/v1/interop/epro/quarantine/{id}:
     get:
       summary: Get Quarantined Submission
       description: Retrieve a single quarantined ePRO submission by ID.
-      operationId: Interop_get_quarantined_submission_api_v1_interop_epro_quarantine__id__get
+      operationId: get_quarantined_submission_api_v1_interop_epro_quarantine__id__get
       parameters:
       - name: id
         in: path
@@ -23867,11 +23489,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/quarantine/{id}/edit:
+  /api/v1/interop/epro/quarantine/{id}/edit:
     post:
       summary: Edit Quarantined Submission
       description: Edit a quarantined ePRO submission payload.
-      operationId: Interop_edit_quarantined_submission_api_v1_interop_epro_quarantine__id__edit_post
+      operationId: edit_quarantined_submission_api_v1_interop_epro_quarantine__id__edit_post
       parameters:
       - name: id
         in: path
@@ -23898,11 +23520,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/epro/quarantine/{id}/replay:
+  /api/v1/interop/epro/quarantine/{id}/replay:
     post:
       summary: Replay Quarantined Submission
       description: Replay a corrected quarantined ePRO submission back into the active database.
-      operationId: Interop_replay_quarantined_submission_api_v1_interop_epro_quarantine__id__replay_post
+      operationId: replay_quarantined_submission_api_v1_interop_epro_quarantine__id__replay_post
       parameters:
       - name: id
         in: path
@@ -23931,13 +23553,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/ingest:
+  /api/v1/interop/lakehouse/ingest:
     post:
       tags:
       - CDR Lakehouse
       summary: Ingest heterogeneous clinical stream data
       description: Ingest and normalize heterogeneous trial streams (EDC, ePRO, Labs, Wearables, FHIR, Imaging).
-      operationId: Interop_ingest_stream_data_api_v1_interop_lakehouse_ingest_post
+      operationId: ingest_stream_data_api_v1_interop_lakehouse_ingest_post
       requestBody:
         content:
           application/json:
@@ -23957,13 +23579,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots:
+  /api/v1/interop/lakehouse/snapshots:
     post:
       tags:
       - CDR Lakehouse
       summary: Create an immutable, version-pinned clinical data snapshot
       description: Pool lakehouse observations into an immutable, version-pinned snapshot sealed with SHA-256.
-      operationId: Interop_create_snapshot_api_v1_interop_lakehouse_snapshots_post
+      operationId: create_snapshot_api_v1_interop_lakehouse_snapshots_post
       requestBody:
         required: true
         content:
@@ -23988,7 +23610,7 @@ paths:
       - CDR Lakehouse
       summary: List version-pinned snapshots for a study
       description: Retrieve all sealed, version-pinned snapshots for the specified study.
-      operationId: Interop_list_snapshots_api_v1_interop_lakehouse_snapshots_get
+      operationId: list_snapshots_api_v1_interop_lakehouse_snapshots_get
       parameters:
       - name: study_id
         in: query
@@ -24021,13 +23643,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}:
+  /api/v1/interop/lakehouse/snapshots/{snapshot_id}:
     get:
       tags:
       - CDR Lakehouse
       summary: Retrieve snapshot metadata and seal info
       description: Fetch metadata and cryptographic digest for a specific snapshot.
-      operationId: Interop_get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get
+      operationId: get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get
       parameters:
       - name: snapshot_id
         in: path
@@ -24048,13 +23670,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/query:
+  /api/v1/interop/lakehouse/snapshots/{snapshot_id}/query:
     post:
       tags:
       - CDR Lakehouse
       summary: Query pooled records inside a version-pinned snapshot
       description: Query observations pooled inside a snapshot, enforcing role-based unblinded masking.
-      operationId: Interop_query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post
+      operationId: query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post
       parameters:
       - name: snapshot_id
         in: path
@@ -24081,13 +23703,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/data:
+  /api/v1/interop/lakehouse/snapshots/{snapshot_id}/data:
     get:
       tags:
       - CDR Lakehouse
       summary: Fetch snapshot pool data records via GET
       description: Convenience endpoint to retrieve observations in a snapshot pool.
-      operationId: Interop_get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get
+      operationId: get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get
       parameters:
       - name: snapshot_id
         in: path
@@ -24138,13 +23760,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/verify:
+  /api/v1/interop/lakehouse/snapshots/{snapshot_id}/verify:
     post:
       tags:
       - CDR Lakehouse
       summary: Verify cryptographic SHA-256 integrity of sealed snapshot
       description: Recompute and verify the SHA-256 seal against all pooled records in the snapshot.
-      operationId: Interop_verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post
+      operationId: verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post
       parameters:
       - name: snapshot_id
         in: path
@@ -24165,13 +23787,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/audit-trail:
+  /api/v1/interop/lakehouse/snapshots/{snapshot_id}/audit-trail:
     get:
       tags:
       - CDR Lakehouse
       summary: Retrieve 21 CFR Part 11 audit log for a snapshot
       description: Retrieve all chronological 21 CFR Part 11 audit trail entries for a snapshot.
-      operationId: Interop_get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get
+      operationId: get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get
       parameters:
       - name: snapshot_id
         in: path
@@ -24192,13 +23814,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/lakehouse/metrics/{study_id}:
+  /api/v1/interop/lakehouse/metrics/{study_id}:
     get:
       tags:
       - CDR Lakehouse
       summary: Retrieve real-time Lakehouse stream and snapshot metrics
       description: Aggregate real-time data stream, subject, site, and snapshot metrics for a study.
-      operationId: Interop_get_metrics_api_v1_interop_lakehouse_metrics__study_id__get
+      operationId: get_metrics_api_v1_interop_lakehouse_metrics__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -24219,13 +23841,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/pipeline/execute:
+  /api/v1/interop/cdr/pipeline/execute:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Execute end-to-end continuous CDISC SDTM/ADaM pipeline and compiler
       description: Execute automated continuous transformation mapping raw clinical observations to 10 SDTM domains, 4 ADaM datasets, Dataset-JSON, and Define-XML.
-      operationId: Interop_execute_continuous_pipeline_api_v1_interop_cdr_pipeline_execute_post
+      operationId: execute_continuous_pipeline_api_v1_interop_cdr_pipeline_execute_post
       requestBody:
         content:
           application/json:
@@ -24245,13 +23867,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/pipeline/results/{execution_id}:
+  /api/v1/interop/cdr/pipeline/results/{execution_id}:
     get:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Retrieve execution manifest for a pipeline run
       description: Retrieve details and metadata summary for a completed pipeline run.
-      operationId: Interop_get_pipeline_execution_result_api_v1_interop_cdr_pipeline_results__execution_id__get
+      operationId: get_pipeline_execution_result_api_v1_interop_cdr_pipeline_results__execution_id__get
       parameters:
       - name: execution_id
         in: path
@@ -24272,13 +23894,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/pipeline/sdtm:
+  /api/v1/interop/cdr/pipeline/sdtm:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Execute CDISC SDTM 10-domain transformation engine
       description: Transform canonical observations into 10 standard CDISC SDTM domains.
-      operationId: Interop_execute_sdtm_pipeline_api_v1_interop_cdr_pipeline_sdtm_post
+      operationId: execute_sdtm_pipeline_api_v1_interop_cdr_pipeline_sdtm_post
       requestBody:
         content:
           application/json:
@@ -24298,13 +23920,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/pipeline/adam:
+  /api/v1/interop/cdr/pipeline/adam:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Execute CDISC ADaM 4-dataset derivation engine
       description: Execute statistical derivation rules generating ADSL, ADAE, ADTTE, BDS datasets.
-      operationId: Interop_execute_adam_pipeline_api_v1_interop_cdr_pipeline_adam_post
+      operationId: execute_adam_pipeline_api_v1_interop_cdr_pipeline_adam_post
       requestBody:
         content:
           application/json:
@@ -24324,13 +23946,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/export/dataset-json:
+  /api/v1/interop/cdr/export/dataset-json:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Export clinical datasets in official CDISC Dataset-JSON 1.1 / 2.0
       description: Serialize and export SDTM and ADaM datasets in CDISC Dataset-JSON 1.1 / 2.0 format.
-      operationId: Interop_export_dataset_json_api_v1_interop_cdr_export_dataset_json_post
+      operationId: export_dataset_json_api_v1_interop_cdr_export_dataset_json_post
       requestBody:
         content:
           application/json:
@@ -24350,13 +23972,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/export/define-xml:
+  /api/v1/interop/cdr/export/define-xml:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Auto-compile and export CDISC Define-XML v2.1 metadata specification
       description: Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset definitions, VLM, WhereClauses, and Origins.
-      operationId: Interop_export_define_xml_api_v1_interop_cdr_export_define_xml_post
+      operationId: export_define_xml_api_v1_interop_cdr_export_define_xml_post
       requestBody:
         content:
           application/json:
@@ -24375,13 +23997,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/validate/dataset-json:
+  /api/v1/interop/cdr/validate/dataset-json:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Validate a Dataset-JSON 1.1 / 2.0 payload
       description: Perform strict structural and schema conformance validation for CDISC Dataset-JSON.
-      operationId: Interop_validate_dataset_json_endpoint_api_v1_interop_cdr_validate_dataset_json_post
+      operationId: validate_dataset_json_endpoint_api_v1_interop_cdr_validate_dataset_json_post
       requestBody:
         content:
           application/json:
@@ -24401,13 +24023,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/validate/define-xml:
+  /api/v1/interop/cdr/validate/define-xml:
     post:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Validate a CDISC Define-XML v2.1 document
       description: Validate CDISC Define-XML v2.1 document syntax, ODM root, and element presence.
-      operationId: Interop_validate_define_xml_endpoint_api_v1_interop_cdr_validate_define_xml_post
+      operationId: validate_define_xml_endpoint_api_v1_interop_cdr_validate_define_xml_post
       requestBody:
         content:
           application/json:
@@ -24427,13 +24049,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/cdr/metadata/catalog:
+  /api/v1/interop/cdr/metadata/catalog:
     get:
       tags:
       - CDR Pipeline & CDISC Compiler
       summary: Retrieve CDISC domain and variable metadata catalog
       description: Retrieve catalog of supported SDTM domains, ADaM datasets, variable definitions, and VLM.
-      operationId: Interop_get_metadata_catalog_api_v1_interop_cdr_metadata_catalog_get
+      operationId: get_metadata_catalog_api_v1_interop_cdr_metadata_catalog_get
       responses:
         '200':
           description: Successful Response
@@ -24441,13 +24063,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_DomainCatalogResponse'
-  /interop/api/v1/interop/sce/programs:
+  /api/v1/interop/sce/programs:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Create or register a statistical analysis program
       description: Register a version-controlled R or Python statistical program with package lockfile.
-      operationId: Interop_create_program_api_v1_interop_sce_programs_post
+      operationId: create_program_api_v1_interop_sce_programs_post
       requestBody:
         required: true
         content:
@@ -24472,7 +24094,7 @@ paths:
       - CDR Statistical Computing Environment
       summary: List statistical programs for a study
       description: List all version-controlled statistical programs for a study.
-      operationId: Interop_list_programs_api_v1_interop_sce_programs_get
+      operationId: list_programs_api_v1_interop_sce_programs_get
       parameters:
       - name: study_id
         in: query
@@ -24495,13 +24117,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/programs/{program_id}:
+  /api/v1/interop/sce/programs/{program_id}:
     get:
       tags:
       - CDR Statistical Computing Environment
       summary: Retrieve statistical program by ID
       description: Retrieve statistical program definition.
-      operationId: Interop_get_program_api_v1_interop_sce_programs__program_id__get
+      operationId: get_program_api_v1_interop_sce_programs__program_id__get
       parameters:
       - name: program_id
         in: path
@@ -24522,13 +24144,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/validate-lockfile:
+  /api/v1/interop/sce/validate-lockfile:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Validate package lockfile integrity and GxP qualification
       description: Parse and verify package lockfile (uv.lock / renv.lock) integrity and qualification.
-      operationId: Interop_validate_lockfile_api_v1_interop_sce_validate_lockfile_post
+      operationId: validate_lockfile_api_v1_interop_sce_validate_lockfile_post
       requestBody:
         content:
           application/json:
@@ -24548,13 +24170,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/lock-tokens:
+  /api/v1/interop/sce/lock-tokens:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Issue database lock authorization token for unblinded analysis
       description: Issue a cryptographically signed database lock token granting unblinded statistical analysis access.
-      operationId: Interop_issue_lock_token_api_v1_interop_sce_lock_tokens_post
+      operationId: issue_lock_token_api_v1_interop_sce_lock_tokens_post
       requestBody:
         required: true
         content:
@@ -24579,7 +24201,7 @@ paths:
       - CDR Statistical Computing Environment
       summary: List active database lock authorization tokens
       description: List active authorization tokens for unblinded analysis.
-      operationId: Interop_list_lock_tokens_api_v1_interop_sce_lock_tokens_get
+      operationId: list_lock_tokens_api_v1_interop_sce_lock_tokens_get
       parameters:
       - name: study_id
         in: query
@@ -24602,13 +24224,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/lock-tokens/{token_id}/revoke:
+  /api/v1/interop/sce/lock-tokens/{token_id}/revoke:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Revoke an active database lock authorization token
       description: Revoke an active database lock token.
-      operationId: Interop_revoke_lock_token_api_v1_interop_sce_lock_tokens__token_id__revoke_post
+      operationId: revoke_lock_token_api_v1_interop_sce_lock_tokens__token_id__revoke_post
       parameters:
       - name: token_id
         in: path
@@ -24640,13 +24262,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/execute:
+  /api/v1/interop/sce/execute:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Execute statistical program in isolated containerized sandbox
       description: Execute validated R or Python script against version-pinned data snapshot with signed run manifest.
-      operationId: Interop_execute_program_api_v1_interop_sce_execute_post
+      operationId: execute_program_api_v1_interop_sce_execute_post
       requestBody:
         content:
           application/json:
@@ -24666,13 +24288,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/runs:
+  /api/v1/interop/sce/runs:
     get:
       tags:
       - CDR Statistical Computing Environment
       summary: List historical execution runs for a study
       description: List all historical analytical execution runs.
-      operationId: Interop_list_execution_runs_api_v1_interop_sce_runs_get
+      operationId: list_execution_runs_api_v1_interop_sce_runs_get
       parameters:
       - name: study_id
         in: query
@@ -24715,13 +24337,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/runs/{run_id}:
+  /api/v1/interop/sce/runs/{run_id}:
     get:
       tags:
       - CDR Statistical Computing Environment
       summary: Retrieve execution run manifest and details
       description: Retrieve details and signed manifest of an execution run.
-      operationId: Interop_get_execution_run_api_v1_interop_sce_runs__run_id__get
+      operationId: get_execution_run_api_v1_interop_sce_runs__run_id__get
       parameters:
       - name: run_id
         in: path
@@ -24742,13 +24364,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/runs/{run_id}/verify:
+  /api/v1/interop/sce/runs/{run_id}/verify:
     post:
       tags:
       - CDR Statistical Computing Environment
       summary: Cryptographically verify execution run manifest seal
       description: Assert bit-for-bit SHA-256 seal integrity and 21 CFR Part 11 electronic signature.
-      operationId: Interop_verify_run_manifest_api_v1_interop_sce_runs__run_id__verify_post
+      operationId: verify_run_manifest_api_v1_interop_sce_runs__run_id__verify_post
       parameters:
       - name: run_id
         in: path
@@ -24769,13 +24391,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}:
+  /api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}:
     get:
       tags:
       - CDR Statistical Computing Environment
       summary: Retrieve generated artifact details and preview
       description: Retrieve output artifact metadata and content preview.
-      operationId: Interop_get_run_artifact_api_v1_interop_sce_runs__run_id__artifacts__artifact_id__get
+      operationId: get_run_artifact_api_v1_interop_sce_runs__run_id__artifacts__artifact_id__get
       parameters:
       - name: run_id
         in: path
@@ -24804,7 +24426,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/devices:
+  /api/v1/interop/sensors/devices:
     post:
       tags:
       - Biometric Sensors & DCT
@@ -24815,7 +24437,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_register_device_api_v1_interop_sensors_devices_post
+      operationId: register_device_api_v1_interop_sensors_devices_post
       requestBody:
         required: true
         content:
@@ -24845,7 +24467,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_list_devices_api_v1_interop_sensors_devices_get
+      operationId: list_devices_api_v1_interop_sensors_devices_get
       parameters:
       - name: study_id
         in: query
@@ -24898,7 +24520,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/ingest:
+  /api/v1/interop/sensors/ingest:
     post:
       tags:
       - Biometric Sensors & DCT
@@ -24926,7 +24548,7 @@ paths:
         @req:PRD-DCT-001
 
         @req:ADR-2199'
-      operationId: Interop_ingest_telemetry_stream_api_v1_interop_sensors_ingest_post
+      operationId: ingest_telemetry_stream_api_v1_interop_sensors_ingest_post
       requestBody:
         content:
           application/json:
@@ -24946,7 +24568,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/daily-summaries:
+  /api/v1/interop/sensors/daily-summaries:
     get:
       tags:
       - Biometric Sensors & DCT
@@ -24957,7 +24579,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_list_daily_summaries_api_v1_interop_sensors_daily_summaries_get
+      operationId: list_daily_summaries_api_v1_interop_sensors_daily_summaries_get
       parameters:
       - name: study_id
         in: query
@@ -25022,7 +24644,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/safety-alerts:
+  /api/v1/interop/sensors/safety-alerts:
     get:
       tags:
       - Biometric Sensors & DCT
@@ -25033,7 +24655,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_list_safety_alerts_api_v1_interop_sensors_safety_alerts_get
+      operationId: list_safety_alerts_api_v1_interop_sensors_safety_alerts_get
       parameters:
       - name: study_id
         in: query
@@ -25096,7 +24718,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge:
+  /api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge:
     post:
       tags:
       - Biometric Sensors & DCT
@@ -25107,7 +24729,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post
+      operationId: acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post
       parameters:
       - name: alert_id
         in: path
@@ -25134,7 +24756,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/sensors/metrics/{study_id}:
+  /api/v1/interop/sensors/metrics/{study_id}:
     get:
       tags:
       - Biometric Sensors & DCT
@@ -25145,7 +24767,7 @@ paths:
         @req:PRD-DCT-002
 
         @req:ADR-2199'
-      operationId: Interop_get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get
+      operationId: get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -25166,7 +24788,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions:
+  /api/v1/interop/dct/telehealth/sessions:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25177,7 +24799,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post
+      operationId: schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post
       requestBody:
         required: true
         content:
@@ -25207,7 +24829,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get
+      operationId: list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get
       parameters:
       - name: study_id
         in: query
@@ -25238,7 +24860,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions/{session_id}:
+  /api/v1/interop/dct/telehealth/sessions/{session_id}:
     get:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25249,7 +24871,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get
+      operationId: get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get
       parameters:
       - name: session_id
         in: path
@@ -25270,7 +24892,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions/{session_id}/token:
+  /api/v1/interop/dct/telehealth/sessions/{session_id}/token:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25281,7 +24903,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post
+      operationId: generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post
       parameters:
       - name: session_id
         in: path
@@ -25308,7 +24930,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling:
+  /api/v1/interop/dct/telehealth/sessions/{session_id}/signaling:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25319,7 +24941,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post
+      operationId: update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post
       parameters:
       - name: session_id
         in: path
@@ -25346,7 +24968,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view:
+  /api/v1/interop/dct/telehealth/sessions/{session_id}/co-view:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25357,7 +24979,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post
+      operationId: sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post
       parameters:
       - name: session_id
         in: path
@@ -25384,7 +25006,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording:
+  /api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25395,7 +25017,7 @@ paths:
         @req:PRD-DCT-005
 
         @req:ADR-2199'
-      operationId: Interop_archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post
+      operationId: archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post
       parameters:
       - name: session_id
         in: path
@@ -25422,7 +25044,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/econsent/pediatric-assent:
+  /api/v1/interop/dct/econsent/pediatric-assent:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25433,7 +25055,7 @@ paths:
         @req:PRD-DCT-006
 
         @req:ADR-2199'
-      operationId: Interop_submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post
+      operationId: submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post
       requestBody:
         required: true
         content:
@@ -25463,7 +25085,7 @@ paths:
         @req:PRD-DCT-006
 
         @req:ADR-2199'
-      operationId: Interop_list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get
+      operationId: list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get
       parameters:
       - name: study_id
         in: query
@@ -25494,7 +25116,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/econsent/pediatric-assent/{assent_id}/verify:
+  /api/v1/interop/dct/econsent/pediatric-assent/{assent_id}/verify:
     get:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25505,7 +25127,7 @@ paths:
         @req:PRD-DCT-006
 
         @req:ADR-2199'
-      operationId: Interop_verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get
+      operationId: verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get
       parameters:
       - name: assent_id
         in: path
@@ -25526,7 +25148,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/dtp/shipments:
+  /api/v1/interop/dct/dtp/shipments:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25537,7 +25159,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post
+      operationId: create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post
       requestBody:
         required: true
         content:
@@ -25567,7 +25189,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get
+      operationId: list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get
       parameters:
       - name: study_id
         in: query
@@ -25606,7 +25228,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/dtp/shipments/{tracking_number}:
+  /api/v1/interop/dct/dtp/shipments/{tracking_number}:
     get:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25617,7 +25239,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get
+      operationId: get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get
       parameters:
       - name: tracking_number
         in: path
@@ -25638,7 +25260,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature:
+  /api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25649,7 +25271,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post
+      operationId: ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post
       parameters:
       - name: tracking_number
         in: path
@@ -25676,7 +25298,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff:
+  /api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25687,7 +25309,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post
+      operationId: record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post
       parameters:
       - name: tracking_number
         in: path
@@ -25714,7 +25336,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery:
+  /api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25725,7 +25347,7 @@ paths:
         @req:PRD-DCT-003
 
         @req:ADR-2199'
-      operationId: Interop_confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post
+      operationId: confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post
       parameters:
       - name: tracking_number
         in: path
@@ -25752,7 +25374,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/home-health/visits:
+  /api/v1/interop/dct/home-health/visits:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25763,7 +25385,7 @@ paths:
         @req:PRD-DCT-004
 
         @req:ADR-2199'
-      operationId: Interop_schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post
+      operationId: schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post
       requestBody:
         required: true
         content:
@@ -25793,7 +25415,7 @@ paths:
         @req:PRD-DCT-004
 
         @req:ADR-2199'
-      operationId: Interop_list_in_home_visits_api_v1_interop_dct_home_health_visits_get
+      operationId: list_in_home_visits_api_v1_interop_dct_home_health_visits_get
       parameters:
       - name: study_id
         in: query
@@ -25840,7 +25462,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/home-health/visits/{visit_id}:
+  /api/v1/interop/dct/home-health/visits/{visit_id}:
     get:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25851,7 +25473,7 @@ paths:
         @req:PRD-DCT-004
 
         @req:ADR-2199'
-      operationId: Interop_get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get
+      operationId: get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get
       parameters:
       - name: visit_id
         in: path
@@ -25872,7 +25494,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/home-health/visits/{visit_id}/status:
+  /api/v1/interop/dct/home-health/visits/{visit_id}/status:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25883,7 +25505,7 @@ paths:
         @req:PRD-DCT-004
 
         @req:ADR-2199'
-      operationId: Interop_update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post
+      operationId: update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post
       parameters:
       - name: visit_id
         in: path
@@ -25910,7 +25532,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf:
+  /api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf:
     post:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25921,7 +25543,7 @@ paths:
         @req:PRD-DCT-004
 
         @req:ADR-2199'
-      operationId: Interop_reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post
+      operationId: reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post
       parameters:
       - name: visit_id
         in: path
@@ -25948,7 +25570,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/dct/metrics/{study_id}:
+  /api/v1/interop/dct/metrics/{study_id}:
     get:
       tags:
       - Decentralized Clinical Trials (DCT)
@@ -25965,7 +25587,7 @@ paths:
         @req:PRD-DCT-006
 
         @req:ADR-2199'
-      operationId: Interop_get_dct_metrics_api_v1_interop_dct_metrics__study_id__get
+      operationId: get_dct_metrics_api_v1_interop_dct_metrics__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -25986,13 +25608,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/endpoints:
+  /api/v1/interop/esource/endpoints:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Register Ehr Endpoint
       description: Register a new hospital EHR FHIR endpoint with SMART Backend Services credentials.
-      operationId: Interop_register_ehr_endpoint_api_v1_interop_esource_endpoints_post
+      operationId: register_ehr_endpoint_api_v1_interop_esource_endpoints_post
       requestBody:
         required: true
         content:
@@ -26017,7 +25639,7 @@ paths:
       - eSource & SMART on FHIR
       summary: List Ehr Endpoints
       description: List configured hospital EHR endpoints.
-      operationId: Interop_list_ehr_endpoints_api_v1_interop_esource_endpoints_get
+      operationId: list_ehr_endpoints_api_v1_interop_esource_endpoints_get
       parameters:
       - name: active_only
         in: query
@@ -26042,13 +25664,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/smart/assertion:
+  /api/v1/interop/esource/smart/assertion:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Generate Client Assertion
       description: Generate an asymmetric signed client assertion JWT for SMART on FHIR Backend Services OAuth2.
-      operationId: Interop_generate_client_assertion_api_v1_interop_esource_smart_assertion_post
+      operationId: generate_client_assertion_api_v1_interop_esource_smart_assertion_post
       requestBody:
         content:
           application/json:
@@ -26068,13 +25690,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/smart/verify:
+  /api/v1/interop/esource/smart/verify:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Verify Client Assertion
       description: Verify an asymmetric client assertion JWT per SMART Backend Services rules.
-      operationId: Interop_verify_client_assertion_api_v1_interop_esource_smart_verify_post
+      operationId: verify_client_assertion_api_v1_interop_esource_smart_verify_post
       requestBody:
         content:
           application/json:
@@ -26094,13 +25716,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/poll:
+  /api/v1/interop/esource/poll:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Poll Hospital Ehr
       description: Trigger automated SMART on FHIR polling against a registered hospital EHR endpoint.
-      operationId: Interop_poll_hospital_ehr_api_v1_interop_esource_poll_post
+      operationId: poll_hospital_ehr_api_v1_interop_esource_poll_post
       requestBody:
         content:
           application/json:
@@ -26120,13 +25742,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/ingest:
+  /api/v1/interop/esource/ingest:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Ingest Fhir Bundle
       description: Ingest a standard FHIR Bundle, normalize to CDASH domain models, and populate candidate reconciliation queue.
-      operationId: Interop_ingest_fhir_bundle_api_v1_interop_esource_ingest_post
+      operationId: ingest_fhir_bundle_api_v1_interop_esource_ingest_post
       requestBody:
         content:
           application/json:
@@ -26146,13 +25768,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/candidates:
+  /api/v1/interop/esource/candidates:
     get:
       tags:
       - eSource & SMART on FHIR
       summary: List Candidates
       description: Retrieve candidate reconciliation items with filtering for the split-screen drawer.
-      operationId: Interop_list_candidates_api_v1_interop_esource_candidates_get
+      operationId: list_candidates_api_v1_interop_esource_candidates_get
       parameters:
       - name: study_id
         in: query
@@ -26221,13 +25843,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/candidates/{candidate_id}:
+  /api/v1/interop/esource/candidates/{candidate_id}:
     get:
       tags:
       - eSource & SMART on FHIR
       summary: Get Candidate
       description: Get details of a specific candidate reconciliation item.
-      operationId: Interop_get_candidate_api_v1_interop_esource_candidates__candidate_id__get
+      operationId: get_candidate_api_v1_interop_esource_candidates__candidate_id__get
       parameters:
       - name: candidate_id
         in: path
@@ -26248,13 +25870,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/reconcile/accept:
+  /api/v1/interop/esource/reconcile/accept:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Accept Candidate
       description: 1-Click 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
-      operationId: Interop_accept_candidate_api_v1_interop_esource_reconcile_accept_post
+      operationId: accept_candidate_api_v1_interop_esource_reconcile_accept_post
       requestBody:
         content:
           application/json:
@@ -26274,13 +25896,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/reconcile/reject:
+  /api/v1/interop/esource/reconcile/reject:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Reject Candidate
       description: 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
-      operationId: Interop_reject_candidate_api_v1_interop_esource_reconcile_reject_post
+      operationId: reject_candidate_api_v1_interop_esource_reconcile_reject_post
       requestBody:
         content:
           application/json:
@@ -26300,13 +25922,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/reconcile/query:
+  /api/v1/interop/esource/reconcile/query:
     post:
       tags:
       - eSource & SMART on FHIR
       summary: Raise Clinical Query
       description: 1-Click 'Raise Clinical Query' to open a formal GxP discrepancy query for an EHR-to-eCRF mismatch.
-      operationId: Interop_raise_clinical_query_api_v1_interop_esource_reconcile_query_post
+      operationId: raise_clinical_query_api_v1_interop_esource_reconcile_query_post
       requestBody:
         content:
           application/json:
@@ -26326,13 +25948,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/esource/provenance/{candidate_id}:
+  /api/v1/interop/esource/provenance/{candidate_id}:
     get:
       tags:
       - eSource & SMART on FHIR
       summary: Get Provenance Audit
       description: Retrieve complete immutable FHIR source provenance and Part 11 audit ledger for a record.
-      operationId: Interop_get_provenance_audit_api_v1_interop_esource_provenance__candidate_id__get
+      operationId: get_provenance_audit_api_v1_interop_esource_provenance__candidate_id__get
       parameters:
       - name: candidate_id
         in: path
@@ -26353,7 +25975,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/devices/sdtm/dd:
+  /api/v1/interop/devices/sdtm/dd:
     post:
       tags:
       - Device Interop & Regulatory Exports
@@ -26362,7 +25984,7 @@ paths:
 
 
         Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209'
-      operationId: Interop_generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post
+      operationId: generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post
       requestBody:
         content:
           application/json:
@@ -26382,7 +26004,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/devices/sdtm/do:
+  /api/v1/interop/devices/sdtm/do:
     post:
       tags:
       - Device Interop & Regulatory Exports
@@ -26391,7 +26013,7 @@ paths:
 
 
         Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209'
-      operationId: Interop_generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post
+      operationId: generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post
       requestBody:
         content:
           application/json:
@@ -26411,7 +26033,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/devices/mir-report:
+  /api/v1/interop/devices/mir-report:
     post:
       tags:
       - Device Interop & Regulatory Exports
@@ -26420,7 +26042,7 @@ paths:
 
 
         Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209'
-      operationId: Interop_generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post
+      operationId: generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post
       requestBody:
         content:
           application/json:
@@ -26440,7 +26062,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /interop/api/v1/interop/devices/export-package:
+  /api/v1/interop/devices/export-package:
     post:
       tags:
       - Device Interop & Regulatory Exports
@@ -26449,7 +26071,7 @@ paths:
 
 
         Requirements: PRD-SYS-126, PRD-DEV-004, ADR-2209'
-      operationId: Interop_generate_export_package_endpoint_api_v1_interop_devices_export_package_post
+      operationId: generate_export_package_endpoint_api_v1_interop_devices_export_package_post
       requestBody:
         content:
           application/json:
@@ -26469,13 +26091,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interop_HTTPValidationError'
-  /knowledge/api/v1/knowledge/categories:
+  /api/v1/knowledge/categories:
     get:
       tags:
       - knowledge
       summary: List Categories
       description: Lists active knowledge categories, filtered by caller's persona visibility.
-      operationId: Knowledge_list_categories_api_v1_knowledge_categories_get
+      operationId: list_categories_api_v1_knowledge_categories_get
       responses:
         '200':
           description: Successful Response
@@ -26491,7 +26113,7 @@ paths:
       - knowledge
       summary: Create Category
       description: Creates a new knowledge article category. Requires super_admin role.
-      operationId: Knowledge_create_category_api_v1_knowledge_categories_post
+      operationId: create_category_api_v1_knowledge_categories_post
       requestBody:
         content:
           application/json:
@@ -26511,13 +26133,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/categories/{category_id}:
+  /api/v1/knowledge/categories/{category_id}:
     get:
       tags:
       - knowledge
       summary: Get Category
       description: Retrieves a single KnowledgeCategory by ID.
-      operationId: Knowledge_get_category_api_v1_knowledge_categories__category_id__get
+      operationId: get_category_api_v1_knowledge_categories__category_id__get
       parameters:
       - name: category_id
         in: path
@@ -26543,7 +26165,7 @@ paths:
       - knowledge
       summary: Delete Category
       description: Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.
-      operationId: Knowledge_delete_category_api_v1_knowledge_categories__category_id__delete
+      operationId: delete_category_api_v1_knowledge_categories__category_id__delete
       parameters:
       - name: category_id
         in: path
@@ -26571,7 +26193,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles:
+  /api/v1/knowledge/articles:
     post:
       tags:
       - knowledge
@@ -26579,7 +26201,7 @@ paths:
       description: 'Creates a new KnowledgeArticle in DRAFT status with an initial working draft version.
 
         Requires super_admin role.'
-      operationId: Knowledge_create_article_api_v1_knowledge_articles_post
+      operationId: create_article_api_v1_knowledge_articles_post
       requestBody:
         required: true
         content:
@@ -26604,7 +26226,7 @@ paths:
       - knowledge
       summary: List Articles
       description: Lists knowledge articles, optionally filtered by status and/or category.
-      operationId: Knowledge_list_articles_api_v1_knowledge_articles_get
+      operationId: list_articles_api_v1_knowledge_articles_get
       parameters:
       - name: status_filter
         in: query
@@ -26638,7 +26260,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}:
+  /api/v1/knowledge/articles/{article_id}:
     put:
       tags:
       - knowledge
@@ -26651,7 +26273,7 @@ paths:
         body, auto-rendered HTML, and GxP audit fields (created_by, reason_for_change, version_index).
 
         Requires super_admin role.'
-      operationId: Knowledge_update_article_draft_api_v1_knowledge_articles__article_id__put
+      operationId: update_article_draft_api_v1_knowledge_articles__article_id__put
       parameters:
       - name: article_id
         in: path
@@ -26685,7 +26307,7 @@ paths:
       description: 'Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.
 
         If the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.'
-      operationId: Knowledge_get_article_api_v1_knowledge_articles__article_id__get
+      operationId: get_article_api_v1_knowledge_articles__article_id__get
       parameters:
       - name: article_id
         in: path
@@ -26706,7 +26328,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/search:
+  /api/v1/knowledge/articles/search:
     get:
       tags:
       - knowledge
@@ -26719,7 +26341,7 @@ paths:
         - Scopes visibility to categories accessible by the caller''s persona roles.
 
         - PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.'
-      operationId: Knowledge_search_articles_api_v1_knowledge_articles_search_get
+      operationId: search_articles_api_v1_knowledge_articles_search_get
       parameters:
       - name: q
         in: query
@@ -26759,7 +26381,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/search:
+  /api/v1/knowledge/search:
     get:
       tags:
       - knowledge
@@ -26772,7 +26394,7 @@ paths:
         - Scopes visibility to categories accessible by the caller''s persona roles.
 
         - PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.'
-      operationId: Knowledge_search_articles_api_v1_knowledge_search_get
+      operationId: search_articles_api_v1_knowledge_search_get
       parameters:
       - name: q
         in: query
@@ -26812,13 +26434,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/draft:
+  /api/v1/knowledge/articles/{article_id}/draft:
     patch:
       tags:
       - knowledge
       summary: Save Article Draft
       description: 'Saves updated body content to a DRAFT article (Issue #4325). Requires super_admin role.'
-      operationId: Knowledge_save_article_draft_api_v1_knowledge_articles__article_id__draft_patch
+      operationId: save_article_draft_api_v1_knowledge_articles__article_id__draft_patch
       parameters:
       - name: article_id
         in: path
@@ -26850,7 +26472,7 @@ paths:
       - knowledge
       summary: Save Article Draft
       description: 'Saves updated body content to a DRAFT article (Issue #4325). Requires super_admin role.'
-      operationId: Knowledge_save_article_draft_api_v1_knowledge_articles__article_id__draft_put
+      operationId: save_article_draft_api_v1_knowledge_articles__article_id__draft_put
       parameters:
       - name: article_id
         in: path
@@ -26877,13 +26499,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/submit-review:
+  /api/v1/knowledge/articles/{article_id}/submit-review:
     post:
       tags:
       - knowledge
       summary: Submit Article Review
       description: Submits a DRAFT article for peer review (DRAFT -> IN_REVIEW).
-      operationId: Knowledge_submit_article_review_api_v1_knowledge_articles__article_id__submit_review_post
+      operationId: submit_article_review_api_v1_knowledge_articles__article_id__submit_review_post
       parameters:
       - name: article_id
         in: path
@@ -26910,7 +26532,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/approve:
+  /api/v1/knowledge/articles/{article_id}/approve:
     post:
       tags:
       - knowledge
@@ -26921,7 +26543,7 @@ paths:
         Enforces Four-Eyes check: approver cannot be author_user_id or last_edited_by.
 
         Locks current KnowledgeArticleVersion record as permanently immutable.'
-      operationId: Knowledge_approve_article_api_v1_knowledge_articles__article_id__approve_post
+      operationId: approve_article_api_v1_knowledge_articles__article_id__approve_post
       parameters:
       - name: article_id
         in: path
@@ -26948,13 +26570,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/reject:
+  /api/v1/knowledge/articles/{article_id}/reject:
     post:
       tags:
       - knowledge
       summary: Reject Article
       description: Rejects an article in IN_REVIEW status (IN_REVIEW -> REJECTED).
-      operationId: Knowledge_reject_article_api_v1_knowledge_articles__article_id__reject_post
+      operationId: reject_article_api_v1_knowledge_articles__article_id__reject_post
       parameters:
       - name: article_id
         in: path
@@ -26981,7 +26603,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/publish:
+  /api/v1/knowledge/articles/{article_id}/publish:
     post:
       tags:
       - knowledge
@@ -26992,7 +26614,7 @@ paths:
         - Updates fast O(1) lookup pointer KnowledgeArticle.current_published_version_id.
 
         - Publishing version N+1 automatically sets prior active version N to SUPERSEDED.'
-      operationId: Knowledge_publish_article_api_v1_knowledge_articles__article_id__publish_post
+      operationId: publish_article_api_v1_knowledge_articles__article_id__publish_post
       parameters:
       - name: article_id
         in: path
@@ -27019,13 +26641,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/transition:
+  /api/v1/knowledge/articles/{article_id}/transition:
     post:
       tags:
       - knowledge
       summary: Transition Article
       description: Generic lifecycle state machine transition endpoint.
-      operationId: Knowledge_transition_article_api_v1_knowledge_articles__article_id__transition_post
+      operationId: transition_article_api_v1_knowledge_articles__article_id__transition_post
       parameters:
       - name: article_id
         in: path
@@ -27052,13 +26674,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/versions:
+  /api/v1/knowledge/articles/{article_id}/versions:
     get:
       tags:
       - knowledge
       summary: List Article Versions
       description: Lists all immutable version snapshots for an article (chronological order).
-      operationId: Knowledge_list_article_versions_api_v1_knowledge_articles__article_id__versions_get
+      operationId: list_article_versions_api_v1_knowledge_articles__article_id__versions_get
       parameters:
       - name: article_id
         in: path
@@ -27082,13 +26704,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/versions/{version_id}:
+  /api/v1/knowledge/articles/{article_id}/versions/{version_id}:
     get:
       tags:
       - knowledge
       summary: Get Article Version
       description: Retrieves a specific immutable version snapshot for an article.
-      operationId: Knowledge_get_article_version_api_v1_knowledge_articles__article_id__versions__version_id__get
+      operationId: get_article_version_api_v1_knowledge_articles__article_id__versions__version_id__get
       parameters:
       - name: article_id
         in: path
@@ -27115,13 +26737,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/audit-log:
+  /api/v1/knowledge/articles/{article_id}/audit-log:
     get:
       tags:
       - knowledge
       summary: Get Article Audit Trail
       description: Returns the immutable SHA-256 digest chained audit trail for a specific article.
-      operationId: Knowledge_get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_log_get
+      operationId: get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_log_get
       parameters:
       - name: article_id
         in: path
@@ -27145,13 +26767,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/audit-trail:
+  /api/v1/knowledge/articles/{article_id}/audit-trail:
     get:
       tags:
       - knowledge
       summary: Get Article Audit Trail
       description: Returns the immutable SHA-256 digest chained audit trail for a specific article.
-      operationId: Knowledge_get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_trail_get
+      operationId: get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_trail_get
       parameters:
       - name: article_id
         in: path
@@ -27175,13 +26797,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/articles/{article_id}/verify-audit-chain:
+  /api/v1/knowledge/articles/{article_id}/verify-audit-chain:
     get:
       tags:
       - knowledge
       summary: Verify Article Audit Chain
       description: Cryptographically verifies the SHA-256 digest chain integrity for an article's audit trail.
-      operationId: Knowledge_verify_article_audit_chain_api_v1_knowledge_articles__article_id__verify_audit_chain_get
+      operationId: verify_article_audit_chain_api_v1_knowledge_articles__article_id__verify_audit_chain_get
       parameters:
       - name: article_id
         in: path
@@ -27202,13 +26824,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/contextual-help/mappings:
+  /api/v1/knowledge/contextual-help/mappings:
     post:
       tags:
       - knowledge
       summary: Create Contextual Help Mapping
       description: Creates a new contextual help route mapping. Requires super_admin role.
-      operationId: Knowledge_create_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings_post
+      operationId: create_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings_post
       requestBody:
         required: true
         content:
@@ -27233,7 +26855,7 @@ paths:
       - knowledge
       summary: List Contextual Help Mappings
       description: Lists all contextual help mappings with optional filters. Requires super_admin role.
-      operationId: Knowledge_list_contextual_help_mappings_api_v1_knowledge_contextual_help_mappings_get
+      operationId: list_contextual_help_mappings_api_v1_knowledge_contextual_help_mappings_get
       parameters:
       - name: route_pattern
         in: query
@@ -27275,13 +26897,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/contextual-help:
+  /api/v1/knowledge/contextual-help:
     post:
       tags:
       - knowledge
       summary: Create Contextual Help Mapping
       description: Creates a new contextual help route mapping. Requires super_admin role.
-      operationId: Knowledge_create_contextual_help_mapping_api_v1_knowledge_contextual_help_post
+      operationId: create_contextual_help_mapping_api_v1_knowledge_contextual_help_post
       requestBody:
         required: true
         content:
@@ -27317,7 +26939,7 @@ paths:
         - Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.
 
         - Surfaces 1 primary spotlight article + up to 3 secondary related guides.'
-      operationId: Knowledge_resolve_contextual_help_api_v1_knowledge_contextual_help_get
+      operationId: resolve_contextual_help_api_v1_knowledge_contextual_help_get
       parameters:
       - name: route
         in: query
@@ -27346,13 +26968,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/contextual-help/mappings/{mapping_id}:
+  /api/v1/knowledge/contextual-help/mappings/{mapping_id}:
     get:
       tags:
       - knowledge
       summary: Get Contextual Help Mapping
       description: Retrieves a single contextual help mapping by ID. Requires super_admin role.
-      operationId: Knowledge_get_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__get
+      operationId: get_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__get
       parameters:
       - name: mapping_id
         in: path
@@ -27378,7 +27000,7 @@ paths:
       - knowledge
       summary: Update Contextual Help Mapping
       description: Updates an existing contextual help mapping. Requires super_admin role.
-      operationId: Knowledge_update_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__put
+      operationId: update_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__put
       parameters:
       - name: mapping_id
         in: path
@@ -27410,7 +27032,7 @@ paths:
       - knowledge
       summary: Delete Contextual Help Mapping
       description: Deletes a contextual help mapping by ID. Requires super_admin role.
-      operationId: Knowledge_delete_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__delete
+      operationId: delete_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__delete
       parameters:
       - name: mapping_id
         in: path
@@ -27440,7 +27062,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/contextual-help/lookup:
+  /api/v1/knowledge/contextual-help/lookup:
     get:
       tags:
       - knowledge
@@ -27457,7 +27079,7 @@ paths:
         - Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.
 
         - Surfaces 1 primary spotlight article + up to 3 secondary related guides.'
-      operationId: Knowledge_resolve_contextual_help_api_v1_knowledge_contextual_help_lookup_get
+      operationId: resolve_contextual_help_api_v1_knowledge_contextual_help_lookup_get
       parameters:
       - name: route
         in: query
@@ -27486,7 +27108,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/protocols/ingest:
+  /api/v1/knowledge/protocols/ingest:
     post:
       tags:
       - protocols
@@ -27495,7 +27117,7 @@ paths:
 
 
         Requires sponsor_designer, data_manager, or super_admin role.'
-      operationId: Knowledge_ingest_protocol_document_api_v1_knowledge_protocols_ingest_post
+      operationId: ingest_protocol_document_api_v1_knowledge_protocols_ingest_post
       requestBody:
         content:
           application/json:
@@ -27518,13 +27140,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/protocols/upload:
+  /api/v1/knowledge/protocols/upload:
     post:
       tags:
       - protocols
       summary: Upload and ingest a protocol PDF/document binary file
       description: Uploads a PDF or document binary, parses pages, and indexes dense vector chunks.
-      operationId: Knowledge_upload_protocol_file_api_v1_knowledge_protocols_upload_post
+      operationId: upload_protocol_file_api_v1_knowledge_protocols_upload_post
       requestBody:
         content:
           multipart/form-data:
@@ -27547,13 +27169,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/protocols/search:
+  /api/v1/knowledge/protocols/search:
     post:
       tags:
       - protocols
       summary: Perform dense vector semantic search over protocol chunks
       description: Searches protocol chunks via dense vector cosine similarity.
-      operationId: Knowledge_search_protocol_chunks_api_v1_knowledge_protocols_search_post
+      operationId: search_protocol_chunks_api_v1_knowledge_protocols_search_post
       requestBody:
         content:
           application/json:
@@ -27576,13 +27198,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/knowledge/protocols/chunks/{chunk_id}:
+  /api/v1/knowledge/protocols/chunks/{chunk_id}:
     get:
       tags:
       - protocols
       summary: Retrieve full details for a single protocol chunk by ID
       description: Retrieves full chunk text and metadata for interactive UI document preview.
-      operationId: Knowledge_get_protocol_chunk_api_v1_knowledge_protocols_chunks__chunk_id__get
+      operationId: get_protocol_chunk_api_v1_knowledge_protocols_chunks__chunk_id__get
       parameters:
       - name: chunk_id
         in: path
@@ -27603,7 +27225,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/curricula/generate-amendment:
+  /api/v1/training/curricula/generate-amendment:
     post:
       tags:
       - Study Training & Gating
@@ -27612,7 +27234,7 @@ paths:
 
 
         Requirements: PRD-TRN-001'
-      operationId: Knowledge_generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post
+      operationId: generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post
       requestBody:
         content:
           application/json:
@@ -27632,13 +27254,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/curricula:
+  /api/v1/training/curricula:
     get:
       tags:
       - Study Training & Gating
       summary: List Curricula Endpoint
       description: List active training curricula.
-      operationId: Knowledge_list_curricula_endpoint_api_v1_training_curricula_get
+      operationId: list_curricula_endpoint_api_v1_training_curricula_get
       parameters:
       - name: study_id
         in: query
@@ -27676,13 +27298,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/curricula/{curriculum_id}:
+  /api/v1/training/curricula/{curriculum_id}:
     get:
       tags:
       - Study Training & Gating
       summary: Get Curriculum Endpoint
       description: Retrieve details for a single training curriculum.
-      operationId: Knowledge_get_curriculum_endpoint_api_v1_training_curricula__curriculum_id__get
+      operationId: get_curriculum_endpoint_api_v1_training_curricula__curriculum_id__get
       parameters:
       - name: curriculum_id
         in: path
@@ -27703,13 +27325,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/curricula/{curriculum_id}/assign:
+  /api/v1/training/curricula/{curriculum_id}/assign:
     post:
       tags:
       - Study Training & Gating
       summary: Assign Curriculum Endpoint
       description: Assign a training curriculum to a site user.
-      operationId: Knowledge_assign_curriculum_endpoint_api_v1_training_curricula__curriculum_id__assign_post
+      operationId: assign_curriculum_endpoint_api_v1_training_curricula__curriculum_id__assign_post
       parameters:
       - name: curriculum_id
         in: path
@@ -27736,13 +27358,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments:
+  /api/v1/training/assignments:
     get:
       tags:
       - Study Training & Gating
       summary: List Assignments Endpoint
       description: List training assignments for a user or site.
-      operationId: Knowledge_list_assignments_endpoint_api_v1_training_assignments_get
+      operationId: list_assignments_endpoint_api_v1_training_assignments_get
       parameters:
       - name: study_id
         in: query
@@ -27792,13 +27414,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments/{assignment_id}:
+  /api/v1/training/assignments/{assignment_id}:
     get:
       tags:
       - Study Training & Gating
       summary: Get Assignment Detail Endpoint
       description: Retrieve full details of an assignment including curriculum modules.
-      operationId: Knowledge_get_assignment_detail_endpoint_api_v1_training_assignments__assignment_id__get
+      operationId: get_assignment_detail_endpoint_api_v1_training_assignments__assignment_id__get
       parameters:
       - name: assignment_id
         in: path
@@ -27819,13 +27441,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments/{assignment_id}/progress:
+  /api/v1/training/assignments/{assignment_id}/progress:
     post:
       tags:
       - Study Training & Gating
       summary: Record Progress Endpoint
       description: Record reading duration and time-on-page tracking.
-      operationId: Knowledge_record_progress_endpoint_api_v1_training_assignments__assignment_id__progress_post
+      operationId: record_progress_endpoint_api_v1_training_assignments__assignment_id__progress_post
       parameters:
       - name: assignment_id
         in: path
@@ -27852,7 +27474,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments/{assignment_id}/submit-quiz:
+  /api/v1/training/assignments/{assignment_id}/submit-quiz:
     post:
       tags:
       - Study Training & Gating
@@ -27861,7 +27483,7 @@ paths:
 
 
         Requirements: PRD-TRN-003'
-      operationId: Knowledge_submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post
+      operationId: submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post
       parameters:
       - name: assignment_id
         in: path
@@ -27888,7 +27510,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments/{assignment_id}/sign-off:
+  /api/v1/training/assignments/{assignment_id}/sign-off:
     post:
       tags:
       - Study Training & Gating
@@ -27897,7 +27519,7 @@ paths:
 
 
         Requirements: PRD-TRN-003, PRD-TRN-004'
-      operationId: Knowledge_sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post
+      operationId: sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post
       parameters:
       - name: assignment_id
         in: path
@@ -27924,13 +27546,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/assignments/{assignment_id}/certificate:
+  /api/v1/training/assignments/{assignment_id}/certificate:
     get:
       tags:
       - Study Training & Gating
       summary: Get Certificate Endpoint
       description: Retrieve completion certificate for an assignment.
-      operationId: Knowledge_get_certificate_endpoint_api_v1_training_assignments__assignment_id__certificate_get
+      operationId: get_certificate_endpoint_api_v1_training_assignments__assignment_id__certificate_get
       parameters:
       - name: assignment_id
         in: path
@@ -27951,7 +27573,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/gating-status:
+  /api/v1/training/gating-status:
     get:
       tags:
       - Study Training & Gating
@@ -27960,7 +27582,7 @@ paths:
 
 
         Requirements: PRD-TRN-002'
-      operationId: Knowledge_get_gating_status_endpoint_api_v1_training_gating_status_get
+      operationId: get_gating_status_endpoint_api_v1_training_gating_status_get
       parameters:
       - name: user_id
         in: query
@@ -28019,7 +27641,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/api/v1/training/verify-gate:
+  /api/v1/training/verify-gate:
     post:
       tags:
       - Study Training & Gating
@@ -28028,7 +27650,7 @@ paths:
 
 
         Requirements: PRD-TRN-002'
-      operationId: Knowledge_verify_gate_endpoint_api_v1_training_verify_gate_post
+      operationId: verify_gate_endpoint_api_v1_training_verify_gate_post
       requestBody:
         content:
           application/json:
@@ -28048,41 +27670,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Knowledge_HTTPValidationError'
-  /knowledge/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Knowledge_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /notifications/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Notifications_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /notifications/api/v1/notifications:
+  /api/v1/notifications:
     post:
       summary: Create Notification
       description: Create a new notification targeting a specific user ID or role.
-      operationId: Notifications_create_notification_api_v1_notifications_post
+      operationId: create_notification_api_v1_notifications_post
       requestBody:
         required: true
         content:
@@ -28105,7 +27697,7 @@ paths:
     get:
       summary: List Notifications
       description: Retrieve notification records targeted to the current user's user ID or roles.
-      operationId: Notifications_list_notifications_api_v1_notifications_get
+      operationId: list_notifications_api_v1_notifications_get
       parameters:
       - name: category
         in: query
@@ -28153,11 +27745,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notifications_HTTPValidationError'
-  /notifications/api/v1/notifications/{id}:
+  /api/v1/notifications/{id}:
     get:
       summary: View Notification
       description: Retrieve a specific notification by ID.
-      operationId: Notifications_view_notification_api_v1_notifications__id__get
+      operationId: view_notification_api_v1_notifications__id__get
       parameters:
       - name: id
         in: path
@@ -28178,11 +27770,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notifications_HTTPValidationError'
-  /notifications/api/v1/notifications/{id}/acknowledge:
+  /api/v1/notifications/{id}/acknowledge:
     post:
       summary: Acknowledge Notification
       description: Transition notification state from OPEN to ACKNOWLEDGED.
-      operationId: Notifications_acknowledge_notification_api_v1_notifications__id__acknowledge_post
+      operationId: acknowledge_notification_api_v1_notifications__id__acknowledge_post
       parameters:
       - name: id
         in: path
@@ -28203,11 +27795,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notifications_HTTPValidationError'
-  /notifications/api/v1/notifications/{id}/resolve:
+  /api/v1/notifications/{id}/resolve:
     post:
       summary: Resolve Notification
       description: Transition notification state from OPEN or ACKNOWLEDGED to RESOLVED.
-      operationId: Notifications_resolve_notification_api_v1_notifications__id__resolve_post
+      operationId: resolve_notification_api_v1_notifications__id__resolve_post
       parameters:
       - name: id
         in: path
@@ -28228,28 +27820,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notifications_HTTPValidationError'
-  /org/health:
-    get:
-      tags:
-      - Organization Directory
-      summary: Health Check
-      operationId: Org_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /org/api/v1/org/organizations:
+  /api/v1/org/organizations:
     post:
       tags:
       - Organization Directory
       summary: Create Organization
-      operationId: Org_create_organization_api_v1_org_organizations_post
+      operationId: create_organization_api_v1_org_organizations_post
       requestBody:
         required: true
         content:
@@ -28273,7 +27849,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Organizations
-      operationId: Org_list_organizations_api_v1_org_organizations_get
+      operationId: list_organizations_api_v1_org_organizations_get
       parameters:
       - name: name
         in: query
@@ -28311,12 +27887,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/organizations/{id}:
+  /api/v1/org/organizations/{id}:
     get:
       tags:
       - Organization Directory
       summary: Get Organization
-      operationId: Org_get_organization_api_v1_org_organizations__id__get
+      operationId: get_organization_api_v1_org_organizations__id__get
       parameters:
       - name: id
         in: path
@@ -28351,7 +27927,7 @@ paths:
       tags:
       - Organization Directory
       summary: Update Organization
-      operationId: Org_update_organization_api_v1_org_organizations__id__put
+      operationId: update_organization_api_v1_org_organizations__id__put
       parameters:
       - name: id
         in: path
@@ -28378,12 +27954,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/organizations/{id}/history:
+  /api/v1/org/organizations/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Organization History
-      operationId: Org_get_organization_history_api_v1_org_organizations__id__history_get
+      operationId: get_organization_history_api_v1_org_organizations__id__history_get
       parameters:
       - name: id
         in: path
@@ -28407,12 +27983,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/delegations:
+  /api/v1/org/delegations:
     post:
       tags:
       - Organization Directory
       summary: Create Delegation
-      operationId: Org_create_delegation_api_v1_org_delegations_post
+      operationId: create_delegation_api_v1_org_delegations_post
       requestBody:
         required: true
         content:
@@ -28436,7 +28012,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Delegations
-      operationId: Org_list_delegations_api_v1_org_delegations_get
+      operationId: list_delegations_api_v1_org_delegations_get
       parameters:
       - name: site_id
         in: query
@@ -28504,12 +28080,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/delegations/{id}/sign-off:
+  /api/v1/org/delegations/{id}/sign-off:
     post:
       tags:
       - Organization Directory
       summary: Sign Delegation
-      operationId: Org_sign_delegation_api_v1_org_delegations__id__sign_off_post
+      operationId: sign_delegation_api_v1_org_delegations__id__sign_off_post
       parameters:
       - name: id
         in: path
@@ -28536,12 +28112,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/delegations/{id}/revoke:
+  /api/v1/org/delegations/{id}/revoke:
     post:
       tags:
       - Organization Directory
       summary: Revoke Delegation
-      operationId: Org_revoke_delegation_api_v1_org_delegations__id__revoke_post
+      operationId: revoke_delegation_api_v1_org_delegations__id__revoke_post
       parameters:
       - name: id
         in: path
@@ -28568,12 +28144,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/delegations/{id}:
+  /api/v1/org/delegations/{id}:
     get:
       tags:
       - Organization Directory
       summary: Get Delegation
-      operationId: Org_get_delegation_api_v1_org_delegations__id__get
+      operationId: get_delegation_api_v1_org_delegations__id__get
       parameters:
       - name: id
         in: path
@@ -28604,12 +28180,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/delegations/{id}/history:
+  /api/v1/org/delegations/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Delegation History
-      operationId: Org_get_delegation_history_api_v1_org_delegations__id__history_get
+      operationId: get_delegation_history_api_v1_org_delegations__id__history_get
       parameters:
       - name: id
         in: path
@@ -28633,12 +28209,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/audit-logs:
+  /api/v1/org/audit-logs:
     get:
       tags:
       - Organization Directory
       summary: List Org Audit Logs
-      operationId: Org_list_org_audit_logs_api_v1_org_audit_logs_get
+      operationId: list_org_audit_logs_api_v1_org_audit_logs_get
       responses:
         '200':
           description: Successful Response
@@ -28649,12 +28225,12 @@ paths:
                   $ref: '#/components/schemas/Org_OrgAuditLogResponse'
                 type: array
                 title: Response List Org Audit Logs Api V1 Org Audit Logs Get
-  /org/api/v1/org/sites:
+  /api/v1/org/sites:
     post:
       tags:
       - Organization Directory
       summary: Create Site
-      operationId: Org_create_site_api_v1_org_sites_post
+      operationId: create_site_api_v1_org_sites_post
       requestBody:
         required: true
         content:
@@ -28678,7 +28254,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Sites
-      operationId: Org_list_sites_api_v1_org_sites_get
+      operationId: list_sites_api_v1_org_sites_get
       parameters:
       - name: site_id
         in: query
@@ -28726,12 +28302,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/sites/{id}:
+  /api/v1/org/sites/{id}:
     get:
       tags:
       - Organization Directory
       summary: Get Site
-      operationId: Org_get_site_api_v1_org_sites__id__get
+      operationId: get_site_api_v1_org_sites__id__get
       parameters:
       - name: id
         in: path
@@ -28766,7 +28342,7 @@ paths:
       tags:
       - Organization Directory
       summary: Update Site
-      operationId: Org_update_site_api_v1_org_sites__id__put
+      operationId: update_site_api_v1_org_sites__id__put
       parameters:
       - name: id
         in: path
@@ -28793,12 +28369,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/sites/{id}/history:
+  /api/v1/org/sites/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Site History
-      operationId: Org_get_site_history_api_v1_org_sites__id__history_get
+      operationId: get_site_history_api_v1_org_sites__id__history_get
       parameters:
       - name: id
         in: path
@@ -28822,12 +28398,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel:
+  /api/v1/org/personnel:
     post:
       tags:
       - Organization Directory
       summary: Create Personnel
-      operationId: Org_create_personnel_api_v1_org_personnel_post
+      operationId: create_personnel_api_v1_org_personnel_post
       requestBody:
         required: true
         content:
@@ -28851,7 +28427,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Personnel
-      operationId: Org_list_personnel_api_v1_org_personnel_get
+      operationId: list_personnel_api_v1_org_personnel_get
       parameters:
       - name: site_id
         in: query
@@ -28919,12 +28495,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel/{id}:
+  /api/v1/org/personnel/{id}:
     get:
       tags:
       - Organization Directory
       summary: Get Personnel
-      operationId: Org_get_personnel_api_v1_org_personnel__id__get
+      operationId: get_personnel_api_v1_org_personnel__id__get
       parameters:
       - name: id
         in: path
@@ -28959,7 +28535,7 @@ paths:
       tags:
       - Organization Directory
       summary: Update Personnel
-      operationId: Org_update_personnel_api_v1_org_personnel__id__put
+      operationId: update_personnel_api_v1_org_personnel__id__put
       parameters:
       - name: id
         in: path
@@ -28986,12 +28562,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel/{id}/history:
+  /api/v1/org/personnel/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Personnel History
-      operationId: Org_get_personnel_history_api_v1_org_personnel__id__history_get
+      operationId: get_personnel_history_api_v1_org_personnel__id__history_get
       parameters:
       - name: id
         in: path
@@ -29015,12 +28591,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel/{personnel_id}/assignments:
+  /api/v1/org/personnel/{personnel_id}/assignments:
     post:
       tags:
       - Organization Directory
       summary: Create Personnel Assignment
-      operationId: Org_create_personnel_assignment_api_v1_org_personnel__personnel_id__assignments_post
+      operationId: create_personnel_assignment_api_v1_org_personnel__personnel_id__assignments_post
       parameters:
       - name: personnel_id
         in: path
@@ -29051,7 +28627,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Personnel Assignments
-      operationId: Org_list_personnel_assignments_api_v1_org_personnel__personnel_id__assignments_get
+      operationId: list_personnel_assignments_api_v1_org_personnel__personnel_id__assignments_get
       parameters:
       - name: personnel_id
         in: path
@@ -29075,12 +28651,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel/assignments/{id}:
+  /api/v1/org/personnel/assignments/{id}:
     put:
       tags:
       - Organization Directory
       summary: Update Personnel Assignment
-      operationId: Org_update_personnel_assignment_api_v1_org_personnel_assignments__id__put
+      operationId: update_personnel_assignment_api_v1_org_personnel_assignments__id__put
       parameters:
       - name: id
         in: path
@@ -29107,12 +28683,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/personnel/assignments/{id}/history:
+  /api/v1/org/personnel/assignments/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Personnel Assignment History
-      operationId: Org_get_personnel_assignment_history_api_v1_org_personnel_assignments__id__history_get
+      operationId: get_personnel_assignment_history_api_v1_org_personnel_assignments__id__history_get
       parameters:
       - name: id
         in: path
@@ -29136,12 +28712,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/assignments/resolve:
+  /api/v1/org/assignments/resolve:
     get:
       tags:
       - Organization Directory
       summary: Resolve Assignments
-      operationId: Org_resolve_assignments_api_v1_org_assignments_resolve_get
+      operationId: resolve_assignments_api_v1_org_assignments_resolve_get
       parameters:
       - name: keycloak_user_id
         in: query
@@ -29164,12 +28740,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/training-logs:
+  /api/v1/org/training-logs:
     post:
       tags:
       - Organization Directory
       summary: Create Training Log
-      operationId: Org_create_training_log_api_v1_org_training_logs_post
+      operationId: create_training_log_api_v1_org_training_logs_post
       requestBody:
         required: true
         content:
@@ -29193,7 +28769,7 @@ paths:
       tags:
       - Organization Directory
       summary: List Training Logs
-      operationId: Org_list_training_logs_api_v1_org_training_logs_get
+      operationId: list_training_logs_api_v1_org_training_logs_get
       parameters:
       - name: personnel_id
         in: query
@@ -29241,12 +28817,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/training-logs/{id}:
+  /api/v1/org/training-logs/{id}:
     get:
       tags:
       - Organization Directory
       summary: Get Training Log
-      operationId: Org_get_training_log_api_v1_org_training_logs__id__get
+      operationId: get_training_log_api_v1_org_training_logs__id__get
       parameters:
       - name: id
         in: path
@@ -29281,7 +28857,7 @@ paths:
       tags:
       - Organization Directory
       summary: Update Training Log
-      operationId: Org_update_training_log_api_v1_org_training_logs__id__put
+      operationId: update_training_log_api_v1_org_training_logs__id__put
       parameters:
       - name: id
         in: path
@@ -29308,12 +28884,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/training-logs/{id}/history:
+  /api/v1/org/training-logs/{id}/history:
     get:
       tags:
       - Organization Directory
       summary: Get Training Log History
-      operationId: Org_get_training_log_history_api_v1_org_training_logs__id__history_get
+      operationId: get_training_log_history_api_v1_org_training_logs__id__history_get
       parameters:
       - name: id
         in: path
@@ -29337,12 +28913,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /org/api/v1/org/training-logs/{id}/sign:
+  /api/v1/org/training-logs/{id}/sign:
     post:
       tags:
       - Organization Directory
       summary: Sign Training Log
-      operationId: Org_sign_training_log_api_v1_org_training_logs__id__sign_post
+      operationId: sign_training_log_api_v1_org_training_logs__id__sign_post
       parameters:
       - name: id
         in: path
@@ -29369,13 +28945,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Org_HTTPValidationError'
-  /payments/api/v1/payments/contracts:
+  /api/v1/payments/contracts:
     post:
       tags:
       - Site Payment Ledger
       summary: Create Budget Contract
       description: Creates or versions an active investigator grant contract schedule.
-      operationId: Payments_create_budget_contract_api_v1_payments_contracts_post
+      operationId: create_budget_contract_api_v1_payments_contracts_post
       requestBody:
         required: true
         content:
@@ -29400,7 +28976,7 @@ paths:
       - Site Payment Ledger
       summary: List Budget Contracts
       description: Lists budget contracts matching filters.
-      operationId: Payments_list_budget_contracts_api_v1_payments_contracts_get
+      operationId: list_budget_contracts_api_v1_payments_contracts_get
       parameters:
       - name: study_id
         in: query
@@ -29441,13 +29017,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/contracts/{contract_id}:
+  /api/v1/payments/contracts/{contract_id}:
     get:
       tags:
       - Site Payment Ledger
       summary: Get Budget Contract
       description: Retrieves a single budget contract by ID.
-      operationId: Payments_get_budget_contract_api_v1_payments_contracts__contract_id__get
+      operationId: get_budget_contract_api_v1_payments_contracts__contract_id__get
       parameters:
       - name: contract_id
         in: path
@@ -29468,13 +29044,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/contracts/{contract_id}/fee-schedules:
+  /api/v1/payments/contracts/{contract_id}/fee-schedules:
     post:
       tags:
       - Site Payment Ledger
       summary: Add Fee Schedule
       description: Adds a procedure reimbursement rate item to the contract fee schedule.
-      operationId: Payments_add_fee_schedule_api_v1_payments_contracts__contract_id__fee_schedules_post
+      operationId: add_fee_schedule_api_v1_payments_contracts__contract_id__fee_schedules_post
       parameters:
       - name: contract_id
         in: path
@@ -29506,7 +29082,7 @@ paths:
       - Site Payment Ledger
       summary: List Fee Schedules
       description: Lists procedure fee schedules configured for a contract.
-      operationId: Payments_list_fee_schedules_api_v1_payments_contracts__contract_id__fee_schedules_get
+      operationId: list_fee_schedules_api_v1_payments_contracts__contract_id__fee_schedules_get
       parameters:
       - name: contract_id
         in: path
@@ -29553,13 +29129,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/contracts/{contract_id}/split-payees:
+  /api/v1/payments/contracts/{contract_id}/split-payees:
     post:
       tags:
       - Site Payment Ledger
       summary: Configure Split Payees
       description: Configures multi-party split payee allocation percentages (must sum to 100%).
-      operationId: Payments_configure_split_payees_api_v1_payments_contracts__contract_id__split_payees_post
+      operationId: configure_split_payees_api_v1_payments_contracts__contract_id__split_payees_post
       parameters:
       - name: contract_id
         in: path
@@ -29594,7 +29170,7 @@ paths:
       - Site Payment Ledger
       summary: List Split Payees
       description: Lists configured split payee shares for a contract.
-      operationId: Payments_list_split_payees_api_v1_payments_contracts__contract_id__split_payees_get
+      operationId: list_split_payees_api_v1_payments_contracts__contract_id__split_payees_get
       parameters:
       - name: contract_id
         in: path
@@ -29625,13 +29201,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/events/ecrf-submission:
+  /api/v1/payments/events/ecrf-submission:
     post:
       tags:
       - Site Payment Ledger
       summary: Ingest Ecrf Submission Event
       description: Real-time event listener ingesting eCRF submission to trigger payables.
-      operationId: Payments_ingest_ecrf_submission_event_api_v1_payments_events_ecrf_submission_post
+      operationId: ingest_ecrf_submission_event_api_v1_payments_events_ecrf_submission_post
       requestBody:
         content:
           application/json:
@@ -29654,13 +29230,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/events/cra-sdv-verification:
+  /api/v1/payments/events/cra-sdv-verification:
     post:
       tags:
       - Site Payment Ledger
       summary: Ingest Cra Sdv Verification Event
       description: Real-time event listener ingesting CRA SDV verification to unlock payables.
-      operationId: Payments_ingest_cra_sdv_verification_event_api_v1_payments_events_cra_sdv_verification_post
+      operationId: ingest_cra_sdv_verification_event_api_v1_payments_events_cra_sdv_verification_post
       requestBody:
         content:
           application/json:
@@ -29683,13 +29259,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/events/milestone-completion:
+  /api/v1/payments/events/milestone-completion:
     post:
       tags:
       - Site Payment Ledger
       summary: Ingest Milestone Completion Event
       description: Real-time event listener ingesting CTMS milestone completion.
-      operationId: Payments_ingest_milestone_completion_event_api_v1_payments_events_milestone_completion_post
+      operationId: ingest_milestone_completion_event_api_v1_payments_events_milestone_completion_post
       requestBody:
         content:
           application/json:
@@ -29709,13 +29285,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/events/batch:
+  /api/v1/payments/events/batch:
     post:
       tags:
       - Site Payment Ledger
       summary: Ingest Batch Events
       description: Ingests batch of mixed clinical financial events.
-      operationId: Payments_ingest_batch_events_api_v1_payments_events_batch_post
+      operationId: ingest_batch_events_api_v1_payments_events_batch_post
       requestBody:
         content:
           application/json:
@@ -29737,13 +29313,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/payables:
+  /api/v1/payments/payables:
     get:
       tags:
       - Site Payment Ledger
       summary: List Payables
       description: Lists payables with split allocations and holdback reserve status.
-      operationId: Payments_list_payables_api_v1_payments_payables_get
+      operationId: list_payables_api_v1_payments_payables_get
       parameters:
       - name: study_id
         in: query
@@ -29817,13 +29393,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/payables/{payable_id}:
+  /api/v1/payments/payables/{payable_id}:
     get:
       tags:
       - Site Payment Ledger
       summary: Get Payable
       description: Retrieves payable details by ID.
-      operationId: Payments_get_payable_api_v1_payments_payables__payable_id__get
+      operationId: get_payable_api_v1_payments_payables__payable_id__get
       parameters:
       - name: payable_id
         in: path
@@ -29844,13 +29420,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/payables/{payable_id}/approve:
+  /api/v1/payments/payables/{payable_id}/approve:
     post:
       tags:
       - Site Payment Ledger
       summary: Approve Payable
       description: Approves a payable for disbursement.
-      operationId: Payments_approve_payable_api_v1_payments_payables__payable_id__approve_post
+      operationId: approve_payable_api_v1_payments_payables__payable_id__approve_post
       parameters:
       - name: payable_id
         in: path
@@ -29871,13 +29447,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/holdbacks:
+  /api/v1/payments/holdbacks:
     get:
       tags:
       - Site Payment Ledger
       summary: List Holdback Reserves
       description: Lists 10% holdback retention reserves.
-      operationId: Payments_list_holdback_reserves_api_v1_payments_holdbacks_get
+      operationId: list_holdback_reserves_api_v1_payments_holdbacks_get
       parameters:
       - name: study_id
         in: query
@@ -29919,13 +29495,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/holdbacks/release:
+  /api/v1/payments/holdbacks/release:
     post:
       tags:
       - Site Payment Ledger
       summary: Release Holdback Reserves
       description: Releases holdback retention reserves with dual DM and Quality oversight sign-offs.
-      operationId: Payments_release_holdback_reserves_api_v1_payments_holdbacks_release_post
+      operationId: release_holdback_reserves_api_v1_payments_holdbacks_release_post
       requestBody:
         content:
           application/json:
@@ -29945,13 +29521,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/audit-logs:
+  /api/v1/payments/audit-logs:
     get:
       tags:
       - Site Payment Ledger
       summary: List Payment Audit Logs
       description: Queries immutable 21 CFR Part 11 payment transaction audit logs.
-      operationId: Payments_list_payment_audit_logs_api_v1_payments_audit_logs_get
+      operationId: list_payment_audit_logs_api_v1_payments_audit_logs_get
       parameters:
       - name: entity_type
         in: query
@@ -29993,13 +29569,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/compile:
+  /api/v1/payments/invoices/compile:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Compile Billing Cycle
       description: Automates monthly or quarterly billing cycle compilation into a self-billing invoice.
-      operationId: Payments_compile_billing_cycle_api_v1_payments_invoices_compile_post
+      operationId: compile_billing_cycle_api_v1_payments_invoices_compile_post
       requestBody:
         content:
           application/json:
@@ -30019,13 +29595,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices:
+  /api/v1/payments/invoices:
     get:
       tags:
       - Billing & ERP Gateway
       summary: List Invoices
       description: Lists compiled self-billing invoices matching filter criteria.
-      operationId: Payments_list_invoices_api_v1_payments_invoices_get
+      operationId: list_invoices_api_v1_payments_invoices_get
       parameters:
       - name: study_id
         in: query
@@ -30083,13 +29659,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}:
+  /api/v1/payments/invoices/{invoice_id}:
     get:
       tags:
       - Billing & ERP Gateway
       summary: Get Invoice
       description: Retrieves full self-billing invoice details with line items and remittance advice.
-      operationId: Payments_get_invoice_api_v1_payments_invoices__invoice_id__get
+      operationId: get_invoice_api_v1_payments_invoices__invoice_id__get
       parameters:
       - name: invoice_id
         in: path
@@ -30110,13 +29686,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/approve:
+  /api/v1/payments/invoices/{invoice_id}/approve:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Approve Self Billing Invoice
       description: Approves a draft self-billing invoice for ERP synchronization and disbursement.
-      operationId: Payments_approve_self_billing_invoice_api_v1_payments_invoices__invoice_id__approve_post
+      operationId: approve_self_billing_invoice_api_v1_payments_invoices__invoice_id__approve_post
       parameters:
       - name: invoice_id
         in: path
@@ -30137,13 +29713,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/remittance-advice:
+  /api/v1/payments/invoices/{invoice_id}/remittance-advice:
     get:
       tags:
       - Billing & ERP Gateway
       summary: Get Remittance Advice
       description: Retrieves remittance advice statement record for an invoice.
-      operationId: Payments_get_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_get
+      operationId: get_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_get
       parameters:
       - name: invoice_id
         in: path
@@ -30164,13 +29740,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/pdf:
+  /api/v1/payments/invoices/{invoice_id}/remittance-advice/pdf:
     get:
       tags:
       - Billing & ERP Gateway
       summary: Download Remittance Advice Pdf
       description: Downloads binary PDF remittance advice statement.
-      operationId: Payments_download_remittance_advice_pdf_api_v1_payments_invoices__invoice_id__remittance_advice_pdf_get
+      operationId: download_remittance_advice_pdf_api_v1_payments_invoices__invoice_id__remittance_advice_pdf_get
       parameters:
       - name: invoice_id
         in: path
@@ -30190,13 +29766,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/sign:
+  /api/v1/payments/invoices/{invoice_id}/remittance-advice/sign:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Sign Remittance Advice
       description: Applies 21 CFR Part 11 cryptographic digital signature to remittance advice statement.
-      operationId: Payments_sign_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_sign_post
+      operationId: sign_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_sign_post
       parameters:
       - name: invoice_id
         in: path
@@ -30223,13 +29799,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/verify-signature:
+  /api/v1/payments/invoices/{invoice_id}/remittance-advice/verify-signature:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Verify Remittance Advice Signature
       description: Verifies cryptographic signature validity and tamper resistance of remittance advice statement.
-      operationId: Payments_verify_remittance_advice_signature_api_v1_payments_invoices__invoice_id__remittance_advice_verify_signature_post
+      operationId: verify_remittance_advice_signature_api_v1_payments_invoices__invoice_id__remittance_advice_verify_signature_post
       parameters:
       - name: invoice_id
         in: path
@@ -30250,13 +29826,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/dispatch:
+  /api/v1/payments/invoices/{invoice_id}/remittance-advice/dispatch:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Dispatch Remittance Advice
       description: Dispatches signed remittance advice statement via automated email notification.
-      operationId: Payments_dispatch_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_dispatch_post
+      operationId: dispatch_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_dispatch_post
       parameters:
       - name: invoice_id
         in: path
@@ -30283,13 +29859,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/erp-export:
+  /api/v1/payments/invoices/{invoice_id}/erp-export:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Export Invoice To Erp
       description: Exports invoice into standardized ERP transmission format (SAP/NetSuite).
-      operationId: Payments_export_invoice_to_erp_api_v1_payments_invoices__invoice_id__erp_export_post
+      operationId: export_invoice_to_erp_api_v1_payments_invoices__invoice_id__erp_export_post
       parameters:
       - name: invoice_id
         in: path
@@ -30319,13 +29895,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/erp/webhook:
+  /api/v1/payments/erp/webhook:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Process Erp Webhook
       description: Inbound enterprise ERP webhook receiver for payment execution and reconciliation status updates.
-      operationId: Payments_process_erp_webhook_api_v1_payments_erp_webhook_post
+      operationId: process_erp_webhook_api_v1_payments_erp_webhook_post
       requestBody:
         content:
           application/json:
@@ -30345,13 +29921,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/reconcile:
+  /api/v1/payments/invoices/{invoice_id}/reconcile:
     post:
       tags:
       - Billing & ERP Gateway
       summary: Reconcile Invoice Payment
       description: Reconciles payment execution against self-billing invoice and underlying payables.
-      operationId: Payments_reconcile_invoice_payment_api_v1_payments_invoices__invoice_id__reconcile_post
+      operationId: reconcile_invoice_payment_api_v1_payments_invoices__invoice_id__reconcile_post
       parameters:
       - name: invoice_id
         in: path
@@ -30378,13 +29954,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/invoices/{invoice_id}/erp-logs:
+  /api/v1/payments/invoices/{invoice_id}/erp-logs:
     get:
       tags:
       - Billing & ERP Gateway
       summary: List Erp Sync Logs
       description: Lists ERP synchronization history and webhook audit records for an invoice.
-      operationId: Payments_list_erp_sync_logs_api_v1_payments_invoices__invoice_id__erp_logs_get
+      operationId: list_erp_sync_logs_api_v1_payments_invoices__invoice_id__erp_logs_get
       parameters:
       - name: invoice_id
         in: path
@@ -30424,13 +30000,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets:
+  /api/v1/payments/participant/wallets:
     post:
       tags:
       - Participant Compensation
       summary: Get Or Create Participant Wallet
       description: Provisions or retrieves a participant financial wallet.
-      operationId: Payments_get_or_create_participant_wallet_api_v1_payments_participant_wallets_post
+      operationId: get_or_create_participant_wallet_api_v1_payments_participant_wallets_post
       requestBody:
         required: true
         content:
@@ -30455,7 +30031,7 @@ paths:
       - Participant Compensation
       summary: List Participant Wallets
       description: Lists participant financial wallets filtered by study and/or site.
-      operationId: Payments_list_participant_wallets_api_v1_payments_participant_wallets_get
+      operationId: list_participant_wallets_api_v1_payments_participant_wallets_get
       parameters:
       - name: study_id
         in: query
@@ -30489,13 +30065,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}:
+  /api/v1/payments/participant/wallets/{wallet_id}:
     get:
       tags:
       - Participant Compensation
       summary: Get Participant Wallet By Id
       description: Retrieves participant wallet details and current balance.
-      operationId: Payments_get_participant_wallet_by_id_api_v1_payments_participant_wallets__wallet_id__get
+      operationId: get_participant_wallet_by_id_api_v1_payments_participant_wallets__wallet_id__get
       parameters:
       - name: wallet_id
         in: path
@@ -30516,13 +30092,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/subject/{study_id}/{subject_id}:
+  /api/v1/payments/participant/wallets/subject/{study_id}/{subject_id}:
     get:
       tags:
       - Participant Compensation
       summary: Get Participant Wallet By Subject
       description: Retrieves participant wallet by study ID and subject ID.
-      operationId: Payments_get_participant_wallet_by_subject_api_v1_payments_participant_wallets_subject__study_id___subject_id__get
+      operationId: get_participant_wallet_by_subject_api_v1_payments_participant_wallets_subject__study_id___subject_id__get
       parameters:
       - name: study_id
         in: path
@@ -30549,13 +30125,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/payout-methods:
+  /api/v1/payments/participant/wallets/{wallet_id}/payout-methods:
     put:
       tags:
       - Participant Compensation
       summary: Update Participant Wallet Payout Methods
       description: Updates payout credentials (virtual card / direct ACH) for a participant wallet.
-      operationId: Payments_update_participant_wallet_payout_methods_api_v1_payments_participant_wallets__wallet_id__payout_methods_put
+      operationId: update_participant_wallet_payout_methods_api_v1_payments_participant_wallets__wallet_id__payout_methods_put
       parameters:
       - name: wallet_id
         in: path
@@ -30582,13 +30158,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/issue-card:
+  /api/v1/payments/participant/wallets/{wallet_id}/issue-card:
     post:
       tags:
       - Participant Compensation
       summary: Issue Participant Reloadable Card
       description: Provisions an automated reloadable debit card linked to the participant wallet.
-      operationId: Payments_issue_participant_reloadable_card_api_v1_payments_participant_wallets__wallet_id__issue_card_post
+      operationId: issue_participant_reloadable_card_api_v1_payments_participant_wallets__wallet_id__issue_card_post
       parameters:
       - name: wallet_id
         in: path
@@ -30615,13 +30191,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/balance:
+  /api/v1/payments/participant/wallets/{wallet_id}/balance:
     get:
       tags:
       - Participant Compensation
       summary: Get Participant Balance Inquiry
       description: Performs real-time multi-channel balance inquiry.
-      operationId: Payments_get_participant_balance_inquiry_api_v1_payments_participant_wallets__wallet_id__balance_get
+      operationId: get_participant_balance_inquiry_api_v1_payments_participant_wallets__wallet_id__balance_get
       parameters:
       - name: wallet_id
         in: path
@@ -30642,13 +30218,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/tax-1099-status:
+  /api/v1/payments/participant/wallets/{wallet_id}/tax-1099-status:
     get:
       tags:
       - Participant Compensation
       summary: Get Participant 1099 Tax Status
       description: Retrieves real-time IRS Form 1099 tax threshold analysis and W-9 validation state.
-      operationId: Payments_get_participant_1099_tax_status_api_v1_payments_participant_wallets__wallet_id__tax_1099_status_get
+      operationId: get_participant_1099_tax_status_api_v1_payments_participant_wallets__wallet_id__tax_1099_status_get
       parameters:
       - name: wallet_id
         in: path
@@ -30669,13 +30245,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/submit-w9:
+  /api/v1/payments/participant/wallets/{wallet_id}/submit-w9:
     post:
       tags:
       - Participant Compensation
       summary: Submit Participant W9 Form
       description: Submits IRS Form W-9 certification for participant 1099 compliance.
-      operationId: Payments_submit_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__submit_w9_post
+      operationId: submit_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__submit_w9_post
       parameters:
       - name: wallet_id
         in: path
@@ -30702,13 +30278,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/verify-w9:
+  /api/v1/payments/participant/wallets/{wallet_id}/verify-w9:
     post:
       tags:
       - Participant Compensation
       summary: Verify Participant W9 Form
       description: Performs coordinator verification on submitted Form W-9.
-      operationId: Payments_verify_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__verify_w9_post
+      operationId: verify_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__verify_w9_post
       parameters:
       - name: wallet_id
         in: path
@@ -30735,13 +30311,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/disburse:
+  /api/v1/payments/participant/wallets/{wallet_id}/disburse:
     post:
       tags:
       - Participant Compensation
       summary: Disburse Participant Funds
       description: Dispatches digital funds payout (Virtual Card / Direct ACH) with 21 CFR Part 11 ledger recording.
-      operationId: Payments_disburse_participant_funds_api_v1_payments_participant_wallets__wallet_id__disburse_post
+      operationId: disburse_participant_funds_api_v1_payments_participant_wallets__wallet_id__disburse_post
       parameters:
       - name: wallet_id
         in: path
@@ -30768,13 +30344,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/wallets/{wallet_id}/transactions:
+  /api/v1/payments/participant/wallets/{wallet_id}/transactions:
     get:
       tags:
       - Participant Compensation
       summary: List Wallet Transactions
       description: Retrieves immutable financial transaction history for a participant wallet.
-      operationId: Payments_list_wallet_transactions_api_v1_payments_participant_wallets__wallet_id__transactions_get
+      operationId: list_wallet_transactions_api_v1_payments_participant_wallets__wallet_id__transactions_get
       parameters:
       - name: wallet_id
         in: path
@@ -30798,13 +30374,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/disbursements:
+  /api/v1/payments/participant/disbursements:
     get:
       tags:
       - Participant Compensation
       summary: List Participant Disbursements
       description: Lists all digital disbursements dispatched across participant wallets.
-      operationId: Payments_list_participant_disbursements_api_v1_payments_participant_disbursements_get
+      operationId: list_participant_disbursements_api_v1_payments_participant_disbursements_get
       parameters:
       - name: wallet_id
         in: query
@@ -30846,13 +30422,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/stipend-rules:
+  /api/v1/payments/participant/stipend-rules:
     post:
       tags:
       - Participant Compensation
       summary: Create Participant Stipend Rule
       description: Configures participant visit compensation rules linked to the Schedule of Activities.
-      operationId: Payments_create_participant_stipend_rule_api_v1_payments_participant_stipend_rules_post
+      operationId: create_participant_stipend_rule_api_v1_payments_participant_stipend_rules_post
       requestBody:
         required: true
         content:
@@ -30877,7 +30453,7 @@ paths:
       - Participant Compensation
       summary: List Participant Stipend Rules
       description: Lists SoA protocol stipend compensation rules for a study.
-      operationId: Payments_list_participant_stipend_rules_api_v1_payments_participant_stipend_rules_get
+      operationId: list_participant_stipend_rules_api_v1_payments_participant_stipend_rules_get
       parameters:
       - name: study_id
         in: query
@@ -30910,13 +30486,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/events/visit-verified:
+  /api/v1/payments/participant/events/visit-verified:
     post:
       tags:
       - Participant Compensation
       summary: Ingest Visit Verified Event
       description: Receives verified clinic visit completion from EDC and credits stipend to participant wallet.
-      operationId: Payments_ingest_visit_verified_event_api_v1_payments_participant_events_visit_verified_post
+      operationId: ingest_visit_verified_event_api_v1_payments_participant_events_visit_verified_post
       requestBody:
         content:
           application/json:
@@ -30938,13 +30514,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/expenses/ocr-extract:
+  /api/v1/payments/participant/expenses/ocr-extract:
     post:
       tags:
       - Participant Compensation
       summary: Extract Receipt Ocr
       description: Performs OCR metadata extraction on a travel/meal expense receipt.
-      operationId: Payments_extract_receipt_ocr_api_v1_payments_participant_expenses_ocr_extract_post
+      operationId: extract_receipt_ocr_api_v1_payments_participant_expenses_ocr_extract_post
       requestBody:
         content:
           application/json:
@@ -30964,13 +30540,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/expenses:
+  /api/v1/payments/participant/expenses:
     post:
       tags:
       - Participant Compensation
       summary: Submit Participant Expense Claim
       description: Submits a mobile travel/meal expense reimbursement claim for coordinator review.
-      operationId: Payments_submit_participant_expense_claim_api_v1_payments_participant_expenses_post
+      operationId: submit_participant_expense_claim_api_v1_payments_participant_expenses_post
       requestBody:
         required: true
         content:
@@ -30995,7 +30571,7 @@ paths:
       - Participant Compensation
       summary: List Participant Expense Claims
       description: Lists submitted expense claims filtered by study, site, subject, or review status.
-      operationId: Payments_list_participant_expense_claims_api_v1_payments_participant_expenses_get
+      operationId: list_participant_expense_claims_api_v1_payments_participant_expenses_get
       parameters:
       - name: study_id
         in: query
@@ -31045,13 +30621,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/participant/expenses/{claim_id}/review:
+  /api/v1/payments/participant/expenses/{claim_id}/review:
     post:
       tags:
       - Participant Compensation
       summary: Review Participant Expense Claim
       description: Processes 1-click coordinator review and approval/rejection of a travel expense claim.
-      operationId: Payments_review_participant_expense_claim_api_v1_payments_participant_expenses__claim_id__review_post
+      operationId: review_participant_expense_claim_api_v1_payments_participant_expenses__claim_id__review_post
       parameters:
       - name: claim_id
         in: path
@@ -31078,13 +30654,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/lay-summaries:
+  /api/v1/payments/lay-summaries:
     post:
       tags:
       - Participant Compensation
       summary: Create Lay Summary
       description: Drafts or creates an EU CTR Regulation No 536/2014 Article 37 Plain Language Lay Summary.
-      operationId: Payments_create_lay_summary_api_v1_payments_lay_summaries_post
+      operationId: create_lay_summary_api_v1_payments_lay_summaries_post
       requestBody:
         required: true
         content:
@@ -31109,7 +30685,7 @@ paths:
       - Participant Compensation
       summary: List Lay Summaries
       description: Lists published and drafted plain-language trial summaries.
-      operationId: Payments_list_lay_summaries_api_v1_payments_lay_summaries_get
+      operationId: list_lay_summaries_api_v1_payments_lay_summaries_get
       parameters:
       - name: study_id
         in: query
@@ -31151,13 +30727,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/lay-summaries/{summary_id}:
+  /api/v1/payments/lay-summaries/{summary_id}:
     get:
       tags:
       - Participant Compensation
       summary: Get Lay Summary
       description: Retrieves details of a plain-language trial summary.
-      operationId: Payments_get_lay_summary_api_v1_payments_lay_summaries__summary_id__get
+      operationId: get_lay_summary_api_v1_payments_lay_summaries__summary_id__get
       parameters:
       - name: summary_id
         in: path
@@ -31178,13 +30754,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/lay-summaries/{summary_id}/publish:
+  /api/v1/payments/lay-summaries/{summary_id}/publish:
     post:
       tags:
       - Participant Compensation
       summary: Publish Lay Summary
       description: Formally publishes an IRB-approved lay summary for participant access.
-      operationId: Payments_publish_lay_summary_api_v1_payments_lay_summaries__summary_id__publish_post
+      operationId: publish_lay_summary_api_v1_payments_lay_summaries__summary_id__publish_post
       parameters:
       - name: summary_id
         in: path
@@ -31211,13 +30787,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/lay-summaries/{summary_id}/confirm-receipt:
+  /api/v1/payments/lay-summaries/{summary_id}/confirm-receipt:
     post:
       tags:
       - Participant Compensation
       summary: Confirm Lay Summary Receipt
       description: Records participant confirmation of lay summary receipt with comprehension score and SHA-256 seal.
-      operationId: Payments_confirm_lay_summary_receipt_api_v1_payments_lay_summaries__summary_id__confirm_receipt_post
+      operationId: confirm_lay_summary_receipt_api_v1_payments_lay_summaries__summary_id__confirm_receipt_post
       parameters:
       - name: summary_id
         in: path
@@ -31244,13 +30820,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/api/v1/payments/lay-summaries/{summary_id}/receipts:
+  /api/v1/payments/lay-summaries/{summary_id}/receipts:
     get:
       tags:
       - Participant Compensation
       summary: List Lay Summary Receipts
       description: Lists confirmation receipts for a lay summary for regulatory compliance audits.
-      operationId: Payments_list_lay_summary_receipts_api_v1_payments_lay_summaries__summary_id__receipts_get
+      operationId: list_lay_summary_receipts_api_v1_payments_lay_summaries__summary_id__receipts_get
       parameters:
       - name: summary_id
         in: path
@@ -31290,40 +30866,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payments_HTTPValidationError'
-  /payments/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Payments_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /quality/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Quality_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /quality/api/v1/quality/deviations:
+  /api/v1/quality/deviations:
     post:
       summary: Create Deviation
-      operationId: Quality_create_deviation_api_v1_quality_deviations_post
+      operationId: create_deviation_api_v1_quality_deviations_post
       requestBody:
         required: true
         content:
@@ -31345,7 +30891,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Deviations
-      operationId: Quality_list_deviations_api_v1_quality_deviations_get
+      operationId: list_deviations_api_v1_quality_deviations_get
       parameters:
       - name: study_id
         in: query
@@ -31413,10 +30959,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/ingest/event:
+  /api/v1/quality/ingest/event:
     post:
       summary: Ingest Quality Event
-      operationId: Quality_ingest_quality_event_api_v1_quality_ingest_event_post
+      operationId: ingest_quality_event_api_v1_quality_ingest_event_post
       requestBody:
         content:
           application/json:
@@ -31436,10 +30982,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/deviations/{id}:
+  /api/v1/quality/deviations/{id}:
     get:
       summary: View Deviation
-      operationId: Quality_view_deviation_api_v1_quality_deviations__id__get
+      operationId: view_deviation_api_v1_quality_deviations__id__get
       parameters:
       - name: id
         in: path
@@ -31460,10 +31006,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/deviations/{id}/rca:
+  /api/v1/quality/deviations/{id}/rca:
     put:
       summary: Create Or Update Rca
-      operationId: Quality_create_or_update_rca_api_v1_quality_deviations__id__rca_put
+      operationId: create_or_update_rca_api_v1_quality_deviations__id__rca_put
       parameters:
       - name: id
         in: path
@@ -31492,7 +31038,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     post:
       summary: Create Or Update Rca
-      operationId: Quality_create_or_update_rca_api_v1_quality_deviations__id__rca_post
+      operationId: create_or_update_rca_api_v1_quality_deviations__id__rca_post
       parameters:
       - name: id
         in: path
@@ -31519,10 +31065,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas:
+  /api/v1/quality/capas:
     post:
       summary: Create Capa
-      operationId: Quality_create_capa_api_v1_quality_capas_post
+      operationId: create_capa_api_v1_quality_capas_post
       requestBody:
         required: true
         content:
@@ -31544,7 +31090,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Capas
-      operationId: Quality_list_capas_api_v1_quality_capas_get
+      operationId: list_capas_api_v1_quality_capas_get
       parameters:
       - name: study_id
         in: query
@@ -31582,10 +31128,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas/{id}:
+  /api/v1/quality/capas/{id}:
     get:
       summary: View Capa
-      operationId: Quality_view_capa_api_v1_quality_capas__id__get
+      operationId: view_capa_api_v1_quality_capas__id__get
       parameters:
       - name: id
         in: path
@@ -31608,7 +31154,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     put:
       summary: Update Capa
-      operationId: Quality_update_capa_api_v1_quality_capas__id__put
+      operationId: update_capa_api_v1_quality_capas__id__put
       parameters:
       - name: id
         in: path
@@ -31635,10 +31181,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas/{id}/transition:
+  /api/v1/quality/capas/{id}/transition:
     post:
       summary: Transition Capa
-      operationId: Quality_transition_capa_api_v1_quality_capas__id__transition_post
+      operationId: transition_capa_api_v1_quality_capas__id__transition_post
       parameters:
       - name: id
         in: path
@@ -31665,10 +31211,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas/{id}/action-items:
+  /api/v1/quality/capas/{id}/action-items:
     post:
       summary: Create Action Item
-      operationId: Quality_create_action_item_api_v1_quality_capas__id__action_items_post
+      operationId: create_action_item_api_v1_quality_capas__id__action_items_post
       parameters:
       - name: id
         in: path
@@ -31695,10 +31241,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas/action-items/{item_id}:
+  /api/v1/quality/capas/action-items/{item_id}:
     put:
       summary: Update Action Item Status
-      operationId: Quality_update_action_item_status_api_v1_quality_capas_action_items__item_id__put
+      operationId: update_action_item_status_api_v1_quality_capas_action_items__item_id__put
       parameters:
       - name: item_id
         in: path
@@ -31725,10 +31271,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/capas/{id}/effectiveness:
+  /api/v1/quality/capas/{id}/effectiveness:
     post:
       summary: Record Effectiveness Check
-      operationId: Quality_record_effectiveness_check_api_v1_quality_capas__id__effectiveness_post
+      operationId: record_effectiveness_check_api_v1_quality_capas__id__effectiveness_post
       parameters:
       - name: id
         in: path
@@ -31755,10 +31301,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/ract/factors:
+  /api/v1/quality/rbqm/ract/factors:
     post:
       summary: Create Ract Risk Factor
-      operationId: Quality_create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post
+      operationId: create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post
       requestBody:
         required: true
         content:
@@ -31780,7 +31326,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Ract Risk Factors
-      operationId: Quality_list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get
+      operationId: list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get
       parameters:
       - name: study_id
         in: query
@@ -31816,10 +31362,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/ract/factors/{factor_id}:
+  /api/v1/quality/rbqm/ract/factors/{factor_id}:
     put:
       summary: Update Ract Risk Factor
-      operationId: Quality_update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put
+      operationId: update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put
       parameters:
       - name: factor_id
         in: path
@@ -31848,7 +31394,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     delete:
       summary: Delete Ract Risk Factor
-      operationId: Quality_delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete
+      operationId: delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete
       parameters:
       - name: factor_id
         in: path
@@ -31868,10 +31414,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/ract/seed-default:
+  /api/v1/quality/rbqm/ract/seed-default:
     post:
       summary: Seed Default Transcelerate Ract
-      operationId: Quality_seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post
+      operationId: seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post
       parameters:
       - name: study_id
         in: query
@@ -31897,10 +31443,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/ract/summary:
+  /api/v1/quality/rbqm/ract/summary:
     get:
       summary: Get Ract Matrix Summary
-      operationId: Quality_get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get
+      operationId: get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get
       parameters:
       - name: study_id
         in: query
@@ -31923,10 +31469,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/ctq:
+  /api/v1/quality/rbqm/ctq:
     post:
       summary: Create Ctq Factor
-      operationId: Quality_create_ctq_factor_api_v1_quality_rbqm_ctq_post
+      operationId: create_ctq_factor_api_v1_quality_rbqm_ctq_post
       requestBody:
         required: true
         content:
@@ -31948,7 +31494,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Ctq Factors
-      operationId: Quality_list_ctq_factors_api_v1_quality_rbqm_ctq_get
+      operationId: list_ctq_factors_api_v1_quality_rbqm_ctq_get
       parameters:
       - name: study_id
         in: query
@@ -31974,10 +31520,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/kris:
+  /api/v1/quality/rbqm/kris:
     get:
       summary: List Kri Definitions
-      operationId: Quality_list_kri_definitions_api_v1_quality_rbqm_kris_get
+      operationId: list_kri_definitions_api_v1_quality_rbqm_kris_get
       responses:
         '200':
           description: Successful Response
@@ -31990,7 +31536,7 @@ paths:
                 title: Response List Kri Definitions Api V1 Quality Rbqm Kris Get
     post:
       summary: Create Kri Definition
-      operationId: Quality_create_kri_definition_api_v1_quality_rbqm_kris_post
+      operationId: create_kri_definition_api_v1_quality_rbqm_kris_post
       requestBody:
         content:
           application/json:
@@ -32010,10 +31556,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/kris/evaluate-batch:
+  /api/v1/quality/rbqm/kris/evaluate-batch:
     post:
       summary: Evaluate Kri Batch
-      operationId: Quality_evaluate_kri_batch_api_v1_quality_rbqm_kris_evaluate_batch_post
+      operationId: evaluate_kri_batch_api_v1_quality_rbqm_kris_evaluate_batch_post
       requestBody:
         content:
           application/json:
@@ -32036,10 +31582,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/evaluations:
+  /api/v1/quality/rbqm/evaluations:
     get:
       summary: List Kri Evaluations
-      operationId: Quality_list_kri_evaluations_api_v1_quality_rbqm_evaluations_get
+      operationId: list_kri_evaluations_api_v1_quality_rbqm_evaluations_get
       parameters:
       - name: study_id
         in: query
@@ -32075,10 +31621,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/site-risk-profiles/compute:
+  /api/v1/quality/rbqm/site-risk-profiles/compute:
     post:
       summary: Compute Site Risk Profiles
-      operationId: Quality_compute_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_compute_post
+      operationId: compute_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_compute_post
       parameters:
       - name: study_id
         in: query
@@ -32104,10 +31650,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/site-risk-profiles:
+  /api/v1/quality/rbqm/site-risk-profiles:
     get:
       summary: Get Site Risk Profiles
-      operationId: Quality_get_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_get
+      operationId: get_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_get
       parameters:
       - name: study_id
         in: query
@@ -32133,10 +31679,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/qtls:
+  /api/v1/quality/rbqm/qtls:
     post:
       summary: Create Qtl
-      operationId: Quality_create_qtl_api_v1_quality_rbqm_qtls_post
+      operationId: create_qtl_api_v1_quality_rbqm_qtls_post
       requestBody:
         required: true
         content:
@@ -32158,7 +31704,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Qtls
-      operationId: Quality_list_qtls_api_v1_quality_rbqm_qtls_get
+      operationId: list_qtls_api_v1_quality_rbqm_qtls_get
       parameters:
       - name: study_id
         in: query
@@ -32184,10 +31730,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/qtls/{id}/evaluate-breach:
+  /api/v1/quality/rbqm/qtls/{id}/evaluate-breach:
     post:
       summary: Evaluate Qtl Breach
-      operationId: Quality_evaluate_qtl_breach_api_v1_quality_rbqm_qtls__id__evaluate_breach_post
+      operationId: evaluate_qtl_breach_api_v1_quality_rbqm_qtls__id__evaluate_breach_post
       parameters:
       - name: id
         in: path
@@ -32213,10 +31759,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/qtls/breaches:
+  /api/v1/quality/rbqm/qtls/breaches:
     get:
       summary: List Qtl Breaches
-      operationId: Quality_list_qtl_breaches_api_v1_quality_rbqm_qtls_breaches_get
+      operationId: list_qtl_breaches_api_v1_quality_rbqm_qtls_breaches_get
       parameters:
       - name: study_id
         in: query
@@ -32242,10 +31788,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/csm/dossiers/compile:
+  /api/v1/quality/rbqm/csm/dossiers/compile:
     post:
       summary: Compile Csm Dossier
-      operationId: Quality_compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post
+      operationId: compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post
       requestBody:
         content:
           application/json:
@@ -32265,10 +31811,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/csm/dossiers:
+  /api/v1/quality/rbqm/csm/dossiers:
     get:
       summary: List Csm Dossiers
-      operationId: Quality_list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get
+      operationId: list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get
       parameters:
       - name: study_id
         in: query
@@ -32294,10 +31840,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/rbqm/csm/dossiers/{dossier_id}:
+  /api/v1/quality/rbqm/csm/dossiers/{dossier_id}:
     get:
       summary: Get Csm Dossier
-      operationId: Quality_get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get
+      operationId: get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get
       parameters:
       - name: dossier_id
         in: path
@@ -32318,11 +31864,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/analyze:
+  /api/v1/quality/forensics/analyze:
     post:
       summary: Execute Forensics Analysis
       description: Executes automated multi-site statistical forensics surveillance.
-      operationId: Quality_execute_forensics_analysis_api_v1_quality_forensics_analyze_post
+      operationId: execute_forensics_analysis_api_v1_quality_forensics_analyze_post
       requestBody:
         content:
           application/json:
@@ -32342,11 +31888,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/runs:
+  /api/v1/quality/forensics/runs:
     get:
       summary: List Forensics Runs
       description: Lists historical statistical forensics surveillance runs.
-      operationId: Quality_list_forensics_runs_api_v1_quality_forensics_runs_get
+      operationId: list_forensics_runs_api_v1_quality_forensics_runs_get
       parameters:
       - name: study_id
         in: query
@@ -32374,11 +31920,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/runs/{run_id}:
+  /api/v1/quality/forensics/runs/{run_id}:
     get:
       summary: Get Forensics Run
       description: Retrieves detailed results for a specific forensics surveillance run.
-      operationId: Quality_get_forensics_run_api_v1_quality_forensics_runs__run_id__get
+      operationId: get_forensics_run_api_v1_quality_forensics_runs__run_id__get
       parameters:
       - name: run_id
         in: path
@@ -32399,11 +31945,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/sites/{site_id}:
+  /api/v1/quality/forensics/sites/{site_id}:
     get:
       summary: Get Site Forensics History
       description: Retrieves chronological forensics surveillance results for an individual site.
-      operationId: Quality_get_site_forensics_history_api_v1_quality_forensics_sites__site_id__get
+      operationId: get_site_forensics_history_api_v1_quality_forensics_sites__site_id__get
       parameters:
       - name: site_id
         in: path
@@ -32427,11 +31973,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/runs/{run_id}/trigger-kri-alerts:
+  /api/v1/quality/forensics/runs/{run_id}/trigger-kri-alerts:
     post:
       summary: Trigger Run Kri Alerts
       description: Dispatches KRI breach events for all flagged anomalous sites in a forensics run.
-      operationId: Quality_trigger_run_kri_alerts_api_v1_quality_forensics_runs__run_id__trigger_kri_alerts_post
+      operationId: trigger_run_kri_alerts_api_v1_quality_forensics_runs__run_id__trigger_kri_alerts_post
       parameters:
       - name: run_id
         in: path
@@ -32455,11 +32001,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/forensics/simulate:
+  /api/v1/quality/forensics/simulate:
     post:
       summary: Simulate Forensics Dataset
       description: Generates synthetic multi-site clinical datasets for testing and calibration.
-      operationId: Quality_simulate_forensics_dataset_api_v1_quality_forensics_simulate_post
+      operationId: simulate_forensics_dataset_api_v1_quality_forensics_simulate_post
       requestBody:
         content:
           application/json:
@@ -32479,11 +32025,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/duplicate-patients/scan:
+  /api/v1/quality/sentinels/duplicate-patients/scan:
     post:
       summary: Execute Duplicate Patient Scan
       description: Executes cross-site similarity matching across baseline clinical feature vectors.
-      operationId: Quality_execute_duplicate_patient_scan_api_v1_quality_sentinels_duplicate_patients_scan_post
+      operationId: execute_duplicate_patient_scan_api_v1_quality_sentinels_duplicate_patients_scan_post
       requestBody:
         content:
           application/json:
@@ -32503,11 +32049,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/temporal-anomalies/scan:
+  /api/v1/quality/sentinels/temporal-anomalies/scan:
     post:
       summary: Execute Temporal Anomaly Scan
       description: Detects off-hours entry clusters, rapid burst submissions, and identical procedure intervals.
-      operationId: Quality_execute_temporal_anomaly_scan_api_v1_quality_sentinels_temporal_anomalies_scan_post
+      operationId: execute_temporal_anomaly_scan_api_v1_quality_sentinels_temporal_anomalies_scan_post
       requestBody:
         content:
           application/json:
@@ -32527,11 +32073,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/image-phash/scan:
+  /api/v1/quality/sentinels/image-phash/scan:
     post:
       summary: Execute Image Phash Scan
       description: Computes DCT-based perceptual image hashes to detect reused and transformed radiological scans.
-      operationId: Quality_execute_image_phash_scan_api_v1_quality_sentinels_image_phash_scan_post
+      operationId: execute_image_phash_scan_api_v1_quality_sentinels_image_phash_scan_post
       requestBody:
         content:
           application/json:
@@ -32551,11 +32097,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/data-integrity/comprehensive-scan:
+  /api/v1/quality/sentinels/data-integrity/comprehensive-scan:
     post:
       summary: Execute Comprehensive Data Integrity Scan
       description: Executes a unified comprehensive data integrity scan across duplicate records, timing, and images.
-      operationId: Quality_execute_comprehensive_data_integrity_scan_api_v1_quality_sentinels_data_integrity_comprehensive_scan_post
+      operationId: execute_comprehensive_data_integrity_scan_api_v1_quality_sentinels_data_integrity_comprehensive_scan_post
       requestBody:
         content:
           application/json:
@@ -32575,11 +32121,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/runs:
+  /api/v1/quality/sentinels/runs:
     get:
       summary: List Data Integrity Runs
       description: Lists historical data integrity sentinel runs.
-      operationId: Quality_list_data_integrity_runs_api_v1_quality_sentinels_runs_get
+      operationId: list_data_integrity_runs_api_v1_quality_sentinels_runs_get
       parameters:
       - name: study_id
         in: query
@@ -32607,11 +32153,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/runs/{run_id}:
+  /api/v1/quality/sentinels/runs/{run_id}:
     get:
       summary: Get Data Integrity Run
       description: Retrieves full details and findings for a specific data integrity sentinel run.
-      operationId: Quality_get_data_integrity_run_api_v1_quality_sentinels_runs__run_id__get
+      operationId: get_data_integrity_run_api_v1_quality_sentinels_runs__run_id__get
       parameters:
       - name: run_id
         in: path
@@ -32632,11 +32178,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/runs/{run_id}/findings:
+  /api/v1/quality/sentinels/runs/{run_id}/findings:
     get:
       summary: Get Data Integrity Run Findings
       description: Retrieves all anomaly findings detected within a sentinel run.
-      operationId: Quality_get_data_integrity_run_findings_api_v1_quality_sentinels_runs__run_id__findings_get
+      operationId: get_data_integrity_run_findings_api_v1_quality_sentinels_runs__run_id__findings_get
       parameters:
       - name: run_id
         in: path
@@ -32660,11 +32206,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/findings/{finding_id}/dispatch-investigation:
+  /api/v1/quality/sentinels/findings/{finding_id}/dispatch-investigation:
     post:
       summary: Dispatch Manual Investigation
       description: Dispatches a formal 21 CFR Part 11 investigation deviation for a flagged finding.
-      operationId: Quality_dispatch_manual_investigation_api_v1_quality_sentinels_findings__finding_id__dispatch_investigation_post
+      operationId: dispatch_manual_investigation_api_v1_quality_sentinels_findings__finding_id__dispatch_investigation_post
       parameters:
       - name: finding_id
         in: path
@@ -32691,11 +32237,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/sentinels/simulate:
+  /api/v1/quality/sentinels/simulate:
     post:
       summary: Simulate Sentinel Dataset
       description: Generates synthetic multi-site clinical datasets with injected fraud anomalies.
-      operationId: Quality_simulate_sentinel_dataset_api_v1_quality_sentinels_simulate_post
+      operationId: simulate_sentinel_dataset_api_v1_quality_sentinels_simulate_post
       requestBody:
         content:
           application/json:
@@ -32715,7 +32261,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/surveillance/run:
+  /api/v1/quality/surveillance/run:
     post:
       summary: Execute Quality Surveillance Run
       description: 'Executes a complete, autonomous cross-domain quality surveillance run.
@@ -32726,7 +32272,7 @@ paths:
         evaluates statistical forensics & computer vision sentinels,
 
         and idempotently dispatches 21 CFR Part 11 Deviations.'
-      operationId: Quality_execute_quality_surveillance_run_api_v1_quality_surveillance_run_post
+      operationId: execute_quality_surveillance_run_api_v1_quality_surveillance_run_post
       requestBody:
         content:
           application/json:
@@ -32746,10 +32292,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits:
+  /api/v1/quality/audits:
     post:
       summary: Create Audit
-      operationId: Quality_create_audit_api_v1_quality_audits_post
+      operationId: create_audit_api_v1_quality_audits_post
       requestBody:
         required: true
         content:
@@ -32771,7 +32317,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Audits
-      operationId: Quality_list_audits_api_v1_quality_audits_get
+      operationId: list_audits_api_v1_quality_audits_get
       parameters:
       - name: study_id
         in: query
@@ -32829,10 +32375,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits/{id}:
+  /api/v1/quality/audits/{id}:
     get:
       summary: Get Audit
-      operationId: Quality_get_audit_api_v1_quality_audits__id__get
+      operationId: get_audit_api_v1_quality_audits__id__get
       parameters:
       - name: id
         in: path
@@ -32853,10 +32399,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits/{id}/status:
+  /api/v1/quality/audits/{id}/status:
     put:
       summary: Update Audit Status
-      operationId: Quality_update_audit_status_api_v1_quality_audits__id__status_put
+      operationId: update_audit_status_api_v1_quality_audits__id__status_put
       parameters:
       - name: id
         in: path
@@ -32883,10 +32429,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits/{id}/findings:
+  /api/v1/quality/audits/{id}/findings:
     post:
       summary: Create Audit Finding
-      operationId: Quality_create_audit_finding_api_v1_quality_audits__id__findings_post
+      operationId: create_audit_finding_api_v1_quality_audits__id__findings_post
       parameters:
       - name: id
         in: path
@@ -32915,7 +32461,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Audit Findings
-      operationId: Quality_list_audit_findings_api_v1_quality_audits__id__findings_get
+      operationId: list_audit_findings_api_v1_quality_audits__id__findings_get
       parameters:
       - name: id
         in: path
@@ -32939,10 +32485,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits/findings/{finding_id}/promote-capa:
+  /api/v1/quality/audits/findings/{finding_id}/promote-capa:
     post:
       summary: Promote Finding To Capa
-      operationId: Quality_promote_finding_to_capa_api_v1_quality_audits_findings__finding_id__promote_capa_post
+      operationId: promote_finding_to_capa_api_v1_quality_audits_findings__finding_id__promote_capa_post
       parameters:
       - name: finding_id
         in: path
@@ -32969,10 +32515,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audits/inspection-dossier/{study_id}:
+  /api/v1/quality/audits/inspection-dossier/{study_id}:
     get:
       summary: Get Inspection Readiness Dossier
-      operationId: Quality_get_inspection_readiness_dossier_api_v1_quality_audits_inspection_dossier__study_id__get
+      operationId: get_inspection_readiness_dossier_api_v1_quality_audits_inspection_dossier__study_id__get
       parameters:
       - name: study_id
         in: path
@@ -32992,10 +32538,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/serious-breaches:
+  /api/v1/quality/serious-breaches:
     post:
       summary: Report Serious Breach
-      operationId: Quality_report_serious_breach_api_v1_quality_serious_breaches_post
+      operationId: report_serious_breach_api_v1_quality_serious_breaches_post
       requestBody:
         required: true
         content:
@@ -33017,7 +32563,7 @@ paths:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
     get:
       summary: List Serious Breaches
-      operationId: Quality_list_serious_breaches_api_v1_quality_serious_breaches_get
+      operationId: list_serious_breaches_api_v1_quality_serious_breaches_get
       parameters:
       - name: study_id
         in: query
@@ -33055,10 +32601,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/serious-breaches/{id}:
+  /api/v1/quality/serious-breaches/{id}:
     get:
       summary: Get Serious Breach
-      operationId: Quality_get_serious_breach_api_v1_quality_serious_breaches__id__get
+      operationId: get_serious_breach_api_v1_quality_serious_breaches__id__get
       parameters:
       - name: id
         in: path
@@ -33079,10 +32625,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/serious-breaches/{id}/confirm:
+  /api/v1/quality/serious-breaches/{id}/confirm:
     post:
       summary: Confirm Serious Breach
-      operationId: Quality_confirm_serious_breach_api_v1_quality_serious_breaches__id__confirm_post
+      operationId: confirm_serious_breach_api_v1_quality_serious_breaches__id__confirm_post
       parameters:
       - name: id
         in: path
@@ -33109,10 +32655,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/serious-breaches/{id}/clock:
+  /api/v1/quality/serious-breaches/{id}/clock:
     get:
       summary: Get Regulatory Clock Status
-      operationId: Quality_get_regulatory_clock_status_api_v1_quality_serious_breaches__id__clock_get
+      operationId: get_regulatory_clock_status_api_v1_quality_serious_breaches__id__clock_get
       parameters:
       - name: id
         in: path
@@ -33133,10 +32679,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/serious-breaches/{id}/status:
+  /api/v1/quality/serious-breaches/{id}/status:
     put:
       summary: Update Serious Breach Status
-      operationId: Quality_update_serious_breach_status_api_v1_quality_serious_breaches__id__status_put
+      operationId: update_serious_breach_status_api_v1_quality_serious_breaches__id__status_put
       parameters:
       - name: id
         in: path
@@ -33163,10 +32709,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /quality/api/v1/quality/audit-logs:
+  /api/v1/quality/audit-logs:
     get:
       summary: List Audit Logs
-      operationId: Quality_list_audit_logs_api_v1_quality_audit_logs_get
+      operationId: list_audit_logs_api_v1_quality_audit_logs_get
       parameters:
       - name: user_id
         in: query
@@ -33269,25 +32815,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quality_HTTPValidationError'
-  /safety/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Safety_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
-  /safety/api/v1/safety/cases:
+  /api/v1/safety/cases:
     post:
       summary: Create Safety Case
-      operationId: Safety_create_safety_case_api_v1_safety_cases_post
+      operationId: create_safety_case_api_v1_safety_cases_post
       requestBody:
         required: true
         content:
@@ -33309,7 +32840,7 @@ paths:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
     get:
       summary: List Safety Cases
-      operationId: Safety_list_safety_cases_api_v1_safety_cases_get
+      operationId: list_safety_cases_api_v1_safety_cases_get
       parameters:
       - name: patient_id
         in: query
@@ -33335,10 +32866,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/cases/{id}:
+  /api/v1/safety/cases/{id}:
     get:
       summary: Get Safety Case
-      operationId: Safety_get_safety_case_api_v1_safety_cases__id__get
+      operationId: get_safety_case_api_v1_safety_cases__id__get
       parameters:
       - name: id
         in: path
@@ -33359,10 +32890,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/export-jobs:
+  /api/v1/safety/export-jobs:
     get:
       summary: List Export Jobs
-      operationId: Safety_list_export_jobs_api_v1_safety_export_jobs_get
+      operationId: list_export_jobs_api_v1_safety_export_jobs_get
       responses:
         '200':
           description: Successful Response
@@ -33375,7 +32906,7 @@ paths:
                 title: Response List Export Jobs Api V1 Safety Export Jobs Get
     post:
       summary: Create Export Job
-      operationId: Safety_create_export_job_api_v1_safety_export_jobs_post
+      operationId: create_export_job_api_v1_safety_export_jobs_post
       requestBody:
         content:
           application/json:
@@ -33395,10 +32926,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/export-jobs/{id}:
+  /api/v1/safety/export-jobs/{id}:
     get:
       summary: Get Export Job
-      operationId: Safety_get_export_job_api_v1_safety_export_jobs__id__get
+      operationId: get_export_job_api_v1_safety_export_jobs__id__get
       parameters:
       - name: id
         in: path
@@ -33419,10 +32950,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/audit-logs:
+  /api/v1/safety/audit-logs:
     get:
       summary: List Safety Audit Logs
-      operationId: Safety_list_safety_audit_logs_api_v1_safety_audit_logs_get
+      operationId: list_safety_audit_logs_api_v1_safety_audit_logs_get
       responses:
         '200':
           description: Successful Response
@@ -33433,10 +32964,10 @@ paths:
                   $ref: '#/components/schemas/Safety_SafetyAuditLogResponse'
                 type: array
                 title: Response List Safety Audit Logs Api V1 Safety Audit Logs Get
-  /safety/api/v1/safety/export:
+  /api/v1/safety/export:
     post:
       summary: Export Safety Case
-      operationId: Safety_export_safety_case_api_v1_safety_export_post
+      operationId: export_safety_case_api_v1_safety_export_post
       requestBody:
         content:
           application/json:
@@ -33456,10 +32987,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/reconciliation/runs:
+  /api/v1/safety/reconciliation/runs:
     get:
       summary: List Reconciliation Runs
-      operationId: Safety_list_reconciliation_runs_api_v1_safety_reconciliation_runs_get
+      operationId: list_reconciliation_runs_api_v1_safety_reconciliation_runs_get
       responses:
         '200':
           description: Successful Response
@@ -33472,7 +33003,7 @@ paths:
                 title: Response List Reconciliation Runs Api V1 Safety Reconciliation Runs Get
     post:
       summary: Trigger Sae Reconciliation
-      operationId: Safety_trigger_sae_reconciliation_api_v1_safety_reconciliation_runs_post
+      operationId: trigger_sae_reconciliation_api_v1_safety_reconciliation_runs_post
       requestBody:
         content:
           application/json:
@@ -33492,10 +33023,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/reconciliation/jobs:
+  /api/v1/safety/reconciliation/jobs:
     post:
       summary: Trigger Sae Reconciliation Job
-      operationId: Safety_trigger_sae_reconciliation_job_api_v1_safety_reconciliation_jobs_post
+      operationId: trigger_sae_reconciliation_job_api_v1_safety_reconciliation_jobs_post
       requestBody:
         required: true
         content:
@@ -33517,7 +33048,7 @@ paths:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
     get:
       summary: List Reconciliation Jobs
-      operationId: Safety_list_reconciliation_jobs_api_v1_safety_reconciliation_jobs_get
+      operationId: list_reconciliation_jobs_api_v1_safety_reconciliation_jobs_get
       parameters:
       - name: limit
         in: query
@@ -33549,10 +33080,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/reconciliation/jobs/{job_id}:
+  /api/v1/safety/reconciliation/jobs/{job_id}:
     get:
       summary: Get Reconciliation Job
-      operationId: Safety_get_reconciliation_job_api_v1_safety_reconciliation_jobs__job_id__get
+      operationId: get_reconciliation_job_api_v1_safety_reconciliation_jobs__job_id__get
       parameters:
       - name: job_id
         in: path
@@ -33573,10 +33104,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/reconciliation/runs/{id}:
+  /api/v1/safety/reconciliation/runs/{id}:
     get:
       summary: Get Reconciliation Run
-      operationId: Safety_get_reconciliation_run_api_v1_safety_reconciliation_runs__id__get
+      operationId: get_reconciliation_run_api_v1_safety_reconciliation_runs__id__get
       parameters:
       - name: id
         in: path
@@ -33597,14 +33128,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/narratives/generate:
+  /api/v1/safety/narratives/generate:
     post:
       summary: Generate Safety Narrative Endpoint
       description: 'Draft a new FDA MedWatch 3500A / CIOMS-I Serious Adverse Event narrative via Tier 3 model.
 
 
         Requirements: PRD-SYS-051, PRD-SYS-052'
-      operationId: Safety_generate_safety_narrative_endpoint_api_v1_safety_narratives_generate_post
+      operationId: generate_safety_narrative_endpoint_api_v1_safety_narratives_generate_post
       requestBody:
         content:
           application/json:
@@ -33624,14 +33155,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/narratives/{id}:
+  /api/v1/safety/narratives/{id}:
     get:
       summary: Get Safety Narrative Endpoint
       description: 'Retrieve safety narrative details, grounded claims, and review status.
 
 
         Requirements: PRD-SYS-052'
-      operationId: Safety_get_safety_narrative_endpoint_api_v1_safety_narratives__id__get
+      operationId: get_safety_narrative_endpoint_api_v1_safety_narratives__id__get
       parameters:
       - name: id
         in: path
@@ -33652,14 +33183,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/narratives:
+  /api/v1/safety/narratives:
     get:
       summary: List Safety Narratives Endpoint
       description: 'List safety narratives filtered by study, subject, or review status.
 
 
         Requirements: PRD-SYS-052'
-      operationId: Safety_list_safety_narratives_endpoint_api_v1_safety_narratives_get
+      operationId: list_safety_narratives_endpoint_api_v1_safety_narratives_get
       parameters:
       - name: study_id
         in: query
@@ -33701,14 +33232,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/narratives/{id}/sign:
+  /api/v1/safety/narratives/{id}/sign:
     post:
       summary: Sign Safety Narrative Endpoint
       description: 'Apply a 21 CFR Part 11 cryptographic electronic signature to approve a safety narrative.
 
 
         Requirements: PRD-SYS-051, PRD-SYS-052'
-      operationId: Safety_sign_safety_narrative_endpoint_api_v1_safety_narratives__id__sign_post
+      operationId: sign_safety_narrative_endpoint_api_v1_safety_narratives__id__sign_post
       parameters:
       - name: id
         in: path
@@ -33735,7 +33266,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/narratives/{id}/export-e2b:
+  /api/v1/safety/narratives/{id}/export-e2b:
     post:
       summary: Export Safety Narrative E2B Endpoint
       description: 'Export an approved safety narrative into ICH E2B(R3) XML format.
@@ -33745,7 +33276,7 @@ paths:
 
 
         Requirements: PRD-SYS-052'
-      operationId: Safety_export_safety_narrative_e2b_endpoint_api_v1_safety_narratives__id__export_e2b_post
+      operationId: export_safety_narrative_e2b_endpoint_api_v1_safety_narratives__id__export_e2b_post
       parameters:
       - name: id
         in: path
@@ -33765,14 +33296,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/rules/evaluate:
+  /api/v1/safety/rules/evaluate:
     post:
       summary: Evaluate Expedited Safety Rules Endpoint
       description: 'Evaluate adverse event against global expedited safety reporting rules and persist evaluation.
 
 
         Requirements: PRD-PVG-001, PRD-PVG-008, ADR-2199'
-      operationId: Safety_evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post
+      operationId: evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post
       requestBody:
         content:
           application/json:
@@ -33792,14 +33323,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/rules/evaluations/{id}:
+  /api/v1/safety/rules/evaluations/{id}:
     get:
       summary: Get Expedited Safety Evaluation Endpoint
       description: 'Retrieve safety reporting evaluation with updated real-time Day 0 countdown clocks.
 
 
         Requirements: PRD-PVG-001'
-      operationId: Safety_get_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__get
+      operationId: get_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__get
       parameters:
       - name: id
         in: path
@@ -33820,14 +33351,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/rules/evaluations:
+  /api/v1/safety/rules/evaluations:
     get:
       summary: List Expedited Safety Evaluations Endpoint
       description: 'List safety evaluations filtered by study, case, or expedited status with live countdowns.
 
 
         Requirements: PRD-PVG-001'
-      operationId: Safety_list_expedited_safety_evaluations_endpoint_api_v1_safety_rules_evaluations_get
+      operationId: list_expedited_safety_evaluations_endpoint_api_v1_safety_rules_evaluations_get
       parameters:
       - name: study_id
         in: query
@@ -33885,14 +33416,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/rules/evaluations/{id}/sign:
+  /api/v1/safety/rules/evaluations/{id}/sign:
     post:
       summary: Sign Expedited Safety Evaluation Endpoint
       description: 'Apply a 21 CFR Part 11 electronic signature by a qualified Safety Physician to approve an ICSR evaluation.
 
 
         Requirements: PRD-PVG-008'
-      operationId: Safety_sign_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__sign_post
+      operationId: sign_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__sign_post
       parameters:
       - name: id
         in: path
@@ -33919,14 +33450,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/rules/countdown-alerts:
+  /api/v1/safety/rules/countdown-alerts:
     get:
       summary: Get Safety Countdown Alerts Endpoint
       description: 'Retrieve all active expedited safety evaluations with WARNING (>=75%), CRITICAL (>=90%), or OVERDUE countdown clocks.
 
 
         Requirements: PRD-PVG-001'
-      operationId: Safety_get_safety_countdown_alerts_endpoint_api_v1_safety_rules_countdown_alerts_get
+      operationId: get_safety_countdown_alerts_endpoint_api_v1_safety_rules_countdown_alerts_get
       parameters:
       - name: study_id
         in: query
@@ -33952,14 +33483,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/as2/transmissions:
+  /api/v1/safety/as2/transmissions:
     post:
       summary: Send As2 Transmission Endpoint
       description: 'Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post
+      operationId: send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post
       requestBody:
         required: true
         content:
@@ -33985,7 +33516,7 @@ paths:
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get
+      operationId: list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get
       parameters:
       - name: target_authority
         in: query
@@ -34049,14 +33580,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/as2/transmissions/{id}:
+  /api/v1/safety/as2/transmissions/{id}:
     get:
       summary: Get As2 Transmission Endpoint
       description: 'Retrieve full audit history and status of an AS2 B2B transmission by ID.
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get
+      operationId: get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get
       parameters:
       - name: id
         in: path
@@ -34077,14 +33608,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/as2/mdn:
+  /api/v1/safety/as2/mdn:
     post:
       summary: Process Inbound Mdn Endpoint
       description: 'Process an asynchronous Message Disposition Notification (MDN) callback.
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post
+      operationId: process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post
       requestBody:
         content:
           application/json:
@@ -34104,14 +33635,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/as2/ack:
+  /api/v1/safety/as2/ack:
     post:
       summary: Process Regulatory Ack Endpoint
       description: 'Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post
+      operationId: process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post
       requestBody:
         content:
           application/json:
@@ -34131,14 +33662,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/as2/transmissions/{id}/retry:
+  /api/v1/safety/as2/transmissions/{id}/retry:
     post:
       summary: Retry As2 Transmission Endpoint
       description: 'Retry a failed AS2 transmission.
 
 
         Requirements: PRD-PVG-002, ADR-2199'
-      operationId: Safety_retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post
+      operationId: retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post
       parameters:
       - name: id
         in: path
@@ -34159,14 +33690,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/detect:
+  /api/v1/safety/signals/detect:
     post:
       summary: Execute Signal Detection Scan Endpoint
       description: 'Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post
+      operationId: execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post
       requestBody:
         content:
           application/json:
@@ -34186,14 +33717,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/runs:
+  /api/v1/safety/signals/runs:
     get:
       summary: List Signal Detection Runs Endpoint
       description: 'List historical disproportionality signal detection scan runs.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get
+      operationId: list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get
       parameters:
       - name: study_id
         in: query
@@ -34228,14 +33759,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/runs/{id}:
+  /api/v1/safety/signals/runs/{id}:
     get:
       summary: Get Signal Detection Run Endpoint
       description: 'Retrieve full metric tables and details for a signal detection scan run.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get
+      operationId: get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get
       parameters:
       - name: id
         in: path
@@ -34258,14 +33789,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/alerts:
+  /api/v1/safety/signals/alerts:
     get:
       summary: List Signal Alerts Endpoint
       description: 'List safety signal review alerts with optional filtering by status, severity, or study.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get
+      operationId: list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get
       parameters:
       - name: study_id
         in: query
@@ -34315,14 +33846,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/alerts/{id}:
+  /api/v1/safety/signals/alerts/{id}:
     get:
       summary: Get Signal Alert Endpoint
       description: 'Retrieve details of an individual safety signal review alert.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get
+      operationId: get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get
       parameters:
       - name: id
         in: path
@@ -34343,14 +33874,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/alerts/{id}/review:
+  /api/v1/safety/signals/alerts/{id}/review:
     post:
       summary: Review Signal Alert Endpoint
       description: 'Review and update the clinical triage disposition of a safety signal alert.
 
 
         Requirements: PRD-PVG-003, ADR-2199'
-      operationId: Safety_review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post
+      operationId: review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post
       parameters:
       - name: id
         in: path
@@ -34377,14 +33908,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/signals/alerts/{id}/sign:
+  /api/v1/safety/signals/alerts/{id}/sign:
     post:
       summary: Sign Signal Alert Endpoint
       description: 'Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.
 
 
         Requirements: PRD-PVG-003, PRD-PVG-008, ADR-2199'
-      operationId: Safety_sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post
+      operationId: sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post
       parameters:
       - name: id
         in: path
@@ -34411,14 +33942,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/exposure/calculate:
+  /api/v1/safety/exposure/calculate:
     post:
       summary: Calculate Subject Exposure Endpoint
       description: 'Calculate cumulative and interval patient-years of exposure.
 
 
         Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199'
-      operationId: Safety_calculate_subject_exposure_endpoint_api_v1_safety_exposure_calculate_post
+      operationId: calculate_subject_exposure_endpoint_api_v1_safety_exposure_calculate_post
       requestBody:
         content:
           application/json:
@@ -34438,14 +33969,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/snapshots/lock:
+  /api/v1/safety/snapshots/lock:
     post:
       summary: Lock Regulatory Snapshot Endpoint
       description: 'Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.
 
 
         Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199'
-      operationId: Safety_lock_regulatory_snapshot_endpoint_api_v1_safety_snapshots_lock_post
+      operationId: lock_regulatory_snapshot_endpoint_api_v1_safety_snapshots_lock_post
       requestBody:
         content:
           application/json:
@@ -34465,14 +33996,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/snapshots/verify:
+  /api/v1/safety/snapshots/verify:
     post:
       summary: Verify Regulatory Snapshot Endpoint
       description: 'Cryptographically verify the bitwise integrity of a locked regulatory snapshot.
 
 
         Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199'
-      operationId: Safety_verify_regulatory_snapshot_endpoint_api_v1_safety_snapshots_verify_post
+      operationId: verify_regulatory_snapshot_endpoint_api_v1_safety_snapshots_verify_post
       requestBody:
         content:
           application/json:
@@ -34492,14 +34023,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/compile:
+  /api/v1/safety/periodic-reports/compile:
     post:
       summary: Compile Periodic Safety Report Endpoint
       description: 'Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
 
 
         Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199'
-      operationId: Safety_compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post
+      operationId: compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post
       requestBody:
         content:
           application/json:
@@ -34519,14 +34050,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports:
+  /api/v1/safety/periodic-reports:
     get:
       summary: List Periodic Safety Reports Endpoint
       description: 'List compiled periodic regulatory safety reports with optional filters.
 
 
         Requirements: PRD-PVG-004, ADR-2199'
-      operationId: Safety_list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get
+      operationId: list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get
       parameters:
       - name: study_id
         in: query
@@ -34576,14 +34107,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/{id}:
+  /api/v1/safety/periodic-reports/{id}:
     get:
       summary: Get Periodic Safety Report Endpoint
       description: 'Retrieve full structured JSON payload of a periodic regulatory safety report by ID.
 
 
         Requirements: PRD-PVG-004, ADR-2199'
-      operationId: Safety_get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get
+      operationId: get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get
       parameters:
       - name: id
         in: path
@@ -34604,14 +34135,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/{id}/sign:
+  /api/v1/safety/periodic-reports/{id}/sign:
     post:
       summary: Sign Periodic Safety Report Endpoint
       description: 'Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
 
 
         Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199'
-      operationId: Safety_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post
+      operationId: sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post
       parameters:
       - name: id
         in: path
@@ -34638,14 +34169,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/{id}/qppv-sign:
+  /api/v1/safety/periodic-reports/{id}/qppv-sign:
     post:
       summary: Qppv Sign Periodic Safety Report Endpoint
       description: 'Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.
 
 
         Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199'
-      operationId: Safety_qppv_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__qppv_sign_post
+      operationId: qppv_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__qppv_sign_post
       parameters:
       - name: id
         in: path
@@ -34672,14 +34203,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/{id}/export:
+  /api/v1/safety/periodic-reports/{id}/export:
     get:
       summary: Export Periodic Safety Report Endpoint
       description: 'Export a periodic safety report as HTML, XML, or JSON.
 
 
         Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199'
-      operationId: Safety_export_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__export_get
+      operationId: export_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__export_get
       parameters:
       - name: id
         in: path
@@ -34703,14 +34234,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/periodic-reports/{id}/xml:
+  /api/v1/safety/periodic-reports/{id}/xml:
     get:
       summary: Export Periodic Safety Report Xml Endpoint
       description: 'Export the structured ICH E2F / E2C(R2) XML submission package.
 
 
         Requirements: PRD-AGG-001, ICH E2F, ICH E2C(R2)'
-      operationId: Safety_export_periodic_safety_report_xml_endpoint_api_v1_safety_periodic_reports__id__xml_get
+      operationId: export_periodic_safety_report_xml_endpoint_api_v1_safety_periodic_reports__id__xml_get
       parameters:
       - name: id
         in: path
@@ -34727,7 +34258,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/device-investigations:
+  /api/v1/safety/device-investigations:
     post:
       summary: Open Device Safety Investigation Endpoint
       description: 'Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.
@@ -34737,7 +34268,7 @@ paths:
 
 
         Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209'
-      operationId: Safety_open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post
+      operationId: open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post
       requestBody:
         required: true
         content:
@@ -34763,7 +34294,7 @@ paths:
 
 
         Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209'
-      operationId: Safety_list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get
+      operationId: list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get
       parameters:
       - name: study_id
         in: query
@@ -34813,14 +34344,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/device-investigations/{investigation_id}:
+  /api/v1/safety/device-investigations/{investigation_id}:
     get:
       summary: Get Device Safety Investigation Endpoint
       description: 'Retrieves a single device safety investigation case by ID.
 
 
         Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209'
-      operationId: Safety_get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get
+      operationId: get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get
       parameters:
       - name: investigation_id
         in: path
@@ -34841,14 +34372,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/device-investigations/{investigation_id}/adjudicate:
+  /api/v1/safety/device-investigations/{investigation_id}/adjudicate:
     put:
       summary: Adjudicate Device Safety Investigation Endpoint
       description: 'Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.
 
 
         Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209'
-      operationId: Safety_adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put
+      operationId: adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put
       parameters:
       - name: investigation_id
         in: path
@@ -34875,14 +34406,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/device-investigations/{investigation_id}/regulatory-report:
+  /api/v1/safety/device-investigations/{investigation_id}/regulatory-report:
     post:
       summary: Generate Device Vigilance Report Endpoint
       description: 'Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).
 
 
         Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209'
-      operationId: Safety_generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post
+      operationId: generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post
       parameters:
       - name: investigation_id
         in: path
@@ -34903,14 +34434,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /safety/api/v1/safety/device-investigations/{investigation_id}/fda-medwatch-report:
+  /api/v1/safety/device-investigations/{investigation_id}/fda-medwatch-report:
     post:
       summary: Generate Device Fda Medwatch Report Endpoint
       description: 'Generates an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Report.
 
 
         Requirements: PRD-SYS-187, PRD-SYS-053, FDA 21 CFR Part 803, 21 CFR Part 11'
-      operationId: Safety_generate_device_fda_medwatch_report_endpoint_api_v1_safety_device_investigations__investigation_id__fda_medwatch_report_post
+      operationId: generate_device_fda_medwatch_report_endpoint_api_v1_safety_device_investigations__investigation_id__fda_medwatch_report_post
       parameters:
       - name: investigation_id
         in: path
@@ -34931,11 +34462,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Safety_HTTPValidationError'
-  /tickets/api/v1/tickets:
+  /api/v1/tickets:
     post:
       summary: Create Ticket
       description: Create and persist a new Ticket record with SLA computation and audit logging.
-      operationId: Tickets_create_ticket_api_v1_tickets_post
+      operationId: create_ticket_api_v1_tickets_post
       requestBody:
         required: true
         content:
@@ -34958,7 +34489,7 @@ paths:
     get:
       summary: List Tickets
       description: List and filter tickets with pagination and scope-awareness.
-      operationId: Tickets_list_tickets_api_v1_tickets_get
+      operationId: list_tickets_api_v1_tickets_get
       parameters:
       - name: status
         in: query
@@ -35080,13 +34611,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/cross-app/events:
+  /api/v1/tickets/cross-app/events:
     post:
       summary: Create Cross App Ticket
       description: 'Automated REST ingestion endpoint for sibling microservices (EDC, Safety, CTMS, Quality).
 
         Creates a ticket linked directly to domain entity with full contextual metadata.'
-      operationId: Tickets_create_cross_app_ticket_api_v1_tickets_cross_app_events_post
+      operationId: create_cross_app_ticket_api_v1_tickets_cross_app_events_post
       requestBody:
         content:
           application/json:
@@ -35106,11 +34637,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/analytics/kpi:
+  /api/v1/tickets/analytics/kpi:
     get:
       summary: Get Ticket Kpis
       description: Retrieve real-time clinical KPI and KRI metrics.
-      operationId: Tickets_get_ticket_kpis_api_v1_tickets_analytics_kpi_get
+      operationId: get_ticket_kpis_api_v1_tickets_analytics_kpi_get
       parameters:
       - name: org_id
         in: query
@@ -35149,11 +34680,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/audit-logs:
+  /api/v1/tickets/audit-logs:
     get:
       summary: List Ticket Audit Logs
       description: Retrieve ticket audit logs in descending chronological order.
-      operationId: Tickets_list_ticket_audit_logs_api_v1_tickets_audit_logs_get
+      operationId: list_ticket_audit_logs_api_v1_tickets_audit_logs_get
       parameters:
       - name: ticket_id
         in: query
@@ -35211,11 +34742,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}:
+  /api/v1/tickets/{id}:
     get:
       summary: Get Ticket
       description: Retrieve a specific ticket record by its ID or sequential reference.
-      operationId: Tickets_get_ticket_api_v1_tickets__id__get
+      operationId: get_ticket_api_v1_tickets__id__get
       parameters:
       - name: id
         in: path
@@ -35239,7 +34770,7 @@ paths:
     put:
       summary: Update Ticket
       description: Update a specific ticket record by its ID or reference with optimistic locking and transitions.
-      operationId: Tickets_update_ticket_api_v1_tickets__id__put
+      operationId: update_ticket_api_v1_tickets__id__put
       parameters:
       - name: id
         in: path
@@ -35266,11 +34797,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}/transition:
+  /api/v1/tickets/{id}/transition:
     post:
       summary: Transition Ticket
       description: Transition a ticket's status explicitly with optimistic locking, RCA check, and SLA pause handling.
-      operationId: Tickets_transition_ticket_api_v1_tickets__id__transition_post
+      operationId: transition_ticket_api_v1_tickets__id__transition_post
       parameters:
       - name: id
         in: path
@@ -35297,11 +34828,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}/assign:
+  /api/v1/tickets/{id}/assign:
     post:
       summary: Assign Ticket
       description: Assign a support ticket to an individual user and/or role-based routing target explicitly.
-      operationId: Tickets_assign_ticket_api_v1_tickets__id__assign_post
+      operationId: assign_ticket_api_v1_tickets__id__assign_post
       parameters:
       - name: id
         in: path
@@ -35328,11 +34859,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}/comments:
+  /api/v1/tickets/{id}/comments:
     post:
       summary: Create Ticket Comment
       description: Append an auditable comment/note to a specific ticket with public or internal visibility.
-      operationId: Tickets_create_ticket_comment_api_v1_tickets__id__comments_post
+      operationId: create_ticket_comment_api_v1_tickets__id__comments_post
       parameters:
       - name: id
         in: path
@@ -35362,7 +34893,7 @@ paths:
     get:
       summary: List Ticket Comments
       description: Retrieve comments for a ticket filtered by role persona visibility boundaries.
-      operationId: Tickets_list_ticket_comments_api_v1_tickets__id__comments_get
+      operationId: list_ticket_comments_api_v1_tickets__id__comments_get
       parameters:
       - name: id
         in: path
@@ -35386,11 +34917,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}/attachments:
+  /api/v1/tickets/{id}/attachments:
     post:
       summary: Upload Ticket Attachment
       description: Upload an audited evidence attachment with SHA-256 integrity hash.
-      operationId: Tickets_upload_ticket_attachment_api_v1_tickets__id__attachments_post
+      operationId: upload_ticket_attachment_api_v1_tickets__id__attachments_post
       parameters:
       - name: id
         in: path
@@ -35420,7 +34951,7 @@ paths:
     get:
       summary: List Ticket Attachments
       description: List all attachments for a ticket.
-      operationId: Tickets_list_ticket_attachments_api_v1_tickets__id__attachments_get
+      operationId: list_ticket_attachments_api_v1_tickets__id__attachments_get
       parameters:
       - name: id
         in: path
@@ -35444,11 +34975,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{id}/sign:
+  /api/v1/tickets/{id}/sign:
     post:
       summary: Sign Ticket
       description: Capture a 21 CFR Part 11 Electronic Signature on a ticket.
-      operationId: Tickets_sign_ticket_api_v1_tickets__id__sign_post
+      operationId: sign_ticket_api_v1_tickets__id__sign_post
       parameters:
       - name: id
         in: path
@@ -35475,11 +35006,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/export/audit-trail:
+  /api/v1/tickets/export/audit-trail:
     get:
       summary: Export Audit Trail
       description: Export regulatory Part 11 immutable audit trail records in JSON or CSV format.
-      operationId: Tickets_export_audit_trail_api_v1_tickets_export_audit_trail_get
+      operationId: export_audit_trail_api_v1_tickets_export_audit_trail_get
       parameters:
       - name: format
         in: query
@@ -35509,14 +35040,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/compliance/change-requests/analyze-diff:
+  /api/v1/compliance/change-requests/analyze-diff:
     post:
       summary: Analyze Diff Endpoint
       description: 'Analyze proposed setting change and evaluate GxP regulatory risk level.
 
 
         Requirements: PRD-SYS-001'
-      operationId: Tickets_analyze_diff_endpoint_api_v1_compliance_change_requests_analyze_diff_post
+      operationId: analyze_diff_endpoint_api_v1_compliance_change_requests_analyze_diff_post
       requestBody:
         content:
           application/json:
@@ -35536,7 +35067,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/{ticket_id}/rag-triage:
+  /api/v1/tickets/{ticket_id}/rag-triage:
     post:
       summary: Execute Grounded Protocol RAG support triage on an existing ticket
       description: 'Execute Grounded Protocol RAG Support Triage on an existing ticket.
@@ -35550,7 +35081,7 @@ paths:
 
 
         Requirements: PRD-TCK-005, PRD-SYS-051'
-      operationId: Tickets_triage_ticket_rag_api_v1_tickets__ticket_id__rag_triage_post
+      operationId: triage_ticket_rag_api_v1_tickets__ticket_id__rag_triage_post
       parameters:
       - name: ticket_id
         in: path
@@ -35588,14 +35119,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/api/v1/tickets/rag-triage/preview:
+  /api/v1/tickets/rag-triage/preview:
     post:
       summary: Preview Grounded Protocol RAG support triage before ticket submission
       description: 'Preview Grounded Protocol RAG Support Triage before ticket submission.
 
 
         Requirements: PRD-TCK-005, PRD-SYS-051'
-      operationId: Tickets_preview_ticket_rag_triage_api_v1_tickets_rag_triage_preview_post
+      operationId: preview_ticket_rag_triage_api_v1_tickets_rag_triage_preview_post
       requestBody:
         content:
           application/json:
@@ -35617,808 +35148,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tickets_HTTPValidationError'
-  /tickets/health:
-    get:
-      summary: Health Check
-      description: Service health check endpoint.
-      operationId: Tickets_health_check_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Health Check Health Get
 components:
   schemas:
-    Gateway_AcknowledgeNotificationRequest:
-      properties:
-        reason_for_change:
-          type: string
-          title: Reason For Change
-      type: object
-      required:
-      - reason_for_change
-      title: AcknowledgeNotificationRequest
-    Gateway_AssignmentComplianceDetail:
-      properties:
-        assignment_id:
-          type: string
-          title: Assignment Id
-        instrument_id:
-          type: string
-          title: Instrument Id
-        instrument_name:
-          type: string
-          title: Instrument Name
-        status:
-          type: string
-          title: Status
-        due_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Due At
-        end_date:
-          type: string
-          format: date-time
-          title: End Date
-        submitted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Submitted At
-      type: object
-      required:
-      - assignment_id
-      - instrument_id
-      - instrument_name
-      - status
-      - due_at
-      - end_date
-      title: AssignmentComplianceDetail
-    Gateway_CdashDomainDefinition:
-      properties:
-        domain_code:
-          type: string
-          title: Domain Code
-        name:
-          type: string
-          title: Name
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-        version:
-          type: string
-          title: Version
-          default: '2.3'
-        fields:
-          items:
-            additionalProperties: true
-            type: object
-          type: array
-          title: Fields
-      type: object
-      required:
-      - domain_code
-      - name
-      title: CdashDomainDefinition
-    Gateway_CdiscProductSummary:
-      properties:
-        title:
-          type: string
-          title: Title
-        version:
-          type: string
-          title: Version
-        href:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Href
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-      type: object
-      required:
-      - title
-      - version
-      title: CdiscProductSummary
-    Gateway_CodelistDefinition:
-      properties:
-        codelist_code:
-          type: string
-          title: Codelist Code
-        name:
-          type: string
-          title: Name
-        extensible:
-          type: boolean
-          title: Extensible
-          default: false
-        terms:
-          items:
-            $ref: '#/components/schemas/Gateway_CodelistTerm'
-          type: array
-          title: Terms
-      type: object
-      required:
-      - codelist_code
-      - name
-      title: CodelistDefinition
-    Gateway_CodelistTerm:
-      properties:
-        concept_id:
-          type: string
-          title: Concept Id
-        submission_value:
-          type: string
-          title: Submission Value
-        preferred_term:
-          type: string
-          title: Preferred Term
-        definition:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Definition
-      type: object
-      required:
-      - concept_id
-      - submission_value
-      - preferred_term
-      title: CodelistTerm
-    Gateway_ConflictStrategyEnum:
-      type: string
-      enum:
-      - CLIENT_WINS
-      - SERVER_WINS
-      - MERGE
-      title: ConflictStrategyEnum
-    Gateway_DemoSessionRequest:
-      properties:
-        username:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Username
-        roles:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Roles
-        tenant_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Tenant Id
-      type: object
-      title: DemoSessionRequest
-    Gateway_EPROBulkSyncRequest:
-      properties:
-        submissions:
-          items:
-            $ref: '#/components/schemas/Gateway_EPROOfflineEntry'
-          type: array
-          title: Submissions
-      type: object
-      required:
-      - submissions
-      title: EPROBulkSyncRequest
-    Gateway_EPROBulkSyncResponse:
-      properties:
-        status:
-          type: string
-          title: Status
-        processed_count:
-          type: integer
-          title: Processed Count
-        created_count:
-          type: integer
-          title: Created Count
-        updated_count:
-          type: integer
-          title: Updated Count
-        ignored_count:
-          type: integer
-          title: Ignored Count
-        conflict_count:
-          type: integer
-          title: Conflict Count
-        results:
-          items:
-            $ref: '#/components/schemas/Gateway_EPROSubmitResponse'
-          type: array
-          title: Results
-      type: object
-      required:
-      - status
-      - processed_count
-      - created_count
-      - updated_count
-      - ignored_count
-      - conflict_count
-      - results
-      title: EPROBulkSyncResponse
-    Gateway_EPROOfflineEntry:
-      properties:
-        subject_id:
-          type: string
-          title: Subject Id
-        diary_id:
-          type: string
-          title: Diary Id
-        device_timestamp:
-          type: string
-          format: date-time
-          title: Device Timestamp
-        answers:
-          additionalProperties: true
-          type: object
-          title: Answers
-        offline_sync_markers:
-          $ref: '#/components/schemas/Gateway_EPROOfflineMarker'
-      type: object
-      required:
-      - subject_id
-      - diary_id
-      - device_timestamp
-      - answers
-      - offline_sync_markers
-      title: EPROOfflineEntry
-    Gateway_EPROOfflineMarker:
-      properties:
-        sequence_number:
-          type: integer
-          title: Sequence Number
-        client_id:
-          type: string
-          title: Client Id
-        conflict_strategy:
-          $ref: '#/components/schemas/Gateway_ConflictStrategyEnum'
-          default: CLIENT_WINS
-        signature:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Signature
-        timestamps:
-          anyOf:
-          - additionalProperties:
-              type: string
-              format: date-time
-            type: object
-          - type: 'null'
-          title: Timestamps
-      type: object
-      required:
-      - sequence_number
-      - client_id
-      title: EPROOfflineMarker
-    Gateway_EPROSubmitResponse:
-      properties:
-        status:
-          type: string
-          title: Status
-        id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Id
-        subject_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Subject Id
-        diary_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Diary Id
-        answers:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Answers
-        sync_status:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Sync Status
-        version_index:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Version Index
-        query:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Query
-        signature_validation:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Signature Validation
-        reconciliation_result:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Reconciliation Result
-        audit_details:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Audit Details
-        offline_sync_markers:
-          anyOf:
-          - $ref: '#/components/schemas/Gateway_EPROOfflineMarker'
-          - type: 'null'
-      type: object
-      required:
-      - status
-      title: EPROSubmitResponse
-    Gateway_HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/Gateway_ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
-    Gateway_InstrumentCreate:
-      properties:
-        study_id:
-          type: string
-          title: Study Id
-          description: Unique identifier of the clinical study
-        name:
-          type: string
-          title: Name
-          description: The name of the questionnaire/diary
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-          description: Optional description
-        items:
-          additionalProperties: true
-          type: object
-          title: Items
-          description: Items/questions
-        response_types:
-          additionalProperties: true
-          type: object
-          title: Response Types
-          description: Response types and options
-        scoring_metadata:
-          additionalProperties: true
-          type: object
-          title: Scoring Metadata
-          description: Scoring metadata
-        reason_for_change:
-          type: string
-          title: Reason For Change
-          description: 21 CFR Part 11 compliant reason for change
-      type: object
-      required:
-      - study_id
-      - name
-      - items
-      - response_types
-      - scoring_metadata
-      - reason_for_change
-      title: InstrumentCreate
-    Gateway_InstrumentResponse:
-      properties:
-        id:
-          type: string
-          title: Id
-        name:
-          type: string
-          title: Name
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-        items:
-          additionalProperties: true
-          type: object
-          title: Items
-        response_types:
-          additionalProperties: true
-          type: object
-          title: Response Types
-        scoring_metadata:
-          additionalProperties: true
-          type: object
-          title: Scoring Metadata
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        created_by:
-          type: string
-          title: Created By
-        reason_for_change:
-          type: string
-          title: Reason For Change
-        version_index:
-          type: integer
-          title: Version Index
-      type: object
-      required:
-      - id
-      - name
-      - description
-      - items
-      - response_types
-      - scoring_metadata
-      - created_at
-      - created_by
-      - reason_for_change
-      - version_index
-      title: InstrumentResponse
-    Gateway_SdtmDomainDefinition:
-      properties:
-        domain_code:
-          type: string
-          title: Domain Code
-        structure:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Structure
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-        version:
-          type: string
-          title: Version
-          default: '3.4'
-        variables:
-          items:
-            additionalProperties: true
-            type: object
-          type: array
-          title: Variables
-      type: object
-      required:
-      - domain_code
-      title: SdtmDomainDefinition
-    Gateway_SignatureVerificationRequest:
-      properties:
-        username:
-          type: string
-          title: Username
-        password:
-          type: string
-          title: Password
-        totp:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Totp
-        action:
-          type: string
-          title: Action
-        batch_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Batch Id
-        semantic_action:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Semantic Action
-      type: object
-      required:
-      - username
-      - password
-      - action
-      title: SignatureVerificationRequest
-    Gateway_SubjectAssignmentCreate:
-      properties:
-        study_id:
-          type: string
-          title: Study Id
-          description: Unique identifier of the clinical study
-        subject_id:
-          type: string
-          title: Subject Id
-          description: Unique subject identifier
-        instrument_id:
-          type: string
-          title: Instrument Id
-          description: ID of the Instrument to assign
-        start_date:
-          type: string
-          format: date-time
-          title: Start Date
-          description: Start of the due/recurrence window
-        end_date:
-          type: string
-          format: date-time
-          title: End Date
-          description: End of the due/recurrence window
-        recurrence_pattern:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Recurrence Pattern
-          description: E.g., DAILY, WEEKLY
-        due_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Due At
-          description: Optional specific due date/time
-        reason_for_change:
-          type: string
-          title: Reason For Change
-          description: 21 CFR Part 11 compliant reason for change
-      type: object
-      required:
-      - study_id
-      - subject_id
-      - instrument_id
-      - start_date
-      - end_date
-      - reason_for_change
-      title: SubjectAssignmentCreate
-    Gateway_SubjectAssignmentResponse:
-      properties:
-        id:
-          type: string
-          title: Id
-        subject_id:
-          type: string
-          title: Subject Id
-        instrument_id:
-          type: string
-          title: Instrument Id
-        start_date:
-          type: string
-          format: date-time
-          title: Start Date
-        end_date:
-          type: string
-          format: date-time
-          title: End Date
-        recurrence_pattern:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Recurrence Pattern
-        due_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Due At
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        created_by:
-          type: string
-          title: Created By
-        reason_for_change:
-          type: string
-          title: Reason For Change
-        version_index:
-          type: integer
-          title: Version Index
-      type: object
-      required:
-      - id
-      - subject_id
-      - instrument_id
-      - start_date
-      - end_date
-      - recurrence_pattern
-      - due_at
-      - created_at
-      - created_by
-      - reason_for_change
-      - version_index
-      title: SubjectAssignmentResponse
-    Gateway_SubjectComplianceResponse:
-      properties:
-        subject_id:
-          type: string
-          title: Subject Id
-        compliance_rate:
-          type: number
-          title: Compliance Rate
-        completed_count:
-          type: integer
-          title: Completed Count
-        pending_count:
-          type: integer
-          title: Pending Count
-        overdue_count:
-          type: integer
-          title: Overdue Count
-        assignments:
-          items:
-            $ref: '#/components/schemas/Gateway_AssignmentComplianceDetail'
-          type: array
-          title: Assignments
-      type: object
-      required:
-      - subject_id
-      - compliance_rate
-      - completed_count
-      - pending_count
-      - overdue_count
-      - assignments
-      title: SubjectComplianceResponse
-    Gateway_SubjectNotificationResponse:
-      properties:
-        id:
-          type: string
-          title: Id
-        subject_id:
-          type: string
-          title: Subject Id
-        assignment_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Assignment Id
-        due_at:
-          type: string
-          format: date-time
-          title: Due At
-        channel:
-          type: string
-          title: Channel
-        delivery_status:
-          type: string
-          title: Delivery Status
-        is_read:
-          type: boolean
-          title: Is Read
-        read_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Read At
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        created_by:
-          type: string
-          title: Created By
-        reason_for_change:
-          type: string
-          title: Reason For Change
-        version_index:
-          type: integer
-          title: Version Index
-      type: object
-      required:
-      - id
-      - subject_id
-      - due_at
-      - channel
-      - delivery_status
-      - is_read
-      - created_at
-      - created_by
-      - reason_for_change
-      - version_index
-      title: SubjectNotificationResponse
-    Gateway_UsdmExportResponse:
-      properties:
-        study_id:
-          type: string
-          title: Study Id
-        usdm_json:
-          additionalProperties: true
-          type: object
-          title: Usdm Json
-      type: object
-      required:
-      - study_id
-      - usdm_json
-      title: UsdmExportResponse
-    Gateway_UsdmImportRequest:
-      properties:
-        raw_usdm_json:
-          additionalProperties: true
-          type: object
-          title: Raw Usdm Json
-          description: Raw USDM protocol JSON dictionary payload
-        target_version:
-          type: string
-          title: Target Version
-          description: Target USDM spec version ('v2.0' or 'v3.0')
-          default: v3.0
-        reason_for_change:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Reason For Change
-          description: GxP audit reason for import/change
-      type: object
-      required:
-      - raw_usdm_json
-      title: UsdmImportRequest
-    Gateway_UsdmImportResponse:
-      properties:
-        study_id:
-          type: string
-          title: Study Id
-        nodes_created:
-          type: integer
-          title: Nodes Created
-        relationships_created:
-          type: integer
-          title: Relationships Created
-        validation_warnings:
-          items:
-            type: string
-          type: array
-          title: Validation Warnings
-      type: object
-      required:
-      - study_id
-      - nodes_created
-      - relationships_created
-      title: UsdmImportResponse
-    Gateway_ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
-        type:
-          type: string
-          title: Error Type
-        input:
-          title: Input
-        ctx:
-          type: object
-          title: Context
-      type: object
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
     Ai_gateway_ChatMessageDTO:
       properties:
         role:
@@ -36759,6 +35490,10 @@ components:
           description: List of previously completed reasoning steps.
         patient_context:
           anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
           - additionalProperties: true
             type: object
           - type: string
@@ -41334,6 +40069,38 @@ components:
       required:
       - arms
       title: ArmReorderRequest
+    Designer_AstEditCheck:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        ast_expression:
+          additionalProperties: true
+          type: object
+          title: Ast Expression
+        severity:
+          type: string
+          title: Severity
+          default: HARD
+        query_message:
+          type: string
+          title: Query Message
+        target_variable_ids:
+          items:
+            type: string
+          type: array
+          title: Target Variable Ids
+      type: object
+      required:
+      - id
+      - name
+      - ast_expression
+      - query_message
+      title: AstEditCheck
+      description: Isomorphic AST validation and query firing rule.
     Designer_AttritionStep:
       properties:
         criterion_id:
@@ -41722,6 +40489,58 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    Designer_CdiscMetadata:
+      properties:
+        domain:
+          type: string
+          title: Domain
+          default: VS
+        variable_name:
+          type: string
+          title: Variable Name
+          default: VSORRES
+        oid:
+          type: string
+          title: Oid
+        codelist_oid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Codelist Oid
+        ucum_unit:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ucum Unit
+        core_designation:
+          type: string
+          title: Core Designation
+          default: Req
+        sdtm_target:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sdtm Target
+      type: object
+      required:
+      - oid
+      title: CdiscMetadata
+      description: CDISC CDASH/SDTM variable mapping annotations.
+    Designer_ClinicalDataType:
+      type: string
+      enum:
+      - string
+      - integer
+      - float
+      - date
+      - datetime
+      - time
+      - boolean
+      - codelist
+      - text
+      - repeat_log
+      title: ClinicalDataType
+      description: Supported CDISC clinical data types.
     Designer_CodeValidationState:
       type: string
       enum:
@@ -42324,6 +41143,47 @@ components:
       - state
       title: ConceptValidationReport
       description: Detailed validation status for a single terminology concept code.
+    Designer_ConstraintDefinition:
+      properties:
+        required:
+          type: boolean
+          title: Required
+          default: true
+        min_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Value
+        max_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Value
+        min_length:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Min Length
+        max_length:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Length
+        regex_pattern:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Regex Pattern
+        allowed_values:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Allowed Values
+      type: object
+      title: ConstraintDefinition
+      description: Value-level data validation constraints.
     Designer_CreateArmRequest:
       properties:
         id:
@@ -42731,6 +41591,39 @@ components:
       - criterion_type
       title: CriteriaBreakdownSummary
       description: Summary of criteria evaluation results for a sub-cohort or participant group.
+    Designer_CrossVisitDependency:
+      properties:
+        id:
+          type: string
+          title: Id
+        trigger_visit_id:
+          type: string
+          title: Trigger Visit Id
+        trigger_variable_id:
+          type: string
+          title: Trigger Variable Id
+        trigger_condition:
+          additionalProperties: true
+          type: object
+          title: Trigger Condition
+        target_visit_ids_to_spawn:
+          items:
+            type: string
+          type: array
+          title: Target Visit Ids To Spawn
+        target_visit_ids_to_suppress:
+          items:
+            type: string
+          type: array
+          title: Target Visit Ids To Suppress
+      type: object
+      required:
+      - id
+      - trigger_visit_id
+      - trigger_variable_id
+      - trigger_condition
+      title: CrossVisitDependency
+      description: Horizontal journey logic linking multiple visits/encounters.
     Designer_DAGJobStatusResponse:
       properties:
         job_id:
@@ -42963,6 +41856,73 @@ components:
       - allowable_units
       title: DataElementPayload
       description: Data-element specific payload validation containing units and format.
+    Designer_DataSchema:
+      properties:
+        schema_version:
+          type: string
+          title: Schema Version
+          default: '2.0'
+        form_id:
+          type: string
+          title: Form Id
+        name:
+          type: string
+          title: Name
+        cdisc_form_oid:
+          type: string
+          title: Cdisc Form Oid
+        variables:
+          items:
+            $ref: '#/components/schemas/Designer_VariableDefinition'
+          type: array
+          title: Variables
+      type: object
+      required:
+      - form_id
+      - name
+      - cdisc_form_oid
+      title: DataSchema
+      description: 'Pillar 1: Data Schema (schema.json) - Defines what is collected.'
+    Designer_DerivedMathRule:
+      properties:
+        id:
+          type: string
+          title: Id
+        target_variable_id:
+          type: string
+          title: Target Variable Id
+        formula_expression:
+          type: string
+          title: Formula Expression
+        input_variable_ids:
+          items:
+            type: string
+          type: array
+          title: Input Variable Ids
+        unit_conversion:
+          additionalProperties:
+            type: number
+          type: object
+          title: Unit Conversion
+      type: object
+      required:
+      - id
+      - target_variable_id
+      - formula_expression
+      title: DerivedMathRule
+      description: Reactive formula derivation rule.
+    Designer_DiffRequest:
+      properties:
+        base_form:
+          $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
+        amended_form:
+          $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
+      type: object
+      required:
+      - base_form
+      - amended_form
+      title: DiffRequest
+      description: Request payload for comparing two form versions.
     Designer_DifferenceResult:
       properties:
         field:
@@ -42985,6 +41945,7 @@ components:
       - PENDING
       - RUNNING
       - COMPLETED
+      - PENDING_REVIEW
       - FAILED
       - CANCELLED
       title: DigitizationJobStatus
@@ -43631,6 +42592,46 @@ components:
       description: 'Represents a structured field reference pointing to an eCRF domain variable.
 
         Format must strictly follow: eCRF.<DOMAIN>.<VARIABLE>'
+    Designer_FieldWidgetConfig:
+      properties:
+        variable_id:
+          type: string
+          title: Variable Id
+        widget:
+          $ref: '#/components/schemas/Designer_WidgetType'
+          default: text_input
+        grid_column_span:
+          type: integer
+          title: Grid Column Span
+          default: 12
+        placeholder:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Placeholder
+        help_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Help Text
+        css_class:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Css Class
+        readonly:
+          type: boolean
+          title: Readonly
+          default: false
+        hidden:
+          type: boolean
+          title: Hidden
+          default: false
+      type: object
+      required:
+      - variable_id
+      title: FieldWidgetConfig
+      description: UI presentation options for a single variable field.
     Designer_FormItem:
       properties:
         item_id:
@@ -43836,6 +42837,29 @@ components:
       - generated_rules
       - summary_by_country
       title: GenerateStartupTemplateResponse
+    Designer_GridSection:
+      properties:
+        id:
+          type: string
+          title: Id
+        title:
+          type: string
+          title: Title
+        columns:
+          type: integer
+          title: Columns
+          default: 12
+        widgets:
+          items:
+            $ref: '#/components/schemas/Designer_FieldWidgetConfig'
+          type: array
+          title: Widgets
+      type: object
+      required:
+      - id
+      - title
+      title: GridSection
+      description: Layout container section in the UI Schema.
     Designer_HTTPValidationError:
       properties:
         detail:
@@ -44134,6 +43158,35 @@ components:
       - visit_id
       - procedure_id
       title: LinkVisitProcedureRequest
+    Designer_LogicSchema:
+      properties:
+        schema_version:
+          type: string
+          title: Schema Version
+          default: '2.0'
+        form_id:
+          type: string
+          title: Form Id
+        edit_checks:
+          items:
+            $ref: '#/components/schemas/Designer_AstEditCheck'
+          type: array
+          title: Edit Checks
+        derived_rules:
+          items:
+            $ref: '#/components/schemas/Designer_DerivedMathRule'
+          type: array
+          title: Derived Rules
+        cross_visit_dependencies:
+          items:
+            $ref: '#/components/schemas/Designer_CrossVisitDependency'
+          type: array
+          title: Cross Visit Dependencies
+      type: object
+      required:
+      - form_id
+      title: LogicSchema
+      description: 'Pillar 1: Logic Schema (rules.json) - Defines how it behaves.'
     Designer_LogicalOperator:
       type: string
       enum:
@@ -44142,7 +43195,7 @@ components:
       - not
       title: LogicalOperator
       description: Allowed logical connectors for composite criteria expressions.
-    Designer_MigrationDirective:
+    Designer_MigrationDirective-Input:
       properties:
         directive_id:
           type: string
@@ -44176,6 +43229,13 @@ components:
 
 
         Requirements: PRD-SYS-001, PRD-SUB-007'
+    Designer_MigrationMode:
+      type: string
+      enum:
+      - prospective
+      - retrospective
+      title: MigrationMode
+      description: In-flight patient migration policies during protocol amendments.
     Designer_NarrativeDelta:
       properties:
         section_id:
@@ -44371,6 +43431,33 @@ components:
       - assignee_role
       title: OperationalTicketBlueprint
       description: Structured actionable ticket blueprint ready for dispatch to apps/tickets.
+    Designer_PatientMigrationMatrix:
+      properties:
+        protocol_id:
+          type: string
+          title: Protocol Id
+        from_version_tag:
+          type: string
+          title: From Version Tag
+        to_version_tag:
+          type: string
+          title: To Version Tag
+        directives:
+          items:
+            $ref: '#/components/schemas/Designer_packages__ddf__tripartite__MigrationDirective'
+          type: array
+          title: Directives
+        effective_date:
+          type: string
+          format: date-time
+          title: Effective Date
+      type: object
+      required:
+      - protocol_id
+      - from_version_tag
+      - to_version_tag
+      title: PatientMigrationMatrix
+      description: 'Pillar 6: In-Flight Patient Migration Matrix for Protocol Amendments.'
     Designer_PrerequisiteCriterionTemplate:
       properties:
         country_code:
@@ -44507,7 +43594,7 @@ components:
       type: object
       title: ProtocolAmendRequest
       description: Payload for the Protocol/Designer Amendment endpoint.
-    Designer_ProtocolImpactAssessment:
+    Designer_ProtocolImpactAssessment-Input:
       properties:
         assessment_id:
           type: string
@@ -44592,7 +43679,114 @@ components:
           description: Domain-routed operational ticket blueprints
         migration_directives:
           items:
-            $ref: '#/components/schemas/Designer_MigrationDirective'
+            $ref: '#/components/schemas/Designer_MigrationDirective-Input'
+          type: array
+          title: Migration Directives
+          description: In-flight migration directives
+        created_at:
+          type: string
+          title: Created At
+          description: UTC ISO timestamp of assessment
+      type: object
+      required:
+      - assessment_id
+      - study_id
+      - base_version
+      - amended_version
+      - executive_summary
+      - data_capture_ecrf
+      - subject_management_rtsm
+      - regulatory_compliance
+      - reconsent_gating_plan
+      - created_at
+      title: ProtocolImpactAssessment
+      description: Consolidated Protocol Amendment Ripple-Effect Impact Assessment.
+    Designer_ProtocolImpactAssessment-Output:
+      properties:
+        assessment_id:
+          type: string
+          title: Assessment Id
+          description: Unique assessment identifier
+        study_id:
+          type: string
+          title: Study Id
+          description: Target study identifier
+        base_version:
+          type: string
+          title: Base Version
+          description: Baseline protocol version tag
+        amended_version:
+          type: string
+          title: Amended Version
+          description: Amended protocol version tag
+        amendment_type:
+          type: string
+          title: Amendment Type
+          description: 'Amendment classification: major or minor'
+          default: minor
+        is_substantial:
+          type: boolean
+          title: Is Substantial
+          description: Whether amendment is substantial vs administrative
+          default: false
+        requires_reconsent:
+          type: boolean
+          title: Requires Reconsent
+          description: Whether mandatory subject re-consent is mandated
+          default: false
+        patient_burden_delta:
+          type: number
+          title: Patient Burden Delta
+          description: Calculated patient burden score change
+          default: 0.0
+        estimated_cost_usd:
+          type: number
+          title: Estimated Cost Usd
+          description: Estimated total operational cost delta in USD
+          default: 0.0
+        executive_summary:
+          type: string
+          title: Executive Summary
+          description: Executive narrative summary of the ripple effect analysis
+        graph_deltas:
+          items:
+            $ref: '#/components/schemas/Designer_EntityDiff'
+          type: array
+          title: Graph Deltas
+          description: USDM Graph entity diffs
+        soa_deltas:
+          items:
+            $ref: '#/components/schemas/Designer_EntityDiff'
+          type: array
+          title: Soa Deltas
+          description: Schedule of Activities matrix diffs
+        narrative_deltas:
+          items:
+            $ref: '#/components/schemas/Designer_NarrativeDelta'
+          type: array
+          title: Narrative Deltas
+          description: Narrative section textual diffs
+        data_capture_ecrf:
+          $ref: '#/components/schemas/Designer_DataCaptureEcrfImpact'
+          description: eCRF & Visit data capture domain manifest
+        subject_management_rtsm:
+          $ref: '#/components/schemas/Designer_SubjectManagementRtsmImpact'
+          description: RTSM & Dosing domain manifest
+        regulatory_compliance:
+          $ref: '#/components/schemas/Designer_RegulatoryComplianceImpact'
+          description: Regulatory & Safety compliance domain manifest
+        reconsent_gating_plan:
+          $ref: '#/components/schemas/Designer_ReConsentGatingPlan'
+          description: Subject re-consent gating enforcement plan
+        operational_tickets:
+          items:
+            $ref: '#/components/schemas/Designer_OperationalTicketBlueprint'
+          type: array
+          title: Operational Tickets
+          description: Domain-routed operational ticket blueprints
+        migration_directives:
+          items:
+            $ref: '#/components/schemas/Designer_apps__designer__domain__cdisc__branch_models__MigrationDirective'
           type: array
           title: Migration Directives
           description: In-flight migration directives
@@ -44713,6 +43907,23 @@ components:
       - chunk_text
       title: ProtocolRAGContextChunk
       description: Normalized protocol excerpt chunk passed to RAG generation and verification.
+    Designer_PublicationRequest:
+      properties:
+        form_definition:
+          $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+        step_up_signature_token:
+          type: string
+          title: Step Up Signature Token
+      type: object
+      required:
+      - form_definition
+      - reason_for_change
+      - step_up_signature_token
+      title: PublicationRequest
+      description: Request payload for publishing and sealing a form.
     Designer_PublishStudyVersionRequest:
       properties:
         description:
@@ -45233,7 +44444,7 @@ components:
           description: Calculated amendment impact summary
         migration_directives:
           items:
-            $ref: '#/components/schemas/Designer_MigrationDirective'
+            $ref: '#/components/schemas/Designer_apps__designer__domain__cdisc__branch_models__MigrationDirective'
           type: array
           title: Migration Directives
           description: Automated in-flight migration directives
@@ -45557,6 +44768,35 @@ components:
           type: array
           title: Gate Errors
           description: Diagnostic schema validation error messages
+        recovery_attempts:
+          type: integer
+          title: Recovery Attempts
+          description: Number of automated LLM schema recovery attempts executed
+          default: 0
+        recovered_by_llm:
+          type: boolean
+          title: Recovered By Llm
+          description: Whether stage validation passed via automated LLM self-healing
+          default: false
+        corrected_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Corrected By
+          description: Username or Signer ID who manually corrected the stage gate
+        correction_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Correction Reason
+          description: Part 11 change reason provided for manual correction
+        signature_manifestation:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Signature Manifestation
+          description: Part 11 signature manifestation audit record
         confidence_score:
           type: number
           maximum: 1.0
@@ -45796,6 +45036,43 @@ components:
       type: object
       title: SubjectManagementRtsmImpact
       description: Manifest of impact on randomization, trial supply management (RTSM), and cohort dosing.
+    Designer_SubmitStageCorrectionRequest:
+      properties:
+        stage:
+          $ref: '#/components/schemas/Designer_DigitizationStage'
+          description: Stage gate being corrected
+        corrected_data:
+          additionalProperties: true
+          type: object
+          title: Corrected Data
+          description: Corrected stage data payload
+        signature_username:
+          type: string
+          title: Signature Username
+          description: Part 11 signer username/ID
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Part 11 GxP reason for manual correction
+        signature_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Token
+          description: Optional authentication or signature token
+        resume_pipeline:
+          type: boolean
+          title: Resume Pipeline
+          description: Whether to resume DAG execution immediately after saving correction
+          default: true
+      type: object
+      required:
+      - stage
+      - corrected_data
+      - signature_username
+      - change_reason
+      title: SubmitStageCorrectionRequest
+      description: Request payload to submit manual stage corrections and electronic signature for human escalation.
     Designer_Suggestion:
       properties:
         suggestion_id:
@@ -46025,6 +45302,31 @@ components:
       - cdash_domain
       title: SynthesizedECRFForm
       description: Synthesized CDASH eCRF form definition compiled from extracted activities.
+    Designer_SyntheticPayload:
+      properties:
+        payload_id:
+          type: string
+          title: Payload Id
+        test_scenario:
+          type: string
+          title: Test Scenario
+        data:
+          additionalProperties: true
+          type: object
+          title: Data
+        expected_rule_outcomes:
+          additionalProperties:
+            type: boolean
+          type: object
+          title: Expected Rule Outcomes
+      type: object
+      required:
+      - payload_id
+      - test_scenario
+      - data
+      - expected_rule_outcomes
+      title: SyntheticPayload
+      description: AI-generated synthetic test payload targeting rule boundaries.
     Designer_SyntheticSimulationSummary:
       properties:
         simulated_subject_count:
@@ -46130,7 +45432,7 @@ components:
           description: Target study ID
         impact_assessment:
           anyOf:
-          - $ref: '#/components/schemas/Designer_ProtocolImpactAssessment'
+          - $ref: '#/components/schemas/Designer_ProtocolImpactAssessment-Input'
           - type: 'null'
           description: Optional pre-calculated impact assessment
         base_version_tag:
@@ -46281,6 +45583,49 @@ components:
       - status
       - reason
       title: TransitionItemRequest
+    Designer_TripartiteFormDefinition:
+      properties:
+        form_id:
+          type: string
+          title: Form Id
+        protocol_id:
+          type: string
+          title: Protocol Id
+        version_index:
+          type: integer
+          title: Version Index
+          default: 1
+        version_tag:
+          type: string
+          title: Version Tag
+          default: 1.0.0
+        data_schema:
+          $ref: '#/components/schemas/Designer_DataSchema'
+        ui_schema:
+          $ref: '#/components/schemas/Designer_UiSchema'
+        logic_schema:
+          $ref: '#/components/schemas/Designer_LogicSchema'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+          default: system
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          default: Initial eCRF baseline release
+      type: object
+      required:
+      - form_id
+      - protocol_id
+      - data_schema
+      - ui_schema
+      - logic_schema
+      title: TripartiteFormDefinition
+      description: The unified, versioned Tripartite Clinical Form Document.
     Designer_USDMProtocolExtractionResponse:
       properties:
         study_title:
@@ -46355,6 +45700,97 @@ components:
       - confidence_score
       title: USDMProtocolExtractionResponse
       description: Structured response representing complete USDM v4.0 protocol parameters.
+    Designer_UatEvidenceReport:
+      properties:
+        report_id:
+          type: string
+          title: Report Id
+        form_id:
+          type: string
+          title: Form Id
+        protocol_id:
+          type: string
+          title: Protocol Id
+        executed_at:
+          type: string
+          format: date-time
+          title: Executed At
+        total_scenarios_evaluated:
+          type: integer
+          title: Total Scenarios Evaluated
+        scenarios_passed:
+          type: integer
+          title: Scenarios Passed
+        scenarios_failed:
+          type: integer
+          title: Scenarios Failed
+        rule_coverage_percentage:
+          type: number
+          title: Rule Coverage Percentage
+        execution_duration_ms:
+          type: number
+          title: Execution Duration Ms
+        gxp_compliance_verified:
+          type: boolean
+          title: Gxp Compliance Verified
+          default: true
+        sha256_evidence_digest:
+          type: string
+          title: Sha256 Evidence Digest
+      type: object
+      required:
+      - report_id
+      - form_id
+      - protocol_id
+      - total_scenarios_evaluated
+      - scenarios_passed
+      - scenarios_failed
+      - rule_coverage_percentage
+      - execution_duration_ms
+      - sha256_evidence_digest
+      title: UatEvidenceReport
+      description: 'Pillar 5: Automated 21 CFR Part 11 UAT Evidence Report.'
+    Designer_UatExecutionRequest:
+      properties:
+        form_definition:
+          $ref: '#/components/schemas/Designer_TripartiteFormDefinition'
+        payloads:
+          items:
+            $ref: '#/components/schemas/Designer_SyntheticPayload'
+          type: array
+          title: Payloads
+      type: object
+      required:
+      - form_definition
+      title: UatExecutionRequest
+      description: Request payload for executing synthetic UAT suite.
+    Designer_UiSchema:
+      properties:
+        schema_version:
+          type: string
+          title: Schema Version
+          default: '2.0'
+        form_id:
+          type: string
+          title: Form Id
+        sections:
+          items:
+            $ref: '#/components/schemas/Designer_GridSection'
+          type: array
+          title: Sections
+        default_viewport:
+          $ref: '#/components/schemas/Designer_ViewportMode'
+          default: desktop_edc
+        theme_tokens:
+          additionalProperties:
+            type: string
+          type: object
+          title: Theme Tokens
+      type: object
+      required:
+      - form_id
+      title: UiSchema
+      description: 'Pillar 1: UI Schema (uischema.json) - Defines how it looks.'
     Designer_UpdateArmRequest:
       properties:
         reason_for_change:
@@ -46577,6 +46013,40 @@ components:
       - msg
       - type
       title: ValidationError
+    Designer_VariableDefinition:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        data_type:
+          $ref: '#/components/schemas/Designer_ClinicalDataType'
+          default: string
+        cdisc:
+          $ref: '#/components/schemas/Designer_CdiscMetadata'
+        constraints:
+          $ref: '#/components/schemas/Designer_ConstraintDefinition'
+        phi_pii_masked:
+          type: boolean
+          title: Phi Pii Masked
+          default: false
+        sdv_tier:
+          type: string
+          title: Sdv Tier
+          default: TSDV_REPRESENTATIVE
+        part11_reason_required:
+          type: boolean
+          title: Part11 Reason Required
+          default: true
+      type: object
+      required:
+      - id
+      - name
+      - cdisc
+      title: VariableDefinition
+      description: Data Schema element defining a single clinical collection variable.
     Designer_VersionDiffResponse:
       properties:
         added_nodes:
@@ -46600,6 +46070,14 @@ components:
       - modified_nodes
       - deleted_nodes
       title: VersionDiffResponse
+    Designer_ViewportMode:
+      type: string
+      enum:
+      - desktop_edc
+      - mobile_epro
+      - tablet_esource
+      title: ViewportMode
+      description: Omni-channel preview modes.
     Designer_VisitAttributes:
       properties:
         visit_type:
@@ -46796,6 +46274,58 @@ components:
       - epoch_id
       - visit_ids
       title: VisitToEpochAssignmentRequest
+    Designer_WidgetType:
+      type: string
+      enum:
+      - text_input
+      - textarea
+      - number_input
+      - radio_group
+      - select_dropdown
+      - multi_select
+      - date_picker
+      - time_picker
+      - slider_vas
+      - body_map_coordinate
+      - repeating_log_grid
+      - medical_autocode
+      - sensor_stream_card
+      title: WidgetType
+      description: UI Widget representations for the headless renderer.
+    Designer_apps__designer__domain__cdisc__branch_models__MigrationDirective:
+      properties:
+        directive_id:
+          type: string
+          title: Directive Id
+          description: Unique migration directive ID
+        action:
+          type: string
+          title: Action
+          description: 'Directive action: RECONSENT_GATE, SCHEMA_UPGRADE, PRESERVE_HISTORICAL'
+        description:
+          type: string
+          title: Description
+          description: Detailed directive description
+        affected_cohort:
+          type: string
+          title: Affected Cohort
+          description: 'Target subject cohort: ACTIVE, COMPLETED, ALL'
+          default: ACTIVE
+        target_version:
+          type: string
+          title: Target Version
+          description: Target protocol version tag
+      type: object
+      required:
+      - directive_id
+      - action
+      - description
+      - target_version
+      title: MigrationDirective
+      description: 'Directive for in-flight subject migration and version transition.
+
+
+        Requirements: PRD-SYS-001, PRD-SUB-007'
     Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input:
       properties:
         type:
@@ -47015,6 +46545,28 @@ components:
       - field_id
       title: FieldReference
       description: Represents a structured field reference within an expression tree.
+    Designer_packages__ddf__tripartite__MigrationDirective:
+      properties:
+        variable_id:
+          type: string
+          title: Variable Id
+        action:
+          type: string
+          title: Action
+        migration_mode:
+          $ref: '#/components/schemas/Designer_MigrationMode'
+          default: prospective
+        backfill_query_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Backfill Query Message
+      type: object
+      required:
+      - variable_id
+      - action
+      title: MigrationDirective
+      description: Action directive for an individual clinical field in an amendment.
     Econsent_ArchivalDeliveryResponse:
       properties:
         created_at:
@@ -47510,6 +47062,20 @@ components:
         reason_for_change:
           type: string
           title: Reason For Change
+        tenant_id:
+          type: string
+          title: Tenant Id
+          default: tenant_default
+        previous_digest:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Previous Digest
+        sha256_digest:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sha256 Digest
       type: object
       required:
       - id
@@ -49210,6 +48776,13 @@ components:
           title: Lead Time Days
           description: Lead time days (0 = only subjects who reached legal majority)
           default: 0
+        as_of_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: As Of Date
+          description: Reference date for majority evaluation (defaults to current date)
         reason_for_change:
           type: string
           title: Reason For Change
@@ -52733,6 +52306,7 @@ components:
       - target_ids
       - signing_reason
       title: BatchSignOffRequest
+      description: Pydantic schema for requesting a batch electronic sign-off.
     Execution_BatchSignOffResponse:
       properties:
         status:
@@ -52760,6 +52334,7 @@ components:
       - skipped_submission_ids
       - skipped_targets
       title: BatchSignOffResponse
+      description: Pydantic schema returning batch electronic sign-off outcome.
     Execution_BatchSignatureRequest:
       properties:
         study_id:
@@ -55223,7 +54798,6 @@ components:
       - is_met
       - is_indeterminate
       title: CriterionLevelResult
-      description: Pydantic schema for individual criterion level evaluation result.
     Execution_CrmConfig:
       properties:
         target_toxicity_rate:
@@ -56082,7 +55656,6 @@ components:
           title: Race
       type: object
       title: Demographics
-      description: Pydantic schema representing demographic details.
     Execution_DeviceClassification:
       type: string
       enum:
@@ -57983,18 +57556,19 @@ components:
       description: Pydantic schema representing clinical dataset export request parameters.
     Execution_FormSubmissionApprove:
       properties:
+        signing_reason:
+          type: string
+          title: Signing Reason
         signature_manifest:
           additionalProperties: true
           type: object
           title: Signature Manifest
-        signing_reason:
-          type: string
-          title: Signing Reason
       type: object
       required:
-      - signature_manifest
       - signing_reason
+      - signature_manifest
       title: FormSubmissionApprove
+      description: Pydantic schema for PI approval of a FormSubmission.
     Execution_FormSubmissionCreate:
       properties:
         study_id:
@@ -58032,6 +57606,7 @@ components:
       - subject_id
       - form_id
       title: FormSubmissionCreate
+      description: Pydantic schema for creating a FormSubmission.
     Execution_FormSubmissionResponse:
       properties:
         id:
@@ -58105,6 +57680,7 @@ components:
       - is_active
       - is_readonly
       title: FormSubmissionResponse
+      description: Pydantic schema returning FormSubmission details.
     Execution_FormSubmissionStatusEnum:
       type: string
       enum:
@@ -59484,59 +59060,84 @@ components:
         study_id:
           type: string
           title: Study Id
+          description: Unique protocol study identifier, e.g. 'STUDY-101'
         test_code:
           type: string
           title: Test Code
+          description: Standardized laboratory test code, e.g. 'WBC'
         test_name:
           type: string
           title: Test Name
+          description: Descriptive name of the test parameter
         source:
-          type: string
-          title: Source
+          $ref: '#/components/schemas/Execution_LabSourceEnum'
+          description: Source type of the range, either 'CENTRAL' or 'LOCAL'
         site_id:
           anyOf:
           - type: string
           - type: 'null'
           title: Site Id
+          description: Optional investigator site identifier
         unit:
           type: string
           title: Unit
+          description: The original/captured unit of measurement
         normalized_unit:
           type: string
           title: Normalized Unit
+          description: Standardized target unit of measurement
         sex_applicability:
           type: string
           title: Sex Applicability
+          description: Sex applicability of the reference range
+        ethnicity_applicability:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ethnicity Applicability
+          description: Optional ethnicity applicability constraint
         age_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Age Low
+          description: Nullable lower bound of age applicability
         age_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Age High
+          description: Nullable upper bound of age applicability
         low_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: Low Bound
+          description: Nullable lower limit of normal range
         high_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: High Bound
+          description: Nullable upper limit of normal range
         critical_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical Low
+          description: Nullable lower limit of critical/panic alert range
         critical_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical High
+          description: Nullable upper limit of critical/panic alert range
+        reason_for_change:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason For Change
+          description: Optional GxP 21 CFR Part 11 justification reason
       type: object
       required:
       - study_id
@@ -59547,74 +59148,99 @@ components:
       - normalized_unit
       - sex_applicability
       title: LabReferenceRangeCreate
-      description: Pydantic schema for creating a reference range.
+      description: 'Payload to create a new clinical laboratory reference range.
+
+
+        Requirements: PRD-SYS-001, PRD-LAB-001'
     Execution_LabReferenceRangeResponse:
       properties:
         id:
           type: string
           title: Id
+          description: Unique database identifier of the range
         study_id:
           type: string
           title: Study Id
+          description: Unique trial study identifier
         test_code:
           type: string
           title: Test Code
+          description: Standardized lab test code
         test_name:
           type: string
           title: Test Name
+          description: Descriptive test name
         source:
-          type: string
-          title: Source
+          $ref: '#/components/schemas/Execution_LabSourceEnum'
+          description: Source type of the range
         site_id:
           anyOf:
           - type: string
           - type: 'null'
           title: Site Id
+          description: Optional investigator site identifier
         unit:
           type: string
           title: Unit
+          description: Original unit of measurement
         normalized_unit:
           type: string
           title: Normalized Unit
+          description: Standardized unit
         sex_applicability:
           type: string
           title: Sex Applicability
+          description: Sex applicability
+        ethnicity_applicability:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ethnicity Applicability
+          description: Ethnicity applicability constraint
         age_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Age Low
+          description: Lower age applicability limit
         age_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Age High
+          description: Upper age applicability limit
         low_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: Low Bound
+          description: Lower normal limit
         high_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: High Bound
+          description: Upper normal limit
         critical_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical Low
+          description: Lower critical bound
         critical_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical High
+          description: Upper critical bound
         version:
           type: integer
           title: Version
+          description: Optimistic locking entity version identifier
         is_deleted:
           type: boolean
           title: Is Deleted
+          description: Flag indicating if the record is soft-deleted
       type: object
       required:
       - id
@@ -59628,7 +59254,10 @@ components:
       - version
       - is_deleted
       title: LabReferenceRangeResponse
-      description: Pydantic schema for returning reference range details.
+      description: 'Response payload representing a registered laboratory reference range.
+
+
+        Requirements: PRD-SYS-001, PRD-LAB-001'
     Execution_LabReferenceRangeUpdate:
       properties:
         study_id:
@@ -59636,74 +59265,113 @@ components:
           - type: string
           - type: 'null'
           title: Study Id
+          description: Unique protocol study identifier
         test_code:
           anyOf:
           - type: string
           - type: 'null'
           title: Test Code
+          description: Standardized laboratory test code
         test_name:
           anyOf:
           - type: string
           - type: 'null'
           title: Test Name
+          description: Updated descriptive name of the test
         source:
           anyOf:
           - type: string
           - type: 'null'
           title: Source
+          description: Updated source type of the range
         site_id:
           anyOf:
           - type: string
           - type: 'null'
           title: Site Id
+          description: Updated investigator site identifier
         unit:
           anyOf:
           - type: string
           - type: 'null'
           title: Unit
+          description: Updated original unit of measurement
         normalized_unit:
           anyOf:
           - type: string
           - type: 'null'
           title: Normalized Unit
+          description: Updated standardized unit of measurement
         sex_applicability:
           anyOf:
           - type: string
           - type: 'null'
           title: Sex Applicability
+          description: Updated sex applicability
+        ethnicity_applicability:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ethnicity Applicability
+          description: Updated ethnicity applicability
         age_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Age Low
+          description: Updated lower bound of age applicability
         age_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Age High
+          description: Updated upper bound of age applicability
         low_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: Low Bound
+          description: Updated lower limit of normal range
         high_bound:
           anyOf:
           - type: number
           - type: 'null'
           title: High Bound
+          description: Updated upper limit of normal range
         critical_low:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical Low
+          description: Updated lower limit of critical alert range
         critical_high:
           anyOf:
           - type: number
           - type: 'null'
           title: Critical High
+          description: Updated upper limit of critical alert range
+        reason_for_change:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason For Change
+          description: Optional GxP 21 CFR Part 11 justification reason
       type: object
       title: LabReferenceRangeUpdate
-      description: Pydantic schema for updating a reference range.
+      description: 'Payload to modify an existing laboratory reference range.
+
+
+        Requirements: PRD-SYS-001, PRD-LAB-001'
+    Execution_LabSourceEnum:
+      type: string
+      enum:
+      - CENTRAL
+      - LOCAL
+      title: LabSourceEnum
+      description: 'Source of the laboratory testing.
+
+
+        Requirements: PRD-SYS-001'
     Execution_LabToxicityEvaluateRequest:
       properties:
         test_code:
@@ -59984,10 +59652,12 @@ components:
           type: integer
           title: Version
           description: Version index
+          default: 1
         is_deleted:
           type: boolean
           title: Is Deleted
           description: Soft deletion flag
+          default: false
       type: object
       required:
       - id
@@ -60000,8 +59670,6 @@ components:
       - expiration_date
       - status
       - is_accredited
-      - version
-      - is_deleted
       title: LocalLabCertificationResponse
       description: 'Response representing a local laboratory certification.
 
@@ -60693,6 +60361,7 @@ components:
       - target_version
       - rule_type
       title: MigrationRuleCreate
+      description: Pydantic schema for creating a protocol migration rule.
     Execution_MigrationRuleResponse:
       properties:
         id:
@@ -60738,6 +60407,7 @@ components:
       - target_version
       - rule_type
       title: MigrationRuleResponse
+      description: Pydantic schema returning protocol migration rule details.
     Execution_MktCalculationDirectRequest:
       properties:
         temperatures_celsius:
@@ -62534,8 +62204,6 @@ components:
           type: string
           title: Status
         triggered_at:
-          type: string
-          format: date-time
           title: Triggered At
       type: object
       required:
@@ -63021,6 +62689,18 @@ components:
           type: string
           title: Action
           description: 'Action to take: ''CONFIRM'' (promote to formal AE), ''DISMISS'' (not clinically significant), or ''ESCALATE_SAE'''
+        ae_term:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ae Term
+          description: Optional adverse event term override
+        causality_assessment:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Causality Assessment
+          description: Optional relationship to study treatment
         investigator_notes:
           anyOf:
           - type: string
@@ -63247,9 +62927,8 @@ components:
       type: object
       required:
       - study_id
-      - payload
       title: StudyEvent
-      description: "Pydantic model representing an incoming study publication event.\n\nAttributes:\n    study_id (str): The unique identifier of the study.\n    payload (dict[str, Any]): The raw USDM protocol payload."
+      description: Pydantic schema for study-published webhook event payload.
     Execution_SubjectConsentRequest:
       properties:
         protocol_version:
@@ -63276,7 +62955,6 @@ components:
       - protocol_version
       - icf_signed
       title: SubjectConsentRequest
-      description: Pydantic schema for recording a subject's consent to a protocol version.
     Execution_SubjectConsentResponse:
       properties:
         id:
@@ -63324,7 +63002,6 @@ components:
       - requires_reconsent
       - version
       title: SubjectConsentResponse
-      description: Pydantic schema returning subject consent details.
     Execution_SubjectCreate:
       properties:
         subject_id:
@@ -63352,7 +63029,6 @@ components:
       - subject_id
       - study_id
       title: SubjectCreate
-      description: Pydantic schema for creating a clinical subject pseudonymously.
     Execution_SubjectDemographicsUpdateRequest:
       properties:
         demographics:
@@ -63518,7 +63194,6 @@ components:
       - subject_id
       - study_id
       title: SubjectResponse
-      description: Pydantic schema returning subject details.
     Execution_SubjectScreeningRequest:
       properties:
         study_id:
@@ -63528,7 +63203,6 @@ components:
           title: Study Id
       type: object
       title: SubjectScreeningRequest
-      description: Pydantic schema for requesting subject eligibility screening.
     Execution_SubjectScreeningResponse:
       properties:
         eligible:
@@ -63553,7 +63227,6 @@ components:
           title: Criterion Evaluations
       type: object
       title: SubjectScreeningResponse
-      description: Pydantic schema for subject screening evaluation outcome, excluding PHI.
     Execution_SubjectStateUpdateRequest:
       properties:
         status:
@@ -64883,7 +64556,6 @@ components:
       - visit_name
       - study_id
       title: VisitCreate
-      description: Pydantic schema for creating a clinical visit.
     Execution_VisitDetailResponse:
       properties:
         id:
@@ -65007,7 +64679,6 @@ components:
       - visit_date
       - study_id
       title: VisitResponse
-      description: Pydantic schema returning visit details.
     Execution_VotingRule:
       type: string
       enum:
@@ -89846,6 +89517,7 @@ components:
       - msg
       - type
       title: ValidationError
+  securitySchemes: {}
 ```
 
 ---

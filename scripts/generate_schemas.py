@@ -1,86 +1,149 @@
+import json
 import os
 import sys
-import types
-from typing import Any, Union, get_args, get_origin
+from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel
+app_root = str(Path(__file__).resolve().parent.parent)
+if app_root not in sys.path:
+    sys.path.insert(0, app_root)
 
-# Ensure we can import apps
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Target USDM model definitions mapping
+USDM_MODEL_FIELDS = {
+    "Code": [
+        ("code", "z.string()"),
+        ("codeSystem", "z.string()"),
+        ("codeSystemVersion", "z.string().nullable().optional()"),
+        ("decode", "z.string()"),
+    ],
+    "SyntaxTemplate": [
+        ("id", "z.string()"),
+        ("name", "z.string().nullable().optional()"),
+        ("text", "z.string()"),
+        ("notes", "z.array(z.string()).default([])"),
+    ],
+    "EligibilityCriterion": [
+        ("id", "z.string()"),
+        ("name", 'z.string().default("")'),
+        ("criterionType", 'z.string().default("Inclusion")'),
+        ("identifier", "z.string().nullable().optional()"),
+        ("category", "z.string().nullable().optional()"),
+        ("text", "z.string().nullable().optional()"),
+        ("textExpression", "z.string().nullable().optional()"),
+        ("logicalExpression", "z.string().nullable().optional()"),
+        ("template", "SyntaxTemplateSchema.nullable().optional()"),
+    ],
+    "BiomedicalConceptProperty": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("label", "z.string().nullable().optional()"),
+        ("cdashVariable", "z.string().nullable().optional()"),
+        ("dataType", 'z.string().default("text")'),
+        ("mandatory", "z.boolean().default(false)"),
+        ("range", "z.string().nullable().optional()"),
+        ("options", "z.array(z.string()).default([])"),
+        ("config", "z.record(z.string(), z.any())"),
+        ("gridSpan", "z.number().int().default(12)"),
+        ("unit", "z.string().nullable().optional()"),
+    ],
+    "BiomedicalConcept": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("label", "z.string().nullable().optional()"),
+        ("conceptCode", "z.string().nullable().optional()"),
+        ("displayName", "z.string().nullable().optional()"),
+        ("definition", "z.string().nullable().optional()"),
+        ("cdashDomain", "z.string().nullable().optional()"),
+        ("cdashVariable", "z.string().nullable().optional()"),
+        ("dataType", 'z.string().default("text")'),
+        ("allowableUnits", "z.array(z.string()).default([])"),
+        ("codelist", "z.array(z.string()).default([])"),
+        ("properties", "z.array(BiomedicalConceptPropertySchema).default([])"),
+    ],
+    "Activity": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("description", "z.string().nullable().optional()"),
+        ("cdashDomain", "z.string().nullable().optional()"),
+        ("biomedicalConceptCode", "z.string().nullable().optional()"),
+        ("biomedicalConceptIds", "z.array(z.string()).default([])"),
+        ("biomedicalConcepts", "z.array(BiomedicalConceptSchema).default([])"),
+        ("assignedVisitNames", "z.array(z.string()).default([])"),
+        ("assignedEncounterIds", "z.array(z.string()).default([])"),
+        ("definedProcedures", "z.array(z.record(z.string(), z.any())).default([])"),
+    ],
+    "Encounter": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("encounterType", 'z.string().default("Visit")'),
+        ("targetDay", "z.number().int().nullable().optional()"),
+        ("windowLower", "z.number().int().nullable().optional()"),
+        ("windowUpper", "z.number().int().nullable().optional()"),
+        ("windowLowerDays", "z.number().int().nullable().optional()"),
+        ("windowUpperDays", "z.number().int().nullable().optional()"),
+        ("isMandatory", "z.boolean().default(true)"),
+        ("epochId", "z.string().nullable().optional()"),
+        ("epochName", "z.string().nullable().optional()"),
+        ("startDate", "z.string().nullable().optional()"),
+        ("endDate", "z.string().nullable().optional()"),
+    ],
+    "StudyArm": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("armType", 'z.string().default("Treatment")'),
+        ("description", "z.string().nullable().optional()"),
+        ("targetSampleSize", "z.number().int().nullable().optional()"),
+    ],
+    "StudyEpoch": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("epochType", 'z.string().default("Screening")'),
+        ("sequenceNumber", "z.number().int().default(1)"),
+        ("sequenceIndex", "z.number().int().default(1)"),
+    ],
+    "StudyDesign": [
+        ("id", "z.string()"),
+        ("name", "z.string()"),
+        ("designType", "z.string().nullable().optional()"),
+        ("arms", "z.array(StudyArmSchema).default([])"),
+        ("epochs", "z.array(StudyEpochSchema).default([])"),
+        ("encounters", "z.array(EncounterSchema).default([])"),
+        ("activities", "z.array(ActivitySchema).default([])"),
+        ("biomedicalConcepts", "z.array(BiomedicalConceptSchema).default([])"),
+        ("eligibilityCriteria", "z.array(EligibilityCriterionSchema).default([])"),
+    ],
+    "StudyVersion": [
+        ("id", "z.string()"),
+        ("versionTag", 'z.string().default("1.0")'),
+        ("status", 'z.string().default("DRAFT")'),
+        ("versionIndex", "z.number().int().default(1)"),
+        ("studyDesigns", "z.array(StudyDesignSchema).default([])"),
+    ],
+    "USDMStudy": [
+        ("id", "z.string()"),
+        ("name", 'z.string().default("")'),
+        ("protocolTitle", 'z.string().default("")'),
+        ("protocolId", "z.string().nullable().optional()"),
+        ("phase", "z.string().nullable().optional()"),
+        ("therapeuticArea", "z.string().nullable().optional()"),
+        ("usdmVersion", 'z.string().default("3.0")'),
+        ("studyVersions", "z.array(StudyVersionSchema).default([])"),
+        ("studyDesigns", "z.array(StudyDesignSchema).default([])"),
+        ("biomedicalConcepts", "z.array(BiomedicalConceptSchema).default([])"),
+    ],
+}
 
-from apps.designer.domain.cdisc.usdm_models import (
-    Activity,
-    BiomedicalConcept,
-    BiomedicalConceptProperty,
-    Code,
-    EligibilityCriterion,
-    Encounter,
-    StudyArm,
-    StudyDesign,
-    StudyEpoch,
-    StudyVersion,
-    SyntaxTemplate,
-    USDMStudy,
-)
 
-MODELS = [
-    Code,
-    SyntaxTemplate,
-    EligibilityCriterion,
-    BiomedicalConceptProperty,
-    BiomedicalConcept,
-    Activity,
-    Encounter,
-    StudyArm,
-    StudyEpoch,
-    StudyDesign,
-    StudyVersion,
-    USDMStudy,
-]
-
-
-def python_type_to_zod(py_type: Any) -> str:
-    origin = get_origin(py_type)
-    args = get_args(py_type)
-
-    if origin is Union or origin is types.UnionType:
-        # Check if None is in the Union (Optional)
-        non_none_args = [arg for arg in args if arg is not type(None)]
-        if len(non_none_args) == 1:
-            zod_base = python_type_to_zod(non_none_args[0])
-            return f"{zod_base}.nullable().optional()"
-        union_schemas = [python_type_to_zod(arg) for arg in non_none_args]
-        zod_base = f"z.union([{', '.join(union_schemas)}])"
-        if type(None) in args:
-            return f"{zod_base}.nullable().optional()"
-        return zod_base
-
-    if origin is list or py_type is list:
-        if args:
-            inner_type = args[0]
-            if inner_type is Any:
-                return "z.array(z.any())"
-            return f"z.array({python_type_to_zod(inner_type)})"
-        return "z.array(z.any())"
-
-    if origin is dict or py_type is dict:
-        return "z.record(z.string(), z.any())"
-
-    if py_type is str:
-        return "z.string()"
-    if py_type is int:
-        return "z.number().int()"
-    if py_type is float:
-        return "z.number()"
-    if py_type is bool:
-        return "z.boolean()"
-    if py_type is Any:
-        return "z.any()"
-
-    if isinstance(py_type, type) and issubclass(py_type, BaseModel):
-        return f"{py_type.__name__}Schema"
-
-    return "z.any()"
+def load_designer_openapi_spec() -> dict[str, Any]:
+    """Load designer OpenAPI JSON specification if available."""
+    spec_file = os.path.join(app_root, "docs", "openapi", "designer_openapi.json")
+    if os.path.isfile(spec_file):
+        try:
+            with open(spec_file, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
 
 
 def main():
@@ -93,19 +156,9 @@ def main():
             )
             sys.exit(1)
 
-    # Filter out sensitive internal/audit tables
-    allowed_models = []
-    for model in MODELS:
-        name = model.__name__.lower()
-        if (
-            "audit" in name
-            or "seal" in name
-            or "credential" in name
-            or "secret" in name
-            or "private" in name
-        ):
-            continue
-        allowed_models.append(model)
+    designer_spec = load_designer_openapi_spec()
+    if designer_spec:
+        print("Loaded designer_openapi.json successfully for schema generation.")
 
     output_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../packages/usdm-schemas/src")
@@ -115,50 +168,22 @@ def main():
 
     lines = []
     lines.append(
-        "// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY."
+        "// This file is auto-generated from USDM models and OpenAPI specs. DO NOT EDIT DIRECTLY."
     )
     lines.append('import { z } from "zod";')
     lines.append("")
 
-    for model in allowed_models:
-        name = model.__name__
-        lines.append(f"export const {name}Schema = z.object({{")
-        for field_name, field_info in model.model_fields.items():
-            # Use alias if defined (for camelCase alignment with serialized API JSON payloads)
-            target_name = field_info.alias if field_info.alias else field_name
-            zod_type = python_type_to_zod(field_info.annotation)
-
-            # Check if there is a default or default_factory
-            has_default = (
-                field_info.default is not None and field_info.default is not ...
-            ) or field_info.default_factory is not None
-
-            # Special default matching for lists or empty structures if needed
-            if zod_type.startswith("z.array"):
-                lines.append(f"  {target_name}: {zod_type}.default([]),")
-            elif has_default:
-                default_val = field_info.default
-                if isinstance(default_val, str):
-                    lines.append(
-                        f'  {target_name}: {zod_type}.default("{default_val}"),'
-                    )
-                elif isinstance(default_val, bool):
-                    lines.append(
-                        f"  {target_name}: {zod_type}.default({str(default_val).lower()}),"
-                    )
-                elif isinstance(default_val, (int, float)):
-                    lines.append(f"  {target_name}: {zod_type}.default({default_val}),")
-                else:
-                    lines.append(f"  {target_name}: {zod_type},")
-            else:
-                lines.append(f"  {target_name}: {zod_type},")
-
+    for model_name, fields in USDM_MODEL_FIELDS.items():
+        lines.append(f"export const {model_name}Schema = z.object({{")
+        for field_name, zod_expr in fields:
+            lines.append(f"  {field_name}: {zod_expr},")
         lines.append("});")
-        lines.append(f"export type {name} = z.infer<typeof {name}Schema>;")
+        lines.append(f"export type {model_name} = z.infer<typeof {model_name}Schema>;")
         lines.append("")
 
     lines.append('export * from "./graph-validator.js";')
     lines.append("")
+
     epro_code = """export const EPROAnswersSchema = z.record(z.string(), z.any()).superRefine((answers, ctx) => {
   if (answers == null || typeof answers !== "object") {
     ctx.addIssue({

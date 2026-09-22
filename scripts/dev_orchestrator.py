@@ -34,7 +34,7 @@ if sys.version_info < (3, 14):
 from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
 COMPOSE_PATH = REPO_ROOT / "docker" / "docker-compose.yml"
-VALID_PROFILES = ["designer", "execution", "operations", "all"]
+VALID_PROFILES = ["designer", "execution", "operations", "python", "dotnet", "hybrid", "all"]
 VALID_ACTIONS = ["up", "down", "logs", "ps", "restart", "build", "stop"]
 
 

@@ -1,7 +1,6 @@
 """Dev orchestrator subcommand for starting and monitoring microservices locally."""
 
 import collections
-import os
 import queue
 import select
 import subprocess
@@ -29,6 +28,7 @@ from packages.cli.formatting import (
     print_warning,
 )
 from packages.cli.ports import get_discovered_service_ports, resolve_all_service_ports
+from packages.cli.registry import get_service_profile, normalize_service_name
 
 dev_app = typer.Typer(
     help="Start and orchestrate local microservices with live reloading and interactive TUI."
@@ -46,19 +46,9 @@ def _spawn_service(
     log_queue: queue.Queue[tuple[str, str]],
 ) -> subprocess.Popen[Any]:
     """Spawns a microservice subprocess with piped logs."""
-    cmd = [
-        sys.executable,
-        "-m",
-        "uvicorn",
-        f"apps.{service_name}.main:app",
-        "--host",
-        host,
-        "--port",
-        str(port),
-    ]
-    if reload:
-        cmd.append("--reload")
-    env = {**os.environ, "PYTHONPATH": str(repo_root)}
+    profile = get_service_profile(service_name)
+    cmd = profile.get_start_command(host=host, port=port, reload=reload)
+    env = profile.get_environment(host=host, port=port, repo_root=repo_root)
     proc = subprocess.Popen(
         cmd,
         cwd=str(repo_root),
@@ -197,6 +187,23 @@ def run_dev(
 
     repo_root = Path(__file__).resolve().parents[3]
 
+    # Normalize service names and look up profiles from central registry
+    normalized_targets: list[str] = []
+    profiles = {}
+    for s in target_services:
+        try:
+            norm_name = normalize_service_name(s)
+            p = get_service_profile(norm_name)
+            profiles[norm_name] = p
+            normalized_targets.append(norm_name)
+        except KeyError as err:
+            if json_mode:
+                output_json({"error": str(err), "status": "error"})
+                raise typer.Exit(code=1) from err
+            print_warning(f"Error: {err}")
+            raise typer.Exit(code=1) from err
+
+    target_services = normalized_targets
     resolved_manifest = resolve_all_service_ports(target_services, host=host)
 
     if not json_mode:
@@ -217,12 +224,19 @@ def run_dev(
                 "services": [
                     {
                         "name": s,
+                        "runtime": profiles[s].runtime,
+                        "project_path": profiles[s].project_path,
                         "default_port": resolved_manifest[s]["default_port"],
                         "assigned_port": resolved_manifest[s]["assigned_port"],
                         "port": resolved_manifest[s]["assigned_port"],
                         "rebound": resolved_manifest[s]["rebound"],
                         "offset": resolved_manifest[s]["offset"],
-                        "app": f"apps.{s}.main:app",
+                        "migration_script": profiles[s].migration_script,
+                        "app": (
+                            f"apps.{s}.main:app"
+                            if profiles[s].runtime == "python"
+                            else profiles[s].project_path
+                        ),
                     }
                     for s in target_services
                 ],
@@ -232,21 +246,14 @@ def run_dev(
 
     if len(target_services) == 1 and not tui:
         s = target_services[0]
+        profile = profiles[s]
         port = resolved_manifest[s]["assigned_port"]
         print_header(
-            "Cadence Microservice Runner", f"Starting foreground {s} on port {port}"
+            "Cadence Microservice Runner",
+            f"Starting foreground {s} ({profile.runtime}) on port {port}",
         )
-        cmd = [
-            "uvicorn",
-            f"apps.{s}.main:app",
-            "--host",
-            host,
-            "--port",
-            str(port),
-        ]
-        if reload:
-            cmd.append("--reload")
-        env = {**os.environ, "PYTHONPATH": str(repo_root)}
+        cmd = profile.get_start_command(host=host, port=port, reload=reload)
+        env = profile.get_environment(host=host, port=port, repo_root=repo_root)
         try:
             subprocess.run(cmd, cwd=str(repo_root), env=env)
         except KeyboardInterrupt:
