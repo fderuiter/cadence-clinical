@@ -759,6 +759,178 @@ def extract_active_frontend_vulnerabilities(
     return vulns_list, ""
 
 
+def execute_dotnet_audit() -> tuple[str, str, int]:
+    """Execute dotnet list package --vulnerable --include-transitive --format json.
+
+    Returns:
+        A tuple of (stdout, stderr, return_code).
+    """
+    sln_path = os.path.join(REPO_ROOT, "Cadence.sln")
+    cmd = ["dotnet", "list"]
+    if os.path.exists(sln_path):
+        cmd.append(sln_path)
+    cmd.extend(
+        [
+            "package",
+            "--vulnerable",
+            "--include-transitive",
+            "--format",
+            "json",
+            "--no-restore",
+        ]
+    )
+
+    if not shutil.which("dotnet"):
+        return ("", "dotnet CLI tool not found", -1)
+
+    try:
+        res = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return res.stdout.strip(), res.stderr.strip(), res.returncode
+    except Exception as e:
+        return ("", str(e), -1)
+
+
+def extract_active_dotnet_vulnerabilities(
+    audit_json: str,
+) -> tuple[list[dict[str, Any]], str]:
+    """Parse dotnet list package --vulnerable --format json output and extract vulnerability findings.
+
+    Args:
+        audit_json: Raw JSON stdout string from dotnet list package execution.
+
+    Returns:
+        A tuple of (list of vulnerability dicts, error message string).
+    """
+    if not audit_json:
+        return [], "No stdout returned from dotnet list package audit."
+
+    try:
+        data = json.loads(audit_json)
+    except Exception as e:
+        return [], f"Failed to parse JSON output from dotnet list package: {e}"
+
+    vulns_list: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+
+    projects = data.get("projects", [])
+    if not isinstance(projects, list):
+        return [], "Invalid JSON structure: 'projects' must be a list."
+
+    for proj in projects:
+        if not isinstance(proj, dict):
+            continue
+        frameworks = proj.get("frameworks", [])
+        if not isinstance(frameworks, list):
+            continue
+
+        for fw in frameworks:
+            if not isinstance(fw, dict):
+                continue
+
+            package_groups = [
+                fw.get("topLevelPackages", []),
+                fw.get("transitivePackages", []),
+                fw.get("packages", []),
+            ]
+
+            for pkg_list in package_groups:
+                if not isinstance(pkg_list, list):
+                    continue
+
+                for pkg in pkg_list:
+                    if not isinstance(pkg, dict):
+                        continue
+
+                    pkg_id = (
+                        pkg.get("id")
+                        or pkg.get("name")
+                        or pkg.get("package_name")
+                        or "unknown"
+                    )
+                    pkg_version = (
+                        pkg.get("resolvedVersion")
+                        or pkg.get("resolved_version")
+                        or pkg.get("requestedVersion")
+                        or pkg.get("version")
+                        or "unknown"
+                    )
+
+                    vulns = pkg.get("vulnerabilities", [])
+                    if not isinstance(vulns, list):
+                        continue
+
+                    for vuln in vulns:
+                        if not isinstance(vuln, dict):
+                            continue
+
+                        severity = vuln.get("severity", "")
+                        advisory_url = (
+                            vuln.get("advisoryurl")
+                            or vuln.get("advisoryUrl")
+                            or vuln.get("url")
+                            or ""
+                        )
+
+                        v_id = (
+                            vuln.get("id")
+                            or vuln.get("vulnerability_id")
+                            or vuln.get("vulnerabilityId")
+                            or vuln.get("ghsa")
+                        )
+
+                        if not v_id:
+                            cve_field = vuln.get("cve")
+                            if isinstance(cve_field, list) and cve_field:
+                                v_id = cve_field[0]
+                            elif isinstance(cve_field, str) and cve_field:
+                                v_id = cve_field
+
+                        if not v_id and advisory_url:
+                            match = re.search(
+                                r"(GHSA-[a-zA-Z0-9-]+|CVE-[0-9-]+|NUGET-[a-zA-Z0-9-]+)",
+                                advisory_url,
+                                re.IGNORECASE,
+                            )
+                            if match:
+                                v_id = match.group(1).upper()
+
+                        if not v_id:
+                            v_id = advisory_url or "unknown"
+
+                        if not isinstance(v_id, str):
+                            v_id = str(v_id)
+
+                        dedup_key = (v_id, pkg_id, pkg_version)
+                        if dedup_key in seen_keys:
+                            continue
+                        seen_keys.add(dedup_key)
+
+                        description = (
+                            vuln.get("title")
+                            or vuln.get("description")
+                            or (f"Severity: {severity}" if severity else advisory_url)
+                        )
+
+                        vulns_list.append(
+                            {
+                                "vulnerability_id": v_id,
+                                "package_name": pkg_id,
+                                "version": pkg_version,
+                                "description": description,
+                                "severity": severity,
+                                "fix_versions": vuln.get("fix_versions", "unknown"),
+                            }
+                        )
+
+    return vulns_list, ""
+
+
 def main() -> None:
     """Core verification orchestrator."""
     print("--- Starting GxP FMEA-Aligned Vulnerability Exemption Ledger Validation ---")
@@ -862,6 +1034,45 @@ def main() -> None:
         print(f"    Stderr: {p_stderr}")
         frontend_audit_error = f"pnpm audit failed to execute successfully: {p_stderr}"
 
+    # Step 3c: Execute .NET vulnerability audit
+    print(
+        "Running automated .NET dependency vulnerability audit (dotnet list package)..."
+    )
+    d_stdout, d_stderr, d_code = execute_dotnet_audit()
+
+    active_dotnet_vulnerabilities: list[dict[str, Any]] = []
+    dotnet_audit_error = ""
+
+    if d_stdout and d_stdout.startswith("{"):
+        parsed_dotnet_vulns, d_parse_err = extract_active_dotnet_vulnerabilities(
+            d_stdout
+        )
+        if not d_parse_err:
+            active_dotnet_vulnerabilities = parsed_dotnet_vulns
+            if active_dotnet_vulnerabilities:
+                print(
+                    f".NET dependency audit completed. Active vulnerabilities found: {len(active_dotnet_vulnerabilities)}."
+                )
+            else:
+                print(
+                    ".NET dependency audit completed successfully with zero vulnerability findings."
+                )
+        else:
+            print(f"[!] Error parsing .NET audit results: {d_parse_err}")
+            dotnet_audit_error = d_parse_err
+    elif d_code == 0:
+        print(
+            ".NET dependency audit completed successfully with zero vulnerability findings."
+        )
+    else:
+        print(
+            f"[!] Warning: dotnet list package exited with unexpected error code {d_code}."
+        )
+        print(f"    Stderr: {d_stderr}")
+        dotnet_audit_error = (
+            f"dotnet list package failed to execute successfully: {d_stderr}"
+        )
+
     # Step 4: Map active vulnerabilities against validated ledger entries
     print("Mapping active vulnerabilities against the GxP FMEA exemption ledger...")
     processed_vulns: list[dict[str, Any]] = []
@@ -873,9 +1084,11 @@ def main() -> None:
         p_name = entry.get("package_name", "")
         ledger_map[(v_id, p_name)] = entry
 
-    all_vulnerabilities = [(v, "Python") for v in active_vulnerabilities] + [
-        (v, "Frontend") for v in active_frontend_vulnerabilities
-    ]
+    all_vulnerabilities = (
+        [(v, "Python") for v in active_vulnerabilities]
+        + [(v, "Frontend") for v in active_frontend_vulnerabilities]
+        + [(v, ".NET") for v in active_dotnet_vulnerabilities]
+    )
 
     for vuln, source_type in all_vulnerabilities:
         v_id = vuln["vulnerability_id"]
@@ -914,6 +1127,7 @@ def main() -> None:
                     "rpn": rpn,
                     "status": vuln_status,
                     "justification": justification,
+                    "ecosystem": source_type,
                 }
             )
         else:
@@ -941,6 +1155,7 @@ def main() -> None:
                     "rpn": "N/A",
                     "status": "Blocked",
                     "justification": f"Undocumented vulnerability bypass. No FMEA assessment exists for {source_type}.",
+                    "ecosystem": source_type,
                 }
             )
 
@@ -953,6 +1168,7 @@ def main() -> None:
         and not has_unapproved_vulns
         and not audit_error
         and not frontend_audit_error
+        and not dotnet_audit_error
     )
 
     # Step 5: Save execution state summary for PR comment generator
@@ -980,6 +1196,7 @@ def main() -> None:
     print(f"Ledger schema/FMEA errors: {len(ledger_errors)}")
     print(f"Active Python vulnerabilities: {len(active_vulnerabilities)}")
     print(f"Active Frontend vulnerabilities: {len(active_frontend_vulnerabilities)}")
+    print(f"Active .NET vulnerabilities: {len(active_dotnet_vulnerabilities)}")
     print(
         f"Blocked vulnerability exclusions: {sum(1 for v in processed_vulns if v['status'] == 'Blocked')}"
     )
