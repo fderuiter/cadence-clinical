@@ -124,6 +124,13 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: auto-stage-schema-doc
+        name: Auto-Stage Schema Documentation
+        entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: validate-path-patterns
         name: Lightweight Path-Pattern Boundary Linter
         entry: uv run --python 3.14 python scripts/validate_path_patterns.py
