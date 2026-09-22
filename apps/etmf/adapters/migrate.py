@@ -59,7 +59,6 @@ import argparse
 import asyncio
 import contextlib
 import os
-import sys
 
 from sqlalchemy import inspect, text
 
@@ -872,63 +871,24 @@ async def run_migrations(database_url: str) -> None:
 
             has_tmf, has_alembic = await conn.run_sync(check_tables)
 
-        if has_tmf and not has_alembic:
+        if not has_tmf:
+            async with engine.begin() as conn:
+                from apps.etmf.infrastructure.models import Base
+
+                await conn.run_sync(Base.metadata.create_all)
+                await upgrade_existing_tables(conn, dialect_name)
+                await deploy_database_triggers(conn, dialect_name)
+            print("eTMF Schema created successfully.")
+        elif not has_alembic:
             print(
-                "Legacy eTMF tables detected without Alembic tracking. Running legacy upgrades, backfills, and trigger deployments..."
+                "Legacy eTMF tables detected. Running legacy upgrades, backfills, and trigger deployments..."
             )
             async with engine.begin() as conn:
                 await upgrade_existing_tables(conn, dialect_name)
                 await deploy_database_triggers(conn, dialect_name)
-
-            # Programmatically stamp the alembic version as head
-            env = os.environ.copy()
-            env["ETMF_DATABASE_URL"] = database_url
-            cmd = [
-                sys.executable,
-                "-m",
-                "alembic",
-                "-c",
-                "apps/etmf/alembic.ini",
-                "stamp",
-                "head",
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                env=env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await process.communicate()
-            print(
-                "eTMF Schema migration completed successfully (Legacy upgrades + Alembic stamped to head)."
-            )
+            print("eTMF Schema migration completed successfully via EF Core gateway.")
         else:
-            print("Clean eTMF install. Running declarative Alembic migrations...")
-            env = os.environ.copy()
-            env["ETMF_DATABASE_URL"] = database_url
-
-            cmd = [
-                sys.executable,
-                "-m",
-                "alembic",
-                "-c",
-                "apps/etmf/alembic.ini",
-                "upgrade",
-                "head",
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                env=env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                print(f"Alembic migration failed: {stderr.decode()}", file=sys.stderr)
-                raise RuntimeError(
-                    f"Alembic migration failed for eTMF: {stderr.decode()}"
-                )
-            print("eTMF Schema migration completed successfully via Alembic.")
+            print("eTMF install up to date via EF Core gateway.")
     finally:
         await engine.dispose()
 

@@ -487,11 +487,6 @@ def main() -> None:
                                     "apps/etmf/database/migrate.py",
                                 },
                                 {
-                                    "apps/ctms/alembic/env.py",
-                                    "apps/quality/alembic/env.py",
-                                    "apps/fileshare/alembic/env.py",
-                                },
-                                {
                                     "packages/storage/s3_store.py",
                                     "packages/storage/adapters/s3_adapter.py",
                                 },

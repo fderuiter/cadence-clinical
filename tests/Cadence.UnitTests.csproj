@@ -29,6 +29,10 @@
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
     <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\packages\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\packages\deid\src\Cadence.Deid.csproj" />

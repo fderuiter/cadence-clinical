@@ -227,6 +227,8 @@ APPROVED_SUBDIRECTORIES = {
     ".devcontainer/",
     ".githooks/",
     ".vscode/",
+    ".config/",
+    ".githooks/",
 }
 
 
