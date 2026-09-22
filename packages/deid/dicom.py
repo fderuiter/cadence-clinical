@@ -9,7 +9,6 @@ Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 import contextlib
 import hashlib
 import io
-import os
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -213,8 +212,7 @@ class DicomDeidentifier:
         from packages.config import get_common_settings
 
         self.signing_secret = (
-            signing_secret
-            or get_common_settings().audit_log_secret_key.encode()
+            signing_secret or get_common_settings().audit_log_secret_key.encode()
         )
 
     def _generate_uid(self, original_uid: str, namespace_salt: str) -> str:

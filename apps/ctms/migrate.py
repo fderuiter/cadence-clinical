@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import os
 
 
 async def run_migrations(database_url: str) -> None:

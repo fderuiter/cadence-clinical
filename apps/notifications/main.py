@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.notifications.infrastructure.database import db_manager
@@ -23,20 +21,17 @@ from apps.notifications.presentation.routers.notifications import (
 from apps.notifications.presentation.routers.notifications import (
     router as notifications_router,
 )
+from packages.config import get_notifications_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-from packages.config import get_notifications_settings
-
 settings = get_notifications_settings()
 DATABASE_URL = settings.notifications_database_url
 
-assert_secure_secrets(
-    "notifications", {"GATEWAY_SECRET": settings.gateway_secret}
-)
+assert_secure_secrets("notifications", {"GATEWAY_SECRET": settings.gateway_secret})
 
 BRAND_NAME = settings.brand_name
 

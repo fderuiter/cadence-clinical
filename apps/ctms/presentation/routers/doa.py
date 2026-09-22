@@ -3,7 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 

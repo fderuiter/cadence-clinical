@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
 """
 
 import logging
-import os
 
 from apps.fileshare.ports.credential_verifier_port import CredentialVerifierPort
 

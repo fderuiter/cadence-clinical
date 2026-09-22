@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 """
 
 import hashlib
-import os
 from typing import Any
 
 import aioboto3
@@ -56,15 +55,10 @@ class S3StorageAdapter(StoragePort[dict[str, Any]], BlobStorageProvider):
             or settings.aws_secret_access_key
         )
         self.region_name = (
-            region_name
-            or settings.storage_region
-            or settings.aws_region
-            or "us-east-1"
+            region_name or settings.storage_region or settings.aws_region or "us-east-1"
         )
         self.endpoint_url = (
-            endpoint_url
-            or settings.storage_endpoint_url
-            or settings.aws_endpoint_url
+            endpoint_url or settings.storage_endpoint_url or settings.aws_endpoint_url
         )
         self.sse_algorithm = (
             sse_algorithm

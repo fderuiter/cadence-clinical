@@ -3,7 +3,6 @@
 Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 """
 
-import os
 from typing import Any
 
 from packages.storage.adapters.minio_adapter import MinioStorageAdapter

@@ -1,7 +1,6 @@
 import asyncio
 import functools
 import logging
-import os
 import re
 import time
 from collections.abc import Callable

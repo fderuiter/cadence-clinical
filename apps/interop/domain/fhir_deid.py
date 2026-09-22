@@ -5,7 +5,6 @@ Requirements: PRD-CRF-007, PRD-SYS-001
 
 import hashlib
 import hmac
-import os
 from typing import Any
 
 from packages.deid.detector import DeidDetector

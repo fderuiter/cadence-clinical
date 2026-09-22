@@ -6,7 +6,6 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 
 import asyncio
 import logging
-import os
 import struct
 from collections.abc import AsyncIterable
 

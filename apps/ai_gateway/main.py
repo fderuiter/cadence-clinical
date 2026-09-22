@@ -1,7 +1,5 @@
 """FastAPI application entry point for the AI Gateway microservice."""
 
-import os
-
 from fastapi import FastAPI
 
 from apps.ai_gateway.presentation.dtos import (
@@ -25,12 +23,11 @@ from apps.ai_gateway.presentation.routers.rag import (
 from apps.ai_gateway.presentation.routers.reasoning import (
     router as reasoning_router,
 )
+from packages.config import get_ai_gateway_settings
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
-
-from packages.config import get_ai_gateway_settings
 
 settings = get_ai_gateway_settings()
 BRAND_NAME = settings.brand_name

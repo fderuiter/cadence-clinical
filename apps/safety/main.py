@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.safety.infrastructure.database import db_manager
@@ -39,13 +37,12 @@ from apps.safety.presentation.routers.safety import (
 from apps.safety.presentation.routers.safety import (
     router as safety_router,
 )
+from packages.config import get_safety_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
-
-from packages.config import get_safety_settings
 
 settings = get_safety_settings()
 DATABASE_URL = settings.safety_database_url

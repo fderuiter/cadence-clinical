@@ -1,4 +1,3 @@
-import os
 import time
 
 from packages.security.signing import generate_gateway_signature

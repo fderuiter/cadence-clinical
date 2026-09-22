@@ -8,7 +8,6 @@ manifest generation for GxP UI video recordings and verification reports.
 import hashlib
 import logging
 import mimetypes
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

@@ -2,9 +2,9 @@
 
 from packages.config.settings import (
     AiGatewaySettings,
-    CTMSSettings,
     CommonSettings,
     ComplianceSettings,
+    CTMSSettings,
     EConsentSettings,
     EISFSettings,
     EtmfSettings,

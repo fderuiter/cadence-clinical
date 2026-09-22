@@ -3,7 +3,6 @@
 import copy
 import json
 import logging
-import os
 import uuid
 from typing import Any
 
@@ -125,7 +124,6 @@ async def send_medical_monitor_alert(
     user_id: str,
     change_reason: str,
 ) -> None:
-    import os
     import time
 
     import httpx
@@ -722,9 +720,8 @@ async def export_safety_case(
     session.add(job)
     await session.flush()
 
-    from packages.deid.transforms import pseudonymize_value
-
     from packages.config import get_safety_settings
+    from packages.deid.transforms import pseudonymize_value
 
     salt = get_safety_settings().safety_salt
     icsr_copy = copy.deepcopy(payload.icsr)

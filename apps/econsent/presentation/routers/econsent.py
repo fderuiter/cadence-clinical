@@ -1,7 +1,6 @@
 """FastAPI Router for eConsent microservice."""
 
 import json
-import os
 import uuid
 from datetime import UTC, datetime
 

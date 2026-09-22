@@ -57,7 +57,9 @@ def test_production_mode_fails_fast_on_insecure_secrets(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("BRAND_NAME", "ACME Pharma")
     monkeypatch.setenv("BRAND_DOMAIN", "acmepharma.com")
-    monkeypatch.setenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+    monkeypatch.setenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
 
     with pytest.raises(ValueError) as exc_info:
         CommonSettings()
@@ -73,7 +75,9 @@ def test_production_mode_fails_fast_on_default_branding(monkeypatch):
     monkeypatch.setenv("AUDIT_LOG_SECRET_KEY", "secure-custom-audit-secret-999")
     monkeypatch.setenv("PSEUDONYMIZATION_SALT", "secure-custom-pseudo-salt-999")
     monkeypatch.setenv("SAFETY_SALT", "secure-custom-safety-salt-999")
-    monkeypatch.setenv("INBOUND_EMAIL_HMAC_SECRET", "secure-custom-email-hmac-secret-999")
+    monkeypatch.setenv(
+        "INBOUND_EMAIL_HMAC_SECRET", "secure-custom-email-hmac-secret-999"
+    )
     monkeypatch.setenv("BRAND_NAME", "Cadence Clinical")
 
     with pytest.raises(ValueError) as exc_info:

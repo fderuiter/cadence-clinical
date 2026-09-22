@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 import logging
-import os
 import threading
 import time
 from collections.abc import Awaitable, Callable

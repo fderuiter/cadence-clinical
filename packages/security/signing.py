@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 from typing import Any
 
 from cryptography import x509

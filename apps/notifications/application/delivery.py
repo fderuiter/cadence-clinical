@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import json
-import os
 from email.message import EmailMessage
 from typing import Any
 

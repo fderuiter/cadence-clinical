@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.econsent.adapters.cache import (
@@ -91,13 +89,12 @@ from apps.econsent.presentation.routers.reconsent import (
 from apps.econsent.presentation.routers.withdrawal import (
     router as withdrawal_router,
 )
+from packages.config import get_econsent_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
-
-from packages.config import get_econsent_settings
 
 settings = get_econsent_settings()
 DATABASE_URL = settings.econsent_database_url

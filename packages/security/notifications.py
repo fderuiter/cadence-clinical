@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, PRD-KNB-002, ADR-2188
 """
 
 import logging
-import os
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from typing import Any
@@ -175,9 +174,9 @@ class GatewayNotificationDispatcher(NotificationDispatcherPort):
     ) -> None:
         from packages.config import get_common_settings
 
-        self._base_url = (
-            base_url or get_common_settings().notifications_url
-        ).rstrip("/")
+        self._base_url = (base_url or get_common_settings().notifications_url).rstrip(
+            "/"
+        )
         self._timeout = timeout
         self._default_service_name = default_service_name
 

@@ -10,7 +10,6 @@ Requirements:
 
 from __future__ import annotations
 
-import os
 import secrets
 import uuid
 from datetime import UTC, datetime

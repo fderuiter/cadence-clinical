@@ -1,6 +1,5 @@
 """FastAPI Router for Interop microservice (FHIR / eSource & eCOA Sync Gateway)."""
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 

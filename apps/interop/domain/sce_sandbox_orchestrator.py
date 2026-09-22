@@ -43,10 +43,7 @@ def _get_signing_secret() -> bytes:
     from packages.config import get_interop_settings
 
     settings = get_interop_settings()
-    secret = (
-        settings.signing_secret
-        or settings.gateway_secret
-    )
+    secret = settings.signing_secret or settings.gateway_secret
     return secret.encode("utf-8")
 
 

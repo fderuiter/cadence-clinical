@@ -3,16 +3,15 @@
 Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
+from packages.config import get_ctms_settings
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,
 )
 
-from packages.config import get_ctms_settings
 
 def _get_execution_url() -> str:
     return get_ctms_settings().execution_url.rstrip("/")

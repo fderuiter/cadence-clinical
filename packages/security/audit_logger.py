@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import datetime
 import hashlib
 import hmac
-import os
 import uuid
 from typing import Any
 

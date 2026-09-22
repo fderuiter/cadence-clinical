@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import os
 import sys
 from typing import Any
 
@@ -21,12 +20,12 @@ from apps.notifications.infrastructure.models import (
     NotificationPriority,
     NotificationStatus,
 )
+from packages.config import get_notifications_settings
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,
 )
 
-from packages.config import get_notifications_settings
 
 def _get_org_url() -> str:
     return get_notifications_settings().org_url.rstrip("/")

@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 """
 
-import os
-
 from botocore.config import Config
 
 from packages.storage.adapters.s3_adapter import S3StorageAdapter

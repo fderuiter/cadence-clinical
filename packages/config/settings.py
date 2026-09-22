@@ -1,10 +1,9 @@
 """Centralized Pydantic BaseSettings models for Cadence Clinical microservices and shared packages."""
 
 from functools import lru_cache
-from typing import ClassVar
+
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 INSECURE_FALLBACKS: set[str] = {
     "internal-gateway-secret-12345",
@@ -40,7 +39,8 @@ class CommonSettings(BaseSettings):
         default="designer-amendment-secure-key-12345", validation_alias="SIGNING_SECRET"
     )
     audit_log_secret_key: str = Field(
-        default="gxp-audit-secret-key-cadence-2026", validation_alias="AUDIT_LOG_SECRET_KEY"
+        default="gxp-audit-secret-key-cadence-2026",
+        validation_alias="AUDIT_LOG_SECRET_KEY",
     )
     pseudonymization_salt: str = Field(
         default="secure-clinical-salt-98765", validation_alias="PSEUDONYMIZATION_SALT"
@@ -54,7 +54,9 @@ class CommonSettings(BaseSettings):
     )
 
     # Cross-Service Core URLs
-    gateway_url: str = Field(default="http://localhost:8000", validation_alias="GATEWAY_URL")
+    gateway_url: str = Field(
+        default="http://localhost:8000", validation_alias="GATEWAY_URL"
+    )
     ai_gateway_url: str = Field(
         default="http://localhost:8000", validation_alias="AI_GATEWAY_URL"
     )
@@ -89,14 +91,16 @@ class CommonSettings(BaseSettings):
     redis_port: int = Field(default=6379, validation_alias="REDIS_PORT")
     redis_password: str | None = Field(default=None, validation_alias="REDIS_PASSWORD")
     redis_url: str | None = Field(default=None, validation_alias="REDIS_URL")
-    neo4j_uri: str = Field(default="bolt://localhost:7687", validation_alias="NEO4J_URI")
+    neo4j_uri: str = Field(
+        default="bolt://localhost:7687", validation_alias="NEO4J_URI"
+    )
     neo4j_user: str = Field(default="neo4j", validation_alias="NEO4J_USER")
     neo4j_password: str = Field(
         default="cadence_password", validation_alias="NEO4J_PASSWORD"
     )
 
     @model_validator(mode="after")
-    def validate_non_dev_guardrails(self) -> "CommonSettings":
+    def validate_non_dev_guardrails(self) -> CommonSettings:
         """Enforce strict non-dev security guardrails on startup."""
         env_lower = (self.app_env or "").strip().lower()
 
@@ -134,9 +138,9 @@ class CommonSettings(BaseSettings):
             invalid_branding: list[str] = []
             if not self.brand_name or self.brand_name.strip() == "Cadence Clinical":
                 invalid_branding.append("BRAND_NAME")
-            if (
-                not self.brand_domain
-                or self.brand_domain.strip() in ("cadenceclinical.com", "cadence-clinical.com")
+            if not self.brand_domain or self.brand_domain.strip() in (
+                "cadenceclinical.com",
+                "cadence-clinical.com",
             ):
                 invalid_branding.append("BRAND_DOMAIN")
 
@@ -153,7 +157,8 @@ class NotificationsSettings(CommonSettings):
     """Localized configuration for the Notifications service."""
 
     notifications_database_url: str = Field(
-        default="sqlite+aiosqlite:///:memory:", validation_alias="NOTIFICATIONS_DATABASE_URL"
+        default="sqlite+aiosqlite:///:memory:",
+        validation_alias="NOTIFICATIONS_DATABASE_URL",
     )
     smtp_host: str = Field(default="127.0.0.1", validation_alias="SMTP_HOST")
     smtp_port: int = Field(default=1025, validation_alias="SMTP_PORT")
@@ -188,7 +193,11 @@ class EConsentSettings(CommonSettings):
 
     @property
     def effective_cache_ttl(self) -> int:
-        return self.econsent_cache_ttl if self.econsent_cache_ttl is not None else self.cache_ttl
+        return (
+            self.econsent_cache_ttl
+            if self.econsent_cache_ttl is not None
+            else self.cache_ttl
+        )
 
 
 class CTMSSettings(CommonSettings):
@@ -203,7 +212,8 @@ class FileshareSettings(CommonSettings):
     """Localized configuration for the Fileshare service."""
 
     fileshare_database_url: str = Field(
-        default="sqlite+aiosqlite:///./fileshare.db", validation_alias="FILESHARE_DATABASE_URL"
+        default="sqlite+aiosqlite:///./fileshare.db",
+        validation_alias="FILESHARE_DATABASE_URL",
     )
     clamav_host: str = Field(default="127.0.0.1", validation_alias="CLAMAV_HOST")
     clamav_port: int = Field(default=3310, validation_alias="CLAMAV_PORT")
@@ -291,22 +301,35 @@ class AiGatewaySettings(CommonSettings):
     """Localized configuration for the AI Gateway service."""
 
     ai_gateway_database_url: str = Field(
-        default="sqlite+aiosqlite:///:memory:", validation_alias="AI_GATEWAY_DATABASE_URL"
+        default="sqlite+aiosqlite:///:memory:",
+        validation_alias="AI_GATEWAY_DATABASE_URL",
     )
 
 
 class StorageSettings(CommonSettings):
     """Localized configuration for Storage adapters."""
 
-    minio_endpoint_url: str | None = Field(default=None, validation_alias="MINIO_ENDPOINT_URL")
+    minio_endpoint_url: str | None = Field(
+        default=None, validation_alias="MINIO_ENDPOINT_URL"
+    )
     minio_bucket: str | None = Field(default=None, validation_alias="MINIO_BUCKET")
-    minio_root_user: str | None = Field(default=None, validation_alias="MINIO_ROOT_USER")
-    minio_root_password: str | None = Field(default=None, validation_alias="MINIO_ROOT_PASSWORD")
+    minio_root_user: str | None = Field(
+        default=None, validation_alias="MINIO_ROOT_USER"
+    )
+    minio_root_password: str | None = Field(
+        default=None, validation_alias="MINIO_ROOT_PASSWORD"
+    )
     storage_bucket: str | None = Field(default=None, validation_alias="STORAGE_BUCKET")
     s3_bucket_name: str | None = Field(default=None, validation_alias="S3_BUCKET_NAME")
-    storage_access_key: str | None = Field(default=None, validation_alias="STORAGE_ACCESS_KEY")
-    aws_access_key_id: str | None = Field(default=None, validation_alias="AWS_ACCESS_KEY_ID")
-    storage_secret_key: str | None = Field(default=None, validation_alias="STORAGE_SECRET_KEY")
+    storage_access_key: str | None = Field(
+        default=None, validation_alias="STORAGE_ACCESS_KEY"
+    )
+    aws_access_key_id: str | None = Field(
+        default=None, validation_alias="AWS_ACCESS_KEY_ID"
+    )
+    storage_secret_key: str | None = Field(
+        default=None, validation_alias="STORAGE_SECRET_KEY"
+    )
     aws_secret_access_key: str | None = Field(
         default=None, validation_alias="AWS_SECRET_ACCESS_KEY"
     )
@@ -315,7 +338,9 @@ class StorageSettings(CommonSettings):
     storage_endpoint_url: str | None = Field(
         default=None, validation_alias="STORAGE_ENDPOINT_URL"
     )
-    aws_endpoint_url: str | None = Field(default=None, validation_alias="AWS_ENDPOINT_URL")
+    aws_endpoint_url: str | None = Field(
+        default=None, validation_alias="AWS_ENDPOINT_URL"
+    )
     storage_sse_algorithm: str = Field(
         default="AES256", validation_alias="STORAGE_SSE_ALGORITHM"
     )
@@ -339,7 +364,9 @@ class ComplianceSettings(CommonSettings):
     gxp_signing_private_key: str | None = Field(
         default=None, validation_alias="GXP_SIGNING_PRIVATE_KEY"
     )
-    gxp_signing_cert: str | None = Field(default=None, validation_alias="GXP_SIGNING_CERT")
+    gxp_signing_cert: str | None = Field(
+        default=None, validation_alias="GXP_SIGNING_CERT"
+    )
 
 
 # Cached Factory Instances

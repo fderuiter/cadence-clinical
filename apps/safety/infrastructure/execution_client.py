@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from typing import Any
 
@@ -28,9 +27,7 @@ class ExecutionClient:
         from packages.config import get_safety_settings
 
         settings = get_safety_settings()
-        self.base_url = (
-            base_url or settings.execution_url
-        ).rstrip("/")
+        self.base_url = (base_url or settings.execution_url).rstrip("/")
         self.timeout = timeout
 
     def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:

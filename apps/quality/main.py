@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -56,14 +54,13 @@ from apps.quality.presentation.routers.quality import (
 from apps.quality.presentation.routers.quality import (
     router as quality_router,
 )
+from packages.config import get_quality_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal
 from packages.telemetry import setup_telemetry
-
-from packages.config import get_quality_settings
 
 settings = get_quality_settings()
 DATABASE_URL = settings.quality_database_url

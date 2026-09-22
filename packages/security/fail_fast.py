@@ -1,6 +1,6 @@
 import sys
 
-from packages.config import CommonSettings, get_common_settings
+from packages.config import get_common_settings
 
 INSECURE_FALLBACKS = {
     "internal-gateway-secret-12345",
@@ -102,4 +102,3 @@ def validate_branding(service_name: str, is_gateway: bool = False) -> None:
             )
             print(error_msg, file=sys.stderr)
             raise RuntimeError(error_msg)
-

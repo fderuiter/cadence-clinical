@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.etmf.adapters.database import db_manager, transactional
@@ -92,13 +90,12 @@ from apps.etmf.presentation.routers.intelligence import (
     router as intelligence_router,
 )
 from apps.etmf.presentation.routers.taxonomy import router as taxonomy_router
+from packages.config import get_etmf_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
-
-from packages.config import get_etmf_settings
 
 settings = get_etmf_settings()
 DATABASE_URL = settings.etmf_database_url

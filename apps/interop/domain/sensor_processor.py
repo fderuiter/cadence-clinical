@@ -18,7 +18,6 @@ import hashlib
 import hmac
 import json
 import math
-import os
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -68,10 +67,7 @@ def pseudonymize_subject_id(subject_id: str, salt: str | None = None) -> str:
     """
     from packages.config import get_interop_settings
 
-    effective_salt = (
-        salt
-        or get_interop_settings().pseudonymization_salt
-    )
+    effective_salt = salt or get_interop_settings().pseudonymization_salt
     digest = hmac.new(
         effective_salt.encode("utf-8"),
         subject_id.strip().encode("utf-8"),
@@ -92,10 +88,7 @@ def generate_device_token(
     """
     from packages.config import get_interop_settings
 
-    effective_salt = (
-        salt
-        or get_interop_settings().pseudonymization_salt
-    )
+    effective_salt = salt or get_interop_settings().pseudonymization_salt
     combo = f"{vendor.strip()}:{model_name.strip()}:{identifier.strip()}"
     digest = hmac.new(
         effective_salt.encode("utf-8"),

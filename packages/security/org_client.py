@@ -122,6 +122,8 @@ async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
     # 2. Check for environment-specific fallbacks or testing defaults if no resolver is registered
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     if not is_testing:
+        from packages.config import get_common_settings
+
         try:
             org_url = get_common_settings().org_url.rstrip("/")
             client = GatewayBaseClient(base_url=org_url)
