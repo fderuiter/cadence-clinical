@@ -63,11 +63,14 @@ from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+from packages.config import get_quality_settings
 
-assert_secure_secrets("quality", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+settings = get_quality_settings()
+DATABASE_URL = settings.quality_database_url
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+assert_secure_secrets("quality", {"GATEWAY_SECRET": settings.gateway_secret})
+
+BRAND_NAME = settings.brand_name
 
 validate_branding("quality")
 app = FastAPI(

@@ -15,7 +15,9 @@ class IdentityProviderCredentialVerifier(CredentialVerifierPort):
     """Adapter verifying re-authentication credentials against IdP or internal security context."""
 
     def __init__(self, idp_url: str | None = None) -> None:
-        self.idp_url = idp_url or os.getenv("KEYCLOAK_URL")
+        from packages.config import get_fileshare_settings
+
+        self.idp_url = idp_url or get_fileshare_settings().keycloak_url
 
     async def verify_credential(self, user_id: str, credential: str) -> bool:
         """Verifies user-supplied re-authentication PIN or password.

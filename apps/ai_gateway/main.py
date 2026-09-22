@@ -30,7 +30,10 @@ from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+from packages.config import get_ai_gateway_settings
+
+settings = get_ai_gateway_settings()
+BRAND_NAME = settings.brand_name
 
 validate_branding("ai-gateway")
 

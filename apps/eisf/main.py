@@ -53,11 +53,14 @@ from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+from packages.config import get_eisf_settings
 
-assert_secure_secrets("eisf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+settings = get_eisf_settings()
+DATABASE_URL = settings.eisf_database_url
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+assert_secure_secrets("eisf", {"GATEWAY_SECRET": settings.gateway_secret})
+
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("eisf")

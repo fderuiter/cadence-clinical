@@ -9,13 +9,15 @@ async def run_migrations(database_url: str) -> None:
 
 
 def main() -> None:
+    from packages.config import get_ctms_settings
+
     parser = argparse.ArgumentParser(
         description="CTMS Database Schema Migration Runner"
     )
     parser.add_argument(
         "--db-url",
         type=str,
-        default=os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
+        default=get_ctms_settings().ctms_database_url,
         help="Database URL for migration",
     )
     args = parser.parse_args()

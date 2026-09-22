@@ -38,9 +38,10 @@ from packages.database.audit import (
     Part11AuditMixin,
 )
 
-AUDIT_LOG_SECRET_KEY = os.getenv(
-    "AUDIT_LOG_SECRET_KEY", "default-cadence-audit-secret-key"
-).strip()
+from packages.config import get_common_settings
+
+def _get_audit_secret() -> str:
+    return get_common_settings().audit_log_secret_key.strip()
 
 
 def compute_audit_digest(
@@ -76,8 +77,7 @@ def compute_audit_digest(
     """
     key = (
         secret_key
-        or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
-        or AUDIT_LOG_SECRET_KEY
+        or _get_audit_secret()
     )
     canonical_payload = (
         f"{event_id}|{service_name}|{action_type}|{entity_name}|{entity_id}|"

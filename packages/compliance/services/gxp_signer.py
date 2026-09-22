@@ -99,11 +99,14 @@ def sign_gxp_markdown(
     Returns:
         Full signed Markdown document string containing the embedded electronic signature block footer.
     """
+    from packages.config import get_compliance_settings
+
+    comp_settings = get_compliance_settings()
     if not signer_id:
         signer_id = (
-            os.getenv("GXP_SIGNER_ID")
-            or os.getenv("GITHUB_ACTOR")
-            or os.getenv("USER")
+            comp_settings.gxp_signer_id
+            or comp_settings.github_actor
+            or comp_settings.user
             or "cadence-validation-runner"
         )
 
@@ -112,8 +115,8 @@ def sign_gxp_markdown(
 
     # Retrieve from environment or generate fresh pair if not provided
     if not private_key_pem or not cert_pem:
-        env_priv = os.getenv("GXP_SIGNING_PRIVATE_KEY")
-        env_cert = os.getenv("GXP_SIGNING_CERT")
+        env_priv = comp_settings.gxp_signing_private_key
+        env_cert = comp_settings.gxp_signing_cert
         if env_priv and env_cert:
             private_key_pem = env_priv
             cert_pem = env_cert

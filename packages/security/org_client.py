@@ -62,9 +62,9 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> dict[str, Any]
             "assigned_studies": [],
         }
 
-    org_service_url = os.getenv(
-        "ORG_SERVICE_URL", "http://localhost:8012"
-    )  # pragma: allowlist secret
+    from packages.config import get_common_settings
+
+    org_service_url = get_common_settings().org_url
     user_id = "security-service"
     roles = "admin"
     change_reason = "Internal Principal Enrichment"
@@ -123,7 +123,7 @@ async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     if not is_testing:
         try:
-            org_url = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
+            org_url = get_common_settings().org_url.rstrip("/")
             client = GatewayBaseClient(base_url=org_url)
             response = await client.request(
                 method="GET",

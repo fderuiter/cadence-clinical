@@ -98,9 +98,12 @@ from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+from packages.config import get_etmf_settings
 
-assert_secure_secrets("etmf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+settings = get_etmf_settings()
+DATABASE_URL = settings.etmf_database_url
+
+assert_secure_secrets("etmf", {"GATEWAY_SECRET": settings.gateway_secret})
 
 
 async def etmf_startup() -> None:
@@ -167,7 +170,7 @@ async def etmf_shutdown() -> None:
     await stop_background_etmf_expiration_scanner()
 
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("etmf")

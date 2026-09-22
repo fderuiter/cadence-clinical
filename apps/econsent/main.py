@@ -97,11 +97,14 @@ from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+from packages.config import get_econsent_settings
 
-assert_secure_secrets("econsent", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+settings = get_econsent_settings()
+DATABASE_URL = settings.econsent_database_url
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+assert_secure_secrets("econsent", {"GATEWAY_SECRET": settings.gateway_secret})
+
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("econsent")

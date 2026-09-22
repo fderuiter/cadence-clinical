@@ -50,10 +50,10 @@ class DCTService:
     """Orchestrates decentralized clinical trial operations with GxP compliance."""
 
     def __init__(self, repository: IDCTRepositoryPort) -> None:
+        from packages.config import get_interop_settings
+
         self.repository = repository
-        self.secret_key = os.getenv(
-            "GATEWAY_SECRET", "cadence-clinical-gxp-secret-key-2026"
-        )
+        self.secret_key = get_interop_settings().gateway_secret
 
     # =========================================================================
     # WebRTC Telehealth Video Consultations

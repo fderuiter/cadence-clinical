@@ -173,8 +173,10 @@ class GatewayNotificationDispatcher(NotificationDispatcherPort):
         timeout: float = 2.0,
         default_service_name: str = "gateway-client",
     ) -> None:
+        from packages.config import get_common_settings
+
         self._base_url = (
-            base_url or os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
+            base_url or get_common_settings().notifications_url
         ).rstrip("/")
         self._timeout = timeout
         self._default_service_name = default_service_name

@@ -26,7 +26,10 @@ from packages.security.gateway_client import (
     create_service_auth_headers,
 )
 
-ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
+from packages.config import get_notifications_settings
+
+def _get_org_url() -> str:
+    return get_notifications_settings().org_url.rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
@@ -108,7 +111,7 @@ class NotificationWorker:
         resolved = []
 
         try:
-            client = GatewayBaseClient(base_url=ORG_URL)
+            client = GatewayBaseClient(base_url=_get_org_url())
             params = {}
             if study_id:
                 params["study_id"] = study_id
@@ -147,7 +150,7 @@ class NotificationWorker:
             logger.info(
                 f"No database assignments found. Using deterministic fallback for {event_type}."
             )
-            brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+            brand_domain = get_notifications_settings().brand_domain
             if event_type == "EDC_QUERY_RAISED":
                 target_id = f"crc_{site_id or 'default'}"
                 resolved.append(

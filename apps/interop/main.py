@@ -40,17 +40,20 @@ from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+from packages.config import get_interop_settings
+
+settings = get_interop_settings()
+DATABASE_URL = settings.interop_database_url
 
 assert_secure_secrets(
     "interop",
     {
-        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
-        "PSEUDONYMIZATION_SALT": os.getenv("PSEUDONYMIZATION_SALT"),
+        "GATEWAY_SECRET": settings.gateway_secret,
+        "PSEUDONYMIZATION_SALT": settings.pseudonymization_salt,
     },
 )
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("interop")

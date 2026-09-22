@@ -19,8 +19,11 @@ from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("IMAGING_DATABASE_URL", "sqlite+aiosqlite:///./imaging.db")
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+from packages.config import get_imaging_settings
+
+settings = get_imaging_settings()
+DATABASE_URL = settings.imaging_database_url
+BRAND_NAME = settings.brand_name
 
 validate_branding("imaging")
 

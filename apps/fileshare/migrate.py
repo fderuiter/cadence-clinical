@@ -13,13 +13,15 @@ async def run_migrations(database_url: str) -> None:
 
 
 def main() -> None:
+    from packages.config import get_fileshare_settings
+
     parser = argparse.ArgumentParser(
         description="Fileshare Database Schema Migration Runner"
     )
     parser.add_argument(
         "--db-url",
         type=str,
-        default=os.getenv("FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
+        default=get_fileshare_settings().fileshare_database_url,
         help="Database URL for migration",
     )
     args = parser.parse_args()

@@ -18,15 +18,16 @@ from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
-).encode()  # pragma: allowlist secret
+from packages.config import get_org_settings
 
-DATABASE_URL = os.getenv("ORG_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+settings = get_org_settings()
+GATEWAY_SECRET = settings.gateway_secret.encode()
 
-assert_secure_secrets("org", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+DATABASE_URL = settings.org_database_url
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+assert_secure_secrets("org", {"GATEWAY_SECRET": settings.gateway_secret})
+
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("org")

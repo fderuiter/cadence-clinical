@@ -83,10 +83,11 @@ async def fetch_eligibility_criteria(study_id: str) -> list[EligibilityCriterion
     Queries the central Designer service to fetch active eligibility criteria for a study.
     Uses Gateway signature for secure inter-service authorization.
     """
-    designer_url = os.getenv("DESIGNER_URL", "http://localhost:8001")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    from packages.config import get_interop_settings
+
+    settings = get_interop_settings()
+    designer_url = settings.designer_url
+    gateway_secret_env = settings.gateway_secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)

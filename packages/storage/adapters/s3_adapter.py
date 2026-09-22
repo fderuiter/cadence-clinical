@@ -36,37 +36,40 @@ class S3StorageAdapter(StoragePort[dict[str, Any]], BlobStorageProvider):
         sse_algorithm: str | None = "AES256",
         config: Config | None = None,
     ) -> None:
+        from packages.config import get_storage_settings
+
+        settings = get_storage_settings()
         self.bucket_name = (
             bucket_name
-            or os.getenv("STORAGE_BUCKET")
-            or os.getenv("S3_BUCKET_NAME")
+            or settings.storage_bucket
+            or settings.s3_bucket_name
             or "cadence-fileshare"
         )
         self.aws_access_key_id = (
             aws_access_key_id
-            or os.getenv("STORAGE_ACCESS_KEY")
-            or os.getenv("AWS_ACCESS_KEY_ID")
+            or settings.storage_access_key
+            or settings.aws_access_key_id
         )
         self.aws_secret_access_key = (
             aws_secret_access_key
-            or os.getenv("STORAGE_SECRET_KEY")
-            or os.getenv("AWS_SECRET_ACCESS_KEY")
+            or settings.storage_secret_key
+            or settings.aws_secret_access_key
         )
         self.region_name = (
             region_name
-            or os.getenv("STORAGE_REGION")
-            or os.getenv("AWS_REGION")
+            or settings.storage_region
+            or settings.aws_region
             or "us-east-1"
         )
         self.endpoint_url = (
             endpoint_url
-            or os.getenv("STORAGE_ENDPOINT_URL")
-            or os.getenv("AWS_ENDPOINT_URL")
+            or settings.storage_endpoint_url
+            or settings.aws_endpoint_url
         )
         self.sse_algorithm = (
             sse_algorithm
             if sse_algorithm is not None
-            else os.getenv("STORAGE_SSE_ALGORITHM", "AES256")
+            else settings.storage_sse_algorithm
         )
         self.config = config
         self.session = aioboto3.Session(

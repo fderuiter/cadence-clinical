@@ -372,9 +372,12 @@ def verify_electronic_signature(
     Supports both RSA/ECDSA asymmetric verification and symmetric HMAC fallback verification.
     """
     if secret_key is None:
+        from packages.config import get_common_settings
+
+        settings = get_common_settings()
         secret_key = (
-            os.getenv("SIGNING_SECRET", "").strip()
-            or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+            (settings.signing_secret or "").strip()
+            or (settings.audit_log_secret_key or "").strip()
         )
     if not request.signer_id:
         return SignatureVerificationResult(

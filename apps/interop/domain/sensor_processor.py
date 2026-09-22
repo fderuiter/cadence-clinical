@@ -66,10 +66,11 @@ def pseudonymize_subject_id(subject_id: str, salt: str | None = None) -> str:
 
     Preserves trial isolation while stripping direct PII/PHI.
     """
+    from packages.config import get_interop_settings
+
     effective_salt = (
         salt
-        or os.getenv("PSEUDONYMIZATION_SALT")
-        or "cadence-clinical-iot-sensor-salt-2026"
+        or get_interop_settings().pseudonymization_salt
     )
     digest = hmac.new(
         effective_salt.encode("utf-8"),
@@ -89,10 +90,11 @@ def generate_device_token(
 
     Encapsulates device hardware serial/MAC without exposing raw physical hardware addresses.
     """
+    from packages.config import get_interop_settings
+
     effective_salt = (
         salt
-        or os.getenv("PSEUDONYMIZATION_SALT")
-        or "cadence-clinical-iot-sensor-salt-2026"
+        or get_interop_settings().pseudonymization_salt
     )
     combo = f"{vendor.strip()}:{model_name.strip()}:{identifier.strip()}"
     digest = hmac.new(
