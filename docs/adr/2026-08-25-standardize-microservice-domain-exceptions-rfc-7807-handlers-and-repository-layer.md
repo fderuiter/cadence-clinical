@@ -1,9 +1,9 @@
 # ADR-2217: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer
 
-* **Status:** Accepted
-* **Date:** 2026-08-25
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-25
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -20,17 +20,33 @@ Microservices across the Cadence eClinical Platform previously used inconsistent
 
 ## 3. Options Considered
 
-1. Standardize microservice domain exceptions extending `packages.hexagonal.DomainError`, register RFC 7807 error handlers on all FastAPIs, and decorate repository methods with database exception mapping (Selected).
-2. Allow ad-hoc exception types and HTTP responses across services (Rejected - leads to inconsistent client handling and ORM leakages).
+### Option 1: Standardize microservice domain exceptions extending `packages.hexagonal.DomainError`, register RFC 7807 error handlers on all FastAPIs, and decorate repository methods with database exception mapping (Selected).
+
+- **Overview:** Standardize microservice domain exceptions extending `packages.hexagonal.DomainError`, register RFC 7807 error handlers on all FastAPIs, and decorate repository methods with database exception mapping (Selected).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Allow ad-hoc exception types and HTTP responses across services (Rejected - leads to inconsistent client handling and ORM leakages).
+
+- **Overview:** Allow ad-hoc exception types and HTTP responses across services (Rejected - leads to inconsistent client handling and ORM leakages).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1 because it establishes a clear, consistent hexagonal domain exception hierarchy and automated RFC 7807 error handling across all platform microservices while preventing ORM leakages.
+- **Chosen Option:** Option 1 because it establishes a clear, consistent hexagonal domain exception hierarchy and automated RFC 7807 error handling across all platform microservices while preventing ORM leakages.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Consistent `application/problem+json` responses for all API clients and decoupled database exception mapping.
-* Negative: Requires explicit exception mapping across repository implementations.
+- **Positive Impact:** Consistent `application/problem+json` responses for all API clients and decoupled database exception mapping.
+- **Negative Impact / Technical Debt:** Requires explicit exception mapping across repository implementations.
+- **Mitigation Strategy:** Managed via automated tests and verification.
 
 ## 6. Implementation & Verification
 

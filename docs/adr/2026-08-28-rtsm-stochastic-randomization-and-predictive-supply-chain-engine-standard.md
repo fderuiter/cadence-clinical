@@ -1,9 +1,9 @@
 # ADR-2230: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirements:** `PRD-SYS-001`, `PRD-RTSM-001`, `PRD-RTSM-002`, `PRD-SCM-001`, `PRD-SCM-002`, `PRD-SYS-050`, `GMP Annex 13`
 
 ---
@@ -23,12 +23,24 @@ Historically, randomization algorithms and inventory threshold evaluations were 
 
 ## 3. Options Considered
 
-1. **Option A (Selected) - Pure Functional Engines in `packages/engine_core/` with Clean Hexagonal Adapters**:
-   - Establish `packages/engine_core/randomization/` (Stratified Block, Pocock-Simon Minimization, BOIN, 3+3) and `packages/engine_core/supply/` (Multi-echelon hierarchy, Poisson demand simulator, DTP logistics, emergency unblinding).
+### Option 1: **Option A (Selected) - Pure Functional Engines in `packages/engine_core/` with Clean Hexagonal Adapters**:
+
+- **Overview:** - Establish `packages/engine_core/randomization/` (Stratified Block, Pocock-Simon Minimization, BOIN, 3+3) and `packages/engine_core/supply/` (Multi-echelon hierarchy, Poisson demand simulator, DTP logistics, emergency unblinding).
    - Integrate with `apps/execution/` via thin repository adapters and REST endpoints.
-2. **Option B - Status Quo In-Service Algorithm Embedding in `apps/execution/`**:
-   - Retain procedural logic inside `apps/execution/randomization.py` and `apps/execution/rtsm_supply.py`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B - Status Quo In-Service Algorithm Embedding in `apps/execution/`**:
+
+- **Overview:** - Retain procedural logic inside `apps/execution/randomization.py` and `apps/execution/rtsm_supply.py`.
    - *Rejected*: Violates zero-I/O separation, impairs isolated benchmarking, and prevents cross-service engine reuse.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 

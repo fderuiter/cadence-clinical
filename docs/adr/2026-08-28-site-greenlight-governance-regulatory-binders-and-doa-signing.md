@@ -1,9 +1,9 @@
 # ADR-2220: Site Greenlight Governance Regulatory Binders and DOA Signing
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** Engineering Architecture Board, Clinical Operations Working Group
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** Engineering Architecture Board, Clinical Operations Working Group
 * **Requirements:** PRD-SSU-001, PRD-SSU-002, PRD-SYS-001
 
 ---
@@ -28,22 +28,38 @@ The platform requires:
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): Dynamic Country Rules + Cryptographic Greenlight Tokens + Sovereign Execution Gate + Part 11 DOA Engine**:
-   - Multi-factor 6-facet greenlight engine evaluates IRB, CTA, eISF/Docs, DOA, Training, and IP Release against jurisdiction presets.
+### Option 1: **Option 1 (Selected): Dynamic Country Rules + Cryptographic Greenlight Tokens + Sovereign Execution Gate + Part 11 DOA Engine**:
+
+- **Overview:** - Multi-factor 6-facet greenlight engine evaluates IRB, CTA, eISF/Docs, DOA, Training, and IP Release against jurisdiction presets.
    - Issues HMAC-SHA256 site activation tokens verified by `apps/execution` middleware.
    - Dual-signature sponsor override requiring two distinct executive roles (`sponsor_clinician` + `regulatory_lead`) with mandatory change justification.
    - Deterministic eISF/eTMF sync with correlation keys, CRA QC staging, and dual-read storage adapters.
    - Principal Investigator electronic DOA log with signature tokens (`execution.doa.signoff`), immutable audit ledger seals, and certified PDF export.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Static Monolithic Checklist**:
-   - Fixed hardcoded checklist across all countries with manual CRA activation checkboxes and direct shared database access.
+### Option 2: **Option 2: Static Monolithic Checklist**:
 
-3. **Option 3: Pure Paper/External Integration**:
-   - Offload site startup and DOA logs entirely to third-party paper scans without execution gating.
+- **Overview:** - Fixed hardcoded checklist across all countries with manual CRA activation checkboxes and direct shared database access.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Pure Paper/External Integration**:
+
+- **Overview:** - Offload site startup and DOA logs entirely to third-party paper scans without execution gating.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option:** Option 1 because it guarantees statutory regulatory compliance, enforces zero-trust execution boundaries, prevents premature subject enrollment with RFC 7807 `HTTP 423 Locked`, and provides end-to-end 21 CFR Part 11 audit traceability.
+**- **Chosen Option:** ** Option 1 because it guarantees statutory regulatory compliance, enforces zero-trust execution boundaries, prevents premature subject enrollment with RFC 7807 `HTTP 423 Locked`, and provides end-to-end 21 CFR Part 11 audit traceability.
 
 ## 5. Consequences & Trade-offs
 

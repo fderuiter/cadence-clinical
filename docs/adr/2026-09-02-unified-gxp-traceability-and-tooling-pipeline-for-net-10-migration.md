@@ -1,9 +1,9 @@
 # ADR-2235: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration
 
-* **Status:** Accepted
-* **Date:** 2026-09-02
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-09-02
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -37,12 +37,22 @@ However, a comprehensive infrastructure and workflow audit identified critical g
 * Establish a `.config/dotnet-tools.json` local tool manifest and complete the command dispatcher in `Cadence.Cli`.
 * Update `.github/workflows/dotnet-ci.yml` to Python 3.14+ and expand PR triggers.
 * Add the `dotnet` service profile in `docker/docker-compose.yml`.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ### Option 2: Split Python and .NET Pipelines (Rejected)
 * Build completely isolated CLI and RTM reporting tools in .NET (`dotnet cadence gxp sync`) that generate separate documentation files from the Python pipeline.
 * *Trade-off:* Fractures SDLC audit documentation into dual disparate reports, violating 21 CFR Part 11 unified validation ledger standards.
 
 ---
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 

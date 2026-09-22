@@ -20,12 +20,27 @@ The `LabReferenceRange` class had a duplicated block of GxP audit fields which c
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Remove the duplicate GxP audit block on `LabReferenceRange` keeping a single canonical declaration. Align `LabUnitConversion`'s `version_index` constraint to be non-nullable (`nullable=False`) with a default of 1.
-2. **Option B (Legacy Fallback):** Retain loose constraints and nullable types across legacy helper classes, risking audit log index gaps.
+### Option 1: **Option A (Selected):** Remove the duplicate GxP audit block on `LabReferenceRange` keeping a single canonical declaration. Align `LabUnitConversion`'s `version_index` constraint to be non-nullable (`nullable=False`) with a default of 1.
+
+- **Overview:** **Option A (Selected):** Remove the duplicate GxP audit block on `LabReferenceRange` keeping a single canonical declaration. Align `LabUnitConversion`'s `version_index` constraint to be non-nullable (`nullable=False`) with a default of 1.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Legacy Fallback):** Retain loose constraints and nullable types across legacy helper classes, risking audit log index gaps.
+
+- **Overview:** **Option B (Legacy Fallback):** Retain loose constraints and nullable types across legacy helper classes, risking audit log index gaps.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces GxP audit field consistency across all lab-related catalog tables and guarantees a uniform schema representation.
+- **Chosen Option:** **Option A** because it enforces GxP audit field consistency across all lab-related catalog tables and guarantees a uniform schema representation.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

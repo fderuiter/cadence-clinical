@@ -1,9 +1,9 @@
 # ADR-2197: Hybrid Semantic Medical Coding Pipeline with pgvector
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -22,18 +22,37 @@ To satisfy requirement **PRD-SYS-008** (and related traceability requirements PR
 
 ## 3. Options Considered
 
-1. **Option A: Hybrid Dense Vector + Lexical Pipeline with Local Deterministic Embeddings (Selected)**
-   - Dense 64-dimensional normalized vector representations with clinical concept expansion and cosine similarity scoring.
+### Option 1: **Option A: Hybrid Dense Vector + Lexical Pipeline with Local Deterministic Embeddings (Selected)**
+
+- **Overview:** - Dense 64-dimensional normalized vector representations with clinical concept expansion and cosine similarity scoring.
    - Combined scoring weighting vector semantic similarity (0.50) and lexical Levenshtein/Token distance (0.50).
    - Dual-attribution ledger recording in `ClinicalCodingLedger`.
-2. **Option B: Pure Lexical Fuzzy String Distance (Levenshtein / Trie)**
-   - Fails on semantic synonyms (e.g., "emesis" vs "vomiting").
-3. **Option C: Direct LLM Prompting over Cloud APIs**
-   - High latency, non-deterministic scoring, high operational cost, and potential GxP data residency non-compliance.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Pure Lexical Fuzzy String Distance (Levenshtein / Trie)**
+
+- **Overview:** - Fails on semantic synonyms (e.g., "emesis" vs "vomiting").
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Direct LLM Prompting over Cloud APIs**
+
+- **Overview:** - High latency, non-deterministic scoring, high operational cost, and potential GxP data residency non-compliance.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Hybrid Dense Vector + Lexical Pipeline)**.
+- **Chosen Option:** **Option A (Hybrid Dense Vector + Lexical Pipeline)**.
+- **Justification:** Selected as primary architectural approach.
 - Implemented `calculate_cosine_similarity(vec_a, vec_b)` handling boundary cases (identical, orthogonal, opposite, zero-magnitude).
 - Implemented `generate_local_term_embedding(text, dim=64)` generating L2-normalized dense embeddings with subword hashing and clinical synonym expansion.
 - Implemented `match_semantic_verbatim_term(session, verbatim, dictionary_type, version, top_k)` delivering hybrid ranking and hierarchical context.

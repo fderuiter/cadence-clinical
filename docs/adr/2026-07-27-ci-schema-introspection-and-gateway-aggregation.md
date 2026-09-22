@@ -30,20 +30,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Live Aggregation Validation in Production
 
 - **Overview:** Rely strictly on runtime checks and manual troubleshooting after deployment when downstream schemas crash.
-- **Pros:**
+- ***Pros:***
   - ✅ No build-time scripts or static analysis requirements.
-- **Cons:**
+- ***Cons:***
   - ❌ High risk of production downtime/500 errors for the developer portal.
   - ❌ Schema issues are only detected after code has been deployed to production.
 
 ### Option 2: Active CI Schema Introspection with Graceful Gateway Isolation
 
 - **Overview:** Build a hermetic offline static schema validation script for the CI runner, protect the runtime Gateway with failure isolation, and implement a cycle-breaking reference-rewriting engine.
-- **Pros:**
+- ***Pros:***
   - ✅ Prevents circular references from crashing the Gateway with cycle detection.
   - ✅ Gracefully isolates broken downstream schemas, serving healthy ones instead of a 500 error.
   - ✅ Fast, offline-capable verification pipeline in CI.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires maintaining mock microservice schemas for validation.
 
 ---

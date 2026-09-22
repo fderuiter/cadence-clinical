@@ -26,12 +26,27 @@ Requirements Traceability:
 
 ## 3. Options Considered
 
-1. **Framework-Agnostic Raw Semantic HTML (Selected):** Inject raw semantic HTML and WAI-ARIA attributes directly into our existing template builders to prevent bundle bloat and maintain a zero-dependency runtime layout.
-2. **Standard Frontend Framework Migration (Alternative):** Migrate shared clinical primitives to a standard SPA framework like Vue or React. This was rejected due to runtime overhead, bundle bloat, and the need to rewrite the light-weight server-side and mobile runtime layers.
+### Option 1: **Framework-Agnostic Raw Semantic HTML (Selected):** Inject raw semantic HTML and WAI-ARIA attributes directly into our existing template builders to prevent bundle bloat and maintain a zero-dependency runtime layout.
+
+- **Overview:** **Framework-Agnostic Raw Semantic HTML (Selected):** Inject raw semantic HTML and WAI-ARIA attributes directly into our existing template builders to prevent bundle bloat and maintain a zero-dependency runtime layout.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Standard Frontend Framework Migration (Alternative):** Migrate shared clinical primitives to a standard SPA framework like Vue or React. This was rejected due to runtime overhead, bundle bloat, and the need to rewrite the light-weight server-side and mobile runtime layers.
+
+- **Overview:** **Standard Frontend Framework Migration (Alternative):** Migrate shared clinical primitives to a standard SPA framework like Vue or React. This was rejected due to runtime overhead, bundle bloat, and the need to rewrite the light-weight server-side and mobile runtime layers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1 (Framework-Agnostic Raw Semantic HTML)** because it satisfies our accessibility requirements (**PRD-MDR-007**, **PRD-CRF-015**) without introducing external runtime dependencies or affecting existing light-weight templates.
+- **Chosen Option:** **Option 1 (Framework-Agnostic Raw Semantic HTML)** because it satisfies our accessibility requirements (**PRD-MDR-007**, **PRD-CRF-015**) without introducing external runtime dependencies or affecting existing light-weight templates.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

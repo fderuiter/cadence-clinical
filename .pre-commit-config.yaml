@@ -95,6 +95,13 @@ repos:
         language: system
         files: \.md$
 
+      - id: validate-readmes
+        name: Validate README Documentation Coverage & Headers
+        entry: uv run --python 3.14 python scripts/validate_readmes.py
+        language: system
+        files: ^(packages/|apps/|scripts/validate_readmes\.py)
+        pass_filenames: false
+
       - id: validate-imports
         name: Cross-Service Import Validator
         entry: uv run --python 3.14 python scripts/validate_imports.py

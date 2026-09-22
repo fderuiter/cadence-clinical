@@ -27,15 +27,15 @@ This decision satisfies requirement PRD-SYS-001 under the eTMF & Regulated Docum
 
 Maintain delegation lists directly on the standard personnel records inside the `apps/org` service.
 
-- **Pros:** Simpler domain hierarchy; personnel and role mapping are already present.
-- **Cons:** Mixes basic directory lookup operations with highly regulated GxP workflow states (signatures, training gates) which require specialized execution audit logs.
+- ***Pros:*** Simpler domain hierarchy; personnel and role mapping are already present.
+- ***Cons:*** Mixes basic directory lookup operations with highly regulated GxP workflow states (signatures, training gates) which require specialized execution audit logs.
 
 ### Option 2: Dedicated eSignature-Backed DOA Service (Selected)
 
 Establish a dedicated database schema and service boundary inside `apps/ctms` with specialized GxP models (`DOADelegationRecord`, `SiteStaffMember`, `DOAAuditLog`) that handles task delegating, credentials re-authentication, signature verification hash generation, and end-dating.
 
-- **Pros:** Strictly isolates regulated trial-specific delegation logs from general organizational profiles, enables strict credentials re-authentication and auditing, and supports granular end-dating and revocation lifecycles.
-- **Cons:** Requires schema expansion on execution-related tables.
+- ***Pros:*** Strictly isolates regulated trial-specific delegation logs from general organizational profiles, enables strict credentials re-authentication and auditing, and supports granular end-dating and revocation lifecycles.
+- ***Cons:*** Requires schema expansion on execution-related tables.
 
 ---
 

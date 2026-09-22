@@ -22,20 +22,20 @@ To enforce high data integrity and ensure alignment with the CDISC Unified Study
 ### Option 1: Fragmented Validation (Separate Backend and Frontend Definitions)
 
 - **Overview:** Define Pydantic models on the Python backend and separate TypeScript interfaces/validators on the frontend.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement initially.
-- **Cons:**
+- ***Cons:***
   - ❌ High risk of schema drift.
   - ❌ No automated compile-time or build-time verification between layers.
 
 ### Option 2: Shared Zod/TypeScript Schemas with Backend Immutability Constraints (Selected)
 
 - **Overview:** Use a shared package (`usdm-schemas`) to publish Zod definitions of CDISC USDM components, while configuring Python-side domain layer models (`apps/designer/domain/cdisc/usdm_models.py`) with strict immutability checks.
-- **Pros:**
+- ***Pros:***
   - ✅ Strict single source of truth for validation.
   - ✅ Fulfills PRD-MDR-002 and Trace-30 requirements perfectly.
   - ✅ Easy to keep frontend client validation in sync.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires synchronization across package build pipelines.
 
 ## 4. Decision Outcome

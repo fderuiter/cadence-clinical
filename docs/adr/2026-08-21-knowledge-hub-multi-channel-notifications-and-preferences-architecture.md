@@ -24,13 +24,35 @@ This decision settles the notification delivery channels, frontend polling model
 
 ## 3. Options Considered
 
-1. **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
-2. **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
-3. **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
+### Option 1: **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
+
+- **Overview:** **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
+
+- **Overview:** **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
+
+- **Overview:** **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Decoupled Multi-Channel Engine with Preference Matrix)** because it provides high availability, fault isolation, and centralized regulatory compliance tracking.
+- **Chosen Option:** **Option A (Decoupled Multi-Channel Engine with Preference Matrix)** because it provides high availability, fault isolation, and centralized regulatory compliance tracking.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Architectural Specifications:
 

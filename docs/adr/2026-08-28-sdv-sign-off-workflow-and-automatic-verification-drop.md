@@ -22,18 +22,18 @@ To satisfy Phase 12 of the Source Data Verification (SDV) workflow, the executio
 ### Option 1: Manual checking in route handlers
 
 - **Overview:** Check each modify route handler for verification drop and GxP reason validation.
-- **Pros:**
+- ***Pros:***
   - ✅ Direct and straightforward.
-- **Cons:**
+- ***Cons:***
   - ❌ Easy to bypass via raw SQL queries, bulk updates, or other async tasks.
 
 ### Option 2: Database and Session-level Interceptor (Selected)
 
 - **Overview:** Intercept modifications using a SQLAlchemy `before_flush` session event listener (in `apps/execution/database/audit.py`).
-- **Pros:**
+- ***Pros:***
   - ✅ Guaranteed enforcement—cannot be bypassed by modifying clinical records in any route handler.
   - ✅ Leverages existing robust audit trail system.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases the complexity of the global session flush listener.
 
 ## 4. Decision Outcome

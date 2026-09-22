@@ -26,20 +26,20 @@ Preserving our isolated, service-level Python database design will eliminate cro
 
 Consolidating all schemas into a single Prisma schema file and using Node/Prisma runtime packages.
 
-- **Pros:** Single tool for multi-database schemas.
-- **Cons:** Violates GxP data isolation, introduces stack mismatch, conflicts with ADR-2159.
+- ***Pros:*** Single tool for multi-database schemas.
+- ***Cons:*** Violates GxP data isolation, introduces stack mismatch, conflicts with ADR-2159.
 
 ### Option 2: Python-Native Isolated Architecture (Selected)
 
 Maintaining isolated SQLAlchemy and SQLModel ORM configurations per service, with localized migration toolchains, and enforcing deletion prevention via database-level triggers.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Guarantees 100% GxP data isolation.
   - ✅ Aligns with ADR-2159 and PRD-SYS-001.
   - ✅ Zero Node.js or Prisma dependencies in the database layer.
   - ✅ Localized migrations execute independently.
   - ✅ Restricts deletion on both database and ORM layers.
-- **Cons:** None.
+- ***Cons:*** None.
 
 ## 4. Decision Outcome
 

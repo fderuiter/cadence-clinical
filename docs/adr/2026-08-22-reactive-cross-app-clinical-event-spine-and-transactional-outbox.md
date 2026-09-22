@@ -1,9 +1,9 @@
 # ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox
 
-* **Status:** Superseded by [ADR-2234](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Superseded by [ADR-2234](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -28,13 +28,35 @@ Direct synchronous HTTP REST invocations across services create cascading latenc
 
 ## 3. Options Considered
 
-1. **Transactional Outbox with Redis / Kafka Event Spine (Selected)**: Microservices persist clinical events to a local `transactional_outbox` table within the same ACID database transaction as the domain entity update. An asynchronous outbox relay polls or streams outbox records to a centralized high-speed event spine. Consuming services process events with deterministic idempotency keys (`{entity_type}:{entity_id}:{event_type}:{version_index}`).
-2. **Direct Synchronous REST APIs**: Services synchronously invoke target service endpoints on state changes.
-3. **Shared Sibling Database State**: Services write directly to shared database tables across service boundaries.
+### Option 1: **Transactional Outbox with Redis / Kafka Event Spine (Selected)**: Microservices persist clinical events to a local `transactional_outbox` table within the same ACID database transaction as the domain entity update. An asynchronous outbox relay polls or streams outbox records to a centralized high-speed event spine. Consuming services process events with deterministic idempotency keys (`{entity_type}:{entity_id}:{event_type}:{version_index}`).
+
+- **Overview:** **Transactional Outbox with Redis / Kafka Event Spine (Selected)**: Microservices persist clinical events to a local `transactional_outbox` table within the same ACID database transaction as the domain entity update. An asynchronous outbox relay polls or streams outbox records to a centralized high-speed event spine. Consuming services process events with deterministic idempotency keys (`{entity_type}:{entity_id}:{event_type}:{version_index}`).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Direct Synchronous REST APIs**: Services synchronously invoke target service endpoints on state changes.
+
+- **Overview:** **Direct Synchronous REST APIs**: Services synchronously invoke target service endpoints on state changes.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Shared Sibling Database State**: Services write directly to shared database tables across service boundaries.
+
+- **Overview:** **Shared Sibling Database State**: Services write directly to shared database tables across service boundaries.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Transactional Outbox with Reactive Event Spine**.
+- **Chosen Option:** **Transactional Outbox with Reactive Event Spine**.
+- **Justification:** Selected as primary architectural approach.
 - Guarantees at-least-once delivery without distributed two-phase commit overhead.
 - Atomically binds event emission with domain state changes in PostgreSQL.
 - Consumer idempotency keys guarantee exactly-once processing semantics for GxP operations.

@@ -1,8 +1,8 @@
 # ADR-2204: Cumulative Mean Kinetic Temperature Stability Budget Engine
-* **Status:** Accepted
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -19,13 +19,35 @@ Traditional RTSM systems rely on rigid, instantaneous binary alarms (e.g. flaggi
 
 ## 3. Options Considered
 
-1. **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine (Selected)**: The system models stability budgets in `apps/designer` (e.g. activation energy $\Delta H$, max cumulative degree-hours, excursion threshold curves). IoT logger data streams ingested at each transit hop update the kit's cumulative MKT and remaining stability budget. Breaches automatically transition kit states to `QUARANTINED_EXCURSION` and trigger depot replenishment orders in `apps/execution` (RTSM).
-2. **Instantaneous Binary Threshold Alarms**: Any temperature reading outside 2°C–8°C triggers immediate automatic destruction.
-3. **Manual Offline Temperature Logger Evaluation**: Sites download CSV logger files, email them to sponsor quality teams, and wait days for manual review.
+### Option 1: **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine (Selected)**: The system models stability budgets in `apps/designer` (e.g. activation energy $\Delta H$, max cumulative degree-hours, excursion threshold curves). IoT logger data streams ingested at each transit hop update the kit's cumulative MKT and remaining stability budget. Breaches automatically transition kit states to `QUARANTINED_EXCURSION` and trigger depot replenishment orders in `apps/execution` (RTSM).
+
+- **Overview:** **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine (Selected)**: The system models stability budgets in `apps/designer` (e.g. activation energy $\Delta H$, max cumulative degree-hours, excursion threshold curves). IoT logger data streams ingested at each transit hop update the kit's cumulative MKT and remaining stability budget. Breaches automatically transition kit states to `QUARANTINED_EXCURSION` and trigger depot replenishment orders in `apps/execution` (RTSM).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Instantaneous Binary Threshold Alarms**: Any temperature reading outside 2°C–8°C triggers immediate automatic destruction.
+
+- **Overview:** **Instantaneous Binary Threshold Alarms**: Any temperature reading outside 2°C–8°C triggers immediate automatic destruction.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Manual Offline Temperature Logger Evaluation**: Sites download CSV logger files, email them to sponsor quality teams, and wait days for manual review.
+
+- **Overview:** **Manual Offline Temperature Logger Evaluation**: Sites download CSV logger files, email them to sponsor quality teams, and wait days for manual review.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine**.
+- **Chosen Option:** **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine**.
+- **Justification:** Selected as primary architectural approach.
 - Scientifically distinguishes between safe transient thermal excursions and true product degradation.
 - Prevents millions of dollars in needless drug wastage and supply shortages.
 - Protects subject safety with instant, programmatic RTSM dispensing locks.

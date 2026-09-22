@@ -27,12 +27,12 @@ This ADR resolves these issues by implementing a unified, shared semantic regula
 
 ### Option 1: Inline body parsing at both gateway and downstream middlewares
 
-- **Pros:** Highly decoupled.
-- **Cons:** Leads to massive code duplication and drift between gateway and downstream services.
+- ***Pros:*** Highly decoupled.
+- ***Cons:*** Leads to massive code duplication and drift between gateway and downstream services.
 
 ### Option 2: Unified Shared Semantic Regulated-Action Contract (Chosen)
 
-- **Pros:**
+- ***Pros:***
   - Defines stableNamespaces / String constants (e.g., `quality.capa.close`, `quality.capa.cancel`, `ctms.grant.approve`).
   - Concentrates all detection logic (HTTP method, path pattern/regex, and body conditions) in a single module `packages/security/regulated_actions.py`.
   - Centralizes signature token verification in a reusable `verify_sig_token` helper.
@@ -40,7 +40,8 @@ This ADR resolves these issues by implementing a unified, shared semantic regula
 
 ## 4. Decision Outcome
 
-We adopted Option 2. A central module `packages/security/regulated_actions.py` defines the stable namespaced strings, rules, and resolvers (`resolve_regulated_action` and `resolve_regulated_action_by_path`). The `X-Sig-Token` claims schema has been extended with `semantic_action` and `sig_ver` to bind the token securely to both the semantic action and concrete resource path.
+- **Chosen Option:** Option 1
+- **Justification:** We adopted Option 2. A central module `packages/security/regulated_actions.py` defines the stable namespaced strings, rules, and resolvers (`resolve_regulated_action` and `resolve_regulated_action_by_path`). The `X-Sig-Token` claims schema has been extended with `semantic_action` and `sig_ver` to bind the token securely to both the semantic action and concrete resource path.
 
 ## 5. Consequences & Trade-offs
 

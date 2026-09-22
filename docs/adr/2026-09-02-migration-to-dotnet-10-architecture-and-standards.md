@@ -1,9 +1,9 @@
 # ADR-2233: Migration to .NET 10 Architecture and Standards
 
-* **Status:** Accepted
-* **Date:** 2026-09-02
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-09-02
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -34,27 +34,27 @@ To address these requirements, Cadence is executing a clean-break architectural 
 
 ### Option 1: Clean-Break Architecture to .NET 10 (Selected)
 - **Overview:** Establish .NET 10 (C# 14 / ASP.NET Core 10) as the sole target architecture across all development documentation, `AGENTS.md`, and agent tooling immediately. Retain existing domain directory boundaries (`apps/<service>` and `packages/<library>`) with C# project files bound via a root `Cadence.sln`. Treat Python codebases as reference specifications to be cleanly transcribed.
-- **Pros:**
+- ***Pros:***
   - ✅ Unambiguous target standard for developers and AI agents (no confusion between competing paradigms).
   - ✅ Modern C# 14 features (file-scoped namespaces, primary constructors, enhanced pattern matching, Native AOT).
   - ✅ High-performance EF Core 10 with Npgsql, compiled queries, and `SaveChangesInterceptor` for GxP audit ledgers.
   - ✅ Central Package Management (CPM) via `Directory.Packages.props` ensures zero transitive dependency drift.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires a structured transcription phase across existing microservices.
 
 ### Option 2: Long-Term Strangler Fig Dual-Stack Coexistence
 - **Overview:** Maintain both Python and .NET backends indefinitely, routing between them at an API gateway layer while supporting both stacks in CI and agent instructions.
-- **Pros:**
+- ***Pros:***
   - ✅ Allows partial service-by-service deployment without full transcription upfront.
-- **Cons:**
+- ***Cons:***
   - ❌ Doubles CI maintenance, dependency scans, security audits, and agent instructions.
   - ❌ Fractures developer focus across two vastly different language ecosystems.
 
 ### Option 3: Incremental Python Optimization (Cython / PyPy / Mypyc / Rust FFI)
 - **Overview:** Keep Python as the primary language, optimizing hot paths with C/Rust extensions.
-- **Pros:**
+- ***Pros:***
   - ✅ Preserves existing codebase without language migration.
-- **Cons:**
+- ***Cons:***
   - ❌ Fails to resolve runtime type fragility, ecosystem packaging drift, or heavy memory consumption.
 
 ---

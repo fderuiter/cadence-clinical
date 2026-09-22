@@ -1,9 +1,9 @@
 # ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** Engineering Architecture Board, Quality Assurance & Regulatory Affairs Committee
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** Engineering Architecture Board, Quality Assurance & Regulatory Affairs Committee
 * **Requirements:** PRD-SYS-001, PRD-VAL-001, PRD-QA-001, PRD-SYS-053
 
 ---
@@ -27,21 +27,37 @@ The platform requires:
 
 ## 3. Options Considered
 
-1. **Option 1 (Selected): Sequential 6-Persona Playwright Golden Path + 1080p Video Recording + Triple Sentinel Gates + Automated RTM Sync**:
-   - Executes full-lifecycle clinical scenarios transitioning state across all 6 clinical personas in standard Vanilla CSS client workspaces (`apps/web`).
+### Option 1: **Option 1 (Selected): Sequential 6-Persona Playwright Golden Path + 1080p Video Recording + Triple Sentinel Gates + Automated RTM Sync**:
+
+- **Overview:** - Executes full-lifecycle clinical scenarios transitioning state across all 6 clinical personas in standard Vanilla CSS client workspaces (`apps/web`).
    - Automatically records high-definition 1080p MP4 videos with human-like action pacing and click highlights for qualification evidence.
    - Triple Sentinel gates verify UI elements, client console hygiene, and backend audit trails (`created_by`, `reason_for_change`, `version_index`, SHA-256 digests).
    - Automated `scripts/sync_gxp.py` regenerates and commits RTM and IQ/OQ/PQ reports with 100% requirements coverage.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option 2: Fragmented Headless Unit Assertions**:
-   - Rely solely on independent microservice unit tests without unified end-to-end persona flows or visual recordings.
+### Option 2: **Option 2: Fragmented Headless Unit Assertions**:
 
-3. **Option 3: Manual Human QA Testing**:
-   - Rely on manual testers clicking through the application without automated video capture or machine-readable traceability synchronization.
+- **Overview:** - Rely solely on independent microservice unit tests without unified end-to-end persona flows or visual recordings.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option 3: Manual Human QA Testing**:
+
+- **Overview:** - Rely on manual testers clicking through the application without automated video capture or machine-readable traceability synchronization.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option:** Option 1 because it provides definitive proof of regulatory compliance, guarantees frontend and backend integration integrity, produces visual qualification artifacts for auditors, and achieves 100% GxP requirement traceability.
+**- **Chosen Option:** ** Option 1 because it provides definitive proof of regulatory compliance, guarantees frontend and backend integration integrity, produces visual qualification artifacts for auditors, and achieves 100% GxP requirement traceability.
 
 ## 5. Consequences & Trade-offs
 

@@ -285,9 +285,14 @@ def test_domain_model_creation():
     # README.md
     readme_content = f"""# {title_name} Microservice
 
-Enterprise compliant microservice bootstrapped via Layout Convergence & Scaffolder tool.
+## Overview
 
-## Architectural Layout
+{service_name.replace("_", " ").title()} microservice bootstrapped via Layout Convergence & Scaffolder tool.
+
+---
+
+## Architectural Boundaries
+
 Conforms 100% to clean Hexagonal standards with decoupled ports and plural adapters:
 - `ports/`: Port interfaces (subclassing `RepositoryPort`) defining driving and driven contracts.
 - `adapters/`: Adapter implementations subclassing port interfaces.
@@ -295,8 +300,36 @@ Conforms 100% to clean Hexagonal standards with decoupled ports and plural adapt
 - `application/`: Business use case drivers coordinating ports and entities.
 - `presentation/`: API router wrappers.
 
-## Configured Features
 {f"Active features: {', '.join(features)}" if features else "Standard minimal layout."}
+
+---
+
+## Public APIs / Exports
+
+- Router prefix: `/api/v1/{service_name.replace("_", "-")}`
+- Presentation router module: `apps.{service_name}.presentation.routers.{service_name}`
+
+---
+
+## Dependencies
+
+- `fastapi`
+- `pydantic`
+- `sqlalchemy`
+- `sqlmodel`
+- `asyncpg`
+- `packages-database`
+- `packages-security`
+
+---
+
+## Local Development & Testing
+
+Run microservice unit tests:
+
+```bash
+uv run pytest apps/{service_name}/tests
+```
 """
     (service_dir / "README.md").write_text(readme_content, encoding="utf-8")
 

@@ -1,6 +1,6 @@
 # ADR-2198: Self-Hosted CI Runner and Trunk-Based Branching Lifecycle
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-22
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -27,9 +27,9 @@ This decision maps to system reliability and operational requirements under `PRD
 ### Option 1: Dual-Trunk GitFlow (`dev` + `main`) with Ephemeral Cloud Runners
 
 - **Overview:** Maintain `dev` as the daily integration branch and `main` as the release mirror, running builds on cloud-hosted runners (`ubuntu-latest`).
-- **Pros:**
+- ***Pros:***
   - Standard GitHub-managed cloud infrastructure.
-- **Cons:**
+- ***Cons:***
   - ❌ Pre-production branch drift between `dev` and `main`.
   - ❌ 30-60s cold-start overhead per job provisioning dependencies.
   - ❌ Higher cloud resource consumption and rate limits.
@@ -37,12 +37,12 @@ This decision maps to system reliability and operational requirements under `PRD
 ### Option 2: Private Repository + Trunk-Based Development (`main`) + Dedicated macOS `launchd` Self-Hosted Runner (Selected)
 
 - **Overview:** Standardize on Trunk-Based Development with `main` as the sole protected trunk. Deploy a dedicated Mac Mini runner using `launchd` background services, host-native toolpaths (`uv`, `pnpm`), persistent test service daemons, and PR-scoped `cancel-in-progress` triggers.
-- **Pros:**
+- ***Pros:***
   - ✅ **Zero Branch Drift:** All feature branches (`feat/*`, `fix/*`) branch from and squash-merge into `main`.
   - ✅ **Instant CI Startup:** Host-native `uv` and `pnpm` execution eliminates runner setup overhead.
   - ✅ **High-Throughput Isolation:** Cadence's existing worker-suffix database isolation (`_{run_uid}_{worker_id}`) runs against persistent local daemons without container restarts.
   - ✅ **Queue Protection:** `cancel-in-progress` on pull requests terminates obsolete runs immediately upon new pushes.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires initial local runner installation and Homebrew/Docker daemon management.
 
 ## 4. Decision Outcome

@@ -27,25 +27,26 @@ This decision supports compliance tracing and standardized trial audits under **
 ### Option A: Standard pre-compiled shared UI library with Vite bundling (Selected)
 
 - **Overview:** Configure `packages/ui` to compile into distributable ESM and CJS formats using a dedicated Vite bundling pipeline. Move the clinical form orchestration engine and all leaf inputs (such as `ClinicalFormField.vue`, `ClinicalInput.vue`, `ClinicalRadioGroup.vue`, `ClinicalLookupInput.vue`, `ClinicalQueryFlag.vue`, and `ClinicalQueryPanel.vue`) along with their custom accessibility composables into `packages/ui`.
-- **Pros:**
+- ***Pros:***
   - ✅ Solves compiler drift by compiling `.vue` and JS assets into stable distributed assets (`packages/ui/dist/index.js`).
   - ✅ Promotes absolute parity in rendering behavior, styles, and accessibility across portals.
   - ✅ Decouples internal logic dynamically via runtime store lookup using Pinia instead of static relative imports.
-- **Cons:**
+- ***Cons:***
   - ❌ Increases upfront build step overhead inside the workspace (`packages/ui` must be built).
 
 ### Option B: Raw source sharing with workspace aliases
 
 - **Overview:** Share raw `.vue` source components directly via workspace aliases or symbolic links without pre-compiling.
-- **Pros:**
+- ***Pros:***
   - ✅ Simpler package setup with no intermediate build steps.
-- **Cons:**
+- ***Cons:***
   - ❌ Consumer applications must have perfectly identical webpack/vite configurations to compile raw `.vue` files, risking compilation drift.
   - ❌ Hard to share and integrate cleanly into environments that do not use standard Vue build toolchains.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Standard pre-compiled shared UI library with Vite bundling)** because it satisfies our strict accessibility constraints (**PRD-CRF-015**) and ensures secure, robust, and consistent clinical form-rendering behavior across the single-page Single Page Applications. By building standard ESM and CJS distributions, we guarantee future-proof imports with zero runtime compiler friction.
+- **Chosen Option:** **Option A (Standard pre-compiled shared UI library with Vite bundling)** because it satisfies our strict accessibility constraints (**PRD-CRF-015**) and ensures secure, robust, and consistent clinical form-rendering behavior across the single-page Single Page Applications. By building standard ESM and CJS distributions, we guarantee future-proof imports with zero runtime compiler friction.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

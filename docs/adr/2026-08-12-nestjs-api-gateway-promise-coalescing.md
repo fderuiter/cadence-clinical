@@ -30,20 +30,20 @@ Implement a custom `JwksCoalescerService` using native `Map` collections:
 - `inFlightFetches` to track active HTTP promises for each Key ID.
   Use native `Promise` chaining to multiplex in-flight fetches, and `AbortController` to enforce timeouts.
 
-- **Pros:**
+- ***Pros:***
   - ✅ High performance: zero external cache/network overhead for local hits.
   - ✅ Complete multiplexing: identical Key ID requests resolve with the same network request promise.
   - ✅ Full control over timeouts, startup resilience, and dynamic error handling.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires custom in-memory implementation in TypeScript/Node.js.
 
 ### Option 2: Relying on Standard/Third-party JWKS Client Libraries
 
 Use standard libraries such as `jwks-rsa`.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Quick integration.
-- **Cons:**
+- ***Cons:***
   - ❌ Limited control over startup non-blocking behaviors (startup resilience).
   - ❌ Harder to tune timeout settings dynamically or handle specific cache retention policies.
 

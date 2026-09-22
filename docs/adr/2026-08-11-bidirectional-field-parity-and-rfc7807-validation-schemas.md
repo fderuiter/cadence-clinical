@@ -24,20 +24,20 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: Default FastAPI Request Validation (HTTP 422)
 
 - **Overview:** Rely on default FastAPI `RequestValidationError` handling.
-- **Pros:**
+- ***Pros:***
   - ✅ No custom code required.
-- **Cons:**
+- ***Cons:***
   - ❌ Does not conform to RFC 7807 compliant error payloads.
   - ❌ Returns `422 Unprocessable Entity` instead of `400 Bad Request`.
 
 ### Option 2: Custom Request Validation Exception Handlers mapping to RFC 7807 (Selected)
 
 - **Overview:** Register custom FastAPI exception handlers for `RequestValidationError` inside `designer` and `execution` microservices to transform standard validation errors into a standardized `ProblemDetails` model returning HTTP 400.
-- **Pros:**
+- ***Pros:***
   - ✅ Fully compliant with RFC 7807 and returns structured invalid parameters.
   - ✅ Ensures validation failures return uniform HTTP 400 Bad Request status.
   - ✅ Enforces strict validation schema constraints.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires updating legacy unit tests that originally expected HTTP 422 to now assert HTTP 400.
 
 ## 4. Decision Outcome

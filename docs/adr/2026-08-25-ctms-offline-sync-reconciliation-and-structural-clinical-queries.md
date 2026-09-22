@@ -26,25 +26,25 @@ The CTMS (Clinical Trial Management System) service requires a robust, GxP and 2
 ### Option 1: Duplicate `MonitoringVisit` in `apps/interop`
 
 - **Overview:** Duplicate the monitoring models and endpoints inside `apps/interop` to utilize the existing sync gateway directly.
-- **Pros:**
+- ***Pros:***
   - ✅ Requires no new sync controllers in CTMS.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates service boundaries and domain ownership.
   - ❌ Creates a split source of truth for MVRs, increasing maintenance overhead.
 
 ### Option 2: Build a custom, independent Sync Engine in CTMS
 
 - **Overview:** Write a completely new, bespoke synchronization and merge logic from scratch inside CTMS.
-- **Pros:**
+- ***Pros:***
   - ✅ Highly decoupled.
-- **Cons:**
+- ***Cons:***
   - ❌ Duplicates complex LWW and merge logic.
   - ❌ Increases the surface area of potential bugs and divergence in conflict resolution behavior.
 
 ### Option 3: Narrow In-Process Sync Contract with Interop Sync Engine (Selected)
 
 - **Overview:** Re-use the domain-agnostic `apps/interop/sync_engine.py` functions (such as `reconcile_records`) in-process within CTMS. CTMS owns the offline sync payloads, endpoints, defeated storage, and clinical-query database models.
-- **Pros:**
+- ***Pros:***
   - ✅ Maintains clean domain isolation—the interop service is not called, and no models are duplicated.
   - ✅ Ensures identical conflict resolution semantics (LWW, Client Wins, Server Wins, Merge) by sharing the tested `sync_engine.py` library.
   - ✅ Simplifies offline integration with safe server-derived deduplication keys.

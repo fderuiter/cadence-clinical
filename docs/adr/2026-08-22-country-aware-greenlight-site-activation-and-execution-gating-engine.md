@@ -1,9 +1,9 @@
 # ADR-2202: Country-Aware Greenlight Site Activation and Execution Gating Engine
 
-* **Status:** Accepted
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -20,20 +20,41 @@ In legacy systems (Veeva, Medidata), site activation is frequently tracked via s
 
 ## 3. Options Considered
 
-1. **Dynamic Country-Aware Prerequisite Rules Matrix & Cryptographic Token Gating (Selected)**: Study authors configure country-specific prerequisite criteria in `apps/designer/`. The `apps/ctms/` Greenlight Engine dynamically evaluates real-time readiness across 6 domain facets:
-   - Regulatory Authority & IRB/Ethics Committee Approval
+### Option 1: **Dynamic Country-Aware Prerequisite Rules Matrix & Cryptographic Token Gating (Selected)**: Study authors configure country-specific prerequisite criteria in `apps/designer/`. The `apps/ctms/` Greenlight Engine dynamically evaluates real-time readiness across 6 domain facets:
+
+- **Overview:** - Regulatory Authority & IRB/Ethics Committee Approval
    - Fully Executed Clinical Trial Agreement (CTA) & Budget
    - Complete Baseline eISF Essential Documents & Investigator CVs
    - Principal Investigator Executed Delegation of Authority (DOA) Log
    - Verified Protocol Amendment & SOP Training for PI and All Active Staff
    - Investigational Product (IP) Depot Greenlight Release
    Once all criteria are digitally certified with 21 CFR Part 11 electronic signatures, the Greenlight Engine issues an HMAC-signed activation certificate and emits `SiteGreenlightApproved` to un-gate RTSM and EDC.
-2. **Static Global Checklist**: A single hardcoded checklist for all sites with manual CRA sign-off.
-3. **Advisory Warning Only**: Display a non-blocking UI badge without programmatically gating RTSM or EDC.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Static Global Checklist**: A single hardcoded checklist for all sites with manual CRA sign-off.
+
+- **Overview:** **Static Global Checklist**: A single hardcoded checklist for all sites with manual CRA sign-off.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Advisory Warning Only**: Display a non-blocking UI badge without programmatically gating RTSM or EDC.
+
+- **Overview:** **Advisory Warning Only**: Display a non-blocking UI badge without programmatically gating RTSM or EDC.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Dynamic Country-Aware Prerequisite Rules Matrix & Cryptographic Token Gating**.
+- **Chosen Option:** **Dynamic Country-Aware Prerequisite Rules Matrix & Cryptographic Token Gating**.
+- **Justification:** Selected as primary architectural approach.
 - Enforces strict regulatory compliance with zero possibility of accidental non-compliant enrollment.
 - Dynamically adapts to multi-national regulatory frameworks.
 - Automates cross-app synchronization upon site activation.

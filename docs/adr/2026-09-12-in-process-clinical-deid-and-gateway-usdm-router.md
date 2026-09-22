@@ -44,19 +44,19 @@ Biostatistical export pipelines require high-throughput in-process clinical de-i
 ### Option 1: Direct Cross-Service Import Between Gateway and Execution
 
 - **Overview:** Import Execution ACL DTOs directly into Gateway presentation routers.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick implementation.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates system-wide hexagonal service boundary rules checked by AST import linter.
 
 ### Option 2: Gateway-Local Anti-Corruption Layer for USDM Validation (Selected)
 
 - **Overview:** Define a Gateway-local Anti-Corruption Layer (ACL) module for USDM validation (`apps/gateway/domain/acl/usdm_validation.py`) and optimize in-process de-identification date calculations.
-- **Pros:**
+- ***Pros:***
   - ✅ Preserves strict service boundaries with zero AST import lint failures.
   - ✅ Delivers high-throughput in-process date shifting and de-identification.
   - ✅ Fulfills PRD-SYS-001 requirements.
-- **Cons:**
+- ***Cons:***
   - ❌ Minor code duplication for USDM validation DTOs across bounded contexts.
 
 ## 4. Decision Outcome
