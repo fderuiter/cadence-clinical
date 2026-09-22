@@ -1,4 +1,4 @@
-"""Unified test runner subcommand wrapping pytest and vitest with intelligent filtering and watch mode."""
+"""Unified test runner subcommand wrapping dotnet test and vitest with intelligent filtering and watch mode."""
 
 import contextlib
 import subprocess
@@ -136,21 +136,7 @@ def run_test(
             )
         sys.exit(res.returncode)
 
-    if e2e:
-        print_info("Running decoupled HTTP E2E test suite...")
-        cmd = ["uv", "run", "pytest", "tests/e2e/test_phase1_e2e_suite.py", "-o", "addopts="]
-        res = subprocess.run(cmd, cwd=str(repo_root))
-        if json_mode:
-            output_json(
-                {
-                    "suite": "e2e_http",
-                    "exit_code": res.returncode,
-                    "success": res.returncode == 0,
-                }
-            )
-        sys.exit(res.returncode)
-
-    if dotnet:
+    if e2e or dotnet:
         print_info("Running .NET 10 E2E integration tests...")
         cmd = ["dotnet", "test", "tests/Cadence.E2ETests.csproj"]
         res = subprocess.run(cmd, cwd=str(repo_root))
@@ -164,21 +150,15 @@ def run_test(
             )
         sys.exit(res.returncode)
 
-    # Build backend Pytest command
-    base_cmd = ["uv", "run", "pytest"]
-    if xdist and not watch:
-        base_cmd.extend(["-n", "auto"])
-    if failed_first:
-        base_cmd.append("--failed-first")
+    # Build backend dotnet test command
+    base_cmd = ["dotnet", "test", str(repo_root / "Cadence.sln")]
     if verbose:
-        base_cmd.append("-v")
-    if not coverage or fast or watch:
-        base_cmd.append("--no-cov")
+        base_cmd.extend(["--verbosity", "detailed"])
 
     if unit or fast and not integration:
-        base_cmd.extend(["-m", "not integration and not e2e"])
+        base_cmd.extend(["--filter", "Category!=E2E&Category!=Validation"])
     elif integration and not unit:
-        base_cmd.extend(["-m", "integration"])
+        base_cmd.extend(["--filter", "Category=E2E|Category=Validation"])
 
     target_path = None
     if service:

@@ -37,6 +37,7 @@
 /packages/security/      @clinical-platform/security-and-privacy
 /packages/sentinels/     @clinical-platform/compliance-and-safety
 /packages/storage/       @clinical-platform/document-management
+/packages/telemetry/     @clinical-platform/integration-and-routing
 /packages/testing/       @clinical-platform/compliance-and-safety
 /packages/tooling_core/  @clinical-platform/integration-and-routing
 /packages/ui/            @clinical-platform/client-ux

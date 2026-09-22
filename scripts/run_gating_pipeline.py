@@ -154,12 +154,26 @@ def main():
     log_step(
         "Step 2: Launching Ephemeral Sandbox Container to Run clinical/GxP Validation & Decoupled E2E Suite"
     )
-    # Runs the GxP clinical validation suite and HTTP E2E test suite
+    # Runs the GxP validation suites migrated to Cadence.E2ETests.csproj
     val_rc, val_out, val_err = run_command(
-        ["uv", "run", "pytest", "tests/validation/dia_tmf_validation_suite.py", "-o", "addopts="]
+        [
+            "dotnet",
+            "test",
+            str(REPO_ROOT / "Cadence.sln"),
+            "--filter",
+            "Category=Validation",
+            "--logger",
+            "trx;LogFileName=report_dotnet.trx",
+        ]
     )
     e2e_rc, e2e_out, e2e_err = run_command(
-        ["uv", "run", "pytest", "tests/e2e/test_phase1_e2e_suite.py", "-o", "addopts="]
+        [
+            "dotnet",
+            "test",
+            str(REPO_ROOT / "Cadence.sln"),
+            "--filter",
+            "Category=E2E",
+        ]
     )
     if val_rc == 0 and e2e_rc == 0:
         print(

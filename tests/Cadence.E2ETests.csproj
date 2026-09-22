@@ -1,7 +1,9 @@
 <Project>
   <!-- Cadence.E2ETests.csproj lives directly in tests/;
-       BaseIntermediateOutputPath and BaseOutputPath are customized to prevent collision on obj/ and bin/
-       during solution-wide builds. -->
+       without distinct intermediate/output paths they collide on obj/project.assets.json and bin/,
+       which produces a nondeterministic race in solution-wide builds. BaseIntermediateOutputPath
+       must be set before the Sdk.props import, so the implicit Sdk="..." shorthand can't be used
+       here (see https://go.microsoft.com/fwlink/?linkid=869650). -->
   <PropertyGroup>
     <BaseIntermediateOutputPath>obj/E2ETests/</BaseIntermediateOutputPath>
     <BaseOutputPath>bin/E2ETests/</BaseOutputPath>
@@ -18,11 +20,32 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Execution/**" />
+    <Compile Remove="Audit/**" />
+    <Compile Remove="Packages/**" />
+    <Compile Remove="SecurityAndDomainTests.cs" />
+    <Compile Remove="ArchitectureSentinelTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
+    <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
     <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\packages\compliance\src\Cadence.Compliance.csproj" />
+    <ProjectReference Include="..\packages\deid\src\Cadence.Deid.csproj" />
+    <ProjectReference Include="..\packages\ddf\src\Cadence.Ddf.csproj" />
+    <ProjectReference Include="..\packages\hexagonal\src\Cadence.Hexagonal.csproj" />
+    <ProjectReference Include="..\packages\sentinels\src\Cadence.Sentinels.csproj" />
+    <ProjectReference Include="..\packages\storage\src\Cadence.Storage.csproj" />
+    <ProjectReference Include="..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,8 +53,12 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="MassTransit" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>

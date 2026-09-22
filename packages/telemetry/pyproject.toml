@@ -10,6 +10,7 @@ version = "0.1.0"
 description = "Shared OpenTelemetry telemetry module"
 requires-python = ">=3.14"
 dependencies = [
+    "packages-security",
     "opentelemetry-api>=1.20.0",
     "opentelemetry-sdk>=1.20.0",
     "opentelemetry-instrumentation-fastapi>=0.41b0",

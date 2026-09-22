@@ -14,9 +14,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2618
+- **Total Automated Test Cases Run:** 2627
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 2618 ⚪
+- **Unverified (Draft):** 2627 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -261,6 +261,66 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `DomainLayerMustNotReferenceInfrastructureOrPresentationAssemblies` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `RegulatedTestSuitesMustFeatureGxPRequirementAttributes` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetFormSubmissionDetail_WhenFormNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.ObservationAndFormE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature01_CodingQueueAndFilter` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature02_MeddraAndWhodrugTraversal` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature03_SingleAndBatchCodingAssignment` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature04_DictionaryUpversioningImpact` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature05_QueryEscalationAndResolution` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature06_RelationalDataLockPersistence` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature07_HierarchicalLockInheritance` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature08_DualSignatureStepUpToken` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature09_UnlockJustificationEnforcement` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature10_MultiFormatLabIngestion` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature11_UcumNormalizationAndRangeEval` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature12_LabDiscrepancyAndSaeAutoQueries` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature13_SasTransportBinaryExport` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature14_CdiscOdmXmlExportWithAudits` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature15_CdiscDatasetJsonExport` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature16_DeidentifiedCsvExport` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier1Feature17_UiRouterAndNavigationMetadata` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary01_EmptyLabPayloadRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary02_InvalidHl7SegmentsRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary03_UnlockJustificationUnder50CharsRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary04_HardLockWithoutStepUpTokenRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary05_IncompatibleUcumUnitConversion` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary06_NonexistentDictionaryTermResolution` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary07_InvalidSdtmDomainExportRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary08_UnauthorizedLockActionRejected` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary09_ReplaySigTokenPrevention` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier2Boundary10_DeidentificationEmptyDemographics` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise01_FormLockThenMedicalCoding` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise02_OutOfRangeLabThenSubjectLock` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise03_BatchCodingThenBiostatExport` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise04_SubjectLockFollowedByLabIngestion` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise05_UpversioningImpactThenQueryEscalation` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier3Pairwise06_HardLockStepUpThenUnlockAndExport` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier4Scenario01_OncologyTrialMultisiteLock` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier4Scenario02_HighThroughputLabBatchIngestion` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier4Scenario03_MeddraUpversioningAndBatchCoding` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier4Scenario04_RegulatorySubmissionBundleGeneration` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestTier4Scenario05_FullLifecycleE2ETrialWorkflow` | `Cadence.E2ETests.E2E.Phase1E2ESuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetSiteComplianceSummary_WhenSiteNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.SiteComplianceE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `CreateSubject_WithValidPayload_Returns201Created` | `Cadence.E2ETests.E2E.SubjectE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `GetSubjectDetail_WhenSubjectNotFound_Returns404NotFound` | `Cadence.E2ETests.E2E.SubjectE2ETests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestCatalogCrossVersionIntegrity` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestMilestoneMandatoryArtifacts` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestSiteLevelClassificationDrift` | `Cadence.E2ETests.Validation.DiaTmfValidationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestFeatureMatrixValidationIgnoringHelperAndExcludedServices` | `Cadence.E2ETests.Validation.FeatureMatrixGatingTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestFeatureMatrixValidationMissingService` | `Cadence.E2ETests.Validation.FeatureMatrixGatingTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestFeatureMatrixValidationSuccess` | `Cadence.E2ETests.Validation.FeatureMatrixGatingTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestGxPComplianceDriftsIdentified` | `Cadence.E2ETests.Validation.GxPComplianceSuiteTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestCommittedSchemaVisualizerIsUpToDate` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestCommittedTypescriptSchemaIsUpToDate` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestFormattingAndWhitespaceImmunity` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestPendingDeltaSchemaDrift` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestSchemaVisualizersUseVendoredAssets` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestSimulatedFieldNameRenameDrift` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestSimulatedTypeMismatchDrift` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestSubmissionsSchemaDrift` | `Cadence.E2ETests.Validation.OfflineSchemaDriftTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestEnvironmentIntegrityAssertions` | `Cadence.E2ETests.Validation.PathBoundaryLinterTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestLinterNegativeCases` | `Cadence.E2ETests.Validation.PathBoundaryLinterTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `TestLinterPositiveCases` | `Cadence.E2ETests.Validation.PathBoundaryLinterTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -703,6 +763,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `Cadence.UnitTests.SecurityAndDomainTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2769,8 +2830,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_ast_port_contracts_fails` | `scripts.tests.test_verify_contracts` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_ast_port_contracts_passes` | `scripts.tests.test_verify_contracts` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_cli_bypass_blocking` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_execute_dotnet_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_execute_pip_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_execute_pnpm_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_extract_active_dotnet_vulnerabilities_invalid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_extract_active_dotnet_vulnerabilities_valid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_invalid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_modern_v9` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_valid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2805,44 +2869,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_for_manifest_bypasses` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_vulnerabilities_compound_matching` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_vulnerabilities_multiple_identical_vuln_ids` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature01_coding_queue_and_filter` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature02_meddra_and_whodrug_traversal` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-001, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature03_single_and_batch_coding_assignment` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature04_dictionary_upversioning_impact` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-30 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature05_query_escalation_and_resolution` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature06_relational_datalock_persistence` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature07_hierarchical_lock_inheritance` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-3 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature08_dual_signature_step_up_token` | `tests.e2e.test_phase1_e2e_suite` | Trace-13, Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature09_unlock_justification_enforcement` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature10_multi_format_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature11_ucum_normalization_and_range_eval` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature12_lab_discrepancy_and_sae_auto_queries` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature13_sas_transport_binary_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-7 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature14_cdisc_odm_xml_export_with_audits` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature15_cdisc_dataset_json_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature16_deidentified_csv_export` | `tests.e2e.test_phase1_e2e_suite` | Trace-12 | ⚪ UNVERIFIED | N/A |
-| `test_tier1_feature17_ui_router_and_navigation_metadata` | `tests.e2e.test_phase1_e2e_suite` | Trace-11 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary01_empty_lab_payload_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary02_invalid_hl7_segments_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary03_unlock_justification_under_50_chars_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary04_hard_lock_without_step_up_token_rejected` | `tests.e2e.test_phase1_e2e_suite` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary05_incompatible_ucum_unit_conversion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary06_nonexistent_dictionary_term_resolution` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary07_invalid_sdtm_domain_export_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary08_unauthorized_lock_action_rejected` | `tests.e2e.test_phase1_e2e_suite` | Trace-27 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary09_replay_sig_token_prevention` | `tests.e2e.test_phase1_e2e_suite` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_tier2_boundary10_deidentification_empty_demographics` | `tests.e2e.test_phase1_e2e_suite` | Trace-12 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise01_form_lock_then_medical_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise02_out_of_range_lab_then_subject_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002, PRD-QRY-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise03_batch_coding_then_biostat_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise05_upversioning_impact_then_query_escalation` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_tier3_pairwise06_hard_lock_step_up_then_unlock_and_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-1, Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_tier4_scenario01_oncology_trial_multisite_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-1, Trace-13, Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_tier4_scenario02_high_throughput_lab_batch_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_tier4_scenario03_meddra_upversioning_and_batch_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001, Trace-1 | ⚪ UNVERIFIED | N/A |
-| `test_tier4_scenario04_regulatory_submission_bundle_generation` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-12, Trace-7 | ⚪ UNVERIFIED | N/A |
-| `test_tier4_scenario05_full_lifecycle_e2e_trial_workflow` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-LAB-001, PRD-MDR-002, PRD-QRY-001, PRD-SYS-001, Trace-1, Trace-17 | ⚪ UNVERIFIED | N/A |
+| `test_validate_vulnerabilities_unapproved_dotnet_blocks_pipeline` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_worker_suffix_uniqueness` | `tests.test_harness_isolation` | PRD-SYS-004 | ⚪ UNVERIFIED | N/A |
 | `test_get_run_uid_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_get_worker_id_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2857,24 +2884,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_setup_wizard_bash_syntax` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | ⚪ UNVERIFIED | N/A |
 | `test_setup_wizard_dev_execution` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | ⚪ UNVERIFIED | N/A |
 | `test_setup_wizard_idempotency` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | ⚪ UNVERIFIED | N/A |
-| `test_catalog_cross_version_integrity` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001 | ⚪ UNVERIFIED | N/A |
-| `test_milestone_mandatory_artifacts` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-004 | ⚪ UNVERIFIED | N/A |
-| `test_site_level_classification_drift` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001, PRD-TMF-003 | ⚪ UNVERIFIED | N/A |
-| `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_feature_matrix_validation_ignoring_helper_and_excluded_services` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_feature_matrix_validation_missing_service` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_feature_matrix_validation_success` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_committed_schema_visualizer_is_up_to_date` | `tests.validation.test_offline_schema_drift` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_formatting_and_whitespace_immunity` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_pending_delta_schema_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_schema_visualizers_use_vendored_assets` | `tests.validation.test_offline_schema_drift` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_simulated_field_name_rename_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_simulated_type_mismatch_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_submissions_schema_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_environment_integrity_assertions` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_linter_negative_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_linter_positive_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.
@@ -2913,28 +2922,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 236fe3eb2e399a9b6a06791c9d9b312b11ef964500b07c64b87d334a638f8b72
+- **Cryptographic Hash (SHA-256):** 2fcb60e8f2814d71023ba3cf0d9884905e7d80ac45fe5a73bc643b1a804521a6
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUPpOHhXomDGoJogXAn2rVKr0VqBYwDQYJKoZIhvcNAQEL
-BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
-bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA5
-MjExNTI4MTBaFw0yNzA5MjIxNTI4MTBaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
-IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDB
-SUJORiz0tQuT1wp0ThMnRpkm/n1Phieqf/FXxw0ztkzpn2FVJHp8EX+x/sMbRdtb
-vwpvGK9/J8JboPArWcpXhW1xuMdIPUg/HvtwG8PEBA+P/QGxb4EXhN1/deQNG2kO
-prkMqAyn1F3jsmUDPs6S9Obv+uEFhzYrOgcbuK5e7USQhV7lePiKK6W8vz2YmsbU
-IgJRdmeGQJ/zikOzvalm/Xf8N0HlFkI/EzM9CB9tc3B9bbRmF2CKrX5cU+TiEq6+
-7RQGO/z6JS/SjxXhH4LlLteBjymhCBt8M0Rr1+F/+BevI6iwOsGbNYidQHCI1XRS
-aR7JY0XRkX84p4P6MR85AgMBAAEwDQYJKoZIhvcNAQELBQADggEBADhLx8NBikxr
-9mkgrcjTGw0ZmL5bxvM6Hx55LqNt7si8GS2v8bI7kQzTn/At8s20uEEgrjHnPK91
-98G/mht5q1UVg2nBZVW1brim3cFqsFbAu0McQMmV/kTMXcGfXqbfDHsSd1EEelS4
-BRIiGCY7P4gwBASb5S/dwr/k+adVJA18dB3PoGKX5g0v1VlaHIv+fZGhqq0CuCE/
-ucWYibdlcQV5NgBw4UAwnN8MpUf1+1FWTs0xX19QmF/SwilERW/TrMOjXMUI1HL+
-gehEFDtr/8l6BDbCFB5ncPH+G/8ZYG4ZMLIhBTw/z56aT0PCguyf4Ww96ids5w/I
-vNyTuT0aZlA=
+MIIDTjCCAjagAwIBAgIUN19mT9HrX+PZMx+ptGUsq8QT5l4wDQYJKoZIhvcNAQEL
+BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
+ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
+dHdhcmUwHhcNMjYwOTIxMTYxMzA4WhcNMjcwOTIyMTYxMzA4WjBhMTswOQYDVQQD
+DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
+bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBANldhODpfW7cI95W9u0mrvxA91Xqwgur
+AMM8uIQ7BlgOgo+apFo7fujN5m19VOA76tyuT4QUuHBtYcwekwa7IZiuaE1GwTFO
+KKQDWeYdDoRVfZ8zDkGV7/p355E1MfWsL6CGuoV6Zvj1U5AklEk6a02jNT/j0fR1
+YgWEaHggMHXBlrNZl19SlImn4gIs4TaPbCMeDfAHUbsRsx+3Iv2+qOLy28ITcX/2
+RUZbl5T/RoA1txGMh2goJLKLPFBxDaJacTIFUyLSTcN8m6kmqrysF6OW9yN28pZW
+yjuw5/6WEW7fX0oAezrmeaIh9rEvtMToxTOU3fRVvdY/t1HHAL3E4okCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAZYSuy7+yCsFrKPOJ3+i/3AjNtKoEf2uBdKtJnBdG
+/zDwOD/4GZNgOZQDwUAsTHNgQGz4rmMBDlEoRJzs44gZxwDG7BRKTuaxPQhQ1vaA
+WDKtyNeAcTxom0j2RYNpkbLp6FW5df9vTAWlwwPMpCLr1V67+Fm8nV6+0hsAB1a3
+SKKDtr7sEmIdesxqLRwiBC/ckjfw7us5ZqUP0I9wcSeMIDDkQC8slqNrqoMG4Z3M
+cbCNlEx/IRkFAa42ShPGtUvIPxpY2xzeVgSi9LCNJrheeWizI+I3V1oaRVtmafDF
+DtWgrNwV0m4V/8/Gewjby5F+4cv2xo5cbChhKi87vzWFqA==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-MJLTwylgvkVU7XRze8kHjFqrMLphzgGWR0eiD6f4CjfNXN6+9M/wKB+XtL9RiRqBMXkMgrE+Cdiu1vcejA2zZ5RM0Yxh8j/BK0ooFRH8KBwq/oe1fQ25uVJXJsQsU7SY+JRNMa4r2sdXlQIKhQSk6/Bgb/MFNH6pZHuZ/+J6q0VD5s8H2IIUGj3NDCpL2kGcbEFUGNQYk5WezbmuMBVWL/h7uMsYg3fvuWkR0nk1P3XY5TXvdrE0LCWTTH8FZ82kawSD+XrwVVeWCAtjKZbb3LRq9RZuapJqa8SvXTTS1iS7utzCikkPTfr6xzLkgfFTJst+wj4zjHS5jmEhsUFEnw==
+Xub6TBiMF6wfV3SQUne5kGoJrFDozCWSfdFZf5Oi/X96vJzEh7OVL/KMK7fD0xwS95HxthCW4K2k2BxWKxTqUFpTQgCWsnGXn/Vsrqdal+yMI/QxKjbDXUQMLcC1LGd1t8psyGkIwEyxp5SehbfYkEt8sSRsbcxOnojwLxs1xH+WVrilisW44xEVqiliGzgRiD8tK0O+V04GgIsqOAOS37/WU3nd7LULKCRaW9rOOF5aMy5khQACr0nDactuFrRRe2VIOimIGUDk1GmwgbRGQisBGaKxJrUjkmFELdn9zg3OCk4ccnxic1il3AbSGyY9q2uYwwVHB+EqEIL006K8bQ==
 -----END SIGNATURE-----

@@ -619,14 +619,15 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras
 
-      - name: Run GxP qualification validation suite and Decoupled HTTP E2E suite
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Run GxP qualification validation suite
         id: run_tests
         if: always()
-        env:
-          TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: |
-          uv run pytest tests/validation/dia_tmf_validation_suite.py -o addopts= --junitxml=report-qualification.xml
-          uv run pytest tests/e2e/test_phase1_e2e_suite.py -o addopts= --junitxml=report-e2e.xml
+        run: dotnet test Cadence.sln --configuration Release --filter "Category=E2E|Category=Validation" --logger "trx;LogFileName=report_dotnet.trx"
 
       - name: Upload qualification test report
         if: always()
