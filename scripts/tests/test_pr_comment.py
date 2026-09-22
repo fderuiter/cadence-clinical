@@ -200,3 +200,34 @@ def test_markdown_and_architecture_outcomes():
     )
     assert "[ ] **Markdown Formatting:**" in body_fail
     assert "[ ] **Architectural Drift:**" in body_fail
+
+
+def test_dotnet_test_outcome_handling():
+    """Verify .NET 10 xUnit Tests outcome is parsed, merged, and rendered with fix command."""
+    sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
+### ⚠️ Action Required: Quality Gate Verification Issues
+
+| Quality Gate / Check | Status | Action / Recommended Local Fix |
+| :--- | :--- | :--- |
+| **.NET 10 xUnit Tests** | ❌ Failed | `dotnet test Cadence.sln` |
+| **Backend Tests & Coverage (pytest)** | ✅ Passed | — |
+"""
+    outcomes = parse_existing_outcomes(sample_comment)
+    assert outcomes.get("dotnet_test") == "failure"
+    assert outcomes.get("test") == "success"
+
+    # Test merging
+    existing = {"dotnet_test": "failure", "test": "success"}
+    new_runs = {"dotnet_test": "success", "test": "skipped"}
+    merged = merge_outcomes(new_runs, existing)
+    assert merged.get("dotnet_test") == "success"
+    assert merged.get("test") == "success"
+
+    # Test rendering of pass and fail checklist item
+    body_pass = build_comment_body({"dotnet_test": "success"}, has_failures=False)
+    assert ".NET 10 xUnit Tests" in body_pass
+    assert "✅ Passed" in body_pass
+
+    body_fail = build_comment_body({"dotnet_test": "failure"}, has_failures=True)
+    assert ".NET 10 xUnit Tests" in body_fail
+    assert "`dotnet test Cadence.sln`" in body_fail

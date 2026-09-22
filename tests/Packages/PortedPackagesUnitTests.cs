@@ -2,10 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using FluentAssertions;
-
-using Xunit;
-
 using Cadence.Compliance;
 using Cadence.Ddf;
 using Cadence.Deid;
@@ -14,6 +10,10 @@ using Cadence.Sentinels;
 using Cadence.Storage;
 using Cadence.Testing;
 using Cadence.ToolingCore;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests.Packages;
 

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -17,7 +18,6 @@ from apps.econsent.models import (
     ConsentDocument,
     ConsentTemplate,
 )
-from apps.gateway.main import generate_signature
 from packages.database import RelationalDatabaseManager
 from packages.database.audit import AuditFields
 

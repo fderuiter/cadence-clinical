@@ -99,6 +99,36 @@ def test_normalize_line_css():
     assert normalize_line(".button {") == ".button {"
 
 
+def test_normalize_line_csharp():
+    # C# using directives (standard, static, global, alias) ignored
+    assert normalize_line("using System;") == ""
+    assert normalize_line("using System.Collections.Generic;") == ""
+    assert normalize_line("using static System.Math;") == ""
+    assert normalize_line("global using Cadence.Core.Domain;") == ""
+    assert normalize_line("using Word = Microsoft.Office.Interop.Word;") == ""
+
+    # C# namespace declarations ignored
+    assert normalize_line("namespace Cadence.Apps.Execution;") == ""
+    assert normalize_line("namespace Cadence.Apps.Execution") == ""
+    assert normalize_line("namespace Cadence.Apps.Execution {") == ""
+
+    # C# comments stripped
+    assert normalize_line("// Single line comment") == ""
+    assert normalize_line("/// <summary>XML doc comment</summary>") == ""
+    assert normalize_line("int value = 42; // inline comment") == "int value = 42;"
+    assert normalize_line("/* block comment */ string name = 'test';") == 'string name = "test";'
+
+    # C# code logic preserved
+    assert (
+        normalize_line("public async Task<IResult> GetSubjectAsync(Guid id)")
+        == "public async Task<IResult> GetSubjectAsync(Guid id)"
+    )
+    assert (
+        normalize_line("var url = 'https://api.cadence.clinical/v1/data';")
+        == 'var url = "http-url-placeholder";'
+    )
+
+
 # File System Mocking / Isolation Tests
 
 

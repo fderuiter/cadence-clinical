@@ -14,6 +14,15 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 import pytest_asyncio
+from apps.execution.database.core import db_manager as exec_db_manager
+from apps.execution.database.models import (
+    Base as ExecBase,
+)
+from apps.execution.database.models import (
+    ClinicalObservation,
+    ClinicalSubject,
+)
+from apps.execution.main import app as execution_app
 from jose import jwt
 from sqlalchemy import select
 
@@ -28,15 +37,6 @@ from apps.ctms.models import (
     RecruitmentRecord,
     SiteMilestone,
 )
-from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import (
-    Base as ExecBase,
-)
-from apps.execution.database.models import (
-    ClinicalObservation,
-    ClinicalSubject,
-)
-from apps.execution.main import app as execution_app
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret

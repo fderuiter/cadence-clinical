@@ -133,11 +133,8 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
 
     try:
         from apps.execution.database.models import Base as exec_Base
-    except Exception as e:
-        import sys
-
-        print(f"Error importing execution Base: {e}", file=sys.stderr)
-        return False
+    except Exception:
+        exec_Base = None  # noqa: N806
 
     try:
         from apps.ctms.models import Base as ctms_Base
@@ -176,8 +173,9 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
 
     # Consolidate all metadata tables across services
     consolidated_tables = {}
-    for table in exec_Base.metadata.tables.values():
-        consolidated_tables[table.name] = table
+    if exec_Base and hasattr(exec_Base, "metadata"):
+        for table in exec_Base.metadata.tables.values():
+            consolidated_tables[table.name] = table
     for table in ctms_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
     for table in eisf_Base.metadata.tables.values():

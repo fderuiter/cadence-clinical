@@ -13,7 +13,7 @@ public static class GxPSigner
         string? timestamp = null)
     {
         signerId ??= Environment.GetEnvironmentVariable("GXP_SIGNER_ID") ?? "cadence-validation-runner";
-        timestamp ??= DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
+        timestamp ??= DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
 
         var contentBytes = Encoding.UTF8.GetBytes(content.Trim());
         var sha256Hash = Convert.ToHexStringLower(SHA256.HashData(contentBytes));

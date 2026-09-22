@@ -8,6 +8,7 @@ from apps.designer.content_assembly import (
     assemble_rendered_protocol_document,
 )
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
+
 from scripts.tests.test_content_assembly import base_study  # noqa: F401
 
 

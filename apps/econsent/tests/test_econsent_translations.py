@@ -3,13 +3,13 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 
 from apps.econsent.database import db_manager
 from apps.econsent.domain.localization.models import validate_language_code
 from apps.econsent.main import app, approved_translation_cache
 from apps.econsent.models import Base
-from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)

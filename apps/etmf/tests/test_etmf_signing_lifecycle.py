@@ -2,6 +2,7 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import select
@@ -13,7 +14,6 @@ from apps.etmf.sealer import (
     execute_etmf_audit_sealing_cycle,
     validate_etmf_ledger_integrity,
 )
-from apps.gateway.main import generate_signature
 from packages.security.signature import SignatureManifestation
 
 

@@ -5,13 +5,14 @@ Requirements: PRD-SYS-001
 
 from datetime import UTC, datetime
 
-import packages  # noqa: F401
 from apps.execution.domain.safety_models import (
     CausalityEnum,
     SAECaseRecord,
     SeriousnessCriteriaEnum,
 )
 from apps.execution.services.sae_reconciler import SAEReconciler
+
+import packages  # noqa: F401
 
 
 def test_sae_reconciler_concordant_and_discrepant() -> None:

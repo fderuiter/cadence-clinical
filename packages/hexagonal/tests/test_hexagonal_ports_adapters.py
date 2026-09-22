@@ -9,7 +9,6 @@ import ast
 import os
 
 import pytest
-
 from apps.designer.db import (
     MOCK_RULES,
     MOCK_STUDY_VERSIONS,
@@ -37,6 +36,7 @@ from apps.execution.domain.models import (
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
 )
+
 from packages.hexagonal.tests.test_hexagonal_architecture import SERVICES
 
 # =====================================================================

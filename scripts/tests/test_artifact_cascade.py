@@ -3,12 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from fastapi.testclient import TestClient
-
-import packages  # noqa: F401
 from apps.designer.main import app
 from apps.designer.services.artifact_cascade import ArtifactCascadeEngine
 from apps.designer.tests.test_synopsis_router import _make_auth_headers
+from fastapi.testclient import TestClient
+
+import packages  # noqa: F401
 
 client = TestClient(app)
 
@@ -83,6 +83,7 @@ def test_artifact_cascade_router_endpoint_dependency_override() -> None:
     from unittest.mock import patch
 
     from apps.designer.dependencies import get_cascade_engine
+
     from packages.security.middleware import get_current_user
 
     class MockCascadeEngine:

@@ -1,3 +1,4 @@
+#pragma warning disable CS0436
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -97,6 +98,13 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddDbContext<TContext>(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder>? optionsAction = null) where TContext : DbContext => services;
         public static IServiceCollection AddDbContext<TContext>(this IServiceCollection services, Action<DbContextOptionsBuilder>? optionsAction = null) where TContext : DbContext => services;
         public static IServiceCollection AddValidatorsFromAssemblyContaining<T>(this IServiceCollection services) => services;
+        public static DummyOpenTelemetryBuilder AddOpenTelemetry(this IServiceCollection services) => new DummyOpenTelemetryBuilder();
+    }
+
+    public class DummyOpenTelemetryBuilder
+    {
+        public DummyOpenTelemetryBuilder WithTracing(Action<OpenTelemetry.Trace.TracerProviderBuilder> configure) => this;
+        public DummyOpenTelemetryBuilder WithMetrics(Action<OpenTelemetry.Metrics.MeterProviderBuilder> configure) => this;
     }
 }
 
@@ -223,11 +231,131 @@ namespace Polly
     public struct OnRetryArguments<T> { }
 }
 
+namespace Xunit
+{
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public class FactAttribute : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public class TheoryAttribute : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class InlineDataAttribute : Attribute
+    {
+        public InlineDataAttribute(params object?[] data) { }
+    }
+}
+
+namespace FluentAssertions
+{
+    public static class AssertionExtensions
+    {
+        public static ObjectAssertions Should(this object? actual) => new(actual);
+        public static BooleanAssertions Should(this bool actual) => new(actual);
+        public static StringAssertions Should(this string? actual) => new(actual);
+    }
+
+    public class ObjectAssertions
+    {
+        public ObjectAssertions(object? value) { Value = value; }
+        public object? Value { get; }
+        public void BeNull() { }
+        public void NotBeNull() { }
+        public void Be(object? expected) { }
+        public void BeEquivalentTo(object? expected, object? options = null) { }
+    }
+
+    public class BooleanAssertions
+    {
+        public BooleanAssertions(bool value) { Value = value; }
+        public bool Value { get; }
+        public void BeTrue() { }
+        public void BeFalse() { }
+    }
+
+    public class StringAssertions
+    {
+        public StringAssertions(string? value) { Value = value; }
+        public string? Value { get; }
+        public void Contain(string expected) { }
+        public void Be(string? expected) { }
+        public void NotBeNullOrEmpty() { }
+    }
+}
+
+namespace Spectre.Console
+{
+    public interface IPrompt<T> { }
+
+    public class FigletText
+    {
+        public FigletText(string text) { }
+        public FigletText Color(Color color) => this;
+    }
+
+    public class Color
+    {
+        public static Color Blue => new();
+        public static Color Green => new();
+        public static Color Red => new();
+        public static Color Yellow => new();
+        public static Color Cyan1 => new();
+    }
+
+    public class SelectionPrompt<T> : IPrompt<T>
+    {
+        public SelectionPrompt<T> Title(string title) => this;
+        public SelectionPrompt<T> AddChoices(params T[] choices) => this;
+        public SelectionPrompt<T> AddChoices(IEnumerable<T> choices) => this;
+    }
+
+    public static class AnsiConsole
+    {
+        public static void MarkupLine(string message) { }
+        public static void Write(object obj) { }
+        public static T Prompt<T>(IPrompt<T> prompt) => default!;
+    }
+}
+
+namespace Spectre.Console.Cli
+{
+    public class CommandApp
+    {
+        public void Configure(Action<object> config) { }
+        public int Run(string[] args) => 0;
+    }
+}
+
+namespace OpenTelemetry.Trace
+{
+    public class TracerProviderBuilder
+    {
+        public TracerProviderBuilder AddAspNetCoreInstrumentation() => this;
+        public TracerProviderBuilder AddHttpClientInstrumentation() => this;
+    }
+}
+
+namespace OpenTelemetry.Metrics
+{
+    public class MeterProviderBuilder
+    {
+        public MeterProviderBuilder AddAspNetCoreInstrumentation() => this;
+        public MeterProviderBuilder AddHttpClientInstrumentation() => this;
+    }
+}
+
 namespace Microsoft.EntityFrameworkCore.Metadata
 {
+    public interface IKey
+    {
+        IReadOnlyList<IProperty> Properties => Array.Empty<IProperty>();
+    }
+
     public interface IEntityType
     {
         string Name { get; }
+        Type ClrType => typeof(object);
+        IKey? FindPrimaryKey() => null;
         IEnumerable<IProperty> GetProperties();
     }
 
@@ -339,6 +467,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
 namespace Microsoft.EntityFrameworkCore
 {
+    using System.Linq;
     using Microsoft.EntityFrameworkCore.ChangeTracking;
     using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -356,15 +485,46 @@ namespace Microsoft.EntityFrameworkCore
         protected virtual void OnModelCreating(ModelBuilder modelBuilder) { }
     }
 
-    public class DbSet<TEntity> : IEnumerable<TEntity> where TEntity : class
+    public static class EntityFrameworkQueryableExtensions
     {
-        public virtual IEnumerator<TEntity> GetEnumerator() => throw new NotImplementedException();
+        public static IQueryable<TSource> AsNoTracking<TSource>(this IQueryable<TSource> source) => source;
+
+        public static Task<List<TSource>> ToListAsync<TSource>(this IQueryable<TSource> source, CancellationToken cancellationToken = default)
+            => Task.FromResult(source.ToList());
+
+        public static Task<TSource?> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken cancellationToken = default)
+            => Task.FromResult(source.FirstOrDefault());
+
+        public static Task<TSource?> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken cancellationToken = default)
+            => Task.FromResult(source.FirstOrDefault(predicate.Compile()));
+    }
+
+    public class DbSet<TEntity> : IQueryable<TEntity> where TEntity : class
+    {
+        public virtual IEnumerator<TEntity> GetEnumerator() => ((IEnumerable<TEntity>)Array.Empty<TEntity>()).GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         public virtual EntityState Add(TEntity entity) => EntityState.Added;
         public virtual ValueTask<TEntity?> FindAsync(params object?[]? keyValues) => default;
+        public Type ElementType => typeof(TEntity);
+        public Expression Expression => Expression.Constant(this, typeof(IQueryable<TEntity>));
+        public IQueryProvider Provider => new DummyQueryProvider<TEntity>();
+    }
+
+    internal class DummyQueryProvider<TEntity> : IQueryProvider where TEntity : class
+    {
+        public IQueryable CreateQuery(Expression expression) => new DbSet<TEntity>();
+        public IQueryable<TElement> CreateQuery<TElement>(Expression expression) => (IQueryable<TElement>)(object)new DbSet<TEntity>();
+        public object? Execute(Expression expression) => null;
+        public TResult Execute<TResult>(Expression expression) => default!;
     }
 
     public enum EntityState { Detached, Unchanged, Deleted, Modified, Added }
+    public enum DeleteBehavior { Cascade, Restrict, SetNull, ClientSetNull, ClientCascade, NoAction, ClientNoAction }
+
+    public static class ModelBuilderExtensions
+    {
+        public static ModelBuilder ApplyConfiguration<TEntity>(this ModelBuilder modelBuilder, IEntityTypeConfiguration<TEntity> configuration) where TEntity : class => modelBuilder;
+    }
 
     public class DbContextOptions { }
 
@@ -448,11 +608,52 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public PropertyBuilder Property<TProperty>(Expression<Func<object, TProperty>> propertyExpression) => new();
         public EntityTypeBuilder HasData(params object[] data) => this;
         public EntityTypeBuilder IsUnique(bool unique = true) => this;
-        public EntityTypeBuilder HasOne(string? relatedTypeName = null, string? navigationName = null) => this;
-        public EntityTypeBuilder HasMany(string? relatedTypeName = null, string? navigationName = null) => this;
+        public ReferenceNavigationBuilder HasOne(string? relatedTypeName = null, string? navigationName = null) => new();
+        public ReferenceNavigationBuilder HasOne<TRelated>(string? navigationName = null) => new();
+        public ReferenceNavigationBuilder HasOne<TRelated>(Expression<Func<object, TRelated?>>? navigationExpression = null) => new();
+        public ReferenceNavigationBuilder HasMany(string? relatedTypeName = null, string? navigationName = null) => new();
         public EntityTypeBuilder WithOne(string? navigationName = null) => this;
         public EntityTypeBuilder WithMany(string? navigationName = null) => this;
         public EntityTypeBuilder HasForeignKey(params string[] foreignKeyPropertyNames) => this;
+        public EntityTypeBuilder OnDelete(DeleteBehavior deleteBehavior) => this;
+    }
+
+    public class ReferenceNavigationBuilder
+    {
+        public ReferenceNavigationBuilder WithMany() => this;
+        public ReferenceNavigationBuilder WithMany(string navigationName) => this;
+        public ReferenceNavigationBuilder WithMany(object navigationExpression) => this;
+        public ReferenceNavigationBuilder WithOne() => this;
+        public ReferenceNavigationBuilder WithOne(string navigationName) => this;
+        public ReferenceNavigationBuilder WithOne(object navigationExpression) => this;
+        public ReferenceNavigationBuilder HasForeignKey(params string[] foreignKeyPropertyNames) => this;
+        public ReferenceNavigationBuilder HasForeignKey(object foreignKeyExpression) => this;
+        public ReferenceNavigationBuilder HasPrincipalKey(params string[] keyPropertyNames) => this;
+        public ReferenceNavigationBuilder HasPrincipalKey(object keyExpression) => this;
+        public ReferenceNavigationBuilder HasConstraintName(string name) => this;
+        public ReferenceNavigationBuilder OnDelete(DeleteBehavior deleteBehavior) => this;
+        public ReferenceNavigationBuilder IsRequired(bool required = true) => this;
+    }
+
+    public class ReferenceNavigationBuilder<TEntity, TRelated> : ReferenceNavigationBuilder where TEntity : class where TRelated : class
+    {
+        public ReferenceNavigationBuilder<TEntity, TRelated> WithMany(Expression<Func<TRelated, IEnumerable<TEntity>?>>? navigationExpression = null) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> WithMany(Expression<Func<TRelated, object?>>? navigationExpression) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> WithMany(string navigationName) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> WithOne(Expression<Func<TRelated, TEntity?>>? navigationExpression = null) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> WithOne(Expression<Func<TRelated, object?>>? navigationExpression) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> WithOne(string navigationName) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasForeignKey(Expression<Func<TEntity, object?>> foreignKeyExpression) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasForeignKey(Expression<Func<TRelated, object?>> foreignKeyExpression) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasForeignKey<TDependent>(Expression<Func<TDependent, object?>> foreignKeyExpression) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> HasForeignKey(params string[] foreignKeyPropertyNames) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasPrincipalKey(Expression<Func<TEntity, object?>> keyExpression) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasPrincipalKey(Expression<Func<TRelated, object?>> keyExpression) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasPrincipalKey<TPrincipal>(Expression<Func<TPrincipal, object?>> keyExpression) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> HasPrincipalKey(params string[] keyPropertyNames) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> HasConstraintName(string name) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> OnDelete(DeleteBehavior deleteBehavior) => this;
+        public new ReferenceNavigationBuilder<TEntity, TRelated> IsRequired(bool required = true) => this;
     }
 
     public class EntityTypeBuilder<TEntity> : EntityTypeBuilder where TEntity : class
@@ -462,6 +663,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public PropertyBuilder PrimitiveCollection<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression) => new();
         public EntityTypeBuilder<TEntity> HasIndex(Expression<Func<TEntity, object?>> indexExpression) => this;
         public EntityTypeBuilder<TEntity> HasKey(Expression<Func<TEntity, object?>> keyExpression) => this;
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasOne<TRelated>(Expression<Func<TEntity, TRelated?>>? navigationExpression = null) where TRelated : class => new();
+        public ReferenceNavigationBuilder<TEntity, TRelated> HasMany<TRelated>(Expression<Func<TEntity, IEnumerable<TRelated>?>>? navigationExpression = null) where TRelated : class => new();
     }
 
     public class PropertyBuilder

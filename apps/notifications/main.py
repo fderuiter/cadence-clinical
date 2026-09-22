@@ -27,6 +27,7 @@ from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.telemetry import setup_telemetry
 
 DATABASE_URL = os.getenv("NOTIFICATIONS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -49,6 +50,8 @@ app = FastAPI(
         shutdown_hooks=[stop_dispatcher],
     ),
 )
+
+setup_telemetry("notifications", app)
 
 register_rfc7807_handlers(app)
 

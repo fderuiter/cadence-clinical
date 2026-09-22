@@ -9,18 +9,18 @@ import time
 
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
-from sqlalchemy import select
-
-from apps.etmf.database import db_manager as etmf_db_manager
-from apps.etmf.main import app as etmf_app
-from apps.etmf.models import Base as EtmfBase
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import AuditLog
 from apps.execution.database.models import Base as ExecBase
 from apps.execution.main import app as exec_app
 from apps.execution.presentation.routers.documents import _DOCUMENTS_DB
 from apps.gateway.main import generate_signature
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+
+from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.main import app as etmf_app
+from apps.etmf.models import Base as EtmfBase
 
 
 @pytest.fixture(autouse=True)

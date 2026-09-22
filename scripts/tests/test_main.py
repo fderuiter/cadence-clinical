@@ -1,8 +1,7 @@
-from fastapi.testclient import TestClient
-
 from apps.designer.main import app as designer_app
 from apps.execution.main import app as execution_app
 from apps.gateway.main import app as gateway_app
+from fastapi.testclient import TestClient
 
 
 def test_designer_health():

@@ -1,9 +1,19 @@
-FROM python:3.14-slim
+# Central .NET 10 thin manifest for Knowledge microservice
+ARG APP_NAME=knowledge
+ARG PROJECT_PATH=apps/knowledge/src
 
-WORKDIR /app
-
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-bookworm-slim AS dev
+WORKDIR /workspace
+COPY Cadence.sln Directory.Build.props Directory.Packages.props .editorconfig global.json ./
 COPY . .
+CMD ["sh", "-c", "dotnet watch --project apps/knowledge/src run"]
 
-RUN pip install uv && uv sync
+FROM dev AS build
+RUN dotnet restore apps/knowledge/src && dotnet publish apps/knowledge/src -c Release -o /app/publish /p:UseAppHost=false
 
-CMD ["python", "scripts/start.py", "knowledge", "--host", "0.0.0.0", "--port", "8013"]
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-bookworm-slim AS runtime
+WORKDIR /app
+USER app
+COPY --from=build /app/publish .
+EXPOSE 8000
+ENTRYPOINT ["sh", "-c", "exec dotnet Cadence.Apps.Knowledge.dll"]

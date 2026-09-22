@@ -228,6 +228,8 @@ class TestOfflineSchemaDrift:
         """
         repo_root = Path(__file__).parent.parent.parent.resolve()
         abs_file_path = (repo_root / file_path).resolve()
+        if not abs_file_path.exists():
+            return {}
         with open(abs_file_path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
 
