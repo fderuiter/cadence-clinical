@@ -2,6 +2,7 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -13,7 +14,6 @@ from apps.etmf.models import (
     TMFAuditLog,
     TMFDocument,
 )
-from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)

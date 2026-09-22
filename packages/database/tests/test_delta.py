@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from apps.designer.delta import (
     create_library_object_version,
     create_study_root,

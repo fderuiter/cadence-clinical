@@ -2,6 +2,7 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -9,7 +10,6 @@ from apps.etmf.database import db_manager
 from apps.etmf.ingestion import ingest_document_service
 from apps.etmf.main import app, map_artifact_to_tmf
 from apps.etmf.models import Base, DocumentQCTransition, TMFAuditLog, TMFDocument
-from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -770,7 +770,6 @@ def test_ucum_extra_coverage():
     Increase unit test coverage for apps/execution/ucum.py.
     """
     import pytest
-
     from apps.execution.ucum import convert_unit, get_normalized_representation
 
     # 1. Incompatible base units (e.g., kg to m)

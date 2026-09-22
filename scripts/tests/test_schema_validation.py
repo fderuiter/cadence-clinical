@@ -18,9 +18,9 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from apps.gateway.main import app
 from fastapi.testclient import TestClient
 
-from apps.gateway.main import app
 from scripts.validate_schemas import validate_schemas
 
 

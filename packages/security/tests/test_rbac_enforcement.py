@@ -10,6 +10,7 @@ from apps.execution.field_masking import (
     mask_clinical_record,
     mask_clinical_records_list,
 )
+
 from packages.security.permissions import (
     PermissionEnum,
     RoleEnum,

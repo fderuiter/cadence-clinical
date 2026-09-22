@@ -9,8 +9,6 @@ Requirements: PRD-SYS-001
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
-
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
@@ -19,6 +17,7 @@ from apps.execution.database.models import (
     ConsentSignature,
 )
 from apps.execution.services.econsent_service import EConsentService
+from sqlalchemy import select
 
 
 @pytest_asyncio.fixture(name="db_session")

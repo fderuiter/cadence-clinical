@@ -1,6 +1,6 @@
+from apps.designer.main import app
 from fastapi.testclient import TestClient
 
-from apps.designer.main import app
 from packages.testing.security import create_test_auth_headers
 
 client = TestClient(app)

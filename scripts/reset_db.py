@@ -14,6 +14,8 @@ import sys
 import urllib.parse
 from typing import Any
 
+# Import PostgreSQL migrations
+from apps.execution.database.migrate import run_migrations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -25,9 +27,6 @@ from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
 from apps.eisf.models import Base as EISFBase
 from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
 from apps.etmf.models import Base as ETMFBase
-
-# Import PostgreSQL migrations
-from apps.execution.database.migrate import run_migrations
 from apps.interop.models import Base as InteropBase
 from apps.notifications.models import Base as NotificationsBase
 from apps.org.models import Base as OrgBase

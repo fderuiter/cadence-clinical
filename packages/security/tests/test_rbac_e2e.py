@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 
 import pytest
-
 from apps.designer.main import app as designer_app
+
 from packages.security.rbac import Principal, get_principal
 from tests.rbac_helpers import build_gateway_headers, data_manager, sponsor_designer
 

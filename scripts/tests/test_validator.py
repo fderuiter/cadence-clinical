@@ -2,8 +2,8 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from apps.designer.validator import generate_alignment_report
+
 from scripts.tests.test_content_assembly import base_study  # noqa: F401
 
 
