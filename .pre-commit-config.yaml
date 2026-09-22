@@ -65,7 +65,7 @@ repos:
         name: Detect Code Duplication
         entry: uv run --python 3.14 python scripts/detect_duplication.py
         language: system
-        files: \.(py|js|vue|css)$
+        files: \.(py|js|vue|css|cs)$
         pass_filenames: true
 
       - id: validate-adrs
