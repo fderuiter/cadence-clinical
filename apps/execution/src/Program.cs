@@ -1,17 +1,5 @@
 using System;
 
-using FluentValidation;
-
-using MassTransit;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
-using Polly;
-
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
@@ -32,6 +20,18 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
 using Cadence.Telemetry;
+
+using FluentValidation;
+
+using MassTransit;
+
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();

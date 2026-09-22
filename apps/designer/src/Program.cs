@@ -1,10 +1,10 @@
 using System;
 
+using Cadence.Telemetry;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-
-using Cadence.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
