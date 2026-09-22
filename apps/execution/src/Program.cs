@@ -308,6 +308,15 @@ app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
 
+if (args.Contains("--seed"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+    await ExecutionDbSeeder.SeedAsync(dbContext);
+    Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
+    return;
+}
+
 await app.RunAsync();
 
 // MIG-SUBJ-023: the standard, minimal ASP.NET Core idiom making the implicit top-level-statement `Program`
