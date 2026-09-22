@@ -47,10 +47,13 @@ typecheck: ## Run static type checking for repository contracts
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
 	uv run --python 3.14 ruff check . --exclude apps/execution/database/models.py
+	dotnet format style Cadence.sln --verify-no-changes --no-restore
 
 format: ## Check formatting only (no auto-fix)
 	pnpm -r format
 	uv run --python 3.14 ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
+	dotnet format whitespace Cadence.sln --verify-no-changes --no-restore
+	dotnet format style Cadence.sln --verify-no-changes --no-restore
 
 check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security, imports, contracts
 	uv run --python 3.14 cadence check

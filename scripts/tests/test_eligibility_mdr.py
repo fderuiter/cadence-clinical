@@ -5,7 +5,6 @@ import time
 
 import httpx
 import pytest
-
 from apps.designer.db import (
     MOCK_ELIGIBILITY_CRITERIA,
     MOCK_STUDY_VERSIONS,

@@ -42,7 +42,7 @@ def get_postgres_base_url() -> str:
 
 # Standard Cadence test DB pattern: cadence_<service>_<run_uid>_<worker>
 TEST_DB_PATTERN = re.compile(
-    r"^cadence_(edc|etmf|ctms|quality|interop|tickets|notifications|econsent|safety|org|eisf)_[0-9a-zA-Z]+_(gw\d+|main)$"
+    r"^cadence_(edc|etmf|ctms|quality|execution|interop|tickets|notifications|econsent|safety|org|eisf)_[0-9a-zA-Z]+_(gw\d+|main)$"
 )
 
 

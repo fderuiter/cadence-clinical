@@ -2,7 +2,6 @@ import contextlib
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from apps.execution.database.migrate import main, run_migrations
 
 
@@ -96,10 +95,9 @@ async def test_lab_reference_ranges_evolution():
 
     Requirements: PRD-SYS-001
     """
+    from apps.execution.database.migrate import upgrade_existing_tables
     from sqlalchemy import inspect, text
     from sqlalchemy.ext.asyncio import create_async_engine
-
-    from apps.execution.database.migrate import upgrade_existing_tables
 
     db_url = "sqlite+aiosqlite:///:memory:"
     engine = create_async_engine(db_url, echo=False)
@@ -160,10 +158,9 @@ async def test_new_tables_metadata_creation():
     # Create a temporary file name for SQLite with a unique suffix to prevent parallel collisions
     import uuid
 
+    from apps.execution.database.migrate import run_migrations
     from sqlalchemy import inspect
     from sqlalchemy.ext.asyncio import create_async_engine
-
-    from apps.execution.database.migrate import run_migrations
 
     temp_dir = tempfile.gettempdir()
     db_file = os.path.join(temp_dir, f"test_migrate_temp_{uuid.uuid4().hex}.db")

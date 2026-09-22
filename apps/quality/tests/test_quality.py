@@ -3,12 +3,12 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
+from apps.gateway.main import generate_signature
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from apps.gateway.main import generate_signature
 from apps.quality.database import db_manager
 from apps.quality.main import app, write_audit_log
 from apps.quality.models import (

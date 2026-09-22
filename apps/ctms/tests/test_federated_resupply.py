@@ -5,15 +5,15 @@ from unittest.mock import patch
 import httpx
 import pytest
 import pytest_asyncio
+from apps.execution.database.core import db_manager as exec_db_manager
+from apps.execution.database.models import Base as ExecBase
+from apps.execution.database.models import ResupplyEvent
+from apps.execution.main import app as exec_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.ctms.database import db_manager as ctms_db_manager
 from apps.ctms.main import app as ctms_app
-from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import Base as ExecBase
-from apps.execution.database.models import ResupplyEvent
-from apps.execution.main import app as exec_app
 from packages.security.signing import generate_gateway_signature
 
 

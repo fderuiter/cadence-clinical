@@ -29,12 +29,41 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 using Polly;
 
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+    options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
+    {
+        Indented = false
+    };
+});
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
+    });
 
 builder.Services.AddOpenApi();
 
@@ -251,6 +280,17 @@ var app = builder.Build();
 // `ToProblemResult()` at its own raise site, ever produces a non-500 problem response.
 app.UseExceptionHandler();
 
+app.Use(async (context, next) =>
+{
+    var activity = System.Diagnostics.Activity.Current;
+    if (activity != null)
+    {
+        var traceParent = $"00-{activity.TraceId}-{activity.SpanId}-{(activity.Recorded ? "01" : "00")}";
+        context.Response.Headers["traceparent"] = traceParent;
+    }
+    await next(context);
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -267,6 +307,15 @@ app.MapSiteComplianceEndpoints();
 app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
+
+if (args.Contains("--seed"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+    await ExecutionDbSeeder.SeedAsync(dbContext);
+    Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
+    return;
+}
 
 await app.RunAsync();
 

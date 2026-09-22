@@ -8,7 +8,6 @@ import defusedxml.ElementTree as ET
 import httpx
 import pytest
 import pytest_asyncio
-
 from apps.execution.database.context import (
     audit_context,
     current_change_reason,

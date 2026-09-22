@@ -5,11 +5,11 @@ import tempfile
 import httpx
 import pytest
 import pytest_asyncio
-from playwright.async_api import async_playwright
-
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, TranslationJob
 from apps.execution.main import app
+from playwright.async_api import async_playwright
+
 from scripts.tests.test_translator import get_auth_headers
 
 

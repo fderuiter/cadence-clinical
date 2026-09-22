@@ -15,8 +15,6 @@ from unittest.mock import patch
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
-
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     AuditLog,
@@ -25,6 +23,7 @@ from apps.execution.database.models import (
     ClinicalSubject,
 )
 from apps.execution.main import app as execution_app
+from sqlalchemy import select
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 

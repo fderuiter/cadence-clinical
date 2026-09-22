@@ -2,6 +2,10 @@ import time
 
 import pytest
 import pytest_asyncio
+from apps.execution.database.core import db_manager as exec_db_manager
+from apps.execution.database.models import Base as ExecBase
+from apps.execution.main import app as exec_app
+from apps.gateway.main import generate_signature
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
@@ -9,10 +13,6 @@ from pydantic import BaseModel
 from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
 from apps.etmf.models import Base as ETMFBase
-from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import Base as ExecBase
-from apps.execution.main import app as exec_app
-from apps.gateway.main import generate_signature
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
@@ -957,9 +957,9 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
     import asyncio
 
     import httpx
-
     from apps.execution.database.core import db_manager as exec_db_mgr
     from apps.execution.database.models import ClinicalSubject
+
     from apps.safety.tests.test_emergency_unblinding import get_sig_token
 
     # Create subject in site_boston
@@ -1062,7 +1062,6 @@ async def test_cross_site_query_read_isolation(monkeypatch) -> None:
     import asyncio
 
     import httpx
-
     from apps.execution.database.core import db_manager as exec_db_mgr
     from apps.execution.database.models import ClinicalQuery
 

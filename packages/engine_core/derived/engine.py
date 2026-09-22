@@ -27,7 +27,7 @@ def normalize_input_units(inputs: dict[str, Any]) -> dict[str, Any]:
         try:
             normalized["weight_kg"] = float(normalized["weight_lbs"]) * 0.45359237
             normalized["weight"] = normalized["weight_kg"]
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
     elif "weight" in normalized and "weight_kg" not in normalized:
         normalized["weight_kg"] = float(normalized["weight"])
@@ -41,7 +41,7 @@ def normalize_input_units(inputs: dict[str, Any]) -> dict[str, Any]:
         try:
             normalized["height_cm"] = float(normalized["height_in"]) * 2.54
             normalized["height"] = normalized["height_cm"]
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
     elif "height" in normalized and "height_cm" not in normalized:
         normalized["height_cm"] = float(normalized["height"])
@@ -53,7 +53,7 @@ def normalize_input_units(inputs: dict[str, Any]) -> dict[str, Any]:
                 float(normalized["serum_creatinine_umol"]) / 88.42
             )
             normalized["scr"] = normalized["serum_creatinine"]
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
     elif "serum_creatinine" in normalized and "scr" not in normalized:
         normalized["scr"] = float(normalized["serum_creatinine"])
@@ -93,7 +93,7 @@ class DerivedVariableEngine:
 
             try:
                 num_val = float(val)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return DerivedCalculationResult(
                     formula_id=formula.formula_id,
                     output_variable=formula.output_variable,

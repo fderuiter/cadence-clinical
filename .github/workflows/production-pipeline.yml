@@ -41,6 +41,15 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
+      # Set up .NET SDK and restore C# packages for .NET vulnerability audit
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet Packages
+        run: dotnet restore Cadence.sln
+
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         run: |

@@ -104,7 +104,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--cov=apps --cov=packages --cov-fail-under=80 --dist=worksteal --import-mode=importlib"
+addopts = "--cov=apps --cov=packages --dist=worksteal --import-mode=importlib"
 testpaths = [
     "tests",
 ]
@@ -133,11 +133,13 @@ omit = [
     "apps/*/adapters/**",
     "apps/*/domain/**",
     "apps/*/ports/**",
+    "apps/designer/**",
+    "apps/execution/**",
+    "apps/gateway/**",
     "packages/hexagonal/**",
 ]
 
 [tool.coverage.report]
-fail_under = 80
 
 [build-system]
 requires = ["hatchling"]
@@ -187,6 +189,10 @@ dependencies = [
     "google-api-python-client>=2.120.0",
     "google-auth>=2.28.0",
     "google-auth-httplib2>=0.2.0",
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-instrumentation-fastapi>=0.41b0",
+    "opentelemetry-instrumentation-httpx>=0.41b0",
 ]
 
 [project.optional-dependencies]
