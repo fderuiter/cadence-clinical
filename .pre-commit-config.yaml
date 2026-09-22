@@ -75,6 +75,13 @@ repos:
         files: \.(py|js|vue|css|cs)$
         pass_filenames: true
 
+      - id: validate-cli-docs
+        name: Validate CLI Docs Parity
+        entry: uv run --python 3.14 python scripts/generate_cli_docs.py --check
+        language: system
+        files: ^(packages/cli/|docs/cli\.md|scripts/generate_cli_docs\.py)
+        pass_filenames: false
+
       - id: validate-adrs
         name: Validate ADRs
         entry: uv run --python 3.14 python scripts/validate_adrs.py
