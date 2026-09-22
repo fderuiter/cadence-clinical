@@ -88,6 +88,12 @@ def run_test(
     frontend: bool = typer.Option(
         False, "--frontend", help="Run frontend Vitest suites"
     ),
+    e2e: bool = typer.Option(
+        False, "--e2e", help="Run decoupled HTTP E2E test suite"
+    ),
+    dotnet: bool = typer.Option(
+        False, "--dotnet", help="Run .NET 10 xUnit integration tests (Cadence.E2ETests)"
+    ),
     failed_first: bool = typer.Option(
         False, "--failed-first", "--lf", help="Run failed tests first"
     ),
@@ -124,6 +130,34 @@ def run_test(
             output_json(
                 {
                     "suite": "frontend",
+                    "exit_code": res.returncode,
+                    "success": res.returncode == 0,
+                }
+            )
+        sys.exit(res.returncode)
+
+    if e2e:
+        print_info("Running decoupled HTTP E2E test suite...")
+        cmd = ["uv", "run", "pytest", "tests/e2e/test_phase1_e2e_suite.py", "-o", "addopts="]
+        res = subprocess.run(cmd, cwd=str(repo_root))
+        if json_mode:
+            output_json(
+                {
+                    "suite": "e2e_http",
+                    "exit_code": res.returncode,
+                    "success": res.returncode == 0,
+                }
+            )
+        sys.exit(res.returncode)
+
+    if dotnet:
+        print_info("Running .NET 10 E2E integration tests...")
+        cmd = ["dotnet", "test", "tests/Cadence.E2ETests.csproj"]
+        res = subprocess.run(cmd, cwd=str(repo_root))
+        if json_mode:
+            output_json(
+                {
+                    "suite": "dotnet_e2e",
                     "exit_code": res.returncode,
                     "success": res.returncode == 0,
                 }

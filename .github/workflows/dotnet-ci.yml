@@ -48,6 +48,9 @@ jobs:
       - name: Execute Test Suites
         run: dotnet test Cadence.sln --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
 
+      - name: Execute .NET 10 E2E Integration Test Project
+        run: dotnet test tests/Cadence.E2ETests.csproj --configuration Release --no-build --logger "trx;LogFileName=e2e_test_results.trx"
+
       - name: Validate Architecture Decision Records (ADRs)
         run: uv run --python 3.14 python scripts/validate_adrs.py
 
