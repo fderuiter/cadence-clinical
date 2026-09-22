@@ -89517,7 +89517,6 @@ components:
       - msg
       - type
       title: ValidationError
-  securitySchemes: {}
 ```
 
 ---
