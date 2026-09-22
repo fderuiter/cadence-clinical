@@ -16,11 +16,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from scripts.runtime_guard import enforce_python_runtime
 
 enforce_python_runtime()
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def get_staged_files(repo_root: Path | None = None) -> list[str]:
