@@ -1933,13 +1933,14 @@ async function executeBulkReconsent() {
       );
     }
 
-    notificationBanner.value = {
-      type: "success",
-      message: `Batch 21 CFR Part 11 signature authorized! Cleared re-consent holds for ${selectedSubjectIds.value.length} subject(s) across active sites.`,
-    };
-
+    const subjectCount = selectedSubjectIds.value.length;
     selectedSubjectIds.value = [];
     showBulkReconsentModal.value = false;
+
+    notificationBanner.value = {
+      type: "success",
+      message: `Batch 21 CFR Part 11 signature authorized! Cleared re-consent holds for ${subjectCount} subject(s) across active sites.`,
+    };
   } finally {
     isSubmitting.value = false;
   }

@@ -279,6 +279,36 @@ def main():
     else:
         test_outcome = "success"
 
+    # 4c. FORBIDDEN DEPENDENCY VALIDATION & OPENAPI SCHEMA DRIFT GATES
+    log_step(
+        "Step 4c: Validating Cryptographic Package Dependencies & OpenAPI Schema Drift"
+    )
+    dep_rc, dep_out, dep_err = run_command(
+        ["uv", "run", "python", "scripts/validate_dependencies.py"]
+    )
+    if dep_rc == 0:
+        print("[Gating-Pipeline] Dependency validation gate passed cleanly.")
+        dependency_outcome = "success"
+    else:
+        print(
+            f"[Gating-Pipeline] Dependency validation FAILED!\n{dep_out}\n{dep_err}",
+            file=sys.stderr,
+        )
+        dependency_outcome = "failure"
+
+    openapi_rc, openapi_out, openapi_err = run_command(
+        ["uv", "run", "python", "scripts/pre_commit_openapi.py"]
+    )
+    if openapi_rc == 0:
+        print("[Gating-Pipeline] OpenAPI schema drift gate passed cleanly.")
+        openapi_outcome = "success"
+    else:
+        print(
+            f"[Gating-Pipeline] OpenAPI schema drift check FAILED!\n{openapi_out}\n{openapi_err}",
+            file=sys.stderr,
+        )
+        openapi_outcome = "failure"
+
     # 5. POST/UPDATE UNIFIED STATUS COMMENT
     log_step(
         "Step 5: Compiling and Posting Unified Quality Gate Status Report to the PR"
@@ -302,6 +332,8 @@ def main():
         migration_outcome,
         dotnet_outcome,
         pytest_outcome,
+        dependency_outcome,
+        openapi_outcome,
     ]
     if "failure" in all_outcomes:
         os.environ["JOB_STATUS"] = "failure"
@@ -330,6 +362,8 @@ def main():
     print(f" - DB Migration Rollback/Forward:       {migration_outcome.upper()}")
     print(f" - .NET 10 xUnit Test Suite:            {dotnet_outcome.upper()}")
     print(f" - Python Pytest & Coverage Gate:       {pytest_outcome.upper()}")
+    print(f" - Dependency Analyzer Gate:            {dependency_outcome.upper()}")
+    print(f" - OpenAPI Schema Drift Gate:           {openapi_outcome.upper()}")
     print(f" - Requirements Traceability:           {traceability_outcome.upper()}")
     print("------------------------------------------------------------------")
 
