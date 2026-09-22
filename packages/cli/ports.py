@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+from packages.cli.registry import SERVICE_ALIAS_MAP, SERVICE_REGISTRY
+
 # Add repository root to sys.path if not present
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -88,35 +90,21 @@ DEFAULT_PORTS: dict[str, int] = {
 }
 
 SERVICE_KEY_DEFAULTS: dict[str, int] = {
-    "gateway": 8000,
-    "designer": 8001,
-    "execution": 8002,
-    "etmf": 8003,
-    "interop": 8004,
-    "quality": 8005,
-    "notifications": 8006,
-    "ctms": 8007,
-    "safety": 8008,
-    "tickets": 8009,
-    "eisf": 8010,
-    "econsent": 8011,
-    "org": 8012,
-    "fileshare": 8013,
-    "imaging": 8014,
-    "knowledge": 8015,
-    "payments": 8016,
-    "ai_gateway": 8017,
-    "ai-gateway": 8017,
-    "web": 3000,
-    "subject-portal": 5174,
-    "keycloak": 8080,
-    "postgres": 5432,
-    "postgres-etmf": 5433,
-    "postgres-ctms": 5434,
-    "postgres-quality": 5435,
-    "neo4j": 7474,
-    "front-proxy": 8000,
+    s.name: s.default_port for s in SERVICE_REGISTRY.values()
 }
+for alias, target in SERVICE_ALIAS_MAP.items():
+    if target in SERVICE_REGISTRY:
+        SERVICE_KEY_DEFAULTS[alias] = SERVICE_REGISTRY[target].default_port
+SERVICE_KEY_DEFAULTS.update(
+    {
+        "keycloak": 8080,
+        "postgres": 5432,
+        "postgres-etmf": 5433,
+        "postgres-ctms": 5434,
+        "postgres-quality": 5435,
+        "neo4j": 7474,
+    }
+)
 
 COMPOSE_SERVICE_MAPPING: dict[str, tuple[str, str]] = {
     "postgres": ("Infrastructure & Databases", "Postgres Database"),
