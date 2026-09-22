@@ -9,7 +9,6 @@ to prevent accidental execution against production database environments.
 
 import argparse
 import asyncio
-import glob
 import os
 import subprocess
 import sys
@@ -18,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 # Import PostgreSQL migrations
-from apps.execution.database.migrate import run_migrations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
