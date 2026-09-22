@@ -62,7 +62,6 @@ for name in ["database", "deid", "security", "ui"]:
         sys.path.insert(0, pkg_path)
 
 
-import json
 import subprocess
 
 # Track dynamic import errors for diagnostic reporting
@@ -168,12 +167,12 @@ def rewrite_refs(obj: Any, prefix: str, schema_map: dict[str, str] | None = None
             else:
                 new_obj[k] = rewrite_refs(v, prefix, schema_map)
         return new_obj
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [rewrite_refs(item, prefix, schema_map) for item in obj]
-    else:
-        return obj
+    return obj
 
 
+# Map downstream service identifiers to their corresponding FastAPI apps / C# specs and gateway prefixes
 SERVICES_CONFIG = discover_services()
 
 
@@ -208,13 +207,10 @@ def validate_schemas() -> bool:
         try:
             if config.get("type") in ("python", "dynamic"):
                 raw_schemas[service_name] = config["app"].openapi()
-                print(
-                    f"Successfully compiled schema for '{service_name}' (dynamic FastAPI)."
-                )
             else:
                 raw_schemas[service_name] = config.get("spec") or config.get("schema")
                 print(
-                    f"Successfully loaded schema for '{service_name}' (C# / static fallback)."
+                    f"Successfully loaded schema for '{service_name}' ({config.get('type')} fallback)."
                 )
         except Exception as e:
             print(f"Error compiling OpenAPI for {service_name}: {e}", file=sys.stderr)
