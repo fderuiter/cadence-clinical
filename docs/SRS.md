@@ -385,28 +385,28 @@ stateDiagram-v2
 
 ### 3.1 Subsystem 1: System Baseline, Cryptography & Audit Ledger
 
-#### SRS-SYS-001: Standard 21 CFR Part 11 Audit Trail Persistence
+#### SRS-PRD-SYS-001: Standard 21 CFR Part 11 Audit Trail Persistence
 * **Parent PRD:** `PRD-SYS-001`
 * **Statement:** When any transactional clinical entity or metadata record is created, updated, or soft-deleted, the Execution Engine shall persist an immutable audit record capturing `created_at`, `created_by`, `reason_for_change`, and an incremented `version_index` within the same database transaction.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(e); EU Annex 11 § 9; ICH GCP E6(R2) § 5.5.3.
 * **Verification Method & Qualification:** Test (T) — Automated Unit & Integration Suite [OQ].
 * **Verification Criteria:** Assert that updates increment `version_index` by exactly 1, reject reasons shorter than 10 characters, and write synchronous entries to `AuditLog`.
 
-#### SRS-SYS-002: Monotonic SHA-256 Merkle Audit Chain Sealing
+#### SRS-PRD-SYS-002: Monotonic SHA-256 Merkle Audit Chain Sealing
 * **Parent PRD:** `PRD-SYS-003`
 * **Statement:** The Cryptographic Sealer Worker shall execute every 60 seconds under advisory lock `42001`, calculating a chained block digest $\text{Hash}_n = \text{SHA256}(\text{Block}_n \parallel \text{Hash}_{n-1})$ across all unsealed audit records, and persist the resultant seal to `AuditLedgerSeal`.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(c); ISO 14971 § 7.1.
 * **Verification Method & Qualification:** Analysis (A) & Test (T) [OQ].
 * **Verification Criteria:** Corrupted audit record in test harness forces verification failure, triggers high-priority security alert, and transitions system to GxP-Lock state.
 
-#### SRS-SYS-003: Database-Level Trigger Soft-Delete Interception
+#### SRS-PRD-SYS-003: Database-Level Trigger Soft-Delete Interception
 * **Parent PRD:** `PRD-SYS-002`
 * **Statement:** When an out-of-band or direct SQL `DELETE` statement is executed against any clinical operational table, the PostgreSQL database trigger shall abort the physical row deletion and insert the pre-delete row image into the secure `shadow` schema with active user context.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(b); EU Annex 11 § 7.1.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Executing raw SQL `DELETE FROM clinical_subjects` leaves table row count unchanged while creating a corresponding shadow delta record.
 
-#### SRS-SYS-004: Universal Site Isolation Boundary
+#### SRS-PRD-SYS-004: Universal Site Isolation Boundary
 * **Parent PRD:** `PRD-SYS-004`
 * **Statement:** When an authenticated site-scoped user initiates a request for subject records, the API Gateway and Application Layer shall restrict query results strictly to subjects sharing the user's assigned `site_id`, rejecting cross-site access attempts with HTTP 403 Forbidden.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(g); HIPAA Security Rule 45 CFR § 164.312(a).
@@ -420,7 +420,7 @@ stateDiagram-v2
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Token older than 60 seconds or replayed with same `jti` is rejected with HTTP 401 Unauthorized.
 
-#### SRS-EVT-001: Transactional Outbox Event Relay & Microservice Parity
+#### SRS-PRD-EVT-001: Transactional Outbox Event Relay & Microservice Parity
 * **Parent PRD:** `PRD-SYS-001`
 * **Statement:** When any domain mutation commits state to persistence, the local Application Layer shall write an atomic outbox message within the same database transaction; the background Outbox Worker shall poll unsent messages under advisory lock `42003` and dispatch to target message brokers with at-least-once delivery guarantees.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(a); ISO/IEC/IEEE 29148:2018 § 9.6.2.
@@ -431,28 +431,28 @@ stateDiagram-v2
 
 ### 3.2 Subsystem 2: Study Protocol Authoring & Metadata Repository (MDR)
 
-#### SRS-MDR-001: CDISC USDM Graph Protocol Authoring
+#### SRS-PRD-MDR-001: CDISC USDM Graph Protocol Authoring
 * **Parent PRD:** `PRD-MDR-001`
 * **Statement:** The Designer Service shall persist clinical study protocols as a directed property graph in Neo4j conforming strictly to the CDISC USDM v3.0/v4.0 specification, enforcing topological ordering across Study Arms, Epochs, and Encounters.
 * **Regulatory Basis:** CDISC USDM v3.0 Core Specification; ICH M11.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Graph validation rejects cyclic epoch paths and validates schema against official USDM JSON Schema.
 
-#### SRS-MDR-002: Biomedical Concept Lock State in Active Execution
+#### SRS-PRD-MDR-002: Biomedical Concept Lock State in Active Execution
 * **Parent PRD:** `PRD-MDR-002`
 * **Statement:** When a study transitions to active clinical execution, the Designer Service shall lock all instantiated Biomedical Concepts and Value-Level Metadata from direct modification, requiring a formal protocol amendment for revisions.
 * **Regulatory Basis:** ICH GCP E6(R2) § 4.5.1; 21 CFR § 312.30.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Mutation attempt against in-use Biomedical Concept returns HTTP 423 Locked (`IN_USE_LOCK_ERROR`).
 
-#### SRS-MDR-003: Schedule of Activities (SoA) Matrix Synthesis
+#### SRS-PRD-MDR-003: Schedule of Activities (SoA) Matrix Synthesis
 * **Parent PRD:** `PRD-MDR-007`
 * **Statement:** The Designer Service shall synthesize a cross-sectional Schedule of Activities matrix mapping clinical activities to encounters, computing relative visit windows $T_{\text{target}} \pm \Delta_{\text{days}}$ and activity mandatory flags.
 * **Regulatory Basis:** CDISC USDM v3.0 SoA Model; ICH M11.
 * **Verification Method & Qualification:** Demonstration (D) & Test (T) [OQ].
 * **Verification Criteria:** Generated SoA matrix accurately outputs valid visit window boundaries for all encounters.
 
-#### SRS-MDR-004: Semantic Protocol Amendment Diffing
+#### SRS-PRD-MDR-004: Semantic Protocol Amendment Diffing
 * **Parent PRD:** `PRD-MDR-003`
 * **Statement:** When an amendment is authored, the Designer Service shall branch the study graph via `PREVIOUS_VERSION` relationships and compute a multi-layer semantic diff categorizing additions, modifications, and deletions of visits and procedures.
 * **Regulatory Basis:** ICH GCP E6(R2) § 4.5.3; 21 CFR § 312.30.
@@ -463,7 +463,7 @@ stateDiagram-v2
 
 ### 3.3 Subsystem 3: Digital Data Flow (DDF) Compiler Engine
 
-#### SRS-DDF-001: USDM to Intermediate Representation (IR) Compilation
+#### SRS-PRD-DDF-001: USDM to Intermediate Representation (IR) Compilation
 * **Parent PRD:** `PRD-DDF-001`
 * **Statement:** The DDF Compiler Engine shall ingest USDM protocol graphs and compile an abstract syntax tree (AST) intermediate representation containing form layouts, item data types, and cross-variable validation rules.
 * **Regulatory Basis:** CDISC DDF Architectural Blueprint v1.0.
@@ -481,21 +481,21 @@ stateDiagram-v2
 
 ### 3.4 Subsystem 4: Electronic Data Capture (EDC) & eCRF Execution Runtime
 
-#### SRS-EDC-001: Dynamic Subject Schema Projection
+#### SRS-PRD-EDC-001: Dynamic Subject Schema Projection
 * **Parent PRD:** `PRD-EDC-001`
 * **Statement:** When a subject visit casebook is rendered, the Execution Engine shall dynamically project the eCRF layout matching the subject's `active_protocol_version` tag, ensuring historical visit forms remain immutable across protocol amendments.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(a); ICH GCP E6(R2) § 5.5.3.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Enrolled subject on Version 1.0 renders Version 1.0 form layout; subject on Version 2.0 renders updated form layout with added procedures.
 
-#### SRS-EDC-002: Real-Time Edit Check Evaluation & Candidate Query Staging
+#### SRS-PRD-EDC-002: Real-Time Edit Check Evaluation & Candidate Query Staging
 * **Parent PRD:** `PRD-EDC-002`
 * **Statement:** During eCRF form submission, the Execution Engine shall evaluate all active validation rules; if univariate or multivariate discrepancies are detected, the system shall stage a `ClinicalQuery` record in `CANDIDATE` status.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(f); ICH GCP E6(R2) § 5.5.3.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Submitting systolic BP < diastolic BP commits observation but automatically creates staged `CANDIDATE` query.
 
-#### SRS-EDC-003: 21 CFR Part 11 Electronic Signature Manifestation
+#### SRS-PRD-EDC-003: 21 CFR Part 11 Electronic Signature Manifestation
 * **Parent PRD:** `PRD-EDC-003`
 * **Statement:** When an investigator signs an eCRF form, the system shall validate the 60-second step-up token, generate a persistent `SignatureManifestation` embedding signer name, UTC timestamp, and statement of intent, and transition form status to `SIGNED`.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.50, § 11.70.
@@ -506,28 +506,28 @@ stateDiagram-v2
 
 ### 3.5 Subsystem 5: Subject Lifecycle, Eligibility & Randomization (RTSM)
 
-#### SRS-SUB-001: Subject State Machine Transition Governance
+#### SRS-PRD-SUB-001: Subject State Machine Transition Governance
 * **Parent PRD:** `PRD-SUB-001`
 * **Statement:** The Execution Engine shall govern subject progression through the strict state machine: $\text{SCREENING} \rightarrow \text{ENROLLED} \rightarrow \text{RANDOMIZED} \rightarrow \text{ACTIVE} \rightarrow \text{COMPLETED}$, blocking unauthorized bypasses with `InvalidStateTransitionError`.
 * **Regulatory Basis:** ICH GCP E6(R2) § 4.3; ISO 14155 § 7.3.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Direct transition attempt from `SCREENING` to `RANDOMIZED` raises validation exception (HTTP 422).
 
-#### SRS-SUB-002: Automated Inclusion / Exclusion Eligibility Gating
+#### SRS-PRD-SUB-002: Automated Inclusion / Exclusion Eligibility Gating
 * **Parent PRD:** `PRD-SUB-002`
 * **Statement:** When the screening checklist is submitted, the system shall verify that all Inclusion criteria evaluate to `TRUE` and all Exclusion criteria evaluate to `FALSE`; any violation shall transition the subject to `SCREEN_FAILED`.
 * **Regulatory Basis:** ICH GCP E6(R2) § 4.5.2; 21 CFR § 312.60.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Failing a single mandatory inclusion criterion blocks enrollment and prevents randomization.
 
-#### SRS-SUB-003: Stratified Permuted Block Randomization & Factor Immutability
+#### SRS-PRD-SUB-003: Stratified Permuted Block Randomization & Factor Immutability
 * **Parent PRD:** `PRD-SUB-003`
 * **Statement:** Upon valid randomization command, the RTSM Engine shall compute treatment allocation via stratified permuted blocks, commit allocation in an atomic database transaction, and permanently lock subject `strat_factors` from subsequent alteration.
 * **Regulatory Basis:** ICH E9 Statistical Principles for Clinical Trials § 2.3.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Attempted alteration of stratification factors on a randomized subject raises `LOCKED_FACTOR_MUTATION` exception.
 
-#### SRS-SUB-004: Emergency Unblinding Code-Break Protocol
+#### SRS-PRD-SUB-004: Emergency Unblinding Code-Break Protocol
 * **Parent PRD:** `PRD-SUB-004`
 * **Statement:** When an emergency code-break is executed, the Execution Engine shall require PI step-up re-authentication and clinical justification, expose treatment allocation immediately, mark `is_unblinded = TRUE`, and emit high-priority alerts to the Medical Monitor.
 * **Regulatory Basis:** ICH GCP E6(R2) § 5.13.4; 21 CFR Part 11 § 11.10(e).
@@ -538,21 +538,21 @@ stateDiagram-v2
 
 ### 3.6 Subsystem 6: Data Clarification, Queries & Review Workflows
 
-#### SRS-QRY-001: Clinical Discrepancy (Query) Lifecycle Management
+#### SRS-PRD-QRY-001: Clinical Discrepancy (Query) Lifecycle Management
 * **Parent PRD:** `PRD-QRY-001`
 * **Statement:** The Execution Engine shall enforce the query lifecycle state transitions: $\text{CANDIDATE} \rightarrow \text{OPEN} \rightarrow \text{ANSWERED} \rightarrow \text{CLOSED} \mid \text{REOPENED}$, permitting only site staff to answer and data management/monitors to close.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(e); ICH GCP E6(R2) § 5.5.3.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Site user attempt to transition query directly from `OPEN` to `CLOSED` returns HTTP 403 Forbidden.
 
-#### SRS-QRY-002: Background Query SLA Auto-Escalation & Notification
+#### SRS-PRD-QRY-002: Background Query SLA Auto-Escalation & Notification
 * **Parent PRD:** `PRD-QRY-002`
 * **Statement:** The Background Query SLA Escalation Worker shall sweep open queries every 60 minutes under advisory lock `42002`, advancing overdue queries from `NORMAL` to `HIGH` priority at 5 days and `CRITICAL` at 10 days, generating notifications to the assigned CRA and site PI.
 * **Regulatory Basis:** ICH GCP E6(R2) § 5.18.4; 21 CFR Part 11 § 11.10(a).
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Unanswered queries exceeding SLA threshold advance in priority and emit notification events with audit trails.
 
-#### SRS-QRY-003: Controlled 14-Day Query Reopening Window
+#### SRS-PRD-QRY-003: Controlled 14-Day Query Reopening Window
 * **Parent PRD:** `PRD-QRY-003`
 * **Statement:** When a Data Manager requests to reopen a `CLOSED` clinical query, the Execution Engine shall permit reopening if the closure timestamp is $\le 14\text{ days}$ old, requiring a mandatory supervisory change justification and resetting the site SLA clock.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(e); ICH GCP E6(R2) § 4.9.3.
@@ -563,14 +563,14 @@ stateDiagram-v2
 
 ### 3.7 Subsystem 7: Medical Terminology & Dictionary Coding
 
-#### SRS-COD-001: MedDRA & WHODrug Automated Semantic Coding
+#### SRS-PRD-COD-001: MedDRA & WHODrug Automated Semantic Coding
 * **Parent PRD:** `PRD-COD-001`
 * **Statement:** The Medical Coding Engine shall process verbatim adverse event and concomitant medication terms against authoritative MedDRA and WHODrug releases, generating deterministic LLT/PT/SOC and ATC coding suggestions with confidence scores.
 * **Regulatory Basis:** ICH M1 MedDRA Terminology; WHO-ART Guidelines.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Exact verbatim match auto-codes with 1.0 confidence; low-confidence matches are staged for human Data Manager manual review.
 
-#### SRS-COD-002: Dictionary Up-Versioning Impact Analysis
+#### SRS-PRD-COD-002: Dictionary Up-Versioning Impact Analysis
 * **Parent PRD:** `PRD-COD-002`
 * **Statement:** When a new MedDRA dictionary release is imported, the Coding Engine shall execute an automated impact analysis identifying previously coded terms impacted by structural hierarchical moves or currency demotions.
 * **Regulatory Basis:** ICH M1 Best Practices Guide § 4.
@@ -581,14 +581,14 @@ stateDiagram-v2
 
 ### 3.8 Subsystem 8: Study Startup (SSU) & Greenlight Site Activation
 
-#### SRS-SSU-001: 6-Facet Automated Site Greenlight Gate
+#### SRS-PRD-SSU-001: 6-Facet Automated Site Greenlight Gate
 * **Parent PRD:** `PRD-SSU-001`
 * **Statement:** The CTMS Startup Engine shall evaluate the 6 mandatory site activation facets (IRB/IEC Approval, Executed Clinical Trial Agreement, Executed CDA/NDA, Essential Documents in eISF, Investigational Product Supply at Depot, and Signed DOA Log), gating subject screening until all 6 evaluate to `TRUE`.
 * **Regulatory Basis:** ICH GCP E6(R2) § 5.6; 21 CFR § 312.60.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Missing any single facet blocks site activation and prevents subject enrollment in the Execution Engine.
 
-#### SRS-SSU-002: Executive Dual-Signature GxP Override
+#### SRS-PRD-SSU-002: Executive Dual-Signature GxP Override
 * **Parent PRD:** `PRD-SSU-002`
 * **Statement:** When an administrative site activation override is submitted, the system shall require dual-signature authorization from the Sponsor QA Director and Lead Medical Monitor with 60-second step-up tokens and formal justification.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.50, § 11.200.
@@ -599,14 +599,14 @@ stateDiagram-v2
 
 ### 3.9 Subsystem 9: CTMS Operations, CRA Monitoring & RBQM
 
-#### SRS-CTM-001: CRA Monitoring Visit Report Lifecycle
+#### SRS-PRD-CTM-001: CRA Monitoring Visit Report Lifecycle
 * **Parent PRD:** `PRD-CTM-001`
 * **Statement:** The CTMS service shall manage Monitoring Visit Reports (MVR) across discrete lifecycle states: $\text{SCHEDULED} \rightarrow \text{IN_PROGRESS} \rightarrow \text{SUBMITTED} \rightarrow \text{APPROVED}$, enforcing CRA authoring gates and Sponsor Approver electronic signatures.
 * **Regulatory Basis:** ICH GCP E6(R2) § 5.18.6; 21 CFR Part 11 § 11.10(a).
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Unapproved MVR cannot be finalized; all edits during visit review generate audit history with user attribution.
 
-#### SRS-CTM-002: RBQM Key Risk Indicator (KRI) Z-Scores
+#### SRS-PRD-CTM-002: RBQM Key Risk Indicator (KRI) Z-Scores
 * **Parent PRD:** `PRD-CTM-002`
 * **Statement:** The CTMS Risk-Based Quality Management (RBQM) engine shall compute statistical Z-scores across study Key Risk Indicators (AE reporting rate, query resolution latency, protocol deviation density) across all investigative sites.
 * **Regulatory Basis:** ICH E6(R2) § 5.0 (Risk-based monitoring); TransCelerate RBM Framework.
@@ -617,14 +617,14 @@ stateDiagram-v2
 
 ### 3.10 Subsystem 10: Regulatory eTMF Ingestion & DIA Reference Model
 
-#### SRS-TMF-001: DIA TMF Reference Model v3.2.0 Ingestion
+#### SRS-PRD-TMF-001: DIA TMF Reference Model v3.2.0 Ingestion
 * **Parent PRD:** `PRD-TMF-001`
 * **Statement:** The eTMF Service shall classify ingested documents against the authoritative DIA TMF Reference Model v3.2.0 catalog across 10 canonical zones, validating artifact codes and rejecting unmapped classifications with HTTP 422.
 * **Regulatory Basis:** DIA TMF Reference Model v3.2.0; 21 CFR Part 11 § 11.10(a).
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Ingesting an unrecognized artifact code returns HTTP 422; valid documents persist zone, section, and artifact metadata.
 
-#### SRS-TMF-002: Expected Document List (EDL) Completeness
+#### SRS-PRD-TMF-002: Expected Document List (EDL) Completeness
 * **Parent PRD:** `PRD-TMF-004`
 * **Statement:** The eTMF Completeness Engine shall dynamically calculate study-level and site-level Expected Document List (EDL) completeness percentages against active clinical milestones, surfacing missing essential documents.
 * **Regulatory Basis:** ICH GCP E6(R2) § 8.1; EMA Reflection Paper on TMF.
@@ -635,14 +635,14 @@ stateDiagram-v2
 
 ### 3.11 Subsystem 11: Isolated eISF Regulatory Binder & Synchronization
 
-#### SRS-ISF-001: Site-Isolated Regulatory Binder
+#### SRS-PRD-ISF-001: Site-Isolated Regulatory Binder
 * **Parent PRD:** `PRD-ISF-001`
 * **Statement:** The eISF Service shall enforce strict site tenancy isolation, ensuring that Principal Investigators and site coordinators access only documents residing within their institution's assigned binder partition.
 * **Regulatory Basis:** ICH GCP E6(R2) § 8.1; HIPAA Security Rule.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Investigator token from Site A querying Site B document binder returns HTTP 403 Forbidden.
 
-#### SRS-ISF-002: Bidirectional eISF-to-eTMF Sync
+#### SRS-PRD-ISF-002: Bidirectional eISF-to-eTMF Sync
 * **Parent PRD:** `PRD-ISF-002`
 * **Statement:** When a site document (e.g. executed Form 1572, CV) is approved in the eISF, the synchronization worker shall deliver a verified cryptographic copy to the Sponsor eTMF with unbroken audit provenance.
 * **Regulatory Basis:** ICH GCP E6(R2) § 8.1; 21 CFR Part 11 § 11.10(e).
@@ -653,7 +653,7 @@ stateDiagram-v2
 
 ### 3.12 Subsystem 12: Digital Informed Consent (eConsent) & Re-Consent
 
-#### SRS-CON-001: Flesch-Kincaid Readability Scoring
+#### SRS-PRD-CON-001: Flesch-Kincaid Readability Scoring
 * **Parent PRD:** `PRD-CON-001`
 * **Statement:** Prior to IRB submission, the eConsent authoring engine shall calculate the Flesch-Kincaid Grade Level of participant-facing informed consent forms, flagging texts exceeding an 8th-grade reading level.
 * **Regulatory Basis:** FDA Guidance: Informed Consent Information Sheet; 21 CFR § 50.20.
@@ -671,21 +671,21 @@ stateDiagram-v2
 
 ### 3.13 Subsystem 13: Pharmacovigilance, E2B(R3) & AS2 Regulatory Gateway
 
-#### SRS-SAF-001: ICH E2B(R3) ISO 27953-2 ICSR XML
+#### SRS-PRD-SAF-001: ICH E2B(R3) ISO 27953-2 ICSR XML
 * **Parent PRD:** `PRD-SAF-001`
 * **Statement:** The Safety Gateway shall compile Serious Adverse Event cases into validated ICH E2B(R3) XML messages conforming strictly to ISO 27953-2 schema specifications and regional FDA/EMA implementation guides.
 * **Regulatory Basis:** ICH E2B(R3); FDA Specifications for Preparing and Submitting Electronic ICSRs.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Generated E2B(R3) XML passes W3C XML Schema validation and Schematron business rule validation with zero errors.
 
-#### SRS-SAF-002: Expedited 7/15-Day Regulatory Clock
+#### SRS-PRD-SAF-002: Expedited 7/15-Day Regulatory Clock
 * **Parent PRD:** `PRD-SAF-002`
 * **Statement:** When an SAE is classified as fatal or life-threatening SUSAR, the Safety Service shall initiate an expedited 7-calendar-day regulatory reporting clock; all other serious unexpected cases initiate a 15-calendar-day clock.
 * **Regulatory Basis:** 21 CFR § 312.32(c)(1); ICH E2A § III.A.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Safety case dashboard displays active countdown; alerts Medical Monitor at 50%, 75%, and 90% clock expiration.
 
-#### SRS-SAF-003: B2B AS2 Secure Transmission & MDN Check
+#### SRS-PRD-SAF-003: B2B AS2 Secure Transmission & MDN Check
 * **Parent PRD:** `PRD-SAF-003`
 * **Statement:** The Safety Transmission Engine shall package E2B(R3) XML into S/MIME encrypted AS2 messages, transmit to regulatory health authority endpoints (FDA ESG, EMA EudraVigilance), and verify synchronous Message Disposition Notifications (MDN).
 * **Regulatory Basis:** RFC 4130 (AS2); 21 CFR Part 11 § 11.10(d).
@@ -696,14 +696,14 @@ stateDiagram-v2
 
 ### 3.14 Subsystem 14: Medical Imaging & Blinded RECIST 1.1 Adjudication
 
-#### SRS-IMG-001: WebGL Multi-Planar Reconstruction (MPR)
+#### SRS-PRD-IMG-001: WebGL Multi-Planar Reconstruction (MPR)
 * **Parent PRD:** `PRD-IMG-001`
 * **Statement:** The Medical Imaging Viewer shall render DICOM CT and MRI scan series in orthogonal planes (Axial, Sagittal, Coronal) using client-side WebGL shaders, supporting caliper and ellipse measurement tools.
 * **Regulatory Basis:** FDA Guidance: Clinical Trial Imaging Endpoint Process Standards.
 * **Verification Method & Qualification:** Demonstration (D) [OQ].
 * **Verification Criteria:** Image series load within 3 seconds; measurements maintain sub-millimeter precision calibration against DICOM pixel spacing.
 
-#### SRS-IMG-002: Blinded RECIST 1.1 20% SOD Discordance
+#### SRS-PRD-IMG-002: Blinded RECIST 1.1 20% SOD Discordance
 * **Parent PRD:** `PRD-IMG-002`
 * **Statement:** When two independent blinded radiologists submit tumor assessments, the Imaging Engine shall compute the Sum of Diameters (SOD); if the assessments diverge by $> 20\%$, the system shall automatically route the dossier to a tie-breaker Adjudicator.
 * **Regulatory Basis:** RECIST 1.1 Criteria; FDA Guidance on Clinical Trial Imaging Endpoints.
@@ -714,14 +714,14 @@ stateDiagram-v2
 
 ### 3.15 Subsystem 15: Centralized Statistical Monitoring (CSM) & Fraud Forensics
 
-#### SRS-CSM-001: Benford's Law Digit Preference Testing
+#### SRS-PRD-CSM-001: Benford's Law Digit Preference Testing
 * **Parent PRD:** `PRD-CSM-001`
 * **Statement:** The Statistical Forensics Engine shall evaluate leading and trailing digits of clinical numerical observations across investigative sites, computing Chi-Square goodness-of-fit against Benford's distribution to flag fabricated data.
 * **Regulatory Basis:** ICH E6(R2) § 5.0 (Centralized monitoring); FDA Guidance on Oversight of Clinical Investigations.
 * **Verification Method & Qualification:** Analysis (A) & Test (T) [OQ].
 * **Verification Criteria:** Artificially fabricated observations with uniform digit distribution trigger $p < 0.01$ anomaly flags.
 
-#### SRS-CSM-002: 64-Bit pHash Duplicate Scan Detection
+#### SRS-PRD-CSM-002: 64-Bit pHash Duplicate Scan Detection
 * **Parent PRD:** `PRD-CSM-003`
 * **Statement:** When medical images or ECG traces are uploaded, the Forensics Engine shall compute a 64-bit DCT perceptual hash (pHash); if Hamming distance $\le 3$ compared to another subject's scan, the system shall flag duplicate fraud.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(b); ISO 14971 § 7.1.
@@ -750,14 +750,14 @@ stateDiagram-v2
 
 ### 3.17 Subsystem 17: Site Financials, Investigator Grants & Participant Wallet
 
-#### SRS-FIN-001: Procedure Fee Triggers & 10% Holdback
+#### SRS-PRD-FIN-001: Procedure Fee Triggers & 10% Holdback
 * **Parent PRD:** `PRD-FIN-001`
 * **Statement:** When an eCRF visit is signed by the PI, the Payments Engine shall calculate payable investigator procedure fees according to the site budget, automatically placing a mandatory 10% escrow holdback until final study closeout.
 * **Regulatory Basis:** ICH GCP E6(R2) § 5.9; Fair Market Value (FMV) Compliance.
 * **Verification Method & Qualification:** Analysis (A) & Test (T) [OQ].
 * **Verification Criteria:** Valid visit sign-off credits site account for 90% of fee and reserves exactly 10% into `HoldbackEscrowLedger`.
 
-#### SRS-FIN-002: Participant Wallet & IRS 1099 Tracking
+#### SRS-PRD-FIN-002: Participant Wallet & IRS 1099 Tracking
 * **Parent PRD:** `PRD-FIN-002`
 * **Statement:** The Participant Wallet Engine shall credit trial participant stipends upon confirmed visit attendance; when cumulative disbursements reach $\$600$ in a calendar year, the system shall flag the subject for IRS 1099-MISC tax reporting.
 * **Regulatory Basis:** IRS Code Section 6041; 21 CFR § 50.20.
@@ -768,14 +768,14 @@ stateDiagram-v2
 
 ### 3.18 Subsystem 18: Interoperability, SMART on FHIR & Biometric Sensors
 
-#### SRS-INT-001: SMART on FHIR eSource Ingestion Drawer
+#### SRS-PRD-INT-001: SMART on FHIR eSource Ingestion Drawer
 * **Parent PRD:** `PRD-INT-001`
 * **Statement:** The Interoperability Service shall query hospital EHR systems via SMART on FHIR REST interfaces, extracting vital signs and lab results and presenting them in an eSource reconciliation drawer for one-click CRC ingestion.
 * **Regulatory Basis:** FDA Guidance: Electronic Source Data in Clinical Investigations; HL7 FHIR R4.
 * **Verification Method & Qualification:** Demonstration (D) & Test (T) [OQ].
 * **Verification Criteria:** FHIR `Observation` payload auto-populates corresponding eCRF candidate fields with EHR provenance metadata.
 
-#### SRS-INT-002: Continuous Biometric Sensor Stream
+#### SRS-PRD-INT-002: Continuous Biometric Sensor Stream
 * **Parent PRD:** `PRD-INT-002`
 * **Statement:** The Sensor Stream Ingestor shall receive continuous actigraphy, pulse oximetry, and blood glucose telemetry streams, computing hourly summary aggregates and raising high-priority alerts on critical threshold violations.
 * **Regulatory Basis:** FDA Guidance: Digital Health Technologies for Remote Data Acquisition.
@@ -804,7 +804,7 @@ stateDiagram-v2
 
 ### 3.20 Subsystem 20: Clinical Data Repository (CDR) & Biostatistical Export
 
-#### SRS-BIO-001: CDISC SDTM & ADaM Dataset-JSON 1.0.0 Serialization
+#### SRS-PRD-BIO-001: CDISC SDTM & ADaM Dataset-JSON 1.0.0 Serialization
 * **Parent PRD:** `PRD-BIO-001`
 * **Statement:** The Biostatistical Export Engine shall extract, validate, and serialize clinical datasets into CDISC Dataset-JSON 1.0.0 and SAS Transport (XPT v5) formats across standard SDTM (DM, AE, VS, LB, MH, CM, CE) and ADaM (ADSL, ADAE, ADVS) domains.
 * **Regulatory Basis:** CDISC Dataset-JSON v1.0.0; FDA Study Data Technical Conformance Guide.
@@ -822,21 +822,21 @@ stateDiagram-v2
 
 ### 3.21 Subsystem 21: Clinical Issue Hub & SLA Management
 
-#### SRS-TCK-001: Multi-Tier Functional Queue Routing
+#### SRS-PRD-TCK-001: Multi-Tier Functional Queue Routing
 * **Parent PRD:** `PRD-TCK-001`
 * **Statement:** The Tickets Service shall route incoming operational and technical inquiries into segregated functional queues based on category (EDC, RTSM, eTMF, Lab, Protocol), enforcing tenant and site isolation.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(a); ISO 9001:2015 § 8.2.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** RTSM-tagged ticket is visible exclusively to RTSM support specialists and site personnel belonging to that study.
 
-#### SRS-TCK-002: Automated Query & Ticket SLA Escalation Worker
+#### SRS-PRD-TCK-002: Automated Query & Ticket SLA Escalation Worker
 * **Parent PRD:** `PRD-TCK-001`
 * **Statement:** The Tickets Service escalation worker (`apps/tickets/escalation.py`) shall poll overdue tickets under pessimistic `SELECT ... FOR UPDATE` locks, advancing ticket priority stepwise up to `CRITICAL` and emitting gateway-signed notification alerts.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(a); ISO 9001:2015 § 8.2.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Overdue tickets advance priority monotonically; failed notification leaving `last_escalation_notified_at` unchanged guarantees automated retry.
 
-#### SRS-TCK-003: Chronological Read Auditing & Non-Repudiation Ledger
+#### SRS-PRD-TCK-003: Chronological Read Auditing & Non-Repudiation Ledger
 * **Parent PRD:** `PRD-TCK-001`
 * **Statement:** When any ticket, comment, or audit trail endpoint is accessed, the Tickets Service shall append a read event (`TICKET_LIST`, `TICKET_VIEW`, `TICKET_COMMENTS_VIEW`) to the immutable `TicketAuditLog`, rejecting database delete or update attempts via runtime exception.
 * **Regulatory Basis:** 21 CFR Part 11 § 11.10(e); EU Annex 11 § 9.
@@ -847,7 +847,7 @@ stateDiagram-v2
 
 ### 3.22 Subsystem 22: Clinical SOP Knowledge Base & Contextual Help
 
-#### SRS-KNO-001: Persona & Route Specificity SOP Dispatcher
+#### SRS-PRD-KNO-001: Persona & Route Specificity SOP Dispatcher
 * **Parent PRD:** `PRD-KNO-001`
 * **Statement:** When a user opens the contextual help drawer, the Knowledge Service shall compute a specificity score matching the active frontend route pattern and user role, returning the most specific approved SOP version.
 * **Regulatory Basis:** 21 CFR § 312.50; ICH GCP E6(R2) § 5.1.
@@ -865,14 +865,14 @@ stateDiagram-v2
 
 ### 3.23 Subsystem 23: Decentralized Clinical Trials (DCT) & Telehealth
 
-#### SRS-DCT-001: Encrypted WebRTC Telehealth & Electronic Signature
+#### SRS-PRD-DCT-001: Encrypted WebRTC Telehealth & Electronic Signature
 * **Parent PRD:** `PRD-DCT-001`
 * **Statement:** The DCT Service shall establish end-to-end encrypted WebRTC audio/video consultations between investigators and participants, recording encounter metadata, duration, and participant identity verification in `TelehealthSessionRecord`.
 * **Regulatory Basis:** FDA Guidance: Decentralized Clinical Trials; HIPAA Security Rule.
 * **Verification Method & Qualification:** Demonstration (D) [OQ].
 * **Verification Criteria:** Telehealth session metadata commits without recording raw audio/video to disk unless explicit patient consent is recorded.
 
-#### SRS-DCT-002: Plain-Language Lay Summary Portal & Publication Gating
+#### SRS-PRD-DCT-002: Plain-Language Lay Summary Portal & Publication Gating
 * **Parent PRD:** `PRD-DCT-001`
 * **Statement:** The Lay Summary Portal shall publish plain-language, non-promotional trial results to participants and the public under EU CTR 536/2014, verifying reading grade level $\le 8.0$ and requiring dual-approval from Sponsor Medical Monitor and Patient Advocacy Lead before public release.
 * **Regulatory Basis:** EU Clinical Trials Regulation (EU CTR) 536/2014 Article 37; Declaration of Helsinki.
@@ -883,14 +883,14 @@ stateDiagram-v2
 
 ### 3.24 Subsystem 24: Medical Device & IVD Investigation Suite
 
-#### SRS-DEV-001: FDA Unique Device Identifier (UDI) Barcode Capture & Quarantine
+#### SRS-PRD-DEV-001: FDA Unique Device Identifier (UDI) Barcode Capture & Quarantine
 * **Parent PRD:** `PRD-SYS-126`
 * **Statement:** The Device Service shall ingest FDA UDI barcodes (Device Identifier + Production Identifier), tracking serialized device custody; any reported device malfunction with adverse event potential shall automatically flag the manufacturing lot for RTSM quarantine.
 * **Regulatory Basis:** 21 CFR Part 830 (UDI); ISO 14155:2020 § 7.3; EU MDR 2017/745.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Logging a critical device deficiency report automatically updates `DeviceQuarantineRecord` and blocks kit dispensation across all sites.
 
-#### SRS-DEV-002: Medical Device Malfunction & Deficiencies Reporting
+#### SRS-PRD-DEV-002: Medical Device Malfunction & Deficiencies Reporting
 * **Parent PRD:** `PRD-SYS-126`
 * **Statement:** When an investigational medical device or IVD experiences a deficiency, malfunction, or use error, the Device Service shall record serialized deficiency attributes, determine if the event meets Serious Adverse Device Effect (SADE) criteria, and dispatch expedited notifications to the Sponsor Quality and Safety Teams.
 * **Regulatory Basis:** ISO 14155:2020 § 9.2; 21 CFR § 803 (Medical Device Reporting); EU MDR Article 87.

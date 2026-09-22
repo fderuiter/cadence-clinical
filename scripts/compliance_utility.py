@@ -229,7 +229,7 @@ def extract_requirement_references(content: str) -> set[str]:
     # Match prd-ABC-123 case-insensitively
     prd_pattern = re.compile(r"\bprd-([a-z0-9]+)-([a-z0-9]+)\b", re.IGNORECASE)
 
-    # We can also support req-X and sys-X case-insensitively just in case
+    # We can also support req-X and sys-X case-insensitively
     req_pattern = re.compile(r"\breq-(\d+)\b", re.IGNORECASE)
     sys_pattern = re.compile(r"(?<!prd-)\bsys-(\d+)\b", re.IGNORECASE)
 
@@ -241,7 +241,7 @@ def extract_requirement_references(content: str) -> set[str]:
     for m in req_pattern.findall(content):
         refs.add(f"REQ-{m.upper()}")
     for m in sys_pattern.findall(content):
-        refs.add(f"SYS-{m.upper()}")
+        refs.add(f"PRD-SYS-{m.upper()}")
 
     return refs
 
@@ -275,3 +275,204 @@ def validate_adr_compliance(
         return False, "\n".join(errors)
 
     return True, ""
+
+
+WORKSTATION_URL_RE = re.compile(
+    r'file:///[^\s\)\"\']*?/cadence-clinical/([^\s\)\"\']+)'
+)
+PROTECTED_RE = re.compile(r"(```[\s\S]*?```|`[^`\n]+`|\]\([^\)]*\)|\[[^\]]+\]:\s*\S+)")
+
+
+def sanitize_content(
+    content: str, valid_requirements: set[str] = None, docs_dir: str = DEFAULT_DOCS_DIR
+) -> tuple[str, int, int]:
+    """
+    Sanitizes markdown content by:
+    1. Stripping workstation file:/// URLs pointing to cadence-clinical.
+    2. Normalizing requirement reference strings outside code blocks and link targets.
+    Returns (new_content, urls_replaced_count, reqs_normalized_count).
+    """
+    if valid_requirements is None:
+        valid_requirements = get_valid_requirements(docs_dir)
+
+    # Build numeric bare mapping: (CAT, int(NUM)) -> 'PRD-CAT-PADDED_NUM'
+    bare_num_map = {}
+    for req in valid_requirements:
+        if req.startswith("PRD-"):
+            parts = req.split("-")
+            if len(parts) >= 3:
+                cat = parts[1].upper()
+                num_str = parts[2]
+                try:
+                    num_int = int(num_str)
+                    bare_num_map[(cat, num_int)] = req
+                except ValueError:
+                    pass
+
+    # 1. Strip workstation URLs
+    url_count = 0
+
+    def url_replacer(match):
+        nonlocal url_count
+        url_count += 1
+        return match.group(1)
+
+    new_content = WORKSTATION_URL_RE.sub(url_replacer, content)
+
+    # 2. Normalize requirements in text sections outside protected blocks
+    tokens = PROTECTED_RE.split(new_content)
+    req_pattern = re.compile(
+        r'\b(?:(PRD)-([A-Za-z0-9]+)-([A-Za-z0-9]+)|(trace)[\s-]*(\d+)|(?<!PRD-)(?<!prd-)([A-Za-z0-9]+)-(\d+))\b',
+        re.IGNORECASE,
+    )
+
+    req_count = 0
+    new_tokens = []
+
+    for i, token in enumerate(tokens):
+        # Odd indices are protected blocks (code blocks, inline code, link destinations)
+        if i % 2 == 1:
+            new_tokens.append(token)
+            continue
+
+        def req_replacer(m):
+            nonlocal req_count
+            full_match = m.group(0)
+
+            # Case 1: PRD-CAT-NUM (normalize case to PRD-CAT-NUM)
+            if m.group(1):
+                normalized = f"PRD-{m.group(2).upper()}-{m.group(3).upper()}"
+                if normalized != full_match:
+                    req_count += 1
+                    return normalized
+                return full_match
+
+            # Case 2: trace-x or trace x
+            if m.group(4):
+                normalized = f"Trace-{m.group(5)}"
+                if normalized != full_match:
+                    req_count += 1
+                    return normalized
+                return full_match
+
+            # Case 3: Bare CAT-NUM
+            if m.group(6):
+                cat = m.group(6).upper()
+                try:
+                    num_int = int(m.group(7))
+                    key = (cat, num_int)
+                    if key in bare_num_map:
+                        normalized = bare_num_map[key]
+                        if normalized != full_match:
+                            req_count += 1
+                            return normalized
+                except ValueError:
+                    pass
+
+            return full_match
+
+        section_normalized = req_pattern.sub(req_replacer, token)
+        new_tokens.append(section_normalized)
+
+    final_content = "".join(new_tokens)
+    return final_content, url_count, req_count
+
+
+def sanitize_file(
+    file_path: str,
+    valid_requirements: set[str] = None,
+    docs_dir: str = DEFAULT_DOCS_DIR,
+) -> tuple[bool, int, int]:
+    """
+    Sanitizes a single file in-place if changes are needed.
+    Returns (modified: bool, url_count: int, req_count: int).
+    """
+    if not os.path.isfile(file_path):
+        return False, 0, 0
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    new_content, url_count, req_count = sanitize_content(
+        content, valid_requirements=valid_requirements, docs_dir=docs_dir
+    )
+
+    if new_content != content:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        return True, url_count, req_count
+
+    return False, 0, 0
+
+
+def sanitize_docs(
+    docs_dir: str = DEFAULT_DOCS_DIR,
+    target_files: list[str] = None,
+    valid_requirements: set[str] = None,
+) -> tuple[int, int, int]:
+    """
+    Sanitizes all markdown files in docs_dir or specified target_files.
+    Returns (files_modified_count, urls_fixed_count, reqs_normalized_count).
+    """
+    if valid_requirements is None:
+        valid_requirements = get_valid_requirements(docs_dir)
+
+    if target_files:
+        files = [f for f in target_files if f.endswith(".md") and os.path.isfile(f)]
+    else:
+        files = _sweep_markdown_files(docs_dir)
+
+    modified_files = 0
+    total_urls = 0
+    total_reqs = 0
+
+    for file_path in sorted(files):
+        mod, urls, reqs = sanitize_file(
+            file_path, valid_requirements=valid_requirements, docs_dir=docs_dir
+        )
+        if mod:
+            modified_files += 1
+            total_urls += urls
+            total_reqs += reqs
+
+    return modified_files, total_urls, total_reqs
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Compliance utility for path sanitization and requirement normalization."
+    )
+    parser.add_argument(
+        "--sanitize",
+        "--fix",
+        dest="sanitize",
+        action="store_true",
+        help="Sanitize workstation file URLs and normalize requirement IDs in markdown files.",
+    )
+    parser.add_argument(
+        "--docs-dir",
+        default=DEFAULT_DOCS_DIR,
+        help="Directory containing documentation files.",
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="Optional list of specific markdown files to process.",
+    )
+
+    args = parser.parse_args()
+
+    if args.sanitize:
+        files_mod, urls_fixed, reqs_norm = sanitize_docs(
+            docs_dir=args.docs_dir, target_files=args.files
+        )
+        print(
+            f"Sanitization complete: {files_mod} file(s) updated, "
+            f"{urls_fixed} workstation URL(s) sanitized, "
+            f"{reqs_norm} requirement reference(s) normalized."
+        )
+        sys.exit(0)
+
