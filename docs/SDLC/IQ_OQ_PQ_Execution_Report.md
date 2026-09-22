@@ -14,9 +14,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2602
+- **Total Automated Test Cases Run:** 2622
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 2602 ⚪
+- **Unverified (Draft):** 2622 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -68,6 +68,7 @@ apps-payments            0.1.0
 apps-quality             0.1.0
 apps-safety              0.1.0
 apps-tickets             0.1.0
+asgiref                  3.12.1
 ast-serialize            0.8.0
 asyncpg                  0.31.0
 attrs                    26.1.0
@@ -148,6 +149,14 @@ nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
 openpyxl                 3.1.5
+opentelemetry-api        1.44.0
+opentelemetry-instrumentation 0.65b0
+opentelemetry-instrumentation-asgi 0.65b0
+opentelemetry-instrumentation-fastapi 0.65b0
+opentelemetry-instrumentation-httpx 0.65b0
+opentelemetry-sdk        1.44.0
+opentelemetry-semantic-conventions 0.65b0
+opentelemetry-util-http  0.65b0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
@@ -2060,6 +2069,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_record_list_with_runs` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
 | `test_record_run_local_only` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
 | `test_record_setup_gdrive_valid` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
+| `test_dev_cli_json_output_includes_registry_metadata` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_dotnet_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_node_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_python_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_alias_resolution` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_contains_all_18_cs_services` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_contains_node_services` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_fail_fast_unknown_service` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_ai_assisted_record_default_state_draft_ai` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
 | `test_ai_generation_manifest_structure` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
 | `test_approved_state_requires_hitl_fields` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
@@ -2454,6 +2471,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_s3_storage_adapter_not_found_handling` | `packages.storage.tests.test_storage_adapters` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_s3_storage_adapter_presigned_urls` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001 | ⚪ UNVERIFIED | N/A |
 | `test_s3_storage_adapter_put_and_get_lifecycle` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001, PRD-DOC-003, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_gateway_client_trace_header_injection` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_gateway_middleware_traceparent_propagation_and_generation` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_json_trace_log_formatter_no_active_span` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_json_trace_log_formatter_with_active_span` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_w3c_trace_context_extract_and_inject` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_dependency_graph_ast_parsing` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | ⚪ UNVERIFIED | N/A |
 | `test_dependency_graph_caching` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | ⚪ UNVERIFIED | N/A |
 | `test_factories_creation` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2540,6 +2562,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_main_no_duplicates_scanned` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_url_logic_preservation` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_with_duplicates_detected` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_normalize_line_csharp` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_css` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_javascript` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_python` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2549,8 +2572,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_file_for_lines` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_all` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_designer` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_build_compose_command_dotnet_profile` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_down_operations` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_execution_with_flag` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_build_compose_command_hybrid_profile` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_no_detach` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_dry_run` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_executes_subprocess` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2669,6 +2694,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_trace17_header_forwarding_contract` | `scripts.tests.test_nginx_front_proxy` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_comment_body` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_combined_audit_logic` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_dotnet_test_outcome_handling` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_get_status_emoji` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_gxp_validation_and_migration_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_markdown_and_architecture_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2726,12 +2752,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_persona_builders_contain_correct_claims` | `scripts.tests.test_shared_rbac_harness` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_shared_sqlite_dbs_and_clients` | `scripts.tests.test_shared_rbac_harness` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_find_migration_script` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_main_designer_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_main_etmf_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_execution_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_pre_boot_migrations_failure` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_pre_boot_migrations_success` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_web_server_nt` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_run_web_server_posix_fallback` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_web_server_posix_success` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_label_based_backlog_gating` | `scripts.tests.test_sync_github_project` | Trace-34 | ⚪ UNVERIFIED | N/A |
 | `test_get_repository_fallback` | `scripts.tests.test_sync_ruleset` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2800,8 +2825,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_ast_port_contracts_fails` | `scripts.tests.test_verify_contracts` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_ast_port_contracts_passes` | `scripts.tests.test_verify_contracts` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_cli_bypass_blocking` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_execute_dotnet_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_execute_pip_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_execute_pnpm_audit_success` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_extract_active_dotnet_vulnerabilities_invalid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_extract_active_dotnet_vulnerabilities_valid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_invalid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_modern_v9` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_extract_active_frontend_vulnerabilities_valid` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2836,6 +2864,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_for_manifest_bypasses` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_vulnerabilities_compound_matching` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_validate_vulnerabilities_multiple_identical_vuln_ids` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_validate_vulnerabilities_unapproved_dotnet_blocks_pipeline` | `scripts.tests.test_vulnerabilities` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_worker_suffix_uniqueness` | `tests.test_harness_isolation` | PRD-SYS-004 | ⚪ UNVERIFIED | N/A |
 | `test_get_run_uid_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_get_worker_id_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2888,28 +2917,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** a999c3bdeec691b2420ac2e08f1219844cf8e5c5344ca865b3003af6dc23b3e9
+- **Cryptographic Hash (SHA-256):** 0e68e64646865680890a5fd942b6bdf74ff978c356600e38c4ceb9f36b86bc04
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUU6UmDze9OIRhsZg4lhCOsZOk0MowDQYJKoZIhvcNAQEL
+MIIDNDCCAhygAwIBAgIUbnz+vLOnngpLmpuPhMW/keaC4p8wDQYJKoZIhvcNAQEL
 BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
 bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA5
-MjExNDU2NDdaFw0yNzA5MjIxNDU2NDdaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+MjExNTU2MjZaFw0yNzA5MjIxNTU2MjZaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
 IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCF
-W38yHngY9CKXgjAo4+kF/FCMvRL0cvJrF5fvn3EIRcxAwKOcU4G06gAagoQP1hKD
-7R/lzXEwQWATNdY5QNVCUvhsn65He4lGDRxEoLuq/U3dKYmJIEHfZqW2vo4zPfIl
-CsZXAW9WuORqwybp7nQ6jImldMPo78a+MVlOykA3l4mWVlLku5Rj2A1IFqrfP0qG
-VhUhxnYM72L+YmC3qAGjYznGFVvOpA2Y3lUyCBEQHexMZ0i7iOjU/5nlCjJEEN/1
-c5AxcKhjD632smcLK+6a3dbDDn9wYqyRSotoq5onk4e9qrQIb/CY/N1M2MbXLTZl
-hcv+VmiQKodPLeKV8m1XAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAFloi10Cdd9t
-PGxCrugIJ36WMn4ks3+wiBYzde83S+aV0J03DwajLTHDUKQFL4Wb2+LvgRsjmZRs
-TUHcq+Ug3gpMcqoYn2gQKEzCe8h43WXjOs3Bj1WKXT81Lyjoc0kMGyj/ipX5xJkZ
-JClkLn3ukG6FIMNRm7AS6klzstB18tBDu17+OAgIHQYWnKbS7+iqrNujirxKPteA
-ulSswx/LzHCd/lGuhQ/1ZX0muzkoHZFI/7v5IvP2yvCD95VFb6hY/5xj134H6wau
-3oOs0AYEv58sCYegt2L5kF5ClsRsMfOHDCA1JFVrtfN0SZsisLTLzrlqIHavYBhC
-zaDo+vYPeaM=
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCr
+UAGYA8Sd7+K9oNmWrZqR7aE+2Q9VUEHZ1gavvWKpiHRyUyT0Gu/852xp3XCO3i/e
+GC2Cn1evsvHrKzwONvqTiRpWgradS09hZZb+uM6RAtf3kPhgFC7M6tcyyCFOwZqq
+ceIOw6fVVE0MR9fIUOsQHcNeaj3wsQxHvPlBR5723OkKdRVF+QtI68F6f+qGO1Z4
+VoLbldWvr7bCNJ4WPbpg6rDC7Kl7VK4NtRqkkHCTRz3vogPbpDlJNjNCJZ9fH3mI
+5G0PRr7HFMQAFDh1jS+m7zyGHgrBa9Ax+QjictXBR3Nw1HkK1t+SzncsNfH5nhWW
+v1BUW0vylYvT4G3Xo311AgMBAAEwDQYJKoZIhvcNAQELBQADggEBACYRGRTjI5Ti
+Oatrknj6rnhY8bcDe5s3lioL/Ik57+r5KMdgwAK3SXQKTdP2PJ+G/kmm8Rd8f5ae
+1DuGMRccrJJhfZ7QucQ0vBickoE/DsbEpougoBpg28bTQxRbsApIaxV4S2ylKjwR
+eGrbiVbmCeSDS+CaiKECTrrcXAJ57auQc1tGhFJjYvxA60ut/ZKnR9HcP60U5Jwt
+VXGPkHoY1aaN52e2Y0LgqArHGTQdn6UpT7ZEetEMKwFJPKT46RPmYNoYlIGUMaXk
+aVwqSZMNMbgd30vDyLT8hQmVEDZiXihGL3JBoySQEi/BUPYaSs8hFkB1OpxO1irJ
+A5v0l3X6MXA=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-A+CT2p6fubEcqzNKAGh0mnJAX51rwYzT3TBip1Az5Wk6XuBzSKufDaXwePDMrbQv9IF3pGCBLqrHqXzry/mFjQp2S+Ac8Aie9HxujCbY2G8T3kOUkcA01m4pEmq38b4+zXKQHMlK47x1pWeQ6IaSweUmraDZSeg0D+EskU1HnI+/XqfkzEBoDNxNh+wQVg63z0qOdMIM4DAaj9GEaNtY5pBWP/mEO+INOscuESniejjRkrbI6DY43i2ET9inM/m1Ganr1wpibPHRWNEBLbHVhvguwfh5/nIP+qnNzSN6NFLsZkiVAdvLbu27Q6Oc+6/NT6oGwZve+jg3hW/ZfdakWQ==
+GiWpd3rHrvJWrpyAMI62n3mxHiEXmu5BsLm6jAH9ZlBjHQLLMQJwwHZSn6PqH7be6oenzBHPgvrhDvnhmRPpGIZ90sQ11tuvSh/RY8ZcNwtAliASFuV+72qaIYqGHfd3GYOIRaw8ru6Zak/f75kQAYYG3/VOXp1ZGDM/cQYCrMCKO9N7qSM/5nmOOH12kwXAmT2HN1K6MiVzm6+C+TwQkHq39xMiMF97fLi1wO8iVPfR1tmS/qMzSsTBswSppspaYvfDYnXZ6S7u4SvF10nq/L/W4Uq6wqci1Qh/+eAaX7Q9cv52LbAU7HePDP0fbzzss17gU5e9vaMtiK38Vgr6yg==
 -----END SIGNATURE-----
