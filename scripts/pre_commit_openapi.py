@@ -64,8 +64,8 @@ def should_trigger_schema_generation(staged_files: list[str]) -> bool:
         staged_files: A list of staged file paths.
 
     Returns:
-        bool: True if any staged file is an API route, Pydantic model, .NET C# endpoint/project,
-              or schema definition, or any frontend API client change; False otherwise.
+        bool: True if any staged file is an API route, Pydantic model, C# endpoint,
+              C# model, or schema definition, or any frontend API client change; False otherwise.
     """
     for f in staged_files:
         if "apps/web/src/api/" in f:

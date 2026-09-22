@@ -14,9 +14,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2598
+- **Total Automated Test Cases Run:** 2618
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 2598 ⚪
+- **Unverified (Draft):** 2618 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -68,6 +68,7 @@ apps-payments            0.1.0
 apps-quality             0.1.0
 apps-safety              0.1.0
 apps-tickets             0.1.0
+asgiref                  3.12.1
 ast-serialize            0.8.0
 asyncpg                  0.31.0
 attrs                    26.1.0
@@ -148,6 +149,14 @@ nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
 openpyxl                 3.1.5
+opentelemetry-api        1.44.0
+opentelemetry-instrumentation 0.65b0
+opentelemetry-instrumentation-asgi 0.65b0
+opentelemetry-instrumentation-fastapi 0.65b0
+opentelemetry-instrumentation-httpx 0.65b0
+opentelemetry-sdk        1.44.0
+opentelemetry-semantic-conventions 0.65b0
+opentelemetry-util-http  0.65b0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
@@ -252,6 +261,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `DomainLayerMustNotReferenceInfrastructureOrPresentationAssemblies` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `RegulatedTestSuitesMustFeatureGxPRequirementAttributes` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2000,6 +2013,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_record_list_with_runs` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
 | `test_record_run_local_only` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
 | `test_record_setup_gdrive_valid` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | ⚪ UNVERIFIED | N/A |
+| `test_dev_cli_json_output_includes_registry_metadata` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_dotnet_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_node_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_python_command_and_environment` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_alias_resolution` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_contains_all_18_cs_services` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_contains_node_services` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_registry_fail_fast_unknown_service` | `packages.cli.tests.test_registry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_ai_assisted_record_default_state_draft_ai` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
 | `test_ai_generation_manifest_structure` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
 | `test_approved_state_requires_hitl_fields` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | ⚪ UNVERIFIED | N/A |
@@ -2394,6 +2415,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_s3_storage_adapter_not_found_handling` | `packages.storage.tests.test_storage_adapters` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_s3_storage_adapter_presigned_urls` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001 | ⚪ UNVERIFIED | N/A |
 | `test_s3_storage_adapter_put_and_get_lifecycle` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001, PRD-DOC-003, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_gateway_client_trace_header_injection` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_gateway_middleware_traceparent_propagation_and_generation` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_json_trace_log_formatter_no_active_span` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_json_trace_log_formatter_with_active_span` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_w3c_trace_context_extract_and_inject` | `packages.telemetry.tests.test_telemetry` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_dependency_graph_ast_parsing` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | ⚪ UNVERIFIED | N/A |
 | `test_dependency_graph_caching` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | ⚪ UNVERIFIED | N/A |
 | `test_factories_creation` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2480,6 +2506,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_main_no_duplicates_scanned` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_url_logic_preservation` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_with_duplicates_detected` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_normalize_line_csharp` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_css` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_javascript` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_line_python` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2489,8 +2516,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_file_for_lines` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_all` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_designer` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_build_compose_command_dotnet_profile` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_down_operations` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_execution_with_flag` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_build_compose_command_hybrid_profile` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_compose_command_no_detach` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_dry_run` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_executes_subprocess` | `scripts.tests.test_dev_orchestrator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2609,6 +2638,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_trace17_header_forwarding_contract` | `scripts.tests.test_nginx_front_proxy` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_build_comment_body` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_combined_audit_logic` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_dotnet_test_outcome_handling` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_get_status_emoji` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_gxp_validation_and_migration_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_markdown_and_architecture_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2666,12 +2696,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_persona_builders_contain_correct_claims` | `scripts.tests.test_shared_rbac_harness` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_shared_sqlite_dbs_and_clients` | `scripts.tests.test_shared_rbac_harness` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_find_migration_script` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_main_designer_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_main_etmf_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_execution_service` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_pre_boot_migrations_failure` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_pre_boot_migrations_success` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_web_server_nt` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_run_web_server_posix_fallback` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_run_web_server_posix_success` | `scripts.tests.test_start` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_label_based_backlog_gating` | `scripts.tests.test_sync_github_project` | Trace-34 | ⚪ UNVERIFIED | N/A |
 | `test_get_repository_fallback` | `scripts.tests.test_sync_ruleset` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -2884,28 +2913,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** d7e2a585b45026d9616b8df43a6f5a98d382b26ca97bcfff7d167e72fad498f4
+- **Cryptographic Hash (SHA-256):** 236fe3eb2e399a9b6a06791c9d9b312b11ef964500b07c64b87d334a638f8b72
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUM7s/TH0enBzIG5ks0XquBB8OrS8wDQYJKoZIhvcNAQEL
-BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
-ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTE3MTUyOTA4WhcNMjcwOTE4MTUyOTA4WjBhMTswOQYDVQQD
-DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
-bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAKBzgNAJ4xXqbZFQoIZcfhP7Iw0xPfNr
-v1OMijHrIqIb7GEBLE35M3uyitTngOplIcb7gtIN2dMdNzWPO65UGjmnwAE8N0u3
-ZnKvI5qPo+aqoqHrjSaWAtXFdgaxcXatzqXhZR1nBj2VPO85tSMXiPYFLLS3qwNV
-Gtg7YjukETX/iINk8iNCDSsR8FMkwgc3W3QhpGJe+rLA6fJFrmI1TK1EcBWPajOF
-gje9IGSS086I498eczjBWQn87PHfNUjoJs/ysp89Y0el5Jl5BYlbnpRW1brbjTZT
-zP7DLeCFKB3deGpWu/ITiHBw/qCGt5nOiw9B0vG+WV6RHFJTi03KlwcCAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAJMa0AukAgdoN6qzXExKS4vZLlSdosdJVpx8rfr6C
-cytn92lZvS7vC2vPgMwoJiB98wpUYvg8iF+Bk+NLh1D+ysye+WjnOFrvuITXdbkV
-uK8R6vX5El05E1teLxyycPEkrK4zWYfjI2dL0NUfqUSduNyVVVqp2LPXSZAUNXkE
-bgcsjOlFzlxi9354r4nEjoQhwRTsDbdV6VY+GjY3EhoOZ2piea++GEYRlxCESuds
-l5fVdS3oxPsbJjTJKmPAgMZtmW2Zxol3QtVtEzi0dHkB9ndN6Hwt8gRHBu+tghXl
-LAGAuuqq6sEhDpU+8hsO/tAK//sE4Gy3w9EPQiOWTp/Pnw==
+MIIDNDCCAhygAwIBAgIUPpOHhXomDGoJogXAn2rVKr0VqBYwDQYJKoZIhvcNAQEL
+BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
+bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA5
+MjExNTI4MTBaFw0yNzA5MjIxNTI4MTBaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDB
+SUJORiz0tQuT1wp0ThMnRpkm/n1Phieqf/FXxw0ztkzpn2FVJHp8EX+x/sMbRdtb
+vwpvGK9/J8JboPArWcpXhW1xuMdIPUg/HvtwG8PEBA+P/QGxb4EXhN1/deQNG2kO
+prkMqAyn1F3jsmUDPs6S9Obv+uEFhzYrOgcbuK5e7USQhV7lePiKK6W8vz2YmsbU
+IgJRdmeGQJ/zikOzvalm/Xf8N0HlFkI/EzM9CB9tc3B9bbRmF2CKrX5cU+TiEq6+
+7RQGO/z6JS/SjxXhH4LlLteBjymhCBt8M0Rr1+F/+BevI6iwOsGbNYidQHCI1XRS
+aR7JY0XRkX84p4P6MR85AgMBAAEwDQYJKoZIhvcNAQELBQADggEBADhLx8NBikxr
+9mkgrcjTGw0ZmL5bxvM6Hx55LqNt7si8GS2v8bI7kQzTn/At8s20uEEgrjHnPK91
+98G/mht5q1UVg2nBZVW1brim3cFqsFbAu0McQMmV/kTMXcGfXqbfDHsSd1EEelS4
+BRIiGCY7P4gwBASb5S/dwr/k+adVJA18dB3PoGKX5g0v1VlaHIv+fZGhqq0CuCE/
+ucWYibdlcQV5NgBw4UAwnN8MpUf1+1FWTs0xX19QmF/SwilERW/TrMOjXMUI1HL+
+gehEFDtr/8l6BDbCFB5ncPH+G/8ZYG4ZMLIhBTw/z56aT0PCguyf4Ww96ids5w/I
+vNyTuT0aZlA=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-iSMPofovnKtuXY59HuR6Xr3XlA37yunTH2HE34gLfMRsX0O+vW0knXtHCi8F7FXgZPVsBVbWGQLMnVYg63VEWd4+B7Bh8ovxg4tDCSC4haum1o8fLFpuNhw61qtSB9ePcQtD90KlJud5aMkt8wygXGJo7kPF6uUMiXCpAJ0ZMrFKI18hDK/8LYVvaav9kew1dckfos1dEmSzf+Bdc6YIhCmTJUHX2Q4deDAjDPHZfQKPhctSB0W/C0rqEdbCoKQOKo7/5mNfOvcIm75e3OUH9nx2rP5HeUgDVf3Fpi1vA9SsP7TiYu/NaB/ZezAG6Prutj4JHXNAisvHA0L8i+uIxg==
+MJLTwylgvkVU7XRze8kHjFqrMLphzgGWR0eiD6f4CjfNXN6+9M/wKB+XtL9RiRqBMXkMgrE+Cdiu1vcejA2zZ5RM0Yxh8j/BK0ooFRH8KBwq/oe1fQ25uVJXJsQsU7SY+JRNMa4r2sdXlQIKhQSk6/Bgb/MFNH6pZHuZ/+J6q0VD5s8H2IIUGj3NDCpL2kGcbEFUGNQYk5WezbmuMBVWL/h7uMsYg3fvuWkR0nk1P3XY5TXvdrE0LCWTTH8FZ82kawSD+XrwVVeWCAtjKZbb3LRq9RZuapJqa8SvXTTS1iS7utzCikkPTfr6xzLkgfFTJst+wj4zjHS5jmEhsUFEnw==
 -----END SIGNATURE-----
