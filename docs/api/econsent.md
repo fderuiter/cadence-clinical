@@ -1473,6 +1473,7 @@ Generates mandatory adult re-consent tasks for minor subjects who turned legal a
 | `adult_version_index` | `integer` | No | Adult consent template version |
 | `subjects` | `Array<SubjectMilestoneInput>` | ✔ Yes | — |
 | `lead_time_days` | `integer` | No | Lead time days (0 = only subjects who reached legal majority) |
+| `as_of_date` | `string` | `null` | No | Reference date for majority evaluation (defaults to current date) |
 | `reason_for_change` | `string` | No | GxP change reason |
 
 #### Response Codes & Schemas
