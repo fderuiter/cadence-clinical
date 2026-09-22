@@ -1,5 +1,17 @@
 using System;
 
+using FluentValidation;
+
+using MassTransit;
+
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+using Polly;
+
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
@@ -19,31 +31,10 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
-
-using FluentValidation;
-
-using MassTransit;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
-
-using Polly;
-
-using Scalar.AspNetCore;
+using Cadence.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
-
-ConfigureLogging(builder.Logging);
-ConfigureTelemetry(builder.Services);
-
-builder.Services.AddOpenApi();
+builder.AddCadenceWebDefaults();
 
 // Shared snake_case wire convention (`subject_id`, `study_id`, ...) for every Application-layer
 // response/request DTO in this service, registered once here per MIG-SUBJ-008 (`02_technical_design.md`
@@ -258,22 +249,7 @@ var app = builder.Build();
 // `ToProblemResult()` at its own raise site, ever produces a non-500 problem response.
 app.UseExceptionHandler();
 
-app.Use(async (context, next) =>
-{
-    var activity = System.Diagnostics.Activity.Current;
-    if (activity != null)
-    {
-        var traceParent = $"00-{activity.TraceId}-{activity.SpanId}-{(activity.Recorded ? "01" : "00")}";
-        context.Response.Headers["traceparent"] = traceParent;
-    }
-    await next(context);
-});
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.UseCadenceWebDefaults();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Execution", engine = "EDC" }))
     .WithName("ExecutionHealthCheck")
@@ -296,24 +272,6 @@ if (args.Contains("--seed"))
 }
 
 await app.RunAsync();
-
-static void ConfigureLogging(ILoggingBuilder logging)
-{
-    logging.ClearProviders();
-    logging.AddJsonConsole(options =>
-    {
-        options.IncludeScopes = true;
-        options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-        options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions { Indented = false };
-    });
-}
-
-static void ConfigureTelemetry(IServiceCollection services)
-{
-    services.AddOpenTelemetry()
-        .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation())
-        .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation());
-}
 
 // MIG-SUBJ-023: the standard, minimal ASP.NET Core idiom making the implicit top-level-statement `Program`
 // class (`internal` by default) visible to `Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>`
