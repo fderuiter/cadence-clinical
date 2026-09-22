@@ -11,7 +11,7 @@ SERVICE="${2:-}"
 MIGRATION_NAME="${3:-}"
 
 if [ -z "$ACTION" ] || [ -z "$SERVICE" ]; then
-    echo "Usage: $0 <add|script|bundle|apply|list> <service-name> [migration-name]"
+    echo "Usage: $0 <add|script|bundle|apply|seed|list> <service-name> [migration-name]"
     exit 1
 fi
 
@@ -55,6 +55,11 @@ case "$ACTION" in
         echo "Applying pending migrations to target database..."
         dotnet ef database update --project "$PROJECT_PATH"
         echo "[SUCCESS] Database update complete."
+        ;;
+    seed)
+        echo "Executing C# DbContext seeders for target service..."
+        dotnet run --project "$PROJECT_PATH" --no-build -- --seed || dotnet run --project "$PROJECT_PATH" -- --seed
+        echo "[SUCCESS] Seeding complete."
         ;;
     list)
         dotnet ef migrations list --project "$PROJECT_PATH"
