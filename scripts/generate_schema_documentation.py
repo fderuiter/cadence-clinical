@@ -1501,7 +1501,8 @@ def generate_cdisc_usdm_compliance_catalog(
         "biomedicalConcepts": biomedical_concepts,
     }
 
-    USDMStudy(**doc)
+    if USDMStudy is not None:
+        USDMStudy(**doc)
     return doc
 
 
