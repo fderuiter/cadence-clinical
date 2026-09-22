@@ -1,13 +1,13 @@
 # ==============================================================================
 # Cadence Clinical — Developer Convenience Makefile
 #
-# This Makefile wraps the canonical pnpm/uv scripts for developers who prefer
-# make. All targets delegate to those scripts so there is a single source of
-# truth. Run `make help` to see all available targets.
+# This Makefile provides native .NET 10 CLI automation and wraps canonical
+# pnpm/uv scripts for developers. All core solution targets delegate directly
+# to dotnet CLI or Cadence.Cli commands. Run `make help` to see all targets.
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard fix lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline regenerate-templates
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -27,16 +27,23 @@ wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/C
 	bash scripts/setup_wizard.sh
 
 ##@ Developer Experience & CLI
+
+build: ## Compile the Cadence solution (.NET 10)
+	dotnet build Cadence.sln
+
 doctor: ## Run system diagnostics and verify development environment health
-	uv run --python 3.14 cadence doctor
+	dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
 
 dev: ## Orchestrate local microservices with live reloading
 	uv run --python 3.14 cadence dev
 
 ##@ Code Quality
 
-fix: ## Auto-fix all ruff lint violations, format code, and sync schemas (safe to run anytime)
-	uv run --python 3.14 cadence fix
+fix: ## Auto-fix all lint violations, format code, and sync schemas (safe to run anytime)
+	pnpm -r format
+	uv run --python 3.14 ruff check --fix . --exclude apps/execution/database/models.py
+	uv run --python 3.14 ruff format --target-version py313 . --exclude apps/execution/database/models.py
+	dotnet format Cadence.sln
 
 lint-paths: ## Run lightweight path-pattern boundary linter
 	uv run --python 3.14 python scripts/validate_path_patterns.py --all
@@ -49,28 +56,27 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 	uv run --python 3.14 ruff check . --exclude apps/execution/database/models.py
 	dotnet format style Cadence.sln --verify-no-changes --no-restore
 
-format: ## Check formatting only (no auto-fix)
+format: ## Format C# code, frontend code, and Python scripts
 	pnpm -r format
-	uv run --python 3.14 ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
-	dotnet format whitespace Cadence.sln --verify-no-changes --no-restore
-	dotnet format style Cadence.sln --verify-no-changes --no-restore
+	uv run --python 3.14 ruff format --target-version py313 . --exclude apps/execution/database/models.py
+	dotnet format Cadence.sln
 
-check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security, imports, contracts
-	uv run --python 3.14 cadence check
+check: ## Run all pre-push quality gates: format, ADRs, architecture sentinels
+	dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
 
 verify: ## Full verification — quality gates + all test suites (use before opening a PR)
 	pnpm verify
 
-test: ## Run backend unit tests with coverage
-	uv run --python 3.14 cadence test
+test: ## Run backend and solution unit test suites
+	dotnet test Cadence.sln
 
 ##@ GxP Compliance
 
 sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (fixes the CI compliance gate)
-	uv run --python 3.14 cadence gxp sync
+	dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
 rtm: ## Validate that checked-in RTM docs are up to date (read-only, no test run)
-	uv run --python 3.14 cadence gxp validate
+	dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp validate
 
 ##@ Architecture & Documentation
 
@@ -98,7 +104,7 @@ regenerate-templates: ## Regenerate DOCX protocol templates programmatically
 	uv run --python 3.14 python scripts/regenerate_templates.py
 
 ports: ## Check that all required service ports are free
-	uv run --python 3.14 cadence doctor
+	dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
 
 ##@ Help
 
@@ -110,3 +116,4 @@ help: ## Show this help message
 	    /^[a-zA-Z_-]+:.*##/ { printf "  $(CYAN)%-15s$(RESET) %s\n", $$1, $$2 }' \
 	    $(MAKEFILE_LIST)
 	@printf "\n"
+
