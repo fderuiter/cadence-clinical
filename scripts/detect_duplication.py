@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Lightweight Code Duplication Detector for Cadence Clinical Platform.
-Scans Python, JavaScript, and Vue files in apps/ and packages/ directories
+Scans Python, JavaScript, Vue, CSS, and C# files in apps/ and packages/ directories
 to detect copied blocks of logic before commits or merges.
 """
 
@@ -70,11 +70,14 @@ def normalize_line(line: str) -> str:
     # 3. Normalize string formats (single quotes, backticks to double quotes)
     cleaned = cleaned.replace("'", '"').replace("`", '"')
 
-    # Ignore imports/exports/braces
+    # Ignore imports/exports/braces/C# directives
     if (
         cleaned.startswith("import ")
         or cleaned.startswith("from ")
         or cleaned.startswith("export ")
+        or cleaned.startswith("using ")
+        or cleaned.startswith("global using ")
+        or cleaned.startswith("namespace ")
         or cleaned.startswith("const {")
         or cleaned == "}"
         or cleaned == "{"
@@ -127,7 +130,7 @@ def main() -> None:
         for arg in args:
             abs_path = os.path.abspath(arg)
             if (
-                abs_path.endswith((".py", ".js", ".vue", ".css"))
+                abs_path.endswith((".py", ".js", ".vue", ".css", ".cs"))
                 and os.path.exists(abs_path)
                 and not any(
                     p in abs_path
@@ -138,6 +141,10 @@ def main() -> None:
                         "__pycache__",
                         "dist",
                         "build",
+                        "bin",
+                        "obj",
+                        "Migrations",
+                        "migrations",
                     ]
                 )
             ):
@@ -166,12 +173,16 @@ def main() -> None:
                     ".git",
                     "dist",
                     "build",
+                    "bin",
+                    "obj",
                     "coverage",
+                    "Migrations",
+                    "migrations",
                 ]
             ):
                 continue
             for file in files:
-                if file.endswith((".py", ".js", ".vue", ".css")):
+                if file.endswith((".py", ".js", ".vue", ".css", ".cs")):
                     all_files.append(os.path.join(root, file))
 
     # 2. Extract blocks from all files to index them
@@ -245,6 +256,10 @@ def main() -> None:
                                 {
                                     "apps/econsent/adapters/ai_readability_client.py",
                                     "apps/execution/adapters/ai_anomaly_client.py",
+                                },
+                                {
+                                    "packages/ddf/rules/ast.py",
+                                    "packages/engine_core/rules/sentinels.py",
                                 },
                                 {
                                     "packages/security/audit_logger.py",
