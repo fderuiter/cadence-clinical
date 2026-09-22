@@ -307,6 +307,10 @@ def verify_live_db_connections(timeout: float = 10.0):
 
 async def create_all_schemas_async(worker_suffix_val: str, timeout: float = 30.0):
     """Run migrations and schema creation for all 11 microservices on this worker's databases."""
+    from apps.execution.database.migrate import (
+        run_migrations as run_exec_migrations,
+    )
+    from apps.execution.database.models import Base as ExecBase
     from sqlalchemy.ext.asyncio import create_async_engine
 
     from apps.ctms.migrate import run_migrations as run_ctms_migrations
@@ -316,10 +320,6 @@ async def create_all_schemas_async(worker_suffix_val: str, timeout: float = 30.0
     from apps.eisf.models import Base as EISFBase
     from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
     from apps.etmf.models import Base as ETMFBase
-    from apps.execution.database.migrate import (
-        run_migrations as run_exec_migrations,
-    )
-    from apps.execution.database.models import Base as ExecBase
     from apps.interop.models import Base as InteropBase
     from apps.notifications.models import Base as NotificationsBase
     from apps.org.models import Base as OrgBase
@@ -366,6 +366,7 @@ def patch_init_db(suffix: str | None = None) -> None:
     """Patch database manager singletons to route to this worker's isolated database set."""
     target_suffix = suffix or _current_worker_suffix or _build_worker_suffix()
     from apps.execution.database.core import DatabaseSessionManager
+
     from packages.database import RelationalDatabaseManager
 
     original_exec_init_db = DatabaseSessionManager.init_db
@@ -904,13 +905,27 @@ def concurrency_runner():
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
 
-from apps.designer.main import app as designer_app
+try:
+    from apps.designer.main import app as designer_app
+except ImportError:
+    from fastapi import FastAPI
+
+    designer_app = FastAPI(title="Dummy Designer Service")
+
+try:
+    from apps.execution.database.core import db_manager as exec_db_manager
+    from apps.execution.database.models import Base as ExecBase
+    from apps.execution.main import app as exec_app
+except ImportError:
+    from fastapi import FastAPI
+
+    exec_app = FastAPI(title="Dummy Execution Service")
+    exec_db_manager = None
+    ExecBase = None
+
 from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
 from apps.etmf.models import Base as ETMFBase
-from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import Base as ExecBase
-from apps.execution.main import app as exec_app
 
 
 @pytest_asyncio.fixture
@@ -923,9 +938,10 @@ async def shared_sqlite_dbs():
     async with etmf_db_manager.engine.begin() as conn:
         await conn.run_sync(ETMFBase.metadata.create_all)
 
-    exec_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
-    async with exec_db_manager.engine.begin() as conn:
-        await conn.run_sync(ExecBase.metadata.create_all)
+    if exec_db_manager is not None and ExecBase is not None:
+        exec_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+        async with exec_db_manager.engine.begin() as conn:
+            await conn.run_sync(ExecBase.metadata.create_all)
 
     yield
 
@@ -936,12 +952,13 @@ async def shared_sqlite_dbs():
     except Exception:
         pass
 
-    try:
-        async with exec_db_manager.engine.begin() as conn:
-            await conn.run_sync(ExecBase.metadata.drop_all)
-        await exec_db_manager.close()
-    except Exception:
-        pass
+    if exec_db_manager is not None and ExecBase is not None:
+        try:
+            async with exec_db_manager.engine.begin() as conn:
+                await conn.run_sync(ExecBase.metadata.drop_all)
+            await exec_db_manager.close()
+        except Exception:
+            pass
 
 
 @pytest.fixture

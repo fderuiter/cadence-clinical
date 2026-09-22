@@ -28,19 +28,19 @@ exclude = [
     "apps/web",
     "apps/subject-portal",
     "apps/__pycache__",
+    "apps/gateway",
+    "apps/designer",
+    "apps/execution",
     "packages/*"
 ]
 
 [tool.uv.sources]
 apps-ai-gateway = { workspace = true }
 apps-ctms = { workspace = true }
-apps-designer = { workspace = true }
 apps-econsent = { workspace = true }
 apps-eisf = { workspace = true }
 apps-etmf = { workspace = true }
-apps-execution = { workspace = true }
 apps-fileshare = { workspace = true }
-apps-gateway = { workspace = true }
 apps-imaging = { workspace = true }
 apps-interop = { workspace = true }
 apps-notifications = { workspace = true }
@@ -170,7 +170,7 @@ dependencies = [
     "jinja2>=3.1.6,<4.0.0",
     "python-multipart>=0.0.32",
     "PyMuPDF>=1.24.0",
-    "weasyprint>=61.0",
+    "weasyprint>=70.0",
     "python-docx>=1.1.0",
     "aioboto3>=13.0.0",
     "aiosmtplib>=3.0.1",

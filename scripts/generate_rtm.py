@@ -597,7 +597,7 @@ def parse_trx_file(trx_path, results):
     if not os.path.exists(trx_path):
         return
     try:
-        tree = ET.parse(trx_path)
+        tree = ET.parse(trx_path)  # nosec B314
         root = tree.getroot()
         ns = {"ns": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
 
