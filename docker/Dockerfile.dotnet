@@ -1,5 +1,5 @@
 # ==============================================================================
-# Cadence Clinical Research Software — .NET 10 Hermetic Development & Build Container
+# Cadence Clinical Research Software — .NET 10 Central Parameterized Dockerfile
 # Requirements: PRD-SYS-053, ADR-2233
 # ==============================================================================
 
@@ -23,23 +23,53 @@ RUN dotnet tool install --global dotnet-ef --version 10.0.0-preview* || true \
 
 WORKDIR /workspace
 
-# Copy solution files first to leverage Docker layer caching
+# Copy solution configuration files first to leverage Docker layer caching
 COPY Cadence.sln Directory.Build.props Directory.Packages.props .editorconfig global.json ./
+
+# Build arguments for target microservice application
+ARG APP_NAME=gateway
+ARG PROJECT_PATH=apps/${APP_NAME}/src
+
+ENV APP_NAME=${APP_NAME}
+ENV PROJECT_PATH=${PROJECT_PATH}
 
 # Expose standard Cadence microservice ports
 EXPOSE 8000 8001 8002
 
-# Default command for development: watch and hot-reload Gateway
-CMD ["dotnet", "watch", "--project", "apps/gateway/src/Cadence.Apps.Gateway.csproj", "run"]
+# Default command for development: watch and hot-reload target project
+CMD ["sh", "-c", "dotnet watch --project ${PROJECT_PATH} run"]
 
 # ------------------------------------------------------------------------------
-# 2. Production Native AOT / Trimmed Runtime Stage
+# 2. Build and Publish Stage
+# ------------------------------------------------------------------------------
+FROM dev AS build
+
+ARG APP_NAME=gateway
+ARG PROJECT_PATH=apps/${APP_NAME}/src
+
+COPY . .
+
+# Restore and publish target microservice application
+RUN dotnet restore ${PROJECT_PATH}
+RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=false
+
+# ------------------------------------------------------------------------------
+# 3. Production Runtime Stage
 # ------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-bookworm-slim AS runtime
+
+# Install curl for container health check parity
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG APP_NAME=gateway
+ENV APP_NAME=${APP_NAME}
 
 WORKDIR /app
 USER app
 
-EXPOSE 8000
-ENTRYPOINT ["dotnet"]
+COPY --from=build /app/publish .
 
+EXPOSE 8000
+ENTRYPOINT ["sh", "-c", "exec dotnet $(ls Cadence.Apps.*.dll | head -n 1)"]
