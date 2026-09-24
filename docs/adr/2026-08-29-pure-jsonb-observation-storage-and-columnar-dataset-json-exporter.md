@@ -147,8 +147,8 @@ class ClinicalObservation(BaseModel):
 
 ## 6. Implementation & Verification
 
-- **Core Pipeline**: [`packages/ddf/dataset_json_etl.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/packages/ddf/dataset_json_etl.py).
-- **Domain Persistence**: [`apps/execution/database/models/observation.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/database/models/observation.py), [`apps/execution/presentation/routers/observations.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/presentation/routers/observations.py).
+- **Core Pipeline**: [`packages/ddf/dataset_json_etl.py`](packages/ddf/dataset_json_etl.py).
+- **Domain Persistence**: [`apps/execution/database/models/observation.py`](apps/execution/database/models/observation.py), [`apps/execution/presentation/routers/observations.py`](apps/execution/presentation/routers/observations.py).
 - **Test Suites & Benchmarks**:
-  - [`packages/ddf/tests/test_dataset_json_etl.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/packages/ddf/tests/test_dataset_json_etl.py) (Columnar transformation, schema hashing, multi-domain SDTM export, 100k performance benchmark).
-  - [`apps/execution/tests/test_observation_jsonb.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/tests/test_observation_jsonb.py) (JSONB persistence and DTO validation).
+  - [`packages/ddf/tests/test_dataset_json_etl.py`](packages/ddf/tests/test_dataset_json_etl.py) (Columnar transformation, schema hashing, multi-domain SDTM export, 100k performance benchmark).
+  - [`apps/execution/tests/test_observation_jsonb.py`](apps/execution/tests/test_observation_jsonb.py) (JSONB persistence and DTO validation).

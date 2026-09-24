@@ -96,6 +96,14 @@ repos:
         files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
         pass_filenames: false
 
+      - id: path-requirement-sanitizer
+        name: Path Sanitizer and Requirement Prefix Normalizer
+        entry: uv run --python 3.14 python scripts/compliance_utility.py --sanitize
+        language: system
+        files: \.md$
+        exclude: ^docs/SDLC/runs/
+        pass_filenames: true
+
       - id: validate-markdown
         name: Validate Custom Markdown
         entry: uv run --python 3.14 python scripts/validate_markdown.py
