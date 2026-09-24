@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from typing import Any
 
@@ -25,15 +24,16 @@ class ExecutionClient:
         base_url: str | None = None,
         timeout: float = 10.0,
     ) -> None:
-        self.base_url = (
-            base_url or os.getenv("EXECUTION_URL") or "http://localhost:8002"
-        ).rstrip("/")
+        from packages.config import get_safety_settings
+
+        settings = get_safety_settings()
+        self.base_url = (base_url or settings.execution_url).rstrip("/")
         self.timeout = timeout
 
     def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
+        from packages.config import get_safety_settings
+
+        gateway_secret_env = get_safety_settings().gateway_secret
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)

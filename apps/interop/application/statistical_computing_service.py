@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -78,11 +77,10 @@ class ExecutionRunNotFoundError(SCEError):
 
 def _get_signing_secret() -> bytes:
     """Retrieve cryptographic signing secret."""
-    secret = (
-        os.getenv("SIGNING_SECRET")
-        or os.getenv("GATEWAY_SECRET")
-        or "cadence-default-sce-signing-secret"
-    )
+    from packages.config import get_interop_settings
+
+    settings = get_interop_settings()
+    secret = settings.signing_secret or settings.gateway_secret
     return secret.encode("utf-8")
 
 

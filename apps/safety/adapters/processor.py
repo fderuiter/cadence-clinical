@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from typing import Any
 
@@ -74,7 +73,9 @@ async def send_medical_monitor_alert(
     Raises:
         RuntimeError: If GATEWAY_SECRET is not set in the environment.
     """
-    gateway_secret_env = os.getenv("GATEWAY_SECRET")
+    from packages.config import get_safety_settings
+
+    gateway_secret_env = get_safety_settings().gateway_secret
     if not gateway_secret_env:
         raise RuntimeError(
             "GATEWAY_SECRET environment variable is not set. "
@@ -113,7 +114,9 @@ async def send_medical_monitor_alert(
         "related_entity_type": "SAEReconciliationRun",
     }
 
-    notifications_url = os.getenv("NOTIFICATIONS_URL") or "http://localhost:8006"
+    from packages.config import get_safety_settings
+
+    notifications_url = get_safety_settings().notifications_url
     url = f"{notifications_url.rstrip('/')}/api/v1/notifications"
 
     try:

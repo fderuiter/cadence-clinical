@@ -18,6 +18,7 @@ from apps.designer.db import (
     get_mock_rules,
     update_mock_rule,
 )
+
 from apps.execution.adapters.repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
@@ -36,7 +37,6 @@ from apps.execution.domain.models import (
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
 )
-
 from packages.hexagonal.tests.test_hexagonal_architecture import SERVICES
 
 # =====================================================================

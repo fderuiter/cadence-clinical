@@ -5,12 +5,11 @@ Requirements: PRD-SYS-001
 
 from datetime import UTC, datetime
 
+import packages  # noqa: F401
 from apps.execution.domain.eisf_models import (
     EISFDocumentRecord,
     EISFTaxonomyCategoryEnum,
 )
-
-import packages  # noqa: F401
 
 
 def test_eisf_document_record_creation() -> None:

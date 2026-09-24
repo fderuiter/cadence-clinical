@@ -2,14 +2,15 @@
 
 import sys
 from pathlib import Path
+
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.generate_cli_docs import generate_markdown, main
-from packages.cli.mcp.server import CadenceMcpServer
+from packages.cli.mcp.server import CadenceMcpServer  # noqa: E402
+from scripts.generate_cli_docs import generate_markdown, main  # noqa: E402
 
 
 def test_generate_cli_docs_structure():
@@ -72,7 +73,9 @@ def test_cli_docs_file_in_sync():
 def test_generate_cli_docs_check_flag(capsys, monkeypatch):
     """Verify scripts/generate_cli_docs.py --check exits 0 when docs/cli.md is up-to-date."""
     cli_docs_path = REPO_ROOT / "docs" / "cli.md"
-    monkeypatch.setattr("sys.argv", ["generate_cli_docs.py", "--check", "--output", str(cli_docs_path)])
+    monkeypatch.setattr(
+        "sys.argv", ["generate_cli_docs.py", "--check", "--output", str(cli_docs_path)]
+    )
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -87,7 +90,9 @@ def test_generate_cli_docs_drift_detection(tmp_path, capsys, monkeypatch):
     stale_file = tmp_path / "cli.md"
     stale_file.write_text("# Outdated CLI Reference\n", encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["generate_cli_docs.py", "--check", "--output", str(stale_file)])
+    monkeypatch.setattr(
+        "sys.argv", ["generate_cli_docs.py", "--check", "--output", str(stale_file)]
+    )
 
     with pytest.raises(SystemExit) as exc_info:
         main()

@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.ctms.adapters.database import db_manager
@@ -14,17 +12,19 @@ from apps.ctms.presentation.routers import (
     rbqm_router,
     site_startup_router,
 )
+from packages.config import get_ctms_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+settings = get_ctms_settings()
+DATABASE_URL = settings.ctms_database_url
 
-assert_secure_secrets("ctms", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+assert_secure_secrets("ctms", {"GATEWAY_SECRET": settings.gateway_secret})
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("ctms")

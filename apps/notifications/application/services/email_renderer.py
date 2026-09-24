@@ -51,9 +51,12 @@ def render_email_template(template_name: str, context: dict[str, Any]) -> str:
     """
     Renders a GxP-compliant HTML email notification from Jinja2 templates.
     """
+    from packages.config import get_notifications_settings
+
+    settings = get_notifications_settings()
     context = dict(context)
-    context.setdefault("brand_name", os.getenv("BRAND_NAME", "Clinical Platform"))
-    context.setdefault("brand_domain", os.getenv("BRAND_DOMAIN", "example.com"))
+    context.setdefault("brand_name", settings.brand_name)
+    context.setdefault("brand_domain", settings.brand_domain)
 
     if os.path.exists(TEMPLATE_DIR):
         try:

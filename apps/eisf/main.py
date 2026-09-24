@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 
 from apps.eisf.domain.eisf_transport_models import (
@@ -47,17 +45,19 @@ from apps.eisf.presentation.routers.eisf import (
 from apps.eisf.presentation.routers.eisf import (
     router as eisf_router,
 )
+from packages.config import get_eisf_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+settings = get_eisf_settings()
+DATABASE_URL = settings.eisf_database_url
 
-assert_secure_secrets("eisf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+assert_secure_secrets("eisf", {"GATEWAY_SECRET": settings.gateway_secret})
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("eisf")

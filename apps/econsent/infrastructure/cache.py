@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import threading
 import time
 from typing import Any
@@ -24,20 +23,19 @@ class ApprovedTranslationCache:
         if ttl is not None:
             self.ttl = float(ttl)
         else:
-            env_ttl = os.getenv("ECONSENT_CACHE_TTL") or os.getenv("CACHE_TTL")
-            if env_ttl is not None:
-                try:
-                    self.ttl = float(env_ttl)
-                except ValueError:
-                    self.ttl = 3600.0
-            else:
-                self.ttl = 3600.0
+            from packages.config import get_econsent_settings
+
+            settings = get_econsent_settings()
+            self.ttl = float(settings.effective_cache_ttl)
 
         # Redis configuration for cluster-wide invalidation propagation
-        self.redis_host = os.getenv("REDIS_HOST")
-        self.redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        self.redis_password = os.getenv("REDIS_PASSWORD") or None
-        self.redis_channel = os.getenv("REDIS_CHANNEL", "econsent_cache_invalidation")
+        from packages.config import get_econsent_settings
+
+        settings = get_econsent_settings()
+        self.redis_host = settings.redis_host
+        self.redis_port = settings.redis_port
+        self.redis_password = settings.redis_password
+        self.redis_channel = settings.redis_channel
 
         self._pub_client = None
         self._sub_thread = None

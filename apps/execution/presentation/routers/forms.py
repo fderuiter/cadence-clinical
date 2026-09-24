@@ -175,7 +175,7 @@ async def create_form_submission(
                         if f_val is not None:
                             try:
                                 f_val = float(f_val)
-                            except (ValueError, TypeError):
+                            except ValueError, TypeError:
                                 f_val = None
                         unit = item.get("unit")
                         norm_val, norm_unit = (
@@ -235,7 +235,7 @@ async def create_form_submission(
                         dom, t_code, t_name, unit = field_mapping[k_clean]
                         try:
                             f_val = float(v)
-                        except (ValueError, TypeError):
+                        except ValueError, TypeError:
                             f_val = None
                         norm_val, norm_unit = (
                             get_normalized_representation(f_val, unit)

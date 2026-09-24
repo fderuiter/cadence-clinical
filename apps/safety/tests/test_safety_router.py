@@ -3,10 +3,10 @@
 Requirements: PRD-SYS-001
 """
 
-from apps.execution.main import app
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
+from apps.execution.main import app
 from packages.testing.security import create_test_auth_headers
 
 client = TestClient(app)

@@ -1,5 +1,4 @@
 import logging
-import os
 
 import httpx
 
@@ -17,9 +16,9 @@ class ETMFClient(IETMFClientPort):
     """Client for pushing clinical documents and metadata to apps/etmf."""
 
     def __init__(self, base_url: str | None = None):
-        self.base_url = base_url or os.getenv(
-            "ETMF_SERVICE_URL", "http://localhost:8006"
-        )
+        from packages.config import get_ctms_settings
+
+        self.base_url = base_url or get_ctms_settings().etmf_url
 
     async def push_document(
         self,
@@ -69,9 +68,9 @@ class QualityClient(IQualityClientPort):
     """Client for escalating Major/Critical deviations to apps/quality CAPA."""
 
     def __init__(self, base_url: str | None = None):
-        self.base_url = base_url or os.getenv(
-            "QUALITY_SERVICE_URL", "http://localhost:8008"
-        )
+        from packages.config import get_ctms_settings
+
+        self.base_url = base_url or get_ctms_settings().gateway_url
 
     async def create_capa_from_deviation(
         self,
@@ -116,9 +115,9 @@ class SafetyClient(ISafetyClientPort):
     """Client for notifying Medical Safety in apps/safety."""
 
     def __init__(self, base_url: str | None = None):
-        self.base_url = base_url or os.getenv(
-            "SAFETY_SERVICE_URL", "http://localhost:8009"
-        )
+        from packages.config import get_ctms_settings
+
+        self.base_url = base_url or get_ctms_settings().gateway_url
 
     async def notify_deviation_event(
         self,

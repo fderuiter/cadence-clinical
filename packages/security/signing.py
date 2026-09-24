@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 from typing import Any
 
 from cryptography import x509
@@ -409,8 +408,10 @@ class InboundEmailReplayCache:
 
 
 def get_inbound_email_hmac_secret() -> str:
-    """Retrieve the inbound email HMAC secret from environment, failing if unset."""
-    secret = os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip()
+    """Retrieve the inbound email HMAC secret from settings, failing if unset."""
+    from packages.config import get_common_settings
+
+    secret = (get_common_settings().inbound_email_hmac_secret or "").strip()
     if not secret:
         raise RuntimeError(
             "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
@@ -474,9 +475,9 @@ def generate_greenlight_token(
     import time
 
     if secret is None:
-        raw_secret = os.getenv("GATEWAY_SECRET")
-        if not raw_secret:
-            raw_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+        from packages.config import get_common_settings
+
+        raw_secret = get_common_settings().gateway_secret
         secret = (
             raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
         )
@@ -515,9 +516,9 @@ def verify_greenlight_token(
         return None
 
     if secret is None:
-        raw_secret = os.getenv("GATEWAY_SECRET")
-        if not raw_secret:
-            raw_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+        from packages.config import get_common_settings
+
+        raw_secret = get_common_settings().gateway_secret
         secret = (
             raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
         )

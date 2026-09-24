@@ -2,6 +2,9 @@ import os
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import String, select, text
+from sqlalchemy.orm import Mapped, mapped_column
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditedModel, AuditLedgerSeal, AuditLog, Base
 from apps.execution.database.sealer import (
@@ -10,8 +13,6 @@ from apps.execution.database.sealer import (
     validate_ledger_integrity,
 )
 from apps.execution.trial_lock import TrialLockManager
-from sqlalchemy import String, select, text
-from sqlalchemy.orm import Mapped, mapped_column
 
 
 # Define a temporary test audited model

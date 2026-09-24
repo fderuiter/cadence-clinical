@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import time
 from typing import Any
 
@@ -22,7 +21,10 @@ class AIReadabilityGatewayClient:
         client: httpx.AsyncClient | None = None,
         timeout: float = 5.0,
     ) -> None:
-        raw_url = base_url or os.getenv("AI_GATEWAY_URL") or "http://localhost:8000"
+        from packages.config import get_econsent_settings
+
+        settings = get_econsent_settings()
+        raw_url = base_url or settings.ai_gateway_url
         self.base_url: str = raw_url.rstrip("/")
         self._external_client = client
         self._client: httpx.AsyncClient | None = client
@@ -62,9 +64,9 @@ class AIReadabilityGatewayClient:
             List of suggested term substitutions conforming to structured schema.
         """
         url = f"{self.base_url}/api/v1/ai/generate"
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-        )
+        from packages.config import get_econsent_settings
+
+        gateway_secret_env = get_econsent_settings().gateway_secret
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)

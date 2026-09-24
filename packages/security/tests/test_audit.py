@@ -1,8 +1,11 @@
 import datetime
 
-import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 import pytest
 import pytest_asyncio
+from sqlalchemy import String, select
+from sqlalchemy.orm import Mapped, mapped_column
+
+import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 from apps.execution.database.context import (
     current_change_reason,
     current_session,
@@ -11,9 +14,6 @@ from apps.execution.database.context import (
 from apps.execution.database.core import db_manager
 from apps.execution.database.decorators import transactional
 from apps.execution.database.models import AuditedModel, AuditLog, Base
-from sqlalchemy import String, select
-from sqlalchemy.orm import Mapped, mapped_column
-
 from packages.security.context import (
     audit_context,
 )

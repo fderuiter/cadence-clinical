@@ -16,9 +16,9 @@ logger = logging.getLogger("packages.security.gateway_client")
 def create_service_auth_headers(
     user_id: str, roles: str = "system", change_reason: str = "system_operation"
 ) -> dict[str, str]:
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    )  # pragma: allowlist secret
+    from packages.config import get_common_settings
+
+    gateway_secret_env = get_common_settings().gateway_secret
     secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -88,11 +88,9 @@ class GatewayBaseClient:
     def __init__(self, base_url: str = "", timeout: float = 5.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        # Resolved gateway secret
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET",
-            "internal-gateway-secret-12345",  # pragma: allowlist secret
-        )
+        from packages.config import get_common_settings
+
+        gateway_secret_env = get_common_settings().gateway_secret
         self.secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)
