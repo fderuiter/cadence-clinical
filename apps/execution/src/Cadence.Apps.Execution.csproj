@@ -2,14 +2,13 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Apps.Execution</RootNamespace>
     <Description>Cadence EDC Execution Engine, clinical observation capture, and eCRF runtime.</Description>
-    <DefaultItemExcludes>$(DefaultItemExcludes);Infrastructure\Persistence\**;Infrastructure\EditChecks\**;Infrastructure\Consumers\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
-    <ProjectReference Include="..\..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
+    <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
   </ItemGroup>
 
   <ItemGroup>

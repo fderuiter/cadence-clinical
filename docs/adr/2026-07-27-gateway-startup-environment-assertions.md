@@ -1,6 +1,6 @@
 # ADR-096: API Gateway Startup Environment Assertions to Prevent Production Auth Bypasses
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-07-27
 - Authors: @fderuiter
 - Deciders: @fderuiter
@@ -26,28 +26,28 @@ This decision implements requirements under Trace-8.
 ### Option 1: Runtime validation checks on every incoming request
 
 - **Overview:** Verify configuration state during request proxying or auth verification at runtime.
-- **Pros:**
+- ***Pros:***
   - ✅ Catches misconfigurations when a request actually arrives.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe performance overhead.
   - ❌ Vulnerability window exists: the port is open and listening before any check runs.
 
 ### Option 2: Build-time / CI-only validation checks
 
 - **Overview:** Check variables during build pipeline or CI execution.
-- **Pros:**
+- ***Pros:***
   - ✅ No runtime overhead.
-- **Cons:**
+- ***Cons:***
   - ❌ Unable to protect against dynamic environment variable misconfigurations in target containers at deployment/runtime.
 
 ### Option 3: Immediate Startup Verification and Assertions ("Fail-Fast" Boot Check) (Selected)
 
 - **Overview:** Implement direct validation of environment variables at the module-loading stage of `apps/gateway/main.py`. If a non-development environment (`APP_ENV` not in `development`, `dev`, `test`) is active and any test bypass variables (`JWT_TEST_SECRET`, `ALLOW_UNVERIFIED_JWT_FOR_TEST`, `SKIP_JWKS_FETCH`) are set, log a clear security alert and terminate the process immediately via `sys.exit(1)`.
-- **Pros:**
+- ***Pros:***
   - ✅ Absolute prevention of accidental production authorization bypass.
   - ✅ Eliminates vulnerability windows as the gateway crashes before binding to the port.
   - ✅ Preserves developer velocity by allowing standard bypass flags in development/test.
-- **Cons:**
+- ***Cons:***
   - ❌ Hard crashes of container if environment is improperly configured (which is desired for security).
 
 ## 4. Decision Outcome

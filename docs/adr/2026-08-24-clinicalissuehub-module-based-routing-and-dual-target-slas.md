@@ -1,9 +1,9 @@
 # ADR-2218: ClinicalIssueHub Module-Based Routing and Dual-Target SLAs
 
-* **Status:** Accepted
-* **Date:** 2026-08-24
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter, Architecture Governance Board, Clinical Operations
+- **Status:** Accepted
+- **Date:** 2026-08-24
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter, Architecture Governance Board, Clinical Operations
 
 ---
 
@@ -33,25 +33,42 @@ Requirements: `PRD-TCK-001`, `PRD-TCK-002`, `PRD-TCK-003`, `PRD-SYS-051`.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Pure Domain Engine (`ClinicalIssueHub`) with Layered Service Adapters and Dual-Phase Escalation.**
-   - Domain layer encapsulates `ClinicalIssueHub`, `FunctionalQueue`, `IssueContextSnapshot`, `RoutingVerdict`, `DualSLAPolicy`, `DualSLAEvaluation`, and `ReopenVerdict`.
+### Option 1: **Option A (Selected): Pure Domain Engine (`ClinicalIssueHub`) with Layered Service Adapters and Dual-Phase Escalation.**
+
+- **Overview:** - Domain layer encapsulates `ClinicalIssueHub`, `FunctionalQueue`, `IssueContextSnapshot`, `RoutingVerdict`, `DualSLAPolicy`, `DualSLAEvaluation`, and `ReopenVerdict`.
    - Infrastructure layer extends `Ticket` ORM model and repository methods.
    - Presentation layer exposes zero-I/O preview endpoints (`/api/v1/tickets/routing/evaluate`, `/api/v1/tickets/sla/evaluate`) and claim acknowledgment (`/api/v1/tickets/{id}/acknowledge`).
    - Escalation worker sweeps for both unacknowledged and unresolved SLA breaches.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Database-Bound Monolithic Ticket Service.**
-   - Engine executes queries internally on every routing or SLA evaluation.
+### Option 2: **Option B: Database-Bound Monolithic Ticket Service.**
+
+- **Overview:** - Engine executes queries internally on every routing or SLA evaluation.
    - *Rejected:* Violates pure domain boundaries, prevents in-memory local substitution, and degrades performance.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option C: Single-Clock SLA with Ad-Hoc Role Tagging.**
-   - Retains single resolution deadline without tracking acknowledgment velocity or formal functional queues.
+### Option 3: **Option C: Single-Clock SLA with Ad-Hoc Role Tagging.**
+
+- **Overview:** - Retains single resolution deadline without tracking acknowledgment velocity or formal functional queues.
    - *Rejected:* Does not provide operational visibility into initial response times or domain queue balancing.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. We implement `ClinicalIssueHub` as a pure, local-substitutable domain component under `apps/tickets/domain/services.py` backed by schema expansions in `apps/tickets/infrastructure/models.py`, API endpoints in `apps/tickets/presentation/routers/tickets.py`, and dual-phase escalation sweeps in `apps/tickets/escalation.py`.
+- **Chosen Option:** **Option A**. We implement `ClinicalIssueHub` as a pure, local-substitutable domain component under `apps/tickets/domain/services.py` backed by schema expansions in `apps/tickets/adapters/models.py`, API endpoints in `apps/tickets/presentation/routers/tickets.py`, and dual-phase escalation sweeps in `apps/tickets/escalation.py`.
+- **Justification:** Selected as primary architectural approach.
 
 ### Key Specifications:
 1. **Functional Queues:** `PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`, `SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`, `REGULATORY_COMPLIANCE`.
@@ -78,7 +95,7 @@ Chosen option: **Option A**. We implement `ClinicalIssueHub` as a pure, local-su
 ## 6. Implementation & Verification
 
 * **Domain Engine:** `apps/tickets/domain/services.py`, `apps/tickets/domain/models.py`
-* **Data Models & Repositories:** `apps/tickets/infrastructure/models.py`, `apps/tickets/adapters/repositories.py`
+* **Data Models & Repositories:** `apps/tickets/adapters/models.py`, `apps/tickets/adapters/repositories.py`
 * **Presentation Layer:** `apps/tickets/presentation/routers/tickets.py`, `apps/tickets/presentation/dtos.py`
 * **Escalation Worker:** `apps/tickets/escalation.py`
 * **Verification Suites:** Unit and integration tests under `apps/tickets/tests/` with `@req:PRD-TCK-001`, `@req:PRD-TCK-002`, `@req:PRD-TCK-003` tags.

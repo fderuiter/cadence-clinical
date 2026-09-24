@@ -30,19 +30,23 @@ Historically, endpoint adjudication systems suffered from several structural fla
 
 ### Option 1: Monolithic Custom Workflow Engine
 Build a standalone adjudication portal with an external database.
-- *Pros:* Decoupled from EDC execution core.
-- *Cons:* Heavy reconciliation overhead, sync latency, fragmented audit trails, lack of immediate SDTM compilation.
+- ***Pros:*** Decoupled from EDC execution core.
+- ***Cons:*** Heavy reconciliation overhead, sync latency, fragmented audit trails, lack of immediate SDTM compilation.
+
+
 
 ### Option 2: Native Cadence Execution Service with Hexagonal Blinding & CDISC Integration (Chosen)
 Implement `CecAdjudicationService`, `CecDossierRecord`, `CecCharterRecord`, and `CecMeetingRecord` directly within `apps/execution`, integrating with `SDTMDomain.CE` and `ClinicalObservation` persistence with role-projected blinding views.
-- *Pros:*
+- ***Pros:***
   - ✅ Instant zero-reconciliation EDC writeback and CDISC SDTM CE generation.
   - ✅ Cryptographic dossier and meeting minutes hashing (`SHA-256`).
   - ✅ Strict reader isolation enforced at the API projection layer.
   - ✅ 21 CFR Part 11 step-up electronic signatures integrated with platform security.
   - ✅ Audited model trigger protection across all committee actions.
-- *Cons:*
+- ***Cons:***
   - ❌ Requires careful role-based blinding projection logic in API endpoints.
+
+
 
 ## 4. Decision Outcome
 

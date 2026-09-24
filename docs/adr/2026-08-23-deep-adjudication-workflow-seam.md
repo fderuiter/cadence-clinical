@@ -1,9 +1,9 @@
 # ADR-2211: Deep Adjudication Workflow Seam
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -24,16 +24,35 @@ Requirements referenced: PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Deep `AdjudicationWorkflow` Module with `ImagingAdjudicationRepositoryPort`**
-   Encapsulate reader progression, discordance triggers, 21 CFR Part 11 cryptographic sealing, and persistence mutations inside `AdjudicationWorkflow` presenting two primary methods: `submit_reader_assessment` and `sign_off_adjudication`. Inject an abstract `ImagingAdjudicationRepositoryPort` satisfying hexagonal architecture.
-2. **Option B: Shallow Helper Functions with Direct `AsyncSession` Passing**
-   Extract helper functions while continuing to pass raw SQLAlchemy `AsyncSession` objects across the presentation/service boundary.
-3. **Option C: Presentation-Layer Transaction Script**
-   Retain inline database mutations and business logic within router endpoints.
+### Option 1: **Option A (Selected): Deep `AdjudicationWorkflow` Module with `ImagingAdjudicationRepositoryPort`**
+
+- **Overview:** Encapsulate reader progression, discordance triggers, 21 CFR Part 11 cryptographic sealing, and persistence mutations inside `AdjudicationWorkflow` presenting two primary methods: `submit_reader_assessment` and `sign_off_adjudication`. Inject an abstract `ImagingAdjudicationRepositoryPort` satisfying hexagonal architecture.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Shallow Helper Functions with Direct `AsyncSession` Passing**
+
+- **Overview:** Extract helper functions while continuing to pass raw SQLAlchemy `AsyncSession` objects across the presentation/service boundary.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Presentation-Layer Transaction Script**
+
+- **Overview:** Retain inline database mutations and business logic within router endpoints.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it:
+- **Chosen Option:** **Option A** because it:
+- **Justification:** Selected as primary architectural approach.
 * Reduces the presentation router to concise, single-line delegations.
 * Provides a clean seam at `ImagingAdjudicationRepositoryPort`, enabling lightweight in-memory fake testing.
 * Strictly encapsulates Part 11 cryptographic sealing and EDC tumor assessment synchronization within the domain service layer.

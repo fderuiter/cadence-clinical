@@ -271,7 +271,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/safety/adapters/ai_narrative_client.py",
-                                    "apps/safety/infrastructure/execution_client.py",
+                                    "apps/safety/adapters/execution_client.py",
                                 },
                                 {
                                     "packages/compliance/services/protocol_rag.py",
@@ -286,7 +286,7 @@ def main() -> None:
                                     "apps/gateway/domain/acl/usdm_validation.py",
                                 },
                                 {
-                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/adapters/neo4j_usdm_writer.py",
                                     "apps/designer/domain/cdisc/usdm_importer.py",
                                 },
                                 {
@@ -312,6 +312,11 @@ def main() -> None:
                                 {
                                     "apps/gateway/main.py",
                                     "packages/security/middleware.py",
+                                },
+                                {
+                                    "apps/execution/src/Program.cs",
+                                    "apps/designer/src/Program.cs",
+                                    "apps/gateway/src/Program.cs",
                                 },
                                 {
                                     "apps/interop/main.py",
@@ -359,7 +364,7 @@ def main() -> None:
                                 {
                                     "apps/tickets/notifications_client.py",
                                     "apps/tickets/adapters/notifications_client.py",
-                                    "apps/tickets/infrastructure/notifications_client.py",
+                                    "apps/tickets/adapters/notifications_client.py",
                                     "apps/execution/notifications_client.py",
                                     "apps/econsent/adapters/notifications_client.py",
                                 },
@@ -392,10 +397,10 @@ def main() -> None:
                                 {
                                     "apps/interop/designer_client.py",
                                     "apps/interop/adapters/designer_client.py",
-                                    "apps/interop/infrastructure/designer_client.py",
+                                    "apps/interop/adapters/designer_client.py",
                                     "apps/etmf/lock_client.py",
                                     "apps/etmf/adapters/lock_client.py",
-                                    "apps/etmf/infrastructure/lock_client.py",
+                                    "apps/etmf/adapters/lock_client.py",
                                     "apps/execution/designer_client.py",
                                     "apps/execution/econsent_client.py",
                                 },
@@ -481,7 +486,7 @@ def main() -> None:
                                     "apps/gateway/domain/acl/usdm_validation.py",
                                 },
                                 {
-                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/adapters/neo4j_usdm_writer.py",
                                     "apps/designer/domain/cdisc/usdm_importer.py",
                                 },
                                 {
@@ -498,7 +503,7 @@ def main() -> None:
                                     "apps/etmf/adapters/migrate.py",
                                 },
                                 {
-                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/adapters/models.py",
                                     "apps/etmf/database/migrate.py",
                                 },
                                 {
@@ -507,7 +512,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/ctms/domain/acl/document_renderer_dto.py",
-                                    "apps/designer/infrastructure/document_renderer.py",
+                                    "apps/designer/adapters/document_renderer.py",
                                     "apps/designer/adapters/document_renderer.py",
                                 },
                                 {
@@ -516,7 +521,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/etmf/adapters/repositories.py",
-                                    "apps/etmf/infrastructure/repositories.py",
+                                    "apps/etmf/adapters/repositories.py",
                                     "apps/etmf/domain/ports.py",
                                 },
                                 {
@@ -540,7 +545,7 @@ def main() -> None:
                                     "apps/designer/soa_models.py",
                                 },
                                 {
-                                    "apps/designer/infrastructure/usdm_ingestion.py",
+                                    "apps/designer/adapters/usdm_ingestion.py",
                                     "apps/designer/adapters/usdm_ingestion.py",
                                     "apps/designer/rules.py",
                                 },
@@ -579,7 +584,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/execution/adapters/repositories.py",
-                                    "apps/execution/infrastructure/repositories/__init__.py",
+                                    "apps/execution/adapters/repositories/__init__.py",
                                 },
                                 {
                                     "apps/execution/domain/acl/designer_eligibility_dto.py",
@@ -595,12 +600,12 @@ def main() -> None:
                                 },
                                 {
                                     "apps/execution/notifications_client.py",
-                                    "apps/tickets/infrastructure/notifications_client.py",
+                                    "apps/tickets/adapters/notifications_client.py",
                                     "apps/econsent/adapters/notifications_client.py",
                                 },
                                 {
                                     "apps/quality/domain/models.py",
-                                    "apps/quality/infrastructure/models.py",
+                                    "apps/quality/adapters/models.py",
                                 },
                                 {
                                     "apps/tickets/main.py",
@@ -615,7 +620,7 @@ def main() -> None:
                                     "apps/execution/main.py",
                                 },
                                 {
-                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/adapters/models.py",
                                     "apps/etmf/database/migrate.py",
                                 },
                                 {
@@ -627,12 +632,12 @@ def main() -> None:
                                     "apps/web/src/components/etmf/PdfPreviewModal.vue",
                                 },
                                 {
-                                    "apps/safety/infrastructure/execution_client.py",
-                                    "apps/quality/infrastructure/execution_client.py",
+                                    "apps/safety/adapters/execution_client.py",
+                                    "apps/quality/adapters/execution_client.py",
                                 },
                                 {
                                     "apps/safety/adapters/ai_narrative_client.py",
-                                    "apps/quality/infrastructure/execution_client.py",
+                                    "apps/quality/adapters/execution_client.py",
                                 },
                                 {
                                     "apps/execution/greenlight_gating.py",
@@ -656,7 +661,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/interop/models.py",
-                                    "apps/interop/infrastructure/models.py",
+                                    "apps/interop/adapters/models.py",
                                 },
                                 {
                                     "apps/interop/presentation/dct_dtos.py",
@@ -671,7 +676,7 @@ def main() -> None:
                                     "apps/interop/domain/cdr/adam_pipeline.py",
                                 },
                                 {
-                                    "apps/designer/infrastructure/document_renderer.py",
+                                    "apps/designer/adapters/document_renderer.py",
                                     "apps/payments/services/pdf_remittance_generator.py",
                                 },
                                 {
@@ -691,7 +696,7 @@ def main() -> None:
                                     "apps/ctms/domain/models.py",
                                 },
                                 {
-                                    "apps/quality/infrastructure/models.py",
+                                    "apps/quality/adapters/models.py",
                                     "apps/quality/presentation/dtos.py",
                                 },
                             ]

@@ -10,6 +10,14 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_models import (
+    LakehouseCanonicalRecord,
+)
+from apps.interop.adapters.lakehouse_repository import (
+    LakehouseRepository,
+)
+from apps.interop.adapters.models import Base
 from apps.interop.application.lakehouse_service import (
     LakehouseService,
     SnapshotImmutableError,
@@ -41,14 +49,6 @@ from apps.interop.domain.lakehouse_normalizer import (
     normalize_medical_imaging,
     partition_and_filter_records,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_models import (
-    LakehouseCanonicalRecord,
-)
-from apps.interop.infrastructure.lakehouse_repository import (
-    LakehouseRepository,
-)
-from apps.interop.infrastructure.models import Base
 from apps.interop.main import app
 from packages.security.rbac_helpers import build_gateway_headers
 

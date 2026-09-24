@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 
 using Spectre.Console;
 
@@ -8,12 +7,6 @@ namespace Cadence.Cli.Services;
 
 public static class GxPComplianceService
 {
-    private static readonly string[] GxpDocs =
-    [
-        "docs/SDLC/Requirements_Traceability_Matrix.md",
-        "docs/SDLC/IQ_OQ_PQ_Execution_Report.md"
-    ];
-
     public static int SyncCompliance(bool dryRun = false, bool commit = false)
     {
         AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");

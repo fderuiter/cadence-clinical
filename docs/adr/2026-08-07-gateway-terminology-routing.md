@@ -26,19 +26,19 @@ This decision implements requirements under Trace-8.
 ### Option 1: Route directly via explicit gateway rules
 
 - **Overview:** Add explicit routing rules in `apps/gateway/main.py` mapping `api/v1/terminology` and `terminology/` path prefixes directly to `SERVICES['designer']`.
-- **Pros:**
+- ***Pros:***
   - ✅ Highly explicit and robust routing matching existing platform patterns.
   - ✅ Preserves signed identity propagation and audit contexts perfectly.
   - ✅ Maintains existing route precedence.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires code modification in the main gateway routing logic.
 
 ### Option 2: Route as part of a generic wildcard
 
 - **Overview:** Rely on fallback wildcard proxy routing in the gateway.
-- **Pros:**
+- ***Pros:***
   - ✅ No direct gateway code edits needed.
-- **Cons:**
+- ***Cons:***
   - ❌ Wildcard fallbacks are implicit and highly prone to regression if route configurations in other services overlap or change.
   - ❌ Lacks explicit verification of routing behavior in tests.
 

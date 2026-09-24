@@ -3,8 +3,8 @@ import os
 import httpx
 import pytest
 from apps.designer.main import app as designer_app
-from apps.execution.main import app as execution_app
 
+from apps.execution.main import app as execution_app
 from packages.testing.security import create_test_auth_headers
 
 

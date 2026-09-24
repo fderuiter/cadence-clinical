@@ -19,6 +19,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Telemetry;
 
 using FluentValidation;
 
@@ -29,43 +30,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 
 using Polly;
 
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Logging.ClearProviders();
-builder.Logging.AddJsonConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-    options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
-    {
-        Indented = false
-    };
-});
-
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing =>
-    {
-        tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-    })
-    .WithMetrics(metrics =>
-    {
-        metrics
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-    });
-
-builder.Services.AddOpenApi();
+builder.AddCadenceWebDefaults();
 
 // Shared snake_case wire convention (`subject_id`, `study_id`, ...) for every Application-layer
 // response/request DTO in this service, registered once here per MIG-SUBJ-008 (`02_technical_design.md`
@@ -280,22 +249,7 @@ var app = builder.Build();
 // `ToProblemResult()` at its own raise site, ever produces a non-500 problem response.
 app.UseExceptionHandler();
 
-app.Use(async (context, next) =>
-{
-    var activity = System.Diagnostics.Activity.Current;
-    if (activity != null)
-    {
-        var traceParent = $"00-{activity.TraceId}-{activity.SpanId}-{(activity.Recorded ? "01" : "00")}";
-        context.Response.Headers["traceparent"] = traceParent;
-    }
-    await next(context);
-});
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.UseCadenceWebDefaults();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Execution", engine = "EDC" }))
     .WithName("ExecutionHealthCheck")

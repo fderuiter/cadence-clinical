@@ -4,12 +4,10 @@ FHIR / eSource & eCOA Sync Gateway providing REST APIs for FHIR prefill,
 pre-screening, ePRO mobile sync, instrument authoring, compliance tracking, and quarantine triage.
 """
 
-import os
-
 from fastapi import FastAPI
 
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.models import Base
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.models import Base
 from apps.interop.presentation.routers.cdr_pipeline import (
     router as cdr_pipeline_router,
 )
@@ -34,23 +32,25 @@ from apps.interop.presentation.routers.sensors import (
 from apps.interop.presentation.routers.statistical_computing import (
     router as sce_router,
 )
+from packages.config import get_interop_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+settings = get_interop_settings()
+DATABASE_URL = settings.interop_database_url
 
 assert_secure_secrets(
     "interop",
     {
-        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
-        "PSEUDONYMIZATION_SALT": os.getenv("PSEUDONYMIZATION_SALT"),
+        "GATEWAY_SECRET": settings.gateway_secret,
+        "PSEUDONYMIZATION_SALT": settings.pseudonymization_salt,
     },
 )
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("interop")
@@ -88,7 +88,7 @@ app.include_router(esource_router)
 app.include_router(devices_router)
 
 
-from apps.interop.infrastructure.designer_client import (  # noqa: E402
+from apps.interop.adapters.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,
 )
 from apps.interop.presentation.routers.interop import (  # noqa: E402

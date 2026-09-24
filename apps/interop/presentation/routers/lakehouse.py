@@ -20,6 +20,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
 from apps.interop.application.lakehouse_service import (
     LakehouseService,
     SnapshotImmutableError,
@@ -30,8 +32,6 @@ from apps.interop.domain.lakehouse_models import (
     MultiStreamIngestPayload,
     SnapshotFilterCriteria,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
 from apps.interop.presentation.lakehouse_dtos import (
     CreateSnapshotRequest,
     IngestResponse,

@@ -1,9 +1,9 @@
 # ADR-2196: Generative Pharmacovigilance Safety Narratives with Part 11 E-Signature
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -22,18 +22,39 @@ Furthermore, per FDA 21 CFR Part 11 and GxP regulatory guidelines, artificial in
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Generative Pipeline in `apps/safety` with Chronological Timeline Aggregation, Tier 3 Frontier AI Drafting, and Part 11 E-Signature Gate**:
-   - `apps/safety` pulls de-identified SDTM/observation timelines from `apps/execution`.
+### Option 1: **Option A (Selected): Dedicated Generative Pipeline in `apps/safety` with Chronological Timeline Aggregation, Tier 3 Frontier AI Drafting, and Part 11 E-Signature Gate**:
+
+- **Overview:** - `apps/safety` pulls de-identified SDTM/observation timelines from `apps/execution`.
    - Inferences are routed to `apps/ai_gateway` (`ModelTier.TIER_3_FRONTIER`) with structured JSON schema outputs.
    - Grounded claims are parsed and stored alongside the narrative.
    - Human-in-the-loop review UI in `apps/web` provides interactive cross-references and cryptographic e-signature sign-off.
    - E2B(R3) export verifies `assert_ai_record_approved` before XML generation.
-2. **Option B: Real-Time Dynamic LLM Generation at Export Time**: Generates text on-the-fly when E2B(R3) XML is exported, bypassing dedicated persistence. Rejected because it lacks Part 11 auditability and pre-export physician review.
-3. **Option C: Client-Side Browser Prompting**: Rejected due to exposed credentials, lack of PHI de-identification air-gap, and inability to maintain immutable backend audit ledgers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Real-Time Dynamic LLM Generation at Export Time**: Generates text on-the-fly when E2B(R3) XML is exported, bypassing dedicated persistence. Rejected because it lacks Part 11 auditability and pre-export physician review.
+
+- **Overview:** **Option B: Real-Time Dynamic LLM Generation at Export Time**: Generates text on-the-fly when E2B(R3) XML is exported, bypassing dedicated persistence. Rejected because it lacks Part 11 auditability and pre-export physician review.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Client-Side Browser Prompting**: Rejected due to exposed credentials, lack of PHI de-identification air-gap, and inability to maintain immutable backend audit ledgers.
+
+- **Overview:** **Option C: Client-Side Browser Prompting**: Rejected due to exposed credentials, lack of PHI de-identification air-gap, and inability to maintain immutable backend audit ledgers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 This architecture provides absolute regulatory compliance, ensures deterministic grounding of clinical claims against source EDC data, enforces strict 21 CFR Part 11 dual-attribution e-signature gating, and leverages Tier 3 frontier reasoning models via the centralized AI Gateway.
 
 ## 5. Consequences & Trade-offs
@@ -46,7 +67,7 @@ This architecture provides absolute regulatory compliance, ensures deterministic
 ## 6. Implementation & Verification
 
 * Implement domain models in `apps/safety/domain/narrative_models.py`.
-* Implement persistence ORM in `apps/safety/infrastructure/models.py`.
+* Implement persistence ORM in `apps/safety/adapters/models.py`.
 * Implement chronological timeline aggregator in `apps/safety/services/timeline_aggregator.py`.
 * Implement AI Gateway client in `apps/safety/adapters/ai_narrative_client.py`.
 * Implement application orchestration and Part 11 signature gate in `apps/safety/services/narrative_service.py`.

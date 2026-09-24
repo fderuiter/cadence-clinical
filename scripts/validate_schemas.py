@@ -84,7 +84,15 @@ def load_csharp_service_spec(service_name: str) -> dict[str, Any] | None:
     if csproj_path:
         try:
             result = subprocess.run(
-                ["dotnet", "run", "--project", csproj_path, "--no-build", "--", "--export-openapi"],
+                [
+                    "dotnet",
+                    "run",
+                    "--project",
+                    csproj_path,
+                    "--no-build",
+                    "--",
+                    "--export-openapi",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -94,13 +102,18 @@ def load_csharp_service_spec(service_name: str) -> dict[str, Any] | None:
         except Exception:
             pass
 
-    openapi_file = os.path.join(app_root, "docs", "openapi", f"{service_name}_openapi.json")
+    openapi_file = os.path.join(
+        app_root, "docs", "openapi", f"{service_name}_openapi.json"
+    )
     if os.path.isfile(openapi_file):
         try:
             with open(openapi_file, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Warning: Failed to load spec file '{openapi_file}': {e}", file=sys.stderr)
+            print(
+                f"Warning: Failed to load spec file '{openapi_file}': {e}",
+                file=sys.stderr,
+            )
     return None
 
 
@@ -113,7 +126,12 @@ def discover_services() -> dict[str, dict[str, Any]]:
     if os.path.isdir(apps_dir):
         for name in sorted(os.listdir(apps_dir)):
             dir_path = os.path.join(apps_dir, name)
-            if name in ("gateway", "web", "subject-portal") or name.startswith(".") or name.startswith("__") or not os.path.isdir(dir_path):
+            if (
+                name in ("gateway", "web", "subject-portal")
+                or name.startswith(".")
+                or name.startswith("__")
+                or not os.path.isdir(dir_path)
+            ):
                 continue
 
             prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
@@ -134,10 +152,19 @@ def discover_services() -> dict[str, dict[str, Any]]:
                 if spec is not None:
                     config[name] = {"spec": spec, "type": "csharp", "prefix": prefix}
                 else:
-                    IMPORT_ERRORS.append((name, RuntimeError(f"Could not load OpenAPI schema for service '{name}'")))
+                    IMPORT_ERRORS.append(
+                        (
+                            name,
+                            RuntimeError(
+                                f"Could not load OpenAPI schema for service '{name}'"
+                            ),
+                        )
+                    )
 
     if os.path.isdir(openapi_dir):
-        for static_file in sorted(glob.glob(os.path.join(openapi_dir, "*_openapi.json"))):
+        for static_file in sorted(
+            glob.glob(os.path.join(openapi_dir, "*_openapi.json"))
+        ):
             base_name = os.path.basename(static_file).replace("_openapi.json", "")
             if base_name in config or base_name == "cdisc":
                 continue
@@ -152,16 +179,27 @@ def discover_services() -> dict[str, dict[str, Any]]:
     return config
 
 
-def rewrite_refs(obj: Any, prefix: str, schema_map: dict[str, str] | None = None) -> Any:
+def rewrite_refs(
+    obj: Any, prefix: str, schema_map: dict[str, str] | None = None
+) -> Any:
     """Recursively rewrite $ref schema pointers to match namespaced schema keys."""
     if isinstance(obj, dict):
         new_obj = {}
         for k, v in obj.items():
-            if k == "$ref" and isinstance(v, str) and v.startswith("#/components/schemas/"):
+            if (
+                k == "$ref"
+                and isinstance(v, str)
+                and v.startswith("#/components/schemas/")
+            ):
                 ref_name = v.split("/")[-1]
                 target_name = (
-                    schema_map.get(ref_name) if schema_map and ref_name in schema_map
-                    else (ref_name if ref_name.startswith(prefix) else f"{prefix}{ref_name}")
+                    schema_map.get(ref_name)
+                    if schema_map and ref_name in schema_map
+                    else (
+                        ref_name
+                        if ref_name.startswith(prefix)
+                        else f"{prefix}{ref_name}"
+                    )
                 )
                 new_obj[k] = f"#/components/schemas/{target_name}"
             else:
@@ -303,7 +341,11 @@ if __name__ == "__main__":
         export_specs: dict[str, tuple[str, dict[str, Any]]] = {}
 
         for name, config in SERVICES_CONFIG.items():
-            schema = config["app"].openapi() if config.get("type") in ("python", "dynamic") else (config.get("spec") or config.get("schema"))
+            schema = (
+                config["app"].openapi()
+                if config.get("type") in ("python", "dynamic")
+                else (config.get("spec") or config.get("schema"))
+            )
             export_specs[name] = (config["prefix"], schema)
             out_file = os.path.join(export_dir, f"{name}_openapi.json")
             with open(out_file, "w", encoding="utf-8") as f:
@@ -317,13 +359,19 @@ if __name__ == "__main__":
             aggregated_paths = {}
             aggregated_schemas = {}
             for name, config in SERVICES_CONFIG.items():
-                spec = config["app"].openapi() if config.get("type") in ("python", "dynamic") else (config.get("spec") or config.get("schema"))
+                spec = (
+                    config["app"].openapi()
+                    if config.get("type") in ("python", "dynamic")
+                    else (config.get("spec") or config.get("schema"))
+                )
                 prefix = config["prefix"]
 
                 schemas = spec.get("components", {}).get("schemas", {})
                 schema_map = {}
                 for s_name in schemas:
-                    target_name = s_name if s_name.startswith(prefix) else f"{prefix}{s_name}"
+                    target_name = (
+                        s_name if s_name.startswith(prefix) else f"{prefix}{s_name}"
+                    )
                     schema_map[s_name] = target_name
 
                 raw_paths = spec.get("paths", {})
@@ -338,14 +386,9 @@ if __name__ == "__main__":
 
             gateway_schema = {
                 "openapi": "3.1.0",
-                "info": {
-                    "title": "Cadence Clinical - Unified API",
-                    "version": "0.1.0"
-                },
+                "info": {"title": "Cadence Clinical - Unified API", "version": "0.1.0"},
                 "paths": aggregated_paths,
-                "components": {
-                    "schemas": aggregated_schemas
-                }
+                "components": {"schemas": aggregated_schemas},
             }
 
             with open(gateway_out_file, "w", encoding="utf-8") as f:

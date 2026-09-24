@@ -560,15 +560,23 @@ def main():
     api_docs_dir = ROOT_DIR / "docs" / "api"
     api_docs_dir.mkdir(parents=True, exist_ok=True)
 
-    print("--- Starting Programmatic OpenAPI Documentation Generator ---")
+    validate_mode = "--validate" in sys.argv
+    drifted_files: list[str] = []
+
+    if not validate_mode:
+        print("--- Starting Programmatic OpenAPI Documentation Generator ---")
+    else:
+        print("--- Validating OpenAPI API Documentation Parity ---")
+
     available_services = []
 
     for service_name, meta in SERVICE_METADATA.items():
         spec = load_service_spec(service_name)
         if not spec:
-            print(
-                f"[WARN] No OpenAPI spec found for '{service_name}', generating fallback metadata..."
-            )
+            if not validate_mode:
+                print(
+                    f"[WARN] No OpenAPI spec found for '{service_name}', generating fallback metadata..."
+                )
             spec = {
                 "paths": {
                     f"{meta['prefix']}/health": {
@@ -588,15 +596,45 @@ def main():
 
         md_content = generate_service_markdown(service_name, meta, spec)
         target_path = api_docs_dir / f"{service_name}.md"
-        target_path.write_text(md_content, encoding="utf-8")
+
+        if validate_mode:
+            if (
+                not target_path.exists()
+                or target_path.read_text(encoding="utf-8") != md_content
+            ):
+                drifted_files.append(f"docs/api/{service_name}.md")
+        else:
+            target_path.write_text(md_content, encoding="utf-8")
+            print(
+                f"[SUCCESS] Generated API documentation: docs/api/{service_name}.md ({len(spec.get('paths', {}))} routes)"
+            )
+
         available_services.append((service_name, meta, spec))
-        print(
-            f"[SUCCESS] Generated API documentation: docs/api/{service_name}.md ({len(spec.get('paths', {}))} routes)"
-        )
 
     # Generate master index
     index_content = generate_index_markdown(available_services)
     index_path = api_docs_dir / "index.md"
+
+    if validate_mode:
+        if (
+            not index_path.exists()
+            or index_path.read_text(encoding="utf-8") != index_content
+        ):
+            drifted_files.append("docs/api/index.md")
+
+        if drifted_files:
+            print(
+                f"[ERROR] API documentation drift detected in {len(drifted_files)} file(s):\n"
+                + "\n".join(f"  - {f}" for f in drifted_files)
+                + "\nPlease run 'uv run python scripts/generate_api_docs.py' or 'cadence fix --all' to synchronize.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(
+            f"[SUCCESS] All API documentation files in docs/api/ ({len(available_services)} services) are up to date."
+        )
+        sys.exit(0)
+
     index_path.write_text(index_content, encoding="utf-8")
     print(
         f"[SUCCESS] Generated Master API Index: docs/api/index.md ({len(available_services)} microservices cataloged)"

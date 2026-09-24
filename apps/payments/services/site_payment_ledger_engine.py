@@ -17,6 +17,15 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.payments.adapters.models import (
+    BudgetContractModel,
+    FeeScheduleModel,
+    HoldbackReserveModel,
+    PayableAllocationModel,
+    PayableModel,
+    PaymentAuditLogModel,
+    SplitPayeeConfigModel,
+)
 from apps.payments.domain.exceptions import (
     ContractNotFoundError,
     PayableNotFoundError,
@@ -30,15 +39,6 @@ from apps.payments.domain.models import (
     SplitAllocationCalculation,
     TriggerType,
     VisitCalculationBreakdown,
-)
-from apps.payments.infrastructure.models import (
-    BudgetContractModel,
-    FeeScheduleModel,
-    HoldbackReserveModel,
-    PayableAllocationModel,
-    PayableModel,
-    PaymentAuditLogModel,
-    SplitPayeeConfigModel,
 )
 from apps.payments.presentation.dtos import SplitPayeeConfigItem
 from apps.payments.services.audit import (

@@ -1,9 +1,9 @@
 # ADR-2203: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault
 
-* **Status:** Accepted
-* **Date:** 2026-08-22
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -19,13 +19,35 @@ In biostatistics and clinical data science, regulatory authorities (FDA, EMA, PM
 
 ## 3. Options Considered
 
-1. **Hermetic Docker Containers with Version-Pinned Data Snapshots & Role-Gated Vault (Selected)**: Statistical execution is spawned in ephemeral, air-gapped Linux containers provisioned with pre-compiled, cryptographically hashed package caches. The CDR engine projects read-only dataset snapshots. Unblinded variables reside in an AES-256 encrypted vault, decrypted only during signed IDMC unblinded sessions. Every run generates a signed manifest capturing script hash, input snapshot hash, container digest, output dataset hashes, and biostatistician identity.
-2. **Shared Persistent Virtual Machine**: Multiple statisticians execute scripts on a long-lived shared server with mutable system libraries and unpinned packages.
-3. **External SAS/R Client Execution**: Statisticians download CSV files to local laptops and run scripts locally without central audit logging.
+### Option 1: **Hermetic Docker Containers with Version-Pinned Data Snapshots & Role-Gated Vault (Selected)**: Statistical execution is spawned in ephemeral, air-gapped Linux containers provisioned with pre-compiled, cryptographically hashed package caches. The CDR engine projects read-only dataset snapshots. Unblinded variables reside in an AES-256 encrypted vault, decrypted only during signed IDMC unblinded sessions. Every run generates a signed manifest capturing script hash, input snapshot hash, container digest, output dataset hashes, and biostatistician identity.
+
+- **Overview:** **Hermetic Docker Containers with Version-Pinned Data Snapshots & Role-Gated Vault (Selected)**: Statistical execution is spawned in ephemeral, air-gapped Linux containers provisioned with pre-compiled, cryptographically hashed package caches. The CDR engine projects read-only dataset snapshots. Unblinded variables reside in an AES-256 encrypted vault, decrypted only during signed IDMC unblinded sessions. Every run generates a signed manifest capturing script hash, input snapshot hash, container digest, output dataset hashes, and biostatistician identity.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Shared Persistent Virtual Machine**: Multiple statisticians execute scripts on a long-lived shared server with mutable system libraries and unpinned packages.
+
+- **Overview:** **Shared Persistent Virtual Machine**: Multiple statisticians execute scripts on a long-lived shared server with mutable system libraries and unpinned packages.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **External SAS/R Client Execution**: Statisticians download CSV files to local laptops and run scripts locally without central audit logging.
+
+- **Overview:** **External SAS/R Client Execution**: Statisticians download CSV files to local laptops and run scripts locally without central audit logging.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Hermetic Docker Containers with Version-Pinned Data Snapshots & Role-Gated Vault**.
+- **Chosen Option:** **Hermetic Docker Containers with Version-Pinned Data Snapshots & Role-Gated Vault**.
+- **Justification:** Selected as primary architectural approach.
 - Guarantees complete regulatory audit compliance and immutable execution history.
 - Prevents package drift and OS-level environment contamination.
 - Cryptographically protects study blinding integrity.

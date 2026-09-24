@@ -26,19 +26,19 @@ This decision implements requirements under Trace-6.
 ### Option 1: Dedicated Sibling Component with Automatic Integration
 
 - **Overview:** Build `createClinicalSoAMatrix` as a focused sibling component in `packages/ui/index.js`, and extend the original wrapper `createClinicalVisitMatrix` to dynamically detect the shape of input data and delegate to this new component when needed.
-- **Pros:**
+- ***Pros:***
   - ✅ High modularity and 100% backwards compatibility.
   - ✅ Clean API design separating simple visit-form matrices from rich hierarchical SoA matrices.
   - ✅ Reuses existing styling conventions while adding scoped style sheets under `.clinical-soa-matrix`.
-- **Cons:**
+- ***Cons:***
   - ❌ Small code addition inside the shared `packages/ui` library.
 
 ### Option 2: Replacing the Monolithic Table Component Completely
 
 - **Overview:** Refactor `createClinicalVisitMatrix` to only consume the new SoA format, and manually migrate all existing components and tests across the repository.
-- **Pros:**
+- ***Pros:***
   - ✅ Single rendering function in the shared library.
-- **Cons:**
+- ***Cons:***
   - ❌ Extremely high risk of breaking existing features or other platform views that depend on the simpler 2D visit format.
   - ❌ Introduces unnecessary complexity to simpler mock views.
 

@@ -35,16 +35,9 @@ class TerminologyCache:
         if ttl is not None:
             self.ttl = float(ttl)
         else:
-            import os
+            from packages.config import get_safety_settings
 
-            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
-            if env_ttl is not None:
-                try:
-                    self.ttl = float(env_ttl)
-                except ValueError:
-                    self.ttl = 3600.0
-            else:
-                self.ttl = 3600.0
+            self.ttl = float(get_safety_settings().effective_cache_ttl)
 
     def get(self, term: str, version: str) -> dict[str, Any] | None:
         """Retrieves a cached term resolution if still valid.

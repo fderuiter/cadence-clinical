@@ -31,21 +31,21 @@ This decision implements requirements under Trace-9.
 ### Option 1: In-line primary table versioning
 
 - **Overview:** Save every version of submissions directly in the `epro_submissions` table with custom revision indexing and status fields.
-- **Pros:**
+- ***Pros:***
   - ✅ Single database table simplifies basic queries.
-- **Cons:**
+- ***Cons:***
   - ❌ Drastically increases table volume and query complexity when fetching only the active/winning answers.
   - ❌ Mixing active data and historically rejected payloads degrades system performance and reporting correctness.
 
 ### Option 2: Dedicated Shadow/Defeated Model and Local Clinical Query Schema (Selected)
 
 - **Overview:** Introduce a dedicated `epro_defeated_submissions` table/model to persist defeated/overwritten inputs and a local `clinical_queries` table/model to record structural exceptions.
-- **Pros:**
+- ***Pros:***
   - ✅ High separation of concerns: Active/winning data is isolated from historical defeated payloads.
   - ✅ Absolutely no overwritten or defeated sync payload is silently discarded.
   - ✅ Clear structured clinical query generation when synchronization attempts refer to non-existent targets.
   - ✅ Self-contained within the Interop gateway service boundary.
-- **Cons:**
+- ***Cons:***
   - ❌ Introduces two new database tables.
 
 ## 4. Decision Outcome

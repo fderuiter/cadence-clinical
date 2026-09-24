@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import json
-import os
 from email.message import EmailMessage
 from typing import Any
 
@@ -43,14 +42,17 @@ async def send_email_notification(notification: Any) -> None:
     """
     Sends an email notification via SMTP configured by SMTP_* env vars.
     """
-    smtp_host = os.getenv("SMTP_HOST", "localhost")
-    smtp_port = int(os.getenv("SMTP_PORT", "1025"))
-    smtp_username = os.getenv("SMTP_USERNAME")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    smtp_use_tls = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
-    smtp_use_ssl = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
-    smtp_sender = os.getenv("SMTP_SENDER", f"no-reply@{brand_domain}")
+    from packages.config import get_notifications_settings
+
+    settings = get_notifications_settings()
+    smtp_host = settings.smtp_host
+    smtp_port = settings.smtp_port
+    smtp_username = settings.smtp_username
+    smtp_password = settings.smtp_password
+    smtp_use_tls = settings.smtp_use_tls
+    smtp_use_ssl = settings.smtp_use_ssl
+    brand_domain = settings.brand_domain
+    smtp_sender = settings.smtp_sender
 
     if notification.recipient_user_id:
         recipient = f"{notification.recipient_user_id}@{brand_domain}"
@@ -103,11 +105,12 @@ async def send_webhook_notification(notification: Any) -> None:
     """
     Sends a webhook notification payload using httpx.
     """
-    webhook_url = os.getenv("WEBHOOK_URL", "http://localhost:8080/webhook")
-    webhook_signing_secret = os.getenv(
-        "WEBHOOK_SIGNING_SECRET", default="default_secret"
-    )
-    webhook_timeout = float(os.getenv("WEBHOOK_TIMEOUT", "10.0"))
+    from packages.config import get_notifications_settings
+
+    settings = get_notifications_settings()
+    webhook_url = settings.webhook_url
+    webhook_signing_secret = settings.webhook_signing_secret
+    webhook_timeout = settings.webhook_timeout
 
     payload = {
         "id": notification.id,
@@ -139,7 +142,7 @@ async def send_webhook_notification(notification: Any) -> None:
         webhook_signing_secret.encode("utf-8"), payload_bytes, hashlib.sha256
     ).hexdigest()
 
-    sig_header = os.getenv("WEBHOOK_SIGNATURE_HEADER", "X-Cadence-Signature")
+    sig_header = settings.webhook_signature_header
     headers = {
         "Content-Type": "application/json",
         sig_header: sig,

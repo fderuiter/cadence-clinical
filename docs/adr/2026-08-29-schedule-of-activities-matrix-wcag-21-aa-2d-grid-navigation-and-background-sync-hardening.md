@@ -29,16 +29,35 @@ This decision resolves requirements under `@req:PRD-SYS-020` and WCAG 2.1 AA.
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Native Vue 3 Composable (`useGridNavigation`) + WAI-ARIA Roles**
-   - Clean separation of concern, full testability, zero external runtime dependencies.
-2. **Option B: Third-Party Data Grid Component (e.g. AG-Grid / Handsontable)**
-   - _Rejected_: Massive bundle size overhead (>500KB), proprietary license friction, and difficulty styling with Vanilla CSS tokens.
-3. **Option C: Unstructured HTML Table with Click-Only Handlers**
-   - _Rejected_: Violates WCAG 2.1 AA accessibility regulations for clinical software.
+### Option 1: **Option A (Selected): Native Vue 3 Composable (`useGridNavigation`) + WAI-ARIA Roles**
+
+- **Overview:** - Clean separation of concern, full testability, zero external runtime dependencies.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Third-Party Data Grid Component (e.g. AG-Grid / Handsontable)**
+
+- **Overview:** - _Rejected_: Massive bundle size overhead (>500KB), proprietary license friction, and difficulty styling with Vanilla CSS tokens.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Unstructured HTML Table with Click-Only Handlers**
+
+- **Overview:** - _Rejected_: Violates WCAG 2.1 AA accessibility regulations for clinical software.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Native Vue 3 Composable + WAI-ARIA Matrix Roles)**.
+- **Chosen Option:** **Option A (Native Vue 3 Composable + WAI-ARIA Matrix Roles)**.
+- **Justification:** Selected as primary architectural approach.
 
 ### 1. Reusable 2D Grid Navigation Composable (`useGridNavigation.ts`)
 
@@ -69,7 +88,7 @@ export function useGridNavigation(initialRow = 0, initialCol = 0) {
 
 ### 2. WAI-ARIA Matrix Semantics
 
-Components [`ClinicalSoAMatrix.vue`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/components/clinical/ClinicalSoAMatrix.vue) and [`SoAMatrixEditor.vue`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/components/clinical/SoAMatrixEditor.vue) declare full ARIA hierarchies:
+Components [`ClinicalSoAMatrix.vue`](apps/web/src/components/clinical/ClinicalSoAMatrix.vue) and [`SoAMatrixEditor.vue`](apps/web/src/components/clinical/SoAMatrixEditor.vue) declare full ARIA hierarchies:
 
 - Root container: `role="grid"` with `aria-label="Schedule of Activities Matrix"`.
 - Table rows: `role="row"`.
@@ -79,7 +98,7 @@ Components [`ClinicalSoAMatrix.vue`](file:///Volumes/SanDisk%20External%20SSD/Co
 
 ### 3. Background Sync & Exception Guarding
 
-In [`apps/web/src/stores/clinical.ts`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/stores/clinical.ts):
+In [`apps/web/src/stores/clinical.ts`](apps/web/src/stores/clinical.ts):
 
 - `startSyncTimer` executes with `.catch()` boundary guards and safe interval error logging.
 - `window.alert()` calls are replaced with reactive `this.soaError` store states for non-blocking UI alert banners.
@@ -98,10 +117,10 @@ In [`apps/web/src/stores/clinical.ts`](file:///Volumes/SanDisk%20External%20SSD/
 
 ## 6. Implementation & Verification
 
-- **Composable**: [`apps/web/src/composables/useGridNavigation.ts`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/composables/useGridNavigation.ts).
-- **Matrix Components**: [`apps/web/src/components/clinical/ClinicalSoAMatrix.vue`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/components/clinical/ClinicalSoAMatrix.vue), [`apps/web/src/components/clinical/SoAMatrixEditor.vue`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/components/clinical/SoAMatrixEditor.vue).
-- **Store & Portal**: [`apps/web/src/stores/clinical.ts`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/src/stores/clinical.ts), [`apps/subject-portal/src/index.js`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/subject-portal/src/index.js).
+- **Composable**: [`apps/web/src/composables/useGridNavigation.ts`](apps/web/src/composables/useGridNavigation.ts).
+- **Matrix Components**: [`apps/web/src/components/clinical/ClinicalSoAMatrix.vue`](apps/web/src/components/clinical/ClinicalSoAMatrix.vue), [`apps/web/src/components/clinical/SoAMatrixEditor.vue`](apps/web/src/components/clinical/SoAMatrixEditor.vue).
+- **Store & Portal**: [`apps/web/src/stores/clinical.ts`](apps/web/src/stores/clinical.ts), [`apps/subject-portal/src/index.js`](apps/subject-portal/src/index.js).
 - **Unit Tests**:
-  - [`apps/web/tests/components/Grid2DKeyboardNavigation.spec.js`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/tests/components/Grid2DKeyboardNavigation.spec.js) (Roving focus, keyboard arrow routing, Space/Enter toggling, axe accessibility checks).
-  - [`apps/web/tests/usdm_validation.test.js`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/web/tests/usdm_validation.test.js) (Reactive error states).
+  - [`apps/web/tests/components/Grid2DKeyboardNavigation.spec.js`](apps/web/tests/components/Grid2DKeyboardNavigation.spec.js) (Roving focus, keyboard arrow routing, Space/Enter toggling, axe accessibility checks).
+  - [`apps/web/tests/usdm_validation.test.js`](apps/web/tests/usdm_validation.test.js) (Reactive error states).
   - 546 web unit tests passing cleanly.

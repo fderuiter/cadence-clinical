@@ -1,4 +1,4 @@
-from apps.eisf.infrastructure.adapter import (
+from apps.eisf.adapters.adapter import (
     FORWARD_MAPPING,
     REVERSE_MAPPING,
     DocumentClassification,

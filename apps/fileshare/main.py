@@ -6,12 +6,10 @@ internal share grants, guest links, and video transcoding pipeline.
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
-import os
-
 from fastapi import FastAPI
 
 from apps.fileshare.adapters.database import db_manager, get_db_session
-from apps.fileshare.infrastructure.models import Base
+from apps.fileshare.adapters.models import Base
 from apps.fileshare.presentation.routers.files import (
     audit_alias_router,
     audit_router,
@@ -25,14 +23,16 @@ from apps.fileshare.workers.transcode_worker import (
     start_transcode_worker,
     stop_transcode_worker,
 )
+from packages.config import get_fileshare_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///./fileshare.db")
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+settings = get_fileshare_settings()
+DATABASE_URL = settings.fileshare_database_url
+BRAND_NAME = settings.brand_name
 
 validate_branding("fileshare")
 

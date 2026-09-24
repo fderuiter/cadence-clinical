@@ -8,10 +8,10 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from apps.ctms.domain.models import CTMSAuditLogEntity
-from apps.ctms.infrastructure.repositories.ctms_delegation_repository import (
+from apps.ctms.adapters.repositories.ctms_delegation_repository import (
     SQLAlchemyCTMSDelegationRepository,
 )
+from apps.ctms.domain.models import CTMSAuditLogEntity
 from apps.ctms.models import Base, CTMSAuditLog
 from packages.compliance.audit import verify_audit_chain
 

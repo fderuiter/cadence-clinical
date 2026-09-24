@@ -16,7 +16,7 @@ os.environ["AUDIT_LOG_SECRET_KEY"] = "test-payments-audit-secret-key-999"
 os.environ["ALLOW_MOCK_SIGNATURES"] = "1"
 
 from apps.payments.adapters.database import db_manager
-from apps.payments.infrastructure.models import Base
+from apps.payments.adapters.models import Base
 from apps.payments.main import app
 from packages.testing.security import generate_signature
 

@@ -1,4 +1,4 @@
-from apps.etmf.infrastructure.cryptography import (
+from apps.etmf.adapters.cryptography import (
     extract_signature_from_content,
     is_bypass_requested,
     is_mock_allowed,

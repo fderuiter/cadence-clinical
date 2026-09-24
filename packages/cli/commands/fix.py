@@ -70,19 +70,39 @@ def run_fix(
             [sys.executable, "scripts/clean_secrets_baseline.py"],
         ),
         ("ADR Index Validation", [sys.executable, "scripts/validate_adrs.py"]),
+        (
+            "CLI Documentation Generation",
+            [sys.executable, "scripts/generate_cli_docs.py"],
+        ),
     ]
 
     if all_remediations:
-        steps.append(
-            (
-                "OpenAPI Schemas Export",
-                [
-                    sys.executable,
-                    "scripts/validate_schemas.py",
-                    "--export-dir",
-                    "docs/openapi",
-                ],
-            )
+        steps.extend(
+            [
+                (
+                    "OpenAPI Schemas Export",
+                    [
+                        sys.executable,
+                        "scripts/validate_schemas.py",
+                        "--export-dir",
+                        "docs/openapi",
+                    ],
+                ),
+                (
+                    "OpenAPI Integration Spec Sync",
+                    [
+                        sys.executable,
+                        "scripts/sync_openapi_spec.py",
+                    ],
+                ),
+                (
+                    "API Markdown Documentation Sync",
+                    [
+                        sys.executable,
+                        "scripts/generate_api_docs.py",
+                    ],
+                ),
+            ]
         )
 
     if sync_gxp:

@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.safety.infrastructure.models import (
+from apps.safety.adapters.models import (
     DeviceSafetyInvestigation,
     write_audit_log,
 )

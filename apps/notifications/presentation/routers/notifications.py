@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.notifications.infrastructure.database import db_manager
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.database import db_manager
+from apps.notifications.adapters.models import (
     Notification,
     NotificationAuditLog,
     NotificationCategory,
@@ -201,7 +201,10 @@ async def deliver_channel(delivery_id: str) -> None:
             delivery.status = "FAILED"
             delivery.last_error = str(e)
 
-            max_attempts = int(os.getenv("NOTIFICATION_MAX_ATTEMPTS", "5"))
+            from packages.config import get_notifications_settings
+
+            settings = get_notifications_settings()
+            max_attempts = settings.notification_max_attempts
             if delivery.attempts >= max_attempts:
                 delivery.retry_eligible = False
                 await write_audit_log(
@@ -212,8 +215,8 @@ async def deliver_channel(delivery_id: str) -> None:
                     details=f"Delivery exhausted for channel '{delivery.channel}' of notification '{delivery.notification_id}' after {delivery.attempts} attempts. Last error: '{str(e)}'",
                 )
             else:
-                base_delay = float(os.getenv("NOTIFICATION_RETRY_BASE_DELAY", "2.0"))
-                max_delay = float(os.getenv("NOTIFICATION_RETRY_MAX_DELAY", "3600.0"))
+                base_delay = settings.notification_retry_base_delay
+                max_delay = settings.notification_retry_max_delay
                 backoff_delay = min(
                     max_delay, base_delay * (2 ** (delivery.attempts - 1))
                 )

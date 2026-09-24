@@ -1,7 +1,6 @@
 """FastAPI Router for eConsent microservice."""
 
 import json
-import os
 import uuid
 from datetime import UTC, datetime
 
@@ -10,12 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.econsent.infrastructure.cache import (
+from apps.econsent.adapters.cache import (
     ApprovedTranslationCache,
     get_approved_template_translation,
 )
-from apps.econsent.infrastructure.database import db_manager
-from apps.econsent.infrastructure.models import (
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import (
     ComprehensionCheck,
     ComprehensionResult,
     ConsentAuditLog,
@@ -27,7 +26,7 @@ from apps.econsent.infrastructure.models import (
     EtmfArchivalDelivery,
     SubjectConsent,
 )
-from apps.econsent.infrastructure.services import submit_comprehension_answers
+from apps.econsent.adapters.services import submit_comprehension_answers
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
     ClauseDiffDTO,
@@ -105,13 +104,16 @@ def publish_consent_completed_event(
     Returns:
         None
     """
-    redis_host = os.getenv("REDIS_HOST")
+    from packages.config import get_econsent_settings
+
+    settings = get_econsent_settings()
+    redis_host = settings.redis_host
     if not redis_host:
         return
     try:
-        redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        redis_password = os.getenv("REDIS_PASSWORD") or None
-        redis_channel = os.getenv("REDIS_CHANNEL_CONSENT", "econsent_consent_completed")
+        redis_port = settings.redis_port
+        redis_password = settings.redis_password
+        redis_channel = settings.redis_channel_consent
 
         r = redis.Redis(
             host=redis_host,
@@ -567,9 +569,9 @@ async def capture_subject_consent(
     from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
     sig_payload = verify_and_consume_sig_token(sig_token, user_id)
-    secret = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    ).encode()
+    from packages.config import get_econsent_settings
+
+    secret = get_econsent_settings().gateway_secret.encode()
 
     bound_action = sig_payload.get("action", "")
     request_path = request.url.path

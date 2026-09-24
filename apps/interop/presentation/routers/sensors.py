@@ -19,15 +19,15 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
+from apps.interop.adapters.sensor_repository import SensorRepository
 from apps.interop.application.sensor_service import SensorService
 from apps.interop.domain.sensor_models import (
     DeviceRegistrationRequest,
     SensorDeviceType,
     SensorIngestStreamPayload,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
-from apps.interop.infrastructure.sensor_repository import SensorRepository
 from apps.interop.presentation.sensor_dtos import (
     AcknowledgeAlertRequest,
     AcknowledgeAlertResponse,

@@ -1,9 +1,9 @@
 # ADR-2216: Deepen CDISC Study Submission Compiler
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirements:** PRD-CDR-002, PRD-CDR-003, ADR-2199, 21 CFR Part 11
 
 ---
@@ -27,14 +27,27 @@ This shallow abstraction increased caller coupling, duplicated orchestration log
 
 ## 3. Options Considered
 
-1. **Unified Deep Submission Engine (`CdiscSubmissionEngine` with `SubmissionPackage` Entity) [Selected]:**
-   Create a cohesive domain engine in `apps/interop/domain/cdr/submission_engine.py` encapsulating the complete 4-step pipeline behind a clean, single-call `compile_submission_package(...)` interface returning a sealed `SubmissionPackage` model.
-2. **Leave Pipeline Logic Distributed in Application Service:**
-   Keep individual compiler engines decoupled and orchestrate them within `CDRPipelineService`. (Rejected: leads to shallow interfaces, leakage of step sequence details, and redundant boilerplate in routers).
+### Option 1: **Unified Deep Submission Engine (`CdiscSubmissionEngine` with `SubmissionPackage` Entity) [Selected]:**
+
+- **Overview:** Create a cohesive domain engine in `apps/interop/domain/cdr/submission_engine.py` encapsulating the complete 4-step pipeline behind a clean, single-call `compile_submission_package(...)` interface returning a sealed `SubmissionPackage` model.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Leave Pipeline Logic Distributed in Application Service:**
+
+- **Overview:** Keep individual compiler engines decoupled and orchestrate them within `CDRPipelineService`. (Rejected: leads to shallow interfaces, leakage of step sequence details, and redundant boilerplate in routers).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1**.
+- **Chosen Option:** **Option 1**.
+- **Justification:** Selected as primary architectural approach.
 We introduced `CdiscSubmissionEngine` and `SubmissionPackage` in `apps/interop/domain/cdr/submission_engine.py`.
 
 Key elements of the design:

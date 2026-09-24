@@ -19,19 +19,31 @@ The Cadence Clinical platform consists of multiple active clinical microservices
 
 ## 3. Options Considered
 
-- **Option 1: Individual Service Custom Startup Checks**
-  Write service-specific validation logic in each microservice entrypoint.
+### Option 1: Option 1: Individual Service Custom Startup Checks
+
+- **Overview:** Write service-specific validation logic in each microservice entrypoint.
   - _Pros:_ Custom messages per service.
   - _Cons:_ High duplication, difficult to maintain, prone to drift.
+- ***Pros:***
+  - ✅ Satisfies requirements and architectural standards
+- ***Cons:***
+  - ❌ Requires component implementation and maintenance overhead
 
-- **Option 2: Centralized Security Guardrail and Global Scan Upgrades (Selected)**
-  Implement a shared `assert_secure_secrets` function in `packages/security/fail_fast.py`, integrate it into every clinical microservice's `main.py`, configure global scanning by default, and support `.scannerignore`.
+### Option 2: Option 2: Centralized Security Guardrail and Global Scan Upgrades (Selected)
+
+- **Overview:** Implement a shared `assert_secure_secrets` function in `packages/security/fail_fast.py`, integrate it into every clinical microservice's `main.py`, configure global scanning by default, and support `.scannerignore`.
   - _Pros:_ Single source of truth for fail-fast behavior, zero duplication, global linter enforcement, and robust test coverage.
   - _Cons:_ Require test configurations to explicitly mock APP_ENV or secrets.
+- ***Pros:***
+  - ✅ Satisfies requirements and architectural standards
+- ***Cons:***
+  - ❌ Requires component implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-We chose **Option 2**.
+- **Chosen Option:** Option 1
+- **Justification:** We chose **Option 2**.
 To implement this, we:
 
 1. Created `packages/security/fail_fast.py` to centralized `assert_secure_secrets` behavior.

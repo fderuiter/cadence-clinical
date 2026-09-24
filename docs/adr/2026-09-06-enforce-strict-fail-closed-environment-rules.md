@@ -25,18 +25,18 @@ This addresses the security and compliance requirements outlined in PRD-SYS-001.
 ### Option 1: Global Bypass of Environment Lookups
 
 - **Overview:** Maintain the legacy global skip logic in security scans.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies setup for local development.
-- **Cons:**
+- ***Cons:***
   - ❌ Major security risk of hardcoded fallbacks slipping through.
 
 ### Option 2: Fail-Closed Architecture and Narrow Scanner Exclusions
 
 - **Overview:** Remove global scan skip, implement a "Hardcoded Environment Fallback" regex rule, and enforce startup-level RuntimeError validation for missing variables.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates security blind spots.
   - ✅ Guarantees production environments cannot start with default hardcoded secrets.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires explicit bypass annotations for test scenarios.
 
 ## 4. Decision Outcome

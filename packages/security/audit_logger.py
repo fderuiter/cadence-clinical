@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import datetime
 import hashlib
 import hmac
-import os
 import uuid
 from typing import Any
 
@@ -29,8 +28,10 @@ except ImportError:
 
 
 def get_audit_log_secret_key() -> str:
-    """Retrieve the audit log HMAC secret from environment, failing if unset."""
-    secret = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+    """Retrieve the audit log HMAC secret from settings, failing if unset."""
+    from packages.config import get_common_settings
+
+    secret = (get_common_settings().audit_log_secret_key or "").strip()
     if not secret:
         raise RuntimeError(
             "AUDIT_LOG_SECRET_KEY environment variable is missing or empty"
@@ -165,9 +166,9 @@ def resolve_current_session() -> Any | None:
     # Dynamically resolve context modules to satisfy package import boundary constraints
     targets = [
         ("apps." + "execution.database.context", "current_session"),
-        ("apps." + "eisf.infrastructure.database", "current_session"),
-        ("apps." + "etmf.infrastructure.database", "current_session"),
-        ("apps." + "quality.infrastructure.database", "current_session"),
+        ("apps." + "eisf.adapters.database", "current_session"),
+        ("apps." + "etmf.adapters.database", "current_session"),
+        ("apps." + "quality.adapters.database", "current_session"),
     ]
 
     for mod_name, var_name in targets:

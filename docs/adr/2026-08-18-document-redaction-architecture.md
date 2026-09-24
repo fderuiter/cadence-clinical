@@ -27,7 +27,6 @@ This decision directly implements requirements under **PRD-TMF-005** and **Trace
 ## 3. Options Considered
 
 ### Option 1: Client-Side Redaction & Metadata Stripping
-
 - **Overview**: Perform regex scanning and word masking directly within client frontend applications (Vue 3 browser clients) and submit only the final sanitized text to the eTMF backend.
 - **Pros**:
   - Offloads compute overhead from server-side databases.
@@ -35,9 +34,13 @@ This decision directly implements requirements under **PRD-TMF-005** and **Trace
   - Violates central validation principles; hard to enforce consistent de-identification rules.
   - High risk of sensitive data leakage if client applications fail or bypass validations.
   - Difficult to audit and sign the provenance of redacted derivatives.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ### Option 2: Centralized, Server-Side Sanitization with Shared Package (`packages/deid`) (Selected)
-
 - **Overview**: Place all core de-identification, scanning, and transform logic in a dedicated shared Python package (`packages/deid`). The eTMF service exposes authenticated `/auto-redact` and `/manual-redact` API routes that invoke this package, apply transforms, persist redacted derivatives as separate versioned documents, and generate symmetrically signed cryptographic manifests.
 - **Pros**:
   - Guarantees identical compliance rules are applied across all services and environments.
@@ -46,10 +49,16 @@ This decision directly implements requirements under **PRD-TMF-005** and **Trace
   - Preserves unredacted originals for authorized research or sponsor personnel.
 - **Cons**:
   - Slight server-side CPU overhead to execute compiled regex patterns over large text blocks.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 
-- **Chosen Option**: Option 2 (Centralized Server-Side Sanitization with Shared Package).
+- **Chosen Option:** Option 1
+- **Justification:** - **Chosen Option**: Option 2 (Centralized Server-Side Sanitization with Shared Package).
 - **Justification**: Enforcing de-identification at the API gateway/service layer provides a secure regulatory boundary, preventing accidental PII/PHI leakage into operational databases or logs while maintaining full 21 CFR Part 11 audit trails.
 
 ### Architectural Blueprint & Decisions

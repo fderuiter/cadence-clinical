@@ -3,7 +3,6 @@
 import copy
 import json
 import logging
-import os
 import uuid
 from typing import Any
 
@@ -18,6 +17,22 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import (
+    AS2Transmission,
+    DeviceSafetyInvestigation,
+    ExportJob,
+    PeriodicSafetyReportRecord,
+    SAEDiscrepancy,
+    SAEReconciliationJob,
+    SAEReconciliationRun,
+    SafetyAuditLog,
+    SafetyCaseICSR,
+    SafetySignalAlert,
+    SafetySignalDetectionRun,
+    write_as2_audit_log,
+    write_audit_log,
+)
 from apps.safety.domain.as2_models import (
     AS2Authority,
     AS2OutboundTransmissionInput,
@@ -35,22 +50,6 @@ from apps.safety.domain.narrative_models import (
     NarrativeSignRequest,
     NarrativeSignResponse,
     SafetyNarrativeDTO,
-)
-from apps.safety.infrastructure.database import db_manager
-from apps.safety.infrastructure.models import (
-    AS2Transmission,
-    DeviceSafetyInvestigation,
-    ExportJob,
-    PeriodicSafetyReportRecord,
-    SAEDiscrepancy,
-    SAEReconciliationJob,
-    SAEReconciliationRun,
-    SafetyAuditLog,
-    SafetyCaseICSR,
-    SafetySignalAlert,
-    SafetySignalDetectionRun,
-    write_as2_audit_log,
-    write_audit_log,
 )
 from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,
@@ -125,14 +124,14 @@ async def send_medical_monitor_alert(
     user_id: str,
     change_reason: str,
 ) -> None:
-    import os
     import time
 
     import httpx
 
+    from packages.config import get_safety_settings
     from packages.security.signing import generate_gateway_signature
 
-    gateway_secret_env = os.getenv("GATEWAY_SECRET")
+    gateway_secret_env = get_safety_settings().gateway_secret
     if not gateway_secret_env:
         raise RuntimeError(
             "GATEWAY_SECRET environment variable is not set. "
@@ -171,7 +170,9 @@ async def send_medical_monitor_alert(
         "related_entity_type": "SAEReconciliationRun",
     }
 
-    notifications_url = os.getenv("NOTIFICATIONS_URL") or "http://localhost:8006"
+    from packages.config import get_safety_settings
+
+    notifications_url = get_safety_settings().notifications_url
     url = f"{notifications_url.rstrip('/')}/api/v1/notifications"
 
     try:
@@ -719,9 +720,10 @@ async def export_safety_case(
     session.add(job)
     await session.flush()
 
+    from packages.config import get_safety_settings
     from packages.deid.transforms import pseudonymize_value
 
-    salt = os.getenv("SAFETY_SALT", default="internal-safety-salt-12345")
+    salt = get_safety_settings().safety_salt
     icsr_copy = copy.deepcopy(payload.icsr)
 
     raw_patient_id = icsr_copy.patient.patient_id

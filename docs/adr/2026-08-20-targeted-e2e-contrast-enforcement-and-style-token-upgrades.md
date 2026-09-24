@@ -25,19 +25,19 @@ This decision relates to system requirements under **PRD-SYS-001**.
 ### Option 1: Global Exclusion of Axe Audits
 
 - **Overview:** Disable automated Axe accessibility checks entirely in the E2E testing suite.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates false positives instantly.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates accessibility qualification and compliance goals for GxP validation.
 
 ### Option 2: Targeted Contrast Upgrades and Axe Exclusions
 
 - **Overview:** Systematically upgrade text and component color contrasts to exceed the 4.5:1 ratio, and explicitly configure `AxeBuilder` to exclude the `.watermark-overlay-container` element from automated accessibility audits.
-- **Pros:**
+- ***Pros:***
   - ✅ Full WCAG 2.1 AA color contrast compliance.
   - ✅ Removes false positive failures without disabling critical accessibility tests.
   - ✅ Preserves robust visual auditing capabilities.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires specific element exclusion targeting in automated tests.
 
 ## 4. Decision Outcome

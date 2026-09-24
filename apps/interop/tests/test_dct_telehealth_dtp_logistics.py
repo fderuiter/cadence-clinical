@@ -19,6 +19,8 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.models import Base
 from apps.interop.domain.dct_models import (
     ExcursionSeverity,
     GxPRecordingSeal,
@@ -44,8 +46,6 @@ from apps.interop.domain.dct_processor import (
     verify_recording_digital_seal,
     verify_room_access_token,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.models import Base
 from apps.interop.main import app
 from packages.security.rbac_helpers import build_gateway_headers
 

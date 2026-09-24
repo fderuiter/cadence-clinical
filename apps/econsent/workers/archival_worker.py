@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 
 import apps.econsent.adapters.etmf_client as etmf_client_module
-from apps.econsent.infrastructure.database import db_manager
-from apps.econsent.infrastructure.models import (
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import (
     ConsentAuditLog,
     ConsentTemplate,
     EtmfArchivalDelivery,
@@ -109,7 +109,9 @@ async def poll_and_dispatch() -> None:
                 delivery.attempts += 1
                 delivery.last_error = str(e)
 
-                attempt_cap = int(os.getenv("ECONSENT_ARCHIVAL_ATTEMPT_CAP", "5"))
+                from packages.config import get_econsent_settings
+
+                attempt_cap = get_econsent_settings().econsent_archival_attempt_cap
                 if delivery.attempts >= attempt_cap:
                     delivery.retry_eligible = False
 
@@ -132,7 +134,9 @@ async def poll_and_dispatch() -> None:
 
 
 async def dispatcher_lifecycle_worker() -> None:
-    poll_interval = float(os.getenv("ECONSENT_ARCHIVAL_POLL_INTERVAL_SECONDS", "5.0"))
+    from packages.config import get_econsent_settings
+
+    poll_interval = get_econsent_settings().econsent_archival_poll_interval_seconds
     while True:
         try:
             await poll_and_dispatch()

@@ -5,9 +5,9 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAPI_PATH = path.resolve(
+const OPENAPI_DIR = path.resolve(
   __dirname,
-  "../../../../docs/openapi/designer_openapi.json"
+  "../../../../docs/openapi"
 );
 const OUTPUT_PATH = path.resolve(__dirname, "usdm.ts");
 
@@ -71,20 +71,42 @@ function translateProperty(prop) {
 }
 
 function generate() {
-  console.log(`Generating types from ${OPENAPI_PATH} to ${OUTPUT_PATH}...`);
-  if (!fs.existsSync(OPENAPI_PATH)) {
-    console.error(`Schema file not found at ${OPENAPI_PATH}`);
+  console.log(`Generating types from ${OPENAPI_DIR} to ${OUTPUT_PATH}...`);
+  if (!fs.existsSync(OPENAPI_DIR)) {
+    console.error(`Schema directory not found at ${OPENAPI_DIR}`);
     process.exit(1);
   }
 
-  const schemaRaw = fs.readFileSync(OPENAPI_PATH, "utf8");
-  const api = JSON.parse(schemaRaw);
+  const files = fs
+    .readdirSync(OPENAPI_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .sort();
 
-  const schemas = api?.components?.schemas || {};
-  let output = `// Auto-generated from OpenAPI schema definition\n// Generated on: ${new Date().toISOString()}\n\n`;
+  if (files.length === 0) {
+    console.error(`No OpenAPI JSON schema files found in ${OPENAPI_DIR}`);
+    process.exit(1);
+  }
 
-  for (const [schemaName, schema] of Object.entries(schemas)) {
-    // Sanitize schema name to be a valid TS identifier
+  const allSchemas = {};
+  for (const file of files) {
+    const filePath = path.join(OPENAPI_DIR, file);
+    try {
+      const schemaRaw = fs.readFileSync(filePath, "utf8");
+      const api = JSON.parse(schemaRaw);
+      const schemas = api?.components?.schemas || {};
+      for (const [schemaName, schema] of Object.entries(schemas)) {
+        if (!allSchemas[schemaName]) {
+          allSchemas[schemaName] = schema;
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to parse ${file}: ${err.message}`);
+    }
+  }
+
+  let output = `// Auto-generated from OpenAPI schema definitions in ${OPENAPI_DIR}\n// Generated on: ${new Date().toISOString()}\n\n`;
+
+  for (const [schemaName, schema] of Object.entries(allSchemas)) {
     const sanitizedName = schemaName.replace(/[^a-zA-Z0-9_]/g, "_");
 
     if (schema.enum) {
@@ -106,7 +128,7 @@ function generate() {
 
   fs.writeFileSync(OUTPUT_PATH, output, "utf8");
   console.log(
-    `Successfully generated ${Object.keys(schemas).length} schemas into ${OUTPUT_PATH}`
+    `Successfully generated ${Object.keys(allSchemas).length} schemas from ${files.length} OpenAPI definitions into ${OUTPUT_PATH}`
   );
 }
 

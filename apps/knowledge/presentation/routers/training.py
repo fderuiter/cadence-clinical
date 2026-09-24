@@ -16,13 +16,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.domain.training_models import (
-    QualificationGateResult,
-)
-from apps.knowledge.infrastructure.training_models import (
+from apps.knowledge.adapters.training_models import (
     TrainingAssignment,
     TrainingCompletionCertificate,
     TrainingCurriculum,
+)
+from apps.knowledge.domain.training_models import (
+    QualificationGateResult,
 )
 from apps.knowledge.services.training_service import (
     training_service_instance,

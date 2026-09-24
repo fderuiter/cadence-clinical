@@ -21,10 +21,10 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from apps.safety.database import db_manager
-from apps.safety.infrastructure.models import (
+from apps.safety.adapters.models import (
     Base,
 )
+from apps.safety.database import db_manager
 from apps.safety.main import app
 from apps.safety.presentation.dtos import (
     DeviceSafetyInvestigationAdjudicateDTO,

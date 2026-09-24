@@ -1,6 +1,5 @@
 """FastAPI Router for Interop microservice (FHIR / eSource & eCOA Sync Gateway)."""
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -10,6 +9,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.embedding_matcher import EmbeddingMatcher
+from apps.interop.adapters.llm_semantic_reasoner import LLMSemanticReasoner
+from apps.interop.adapters.models import (
+    ClinicalQuery,
+    EPROSubmission,
+    EPROSubmissionDefeated,
+    EPROSubmissionQuarantine,
+    Instrument,
+    InteropAuditLog,
+    SubjectAssignment,
+    SubjectNotification,
+)
 from apps.interop.application import SemanticMapperService
 from apps.interop.auth import (
     has_subject_role,
@@ -36,19 +48,6 @@ from apps.interop.domain.sync_engine import (
     verify_record_signature,
 )
 from apps.interop.fhir_adapter import FHIRAdapter
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.embedding_matcher import EmbeddingMatcher
-from apps.interop.infrastructure.llm_semantic_reasoner import LLMSemanticReasoner
-from apps.interop.infrastructure.models import (
-    ClinicalQuery,
-    EPROSubmission,
-    EPROSubmissionDefeated,
-    EPROSubmissionQuarantine,
-    Instrument,
-    InteropAuditLog,
-    SubjectAssignment,
-    SubjectNotification,
-)
 from apps.interop.presentation.dtos import (
     AcknowledgeNotificationRequest,
     BulkSyncPayload,
@@ -281,9 +280,9 @@ async def _resolve_and_save_submission(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    from packages.config import get_interop_settings
+
+    gateway_secret_str = get_interop_settings().gateway_secret
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"
@@ -1109,9 +1108,9 @@ class NotificationRouter:
     """Routes reminders and notifications to subjects or designated recipients."""
 
     def __init__(self) -> None:
-        self.notifications_url: str = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8006"
-        )
+        from packages.config import get_interop_settings
+
+        self.notifications_url: str = get_interop_settings().notifications_url
 
     async def send_email(self, recipient: str, message: str) -> bool:
         print(f"[STUB EMAIL] Sending email to {recipient}: {message}")

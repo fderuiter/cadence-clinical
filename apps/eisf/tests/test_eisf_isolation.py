@@ -5,11 +5,11 @@ Requirements: PRD-SYS-001
 
 import base64
 
-from apps.execution.main import app
-from apps.execution.tests.test_lock_router import _make_auth_headers
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
+from apps.execution.main import app
+from apps.execution.tests.test_lock_router import _make_auth_headers
 
 client = TestClient(app)
 

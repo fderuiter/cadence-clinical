@@ -1,9 +1,9 @@
 # ADR-2192: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails
 
-* **Status:** Accepted
-* **Date:** 2026-08-24
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-24
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement ID:** PRD-SYS-053
 
 ---
@@ -29,13 +29,13 @@ However, unregulated agent operations introduce significant risks in regulated l
 
 ### Option 1: Unenforced Agent Prompt Rules Only
 - **Overview:** Rely purely on `AGENTS.md` system prompt text instructions without programmatic interception.
-- **Pros:** No code or hook configuration required.
-- **Cons:** High error rate; models frequently violate prompt rules under complex multi-step reasoning.
+- ***Pros:*** No code or hook configuration required.
+- ***Cons:*** High error rate; models frequently violate prompt rules under complex multi-step reasoning.
 
 ### Option 2: Pre-Commit Hooks Only
 - **Overview:** Catch violations only when the agent or developer commits code to git.
-- **Pros:** Reuses existing git hook pipeline.
-- **Cons:** Does not prevent dangerous runtime tool execution (e.g. destructive `rm` or `git reset`), does not inject in-flight compliance reminders, and does not block premature agent stop.
+- ***Pros:*** Reuses existing git hook pipeline.
+- ***Cons:*** Does not prevent dangerous runtime tool execution (e.g. destructive `rm` or `git reset`), does not inject in-flight compliance reminders, and does not block premature agent stop.
 
 ### Option 3: Comprehensive Antigravity GxP Lifecycle Hooks (Selected)
 - **Overview:** Configure native Antigravity lifecycle hooks (`.agents/hooks.json`) executing Python guardrail scripts across all 4 execution phases:
@@ -43,11 +43,11 @@ However, unregulated agent operations introduce significant risks in regulated l
   2. `PostToolUse`: Scans mutated files for bare boolean SQL comparisons (`E712`), import order, and sensitive tokens.
   3. `PreInvocation`: Injects ephemeral GxP compliance reminders into agent context before model execution.
   4. `Stop`: Intercepts termination to verify clean repository state and prompt for GxP sync if tests were touched.
-- **Pros:**
+- ***Pros:***
   - Hard programmatic enforcement preventing dangerous operations before execution.
   - Zero context loss with in-flight ephemeral compliance reminders.
   - Complete GxP traceability under requirement `PRD-SYS-053`.
-- **Cons:** Requires maintaining hook runner scripts and keeping test coverage above 80%.
+- ***Cons:*** Requires maintaining hook runner scripts and keeping test coverage above 80%.
 
 ## 4. Decision Outcome
 

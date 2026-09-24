@@ -12,7 +12,7 @@ import pydicom
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.imaging.infrastructure.models import (
+from apps.imaging.adapters.models import (
     DeidentificationCertificateModel,
     ImagingAuditLogModel,
     ImagingInstanceEnvelopeModel,

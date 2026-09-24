@@ -23,14 +23,14 @@ In clinical trials, site coordinators and subject participants often record ePRO
 ### Option 1: Client-overwrite-all (Last-Write-Wins)
 
 - **Overview:** The incoming offline delta always overwrites any existing database records.
-- **Pros:** Simpler to implement on the server side.
-- **Cons:** Overwrites concurrent server-side modifications without flagging them, violating clinical data integrity.
+- ***Pros:*** Simpler to implement on the server side.
+- ***Cons:*** Overwrites concurrent server-side modifications without flagging them, violating clinical data integrity.
 
 ### Option 2: Database-Backed Idempotent Sync with Vector Comparison (Selected)
 
 - **Overview:** Introduce a tracking table (`processed_offline_batches`) to record synchronized batch IDs. Retrieve the latest `AuditLog` timestamp for any existing clinical record to detect if there has been a newer concurrent server-side modification, and if so, preserve both versions and flag the status as `NEEDS_REVIEW`.
-- **Pros:** Fully compliant with GxP and 21 CFR Part 11, guarantees strict idempotency, detects and handles conflicts gracefully (PRD-SYS-001).
-- **Cons:** Slightly more database interactions per batch.
+- ***Pros:*** Fully compliant with GxP and 21 CFR Part 11, guarantees strict idempotency, detects and handles conflicts gracefully (PRD-SYS-001).
+- ***Cons:*** Slightly more database interactions per batch.
 
 ## 4. Decision Outcome
 

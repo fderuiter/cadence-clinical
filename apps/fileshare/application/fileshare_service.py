@@ -553,11 +553,11 @@ class FileShareService:
                 reason="QUARANTINED",
             )
 
+        from packages.config import get_fileshare_settings
+
         raw_secret_token = secrets.token_urlsafe(32)
         token_hmac = hmac.new(
-            os.getenv(
-                "GATEWAY_SECRET", "default-guest-secret"
-            ).encode(),  # pragma: allowlist secret
+            get_fileshare_settings().gateway_secret.encode(),
             raw_secret_token.encode(),
             hashlib.sha256,
         ).hexdigest()
@@ -606,10 +606,10 @@ class FileShareService:
         raw_secret_token: str,
     ) -> FileDownloadSession:
         """Resolve an external guest link token and issue a presigned download session."""
+        from packages.config import get_fileshare_settings
+
         token_hmac = hmac.new(
-            os.getenv(
-                "GATEWAY_SECRET", "default-guest-secret"
-            ).encode(),  # pragma: allowlist secret
+            get_fileshare_settings().gateway_secret.encode(),
             raw_secret_token.encode(),
             hashlib.sha256,
         ).hexdigest()

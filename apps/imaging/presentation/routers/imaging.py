@@ -33,6 +33,15 @@ from apps.imaging.adapters.database import (
     get_adjudication_workflow,
     get_db_session,
 )
+from apps.imaging.adapters.models import (
+    DeidentificationCertificateModel,
+    ImagingAnnotationModel,
+    ImagingAuditLogModel,
+    ImagingInstanceEnvelopeModel,
+    ImagingSeriesEnvelopeModel,
+    ImagingStudyEnvelopeModel,
+    TumorResponseAssessmentModel,
+)
 from apps.imaging.adapters.storage import get_storage_adapter
 from apps.imaging.domain.exceptions import (
     AdjudicationSessionNotFoundError,
@@ -46,15 +55,6 @@ from apps.imaging.domain.models import (
     OncologicCriteria,
     ReaderAssessment,
     ReaderRole,
-)
-from apps.imaging.infrastructure.models import (
-    DeidentificationCertificateModel,
-    ImagingAnnotationModel,
-    ImagingAuditLogModel,
-    ImagingInstanceEnvelopeModel,
-    ImagingSeriesEnvelopeModel,
-    ImagingStudyEnvelopeModel,
-    TumorResponseAssessmentModel,
 )
 from apps.imaging.ports.repository_port import ImagingAdjudicationRepositoryPort
 from apps.imaging.presentation.dtos import (

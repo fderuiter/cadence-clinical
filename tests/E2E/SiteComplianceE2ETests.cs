@@ -26,7 +26,7 @@ public class SiteComplianceE2ETests : IClassFixture<ExecutionE2EFactory>
     public async Task GetSiteComplianceSummary_WhenSiteNotFound_Returns404NotFound()
     {
         // Act
-        var response = await _client.GetAsync("/api/v1/execution/site-compliance/NON_EXISTENT_SITE");
+        var response = await _client.GetAsync("/api/v1/execution/site-compliance/NON_EXISTENT_SITE", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

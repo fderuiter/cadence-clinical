@@ -13,9 +13,11 @@ dependencies = [
     "fastapi>=0.139.2,<0.140.0",
     "pydantic>=2.6.0",
     "cryptography>=4.5.0",
+    "packages-config",
     "packages-security",
     "packages-deid",
     "packages-database",
+    "packages-config",
 ]
 
 

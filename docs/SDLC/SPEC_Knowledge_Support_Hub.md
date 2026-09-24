@@ -83,7 +83,7 @@ Key capabilities include:
    - Test four-eyes approval validation (`last_edited_by != actor_user_id`).
    - Test `reason_for_change` enforcement on regulated transitions.
    - Test auto-supersede trigger on publication of new article versions.
-2. **Database ORM & Immutability Seam** (`apps/knowledge/infrastructure/models.py`):
+2. **Database ORM & Immutability Seam** (`apps/knowledge/adapters/models.py`):
    - Test `before_flush` hook raising `ValueError` on update or delete of `KnowledgeArticleAuditLog`.
    - Test foreign key constraints (`RESTRICT` on article/category deletion).
    - Test composite indexes and query execution.

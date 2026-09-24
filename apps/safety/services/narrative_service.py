@@ -13,6 +13,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.safety.adapters.ai_narrative_client import AISafetyNarrativeClient
+from apps.safety.adapters.execution_client import ExecutionClient
+from apps.safety.adapters.models import (
+    SafetyNarrative,
+    write_audit_log,
+)
 from apps.safety.domain.narrative_models import (
     ClinicalTimelineEvent,
     GroundedClaim,
@@ -20,11 +25,6 @@ from apps.safety.domain.narrative_models import (
     NarrativeSignResponse,
     SafetyNarrativeDTO,
     SafetyNarrativeSection,
-)
-from apps.safety.infrastructure.execution_client import ExecutionClient
-from apps.safety.infrastructure.models import (
-    SafetyNarrative,
-    write_audit_log,
 )
 from apps.safety.services.timeline_aggregator import (
     build_timeline_from_sdtm_records,

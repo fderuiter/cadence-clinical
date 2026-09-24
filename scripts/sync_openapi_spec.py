@@ -33,6 +33,7 @@ os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
 os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
 
+
 def load_aggregated_spec() -> dict[str, Any]:
     """Aggregate OpenAPI schemas directly from docs/openapi/*.json."""
     cdisc_file = os.path.join(app_root, "docs", "openapi", "cdisc_openapi.json")
@@ -97,6 +98,8 @@ def main():
         "components": aggregated_spec.get("components", {}),
     }
 
+    validate_mode = "--validate" in sys.argv
+
     # Convert merged spec to YAML string
     yaml_content = yaml.dump(merged_spec, sort_keys=False, width=1000)
 
@@ -104,7 +107,8 @@ def main():
     markdown_path = os.path.join(
         app_root, "docs", "SDLC", "03_API_Integration_Specification.md"
     )
-    print(f"Updating specification file at: {markdown_path}")
+    if not validate_mode:
+        print(f"Updating specification file at: {markdown_path}")
 
     if not os.path.exists(markdown_path):
         print(f"Error: Spec file not found at {markdown_path}", file=sys.stderr)
@@ -146,6 +150,19 @@ def main():
     )
 
     final_content = before_sec + new_sec_content_and_after
+
+    if validate_mode:
+        if content != final_content:
+            print(
+                "[ERROR] OpenAPI specification drift detected in docs/SDLC/03_API_Integration_Specification.md!\n"
+                "Please run 'uv run python scripts/sync_openapi_spec.py' or 'cadence fix --all' to synchronize.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(
+            "[SUCCESS] OpenAPI specification in docs/SDLC/03_API_Integration_Specification.md is up to date."
+        )
+        sys.exit(0)
 
     with open(markdown_path, "w", encoding="utf-8") as f:
         f.write(final_content)

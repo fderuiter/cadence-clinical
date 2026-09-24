@@ -2,31 +2,33 @@ import asyncio
 import contextlib
 import json
 import logging
-import os
 import sys
 from typing import Any
 
-from apps.notifications.application.services.email_renderer import (
-    get_template_name_for_event,
-    render_email_template,
-)
-from apps.notifications.domain.event_models import SystemDomainEvent
-from apps.notifications.infrastructure.database import (
+from apps.notifications.adapters.database import (
     db_manager as notifications_db_manager,
 )
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.models import (
     Notification,
     NotificationCategory,
     NotificationDelivery,
     NotificationPriority,
     NotificationStatus,
 )
+from apps.notifications.application.services.email_renderer import (
+    get_template_name_for_event,
+    render_email_template,
+)
+from apps.notifications.domain.event_models import SystemDomainEvent
+from packages.config import get_notifications_settings
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,
 )
 
-ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
+
+def _get_org_url() -> str:
+    return get_notifications_settings().org_url.rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
@@ -108,7 +110,7 @@ class NotificationWorker:
         resolved = []
 
         try:
-            client = GatewayBaseClient(base_url=ORG_URL)
+            client = GatewayBaseClient(base_url=_get_org_url())
             params = {}
             if study_id:
                 params["study_id"] = study_id
@@ -147,7 +149,7 @@ class NotificationWorker:
             logger.info(
                 f"No database assignments found. Using deterministic fallback for {event_type}."
             )
-            brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+            brand_domain = get_notifications_settings().brand_domain
             if event_type == "EDC_QUERY_RAISED":
                 target_id = f"crc_{site_id or 'default'}"
                 resolved.append(

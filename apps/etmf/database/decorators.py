@@ -1,3 +1,3 @@
-from apps.etmf.infrastructure.database import transactional
+from apps.etmf.adapters.database import transactional
 
 __all__ = ["transactional"]

@@ -24,20 +24,20 @@ When developers work on multi-commit feature branches offline or in network-rest
 ### Option 1: Hardcoded Primary Branch Resolution
 
 - **Overview:** Rely on a default branch name like `origin/main` or `main` as the fixed ancestor point.
-- **Pros:**
+- ***Pros:***
   - ✅ Simple to implement.
-- **Cons:**
+- ***Cons:***
   - ❌ Fails completely in offline modes or when working with custom feature-branch topologies.
   - ❌ Hardcoded defaults break flexibility for custom workspace patterns.
 
 ### Option 2: Dynamic Offline Ancestor Point Calculation (Selected)
 
 - **Overview:** Dynamically resolve the closest local branch ancestor entirely offline by querying both local and remote-tracking references via git commands, filtering out headless or irrelevant pointers, and identifying the closest merge-base.
-- **Pros:**
+- ***Pros:***
   - ✅ 100% network-independent and offline-capable.
   - ✅ Bypasses merge commits cleanly via `--first-parent` traversal.
   - ✅ Includes all active workspace states (staged, unstaged, untracked).
-- **Cons:**
+- ***Cons:***
   - ❌ Slower than a hardcoded string, though overhead is negligible (<1s).
 
 ## 4. Decision Outcome

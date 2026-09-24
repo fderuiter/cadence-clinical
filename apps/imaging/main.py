@@ -6,21 +6,21 @@ tenant-isolated S3/MinIO envelope storage, and independent review charter workfl
 Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 """
 
-import os
-
 from fastapi import FastAPI
 
 from apps.imaging.adapters.database import db_manager, get_db_session
-from apps.imaging.infrastructure.models import Base
+from apps.imaging.adapters.models import Base
 from apps.imaging.presentation.routers.imaging import router as imaging_router
+from packages.config import get_imaging_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("IMAGING_DATABASE_URL", "sqlite+aiosqlite:///./imaging.db")
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+settings = get_imaging_settings()
+DATABASE_URL = settings.imaging_database_url
+BRAND_NAME = settings.brand_name
 
 validate_branding("imaging")
 

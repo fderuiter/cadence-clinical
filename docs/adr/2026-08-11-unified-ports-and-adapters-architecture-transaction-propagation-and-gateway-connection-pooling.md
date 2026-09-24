@@ -24,16 +24,29 @@ This decision directly aligns with standard system requirements under **PRD-SYS-
 
 ## 3. Options Considered
 
-1. **Option A (Selected) - Ports and Adapters + Connection Pooling + Session Propagation:**
-   - Introduce registry/adapter hooks for critical cross-boundary calls (e.g. `verify_trial_lock_status`, `resolve_personnel_assignments`, `is_sponsor_known_to_org_directory`).
+### Option 1: **Option A (Selected) - Ports and Adapters + Connection Pooling + Session Propagation:**
+
+- **Overview:** - Introduce registry/adapter hooks for critical cross-boundary calls (e.g. `verify_trial_lock_status`, `resolve_personnel_assignments`, `is_sponsor_known_to_org_directory`).
    - Share a single `httpx.AsyncClient` instance with explicit limits (100 max connections, 20 keepalives) at the `GatewayBaseClient` class level.
    - Reuse existing context sessions in the transactional decorator by inspecting and yielding the thread/async-local context.
-2. **Option B (Alternative) - Sibling Imports with Lax Controls:**
-   - Allow lazy imports of sibling modules or rely on runtime system probing hacks. This degrades maintainability, introduces dependency cycles, and risks regression in isolated execution modes.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative) - Sibling Imports with Lax Controls:**
+
+- **Overview:** - Allow lazy imports of sibling modules or rely on runtime system probing hacks. This degrades maintainability, introduces dependency cycles, and risks regression in isolated execution modes.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces architectural cleanliness, guarantees 100% adherence to microservice separation guidelines, boosts REST performance to satisfy the 100ms SLA, and provides flawless transaction propagation in relational engines.
+- **Chosen Option:** **Option A** because it enforces architectural cleanliness, guarantees 100% adherence to microservice separation guidelines, boosts REST performance to satisfy the 100ms SLA, and provides flawless transaction propagation in relational engines.
+- **Justification:** Selected as primary architectural approach.
 
 ### Implementation Details:
 
@@ -53,7 +66,7 @@ Chosen option: **Option A** because it enforces architectural cleanliness, guara
 ## 6. Implementation & Verification
 
 - **Files Modified:**
-  - `apps/etmf/infrastructure/lock_client.py`
+  - `apps/etmf/adapters/lock_client.py`
   - `apps/etmf/tests/conftest.py`
   - `packages/database/__init__.py`
   - `packages/security/gateway_client.py`

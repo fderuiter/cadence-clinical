@@ -6,21 +6,21 @@ Owns: Real-time EDC/SDV trigger-to-payable automation, multi-party split payee a
 Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
 """
 
-import os
-
 from fastapi import FastAPI
 
 from apps.payments.adapters.database import db_manager, get_db_session
-from apps.payments.infrastructure.models import Base
+from apps.payments.adapters.models import Base
 from apps.payments.presentation.routers import payments_router
+from packages.config import get_payments_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("PAYMENTS_DATABASE_URL", "sqlite+aiosqlite:///./payments.db")
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+settings = get_payments_settings()
+DATABASE_URL = settings.payments_database_url
+BRAND_NAME = settings.brand_name
 
 validate_branding("payments")
 

@@ -1,4 +1,4 @@
-from apps.eisf.infrastructure.models import (
+from apps.eisf.adapters.models import (
     STANDARD_EISF_SECTIONS,
     Base,
     EISFDocumentRecord,

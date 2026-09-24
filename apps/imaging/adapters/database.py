@@ -8,16 +8,16 @@ from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.imaging.adapters.models import (
+    ImagingAdjudicationSessionModel,
+    ImagingAuditLogModel,
+    TumorResponseAssessmentModel,
+)
 from apps.imaging.domain.models import (
     AdjudicationWorkflowStatus,
     DualReaderAdjudicationSession,
     OncologicCriteria,
     ReaderAssessment,
-)
-from apps.imaging.infrastructure.models import (
-    ImagingAdjudicationSessionModel,
-    ImagingAuditLogModel,
-    TumorResponseAssessmentModel,
 )
 from apps.imaging.ports.repository_port import ImagingAdjudicationRepositoryPort
 from apps.imaging.services.adjudication import AdjudicationWorkflow

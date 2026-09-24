@@ -1,9 +1,9 @@
 # ADR-2213: Autonomous Cross-Domain Quality Surveillance Runner Architecture
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -32,20 +32,37 @@ System Requirements: `PRD-CSM-001`, `PRD-CSM-002`, `PRD-CSM-003`, `PRD-CSM-004`,
 
 ## 3. Options Considered
 
-1. **Option A: Deep Autonomous Orchestrator (`QualitySurveillanceRunner`) with Dual-Mode REST Harvesting (Selected)**:
-   Encapsulate data harvesting, SDTM normalization, sample-size gating, statistical forensics, computer vision pHash scanning, composite risk scoring, and idempotent deviation logging behind a single deep class `QualitySurveillanceRunner`. Autonomous production runs use an HMAC-authenticated `ExecutionClient` to pull datasets, while testing suites can supply in-memory bundles.
+### Option 1: **Option A: Deep Autonomous Orchestrator (`QualitySurveillanceRunner`) with Dual-Mode REST Harvesting (Selected)**:
 
-2. **Option B: Push-Only REST Pipeline (Rejected)**:
-   Keep data harvesting on external callers and only add a workflow orchestration wrapper. Rejected because it preserves shallow endpoint ergonomics and pushes data-wrangling complexity to frontend clients or external crons.
+- **Overview:** Encapsulate data harvesting, SDTM normalization, sample-size gating, statistical forensics, computer vision pHash scanning, composite risk scoring, and idempotent deviation logging behind a single deep class `QualitySurveillanceRunner`. Autonomous production runs use an HMAC-authenticated `ExecutionClient` to pull datasets, while testing suites can supply in-memory bundles.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-3. **Option C: Event-Sourced Materialized Read View (Rejected)**:
-   Maintain a full replicated projection of all clinical observations and audit logs in `apps/quality` via background Kafka/Outbox event subscriptions. Rejected due to excessive storage duplication, eventual consistency latency during on-demand quality audits, and heightened operational complexity.
+### Option 2: **Option B: Push-Only REST Pipeline (Rejected)**:
+
+- **Overview:** Keep data harvesting on external callers and only add a workflow orchestration wrapper. Rejected because it preserves shallow endpoint ergonomics and pushes data-wrangling complexity to frontend clients or external crons.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Event-Sourced Materialized Read View (Rejected)**:
+
+- **Overview:** Maintain a full replicated projection of all clinical observations and audit logs in `apps/quality` via background Kafka/Outbox event subscriptions. Rejected due to excessive storage duplication, eventual consistency latency during on-demand quality audits, and heightened operational complexity.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Deep Autonomous Orchestrator with Dual-Mode REST Harvesting)**.
+- **Chosen Option:** **Option A (Deep Autonomous Orchestrator with Dual-Mode REST Harvesting)**.
+- **Justification:** Selected as primary architectural approach.
 
 ### Architectural Blueprint
 
@@ -100,7 +117,7 @@ Chosen option: **Option A (Deep Autonomous Orchestrator with Dual-Mode REST Harv
 ## 6. Implementation & Verification
 
 * **Core Engine**: `apps/quality/application/services/quality_surveillance_runner.py`
-* **HTTP Client Adapter**: `apps/quality/infrastructure/execution_client.py`
+* **HTTP Client Adapter**: `apps/quality/adapters/execution_client.py`
 * **Domain Models**: `apps/quality/domain/surveillance_models.py`
 * **Presentation Layer**: `apps/quality/presentation/routers/surveillance.py`
 * **DTO Contracts**: `apps/quality/presentation/dtos.py`

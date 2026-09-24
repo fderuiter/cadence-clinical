@@ -87,8 +87,6 @@ export function createClinicalLookupInput(
   </div>`;
 }
 
-export { ComplianceSDK } from "./sdk.ts";
-
 export {
   canonicalSerialize,
   generateCanonicalSignature,

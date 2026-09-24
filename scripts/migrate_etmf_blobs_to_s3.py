@@ -23,8 +23,8 @@ if REPO_ROOT not in sys.path:
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from apps.eisf.infrastructure.models import ISFDocument
-from apps.etmf.infrastructure.models import TMFDocument
+from apps.eisf.adapters.models import ISFDocument
+from apps.etmf.adapters.models import TMFDocument
 from packages.storage.adapters.minio_adapter import MinioStorageAdapter
 from packages.storage.adapters.s3_adapter import S3StorageAdapter
 from packages.storage.ports.storage_port import StoragePort

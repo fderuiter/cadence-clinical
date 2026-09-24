@@ -24,20 +24,20 @@ This decision implements requirements under Trace-1.
 ### Option 1: Client-Side Filtering and Pagination
 
 - **Overview:** Return the entire audit trail to the client, allowing the web or client layer to filter and paginate.
-- **Pros:**
+- ***Pros:***
   - ✅ Extremely simple backend logic.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe scalability blocker for large datasets.
   - ❌ Exposes excessive unfiltered log data on initial requests.
 
 ### Option 2: Server-Side Filtered & Offset Paginated API Response
 
 - **Overview:** Introduce dynamic SQL query parameters (user_id, action, document_id, start_time, end_time) and limit/offset boundaries handled on the database level. Return a wrapped JSON schema containing `items`, `total_count`, and next-page cursor metadata.
-- **Pros:**
+- ***Pros:***
   - ✅ High performance and scalability.
   - ✅ Safe data access boundaries.
   - ✅ Full compliance with 21 CFR Part 11 auditing and inspectability requirements.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires updating existing test assertions that expected raw array list responses.
 
 ## 4. Decision Outcome

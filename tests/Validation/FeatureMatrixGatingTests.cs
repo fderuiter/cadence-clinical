@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.E2ETests.Validation;
@@ -76,6 +79,6 @@ public class FeatureMatrixGatingTests
         var activeServices = new[] { "designer", "execution", "postgres", "neo4j", "keycloak", "gateway" };
 
         var domainServices = activeServices.Where(s => !helperServices.Contains(s)).ToList();
-        domainServices.Should().BeEquivalentTo(new[] { "designer", "execution" });
+        domainServices.Should().BeEquivalentTo("designer", "execution");
     }
 }

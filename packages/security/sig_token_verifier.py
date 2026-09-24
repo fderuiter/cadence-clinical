@@ -1,4 +1,3 @@
-import os
 import threading
 import time
 
@@ -13,7 +12,9 @@ _redis_client_lock = threading.Lock()
 def get_redis_client() -> redis.Redis | None:
     """Lazily initialize and return the Redis client if REDIS_URL is configured."""
     global _redis_client
-    redis_url = os.getenv("REDIS_URL")
+    from packages.config import get_common_settings
+
+    redis_url = get_common_settings().redis_url
     if not redis_url:
         return None
     if _redis_client is None:
@@ -118,11 +119,9 @@ def verify_and_consume_sig_token(
         )
 
     if secret is None:
-        secret = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        ).encode(  # pragma: allowlist secret
-            "utf-8"
-        )
+        from packages.config import get_common_settings
+
+        secret = get_common_settings().gateway_secret.encode("utf-8")
 
     try:
         payload = jwt.decode(sig_token, secret, algorithms=["HS256"])

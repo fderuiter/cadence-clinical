@@ -22,19 +22,19 @@ To meet the stringent standards of FDA 21 CFR Part 11 for electronic records and
 ### Option 1: Basic string-based signatures with database audit tables only
 
 - **Overview:** Rely purely on database constraints and simple token matching.
-- **Pros:**
+- ***Pros:***
   - ✅ Extremely easy to implement.
-- **Cons:**
+- ***Cons:***
   - ❌ Does not provide cryptographic proof of non-repudiation or tamper-evidence required by Part 11.
 
 ### Option 2: Full Asymmetric RSA/ECDSA verification with Symmetric HMAC fallback (Selected)
 
 - **Overview:** Build a dedicated `crypto_verifier.py` service inside `packages/security/` that validates RSA and ECDSA signatures using base64 inputs, cleans/canonicalizes payload formats, parses signatures in PEM/XML/JSON shapes, and provides secure fallback to HMAC signatures.
-- **Pros:**
+- ***Pros:***
   - ✅ High security and non-repudiation.
   - ✅ Flexible compatibility with modern identity providers and legacy clients.
   - ✅ Fully compliant with 21 CFR Part 11.
-- **Cons:**
+- ***Cons:***
   - ❌ Additional complexity in managing public keys/certificates and handling payload canonicalization.
 
 ## 4. Decision Outcome

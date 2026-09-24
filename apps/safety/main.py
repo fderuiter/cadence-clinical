@@ -1,9 +1,7 @@
-import os
-
 from fastapi import FastAPI
 
-from apps.safety.infrastructure.database import db_manager
-from apps.safety.infrastructure.models import Base
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import Base
 from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,
     AS2TransmissionAuditLogDTO,
@@ -39,23 +37,25 @@ from apps.safety.presentation.routers.safety import (
 from apps.safety.presentation.routers.safety import (
     router as safety_router,
 )
+from packages.config import get_safety_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("SAFETY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+settings = get_safety_settings()
+DATABASE_URL = settings.safety_database_url
 
 assert_secure_secrets(
     "safety",
     {
-        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
-        "SAFETY_SALT": os.getenv("SAFETY_SALT"),
+        "GATEWAY_SECRET": settings.gateway_secret,
+        "SAFETY_SALT": settings.safety_salt,
     },
 )
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("safety")

@@ -7,6 +7,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
+from apps.etmf.adapters.database import transactional
+from apps.etmf.adapters.models import (
+    DocumentStatus,
+    ExpectedDocument,
+    TMFAuditLog,
+    TMFDocument,
+)
 from apps.etmf.domain.ports import ETMFRepositoryPort
 from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
@@ -15,13 +22,6 @@ from apps.etmf.domain.tmf_reference_model import (
     resolve_artifact,
 )
 from apps.etmf.export import generate_binder_zip
-from apps.etmf.infrastructure.database import transactional
-from apps.etmf.infrastructure.models import (
-    DocumentStatus,
-    ExpectedDocument,
-    TMFAuditLog,
-    TMFDocument,
-)
 from apps.etmf.ingestion_service import ingest_tmf_document
 from apps.etmf.lifecycle import (
     authorize_document_read,
@@ -71,7 +71,7 @@ def get_etmf_repository() -> ETMFRepositoryPort:
 
     if hasattr(main_module, "_repo_instance"):
         return main_module._repo_instance
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     return SQLETMFRepository()
 
@@ -1990,7 +1990,7 @@ async def sign_document_endpoint(
     # Write outbox archival record within the service transaction
     import uuid
 
-    from apps.etmf.infrastructure.models import IntegrationOutbox
+    from apps.etmf.adapters.models import IntegrationOutbox
 
     outbox_entry = IntegrationOutbox(
         id=str(uuid.uuid4()),
@@ -2748,7 +2748,7 @@ async def get_document_qc_history(
 
 @router.post("/api/v1/etmf/locks/trial/lock")
 async def etmf_lock_trial_endpoint(request: Request) -> dict[str, str]:
-    from apps.etmf.infrastructure import lock_client
+    from apps.etmf.adapters import lock_client
 
     lock_client.trial_lock_override = True
     return {"status": "success", "message": "Trial lock propagated to eTMF."}
@@ -2756,7 +2756,7 @@ async def etmf_lock_trial_endpoint(request: Request) -> dict[str, str]:
 
 @router.post("/api/v1/etmf/locks/trial/unlock")
 async def etmf_unlock_trial_endpoint(request: Request) -> dict[str, str]:
-    from apps.etmf.infrastructure import lock_client
+    from apps.etmf.adapters import lock_client
 
     lock_client.trial_lock_override = False
     return {"status": "success", "message": "Trial unlock propagated to eTMF."}
@@ -2769,8 +2769,8 @@ async def etmf_admin_outbox_endpoint(
 ) -> list[dict]:
     from sqlalchemy import select
 
-    from apps.etmf.infrastructure.database import db_manager
-    from apps.etmf.infrastructure.models import IntegrationOutbox
+    from apps.etmf.adapters.database import db_manager
+    from apps.etmf.adapters.models import IntegrationOutbox
 
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:

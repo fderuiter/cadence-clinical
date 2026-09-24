@@ -29,16 +29,35 @@ This decision resolves requirements under `@req:PRD-SYS-048` and `@req:PRD-SYS-0
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Application-Level WHODrug Gating with Pre-Flight AS2 Interceptor**
-   - Pure application domain service with zero ORM leaks, strict validation before XML compilation and AS2 transmission.
-2. **Option B: Health Authority Gateway ACK B Post-Processing**
-   - _Rejected_: Waiting for regulatory agency rejections violates GxP compliance and risks regulatory enforcement actions.
-3. **Option C: Client-Side-Only Form Input Validation**
-   - _Rejected_: Fails defense-in-depth; direct API submissions, batch imports, or legacy migrations could bypass client checks.
+### Option 1: **Option A (Selected): Application-Level WHODrug Gating with Pre-Flight AS2 Interceptor**
+
+- **Overview:** - Pure application domain service with zero ORM leaks, strict validation before XML compilation and AS2 transmission.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Health Authority Gateway ACK B Post-Processing**
+
+- **Overview:** - _Rejected_: Waiting for regulatory agency rejections violates GxP compliance and risks regulatory enforcement actions.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Client-Side-Only Form Input Validation**
+
+- **Overview:** - _Rejected_: Fails defense-in-depth; direct API submissions, batch imports, or legacy migrations could bypass client checks.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Interceptor)**.
+- **Chosen Option:** **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Interceptor)**.
+- **Justification:** Selected as primary architectural approach.
 
 ```
 +-----------------------------------------------------------------------+
@@ -70,7 +89,7 @@ Chosen option: **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Int
 
 ### Multi-Dimensional WHODrug Verification Dimensions
 
-`WHODrugValidationService` ([`apps/safety/application/validation_service.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/application/validation_service.py)) enforces 6 distinct validation checks:
+`WHODrugValidationService` ([`apps/safety/application/validation_service.py`](apps/safety/application/validation_service.py)) enforces 6 distinct validation checks:
 
 1. `INVALID_DRUG_CODE`: Code does not exist in WHODrug reference hierarchies.
 2. `UNMAPPED_VERBATIM_TERM`: Verbatim text cannot be mapped to a standardized medicinal product.
@@ -81,7 +100,7 @@ Chosen option: **Option A (Application-Level WHODrug Gating + Pre-Flight AS2 Int
 
 ### AS2 Transmission Pre-Flight Interceptor
 
-In [`apps/safety/services/as2_gateway_client.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/services/as2_gateway_client.py), `send_e2b_payload` runs pre-flight validation:
+In [`apps/safety/services/as2_gateway_client.py`](apps/safety/services/as2_gateway_client.py), `send_e2b_payload` runs pre-flight validation:
 
 - If validation fails, it marks transmission status as `FAILED_TRANSMISSION`, writes `WHODRUG_VALIDATION_FAILED` to the Part 11 security audit logger, and raises `WHODrugValidationError`, preventing malformed payloads from reaching health authority AS2 endpoints.
 
@@ -99,10 +118,10 @@ In [`apps/safety/services/as2_gateway_client.py`](file:///Volumes/SanDisk%20Exte
 
 ## 6. Implementation & Verification
 
-- **Application Service**: [`apps/safety/application/validation_service.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/application/validation_service.py).
-- **Compiler & Renderer**: [`apps/safety/renderer.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/renderer.py), [`apps/safety/services/validator.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/services/validator.py).
-- **Gateway & Adapter**: [`apps/safety/services/as2_gateway_client.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/services/as2_gateway_client.py), [`apps/safety/adapters/safety_adapter.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/adapters/safety_adapter.py).
-- **Domain Model & Jinja2 Template**: [`apps/safety/domain/sae_icsr/models.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/domain/sae_icsr/models.py), [`apps/safety/templates/e2b_r3_icsr.xml.j2`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/templates/e2b_r3_icsr.xml.j2).
+- **Application Service**: [`apps/safety/application/validation_service.py`](apps/safety/application/validation_service.py).
+- **Compiler & Renderer**: [`apps/safety/renderer.py`](apps/safety/renderer.py), [`apps/safety/services/validator.py`](apps/safety/services/validator.py).
+- **Gateway & Adapter**: [`apps/safety/services/as2_gateway_client.py`](apps/safety/services/as2_gateway_client.py), [`apps/safety/adapters/safety_adapter.py`](apps/safety/adapters/safety_adapter.py).
+- **Domain Model & Jinja2 Template**: [`apps/safety/domain/sae_icsr/models.py`](apps/safety/domain/sae_icsr/models.py), [`apps/safety/templates/e2b_r3_icsr.xml.j2`](apps/safety/templates/e2b_r3_icsr.xml.j2).
 - **Test Suite**:
-  - [`apps/safety/tests/test_e2b_whodrug_validation.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/safety/tests/test_e2b_whodrug_validation.py) (12 test cases covering valid compilation, unmapped term rejection, substance mismatch, ATC mismatch, AS2 transmission abort, and RFC 7807 diagnostics).
+  - [`apps/safety/tests/test_e2b_whodrug_validation.py`](apps/safety/tests/test_e2b_whodrug_validation.py) (12 test cases covering valid compilation, unmapped term rejection, substance mismatch, ATC mismatch, AS2 transmission abort, and RFC 7807 diagnostics).
   - All 192 safety tests passing cleanly with `@req:PRD-SYS-048` and `@req:PRD-SYS-053`.

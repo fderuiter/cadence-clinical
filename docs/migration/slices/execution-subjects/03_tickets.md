@@ -680,7 +680,7 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
-  apps/execution/adapters/repositories.py, apps/execution/infrastructure/repositories/execution_repositories.py (get_max_enrollment_index, dual-lookup query methods)
+  apps/execution/adapters/repositories.py, apps/execution/adapters/repositories/execution_repositories.py (get_max_enrollment_index, dual-lookup query methods)
   ```
 
 #### Objective & Scope

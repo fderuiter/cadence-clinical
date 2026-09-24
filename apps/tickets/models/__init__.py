@@ -2,7 +2,7 @@
 SQLAlchemy models for the Tickets service.
 """
 
-from apps.tickets.infrastructure.models import (
+from apps.tickets.adapters.models import (
     CANCELLABLE_STATES,
     REOPENABLE_STATES,
     TERMINAL_STATES,

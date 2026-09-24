@@ -27,17 +27,30 @@ Clinical research operations under 21 CFR Part 11, ICH GCP E6(R2)/(R3), and EU A
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Enterprise Hexagonal eConsent Service with Modular Domain Ports and Standalone Artifact Rendering.**
-   - Domain layer encapsulates pure entities, diff engines, and CDISC ODM generator.
+### Option 1: **Option A (Selected): Enterprise Hexagonal eConsent Service with Modular Domain Ports and Standalone Artifact Rendering.**
+
+- **Overview:** - Domain layer encapsulates pure entities, diff engines, and CDISC ODM generator.
    - Application layer exposes cohesive use-case services (`ClauseManagementService`, `TemplateAuthoringService`, `ConsentCaptureService`, `ReconsentService`, `WithdrawalService`, `InspectionExportService`).
    - Presentation layer utilizes typed Pydantic v2 DTOs and segregated sub-routers with RFC 7807 error mapping.
-2. **Option B: Monolithic Schema & Ad-hoc Rendering.**
-   - Mixing ORM models with business logic and generating PDFs via heavyweight external binaries.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Monolithic Schema & Ad-hoc Rendering.**
+
+- **Overview:** - Mixing ORM models with business logic and generating PDFs via heavyweight external binaries.
    - Rejected due to maintenance friction, lack of verifiable cryptographic transparency, and high container overhead.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. We have implemented a state-of-the-art, hexagonal eConsent microservice that fulfills all enterprise clinical trial requirements with >94% test coverage, strict type safety, and zero regressions.
+- **Chosen Option:** **Option A**. We have implemented a state-of-the-art, hexagonal eConsent microservice that fulfills all enterprise clinical trial requirements with >94% test coverage, strict type safety, and zero regressions.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

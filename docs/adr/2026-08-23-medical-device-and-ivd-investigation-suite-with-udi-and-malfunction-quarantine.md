@@ -1,9 +1,9 @@
 # ADR-2209: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -33,20 +33,33 @@ This ADR defines the unified architecture satisfying **PRD-SYS-126**, **PRD-DEV-
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Unified Hexagonal Microservice Suite with Reactive Outbox Triggers:**
-   - `apps/execution`: UDI parsing engine (GS1 / HIBCC), serialized device inventory in RTSM, deficiency eCRF logging, and programmatic dispensation gating for quarantined devices.
+### Option 1: **Option A (Selected): Unified Hexagonal Microservice Suite with Reactive Outbox Triggers:**
+
+- **Overview:** - `apps/execution`: UDI parsing engine (GS1 / HIBCC), serialized device inventory in RTSM, deficiency eCRF logging, and programmatic dispensation gating for quarantined devices.
    - `apps/safety`: Adverse Device Effect (ADE / SADE / USADE) investigation lifecycle, vigilance countdown timers, and Safety Physician electronic signature adjudication.
    - `apps/interop`: CDISC SDTM DD & DO dataset compiler and EU MDR/IVDR Manufacturer Incident Report (MIR v7.2 XML/JSON) export engine.
    - `apps/web`: High-density `DeviceInvestigationConsole.vue` providing barcode scanning simulation, deficiency logging, quarantine management, and regulatory exports.
-2. **Option B: Monolithic EDC Database Coupling:**
-   - Centralizing safety cases and SDTM exports directly in `apps/execution` database models.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Monolithic EDC Database Coupling:**
+
+- **Overview:** - Centralizing safety cases and SDTM exports directly in `apps/execution` database models.
    - Rejected because it violates Cadence microservice boundaries and 21 CFR Part 11 audit separation.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it delivers full regulatory compliance under ISO 14155 and EU MDR/IVDR while upholding strict architectural decoupling and GxP auditability.
+- **Chosen Option:** **Option A** because it delivers full regulatory compliance under ISO 14155 and EU MDR/IVDR while upholding strict architectural decoupling and GxP auditability.
+- **Justification:** Selected as primary architectural approach.
 
 ### Architecture Highlights:
 - **UDI Barcode Engine:** Stateless regex-based GS1 Application Identifier (AI 01, 10, 11, 17, 21, 8012) and HIBCC primary/secondary parser validating check digits (GTIN Mod 10, HIBCC Mod 43).
@@ -73,7 +86,7 @@ Chosen option: **Option A** because it delivers full regulatory compliance under
   - `apps/execution/presentation/routers/devices.py`
   - `apps/execution/domain/sdtm/models.py` (DD & DO domains)
 * **Safety Microservice:**
-  - `apps/safety/infrastructure/models.py`
+  - `apps/safety/adapters/models.py`
   - `apps/safety/presentation/routers/safety.py`
   - `apps/safety/presentation/dtos.py`
 * **Interop Microservice:**

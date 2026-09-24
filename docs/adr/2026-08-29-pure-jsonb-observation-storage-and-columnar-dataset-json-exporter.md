@@ -33,17 +33,36 @@ This decision resolves requirements under `@req:PRD-CRF-001`, `@req:PRD-SYS-125`
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Pure JSONB Storage with Columnar DDF Transformation**
-   - Observations stored as flexible JSONB documents on a unified table with indexed query columns.
+### Option 1: **Option A (Selected): Pure JSONB Storage with Columnar DDF Transformation**
+
+- **Overview:** - Observations stored as flexible JSONB documents on a unified table with indexed query columns.
    - Columnar extraction in memory provides sub-100ms analytical transformation.
-2. **Option B: Dynamic Physical SQL Table Generation per Form Definition**
-   - _Rejected_: Leads to database lock contention, schema drift, and brittle multi-tenant deployments.
-3. **Option C: Entity-Attribute-Value (EAV) Relational Triples**
-   - _Rejected_: Requires massive recursive SQL joins, resulting in 10x-50x slower extraction latency and prohibitive CPU costs.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Dynamic Physical SQL Table Generation per Form Definition**
+
+- **Overview:** - _Rejected_: Leads to database lock contention, schema drift, and brittle multi-tenant deployments.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Entity-Attribute-Value (EAV) Relational Triples**
+
+- **Overview:** - _Rejected_: Requires massive recursive SQL joins, resulting in 10x-50x slower extraction latency and prohibitive CPU costs.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Pure JSONB Observation Envelopes + Columnar DDF ETL)**.
+- **Chosen Option:** **Option A (Pure JSONB Observation Envelopes + Columnar DDF ETL)**.
+- **Justification:** Selected as primary architectural approach.
 
 ```
 +-----------------------------------------------------------------------+
@@ -128,8 +147,8 @@ class ClinicalObservation(BaseModel):
 
 ## 6. Implementation & Verification
 
-- **Core Pipeline**: [`packages/ddf/dataset_json_etl.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/packages/ddf/dataset_json_etl.py).
-- **Domain Persistence**: [`apps/execution/database/models/observation.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/database/models/observation.py), [`apps/execution/presentation/routers/observations.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/presentation/routers/observations.py).
+- **Core Pipeline**: [`packages/ddf/dataset_json_etl.py`](packages/ddf/dataset_json_etl.py).
+- **Domain Persistence**: [`apps/execution/database/models/observation.py`](apps/execution/database/models/observation.py), [`apps/execution/presentation/routers/observations.py`](apps/execution/presentation/routers/observations.py).
 - **Test Suites & Benchmarks**:
-  - [`packages/ddf/tests/test_dataset_json_etl.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/packages/ddf/tests/test_dataset_json_etl.py) (Columnar transformation, schema hashing, multi-domain SDTM export, 100k performance benchmark).
-  - [`apps/execution/tests/test_observation_jsonb.py`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/apps/execution/tests/test_observation_jsonb.py) (JSONB persistence and DTO validation).
+  - [`packages/ddf/tests/test_dataset_json_etl.py`](packages/ddf/tests/test_dataset_json_etl.py) (Columnar transformation, schema hashing, multi-domain SDTM export, 100k performance benchmark).
+  - [`apps/execution/tests/test_observation_jsonb.py`](apps/execution/tests/test_observation_jsonb.py) (JSONB persistence and DTO validation).

@@ -1,4 +1,4 @@
-from apps.safety.infrastructure.models import (
+from apps.safety.adapters.models import (
     ICSR,
     AS2Transmission,
     AS2TransmissionAuditLog,

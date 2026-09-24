@@ -22,13 +22,35 @@ To achieve Cadence's automated Digital Data Flow (DDF) vision, we need an automa
 
 ## 3. Options Considered
 
-1. **Integrated Multi-Stage LLM & Heuristic Extraction Pipeline (Selected):** Ingests document bytes using PyMuPDF and python-docx, uses structured Pydantic v2 schemas for LLM extraction with deterministic heuristic fallback, populates Neo4j graph nodes and relationships atomically, and synthesizes CDASH eCRFs and interactive Schedule of Activities.
-2. **Pure Manual Form Authoring in MDR:** Requires study teams to transcribe protocol parameters manually into the UI. High friction and time to study launch.
-3. **Unstructured Vector RAG without Schema Enforcement:** Ingests protocol chunks into a vector database without strict USDM ontology mapping, leading to non-deterministic schemas and broken EDC form generation.
+### Option 1: **Integrated Multi-Stage LLM & Heuristic Extraction Pipeline (Selected):** Ingests document bytes using PyMuPDF and python-docx, uses structured Pydantic v2 schemas for LLM extraction with deterministic heuristic fallback, populates Neo4j graph nodes and relationships atomically, and synthesizes CDASH eCRFs and interactive Schedule of Activities.
+
+- **Overview:** **Integrated Multi-Stage LLM & Heuristic Extraction Pipeline (Selected):** Ingests document bytes using PyMuPDF and python-docx, uses structured Pydantic v2 schemas for LLM extraction with deterministic heuristic fallback, populates Neo4j graph nodes and relationships atomically, and synthesizes CDASH eCRFs and interactive Schedule of Activities.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Pure Manual Form Authoring in MDR:** Requires study teams to transcribe protocol parameters manually into the UI. High friction and time to study launch.
+
+- **Overview:** **Pure Manual Form Authoring in MDR:** Requires study teams to transcribe protocol parameters manually into the UI. High friction and time to study launch.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Unstructured Vector RAG without Schema Enforcement:** Ingests protocol chunks into a vector database without strict USDM ontology mapping, leading to non-deterministic schemas and broken EDC form generation.
+
+- **Overview:** **Unstructured Vector RAG without Schema Enforcement:** Ingests protocol chunks into a vector database without strict USDM ontology mapping, leading to non-deterministic schemas and broken EDC form generation.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1 (Integrated Multi-Stage LLM & Heuristic Extraction Pipeline)** because it satisfies PRD-DDF-001, enforces CDISC USDM v4.0 structural consistency, provides deterministic offline test execution, and generates verified CDASH eCRF forms with Part 11 audit logging.
+- **Chosen Option:** **Option 1 (Integrated Multi-Stage LLM & Heuristic Extraction Pipeline)** because it satisfies PRD-DDF-001, enforces CDISC USDM v4.0 structural consistency, provides deterministic offline test execution, and generates verified CDASH eCRF forms with Part 11 audit logging.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
@@ -44,7 +66,7 @@ Chosen option: **Option 1 (Integrated Multi-Stage LLM & Heuristic Extraction Pip
 
 - **Data Models:** `apps/designer/domain/digitization_models.py`
 - **Extraction & Synthesis Service:** `apps/designer/application/services/digitization_service.py`
-- **Neo4j Graph Writer:** `apps/designer/infrastructure/neo4j_usdm_writer.py`
+- **Neo4j Graph Writer:** `apps/designer/adapters/neo4j_usdm_writer.py`
 - **API Endpoints:** `apps/designer/presentation/routers/digitization.py`
 - **Frontend Web UI:** `apps/web/src/views/ProtocolDigitizationView.vue`, `apps/web/src/components/clinical/SoAMatrixEditor.vue`, `apps/web/src/components/clinical/ArmVisualizer.vue`, `apps/web/src/components/clinical/IECriteriaTable.vue`
 - **Automated Tests:** `apps/designer/tests/test_ai_usdm_digitization.py` verifying entity extraction, Neo4j graph integrity, cycle detection, and sub-60-second synthesis.

@@ -770,6 +770,7 @@ def test_ucum_extra_coverage():
     Increase unit test coverage for apps/execution/ucum.py.
     """
     import pytest
+
     from apps.execution.ucum import convert_unit, get_normalized_representation
 
     # 1. Incompatible base units (e.g., kg to m)
@@ -2818,7 +2819,7 @@ async def test_etmf_completeness_rejects_quarantined():
     assert ingest_res.status_code == 201
 
     # Verify site_id is "QUARANTINED" in DB
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     async with db_manager.get_session_maker()() as session:
         repo = SQLETMFRepository(session=session)
@@ -2839,14 +2840,14 @@ async def test_etmf_repository_rule_deduplication():
     """
     Test repository-level expected document sorting and deduplication.
     """
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     async with db_manager.get_session_maker()() as session:
         repo = SQLETMFRepository(session=session)
         study_id = "study_dedup_test"
 
         # Save two duplicate expected documents with different version_index and created_by
-        from apps.etmf.infrastructure.models import ExpectedDocument
+        from apps.etmf.adapters.models import ExpectedDocument
 
         doc1 = ExpectedDocument(
             study_id=study_id,

@@ -23,7 +23,7 @@ However, developer tooling currently exhibits critical friction points:
 
 Build a unified, four-pillar developer tooling architecture:
 1. **Native Stdio MCP Server (`cadence mcp`):** Provide a Model Context Protocol endpoint directly within the `cadence` CLI exposing 6 workflow-centric tools with parameter-level zoom control (`summary`, `fields`, `dry_run`).
-2. **Two-Tier Staged Pre-Commit Hook:** Implement a fast, Python/UV-native git pre-commit pipeline executing sub-500ms staged file checks and sub-1.5s repo assertions, auto-installed via `cadence doctor --auto-fix`.
+2. **Two-Tier Staged Pre-Commit Hook:** Implement a fast, Python/UV-native git pre-commit pipeline executing sub-500ms staged file checks and PRD-SUB-001.5s repo assertions, auto-installed via `cadence doctor --auto-fix`.
 3. **Centralized `TerminalDocument` Builder:** Standardize all human CLI output into authored terminal documents with narrative headings, status metric badges, column-aligned layouts, and contextual Next-Action CTAs, paired with strict NDJSON/JSON output in non-TTY contexts.
 4. **Deterministic Tooling Self-Healing:** Provide safe, non-destructive automated remediation of environment drift, SQLite scratch databases, import ordering, code formatting, ADR indexing, and OpenAPI schema exports.
 

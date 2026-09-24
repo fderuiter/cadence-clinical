@@ -16,12 +16,18 @@
 
     <!-- GxP & Part 11 Documentation Engine Requirements -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591;CA1000;IDE0065;CA1822;CA1716;CA1710;CA1018;CA1715;CA1707;CA1859;CA1852;CS1501;CS1660;CS0103;CS0311;CS1729;CS0535</NoWarn> <!-- Missing XML comment for publicly visible type or member (temporary during initial scaffold) -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- Missing XML comment for publicly visible type or member (temporary during initial scaffold) -->
   </PropertyGroup>
 
   <!-- Global Code Analysis & Security Analyzers -->
-  <PropertyGroup>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SonarAnalyzer.CSharp">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>
-

@@ -26,6 +26,7 @@ jobs:
       adr_outcome: ${{ steps.run_adr.outcome }}
       duplication_outcome: ${{ steps.run_duplication.outcome }}
       traceability_outcome: ${{ steps.run_traceability.outcome }}
+      openapi_drift_outcome: ${{ steps.run_openapi_drift.outcome }}
       markdown_outcome: ${{ steps.run_markdown.outcome }}
       architecture_outcome: ${{ steps.run_architecture.outcome }}
     steps:
@@ -76,6 +77,11 @@ jobs:
         id: run_cadence_check
         if: always()
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
+
+      - name: Run C# Architecture Sentinel Tests
+        id: run_csharp_sentinels
+        if: always()
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj
 
       - name: Run Hexagonal Contract Verification
         id: run_contracts
@@ -183,6 +189,11 @@ jobs:
           echo "==== Verifying schema visualizers match domain models ===="
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
           git diff --exit-code docs/schema_visualizer.html docs/schema/ docs/CDISC/ || true
+
+      - name: Verify OpenAPI Specification Drift Sentinel
+        id: run_openapi_drift
+        if: always()
+        run: uv run python scripts/validate_openapi_drift.py
 
       - name: Run Requirements Traceability Validation
         id: run_traceability

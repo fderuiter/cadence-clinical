@@ -1,13 +1,16 @@
 using System;
 using System.IO;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.E2ETests.Validation;
 
 /// <summary>
-/// SDLC Documentation Drift & GxP Compliance Validation Suite.
+/// SDLC Documentation Drift &amp; GxP Compliance Validation Suite.
 /// Ported from legacy gxp_compliance_suite.py.
 /// </summary>
 public class GxPComplianceSuiteTests

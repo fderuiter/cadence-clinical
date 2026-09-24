@@ -1,18 +1,18 @@
 # ADR-2185: Dynamic Subject Enrollment and eCRF Visit Execution with Real Time Edit Checks
 
-* **Status:** Accepted
-* **Date:** 2026-08-19
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-19
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
 # ADR-2185: Dynamic Subject Enrollment and eCRF Visit Execution with Real Time Edit Checks
 
-* **Status:** Accepted
-* **Date:** 2026-08-19
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-19
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -29,14 +29,26 @@ In clinical electronic data capture (EDC) systems under 21 CFR Part 11 and GxP s
 
 ## 3. Options Considered
 
-1. **Option 1: Dynamic Client & Server Schema Projection with Write-Time Observation Persistence (Selected)**
-   - Maintain protocol-version-aware dynamic projection in `CrcFormRenderer.vue` and `useClinicalStore`.
+### Option 1: **Option 1: Dynamic Client & Server Schema Projection with Write-Time Observation Persistence (Selected)**
+
+- **Overview:** - Maintain protocol-version-aware dynamic projection in `CrcFormRenderer.vue` and `useClinicalStore`.
    - Implement real-time edit check evaluation engine with Warning and Discrepancy badges.
    - Automatically persist individual `ClinicalObservation` records with 21 CFR Part 11 audit fields during `FormSubmission` creation in `apps/execution/main.py`.
    - Enforce explicit Re-Consent Gate blocking modal on the web client alongside the database flush listener.
-2. **Option 2: Static Form Schemas with Separate Observation Ingestion Endpoints**
-   - Require separate API calls for form submissions and individual observations without client-side dynamic projection.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option 2: Static Form Schemas with Separate Observation Ingestion Endpoints**
+
+- **Overview:** - Require separate API calls for form submissions and individual observations without client-side dynamic projection.
    - Disadvantage: Disconnected audit histories, slower CRC workflows, and risk of inconsistency between eCRF form submissions and clinical observations.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 

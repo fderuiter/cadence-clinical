@@ -86,6 +86,10 @@ def run_check(
         ),
         ("secrets-scan", [sys.executable, "scripts/clean_secrets_baseline.py"]),
         ("adr-validation", [sys.executable, "scripts/validate_adrs.py"]),
+        (
+            "cli-docs-drift",
+            [sys.executable, "scripts/generate_cli_docs.py", "--check"],
+        ),
         ("markdown-validation", [sys.executable, "scripts/validate_markdown.py"]),
         (
             "security-audit",
@@ -107,7 +111,12 @@ def run_check(
             "architecture-drift",
             [sys.executable, "scripts/validate_architecture_drift.py"],
         ),
+        (
+            "openapi-drift",
+            [sys.executable, "scripts/validate_openapi_drift.py"],
+        ),
         ("contract-verification", [sys.executable, "scripts/verify_contracts.py"]),
+        ("env-vars", [sys.executable, "scripts/extract_env_vars.py", "--check"]),
     ]
 
     selected_gates = [g for g in all_gates if not gate or g[0] == gate]

@@ -19,12 +19,27 @@ The clinical execution service previously relied on a deprecated write endpoint 
 
 ## 3. Options Considered
 
-1. Synchronous On-Demand Pull-Through Consent Cache & `before_flush` ORM Event Hooks (Selected)
-2. Asynchronous Webhook Push Synchronization (Rejected — vulnerable to race conditions)
+### Option 1: Synchronous On-Demand Pull-Through Consent Cache & `before_flush` ORM Event Hooks (Selected)
+
+- **Overview:** Synchronous On-Demand Pull-Through Consent Cache & `before_flush` ORM Event Hooks (Selected)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Asynchronous Webhook Push Synchronization (Rejected — vulnerable to race conditions)
+
+- **Overview:** Asynchronous Webhook Push Synchronization (Rejected — vulnerable to race conditions)
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1. Implemented a `before_flush` SQLAlchemy listener in `apps/execution/database/audit.py` to inspect pending session mutations, execute on-demand consent status checks via `fetch_subject_consent_status`, update local `SubjectConsent` records, and raise `PermissionError` if consent is missing or invalid.
+- **Chosen Option:** Option 1. Implemented a `before_flush` SQLAlchemy listener in `apps/execution/database/audit.py` to inspect pending session mutations, execute on-demand consent status checks via `fetch_subject_consent_status`, update local `SubjectConsent` records, and raise `PermissionError` if consent is missing or invalid.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

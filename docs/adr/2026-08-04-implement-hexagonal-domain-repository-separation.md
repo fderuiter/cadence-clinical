@@ -26,21 +26,21 @@ By decoupling the core domain rules from database-specific frameworks using a **
 ### Option 1: Framework-coupled Database Models
 
 - **Overview:** Keep state machine validations, immutability constraints, and GxP rules directly embedded in SQLAlchemy model classes via validators and active event hooks.
-- **Pros:**
+- ***Pros:***
   - ✅ Simpler codebase in the short term (fewer files/abstractions).
   - ✅ Automatic synchronization of DB status and local memory representations.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe coupling of business rules with third-party libraries (SQLAlchemy).
   - ❌ Testing requires spinning up active databases or extensive mocking of ORM behaviors.
 
 ### Option 2: Hexagonal Domain-Repository Separation
 
 - **Overview:** Separate the execution core into pure Python domain models (`ClinicalSubjectDomain`, `ConsentSignatureDomain`, `ConsentFormRecordDomain`, `AuditLogDomain`) and Protocol-based repository ports. Implement concrete Adapters for both SQLAlchemy and In-Memory storage.
-- **Pros:**
+- ***Pros:***
   - ✅ Standardized business layer that has zero dependencies on databases or frameworks.
   - ✅ Instantaneous unit testing capability using In-Memory repositories.
   - ✅ Clearer, more readable code for clinical regulatory auditors.
-- **Cons:**
+- ***Cons:***
   - ❌ Additional mapping layer/boilerplate needed to convert between domain models and database records.
 
 ## 4. Decision Outcome

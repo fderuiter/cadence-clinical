@@ -1,4 +1,4 @@
-from apps.etmf.infrastructure.models import (
+from apps.etmf.adapters.models import (
     Base,
     DocumentExpirationAlertState,
     DocumentQCTransition,

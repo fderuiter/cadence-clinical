@@ -26,20 +26,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Direct Service Calls without Signature Verification
 
 - **Overview:** Front-end queries the designer service directly over HTTP without gateway signatures.
-- **Pros:**
+- ***Pros:***
   - ✅ Simpler front-end setup.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates 21 CFR Part 11 identity tracking and GxP compliance.
   - ❌ Bypasses API Gateway security and rate-limiting blocks.
 
 ### Option 2: Gateway-Targeted signed client using packages/ui/signing.js (Selected)
 
 - **Overview:** Implement `terminologyClient` inside `apps/web/src/api/` to target the gateway base URL, generate HMAC signatures dynamically using the shared cryptographic helper, and map terminology status fields distinctly from physical transmission errors via `TerminologyNetworkError`.
-- **Pros:**
+- ***Pros:***
   - ✅ High security: Uses GxP-compliant canonical JSON signatures for identity propagation.
   - ✅ Configurable: Dynamically configures the API gateway base URL.
   - ✅ High resilience: Distinguishes logical terminology states (`VALID`, `INVALID`, `DEGRADED`) from connection drops or bad gateway responses (502/503).
-- **Cons:**
+- ***Cons:***
   - ❌ Requires maintaining front-end cryptographic signature generation.
 
 ## 4. Decision Outcome

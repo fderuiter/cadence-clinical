@@ -9,7 +9,6 @@ to prevent accidental execution against production database environments.
 
 import argparse
 import asyncio
-import glob
 import os
 import subprocess
 import sys
@@ -18,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 # Import PostgreSQL migrations
-from apps.execution.database.migrate import run_migrations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -157,20 +155,28 @@ def detect_dotnet_services() -> list[str]:
     if apps_dir.exists():
         for item in sorted(apps_dir.iterdir()):
             if item.is_dir():
-                csproj_matches = list((item / "src").glob("*.csproj")) if (item / "src").exists() else []
+                csproj_matches = (
+                    list((item / "src").glob("*.csproj"))
+                    if (item / "src").exists()
+                    else []
+                )
                 if csproj_matches:
                     services.append(item.name)
     return services
 
 
-async def apply_dotnet_ef_migrations_and_seed(service: str, db_url: str, allow_offline: bool) -> None:
+async def apply_dotnet_ef_migrations_and_seed(
+    service: str, db_url: str, allow_offline: bool
+) -> None:
     """
     Invokes EF Core migrations (via manage_migrations.sh apply / dotnet ef database update)
     and C# DbContext seeders (via manage_migrations.sh seed / dotnet run --seed) for a given .NET service.
     """
     repo_root = Path(__file__).resolve().parent.parent
     cap_name = service.capitalize()
-    csproj_path = repo_root / "apps" / service / "src" / f"Cadence.Apps.{cap_name}.csproj"
+    csproj_path = (
+        repo_root / "apps" / service / "src" / f"Cadence.Apps.{cap_name}.csproj"
+    )
 
     if not csproj_path.exists():
         return
@@ -188,25 +194,60 @@ async def apply_dotnet_ef_migrations_and_seed(service: str, db_url: str, allow_o
     try:
         if manage_script.exists():
             cmd = ["bash", str(manage_script), "apply", service]
-            proc = subprocess.run(cmd, cwd=str(repo_root), env=env, capture_output=True, text=True)
+            proc = subprocess.run(
+                cmd, cwd=str(repo_root), env=env, capture_output=True, text=True
+            )
             if proc.returncode == 0:
                 print(f"[SUCCESS] EF Core migrations applied for {service}.")
             else:
                 # Direct dotnet ef fallback
-                cmd_direct = ["dotnet", "ef", "database", "update", "--project", str(csproj_path)]
-                proc_direct = subprocess.run(cmd_direct, cwd=str(repo_root), env=env, capture_output=True, text=True)
+                cmd_direct = [
+                    "dotnet",
+                    "ef",
+                    "database",
+                    "update",
+                    "--project",
+                    str(csproj_path),
+                ]
+                proc_direct = subprocess.run(
+                    cmd_direct,
+                    cwd=str(repo_root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
                 if proc_direct.returncode == 0:
-                    print(f"[SUCCESS] EF Core migrations applied for {service} via dotnet ef fallback.")
+                    print(
+                        f"[SUCCESS] EF Core migrations applied for {service} via dotnet ef fallback."
+                    )
                 else:
-                    msg = proc.stderr or proc.stdout or proc_direct.stderr or proc_direct.stdout
-                    raise RuntimeError(f"EF Core migration execution failed for {service}: {msg}")
+                    msg = (
+                        proc.stderr
+                        or proc.stdout
+                        or proc_direct.stderr
+                        or proc_direct.stdout
+                    )
+                    raise RuntimeError(
+                        f"EF Core migration execution failed for {service}: {msg}"
+                    )
         else:
-            cmd_direct = ["dotnet", "ef", "database", "update", "--project", str(csproj_path)]
-            proc_direct = subprocess.run(cmd_direct, cwd=str(repo_root), env=env, capture_output=True, text=True)
+            cmd_direct = [
+                "dotnet",
+                "ef",
+                "database",
+                "update",
+                "--project",
+                str(csproj_path),
+            ]
+            proc_direct = subprocess.run(
+                cmd_direct, cwd=str(repo_root), env=env, capture_output=True, text=True
+            )
             if proc_direct.returncode == 0:
                 print(f"[SUCCESS] EF Core migrations applied for {service}.")
             else:
-                raise RuntimeError(f"EF Core migration execution failed for {service}: {proc_direct.stderr or proc_direct.stdout}")
+                raise RuntimeError(
+                    f"EF Core migration execution failed for {service}: {proc_direct.stderr or proc_direct.stdout}"
+                )
     except Exception as e:
         if allow_offline:
             print(
@@ -214,39 +255,83 @@ async def apply_dotnet_ef_migrations_and_seed(service: str, db_url: str, allow_o
                 "Continuing database reset via fallback."
             )
         else:
-            print(f"ERROR: EF Core migration execution failed for '{service}': {e}", file=sys.stderr)
+            print(
+                f"ERROR: EF Core migration execution failed for '{service}': {e}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     # 2. Execute C# DbContext seeders
     try:
         if manage_script.exists():
             cmd_seed = ["bash", str(manage_script), "seed", service]
-            proc_seed = subprocess.run(cmd_seed, cwd=str(repo_root), env=env, capture_output=True, text=True)
+            proc_seed = subprocess.run(
+                cmd_seed, cwd=str(repo_root), env=env, capture_output=True, text=True
+            )
             if proc_seed.returncode == 0:
                 print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
             else:
-                cmd_seed_direct = ["dotnet", "run", "--project", str(csproj_path), "--no-build", "--", "--seed"]
-                proc_seed_direct = subprocess.run(cmd_seed_direct, cwd=str(repo_root), env=env, capture_output=True, text=True)
+                cmd_seed_direct = [
+                    "dotnet",
+                    "run",
+                    "--project",
+                    str(csproj_path),
+                    "--no-build",
+                    "--",
+                    "--seed",
+                ]
+                proc_seed_direct = subprocess.run(
+                    cmd_seed_direct,
+                    cwd=str(repo_root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
                 if proc_seed_direct.returncode == 0:
-                    print(f"[SUCCESS] C# DbContext seeder executed for {service} via dotnet run fallback.")
+                    print(
+                        f"[SUCCESS] C# DbContext seeder executed for {service} via dotnet run fallback."
+                    )
                 else:
-                    raise RuntimeError(f"C# DbContext seeder failed for {service}: {proc_seed.stderr or proc_seed.stdout}")
+                    raise RuntimeError(
+                        f"C# DbContext seeder failed for {service}: {proc_seed.stderr or proc_seed.stdout}"
+                    )
         else:
-            cmd_seed_direct = ["dotnet", "run", "--project", str(csproj_path), "--no-build", "--", "--seed"]
-            proc_seed_direct = subprocess.run(cmd_seed_direct, cwd=str(repo_root), env=env, capture_output=True, text=True)
+            cmd_seed_direct = [
+                "dotnet",
+                "run",
+                "--project",
+                str(csproj_path),
+                "--no-build",
+                "--",
+                "--seed",
+            ]
+            proc_seed_direct = subprocess.run(
+                cmd_seed_direct,
+                cwd=str(repo_root),
+                env=env,
+                capture_output=True,
+                text=True,
+            )
             if proc_seed_direct.returncode == 0:
                 print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
             else:
-                raise RuntimeError(f"C# DbContext seeder failed for {service}: {proc_seed_direct.stderr or proc_seed_direct.stdout}")
+                raise RuntimeError(
+                    f"C# DbContext seeder failed for {service}: {proc_seed_direct.stderr or proc_seed_direct.stdout}"
+                )
     except Exception as e:
         if allow_offline:
             print(f"WARNING: C# DbContext seeder for '{service}' skipped: {e}")
         else:
-            print(f"ERROR: C# DbContext seeder failed for '{service}': {e}", file=sys.stderr)
+            print(
+                f"ERROR: C# DbContext seeder failed for '{service}': {e}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
 
-async def verify_and_ensure_ef_migration_history_and_triggers(url: str, allow_offline: bool) -> None:
+async def verify_and_ensure_ef_migration_history_and_triggers(
+    url: str, allow_offline: bool
+) -> None:
     """
     Verifies and ensures that __EFMigrationsHistory contains all expected EF Core migration records,
     ensures EF Core model tables exist, and attaches audit_schema.prevent_audit_mutation() trigger.
@@ -276,7 +361,9 @@ async def verify_and_ensure_ef_migration_history_and_triggers(url: str, allow_of
 
             # Verify tables created by EF Core. If missing (e.g. dotnet ef was offline), apply fallback DDL.
             res = await conn.execute(
-                text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'clinical_subjects');")
+                text(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'clinical_subjects');"
+                )
             )
             has_subjects = res.scalar()
             if not has_subjects:

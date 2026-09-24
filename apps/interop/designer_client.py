@@ -1,4 +1,4 @@
-from apps.interop.infrastructure.designer_client import (
+from apps.interop.adapters.designer_client import (
     EligibilityCriterion,
     ExpressionNode,
     fetch_eligibility_criteria,

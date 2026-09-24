@@ -25,20 +25,20 @@ To bridge this gap without introducing the performance overhead of spawning sepa
 ### Option 1: Live Databases with In-Process ASGI Routing & Autouse Resets (Selected)
 
 - **Overview:** Swap mock drivers with connections to live PostgreSQL and Neo4j databases during test startup when `USE_LIVE_DB=true` is set. Clean state before and after each test using autouse fixtures (truncating PostgreSQL tables under temporary replication mode bypasses triggers and foreign key locks cleanly, and detachment deletes all Neo4j nodes). Keep all S-to-S calls fully in-process.
-- **Pros:**
+- ***Pros:***
   - ✅ Full-fidelity database schema validation with no mock drift.
   - ✅ Extremely fast local execution (under 30s) as S-to-S requests bypass the network stack.
   - ✅ Clear fail-fast boundaries with connection assertions at startup.
   - ✅ High reliability with autouse GxP-compliant transactional teardown.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires local running PostgreSQL and Neo4j instances for the live execution mode.
 
 ### Option 2: Spawning Background Web Server Processes & Dynamic Testcontainers
 
 - **Overview:** Launch separate background API gateway and microservice processes, or spin up disposable containerized environments on every test run.
-- **Pros:**
+- ***Pros:***
   - ✅ True production parity with network stack traversal.
-- **Cons:**
+- ***Cons:***
   - ❌ Massive performance penalty, raising suite execution times well beyond the 30-second target.
   - ❌ High complexity in handling process lifecycles, port collisions, and async state synchronization.
 

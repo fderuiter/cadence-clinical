@@ -9,7 +9,6 @@ Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 import contextlib
 import hashlib
 import io
-import os
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -210,11 +209,10 @@ class DicomDeidentifier:
     """
 
     def __init__(self, signing_secret: bytes | None = None) -> None:
+        from packages.config import get_common_settings
+
         self.signing_secret = (
-            signing_secret
-            or os.getenv(
-                "AUDIT_LOG_SECRET_KEY", "cadence-imaging-deid-secret-12345"
-            ).encode()
+            signing_secret or get_common_settings().audit_log_secret_key.encode()
         )
 
     def _generate_uid(self, original_uid: str, namespace_salt: str) -> str:

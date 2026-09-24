@@ -8,14 +8,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
-from apps.knowledge.domain.models import ArticleStatus
-from apps.knowledge.infrastructure.models import (
+from apps.knowledge.adapters.models import (
     ContextualHelpMapping,
     KnowledgeArticle,
     KnowledgeArticleAuditLog,
     KnowledgeArticleVersion,
     KnowledgeCategory,
 )
+from apps.knowledge.domain.models import ArticleStatus
 from packages.hexagonal import RepositoryPort
 
 
