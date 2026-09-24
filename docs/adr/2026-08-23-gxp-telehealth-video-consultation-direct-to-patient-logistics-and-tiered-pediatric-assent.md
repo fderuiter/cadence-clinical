@@ -28,7 +28,7 @@ Decentralized and hybrid clinical trials (DCT) require robust, patient-centric c
 ### Option 1: **Option A (Selected): Unified DCT Engine in Interop Gateway with Domain-Driven Services**
 
 - **Overview:** - Implement pure domain models and processors in `apps/interop/domain/dct_models.py` and `dct_processor.py`.
-   - Implement relational persistence models and repositories in `apps/interop/infrastructure/dct_models.py` and `dct_repository.py`.
+   - Implement relational persistence models and repositories in `apps/interop/adapters/dct_models.py` and `dct_repository.py`.
    - Expose standard REST endpoints under `/api/v1/interop/dct/*` with comprehensive Pydantic v2 DTOs.
    - Build a full-featured, accessible `TelehealthDtpConsole.vue` in `apps/web/src/components/clinical/`.
 - ***Pros:***
@@ -66,7 +66,7 @@ Decentralized and hybrid clinical trials (DCT) require robust, patient-centric c
 
 * **Backend Services:**
   - `apps/interop/domain/dct_models.py` & `apps/interop/domain/dct_processor.py`
-  - `apps/interop/infrastructure/dct_models.py` & `apps/interop/infrastructure/dct_repository.py`
+  - `apps/interop/adapters/dct_models.py` & `apps/interop/adapters/dct_repository.py`
   - `apps/interop/application/dct_service.py`
   - `apps/interop/presentation/routers/dct.py` & `apps/interop/presentation/dct_dtos.py`
 * **Frontend Components:**

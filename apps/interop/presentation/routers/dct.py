@@ -15,6 +15,14 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.dct_models import (
+    DTPShipmentRecord,
+    InHomeVisitRecord,
+    PediatricAssentRecord,
+    TelehealthSessionRecord,
+)
+from apps.interop.adapters.dct_repository import DCTRepository
 from apps.interop.application.dct_service import DCTService
 from apps.interop.domain.dct_models import (
     CoViewStatePayload,
@@ -26,14 +34,6 @@ from apps.interop.domain.dct_models import (
     TemperatureZone,
     WebRTCSignalingPayload,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.dct_models import (
-    DTPShipmentRecord,
-    InHomeVisitRecord,
-    PediatricAssentRecord,
-    TelehealthSessionRecord,
-)
-from apps.interop.infrastructure.dct_repository import DCTRepository
 from apps.interop.presentation.dct_dtos import (
     ArchiveRecordingRequest,
     ArchiveRecordingResponse,

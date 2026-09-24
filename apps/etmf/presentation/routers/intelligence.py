@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from apps.etmf.adapters.database import transactional
 from apps.etmf.application.document_intelligence_use_case import (
     AnalyzeDocumentIntelligenceUseCase,
     CRAQCReviewUseCase,
@@ -28,7 +29,6 @@ from apps.etmf.domain.services.metadata_extractor import (
 from apps.etmf.domain.services.signature_analyzer import (
     SignatureCompletenessAnalyzer,
 )
-from apps.etmf.infrastructure.database import transactional
 from apps.etmf.presentation.dtos import (
     CRAQCReviewRequest,
     DocumentIntelligenceAnalyzeRequest,
@@ -49,7 +49,7 @@ def get_etmf_repository() -> ETMFRepositoryPort:
 
     if hasattr(main_module, "_repo_instance"):
         return main_module._repo_instance
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     return SQLETMFRepository()
 

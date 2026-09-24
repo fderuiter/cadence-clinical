@@ -1,4 +1,4 @@
-from apps.execution.infrastructure.repositories.execution_repositories import (
+from apps.execution.adapters.repositories.execution_repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
     InMemorySubjectRepository,

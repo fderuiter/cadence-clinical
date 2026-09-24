@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-using Cadence.Apps.Ctms;
-using Cadence.Apps.Etmf;
+using Cadence.Apps.Ctms.Domain;
+using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Apps.Fileshare;
-using Cadence.Apps.Quality;
+using Cadence.Apps.Fileshare.Domain;
+using Cadence.Apps.Quality.Domain;
 using Cadence.Core.Domain;
 using Cadence.Testing;
 

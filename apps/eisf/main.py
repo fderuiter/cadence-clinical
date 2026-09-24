@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 
+from apps.eisf.adapters.database import db_manager
+from apps.eisf.adapters.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.adapters.repositories import SQLEISFRepository
 from apps.eisf.domain.eisf_transport_models import (
     EISFDocumentDetail,
     EISFDocumentUploadRequest,
     EISFFolderNode,
 )
 from apps.eisf.domain.ports import EISFRepositoryPort
-from apps.eisf.infrastructure.database import db_manager
-from apps.eisf.infrastructure.models import Base, ISFAuditLog, ISFDocument
-from apps.eisf.infrastructure.repositories import SQLEISFRepository
 from apps.eisf.presentation.dtos import (
     BinderCompletenessResponse,
     BinderSectionStatus,

@@ -1,4 +1,4 @@
-from apps.interop.infrastructure.auth import (
+from apps.interop.adapters.auth import (
     has_subject_role,
     require_staff_role,
     verify_subject_bulk_identity,

@@ -17,6 +17,22 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import (
+    AS2Transmission,
+    DeviceSafetyInvestigation,
+    ExportJob,
+    PeriodicSafetyReportRecord,
+    SAEDiscrepancy,
+    SAEReconciliationJob,
+    SAEReconciliationRun,
+    SafetyAuditLog,
+    SafetyCaseICSR,
+    SafetySignalAlert,
+    SafetySignalDetectionRun,
+    write_as2_audit_log,
+    write_audit_log,
+)
 from apps.safety.domain.as2_models import (
     AS2Authority,
     AS2OutboundTransmissionInput,
@@ -34,22 +50,6 @@ from apps.safety.domain.narrative_models import (
     NarrativeSignRequest,
     NarrativeSignResponse,
     SafetyNarrativeDTO,
-)
-from apps.safety.infrastructure.database import db_manager
-from apps.safety.infrastructure.models import (
-    AS2Transmission,
-    DeviceSafetyInvestigation,
-    ExportJob,
-    PeriodicSafetyReportRecord,
-    SAEDiscrepancy,
-    SAEReconciliationJob,
-    SAEReconciliationRun,
-    SafetyAuditLog,
-    SafetyCaseICSR,
-    SafetySignalAlert,
-    SafetySignalDetectionRun,
-    write_as2_audit_log,
-    write_audit_log,
 )
 from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,

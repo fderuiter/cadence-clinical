@@ -16,17 +16,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
+from apps.knowledge.adapters.models import (
+    KnowledgeArticle,
+    KnowledgeArticleAuditLog,
+    KnowledgeCategory,
+)
 from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
     ArticleStatus,
-)
-from apps.knowledge.infrastructure.models import (
-    KnowledgeArticle,
-    KnowledgeArticleAuditLog,
-    KnowledgeCategory,
 )
 from apps.knowledge.main import app
 from packages.security.audit_logger import audit_logger_engine

@@ -62,7 +62,7 @@ This decision implements requirements under PRD-SYS-001.
 - **Affected Repositories / Services:**
   - `apps/execution/domain/ports.py` (Source of truth repository interfaces)
   - `apps/execution/adapters/repositories.py` (Facade re-exports)
-  - `apps/execution/infrastructure/repositories/execution_repositories.py` (Concrete database and in-memory mock repositories)
+  - `apps/execution/adapters/repositories/execution_repositories.py` (Concrete database and in-memory mock repositories)
   - `scripts/verify_contracts.py` (Static contract type checking orchestrator)
 - **Verification Plan:**
   - Run `uv run python scripts/verify_contracts.py` to confirm that all repository signatures fully comply with their ports.

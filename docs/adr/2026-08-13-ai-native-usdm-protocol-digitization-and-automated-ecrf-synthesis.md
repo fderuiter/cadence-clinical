@@ -66,7 +66,7 @@ To achieve Cadence's automated Digital Data Flow (DDF) vision, we need an automa
 
 - **Data Models:** `apps/designer/domain/digitization_models.py`
 - **Extraction & Synthesis Service:** `apps/designer/application/services/digitization_service.py`
-- **Neo4j Graph Writer:** `apps/designer/infrastructure/neo4j_usdm_writer.py`
+- **Neo4j Graph Writer:** `apps/designer/adapters/neo4j_usdm_writer.py`
 - **API Endpoints:** `apps/designer/presentation/routers/digitization.py`
 - **Frontend Web UI:** `apps/web/src/views/ProtocolDigitizationView.vue`, `apps/web/src/components/clinical/SoAMatrixEditor.vue`, `apps/web/src/components/clinical/ArmVisualizer.vue`, `apps/web/src/components/clinical/IECriteriaTable.vue`
 - **Automated Tests:** `apps/designer/tests/test_ai_usdm_digitization.py` verifying entity extraction, Neo4j graph integrity, cycle detection, and sub-60-second synthesis.

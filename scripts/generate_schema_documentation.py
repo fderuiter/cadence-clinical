@@ -1335,24 +1335,24 @@ def extract_all_service_schemas() -> dict[str, Any]:
     """
     from apps.ctms.models import Base as CtmsBase
     from apps.econsent.adapters.models import Base as EconsentBase
-    from apps.eisf.infrastructure.models import Base as EisfBase
-    from apps.etmf.infrastructure.models import Base as EtmfBase
+    from apps.eisf.adapters.models import Base as EisfBase
+    from apps.etmf.adapters.models import Base as EtmfBase
 
     try:
         from apps.execution.database.models import Base as ExecutionBase
     except ImportError:
         ExecutionBase = None  # noqa: N806
-    import apps.knowledge.infrastructure.training_models  # noqa: F401
-    from apps.fileshare.infrastructure.models import Base as FileshareBase
-    from apps.imaging.infrastructure.models import Base as ImagingBase
-    from apps.interop.infrastructure.models import Base as InteropBase
-    from apps.knowledge.infrastructure.models import Base as KnowledgeBase
-    from apps.notifications.infrastructure.models import Base as NotificationsBase
-    from apps.org.infrastructure.models import Base as OrgBase
-    from apps.payments.infrastructure.models import Base as PaymentsBase
-    from apps.quality.infrastructure.models import Base as QualityBase
-    from apps.safety.infrastructure.models import Base as SafetyBase
-    from apps.tickets.infrastructure.models import Base as TicketsBase
+    import apps.knowledge.adapters.training_models  # noqa: F401
+    from apps.fileshare.adapters.models import Base as FileshareBase
+    from apps.imaging.adapters.models import Base as ImagingBase
+    from apps.interop.adapters.models import Base as InteropBase
+    from apps.knowledge.adapters.models import Base as KnowledgeBase
+    from apps.notifications.adapters.models import Base as NotificationsBase
+    from apps.org.adapters.models import Base as OrgBase
+    from apps.payments.adapters.models import Base as PaymentsBase
+    from apps.quality.adapters.models import Base as QualityBase
+    from apps.safety.adapters.models import Base as SafetyBase
+    from apps.tickets.adapters.models import Base as TicketsBase
 
     relational_services = [
         (s_id, s_name, base_cls, color)

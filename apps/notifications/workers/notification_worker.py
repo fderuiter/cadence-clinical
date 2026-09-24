@@ -5,21 +5,21 @@ import logging
 import sys
 from typing import Any
 
-from apps.notifications.application.services.email_renderer import (
-    get_template_name_for_event,
-    render_email_template,
-)
-from apps.notifications.domain.event_models import SystemDomainEvent
-from apps.notifications.infrastructure.database import (
+from apps.notifications.adapters.database import (
     db_manager as notifications_db_manager,
 )
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.models import (
     Notification,
     NotificationCategory,
     NotificationDelivery,
     NotificationPriority,
     NotificationStatus,
 )
+from apps.notifications.application.services.email_renderer import (
+    get_template_name_for_event,
+    render_email_template,
+)
+from apps.notifications.domain.event_models import SystemDomainEvent
 from packages.config import get_notifications_settings
 from packages.security.gateway_client import (
     GatewayBaseClient,

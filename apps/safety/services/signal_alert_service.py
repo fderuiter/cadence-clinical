@@ -10,6 +10,13 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.adapters.models import (
+    PeriodicSafetyReportRecord,
+    SafetyCaseICSR,
+    SafetySignalAlert,
+    SafetySignalDetectionRun,
+    write_audit_log,
+)
 from apps.safety.domain.periodic_report_models import (
     PeriodicReportCompilationRequest,
     PeriodicReportResponseDTO,
@@ -25,13 +32,6 @@ from apps.safety.domain.signal_models import (
     SignalDetectionScanRequest,
     SignalDetectionScanResponse,
     SignalStrength,
-)
-from apps.safety.infrastructure.models import (
-    PeriodicSafetyReportRecord,
-    SafetyCaseICSR,
-    SafetySignalAlert,
-    SafetySignalDetectionRun,
-    write_audit_log,
 )
 from apps.safety.services.periodic_report_compiler import (
     PeriodicSafetyReportCompiler,

@@ -1,3 +1,3 @@
-from apps.eisf.infrastructure.database import transactional
+from apps.eisf.adapters.database import transactional
 
 __all__ = ["transactional"]

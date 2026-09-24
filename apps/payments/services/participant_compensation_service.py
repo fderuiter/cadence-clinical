@@ -20,14 +20,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from apps.payments.domain.exceptions import (
-    ClaimNotFoundError,
-    LaySummaryNotFoundError,
-    PaymentsValidationError,
-    WalletNotFoundError,
-)
-from apps.payments.domain.models import AuditAction, ReceiptOcrResult
-from apps.payments.infrastructure.models import (
+from apps.payments.adapters.models import (
     LaySummaryModel,
     LaySummaryReceiptModel,
     ParticipantDisbursementModel,
@@ -36,6 +29,13 @@ from apps.payments.infrastructure.models import (
     ParticipantTransactionModel,
     ParticipantWalletModel,
 )
+from apps.payments.domain.exceptions import (
+    ClaimNotFoundError,
+    LaySummaryNotFoundError,
+    PaymentsValidationError,
+    WalletNotFoundError,
+)
+from apps.payments.domain.models import AuditAction, ReceiptOcrResult
 from apps.payments.services.audit import record_payment_audit_log
 
 

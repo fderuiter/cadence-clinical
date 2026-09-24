@@ -12,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import and_, or_, select
 
-from apps.tickets.infrastructure.models import TERMINAL_STATES, Ticket
+from apps.tickets.adapters.models import TERMINAL_STATES, Ticket
 
 logger = logging.getLogger("tickets_escalation")
 
@@ -199,7 +199,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
 
                     await db.flush()
 
-                    from apps.tickets.infrastructure.repositories import (
+                    from apps.tickets.adapters.repositories import (
                         TICKET_ESCALATE,
                         write_ticket_audit_log,
                     )

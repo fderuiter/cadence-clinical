@@ -13,6 +13,8 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.repositories import SQLETMFRepository
 from apps.etmf.application.document_intelligence_use_case import (
     AnalyzeDocumentIntelligenceUseCase,
 )
@@ -20,8 +22,6 @@ from apps.etmf.domain.exceptions import DocumentNotFoundError
 from apps.etmf.domain.intelligence_models import DocumentIntelligenceReport
 from apps.etmf.domain.models import DocumentStatus
 from apps.etmf.domain.ports import ETMFRepositoryPort
-from apps.etmf.infrastructure.database import db_manager
-from apps.etmf.infrastructure.repositories import SQLETMFRepository
 
 logger = logging.getLogger("etmf.document_intelligence_worker")
 

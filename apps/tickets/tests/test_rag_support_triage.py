@@ -20,7 +20,7 @@ from sqlalchemy import select
 from apps.knowledge.adapters.database import (
     db_manager as knowledge_db_manager,
 )
-from apps.knowledge.infrastructure.models import (
+from apps.knowledge.adapters.models import (
     Base as KnowledgeBase,
 )
 from apps.knowledge.services.protocol_service import (
@@ -33,14 +33,14 @@ from apps.tickets.adapters.knowledge_client import (
     register_in_process_knowledge_provider,
 )
 from apps.tickets.adapters.models import (
+    Base as TicketsBase,
+)
+from apps.tickets.adapters.models import (
     Ticket,
     TicketAuditLog,
     TicketCategory,
     TicketPriority,
     TicketStatus,
-)
-from apps.tickets.infrastructure.models import (
-    Base as TicketsBase,
 )
 from apps.tickets.main import app as tickets_app
 from apps.tickets.services.rag_triage_service import (

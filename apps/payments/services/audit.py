@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.payments.infrastructure.models import PaymentAuditLogModel
+from apps.payments.adapters.models import PaymentAuditLogModel
 
 
 async def record_payment_audit_log(

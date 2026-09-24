@@ -54,7 +54,7 @@ It provides a complete reference for all operational environment variables used 
 | :--- | :--- | :---: | :--- | :--- |
 | `AUDIT_LOG_SECRET_KEY` | `dev-audit-secret-key-cadence-2026-secure-32b` | No | Secret key for GxP immutable audit trail hashing and verification | `apps/execution/database/rollback.py:14`<br>`apps/imaging/tests/conftest.py:16`<br>`apps/payments/tests/conftest.py:15`<br>*(+19 more)* |
 | `BIOSTAT_EXPORT_SALT` | `dev-biostat-export-salt-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/execution/biostat/csv_export.py:51`<br>`apps/execution/biostat/csv_export.py:133`<br>`apps/execution/main.py:118`<br>*(+4 more)* |
-| `GATEWAY_INTERNAL_SECRET` | `dev-gateway-internal-secret-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/eisf/presentation/routers/eisf.py:1547`<br>`apps/eisf/presentation/routers/eisf.py:1651`<br>`apps/tickets/infrastructure/knowledge_client.py:23` |
+| `GATEWAY_INTERNAL_SECRET` | `dev-gateway-internal-secret-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/eisf/presentation/routers/eisf.py:1547`<br>`apps/eisf/presentation/routers/eisf.py:1651`<br>`apps/tickets/adapters/knowledge_client.py:23` |
 | `GATEWAY_SECRET` | `internal-gateway-secret-12345` | No | Shared HMAC-SHA256 secret for inter-service Gateway authentication headers | `apps/ctms/main.py:25`<br>`apps/ctms/presentation/routers/ctms.py:1463`<br>`apps/ctms/presentation/routers/ctms.py:2084`<br>*(+131 more)* |
 | `GOOGLE_APPLICATION_CREDENTIALS` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/cli/commands/record.py:259`<br>`packages/storage/gdrive.py:142` |
 | `GXP_SIGNING_CERT` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/compliance/services/gxp_signer.py:116`<br>`scripts/sync_gxp.py:94` |
@@ -73,7 +73,7 @@ It provides a complete reference for all operational environment variables used 
 | `CLAMAV_PORT` | `3310` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/fileshare/adapters/clamav_adapter.py:32` |
 | `CTMS_SERVICE_URL` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/greenlight_gating.py:77` |
 | `CTMS_URL` | `http://localhost:8007` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `DESIGNER_URL` | `http://localhost:8001` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/designer_client.py:31`<br>`apps/interop/adapters/designer_client.py:86`<br>`apps/interop/infrastructure/designer_client.py:87` |
+| `DESIGNER_URL` | `http://localhost:8001` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/designer_client.py:31`<br>`apps/interop/adapters/designer_client.py:86`<br>`apps/interop/adapters/designer_client.py:87` |
 | `ECONSENT_URL` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/econsent_client.py:46` |
 | `EISF_URL` | `http://localhost:8010` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/org/presentation/routers/org.py:390`<br>`apps/org/presentation/routers/org.py:1534` |
 | `EMA_AS2_URL` | `https://eudravigilance.ema.europa.eu/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/safety/services/as2_gateway_client.py:89` |
@@ -85,7 +85,7 @@ It provides a complete reference for all operational environment variables used 
 | `GATEWAY_URL` | `http://localhost:8000` | No | 4. Microservice REST Endpoints & URLs (Local Default Port Map) | *Pre-configured template variable* |
 | `HC_AS2_URL` | `https://gateway.hc-sc.gc.ca/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/safety/services/as2_gateway_client.py:119` |
 | `INTEROP_URL` | `http://localhost:8004` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/org/presentation/routers/org.py:390`<br>`apps/org/presentation/routers/org.py:1534` |
-| `KNOWLEDGE_SERVICE_URL` | `http://127.0.0.1:8006` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/presentation/routers/amendments.py:203`<br>`apps/execution/training_gating.py:79`<br>`apps/tickets/infrastructure/knowledge_client.py:22` |
+| `KNOWLEDGE_SERVICE_URL` | `http://127.0.0.1:8006` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/presentation/routers/amendments.py:203`<br>`apps/execution/training_gating.py:79`<br>`apps/tickets/adapters/knowledge_client.py:22` |
 | `MHRA_AS2_URL` | `https://sub.mhra.gov.uk/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/safety/services/as2_gateway_client.py:109` |
 | `MINIO_ENDPOINT_URL` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `apps/etmf/storage.py:27`<br>`apps/imaging/adapters/storage.py:23`<br>`packages/storage/adapters/minio_adapter.py:31`<br>*(+1 more)* |
 | `ORG_SERVICE_URL` | `http://localhost:8012` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/security/org_client.py:65` |
@@ -93,7 +93,7 @@ It provides a complete reference for all operational environment variables used 
 | `PMDA_AS2_URL` | `https://gateway.pmda.go.jp/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/safety/services/as2_gateway_client.py:99` |
 | `QUALITY_SERVICE_URL` | `http://localhost:8008` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/ctms/adapters/clients.py:72` |
 | `QUALITY_URL` | `http://localhost:8005` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `REDIS_PORT` | `6379` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/econsent/infrastructure/cache.py:38`<br>`apps/econsent/presentation/routers/econsent.py:112`<br>`apps/execution/workers/consent_subscriber.py:138` |
+| `REDIS_PORT` | `6379` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/econsent/adapters/cache.py:38`<br>`apps/econsent/presentation/routers/econsent.py:112`<br>`apps/execution/workers/consent_subscriber.py:138` |
 | `REDIS_URL` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `packages/security/sig_token_verifier.py:16` |
 | `SAFETY_SERVICE_URL` | `http://localhost:8009` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/ctms/adapters/clients.py:119` |
 | `SAFETY_URL` | `http://localhost:8008` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
@@ -140,10 +140,10 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :---: | :--- | :--- |
-| `ETMF_NOTIFICATIONS_CLIENT_TIMEOUT` | `2.0` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/etmf/infrastructure/notifications_client.py:30` |
+| `ETMF_NOTIFICATIONS_CLIENT_TIMEOUT` | `2.0` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/etmf/adapters/notifications_client.py:30` |
 | `INBOUND_EMAIL_HMAC_SECRET` | `dev-secret-inbound-email-hmac-secure-placeholder` | No | Secret key for eTMF inbound email verification and webhook signing | `apps/execution/database/rollback.py:17`<br>`packages/cli/main.py:10`<br>`packages/compliance/services/gxp_signer.py:16`<br>*(+13 more)* |
 | `INBOUND_EMAIL_MAX_SIZE_BYTES` | `10485760` | No | 10MB default | `apps/etmf/presentation/routers/etmf.py:2173` |
-| `NOTIFICATIONS_URL` | `http://localhost:8006` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/etmf/infrastructure/notifications_client.py:29`<br>`apps/interop/presentation/routers/interop.py:1112`<br>`apps/safety/adapters/processor.py:116`<br>*(+3 more)* |
+| `NOTIFICATIONS_URL` | `http://localhost:8006` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/etmf/adapters/notifications_client.py:29`<br>`apps/interop/presentation/routers/interop.py:1112`<br>`apps/safety/adapters/processor.py:116`<br>*(+3 more)* |
 | `NOTIFICATION_MAX_ATTEMPTS` | `5` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/notifications/presentation/routers/notifications.py:204` |
 | `NOTIFICATION_RETRY_BASE_DELAY` | `2.0` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/notifications/presentation/routers/notifications.py:215` |
 | `NOTIFICATION_RETRY_MAX_DELAY` | `3600.0` | No | Operational setting for Notifications, SMTP & Webhooks. | `apps/notifications/presentation/routers/notifications.py:216` |
@@ -173,7 +173,7 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :---: | :--- | :--- |
-| `AI_GATEWAY_URL` | *(None)* | Yes | Operational setting for AI Gateway & LLM Ingestion. | `apps/econsent/adapters/ai_readability_client.py:25`<br>`apps/execution/adapters/ai_anomaly_client.py:29`<br>`apps/interop/infrastructure/llm_semantic_reasoner.py:38`<br>*(+1 more)* |
+| `AI_GATEWAY_URL` | *(None)* | Yes | Operational setting for AI Gateway & LLM Ingestion. | `apps/econsent/adapters/ai_readability_client.py:25`<br>`apps/execution/adapters/ai_anomaly_client.py:29`<br>`apps/interop/adapters/llm_semantic_reasoner.py:38`<br>*(+1 more)* |
 | `AI_TIER_1_EMBED_MODEL` | *(None)* | Yes | Operational setting for AI Gateway & LLM Ingestion. | `apps/ai_gateway/adapters/litellm_adapter.py:48` |
 | `AI_TIER_1_MODEL` | *(None)* | Yes | Operational setting for AI Gateway & LLM Ingestion. | `apps/ai_gateway/adapters/litellm_adapter.py:38` |
 | `AI_TIER_2_MODEL` | *(None)* | Yes | Operational setting for AI Gateway & LLM Ingestion. | `apps/ai_gateway/adapters/litellm_adapter.py:41` |
@@ -223,7 +223,7 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :---: | :--- | :--- |
-| `PYTEST_CURRENT_TEST` | *(None)* | Yes | Operational setting for Helpdesk & Tickets Service. | `apps/etmf/infrastructure/cryptography.py:16`<br>`apps/etmf/infrastructure/cryptography.py:324`<br>`apps/notifications/presentation/routers/notifications.py:256`<br>*(+2 more)* |
+| `PYTEST_CURRENT_TEST` | *(None)* | Yes | Operational setting for Helpdesk & Tickets Service. | `apps/etmf/adapters/cryptography.py:16`<br>`apps/etmf/adapters/cryptography.py:324`<br>`apps/notifications/presentation/routers/notifications.py:256`<br>*(+2 more)* |
 | `TICKETS_ESCALATION_INTERVAL_SECONDS` | `86400.0` | No | Operational setting for Helpdesk & Tickets Service. | `apps/tickets/escalation.py:90`<br>`apps/tickets/tests/test_tickets_escalation.py:252` |
 | `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` | `60.0` | No | Temporarily set poll interval to a small value | `apps/tickets/escalation.py:274`<br>`apps/tickets/tests/test_tickets_escalation.py:416` |
 
@@ -233,21 +233,21 @@ It provides a complete reference for all operational environment variables used 
 | :--- | :--- | :---: | :--- | :--- |
 | `ECONSENT_ARCHIVAL_ATTEMPT_CAP` | `5` | No | Operational setting for eConsent Service. | `apps/econsent/workers/archival_worker.py:112` |
 | `ECONSENT_ARCHIVAL_POLL_INTERVAL_SECONDS` | `5.0` | No | Operational setting for eConsent Service. | `apps/econsent/workers/archival_worker.py:135` |
-| `ECONSENT_CACHE_TTL` | *(None)* | Yes | Operational setting for eConsent Service. | `apps/econsent/infrastructure/cache.py:27` |
-| `REDIS_CHANNEL` | `econsent_cache_invalidation` | No | Operational setting for eConsent Service. | `apps/econsent/infrastructure/cache.py:40` |
+| `ECONSENT_CACHE_TTL` | *(None)* | Yes | Operational setting for eConsent Service. | `apps/econsent/adapters/cache.py:27` |
+| `REDIS_CHANNEL` | `econsent_cache_invalidation` | No | Operational setting for eConsent Service. | `apps/econsent/adapters/cache.py:40` |
 
 ## Site Payments Service
 
 | Variable | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :---: | :--- | :--- |
-| `ALLOW_MOCK_SIGNATURES` | `1` | No | Operational setting for Site Payments Service. | `apps/etmf/infrastructure/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
+| `ALLOW_MOCK_SIGNATURES` | `1` | No | Operational setting for Site Payments Service. | `apps/etmf/adapters/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
 
 ## EDC Execution Service
 
 | Variable | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :---: | :--- | :--- |
 | `ANOMALY_WORKER_POLL_INTERVAL_SECONDS` | `30.0` | No | Operational setting for EDC Execution Service. | `apps/execution/workers/anomaly_worker.py:127` |
-| `CACHE_TTL` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/infrastructure/cache.py:27`<br>`apps/execution/coding/matcher.py:381`<br>`apps/execution/lab_range_cache.py:26`<br>*(+1 more)* |
+| `CACHE_TTL` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/adapters/cache.py:27`<br>`apps/execution/coding/matcher.py:381`<br>`apps/execution/lab_range_cache.py:26`<br>*(+1 more)* |
 | `CODING_CACHE_TTL` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/execution/coding/matcher.py:380` |
 | `LAB_RANGE_CACHE_TTL` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/execution/lab_range_cache.py:26`<br>`apps/execution/tests/test_lab_range_cache.py:23` |
 | `OUTBOX_ATTEMPT_CAP` | `5` | No | Operational setting for EDC Execution Service. | `apps/etmf/workers/outbox_worker.py:61`<br>`apps/execution/workers/outbox_worker.py:28` |
@@ -257,8 +257,8 @@ It provides a complete reference for all operational environment variables used 
 | `QUERY_ESCALATION_DIGEST_SECONDS` | `86400.0` | No | With high digest interval (e.g. 86400s), digest is NOT sent | `apps/execution/queries_escalation.py:72`<br>`apps/execution/tests/test_queries_escalation.py:205`<br>`apps/execution/tests/test_queries_escalation.py:210` |
 | `QUERY_ESCALATION_INTERVAL_SECONDS` | `86400.0` | No | Start loop with very short interval | `apps/execution/queries_escalation.py:153`<br>`apps/execution/tests/test_queries_escalation.py:225` |
 | `REDIS_CHANNEL_CONSENT` | `econsent_consent_completed` | No | Operational setting for EDC Execution Service. | `apps/econsent/presentation/routers/econsent.py:114`<br>`apps/execution/workers/consent_subscriber.py:140` |
-| `REDIS_HOST` | *(None)* | Yes | Redis configuration for cluster-wide invalidation propagation | `apps/econsent/infrastructure/cache.py:37`<br>`apps/econsent/presentation/routers/econsent.py:108`<br>`apps/execution/workers/consent_subscriber.py:137`<br>*(+1 more)* |
-| `REDIS_PASSWORD` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/infrastructure/cache.py:39`<br>`apps/econsent/presentation/routers/econsent.py:113`<br>`apps/execution/workers/consent_subscriber.py:139` |
+| `REDIS_HOST` | *(None)* | Yes | Redis configuration for cluster-wide invalidation propagation | `apps/econsent/adapters/cache.py:37`<br>`apps/econsent/presentation/routers/econsent.py:108`<br>`apps/execution/workers/consent_subscriber.py:137`<br>*(+1 more)* |
+| `REDIS_PASSWORD` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/adapters/cache.py:39`<br>`apps/econsent/presentation/routers/econsent.py:113`<br>`apps/execution/workers/consent_subscriber.py:139` |
 | `RUN_BACKGROUND_WORKERS` | `true` | No | Operational setting for EDC Execution Service. | `apps/execution/main.py:205` |
 | `SEALER_INTERVAL_SECONDS` | `60.0` | No | Operational setting for EDC Execution Service. | `apps/execution/database/sealer.py:297` |
 | `TESTING` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/workers/archival_worker.py:150`<br>`apps/etmf/workers/document_intelligence_worker.py:177`<br>`apps/etmf/workers/outbox_worker.py:87`<br>*(+5 more)* |

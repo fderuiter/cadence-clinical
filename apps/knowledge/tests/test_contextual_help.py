@@ -22,6 +22,10 @@ from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
+from apps.knowledge.adapters.models import (
+    ContextualHelpMapping,
+    KnowledgeArticle,
+)
 from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.domain.route_matcher import (
     PatternSpecificity,
@@ -30,10 +34,6 @@ from apps.knowledge.domain.route_matcher import (
     matches_route,
     normalize_route,
     rank_matching_mappings,
-)
-from apps.knowledge.infrastructure.models import (
-    ContextualHelpMapping,
-    KnowledgeArticle,
 )
 from apps.knowledge.main import app
 from packages.testing.security import create_test_auth_headers

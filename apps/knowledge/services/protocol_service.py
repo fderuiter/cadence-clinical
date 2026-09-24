@@ -21,7 +21,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.knowledge.infrastructure.models import ProtocolKnowledgeChunk
+from apps.knowledge.adapters.models import ProtocolKnowledgeChunk
 
 logger = logging.getLogger(__name__)
 

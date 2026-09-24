@@ -14,17 +14,17 @@ from fastapi.testclient import TestClient
 
 from apps.econsent.adapters.database import db_manager
 from apps.econsent.adapters.models import Base
+from apps.econsent.adapters.repositories import (
+    SQLConsentAuditRepository,
+    SQLReconsentRepository,
+    SQLSubjectConsentRepository,
+)
 from apps.econsent.application.use_cases import ReconsentService
 from apps.econsent.domain.majority_engine import (
     calculate_exact_age,
     calculate_majority_date,
     evaluate_subject_majority_milestone,
     get_legal_age_threshold,
-)
-from apps.econsent.infrastructure.repositories import (
-    SQLConsentAuditRepository,
-    SQLReconsentRepository,
-    SQLSubjectConsentRepository,
 )
 from apps.econsent.main import app
 from packages.testing.security import generate_signature

@@ -9,6 +9,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.embedding_matcher import EmbeddingMatcher
+from apps.interop.adapters.llm_semantic_reasoner import LLMSemanticReasoner
+from apps.interop.adapters.models import (
+    ClinicalQuery,
+    EPROSubmission,
+    EPROSubmissionDefeated,
+    EPROSubmissionQuarantine,
+    Instrument,
+    InteropAuditLog,
+    SubjectAssignment,
+    SubjectNotification,
+)
 from apps.interop.application import SemanticMapperService
 from apps.interop.auth import (
     has_subject_role,
@@ -35,19 +48,6 @@ from apps.interop.domain.sync_engine import (
     verify_record_signature,
 )
 from apps.interop.fhir_adapter import FHIRAdapter
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.embedding_matcher import EmbeddingMatcher
-from apps.interop.infrastructure.llm_semantic_reasoner import LLMSemanticReasoner
-from apps.interop.infrastructure.models import (
-    ClinicalQuery,
-    EPROSubmission,
-    EPROSubmissionDefeated,
-    EPROSubmissionQuarantine,
-    Instrument,
-    InteropAuditLog,
-    SubjectAssignment,
-    SubjectNotification,
-)
 from apps.interop.presentation.dtos import (
     AcknowledgeNotificationRequest,
     BulkSyncPayload,

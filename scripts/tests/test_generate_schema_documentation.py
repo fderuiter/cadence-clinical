@@ -35,7 +35,7 @@ def test_parse_sqlalchemy_schema_execution():
 
 def test_parse_sqlalchemy_schema_etmf():
     """Verify SQLAlchemy schema extraction for eTMF models."""
-    from apps.etmf.infrastructure.models import Base as EtmfBase
+    from apps.etmf.adapters.models import Base as EtmfBase
 
     tables = parse_sqlalchemy_schema(EtmfBase, "etmf")
     assert len(tables) > 0
@@ -56,7 +56,7 @@ def test_parse_sqlalchemy_schema_etmf():
 
 def test_parse_sqlalchemy_schema_fileshare():
     """Verify SQLAlchemy schema extraction for fileshare models."""
-    from apps.fileshare.infrastructure.models import Base as FileshareBase
+    from apps.fileshare.adapters.models import Base as FileshareBase
 
     tables = parse_sqlalchemy_schema(FileshareBase, "fileshare")
     assert len(tables) > 0
@@ -64,7 +64,7 @@ def test_parse_sqlalchemy_schema_fileshare():
 
 def test_parse_sqlalchemy_schema_imaging():
     """Verify SQLAlchemy schema extraction for imaging models."""
-    from apps.imaging.infrastructure.models import Base as ImagingBase
+    from apps.imaging.adapters.models import Base as ImagingBase
 
     tables = parse_sqlalchemy_schema(ImagingBase, "imaging")
     assert len(tables) > 0
@@ -72,7 +72,7 @@ def test_parse_sqlalchemy_schema_imaging():
 
 def test_parse_sqlalchemy_schema_payments():
     """Verify SQLAlchemy schema extraction for payments models."""
-    from apps.payments.infrastructure.models import Base as PaymentsBase
+    from apps.payments.adapters.models import Base as PaymentsBase
 
     tables = parse_sqlalchemy_schema(PaymentsBase, "payments")
     assert len(tables) > 0
@@ -80,8 +80,8 @@ def test_parse_sqlalchemy_schema_payments():
 
 def test_parse_sqlalchemy_schema_knowledge():
     """Verify SQLAlchemy schema extraction for knowledge models."""
-    import apps.knowledge.infrastructure.training_models  # noqa: F401
-    from apps.knowledge.infrastructure.models import Base as KnowledgeBase
+    import apps.knowledge.adapters.training_models  # noqa: F401
+    from apps.knowledge.adapters.models import Base as KnowledgeBase
 
     tables = parse_sqlalchemy_schema(KnowledgeBase, "knowledge")
     assert len(tables) > 0

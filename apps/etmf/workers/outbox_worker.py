@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from sqlalchemy import select
 
-from apps.etmf.infrastructure.database import db_manager
-from apps.etmf.infrastructure.models import IntegrationOutbox
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.models import IntegrationOutbox
 
 logger = logging.getLogger("etmf-outbox-worker")
 outbox_task = None

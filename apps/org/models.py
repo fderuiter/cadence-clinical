@@ -1,4 +1,4 @@
-from apps.org.infrastructure.models import (
+from apps.org.adapters.models import (
     Base,
     DelegationOfAuthority,
     Organization,

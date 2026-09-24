@@ -20,6 +20,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from apps.quality.adapters.execution_client import QualityExecutionClient
 from apps.quality.application.services.data_integrity_sentinel_service import (
     DataIntegritySentinelService,
 )
@@ -41,7 +42,6 @@ from apps.quality.domain.surveillance_models import (
     SiteSamplePowerStatus,
     SiteSurveillanceSummary,
 )
-from apps.quality.infrastructure.execution_client import QualityExecutionClient
 from packages.hexagonal import DomainError
 
 logger = logging.getLogger("quality-surveillance-runner")

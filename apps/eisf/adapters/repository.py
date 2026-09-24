@@ -1,3 +1,3 @@
-from apps.eisf.infrastructure.repositories import SQLEISFRepository
+from apps.eisf.adapters.repositories import SQLEISFRepository
 
 __all__ = ["SQLEISFRepository"]

@@ -16,8 +16,8 @@ os.environ.setdefault("GATEWAY_SECRET", "test-gateway-secret-12345")
 os.environ.setdefault("AUDIT_LOG_SECRET_KEY", "test-imaging-audit-secret-key-999")
 
 from apps.imaging.adapters.database import db_manager
+from apps.imaging.adapters.models import Base
 from apps.imaging.adapters.storage import set_storage_port
-from apps.imaging.infrastructure.models import Base
 from apps.imaging.main import app
 from packages.testing.fakes import InMemoryStoragePort
 from packages.testing.security import create_test_auth_headers

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.payments.adapters.database import get_db_session
-from apps.payments.infrastructure.models import (
+from apps.payments.adapters.models import (
     BudgetContractModel,
     FeeScheduleModel,
     HoldbackReserveModel,

@@ -8,19 +8,19 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.fileshare.adapters.models import (
+    FileAuditLogModel,
+    FileRecordModel,
+    GuestLinkModel,
+    PlaybackAuditLogModel,
+    ShareGrantModel,
+)
 from apps.fileshare.domain.models import (
     FileAuditLog,
     FileRecord,
     GuestLink,
     PlaybackAuditEvent,
     ShareGrant,
-)
-from apps.fileshare.infrastructure.models import (
-    FileAuditLogModel,
-    FileRecordModel,
-    GuestLinkModel,
-    PlaybackAuditLogModel,
-    ShareGrantModel,
 )
 from apps.fileshare.ports.repository_port import (
     FileAuditLogRepositoryPort,

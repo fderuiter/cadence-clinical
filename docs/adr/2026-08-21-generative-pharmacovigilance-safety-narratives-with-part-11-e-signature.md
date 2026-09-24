@@ -67,7 +67,7 @@ This architecture provides absolute regulatory compliance, ensures deterministic
 ## 6. Implementation & Verification
 
 * Implement domain models in `apps/safety/domain/narrative_models.py`.
-* Implement persistence ORM in `apps/safety/infrastructure/models.py`.
+* Implement persistence ORM in `apps/safety/adapters/models.py`.
 * Implement chronological timeline aggregator in `apps/safety/services/timeline_aggregator.py`.
 * Implement AI Gateway client in `apps/safety/adapters/ai_narrative_client.py`.
 * Implement application orchestration and Part 11 signature gate in `apps/safety/services/narrative_service.py`.
