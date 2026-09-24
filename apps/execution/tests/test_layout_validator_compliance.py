@@ -136,4 +136,3 @@ async def test_missing_playwright_raises_runtime_error(monkeypatch):
         )
 
     assert "Playwright is not installed" in str(exc_info.value)
-

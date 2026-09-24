@@ -12,12 +12,12 @@ from datetime import datetime
 import httpx
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog, Base, FormSubmission
 from apps.execution.main import app
 from apps.execution.services.offline_sync import OfflineSyncEngine
-from sqlalchemy import select
-
 from packages.security.signing import generate_canonical_signature
 
 GATEWAY_SECRET = os.getenv(

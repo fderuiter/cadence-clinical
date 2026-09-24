@@ -770,6 +770,7 @@ def test_ucum_extra_coverage():
     Increase unit test coverage for apps/execution/ucum.py.
     """
     import pytest
+
     from apps.execution.ucum import convert_unit, get_normalized_representation
 
     # 1. Incompatible base units (e.g., kg to m)

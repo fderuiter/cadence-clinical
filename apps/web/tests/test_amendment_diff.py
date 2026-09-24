@@ -18,6 +18,7 @@ from apps.designer.db import (
     MOCK_STUDY_VERSIONS,
 )
 from apps.designer.main import app as designer_app
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base
 from apps.execution.main import app as execution_app

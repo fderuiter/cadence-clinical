@@ -17,19 +17,48 @@ from scripts.extract_env_vars import (
 
 
 class TestExtractEnvVars(unittest.TestCase):
-
     def test_classify_domain(self):
         """Validates domain classification rules."""
-        self.assertEqual(classify_domain("AI_TIER_3_MODEL", "apps/ai_gateway/main.py"), "AI Gateway & LLM Ingestion")
-        self.assertEqual(classify_domain("DATABASE_URL", "apps/execution/main.py"), "Database Connection URLs")
-        self.assertEqual(classify_domain("GATEWAY_URL", "apps/gateway/main.py"), "Microservice REST Endpoints & URLs")
-        self.assertEqual(classify_domain("KEYCLOAK_REALM", "apps/gateway/auth.py"), "Keycloak / OIDC Identity Provider Configuration")
-        self.assertEqual(classify_domain("SMTP_HOST", "apps/notifications/main.py"), "Notifications, SMTP & Webhooks")
-        self.assertEqual(classify_domain("NCI_EVS_BASE_URL", "apps/terminology/main.py"), "External Clinical Ontologies & Terminology Services")
-        self.assertEqual(classify_domain("STORAGE_BACKEND", "apps/etmf/storage.py"), "Document Storage & Archival")
-        self.assertEqual(classify_domain("AUDIT_LOG_SECRET_KEY", "packages/security/audit.py"), "Cryptographic Secrets & Authentication Keys")
-        self.assertEqual(classify_domain("BRAND_NAME", "packages/core/config.py"), "Enterprise Branding & Domain Identity")
-        self.assertEqual(classify_domain("APP_ENV", "apps/execution/config.py"), "Global Platform & Environment")
+        self.assertEqual(
+            classify_domain("AI_TIER_3_MODEL", "apps/ai_gateway/main.py"),
+            "AI Gateway & LLM Ingestion",
+        )
+        self.assertEqual(
+            classify_domain("DATABASE_URL", "apps/execution/main.py"),
+            "Database Connection URLs",
+        )
+        self.assertEqual(
+            classify_domain("GATEWAY_URL", "apps/gateway/main.py"),
+            "Microservice REST Endpoints & URLs",
+        )
+        self.assertEqual(
+            classify_domain("KEYCLOAK_REALM", "apps/gateway/auth.py"),
+            "Keycloak / OIDC Identity Provider Configuration",
+        )
+        self.assertEqual(
+            classify_domain("SMTP_HOST", "apps/notifications/main.py"),
+            "Notifications, SMTP & Webhooks",
+        )
+        self.assertEqual(
+            classify_domain("NCI_EVS_BASE_URL", "apps/terminology/main.py"),
+            "External Clinical Ontologies & Terminology Services",
+        )
+        self.assertEqual(
+            classify_domain("STORAGE_BACKEND", "apps/etmf/storage.py"),
+            "Document Storage & Archival",
+        )
+        self.assertEqual(
+            classify_domain("AUDIT_LOG_SECRET_KEY", "packages/security/audit.py"),
+            "Cryptographic Secrets & Authentication Keys",
+        )
+        self.assertEqual(
+            classify_domain("BRAND_NAME", "packages/core/config.py"),
+            "Enterprise Branding & Domain Identity",
+        )
+        self.assertEqual(
+            classify_domain("APP_ENV", "apps/execution/config.py"),
+            "Global Platform & Environment",
+        )
 
     def test_sanitize_default_value(self):
         """Verifies that sensitive credentials are replaced with placeholders (Guardrail 2)."""
@@ -37,7 +66,9 @@ class TestExtractEnvVars(unittest.TestCase):
         self.assertFalse(is_sensitive_variable("APP_ENV"))
 
         # Safe defaults remain intact
-        self.assertEqual(sanitize_default_value("APP_ENV", "development"), "development")
+        self.assertEqual(
+            sanitize_default_value("APP_ENV", "development"), "development"
+        )
         self.assertEqual(sanitize_default_value("LOG_LEVEL", "INFO"), "INFO")
 
         # Live sensitive secret string gets sanitized
@@ -48,7 +79,7 @@ class TestExtractEnvVars(unittest.TestCase):
 
     def test_ast_extraction_visitor(self):
         """Verifies AST visitor captures getenv, environ.get, environ[...], setdefault, and Pydantic fields."""
-        code = '''
+        code = """
 import os
 from pydantic import BaseModel, Field
 
@@ -63,7 +94,7 @@ class ConfigModel(BaseModel):
     field_b: str = Field(..., validation_alias="TEST_AST_VAR_6")
 
 # env-var: TEST_AST_VAR_7=inline_default
-'''
+"""
         code_lines = code.splitlines()
         tree = ast.parse(code, filename="dummy.py")
 
@@ -117,7 +148,9 @@ class ConfigModel(BaseModel):
         self.assertIn("TEST_GEN_VAR_2=val_2", env_content)
 
         md_docs = generate_markdown_docs(scanned, existing)
-        self.assertIn("# Cadence Platform Operational Environment Variables Dictionary", md_docs)
+        self.assertIn(
+            "# Cadence Platform Operational Environment Variables Dictionary", md_docs
+        )
         self.assertIn("`TEST_GEN_VAR_1`", md_docs)
         self.assertIn("`apps/test/main.py:10`", md_docs)
 

@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 import pytest_asyncio
+from jose import jwt
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, ClinicalSubject
 from apps.execution.main import app
 from apps.execution.notifications_client import publish_notification
 from apps.execution.trial_lock import NotificationRouter
-from jose import jwt
-
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv(
