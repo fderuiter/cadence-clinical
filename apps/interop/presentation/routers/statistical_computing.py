@@ -24,6 +24,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
 from apps.interop.application.statistical_computing_service import (
     ExecutionRunNotFoundError,
     LockfileIntegrityError,
@@ -31,8 +33,6 @@ from apps.interop.application.statistical_computing_service import (
     StatisticalComputingService,
     UnblindedAccessDeniedError,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
 from apps.interop.presentation.sce_dtos import (
     CreateProgramRequest,
     ExecuteProgramRequest,

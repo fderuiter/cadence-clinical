@@ -9,7 +9,7 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 from fastapi import FastAPI
 
 from apps.fileshare.adapters.database import db_manager, get_db_session
-from apps.fileshare.infrastructure.models import Base
+from apps.fileshare.adapters.models import Base
 from apps.fileshare.presentation.routers.files import (
     audit_alias_router,
     audit_router,

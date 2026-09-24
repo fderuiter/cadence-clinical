@@ -170,7 +170,7 @@ repos:
         name: Backend Port Contract Static Verification
         entry: uv run --python 3.14 python scripts/verify_contracts.py
         language: system
-        files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/infrastructure/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
+        files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/adapters/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
         pass_filenames: false
 
       - id: query-style-linter

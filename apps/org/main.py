@@ -7,8 +7,8 @@ with 21 CFR Part 11 and GxP compliant append-only version history and audit trai
 
 from fastapi import FastAPI
 
-from apps.org.infrastructure.database import db_manager
-from apps.org.infrastructure.models import Base
+from apps.org.adapters.database import db_manager
+from apps.org.adapters.models import Base
 from apps.org.presentation.routers.org import router as org_router
 from packages.config import get_org_settings
 from packages.database import get_relational_db_lifespan

@@ -1,4 +1,4 @@
-from apps.econsent.infrastructure.cache import (
+from apps.econsent.adapters.cache import (
     ApprovedTranslationCache,
     get_approved_template_translation,
 )

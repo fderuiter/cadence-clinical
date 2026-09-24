@@ -9,7 +9,7 @@ Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 from fastapi import FastAPI
 
 from apps.imaging.adapters.database import db_manager, get_db_session
-from apps.imaging.infrastructure.models import Base
+from apps.imaging.adapters.models import Base
 from apps.imaging.presentation.routers.imaging import router as imaging_router
 from packages.config import get_imaging_settings
 from packages.database import get_relational_db_lifespan

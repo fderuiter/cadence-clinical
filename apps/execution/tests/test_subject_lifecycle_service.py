@@ -9,12 +9,12 @@ Requirements:
 
 import pytest
 
-from apps.execution.application.services import SubjectLifecycleService
-from apps.execution.infrastructure.repositories.execution_repositories import (
+from apps.execution.adapters.repositories.execution_repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
     InMemorySubjectRepository,
 )
+from apps.execution.application.services import SubjectLifecycleService
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
 )

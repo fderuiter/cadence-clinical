@@ -9,6 +9,9 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
+from apps.interop.adapters.models import Base
 from apps.interop.application.cdr_pipeline_service import CDRPipelineService
 from apps.interop.domain.cdr.adam_pipeline import ADaMPipelineEngine
 from apps.interop.domain.cdr.dataset_json_compiler import (
@@ -43,9 +46,6 @@ from apps.interop.domain.lakehouse_models import (
     DataStreamType,
     ObservationDomain,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
-from apps.interop.infrastructure.models import Base
 from apps.interop.main import app
 from packages.security.rbac_helpers import build_gateway_headers
 

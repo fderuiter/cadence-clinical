@@ -15,18 +15,18 @@ from sqlalchemy.orm import joinedload
 if TYPE_CHECKING:
     from apps.knowledge.application.article_service import ArticleLifecycleService
 
-from apps.knowledge.domain.models import ArticleStatus
-from apps.knowledge.domain.search import (
-    calculate_lexical_score,
-    extract_query_terms,
-    generate_highlighted_snippet,
-)
-from apps.knowledge.infrastructure.models import (
+from apps.knowledge.adapters.models import (
     ContextualHelpMapping,
     KnowledgeArticle,
     KnowledgeArticleAuditLog,
     KnowledgeArticleVersion,
     KnowledgeCategory,
+)
+from apps.knowledge.domain.models import ArticleStatus
+from apps.knowledge.domain.search import (
+    calculate_lexical_score,
+    extract_query_terms,
+    generate_highlighted_snippet,
 )
 from apps.knowledge.ports.repository_port import (
     ArticleSearchResultItem,

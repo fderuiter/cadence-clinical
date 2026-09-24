@@ -16,7 +16,7 @@ if str(ROOT_DIR) not in sys.path:
 
 # Import models
 try:
-    from apps.payments.infrastructure.models import Base
+    from apps.payments.adapters.models import Base
 
     target_metadata = Base.metadata
 except ImportError:

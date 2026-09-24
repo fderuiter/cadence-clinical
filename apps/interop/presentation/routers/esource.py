@@ -9,6 +9,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.esource_repository import (
+    EsourceReconciliationRepository,
+)
+from apps.interop.adapters.models import (
+    EhrEndpointRecord,
+    EhrReconciliationCandidateRecord,
+    InteropAuditLog,
+)
 from apps.interop.application import (
     EsourceIngestionService,
     EsourceReconciliationService,
@@ -18,15 +27,6 @@ from apps.interop.application import (
 )
 from apps.interop.auth import require_staff_role
 from apps.interop.domain.esource_models import EhrEndpointConfig
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.esource_repository import (
-    EsourceReconciliationRepository,
-)
-from apps.interop.infrastructure.models import (
-    EhrEndpointRecord,
-    EhrReconciliationCandidateRecord,
-    InteropAuditLog,
-)
 from apps.interop.presentation.esource_dtos import (
     EhrCandidateItemDTO,
     EhrCandidateListResponse,

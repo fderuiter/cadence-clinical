@@ -66,7 +66,7 @@ This decision directly aligns with standard system requirements under **PRD-SYS-
 ## 6. Implementation & Verification
 
 - **Files Modified:**
-  - `apps/etmf/infrastructure/lock_client.py`
+  - `apps/etmf/adapters/lock_client.py`
   - `apps/etmf/tests/conftest.py`
   - `packages/database/__init__.py`
   - `packages/security/gateway_client.py`

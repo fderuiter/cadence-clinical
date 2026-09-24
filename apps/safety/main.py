@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from apps.safety.infrastructure.database import db_manager
-from apps.safety.infrastructure.models import Base
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import Base
 from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,
     AS2TransmissionAuditLogDTO,

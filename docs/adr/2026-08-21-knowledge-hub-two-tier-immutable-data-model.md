@@ -81,7 +81,7 @@ This record formalizes the relational database schema, version snapshotting mech
 
 ## 6. Implementation & Verification
 
-* **Target Schema**: `apps/knowledge/infrastructure/models.py`
+* **Target Schema**: `apps/knowledge/adapters/models.py`
 * **Target Domain Logic**: `apps/knowledge/domain/models.py` and `apps/knowledge/application/article_service.py`
 * **Verification**: Test suite under `apps/knowledge/tests/` verifying lifecycle transitions, version snapshot immutability, 4-eyes enforcement, and search vector indexing. Traceable to `@req:PRD-KNB-001`.
 

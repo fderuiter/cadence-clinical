@@ -22,6 +22,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event
 
 from apps.quality.adapters.database import db_manager, transactional
+from apps.quality.adapters.execution_client import (
+    QualityExecutionClient,
+    mock_audit_events_records,
+    mock_image_attachments_records,
+    mock_sdtm_domain_records,
+)
 from apps.quality.adapters.models import Base
 from apps.quality.adapters.repositories import SQLQualityRepository
 from apps.quality.application.services.data_integrity_sentinel_service import (
@@ -36,12 +42,6 @@ from apps.quality.application.services.statistical_forensics_service import (
 from apps.quality.domain.surveillance_models import (
     HarvestedSurveillanceBundle,
     SiteSamplePowerStatus,
-)
-from apps.quality.infrastructure.execution_client import (
-    QualityExecutionClient,
-    mock_audit_events_records,
-    mock_image_attachments_records,
-    mock_sdtm_domain_records,
 )
 from apps.quality.main import app
 from packages.security.rbac_helpers import build_gateway_headers

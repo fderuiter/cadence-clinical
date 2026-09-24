@@ -1,4 +1,4 @@
-from apps.quality.infrastructure.models import (
+from apps.quality.adapters.models import (
     Base,
     CAPARecord,
     CAPAStatus,

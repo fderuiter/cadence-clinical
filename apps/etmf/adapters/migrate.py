@@ -873,7 +873,7 @@ async def run_migrations(database_url: str) -> None:
 
         if not has_tmf:
             async with engine.begin() as conn:
-                from apps.etmf.infrastructure.models import Base
+                from apps.etmf.adapters.models import Base
 
                 await conn.run_sync(Base.metadata.create_all)
                 await upgrade_existing_tables(conn, dialect_name)

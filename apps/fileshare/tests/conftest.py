@@ -10,8 +10,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.fileshare.adapters.clamav_adapter import MockScanAdapter, set_scan_adapter
+from apps.fileshare.adapters.models import Base
 from apps.fileshare.adapters.storage import set_storage_adapter
-from apps.fileshare.infrastructure.models import Base
 from packages.testing.fakes import InMemoryStoragePort
 
 

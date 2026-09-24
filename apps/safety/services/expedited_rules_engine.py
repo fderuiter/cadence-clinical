@@ -16,6 +16,10 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.adapters.models import (
+    ICSRReportingEvaluation,
+    write_audit_log,
+)
 from apps.safety.domain.expedited_rules import (
     AuthorityRuleEvaluationResult,
     CausalityCategory,
@@ -28,10 +32,6 @@ from apps.safety.domain.expedited_rules import (
     ICSRRuleEvaluationSummary,
     ReportingAuthority,
     SignICSRRuleEvaluationResponse,
-)
-from apps.safety.infrastructure.models import (
-    ICSRReportingEvaluation,
-    write_audit_log,
 )
 from packages.security.signing import generate_canonical_signature
 

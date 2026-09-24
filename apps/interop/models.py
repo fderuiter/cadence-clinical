@@ -1,4 +1,4 @@
-from apps.interop.infrastructure.models import (
+from apps.interop.adapters.models import (
     Base,
     ClinicalQuery,
     DeviceRegistrationRecord,

@@ -6,8 +6,8 @@ pre-screening, ePRO mobile sync, instrument authoring, compliance tracking, and 
 
 from fastapi import FastAPI
 
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.models import Base
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.models import Base
 from apps.interop.presentation.routers.cdr_pipeline import (
     router as cdr_pipeline_router,
 )
@@ -88,7 +88,7 @@ app.include_router(esource_router)
 app.include_router(devices_router)
 
 
-from apps.interop.infrastructure.designer_client import (  # noqa: E402
+from apps.interop.adapters.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,
 )
 from apps.interop.presentation.routers.interop import (  # noqa: E402

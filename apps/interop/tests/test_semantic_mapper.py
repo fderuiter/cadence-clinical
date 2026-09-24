@@ -8,6 +8,8 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from apps.interop.adapters.embedding_matcher import EmbeddingMatcher
+from apps.interop.adapters.llm_semantic_reasoner import LLMSemanticReasoner
 from apps.interop.application.semantic_mapper_service import (
     SemanticMapperService,
 )
@@ -23,8 +25,6 @@ from apps.interop.domain.semantic_mapping_models import (
     MappingStatus,
     MappingTier,
 )
-from apps.interop.infrastructure.embedding_matcher import EmbeddingMatcher
-from apps.interop.infrastructure.llm_semantic_reasoner import LLMSemanticReasoner
 from apps.interop.main import app
 from apps.interop.models import Base, InteropAuditLog
 from packages.testing.security import create_test_auth_headers

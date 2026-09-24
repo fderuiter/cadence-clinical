@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from apps.etmf.infrastructure.models import Base, TMFDocument
+from apps.etmf.adapters.models import Base, TMFDocument
 from apps.etmf.storage import get_document_bytes
 from scripts.migrate_etmf_blobs_to_s3 import migrate_documents
 

@@ -1,4 +1,4 @@
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.models import (
     Base,
     Notification,
     NotificationAuditLog,

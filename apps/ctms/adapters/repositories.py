@@ -29,6 +29,9 @@ from apps.ctms.adapters.models import (
     SiteGreenlightGate,
     SiteRiskScore,
 )
+from apps.ctms.adapters.repositories.ctms_delegation_repository import (
+    SQLAlchemyCTMSDelegationRepository,
+)
 from apps.ctms.domain.models import (
     BudgetAdjustmentEntity,
     CountryPrerequisiteRuleEntity,
@@ -57,9 +60,6 @@ from apps.ctms.domain.ports import (
     IProtocolDeviationRepository,
     IRBQMRepository,
     ISiteStartupRepository,
-)
-from apps.ctms.infrastructure.repositories.ctms_delegation_repository import (
-    SQLAlchemyCTMSDelegationRepository,
 )
 from packages.database import DatabaseSessionDependency, map_database_exceptions
 

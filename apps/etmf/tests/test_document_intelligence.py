@@ -61,7 +61,7 @@ class FakeETMFIntelligenceRepository:
         return max(versions) if versions else 0
 
     async def create_document(self, **kwargs) -> Any:
-        from apps.etmf.infrastructure.models import TMFDocument
+        from apps.etmf.adapters.models import TMFDocument
 
         doc = TMFDocument(**kwargs)
         doc.id = f"doc_{len(self.documents) + 1}"

@@ -1,4 +1,4 @@
-from apps.etmf.infrastructure.lock_client import (
+from apps.etmf.adapters.lock_client import (
     trigger_global_trial_lock,
     verify_trial_lock_status,
 )

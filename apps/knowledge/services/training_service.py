@@ -14,6 +14,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.knowledge.adapters.training_models import (
+    TrainingAssignment,
+    TrainingAuditLog,
+    TrainingCompletionCertificate,
+    TrainingCurriculum,
+    TrainingModule,
+)
 from apps.knowledge.domain.training_models import (
     AssignmentStatus,
     QualificationGateResult,
@@ -22,13 +29,6 @@ from apps.knowledge.domain.training_models import (
     TrainingModuleType,
     compute_certificate_seal,
     compute_signature_hash,
-)
-from apps.knowledge.infrastructure.training_models import (
-    TrainingAssignment,
-    TrainingAuditLog,
-    TrainingCompletionCertificate,
-    TrainingCurriculum,
-    TrainingModule,
 )
 from apps.knowledge.services.certificate_generator import (
     encode_pdf_to_base64,

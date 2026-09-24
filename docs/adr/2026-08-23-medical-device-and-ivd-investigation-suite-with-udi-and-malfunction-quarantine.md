@@ -86,7 +86,7 @@ This ADR defines the unified architecture satisfying **PRD-SYS-126**, **PRD-DEV-
   - `apps/execution/presentation/routers/devices.py`
   - `apps/execution/domain/sdtm/models.py` (DD & DO domains)
 * **Safety Microservice:**
-  - `apps/safety/infrastructure/models.py`
+  - `apps/safety/adapters/models.py`
   - `apps/safety/presentation/routers/safety.py`
   - `apps/safety/presentation/dtos.py`
 * **Interop Microservice:**

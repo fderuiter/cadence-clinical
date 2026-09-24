@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
+from apps.knowledge.adapters.models import KnowledgeArticleVersion
 from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.domain.exceptions import (
     ArticleApprovalConflictError,
@@ -26,7 +27,6 @@ from apps.knowledge.domain.exceptions import (
     ContextualHelpMappingNotFoundError,
 )
 from apps.knowledge.domain.models import ArticleStatus
-from apps.knowledge.infrastructure.models import KnowledgeArticleVersion
 from apps.knowledge.presentation.dtos import (
     ArticleApproveRequest,
     ArticleCreate,

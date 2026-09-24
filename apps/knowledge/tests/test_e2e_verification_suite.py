@@ -29,10 +29,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.adapters.repositories import create_article_service
-from apps.knowledge.infrastructure.models import (
+from apps.knowledge.adapters.models import (
     KnowledgeArticleAuditLog,
 )
+from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.main import app
 from packages.testing.security import create_test_auth_headers
 

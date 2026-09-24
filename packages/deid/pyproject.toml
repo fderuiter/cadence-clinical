@@ -15,6 +15,7 @@ dependencies = [
     "pyyaml>=6.0.1",
     "rapidfuzz>=3.14.5",
     "packages-security",
+    "packages-config",
 ]
 
 [tool.hatch.build.targets.wheel]
