@@ -11,9 +11,7 @@ Compliance:
 """
 
 import argparse
-import glob
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -53,7 +51,7 @@ def load_openapi_paths(spec_path: Path) -> set[str]:
         sys.stderr.write(f"[ERROR] OpenAPI spec file not found at {spec_path}\n")
         return set()
 
-    with open(spec_path, "r", encoding="utf-8") as fh:
+    with open(spec_path, encoding="utf-8") as fh:
         spec = json.load(fh)
 
     paths = spec.get("paths", {})
@@ -76,7 +74,7 @@ def check_for_any_type_casts(api_dir: Path) -> list[str]:
 
     client_files = list(api_dir.glob("*.ts")) + list(api_dir.glob("*.js"))
     for file_path in client_files:
-        with open(file_path, "r", encoding="utf-8") as fh:
+        with open(file_path, encoding="utf-8") as fh:
             for line_no, line in enumerate(fh, 1):
                 if any_regex.search(line):
                     rel_path = file_path.relative_to(REPO_ROOT)
@@ -104,7 +102,7 @@ def extract_called_api_paths(api_dir: Path) -> set[tuple[str, Path, int]]:
     for file_path in client_files:
         if file_path.name == "types.ts":
             continue
-        with open(file_path, "r", encoding="utf-8") as fh:
+        with open(file_path, encoding="utf-8") as fh:
             for line_no, line in enumerate(fh, 1):
                 for match in path_regex.finditer(line):
                     raw_path = match.group(1)
@@ -113,9 +111,7 @@ def extract_called_api_paths(api_dir: Path) -> set[tuple[str, Path, int]]:
     return called_paths
 
 
-def validate_api_clients(
-    spec_path: Path, api_dir: Path, strict: bool = True
-) -> int:
+def validate_api_clients(spec_path: Path, api_dir: Path, strict: bool = True) -> int:
     """Validate frontend API clients against OpenAPI specification and lint guidelines.
 
     Args:
@@ -132,7 +128,9 @@ def validate_api_clients(
     if not openapi_paths:
         return 1
 
-    print(f"[+] Loaded {len(openapi_paths)} OpenAPI paths from {spec_path.relative_to(REPO_ROOT)}")
+    print(
+        f"[+] Loaded {len(openapi_paths)} OpenAPI paths from {spec_path.relative_to(REPO_ROOT)}"
+    )
 
     # 1. Check for explicit `any` type casts
     any_violations = check_for_any_type_casts(api_dir)

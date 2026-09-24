@@ -271,7 +271,9 @@ async def start_background_ticket_escalation() -> None:
 
     session_maker = db_manager.get_session_maker()
 
-    poll_interval = float(get_tickets_settings().tickets_escalation_poll_interval_seconds)
+    poll_interval = float(
+        get_tickets_settings().tickets_escalation_poll_interval_seconds
+    )
     _should_run = True
 
     async def escalation_loop():

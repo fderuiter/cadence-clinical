@@ -243,7 +243,9 @@ def check_and_run_exporter() -> int:
         return 1
 
     # Run AST contract linter on frontend API clients
-    validate_api_clients_script = os.path.join(app_root, "scripts", "validate_api_clients.py")
+    validate_api_clients_script = os.path.join(
+        app_root, "scripts", "validate_api_clients.py"
+    )
     print("Running AST contract linter on frontend API clients...")
     try:
         api_clients_result = subprocess.run(
