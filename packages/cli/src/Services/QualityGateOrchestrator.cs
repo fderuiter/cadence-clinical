@@ -50,6 +50,16 @@ public static class QualityGateOrchestrator
         }
         AnsiConsole.MarkupLine("  [green][[OK]] All unit tests passed.[/]");
 
+        // 5. OpenAPI Specification Drift Sentinel
+        AnsiConsole.MarkupLine("\n  5. Executing OpenAPI Specification Drift Sentinel...");
+        int openapiExit = RunProcess("uv", "run python scripts/validate_openapi_drift.py");
+        if (openapiExit != 0)
+        {
+            AnsiConsole.MarkupLine("  [red]OpenAPI specification drift detected! Run 'make fix' or 'cadence fix --all' to remediate.[/]");
+            return openapiExit;
+        }
+        AnsiConsole.MarkupLine("  [green][[OK]] OpenAPI specification and documentation aligned.[/]");
+
         AnsiConsole.MarkupLine("\n[bold green]All quality sentinels passed.[/]");
         return 0;
     }
