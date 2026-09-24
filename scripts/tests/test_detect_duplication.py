@@ -116,7 +116,10 @@ def test_normalize_line_csharp():
     assert normalize_line("// Single line comment") == ""
     assert normalize_line("/// <summary>XML doc comment</summary>") == ""
     assert normalize_line("int value = 42; // inline comment") == "int value = 42;"
-    assert normalize_line("/* block comment */ string name = 'test';") == 'string name = "test";'
+    assert (
+        normalize_line("/* block comment */ string name = 'test';")
+        == 'string name = "test";'
+    )
 
     # C# code logic preserved
     assert (

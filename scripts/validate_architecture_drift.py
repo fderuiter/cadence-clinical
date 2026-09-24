@@ -67,7 +67,11 @@ def get_active_services(compose_file: Path) -> list[str]:
                 match = re.match(r"^  ([a-zA-Z0-9_-]+):", line)
                 if match:
                     service_name = match.group(1)
-                    if service_name not in ("dotnet-dev",) and not service_name.endswith("-dotnet") and not service_name.endswith("-python"):
+                    if (
+                        service_name not in ("dotnet-dev",)
+                        and not service_name.endswith("-dotnet")
+                        and not service_name.endswith("-python")
+                    ):
                         services.append(service_name)
 
     return services

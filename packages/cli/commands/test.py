@@ -88,9 +88,7 @@ def run_test(
     frontend: bool = typer.Option(
         False, "--frontend", help="Run frontend Vitest suites"
     ),
-    e2e: bool = typer.Option(
-        False, "--e2e", help="Run decoupled HTTP E2E test suite"
-    ),
+    e2e: bool = typer.Option(False, "--e2e", help="Run decoupled HTTP E2E test suite"),
     dotnet: bool = typer.Option(
         False, "--dotnet", help="Run .NET 10 xUnit integration tests (Cadence.E2ETests)"
     ),

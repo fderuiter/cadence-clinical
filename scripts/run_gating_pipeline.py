@@ -23,7 +23,9 @@ def run_command(args: list[str]) -> tuple[int, str, str]:
     """Run a system command and return returncode, stdout, and stderr."""
     try:
         repo_root = Path(__file__).resolve().parent.parent
-        res = subprocess.run(args, capture_output=True, text=True, timeout=120, cwd=repo_root)
+        res = subprocess.run(
+            args, capture_output=True, text=True, timeout=120, cwd=repo_root
+        )
         return res.returncode, res.stdout.strip(), res.stderr.strip()
     except subprocess.TimeoutExpired:
         return -1, "", "Command timed out (120s limit)"
@@ -252,7 +254,7 @@ def main():
             or "timed out" in dotnet_combined.lower()
         ):
             print(
-                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
+                "[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
             )
             dotnet_outcome = "skipped"
         else:
