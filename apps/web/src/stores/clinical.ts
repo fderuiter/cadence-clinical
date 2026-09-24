@@ -1167,7 +1167,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       };
 
       try {
-        const res = await executionService.screenSubject(trimmedId, body);
+        const res = await executionService.screenSubject(trimmedId, body ?? undefined);
         if (res) {
           result = res;
         }
