@@ -314,6 +314,11 @@ def main() -> None:
                                     "packages/security/middleware.py",
                                 },
                                 {
+                                    "apps/execution/src/Program.cs",
+                                    "apps/designer/src/Program.cs",
+                                    "apps/gateway/src/Program.cs",
+                                },
+                                {
                                     "apps/interop/main.py",
                                     "apps/notifications/main.py",
                                     "apps/econsent/main.py",

@@ -240,7 +240,7 @@ def main():
             or "timed out" in dotnet_combined.lower()
         ):
             print(
-                f"[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
+                "[Gating-Pipeline] Warning: .NET 10 assets unrestored in local sandbox. Defaulting to skipped for local gating."
             )
             dotnet_outcome = "skipped"
         else:
