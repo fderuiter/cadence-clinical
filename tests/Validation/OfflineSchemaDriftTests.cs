@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.E2ETests.Validation;
@@ -55,7 +58,6 @@ public class OfflineSchemaDriftTests
     {
         var repoRoot = GetRepoRoot();
         var clientFile = Path.Combine(repoRoot, "apps", "web", "src", "utils", "syncEngine.ts");
-        var serverFile = Path.Combine(repoRoot, "apps", "execution", "src", "Domain", "OfflineModels.cs");
 
         // Verify that web client sync engine or database schema definitions exist
         File.Exists(clientFile).Should().BeTrue("apps/web/src/utils/syncEngine.ts must exist");

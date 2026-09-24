@@ -7,9 +7,13 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Microsoft.IdentityModel.Tokens;
+
 using Xunit;
 
 namespace Cadence.E2ETests.E2E;
@@ -21,7 +25,7 @@ namespace Cadence.E2ETests.E2E;
 /// </summary>
 public class Phase1E2ESuiteTests
 {
-    private const string GatewaySecret = "internal-gateway-secret-12345";
+    private const string GatewaySecret = "internal-gateway-secret-for-e2e-tests-0123456789"; // pragma: allowlist secret
 
     private static string GenerateStepUpToken(string subject = "user-123", string action = "HARD_LOCK", int expMinutes = 5, string? jti = null)
     {
@@ -142,8 +146,6 @@ public class Phase1E2ESuiteTests
     [Trait("Category", "E2E")]
     public void TestTier1Feature04_DictionaryUpversioningImpact()
     {
-        var oldVer = "v25.0";
-        var newVer = "v26.0";
         var terms = new List<string> { "TermA", "TermB", "ObsoleteTermC" };
 
         var impacted = terms.Where(t => t.StartsWith("Obsolete")).ToList();
@@ -164,9 +166,7 @@ public class Phase1E2ESuiteTests
     [Trait("Category", "E2E")]
     public void TestTier1Feature05_QueryEscalationAndResolution()
     {
-        var queryStatus = "OPEN";
-        queryStatus = "ANSWERED";
-        queryStatus = "CLOSED";
+        var queryStatus = "CLOSED";
 
         queryStatus.Should().Be("CLOSED");
     }
@@ -380,7 +380,6 @@ public class Phase1E2ESuiteTests
     [Trait("Category", "E2E")]
     public void TestTier1Feature16_DeidentifiedCsvExport()
     {
-        var rawRecord = "John Doe,1980-05-12,555-0199";
         var deidRecord = "SUBJECT_ANON_101,1980-01-01,[REDACTED]";
         deidRecord.Should().NotContain("John Doe");
     }
@@ -422,7 +421,7 @@ public class Phase1E2ESuiteTests
     /// Boundary 02: Invalid HL7 segment rejection.
     /// @req:PRD-LAB-001
     /// </summary>
-    [Fact(DisplayName = "Tier2_Boundary02_InvalidHl7SegmentsRejected")]
+    [Fact(DisplayName = "Tier2_Boundary02_InvalidHl7SegmentsRejected")] // pragma: allowlist secret
     [GxPRequirement("PRD-LAB-001")]
     [Trait("Requirement", "PRD-LAB-001")]
     [Trait("Category", "E2E")]
@@ -434,11 +433,11 @@ public class Phase1E2ESuiteTests
     }
 
     /// <summary>
-    /// Boundary 03: Short unlock justification (<50 chars) rejection.
+    /// Boundary 03: Short unlock justification (&lt;50 chars) rejection.
     /// @req:PRD-SYS-001
     /// @req:Trace-1
     /// </summary>
-    [Fact(DisplayName = "Tier2_Boundary03_UnlockJustificationUnder50CharsRejected")]
+    [Fact(DisplayName = "Tier2_Boundary03_UnlockJustificationUnder50CharsRejected")] // pragma: allowlist secret
     [GxPRequirement("PRD-SYS-001")]
     [GxPRequirement("Trace-1")]
     [Trait("Requirement", "PRD-SYS-001")]
@@ -455,7 +454,7 @@ public class Phase1E2ESuiteTests
     /// Boundary 04: Hard lock attempt without step-up token rejection.
     /// @req:Trace-17
     /// </summary>
-    [Fact(DisplayName = "Tier2_Boundary04_HardLockWithoutStepUpTokenRejected")]
+    [Fact(DisplayName = "Tier2_Boundary04_HardLockWithoutStepUpTokenRejected")] // pragma: allowlist secret
     [GxPRequirement("Trace-17")]
     [Trait("Requirement", "Trace-17")]
     [Trait("Category", "E2E")]
@@ -501,7 +500,7 @@ public class Phase1E2ESuiteTests
     /// Boundary 07: Invalid SDTM domain export rejection.
     /// @req:PRD-CRF-008
     /// </summary>
-    [Fact(DisplayName = "Tier2_Boundary07_InvalidSdtmDomainExportRejected")]
+    [Fact(DisplayName = "Tier2_Boundary07_InvalidSdtmDomainExportRejected")] // pragma: allowlist secret
     [GxPRequirement("PRD-CRF-008")]
     [Trait("Requirement", "PRD-CRF-008")]
     [Trait("Category", "E2E")]
@@ -589,7 +588,7 @@ public class Phase1E2ESuiteTests
     /// @req:PRD-MDR-002
     /// @req:PRD-QRY-001
     /// </summary>
-    [Fact(DisplayName = "Tier3_Pairwise02_OutOfRangeLabThenSubjectLock")]
+    [Fact(DisplayName = "Tier3_Pairwise02_OutOfRangeLabThenSubjectLock")] // pragma: allowlist secret
     [GxPRequirement("PRD-LAB-001")]
     [GxPRequirement("PRD-MDR-002")]
     [GxPRequirement("PRD-QRY-001")]
@@ -630,7 +629,7 @@ public class Phase1E2ESuiteTests
     /// @req:PRD-LAB-001
     /// @req:PRD-MDR-002
     /// </summary>
-    [Fact(DisplayName = "Tier3_Pairwise04_SubjectLockFollowedByLabIngestion")]
+    [Fact(DisplayName = "Tier3_Pairwise04_SubjectLockFollowedByLabIngestion")] // pragma: allowlist secret
     [GxPRequirement("PRD-LAB-001")]
     [GxPRequirement("PRD-MDR-002")]
     [Trait("Requirement", "PRD-LAB-001")]
@@ -657,8 +656,7 @@ public class Phase1E2ESuiteTests
     public void TestTier3Pairwise05_UpversioningImpactThenQueryEscalation()
     {
         var unmappedTerm = "ObsoleteTerm";
-        var queryStatus = "OPEN";
-        queryStatus = "ESCALATED";
+        var queryStatus = "ESCALATED";
 
         unmappedTerm.Should().NotBeEmpty();
         queryStatus.Should().Be("ESCALATED");
@@ -670,7 +668,7 @@ public class Phase1E2ESuiteTests
     /// @req:PRD-CRF-008
     /// @req:Trace-1
     /// </summary>
-    [Fact(DisplayName = "Tier3_Pairwise06_HardLockStepUpThenUnlockAndExport")]
+    [Fact(DisplayName = "Tier3_Pairwise06_HardLockStepUpThenUnlockAndExport")] // pragma: allowlist secret
     [GxPRequirement("Trace-17")]
     [GxPRequirement("PRD-CRF-008")]
     [GxPRequirement("Trace-1")]
@@ -744,7 +742,7 @@ public class Phase1E2ESuiteTests
     }
 
     /// <summary>
-    /// Scenario 03: MedDRA upversioning & batch term re-coding.
+    /// Scenario 03: MedDRA upversioning &amp; batch term re-coding.
     /// @req:PRD-SYS-001
     /// @req:PRD-QRY-001
     /// @req:Trace-1

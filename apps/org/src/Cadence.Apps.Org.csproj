@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
+    <OutputType>Library</OutputType>
     <RootNamespace>Cadence.Apps.Org</RootNamespace>
     <Description>Cadence Clinical Org Service (.NET 10 / C# 14 Minimal APIs).</Description>
   </PropertyGroup>
