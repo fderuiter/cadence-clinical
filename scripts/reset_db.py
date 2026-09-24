@@ -147,7 +147,7 @@ def validate_local_only(name: str, url: str | None) -> None:
 
 def detect_dotnet_services() -> list[str]:
     """
-    Detects all migrated .NET microservices in apps/ by checking for C# project files.
+    Detects all database-backed .NET microservices in apps/ by checking for EF Core migrations.
     """
     repo_root = Path(__file__).resolve().parent.parent
     services = []
@@ -155,14 +155,36 @@ def detect_dotnet_services() -> list[str]:
     if apps_dir.exists():
         for item in sorted(apps_dir.iterdir()):
             if item.is_dir():
-                csproj_matches = (
-                    list((item / "src").glob("*.csproj"))
-                    if (item / "src").exists()
-                    else []
+                migrations_dir = (
+                    item / "src" / "Infrastructure" / "Persistence" / "Migrations"
                 )
-                if csproj_matches:
+                if migrations_dir.exists():
                     services.append(item.name)
     return services
+
+
+def discover_all_ef_migrations() -> list[tuple[str, str]]:
+    """
+    Discovers all EF Core migration IDs across all microservices.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    known = []
+    apps_dir = repo_root / "apps"
+    if apps_dir.exists():
+        for item in sorted(apps_dir.iterdir()):
+            if item.is_dir():
+                migrations_dir = (
+                    item / "src" / "Infrastructure" / "Persistence" / "Migrations"
+                )
+                if migrations_dir.exists():
+                    for mig_file in sorted(migrations_dir.glob("*.cs")):
+                        if (
+                            not mig_file.name.endswith(".Designer.cs")
+                            and not mig_file.name.endswith("ModelSnapshot.cs")
+                        ):
+                            mig_id = mig_file.stem
+                            known.append((mig_id, "10.0.0"))
+    return known
 
 
 async def apply_dotnet_ef_migrations_and_seed(
@@ -195,7 +217,12 @@ async def apply_dotnet_ef_migrations_and_seed(
         if manage_script.exists():
             cmd = ["bash", str(manage_script), "apply", service]
             proc = subprocess.run(
-                cmd, cwd=str(repo_root), env=env, capture_output=True, text=True
+                cmd,
+                cwd=str(repo_root),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             if proc.returncode == 0:
                 print(f"[SUCCESS] EF Core migrations applied for {service}.")
@@ -215,6 +242,7 @@ async def apply_dotnet_ef_migrations_and_seed(
                     env=env,
                     capture_output=True,
                     text=True,
+                    timeout=60,
                 )
                 if proc_direct.returncode == 0:
                     print(
@@ -240,7 +268,12 @@ async def apply_dotnet_ef_migrations_and_seed(
                 str(csproj_path),
             ]
             proc_direct = subprocess.run(
-                cmd_direct, cwd=str(repo_root), env=env, capture_output=True, text=True
+                cmd_direct,
+                cwd=str(repo_root),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             if proc_direct.returncode == 0:
                 print(f"[SUCCESS] EF Core migrations applied for {service}.")
@@ -261,15 +294,48 @@ async def apply_dotnet_ef_migrations_and_seed(
             )
             sys.exit(1)
 
-    # 2. Execute C# DbContext seeders
-    try:
-        if manage_script.exists():
-            cmd_seed = ["bash", str(manage_script), "seed", service]
-            proc_seed = subprocess.run(
-                cmd_seed, cwd=str(repo_root), env=env, capture_output=True, text=True
-            )
-            if proc_seed.returncode == 0:
-                print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
+    # 2. Execute C# DbContext seeders (if Program.cs entrypoint exists)
+    program_cs = repo_root / "apps" / service / "src" / "Program.cs"
+    if program_cs.exists():
+        try:
+            if manage_script.exists():
+                cmd_seed = ["bash", str(manage_script), "seed", service]
+                proc_seed = subprocess.run(
+                    cmd_seed,
+                    cwd=str(repo_root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if proc_seed.returncode == 0:
+                    print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
+                else:
+                    cmd_seed_direct = [
+                        "dotnet",
+                        "run",
+                        "--project",
+                        str(csproj_path),
+                        "--no-build",
+                        "--",
+                        "--seed",
+                    ]
+                    proc_seed_direct = subprocess.run(
+                        cmd_seed_direct,
+                        cwd=str(repo_root),
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if proc_seed_direct.returncode == 0:
+                        print(
+                            f"[SUCCESS] C# DbContext seeder executed for {service} via dotnet run fallback."
+                        )
+                    else:
+                        raise RuntimeError(
+                            f"C# DbContext seeder failed for {service}: {proc_seed.stderr or proc_seed.stdout}"
+                        )
             else:
                 cmd_seed_direct = [
                     "dotnet",
@@ -286,47 +352,23 @@ async def apply_dotnet_ef_migrations_and_seed(
                     env=env,
                     capture_output=True,
                     text=True,
+                    timeout=30,
                 )
                 if proc_seed_direct.returncode == 0:
-                    print(
-                        f"[SUCCESS] C# DbContext seeder executed for {service} via dotnet run fallback."
-                    )
+                    print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
                 else:
                     raise RuntimeError(
-                        f"C# DbContext seeder failed for {service}: {proc_seed.stderr or proc_seed.stdout}"
+                        f"C# DbContext seeder failed for {service}: {proc_seed_direct.stderr or proc_seed_direct.stdout}"
                     )
-        else:
-            cmd_seed_direct = [
-                "dotnet",
-                "run",
-                "--project",
-                str(csproj_path),
-                "--no-build",
-                "--",
-                "--seed",
-            ]
-            proc_seed_direct = subprocess.run(
-                cmd_seed_direct,
-                cwd=str(repo_root),
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            if proc_seed_direct.returncode == 0:
-                print(f"[SUCCESS] C# DbContext seeder executed for {service}.")
+        except Exception as e:
+            if allow_offline:
+                print(f"WARNING: C# DbContext seeder for '{service}' skipped: {e}")
             else:
-                raise RuntimeError(
-                    f"C# DbContext seeder failed for {service}: {proc_seed_direct.stderr or proc_seed_direct.stdout}"
+                print(
+                    f"ERROR: C# DbContext seeder failed for '{service}': {e}",
+                    file=sys.stderr,
                 )
-    except Exception as e:
-        if allow_offline:
-            print(f"WARNING: C# DbContext seeder for '{service}' skipped: {e}")
-        else:
-            print(
-                f"ERROR: C# DbContext seeder failed for '{service}': {e}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+                sys.exit(1)
 
 
 async def verify_and_ensure_ef_migration_history_and_triggers(
@@ -352,12 +394,8 @@ async def verify_and_ensure_ef_migration_history_and_triggers(
                 )
             )
 
-            # 2. Known EF Core migration records for Cadence.Apps.Execution
-            known_migrations = [
-                ("20260905174215_AddExecutionSubjectsSlice", "10.0.0"),
-                ("20260905230921_AddMassTransitOutbox", "10.0.0"),
-                ("20260910120000_AddExecutionObservationsSlice", "10.0.0"),
-            ]
+            # 2. Known EF Core migration records across all microservices
+            known_migrations = discover_all_ef_migrations()
 
             # Verify tables created by EF Core. If missing (e.g. dotnet ef was offline), apply fallback DDL.
             res = await conn.execute(
@@ -543,6 +581,19 @@ async def verify_and_ensure_ef_migration_history_and_triggers(
             raise
 
 
+def is_port_open(host: str, port: int, timeout: float = 0.5) -> bool:
+    """
+    Checks if a TCP port is open on the specified host.
+    """
+    import socket
+
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
 async def reset_postgres(url: str, allow_offline: bool) -> None:
     """
     Clears PostgreSQL database schemas (public and audit_schema) without dropping the database,
@@ -553,6 +604,19 @@ async def reset_postgres(url: str, allow_offline: bool) -> None:
         allow_offline: If True, warnings will be printed instead of crashing if database is unreachable.
     """
     print(f"Purging and resetting PostgreSQL database using connection: {url}...")
+    if allow_offline:
+        try:
+            parsed = urllib.parse.urlparse(url)
+            host = parsed.hostname or "localhost"
+            port = parsed.port or 5432
+            if not is_port_open(host, port):
+                print(
+                    f"WARNING: PostgreSQL at {host}:{port} is unreachable or offline. Skipping reset."
+                )
+                return
+        except Exception:
+            pass
+
     try:
         engine = create_async_engine(url, echo=False)
         async with engine.begin() as conn:
@@ -615,6 +679,19 @@ async def reset_neo4j(uri: str, user: str, password: str, allow_offline: bool) -
         allow_offline: If True, warnings will be printed instead of crashing if database is unreachable.
     """
     print(f"Purging and resetting Neo4j graph database using connection: {uri}...")
+    if allow_offline:
+        try:
+            parsed = urllib.parse.urlparse(uri)
+            host = parsed.hostname or "localhost"
+            port = parsed.port or 7687
+            if not is_port_open(host, port):
+                print(
+                    f"WARNING: Neo4j at {host}:{port} is unreachable or offline. Skipping reset."
+                )
+                return
+        except Exception:
+            pass
+
     try:
         from neo4j import AsyncGraphDatabase
 

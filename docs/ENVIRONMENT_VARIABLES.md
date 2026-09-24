@@ -20,12 +20,11 @@ It provides a complete reference for all operational environment variables used 
 9. [AI Gateway & LLM Ingestion](#ai-gateway-llm-ingestion) (6 variables)
 10. [Document Storage & Archival](#document-storage-archival) (15 variables)
 11. [Safety & Pharmacovigilance Service](#safety-pharmacovigilance-service) (7 variables)
-12. [eTMF Master File Service](#etmf-master-file-service) (3 variables)
+12. [eTMF Master File Service](#etmf-master-file-service) (6 variables)
 13. [Helpdesk & Tickets Service](#helpdesk-tickets-service) (3 variables)
 14. [eConsent Service](#econsent-service) (3 variables)
-15. [Site Payments Service](#site-payments-service) (1 variables)
-16. [EDC Execution Service](#edc-execution-service) (15 variables)
-17. [Operational Microservice Configuration](#operational-microservice-configuration) (48 variables)
+15. [EDC Execution Service](#edc-execution-service) (12 variables)
+16. [Operational Microservice Configuration](#operational-microservice-configuration) (49 variables)
 
 ---
 
@@ -33,71 +32,71 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `APP_ENV` | `str` | `development` | No | Options: development, test, staging, production | `apps/execution/tests/test_decoupled_pg_introspection_triggers.py:143`<br>`apps/execution/tests/test_decoupled_pg_introspection_triggers.py:149`<br>`packages/config/settings.py:30`<br>*(+2 more)* |
+| `APP_ENV` | `str` | `development` | No | Options: development, test, staging, production | `apps/execution/tests/test_decoupled_pg_introspection_triggers.py:143`<br>`apps/execution/tests/test_decoupled_pg_introspection_triggers.py:149`<br>`packages/config/settings.py:30`<br>*(+1 more)* |
 | `CADENCE_DISABLE_RUNTIME_REEXEC` | `str` | *(None)* | Yes | Check if auto re-execution via uv should be attempted | `scripts/runtime_guard.py:44` |
 | `CADENCE_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Global Platform & Environment. | `scripts/post_pr_comment.py:632` |
 | `CADENCE_TEST_MODE` | `bool` | `false` | No | Set true in CI/test runs to disable external LLM/APIs | *Pre-configured template variable* |
 | `DEBUG` | `bool` | `true` | No | Operational setting for Global Platform & Environment. | `scripts/tests/test_markdown_validator.py:637` |
 | `ENVIRONMENT` | `str` | *(None)* | Yes | Operational setting for Global Platform & Environment. | `scripts/tests/test_markdown_validator.py:636` |
-| `LOG_LEVEL` | `str` | `INFO` | No | Structured application log verbosity level | `packages/config/settings.py:552`<br>`packages/config/settings.py:1` |
+| `LOG_LEVEL` | `str` | `INFO` | No | Operational setting for Global Platform & Environment. | `packages/config/settings.py:552` |
 
 ## Enterprise Branding & Domain Identity
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `BRAND_DOMAIN` | `str` | `ccrsoft.com` | No | Verify RFC 7807 required fields | `apps/imaging/tests/conftest.py:14`<br>`apps/payments/tests/conftest.py:13`<br>`packages/config/settings.py:32`<br>*(+6 more)* |
-| `BRAND_NAME` | `str` | `Cadence Clinical Research Software` | No | 2. Enterprise Branding & Domain Identity (21 CFR Part 11 / GxP) | `apps/imaging/tests/conftest.py:13`<br>`apps/payments/tests/conftest.py:12`<br>`packages/config/settings.py:31`<br>*(+1 more)* |
+| `BRAND_DOMAIN` | `str` | `ccrsoft.com` | No | Verify RFC 7807 required fields | `apps/imaging/tests/conftest.py:14`<br>`apps/payments/tests/conftest.py:13`<br>`packages/config/settings.py:32`<br>*(+5 more)* |
+| `BRAND_NAME` | `str` | `Cadence Clinical Research Software` | No | 2. Enterprise Branding & Domain Identity (21 CFR Part 11 / GxP) | `apps/imaging/tests/conftest.py:13`<br>`apps/payments/tests/conftest.py:12`<br>`packages/config/settings.py:31` |
 
 ## Cryptographic Secrets & Authentication Keys
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `AUDIT_LOG_SECRET_KEY` | `str` | `dev-audit-secret-key-cadence-2026-secure-32b` | No | Secret key for GxP immutable audit trail hashing and verification | `apps/execution/database/rollback.py:14`<br>`apps/imaging/tests/conftest.py:16`<br>`apps/payments/tests/conftest.py:15`<br>*(+16 more)* |
-| `BIOSTAT_EXPORT_SALT` | `str` | `dev-biostat-export-salt-placeholder` | No | Biostat statistical export pseudonymization salt | `apps/execution/biostat/csv_export.py:51`<br>`apps/execution/biostat/csv_export.py:133`<br>`apps/execution/presentation/routers/exports.py:237`<br>*(+5 more)* |
-| `DEID_SALT` | `str` | `dev-deid-salt-placeholder` | No | De-identification hashing salt | `packages/config/settings.py:542`<br>`packages/config/settings.py:1` |
-| `GATEWAY_INTERNAL_SECRET` | `str` | `dev-gateway-internal-secret-placeholder` | No | Gateway internal service authentication secret | `apps/eisf/presentation/routers/eisf.py:1547`<br>`apps/eisf/presentation/routers/eisf.py:1651`<br>`packages/config/settings.py:517`<br>*(+1 more)* |
-| `GATEWAY_SECRET` | `str` | `internal-gateway-secret-12345` | No | Shared HMAC-SHA256 secret for inter-service Gateway authentication headers | `apps/ctms/tests/test_deviations_and_issues.py:15`<br>`apps/ctms/tests/test_doa_router.py:20`<br>`apps/ctms/tests/test_etmf_integration.py:14`<br>*(+91 more)* |
-| `GOOGLE_APPLICATION_CREDENTIALS` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:398`<br>`packages/config/settings.py:1` |
-| `GXP_SIGNING_CERT` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:568`<br>`scripts/sync_gxp.py:94`<br>`packages/config/settings.py:1` |
-| `GXP_SIGNING_PRIVATE_KEY` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:565`<br>`scripts/sync_gxp.py:93`<br>`packages/config/settings.py:1` |
-| `PSEUDONYMIZATION_SALT` | `str` | `dev-pseudonymization-salt-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:45`<br>`packages/config/settings.py:1` |
+| `AUDIT_LOG_SECRET_KEY` | `str` | `dev-audit-secret-key-cadence-2026-secure-32b` | No | Secret key for GxP immutable audit trail hashing and verification | `apps/execution/database/rollback.py:14`<br>`apps/imaging/tests/conftest.py:16`<br>`apps/payments/tests/conftest.py:15`<br>*(+15 more)* |
+| `BIOSTAT_EXPORT_SALT` | `str` | `dev-biostat-export-salt-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/execution/biostat/csv_export.py:51`<br>`apps/execution/biostat/csv_export.py:133`<br>`apps/execution/presentation/routers/exports.py:237`<br>*(+4 more)* |
+| `DEID_SALT` | `str` | `dev-deid-salt-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:542` |
+| `GATEWAY_INTERNAL_SECRET` | `str` | `dev-gateway-internal-secret-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/eisf/presentation/routers/eisf.py:1547`<br>`apps/eisf/presentation/routers/eisf.py:1651`<br>`packages/config/settings.py:517` |
+| `GATEWAY_SECRET` | `str` | `internal-gateway-secret-12345` | No | Shared HMAC-SHA256 secret for inter-service Gateway authentication headers | `apps/ctms/tests/test_deviations_and_issues.py:15`<br>`apps/ctms/tests/test_doa_router.py:20`<br>`apps/ctms/tests/test_etmf_integration.py:14`<br>*(+90 more)* |
+| `GOOGLE_APPLICATION_CREDENTIALS` | `str` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:398` |
+| `GXP_SIGNING_CERT` | `str` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:568`<br>`scripts/sync_gxp.py:94` |
+| `GXP_SIGNING_PRIVATE_KEY` | `str` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:565`<br>`scripts/sync_gxp.py:93` |
+| `PSEUDONYMIZATION_SALT` | `str` | `dev-pseudonymization-salt-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:45` |
 | `REDACTION_SIGNING_SECRET` | `str` | `internal-gateway-secret-12345` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/etmf/application/use_cases.py:364`<br>`apps/etmf/presentation/routers/etmf.py:1344`<br>`apps/etmf/presentation/routers/etmf.py:1560` |
-| `RTSM_MASTER_SECRET` | `str` | `dev-rtsm-master-secret-placeholder` | No | RTSM randomization master secret key | `apps/execution/cryptography.py:74`<br>`packages/config/settings.py:472`<br>`packages/config/settings.py:1` |
-| `SAFETY_SALT` | `str` | `internal-safety-salt-12345` | No | Salt for Blinded/Unblinded Safety hashing (SUSAR / SAE safety reporting) | `apps/safety/tests/test_safety_service.py:417`<br>`packages/cli/main.py:13`<br>`packages/config/settings.py:48`<br>*(+1 more)* |
+| `RTSM_MASTER_SECRET` | `str` | `dev-rtsm-master-secret-placeholder` | No | Operational setting for Cryptographic Secrets & Authentication Keys. | `apps/execution/cryptography.py:74`<br>`packages/config/settings.py:472` |
+| `SAFETY_SALT` | `str` | `internal-safety-salt-12345` | No | Salt for Blinded/Unblinded Safety hashing (SUSAR / SAE safety reporting) | `apps/safety/tests/test_safety_service.py:417`<br>`packages/cli/main.py:13`<br>`packages/config/settings.py:48` |
 | `SECRETS_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `scripts/post_pr_comment.py:600` |
-| `SIGNING_SECRET` | `str` | `dev-signing-secret-key-32-bytes-long!` | No | Cryptographic signing secret for protocol authoring and document digital seals | `apps/execution/database/rollback.py:21`<br>`packages/cli/main.py:9`<br>`packages/config/settings.py:38`<br>*(+7 more)* |
+| `SIGNING_SECRET` | `str` | `dev-signing-secret-key-32-bytes-long!` | No | Cryptographic signing secret for protocol authoring and document digital seals | `apps/execution/database/rollback.py:21`<br>`packages/cli/main.py:9`<br>`packages/config/settings.py:38`<br>*(+6 more)* |
 
 ## Microservice REST Endpoints & URLs
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `CLAMAV_PORT` | `int` | `3310` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:219`<br>`packages/config/settings.py:1` |
+| `CLAMAV_PORT` | `int` | `3310` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:219` |
 | `CTMS_SERVICE_URL` | `str` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/greenlight_gating.py:77` |
-| `CTMS_URL` | `str` | `http://localhost:8007` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:73`<br>`packages/config/settings.py:1` |
-| `DESIGNER_URL` | `str` | `http://localhost:8001` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/designer_client.py:31`<br>`packages/config/settings.py:63`<br>`packages/config/settings.py:1` |
-| `ECONSENT_URL` | `str` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/econsent_client.py:46`<br>`packages/config/settings.py:70`<br>`packages/config/settings.py:1` |
+| `CTMS_URL` | `str` | `http://localhost:8007` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:73` |
+| `DESIGNER_URL` | `str` | `http://localhost:8001` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/designer_client.py:31`<br>`packages/config/settings.py:63` |
+| `ECONSENT_URL` | `str` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/econsent_client.py:46`<br>`packages/config/settings.py:70` |
 | `EISF_URL` | `str` | `http://localhost:8010` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/org/presentation/routers/org.py:390`<br>`apps/org/presentation/routers/org.py:1534` |
 | `EMA_AS2_URL` | `str` | `https://eudravigilance.ema.europa.eu/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `ETMF_SERVICE_URL` | `str` | `http://localhost:8006` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `ETMF_URL` | `str` | `http://localhost:8003` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/eisf/presentation/routers/eisf.py:1134`<br>`apps/eisf/presentation/routers/eisf.py:1539`<br>`apps/eisf/presentation/routers/eisf.py:1643`<br>*(+3 more)* |
-| `EXECUTION_SERVICE_URL` | `str | None` | *(None)* | Yes | EDC Execution REST endpoint URL | `packages/config/settings.py:432`<br>`packages/config/settings.py:1` |
-| `EXECUTION_URL` | `str` | `http://localhost:8002` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/quality/adapters/execution_client.py:42`<br>`packages/config/settings.py:66`<br>`packages/config/settings.py:1` |
+| `ETMF_URL` | `str` | `http://localhost:8003` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/eisf/presentation/routers/eisf.py:1134`<br>`apps/eisf/presentation/routers/eisf.py:1539`<br>`apps/eisf/presentation/routers/eisf.py:1643`<br>*(+2 more)* |
+| `EXECUTION_SERVICE_URL` | `str` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:432` |
+| `EXECUTION_URL` | `str` | `http://localhost:8002` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/quality/adapters/execution_client.py:42`<br>`packages/config/settings.py:66` |
 | `EXTERNAL_ARCHIVAL_URL` | `str` | `http://localhost:8004` | No | Send document to the external archival system | `apps/etmf/workers/outbox_worker.py:41` |
 | `FDA_ESG_AS2_URL` | `str` | `https://esg.fda.gov/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `FILESHARE_URL` | `str` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:78`<br>`packages/config/settings.py:1` |
-| `GATEWAY_URL` | `str` | `http://localhost:8000` | No | 4. Microservice REST Endpoints & URLs (Local Default Port Map) | `packages/config/settings.py:57`<br>`packages/config/settings.py:1` |
+| `FILESHARE_URL` | `str` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:78` |
+| `GATEWAY_URL` | `str` | `http://localhost:8000` | No | 4. Microservice REST Endpoints & URLs (Local Default Port Map) | `packages/config/settings.py:57` |
 | `HC_AS2_URL` | `str` | `https://gateway.hc-sc.gc.ca/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `INTEROP_URL` | `str` | `http://localhost:8004` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/org/presentation/routers/org.py:390`<br>`apps/org/presentation/routers/org.py:1534` |
-| `KNOWLEDGE_SERVICE_URL` | `str` | `http://127.0.0.1:8006` | No | Knowledge service REST endpoint URL | `apps/execution/presentation/routers/amendments.py:203`<br>`apps/execution/training_gating.py:79`<br>`packages/config/settings.py:417`<br>*(+1 more)* |
+| `KNOWLEDGE_SERVICE_URL` | `str` | `http://127.0.0.1:8006` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/presentation/routers/amendments.py:203`<br>`apps/execution/training_gating.py:79`<br>`packages/config/settings.py:417` |
 | `MHRA_AS2_URL` | `str` | `https://sub.mhra.gov.uk/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `MINIO_ENDPOINT_URL` | `str | None` | *(None)* | Yes | MinIO endpoint URL override | `apps/etmf/storage.py:27`<br>`packages/config/settings.py:313`<br>`packages/config/settings.py:363`<br>*(+2 more)* |
+| `MINIO_ENDPOINT_URL` | `str` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `apps/etmf/storage.py:27`<br>`packages/config/settings.py:313`<br>`packages/config/settings.py:363`<br>*(+1 more)* |
 | `ORG_SERVICE_URL` | `str` | `http://localhost:8012` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `ORG_URL` | `str` | `http://localhost:8012` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:77`<br>`packages/config/settings.py:1` |
+| `ORG_URL` | `str` | `http://localhost:8012` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:77` |
 | `PMDA_AS2_URL` | `str` | `https://gateway.pmda.go.jp/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `QUALITY_SERVICE_URL` | `str` | `http://localhost:8008` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `QUALITY_URL` | `str` | `http://localhost:8005` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
-| `REDIS_PORT` | `int` | `6379` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/workers/consent_subscriber.py:138`<br>`packages/config/settings.py:91`<br>`packages/config/settings.py:1` |
-| `REDIS_URL` | `str | None` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:93`<br>`packages/config/settings.py:1` |
+| `REDIS_PORT` | `int` | `6379` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/execution/workers/consent_subscriber.py:138`<br>`packages/config/settings.py:91` |
+| `REDIS_URL` | `str` | *(None)* | Yes | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:93` |
 | `SAFETY_SERVICE_URL` | `str` | `http://localhost:8009` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `SAFETY_URL` | `str` | `http://localhost:8008` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `TICKETS_URL` | `str` | `http://localhost:8009` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
@@ -106,58 +105,58 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `CTMS_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5434/cadence_ctms` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:206`<br>`packages/config/settings.py:1` |
+| `CTMS_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5434/cadence_ctms` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:206` |
 | `DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc` | No | Local Dev Default: SQLite | Containerized Dev: PostgreSQL | `apps/econsent/alembic/env.py:31`<br>`apps/eisf/alembic/env.py:31`<br>`apps/execution/alembic/env.py:31`<br>*(+14 more)* |
-| `DESIGNER_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | Study Designer database connection string | `packages/config/settings.py:507`<br>`packages/config/settings.py:1` |
-| `ECONSENT_DATABASE_URL` | `str` | `sqlite+aiosqlite:///econsent.db` | No | Operational setting for Database Connection URLs. | `apps/econsent/alembic/env.py:32`<br>`apps/econsent/tests/test_econsent.py:110`<br>`packages/config/settings.py:174`<br>*(+1 more)* |
-| `EISF_DATABASE_URL` | `str` | `sqlite+aiosqlite:///eisf.db` | No | Operational setting for Database Connection URLs. | `apps/eisf/alembic/env.py:32`<br>`apps/eisf/database/migrate.py:139`<br>`apps/eisf/tests/test_eisf_persistence.py:43`<br>*(+2 more)* |
-| `ETMF_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5433/cadence_etmf` | No | Operational setting for Database Connection URLs. | `apps/etmf/adapters/migrate.py:904`<br>`apps/etmf/database/migrate.py:966`<br>`packages/config/settings.py:241`<br>*(+2 more)* |
-| `EXECUTION_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | EDC Execution database connection string | `apps/execution/alembic/env.py:32`<br>`packages/config/settings.py:427`<br>`packages/config/settings.py:1` |
-| `FILESHARE_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./fileshare.db` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:214`<br>`packages/config/settings.py:1` |
-| `IMAGING_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./imaging.db` | No | Operational setting for Database Connection URLs. | `apps/imaging/alembic/env.py:32`<br>`packages/config/settings.py:305`<br>`packages/config/settings.py:1` |
-| `INTEROP_DATABASE_URL` | `str` | `sqlite+aiosqlite:///interop.db` | No | Operational setting for Database Connection URLs. | `apps/interop/alembic/env.py:32`<br>`apps/interop/tests/test_device_sdtm_regulatory_exports.py:28`<br>`packages/config/settings.py:225`<br>*(+1 more)* |
-| `KNOWLEDGE_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./knowledge.db` | No | Knowledge service relational database URL | `apps/knowledge/alembic/env.py:33`<br>`packages/config/settings.py:412`<br>`packages/config/settings.py:1` |
-| `NEO4J_PASSWORD` | `str` | `cadence_password` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:98`<br>`scripts/reset_db.py:858`<br>`packages/config/settings.py:1` |
-| `NEO4J_URI` | `str` | `bolt://localhost:7687` | No | Neo4j Graph Database (Study Designer & USDM MDR) | `packages/config/settings.py:94`<br>`scripts/reset_db.py:856`<br>`packages/config/settings.py:1` |
-| `NEO4J_USER` | `str` | `neo4j` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:97`<br>`scripts/reset_db.py:857`<br>`packages/config/settings.py:1` |
-| `NOTIFICATIONS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///notifications.db` | No | Operational setting for Database Connection URLs. | `apps/notifications/alembic/env.py:32`<br>`packages/config/settings.py:159`<br>`scripts/generate_api_docs.py:35`<br>*(+1 more)* |
-| `ORG_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc` | No | Operational setting for Database Connection URLs. | `apps/org/alembic/env.py:32`<br>`packages/config/settings.py:249`<br>`packages/config/settings.py:1` |
-| `PAYMENTS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./payments.db` | No | Operational setting for Database Connection URLs. | `apps/payments/alembic/env.py:32`<br>`packages/config/settings.py:297`<br>`packages/config/settings.py:1` |
-| `QUALITY_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5435/cadence_quality` | No | Operational setting for Database Connection URLs. | `apps/quality/migrate.py:20`<br>`packages/config/settings.py:257`<br>`packages/config/settings.py:1` |
-| `SAFETY_DATABASE_URL` | `str` | `sqlite+aiosqlite:///safety.db` | No | SQLite services (Microservice standalone state) | `apps/safety/alembic/env.py:32`<br>`apps/safety/tests/test_device_safety_investigation.py:31`<br>`apps/safety/tests/test_device_vigilance.py:32`<br>*(+2 more)* |
+| `DESIGNER_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:507` |
+| `ECONSENT_DATABASE_URL` | `str` | `sqlite+aiosqlite:///econsent.db` | No | Operational setting for Database Connection URLs. | `apps/econsent/alembic/env.py:32`<br>`apps/econsent/tests/test_econsent.py:110`<br>`packages/config/settings.py:174` |
+| `EISF_DATABASE_URL` | `str` | `sqlite+aiosqlite:///eisf.db` | No | Operational setting for Database Connection URLs. | `apps/eisf/alembic/env.py:32`<br>`apps/eisf/database/migrate.py:139`<br>`apps/eisf/tests/test_eisf_persistence.py:43`<br>*(+1 more)* |
+| `ETMF_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5433/cadence_etmf` | No | Operational setting for Database Connection URLs. | `apps/etmf/adapters/migrate.py:904`<br>`apps/etmf/database/migrate.py:966`<br>`packages/config/settings.py:241`<br>*(+1 more)* |
+| `EXECUTION_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | Operational setting for Database Connection URLs. | `apps/execution/alembic/env.py:32`<br>`packages/config/settings.py:427` |
+| `FILESHARE_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./fileshare.db` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:214` |
+| `IMAGING_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./imaging.db` | No | Operational setting for Database Connection URLs. | `apps/imaging/alembic/env.py:32`<br>`packages/config/settings.py:305` |
+| `INTEROP_DATABASE_URL` | `str` | `sqlite+aiosqlite:///interop.db` | No | Operational setting for Database Connection URLs. | `apps/interop/alembic/env.py:32`<br>`apps/interop/tests/test_device_sdtm_regulatory_exports.py:28`<br>`packages/config/settings.py:225` |
+| `KNOWLEDGE_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./knowledge.db` | No | Operational setting for Database Connection URLs. | `apps/knowledge/alembic/env.py:33`<br>`packages/config/settings.py:412` |
+| `NEO4J_PASSWORD` | `str` | `cadence_password` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:98`<br>`scripts/reset_db.py:935` |
+| `NEO4J_URI` | `str` | `bolt://localhost:7687` | No | Neo4j Graph Database (Study Designer & USDM MDR) | `packages/config/settings.py:94`<br>`scripts/reset_db.py:933` |
+| `NEO4J_USER` | `str` | `neo4j` | No | Operational setting for Database Connection URLs. | `packages/config/settings.py:97`<br>`scripts/reset_db.py:934` |
+| `NOTIFICATIONS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///notifications.db` | No | Operational setting for Database Connection URLs. | `apps/notifications/alembic/env.py:32`<br>`packages/config/settings.py:159`<br>`scripts/generate_api_docs.py:35` |
+| `ORG_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc` | No | Operational setting for Database Connection URLs. | `apps/org/alembic/env.py:32`<br>`packages/config/settings.py:249` |
+| `PAYMENTS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///./payments.db` | No | Operational setting for Database Connection URLs. | `apps/payments/alembic/env.py:32`<br>`packages/config/settings.py:297` |
+| `QUALITY_DATABASE_URL` | `str` | `postgresql+asyncpg://cadence:cadence_password@localhost:5435/cadence_quality` | No | Operational setting for Database Connection URLs. | `apps/quality/migrate.py:20`<br>`packages/config/settings.py:257` |
+| `SAFETY_DATABASE_URL` | `str` | `sqlite+aiosqlite:///safety.db` | No | SQLite services (Microservice standalone state) | `apps/safety/alembic/env.py:32`<br>`apps/safety/tests/test_device_safety_investigation.py:31`<br>`apps/safety/tests/test_device_vigilance.py:32`<br>*(+1 more)* |
 | `TEST_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | Operational setting for Database Connection URLs. | `apps/ctms/tests/test_federated_resupply.py:27`<br>`apps/execution/tests/test_boot_recovery.py:24`<br>`apps/execution/tests/test_cec_adjudication.py:45`<br>*(+29 more)* |
-| `TICKETS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///tickets.db` | No | Operational setting for Database Connection URLs. | `apps/tickets/alembic/env.py:32`<br>`packages/config/settings.py:283`<br>`packages/config/settings.py:1` |
+| `TICKETS_DATABASE_URL` | `str` | `sqlite+aiosqlite:///tickets.db` | No | Operational setting for Database Connection URLs. | `apps/tickets/alembic/env.py:32`<br>`packages/config/settings.py:283` |
 
 ## Keycloak / OIDC Identity Provider Configuration
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `JWT_ALGORITHM` | `str` | `RS256` | No | OIDC JWT token verification algorithm | `packages/config/settings.py:527`<br>`packages/config/settings.py:1` |
-| `JWT_SECRET_KEY` | `str` | `dev-jwt-secret-key-12345` | No | JWT secret key for HMAC fallback validation | `packages/config/settings.py:532`<br>`scripts/generate_api_docs.py:33`<br>`scripts/sync_openapi_spec.py:33`<br>*(+1 more)* |
+| `JWT_ALGORITHM` | `str` | `RS256` | No | 6. Keycloak / OIDC Identity Provider Configuration | `packages/config/settings.py:527` |
+| `JWT_SECRET_KEY` | `str` | `dev-jwt-secret-key-12345` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:532`<br>`scripts/generate_api_docs.py:33`<br>`scripts/sync_openapi_spec.py:33` |
 | `KEYCLOAK_ADMIN` | `str` | `admin` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | *Pre-configured template variable* |
 | `KEYCLOAK_ADMIN_PASSWORD` | `str` | `admin_password` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | *Pre-configured template variable* |
-| `KEYCLOAK_CLIENT_ID` | `str` | `cadence-clinical` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:85`<br>`packages/config/settings.py:1` |
-| `KEYCLOAK_REALM` | `str` | `cadence` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:84`<br>`packages/config/settings.py:1` |
-| `KEYCLOAK_URL` | `str | None` | `http://localhost:8080` | No | 6. Keycloak / OIDC Identity Provider Configuration | `packages/config/settings.py:83`<br>`packages/config/settings.py:1` |
+| `KEYCLOAK_CLIENT_ID` | `str` | `cadence-clinical` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:85` |
+| `KEYCLOAK_REALM` | `str` | `cadence` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:84` |
+| `KEYCLOAK_URL` | `str` | `http://localhost:8080` | No | 6. Keycloak / OIDC Identity Provider Configuration | `packages/config/settings.py:83` |
 
 ## Notifications, SMTP & Webhooks
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
 | `ETMF_NOTIFICATIONS_CLIENT_TIMEOUT` | `str` | `2.0` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
-| `INBOUND_EMAIL_HMAC_SECRET` | `str` | `dev-secret-inbound-email-hmac-secure-placeholder` | No | Secret key for eTMF inbound email verification and webhook signing | `apps/execution/database/rollback.py:17`<br>`packages/cli/main.py:10`<br>`packages/compliance/services/gxp_signer.py:16`<br>*(+14 more)* |
+| `INBOUND_EMAIL_HMAC_SECRET` | `str` | `dev-secret-inbound-email-hmac-secure-placeholder` | No | Secret key for eTMF inbound email verification and webhook signing | `apps/execution/database/rollback.py:17`<br>`packages/cli/main.py:10`<br>`packages/compliance/services/gxp_signer.py:16`<br>*(+13 more)* |
 | `INBOUND_EMAIL_MAX_SIZE_BYTES` | `int` | `10485760` | No | 10MB default | `apps/etmf/presentation/routers/etmf.py:2173` |
-| `NOTIFICATIONS_URL` | `str` | `http://localhost:8006` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:74`<br>`packages/config/settings.py:1` |
+| `NOTIFICATIONS_URL` | `str` | `http://localhost:8006` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:74` |
 | `NOTIFICATION_MAX_ATTEMPTS` | `int` | `5` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
 | `NOTIFICATION_RETRY_BASE_DELAY` | `str` | `2.0` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
 | `NOTIFICATION_RETRY_MAX_DELAY` | `str` | `3600.0` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
-| `SMTP_HOST` | `str` | `localhost` | No | 7. Notifications, SMTP & Webhooks | `packages/config/settings.py:163`<br>`packages/config/settings.py:1` |
-| `SMTP_PASSWORD` | `str | None` | `dev_password` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:166`<br>`packages/config/settings.py:1` |
-| `SMTP_PORT` | `int` | `1025` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:164`<br>`packages/config/settings.py:1` |
+| `SMTP_HOST` | `str` | `localhost` | No | 7. Notifications, SMTP & Webhooks | `packages/config/settings.py:163` |
+| `SMTP_PASSWORD` | `str` | `dev_password` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:166` |
+| `SMTP_PORT` | `int` | `1025` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:164` |
 | `SMTP_SENDER` | `str` | `no-reply@ccrsoft.com` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
-| `SMTP_USERNAME` | `str | None` | `dev_user` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:165`<br>`packages/config/settings.py:1` |
-| `SMTP_USE_SSL` | `bool` | `false` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:168`<br>`packages/config/settings.py:1` |
-| `SMTP_USE_TLS` | `bool` | `false` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:167`<br>`packages/config/settings.py:1` |
+| `SMTP_USERNAME` | `str` | `dev_user` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:165` |
+| `SMTP_USE_SSL` | `bool` | `false` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:168` |
+| `SMTP_USE_TLS` | `bool` | `false` | No | Operational setting for Notifications, SMTP & Webhooks. | `packages/config/settings.py:167` |
 | `WEBHOOK_SIGNATURE_HEADER` | `str` | `X-Cadence-Signature` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
 | `WEBHOOK_SIGNING_SECRET` | `str` | `dev_webhook_secret_key_12345` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
 | `WEBHOOK_TIMEOUT` | `str` | `5.0` | No | Operational setting for Notifications, SMTP & Webhooks. | *Pre-configured template variable* |
@@ -177,32 +176,32 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `AI_GATEWAY_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | AI Gateway relational database connection string | `packages/config/settings.py:333`<br>`packages/config/settings.py:1` |
-| `AI_GATEWAY_URL` | `str` | `http://localhost:8000` | No | Operational setting for AI Gateway & LLM Ingestion. | `apps/execution/adapters/ai_anomaly_client.py:29`<br>`packages/config/settings.py:60`<br>`packages/config/settings.py:1` |
-| `AI_TIER_1_EMBED_MODEL` | `str` | `text-embedding-3-small` | No | Default text embedding model identifier | `packages/config/settings.py:353`<br>`packages/config/settings.py:1` |
-| `AI_TIER_1_MODEL` | `str` | `ollama/llama3` | No | Tier 1 fast local/edge LLM model identifier | `packages/config/settings.py:338`<br>`packages/config/settings.py:1` |
-| `AI_TIER_2_MODEL` | `str` | `gpt-4o-mini` | No | Tier 2 balanced cloud LLM model identifier | `packages/config/settings.py:343`<br>`packages/config/settings.py:1` |
-| `AI_TIER_3_MODEL` | `str` | `gpt-4o` | No | Tier 3 high-reasoning complex LLM model identifier | `packages/config/settings.py:348`<br>`packages/config/settings.py:1` |
+| `AI_GATEWAY_DATABASE_URL` | `str` | `sqlite+aiosqlite:///:memory:` | No | Operational setting for AI Gateway & LLM Ingestion. | `packages/config/settings.py:333` |
+| `AI_GATEWAY_URL` | `str` | `http://localhost:8000` | No | Operational setting for AI Gateway & LLM Ingestion. | `apps/execution/adapters/ai_anomaly_client.py:29`<br>`packages/config/settings.py:60` |
+| `AI_TIER_1_EMBED_MODEL` | `str` | `text-embedding-3-small` | No | Operational setting for AI Gateway & LLM Ingestion. | `packages/config/settings.py:353` |
+| `AI_TIER_1_MODEL` | `str` | `ollama/llama3` | No | Operational setting for AI Gateway & LLM Ingestion. | `packages/config/settings.py:338` |
+| `AI_TIER_2_MODEL` | `str` | `gpt-4o-mini` | No | Operational setting for AI Gateway & LLM Ingestion. | `packages/config/settings.py:343` |
+| `AI_TIER_3_MODEL` | `str` | `gpt-4o` | No | Operational setting for AI Gateway & LLM Ingestion. | `packages/config/settings.py:348` |
 
 ## Document Storage & Archival
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `AWS_ACCESS_KEY_ID` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:378`<br>`packages/config/settings.py:1` |
-| `AWS_ENDPOINT_URL` | `str | None` | *(None)* | Yes | AWS endpoint URL override | `packages/config/settings.py:323`<br>`packages/config/settings.py:392`<br>`packages/config/settings.py:1` |
-| `AWS_REGION` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:388`<br>`packages/config/settings.py:1` |
-| `AWS_SECRET_ACCESS_KEY` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:384`<br>`packages/config/settings.py:1` |
-| `IMAGING_STORAGE_BUCKET` | `str` | `cadence-imaging` | No | S3/MinIO bucket name for storing imaging DICOM objects | `packages/config/settings.py:308`<br>`packages/config/settings.py:1` |
-| `MINIO_BUCKET` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:366`<br>`packages/config/settings.py:1` |
-| `S3_BUCKET_NAME` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:374`<br>`packages/config/settings.py:1` |
-| `STORAGE_ACCESS_KEY` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:375`<br>`packages/config/settings.py:1` |
+| `AWS_ACCESS_KEY_ID` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:378` |
+| `AWS_ENDPOINT_URL` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:323`<br>`packages/config/settings.py:392` |
+| `AWS_REGION` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:388` |
+| `AWS_SECRET_ACCESS_KEY` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:384` |
+| `IMAGING_STORAGE_BUCKET` | `str` | `cadence-imaging` | No | Operational setting for Document Storage & Archival. | `packages/config/settings.py:308` |
+| `MINIO_BUCKET` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:366` |
+| `S3_BUCKET_NAME` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:374` |
+| `STORAGE_ACCESS_KEY` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:375` |
 | `STORAGE_BACKEND` | `str` | `local` | No | Options: local, s3 | *Pre-configured template variable* |
-| `STORAGE_BUCKET` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:373`<br>`packages/config/settings.py:1` |
-| `STORAGE_ENDPOINT_URL` | `str | None` | *(None)* | Yes | Generic storage endpoint URL override | `apps/etmf/storage.py:27`<br>`packages/config/settings.py:318`<br>`packages/config/settings.py:389`<br>*(+2 more)* |
+| `STORAGE_BUCKET` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:373` |
+| `STORAGE_ENDPOINT_URL` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `apps/etmf/storage.py:27`<br>`packages/config/settings.py:318`<br>`packages/config/settings.py:389`<br>*(+1 more)* |
 | `STORAGE_LOCAL_DIR` | `str` | `./storage` | No | Operational setting for Document Storage & Archival. | *Pre-configured template variable* |
-| `STORAGE_REGION` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:387`<br>`packages/config/settings.py:1` |
-| `STORAGE_SECRET_KEY` | `str | None` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:381`<br>`packages/config/settings.py:1` |
-| `STORAGE_SSE_ALGORITHM` | `str` | `AES256` | No | Operational setting for Document Storage & Archival. | `packages/config/settings.py:395`<br>`packages/config/settings.py:1` |
+| `STORAGE_REGION` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:387` |
+| `STORAGE_SECRET_KEY` | `str` | *(None)* | Yes | Operational setting for Document Storage & Archival. | `packages/config/settings.py:381` |
+| `STORAGE_SSE_ALGORITHM` | `str` | `AES256` | No | Operational setting for Document Storage & Archival. | `packages/config/settings.py:395` |
 
 ## Safety & Pharmacovigilance Service
 
@@ -213,58 +212,52 @@ It provides a complete reference for all operational environment variables used 
 | `HC_CERT` | `str` | `hc_cert` | No | Operational setting for Safety & Pharmacovigilance Service. | `apps/safety/services/as2_gateway_client.py:122`<br>`apps/safety/services/as2_gateway_client.py:123` |
 | `MHRA_CERT` | `str` | `mhra_cert` | No | Operational setting for Safety & Pharmacovigilance Service. | `apps/safety/services/as2_gateway_client.py:112`<br>`apps/safety/services/as2_gateway_client.py:113` |
 | `PMDA_CERT` | `str` | `pmda_cert` | No | Operational setting for Safety & Pharmacovigilance Service. | `apps/safety/services/as2_gateway_client.py:102`<br>`apps/safety/services/as2_gateway_client.py:103` |
-| `SAFETY_DB_INGESTION_ENDPOINT` | `str | None` | *(None)* | Yes | Safety cases ingestion API endpoint URL | `packages/config/settings.py:273`<br>`packages/config/settings.py:1` |
-| `SAFETY_DB_TRANSMISSION_ENDPOINT` | `str | None` | *(None)* | Yes | Safety transmission API endpoint URL | `packages/config/settings.py:268`<br>`packages/config/settings.py:1` |
+| `SAFETY_DB_INGESTION_ENDPOINT` | `str` | *(None)* | Yes | Operational setting for Safety & Pharmacovigilance Service. | `packages/config/settings.py:273` |
+| `SAFETY_DB_TRANSMISSION_ENDPOINT` | `str` | *(None)* | Yes | Operational setting for Safety & Pharmacovigilance Service. | `packages/config/settings.py:268` |
 
 ## eTMF Master File Service
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
+| `ALLOW_MOCK_SIGNATURES` | `int` | `1` | No | Operational setting for eTMF Master File Service. | `apps/etmf/adapters/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
 | `ETMF_EXPIRATION_SCANNER_INTERVAL_SECONDS` | `str` | `86400.0` | No | Start loop with very short interval | `apps/etmf/expiration_scanner.py:280`<br>`apps/etmf/tests/test_etmf_expiration_scanner.py:289` |
 | `ETMF_EXPIRATION_WARNING_WINDOWS` | `str` | *(None)* | Yes | Get warning windows config | `apps/etmf/expiration_scanner.py:59` |
 | `ETMF_SEALER_INTERVAL_SECONDS` | `str` | `60.0` | No | Operational setting for eTMF Master File Service. | `apps/etmf/adapters/sealer.py:268`<br>`apps/etmf/sealer.py:404` |
+| `OUTBOX_ATTEMPT_CAP` | `int` | `5` | No | Operational setting for eTMF Master File Service. | `apps/etmf/workers/outbox_worker.py:61`<br>`apps/execution/workers/outbox_worker.py:28`<br>`packages/config/settings.py:482` |
+| `OUTBOX_POLL_INTERVAL_SECONDS` | `str` | `5.0` | No | Operational setting for eTMF Master File Service. | `apps/etmf/workers/outbox_worker.py:74`<br>`apps/execution/workers/outbox_worker.py:217`<br>`packages/config/settings.py:497` |
 
 ## Helpdesk & Tickets Service
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
 | `PYTEST_CURRENT_TEST` | `str` | *(None)* | Yes | Operational setting for Helpdesk & Tickets Service. | `apps/etmf/adapters/cryptography.py:16`<br>`apps/etmf/adapters/cryptography.py:324`<br>`apps/notifications/presentation/routers/notifications.py:259`<br>*(+2 more)* |
-| `TICKETS_ESCALATION_INTERVAL_SECONDS` | `float` | `86400.0` | No | Operational setting for Helpdesk & Tickets Service. | `apps/tickets/tests/test_tickets_escalation.py:252`<br>`packages/config/settings.py:286`<br>`packages/config/settings.py:1` |
-| `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` | `float` | `60.0` | No | Temporarily set poll interval to a small value | `apps/tickets/tests/test_tickets_escalation.py:416`<br>`packages/config/settings.py:289`<br>`packages/config/settings.py:1` |
+| `TICKETS_ESCALATION_INTERVAL_SECONDS` | `str` | `86400.0` | No | Operational setting for Helpdesk & Tickets Service. | `apps/tickets/tests/test_tickets_escalation.py:252`<br>`packages/config/settings.py:286` |
+| `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` | `str` | `60.0` | No | Temporarily set poll interval to a small value | `apps/tickets/tests/test_tickets_escalation.py:416`<br>`packages/config/settings.py:289` |
 
 ## eConsent Service
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `ECONSENT_ARCHIVAL_ATTEMPT_CAP` | `int` | `5` | No | Operational setting for eConsent Service. | `packages/config/settings.py:187`<br>`packages/config/settings.py:1` |
-| `ECONSENT_ARCHIVAL_POLL_INTERVAL_SECONDS` | `float` | `5.0` | No | Operational setting for eConsent Service. | `packages/config/settings.py:190`<br>`packages/config/settings.py:1` |
-| `ECONSENT_CACHE_TTL` | `int | None` | *(None)* | Yes | Operational setting for eConsent Service. | `packages/config/settings.py:177`<br>`packages/config/settings.py:1` |
-
-## Site Payments Service
-
-| Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
-| :--- | :--- | :--- | :---: | :--- | :--- |
-| `ALLOW_MOCK_SIGNATURES` | `int` | `1` | No | Operational setting for Site Payments Service. | `apps/etmf/adapters/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
+| `ECONSENT_ARCHIVAL_ATTEMPT_CAP` | `int` | `5` | No | Operational setting for eConsent Service. | `packages/config/settings.py:187` |
+| `ECONSENT_ARCHIVAL_POLL_INTERVAL_SECONDS` | `str` | `5.0` | No | Operational setting for eConsent Service. | `packages/config/settings.py:190` |
+| `ECONSENT_CACHE_TTL` | `str` | *(None)* | Yes | Operational setting for eConsent Service. | `packages/config/settings.py:177` |
 
 ## EDC Execution Service
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `ANOMALY_WORKER_POLL_INTERVAL_SECONDS` | `float` | `30.0` | No | AI anomaly detection worker polling interval in seconds | `apps/execution/workers/anomaly_worker.py:127`<br>`packages/config/settings.py:437`<br>`packages/config/settings.py:1` |
-| `CACHE_TTL` | `int` | `300` | No | Operational setting for EDC Execution Service. | `apps/execution/coding/matcher.py:381`<br>`apps/execution/lab_range_cache.py:26`<br>`packages/config/settings.py:180`<br>*(+1 more)* |
-| `CODING_CACHE_TTL` | `int` | `86400` | No | Medical coding term matcher cache TTL in seconds | `apps/execution/coding/matcher.py:380`<br>`packages/config/settings.py:442`<br>`packages/config/settings.py:1` |
-| `LAB_RANGE_CACHE_TTL` | `int` | `3600` | No | Lab normal range cache TTL in seconds | `apps/execution/lab_range_cache.py:26`<br>`apps/execution/tests/test_lab_range_cache.py:23`<br>`packages/config/settings.py:447`<br>*(+1 more)* |
-| `OUTBOX_ATTEMPT_CAP` | `int` | `5` | No | Transactional outbox retry attempt cap | `apps/etmf/workers/outbox_worker.py:61`<br>`apps/execution/workers/outbox_worker.py:28`<br>`packages/config/settings.py:482`<br>*(+1 more)* |
-| `OUTBOX_BATCH_SIZE` | `int` | `20` | No | Transactional outbox batch processing size | `apps/execution/workers/outbox_worker.py:26`<br>`packages/config/settings.py:487`<br>`packages/config/settings.py:1` |
-| `OUTBOX_MAX_CONCURRENCY` | `int` | `10` | No | Transactional outbox max concurrency worker limit | `apps/execution/workers/outbox_worker.py:27`<br>`packages/config/settings.py:492`<br>`packages/config/settings.py:1` |
-| `OUTBOX_POLL_INTERVAL_SECONDS` | `float` | `5.0` | No | Transactional outbox polling loop interval in seconds | `apps/etmf/workers/outbox_worker.py:74`<br>`apps/execution/workers/outbox_worker.py:217`<br>`packages/config/settings.py:497`<br>*(+1 more)* |
-| `QUERY_ESCALATION_DIGEST_SECONDS` | `float` | `86400.0` | No | Data query escalation email digest interval in seconds | `apps/execution/queries_escalation.py:72`<br>`apps/execution/tests/test_queries_escalation.py:205`<br>`apps/execution/tests/test_queries_escalation.py:210`<br>*(+2 more)* |
-| `QUERY_ESCALATION_INTERVAL_SECONDS` | `float` | `86400.0` | No | Data query escalation check loop interval in seconds | `apps/execution/queries_escalation.py:153`<br>`apps/execution/tests/test_queries_escalation.py:225`<br>`packages/config/settings.py:457`<br>*(+1 more)* |
-| `REDIS_CHANNEL_CONSENT` | `str` | `econsent_consent_completed` | No | Operational setting for EDC Execution Service. | `apps/execution/workers/consent_subscriber.py:140`<br>`packages/config/settings.py:184`<br>`packages/config/settings.py:1` |
-| `REDIS_HOST` | `str | None` | *(None)* | Yes | Redis configuration for cluster-wide invalidation propagation | `apps/execution/workers/consent_subscriber.py:137`<br>`apps/execution/workers/consent_subscriber.py:208`<br>`packages/config/settings.py:90`<br>*(+1 more)* |
-| `REDIS_PASSWORD` | `str | None` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/execution/workers/consent_subscriber.py:139`<br>`packages/config/settings.py:92`<br>`packages/config/settings.py:1` |
-| `SEALER_INTERVAL_SECONDS` | `float` | `60.0` | No | Audit trail Merkle block sealer interval in seconds | `apps/execution/database/sealer.py:297`<br>`packages/config/settings.py:467`<br>`packages/config/settings.py:1` |
-| `TESTING` | `str` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/econsent/workers/archival_worker.py:154`<br>`apps/etmf/workers/document_intelligence_worker.py:177`<br>`apps/etmf/workers/outbox_worker.py:87`<br>*(+5 more)* |
+| `ANOMALY_WORKER_POLL_INTERVAL_SECONDS` | `str` | `30.0` | No | Operational setting for EDC Execution Service. | `apps/execution/workers/anomaly_worker.py:127`<br>`packages/config/settings.py:437` |
+| `CACHE_TTL` | `int` | `300` | No | Operational setting for EDC Execution Service. | `apps/execution/coding/matcher.py:381`<br>`apps/execution/lab_range_cache.py:26`<br>`packages/config/settings.py:180` |
+| `CODING_CACHE_TTL` | `int` | `86400` | No | Operational setting for EDC Execution Service. | `apps/execution/coding/matcher.py:380`<br>`packages/config/settings.py:442` |
+| `LAB_RANGE_CACHE_TTL` | `int` | `3600` | No | Operational setting for EDC Execution Service. | `apps/execution/lab_range_cache.py:26`<br>`apps/execution/tests/test_lab_range_cache.py:23`<br>`packages/config/settings.py:447` |
+| `OUTBOX_BATCH_SIZE` | `int` | `20` | No | Get parameters from environment | `apps/execution/workers/outbox_worker.py:26`<br>`packages/config/settings.py:487` |
+| `OUTBOX_MAX_CONCURRENCY` | `int` | `10` | No | Operational setting for EDC Execution Service. | `apps/execution/workers/outbox_worker.py:27`<br>`packages/config/settings.py:492` |
+| `QUERY_ESCALATION_DIGEST_SECONDS` | `str` | `86400.0` | No | With high digest interval (e.g. 86400s), digest is NOT sent | `apps/execution/queries_escalation.py:72`<br>`apps/execution/tests/test_queries_escalation.py:205`<br>`apps/execution/tests/test_queries_escalation.py:210`<br>*(+1 more)* |
+| `QUERY_ESCALATION_INTERVAL_SECONDS` | `str` | `86400.0` | No | Start loop with very short interval | `apps/execution/queries_escalation.py:153`<br>`apps/execution/tests/test_queries_escalation.py:225`<br>`packages/config/settings.py:457` |
+| `REDIS_CHANNEL_CONSENT` | `str` | `econsent_consent_completed` | No | Operational setting for EDC Execution Service. | `apps/execution/workers/consent_subscriber.py:140`<br>`packages/config/settings.py:184` |
+| `REDIS_HOST` | `str` | *(None)* | Yes | Redis configuration for cluster-wide invalidation propagation | `apps/execution/workers/consent_subscriber.py:137`<br>`apps/execution/workers/consent_subscriber.py:208`<br>`packages/config/settings.py:90` |
+| `REDIS_PASSWORD` | `str` | *(None)* | Yes | Operational setting for EDC Execution Service. | `apps/execution/workers/consent_subscriber.py:139`<br>`packages/config/settings.py:92` |
+| `SEALER_INTERVAL_SECONDS` | `str` | `60.0` | No | Operational setting for EDC Execution Service. | `apps/execution/database/sealer.py:297`<br>`packages/config/settings.py:467` |
 
 ## Operational Microservice Configuration
 
@@ -274,7 +267,7 @@ It provides a complete reference for all operational environment variables used 
 | `ARCHITECTURE_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:649` |
 | `AUDIT_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:598`<br>`scripts/tests/test_pr_comment.py:75`<br>`scripts/tests/test_pr_comment.py:78` |
 | `CI` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/validate_markdown.py:1000`<br>`scripts/validate_markdown.py:1020` |
-| `CLAMAV_HOST` | `str` | `127.0.0.1` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:218`<br>`packages/config/settings.py:1` |
+| `CLAMAV_HOST` | `str` | `127.0.0.1` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:218` |
 | `CONFLICT_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:642`<br>`scripts/run_gating_pipeline.py:330`<br>`scripts/self_heal.py:112` |
 | `CONTRACTS_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:633` |
 | `DEID_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:643`<br>`scripts/run_gating_pipeline.py:339` |
@@ -289,33 +282,34 @@ It provides a complete reference for all operational environment variables used 
 | `GENERATE_RTM_DRAFT` | `str` | *(None)* | Yes | Automatically enable draft mode if the environment variable is set | `scripts/generate_rtm.py:1289`<br>`scripts/generate_rtm.py:1290` |
 | `GH_TOKEN` | `str` | *(None)* | Yes | Check for GITHUB_TOKEN or GH_TOKEN presence | `scripts/self_heal.py:432`<br>`scripts/sync_ruleset.py:105` |
 | `GITHUB_ACTIONS` | `str` | *(None)* | Yes | 2. If in GitHub Actions, use origin/main diff as the primary source of truth | `packages/database/tests/test_database_managers.py:87`<br>`scripts/sync_ruleset.py:132`<br>`scripts/validate_adrs.py:239`<br>*(+2 more)* |
-| `GITHUB_ACTOR` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:563`<br>`packages/config/settings.py:1` |
+| `GITHUB_ACTOR` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:563` |
 | `GITHUB_BASE_REF` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/validate_adrs.py:137` |
 | `GITHUB_HEAD_REF` | `str` | *(None)* | Yes | In GitHub Actions, ignore the source PR branch/HEAD ref to prevent comparing against merge commit | `scripts/validate_adrs.py:175` |
 | `GITHUB_REPOSITORY` | `str` | `fderuiter/cadence-clinical` | No | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:589`<br>`scripts/remove_jules_labels.py:120`<br>`scripts/run_gating_pipeline.py:47`<br>*(+3 more)* |
 | `GITHUB_TOKEN` | `str` | *(None)* | Yes | Check for GITHUB_TOKEN or GH_TOKEN presence | `scripts/sync_ruleset.py:105` |
-| `GOOGLE_DRIVE_FOLDER_ID` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:404`<br>`packages/config/settings.py:1` |
-| `GOOGLE_DRIVE_SERVICE_ACCOUNT_PATH` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:401`<br>`packages/config/settings.py:1` |
-| `GXP_SIGNER_ID` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:562`<br>`packages/config/settings.py:1` |
+| `GOOGLE_DRIVE_FOLDER_ID` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:404` |
+| `GOOGLE_DRIVE_SERVICE_ACCOUNT_PATH` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:401` |
+| `GXP_SIGNER_ID` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:562` |
 | `GXP_SYNC_RUNNING` | `str` | *(None)* | Yes | Mark that the GxP sync process is running, so spawned scripts know they aren't run directly. Triggered CI/CD compliance validation run. | `scripts/generate_rtm.py:1239`<br>`scripts/sync_gxp.py:77` |
 | `GXP_VALIDATION_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:646`<br>`scripts/run_gating_pipeline.py:331` |
 | `JOB_STATUS` | `str` | `success` | No | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:681`<br>`scripts/run_gating_pipeline.py:353`<br>`scripts/run_gating_pipeline.py:356` |
 | `LINTING_OUTCOME` | `str` | *(None)* | Yes | Verify LINTING_OUTCOME and TEST_OUTCOME are set to skipped | `scripts/post_pr_comment.py:634`<br>`scripts/run_gating_pipeline.py:336`<br>`scripts/self_heal.py:397`<br>*(+4 more)* |
 | `MARKDOWN_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:648` |
 | `MIGRATION_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:647`<br>`scripts/run_gating_pipeline.py:332` |
-| `MINIO_ROOT_PASSWORD` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:370`<br>`packages/config/settings.py:1` |
-| `MINIO_ROOT_USER` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:367`<br>`packages/config/settings.py:1` |
+| `MINIO_ROOT_PASSWORD` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:370` |
+| `MINIO_ROOT_USER` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:367` |
 | `PAT_FDERUITER` | `str` | *(None)* | Yes | 7. Secure Pushing with High Privilege | `scripts/self_heal.py:431` |
 | `PR_NUMBER` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:590`<br>`scripts/run_gating_pipeline.py:48`<br>`scripts/run_gating_pipeline.py:70`<br>*(+1 more)* |
-| `REDIS_CHANNEL` | `str` | `econsent_cache_invalidation` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:181`<br>`packages/config/settings.py:1` |
+| `REDIS_CHANNEL` | `str` | `econsent_cache_invalidation` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:181` |
 | `RTM_DRAFT` | `str` | *(None)* | Yes | Automatically enable draft mode if the environment variable is set | `scripts/generate_rtm.py:1289`<br>`scripts/generate_rtm.py:1290` |
-| `RUN_BACKGROUND_WORKERS` | `bool` | `true` | No | Flag to toggle execution background polling workers | `packages/config/settings.py:462`<br>`packages/config/settings.py:1` |
+| `RUN_BACKGROUND_WORKERS` | `bool` | `true` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:462` |
 | `STATIC_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:599`<br>`scripts/tests/test_pr_comment.py:76`<br>`scripts/tests/test_pr_comment.py:79` |
+| `TESTING` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `apps/econsent/workers/archival_worker.py:154`<br>`apps/etmf/workers/document_intelligence_worker.py:177`<br>`apps/etmf/workers/outbox_worker.py:87`<br>*(+5 more)* |
 | `TESTING_RULES_SYNC` | `str` | *(None)* | Yes | Check if we are in a headless/mock test environment | `scripts/sync_ruleset.py:108` |
 | `TEST_AST_VAR_7` | `str` | `inline_default` | No | Explicit inline annotation in scripts/tests/test_extract_env_vars.py:65 | `scripts/tests/test_extract_env_vars.py:96` |
 | `TEST_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:638`<br>`scripts/run_gating_pipeline.py:334`<br>`scripts/self_heal.py:398`<br>*(+4 more)* |
 | `TEST_SUITE_RUN` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/sync_ruleset.py:134` |
 | `TRACEABILITY_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:645`<br>`scripts/run_gating_pipeline.py:335` |
-| `USER` | `str | None` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:564`<br>`packages/config/settings.py:1` |
+| `USER` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:564` |
 | `VARIABLE_NAME` | `str` | *(None)* | Yes | Explicit inline annotation in scripts/extract_env_vars.py:219 | `scripts/extract_env_vars.py:305` |
 

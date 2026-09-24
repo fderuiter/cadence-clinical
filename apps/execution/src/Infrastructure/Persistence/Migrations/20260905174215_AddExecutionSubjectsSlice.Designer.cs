@@ -10,8 +10,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
-{
+namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations;
     [DbContext(typeof(ExecutionDbContext))]
     [Migration("20260905174215_AddExecutionSubjectsSlice")]
     partial class AddExecutionSubjectsSlice
@@ -294,4 +293,3 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

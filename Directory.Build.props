@@ -8,6 +8,7 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
 
     <!-- Product Metadata -->
     <Company>Cadence Clinical</Company>
