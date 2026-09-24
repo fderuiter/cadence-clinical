@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import time
 from typing import Any
 
@@ -20,6 +19,7 @@ from apps.ai_gateway.domain.models import (
     ToolCallFunction,
 )
 from apps.ai_gateway.domain.ports import AIEnginePort
+from packages.config import get_ai_gateway_settings
 
 logger = logging.getLogger(__name__)
 
@@ -34,18 +34,17 @@ class LiteLLMAdapter(AIEnginePort):
         tier_3_model: str | None = None,
         tier_1_embed_model: str | None = None,
     ) -> None:
+        settings = get_ai_gateway_settings()
         self.tier_1_model: str = (
-            tier_1_model or os.getenv("AI_TIER_1_MODEL") or "ollama/llama3"
+            tier_1_model or settings.ai_tier_1_model or "ollama/llama3"
         )
         self.tier_2_model: str = (
-            tier_2_model or os.getenv("AI_TIER_2_MODEL") or "gpt-4o-mini"
+            tier_2_model or settings.ai_tier_2_model or "gpt-4o-mini"
         )
-        self.tier_3_model: str = (
-            tier_3_model or os.getenv("AI_TIER_3_MODEL") or "gpt-4o"
-        )
+        self.tier_3_model: str = tier_3_model or settings.ai_tier_3_model or "gpt-4o"
         self.tier_1_embed_model: str = (
             tier_1_embed_model
-            or os.getenv("AI_TIER_1_EMBED_MODEL")
+            or settings.ai_tier_1_embed_model
             or "text-embedding-3-small"
         )
 

@@ -256,8 +256,11 @@ def setup_gdrive(
     """
     print_header("Google Drive Credential Setup & Validation", "Storage & Compliance")
 
-    key_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    target_folder = folder_id or os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+    from packages.config import get_storage_settings
+
+    storage_settings = get_storage_settings()
+    key_path = credentials_path or storage_settings.google_application_credentials
+    target_folder = folder_id or storage_settings.google_drive_folder_id
 
     if not key_path:
         print_error("Missing service account credentials key path.")
@@ -536,7 +539,9 @@ def run_recordings(
             )
         else:
             print_info("Uploading recording envelope to Google Drive...")
-            parent_folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+            from packages.config import get_storage_settings
+
+            parent_folder_id = get_storage_settings().google_drive_folder_id
             upload_summary = client.upload_directory(
                 local_dir=run_dir,
                 parent_folder_id=parent_folder_id,
