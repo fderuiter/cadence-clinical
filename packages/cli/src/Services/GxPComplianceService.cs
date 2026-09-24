@@ -1,6 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+
+using Cadence.Compliance;
 
 using Spectre.Console;
 
@@ -36,22 +39,20 @@ public static class GxPComplianceService
             }
         }
 
-        // 2. Generate RTM report via python generator or native processor
+        // 2. Generate RTM report via native C# RtmGeneratorService
         AnsiConsole.MarkupLine("\n  2. Regenerating RTM and IQ/OQ/PQ Compliance Documents...");
-        var genPsi = new ProcessStartInfo("python3", "scripts/generate_rtm.py" + (dryRun ? " --validate" : ""))
-        {
-            UseShellExecute = false
-        };
+        int genExit = RtmGeneratorService.GenerateRtm(
+            outputDir: "docs/SDLC",
+            reportPath: "report_dotnet.trx",
+            draft: false,
+            validateOnly: dryRun,
+            dynamicTimestamp: false
+        );
 
-        using var genProc = Process.Start(genPsi);
-        if (genProc != null)
+        if (genExit != 0)
         {
-            genProc.WaitForExit();
-            if (genProc.ExitCode != 0)
-            {
-                AnsiConsole.MarkupLine("[red]RTM document generation failed![/]");
-                return genProc.ExitCode;
-            }
+            AnsiConsole.MarkupLine("[red]RTM document generation failed![/]");
+            return genExit;
         }
 
         if (commit && !dryRun)
