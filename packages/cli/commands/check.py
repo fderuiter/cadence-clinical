@@ -111,6 +111,10 @@ def run_check(
             "architecture-drift",
             [sys.executable, "scripts/validate_architecture_drift.py"],
         ),
+        (
+            "openapi-drift",
+            [sys.executable, "scripts/validate_openapi_drift.py"],
+        ),
         ("contract-verification", [sys.executable, "scripts/verify_contracts.py"]),
         ("env-vars", [sys.executable, "scripts/extract_env_vars.py", "--check"]),
     ]
