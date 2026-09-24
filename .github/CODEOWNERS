@@ -25,6 +25,7 @@
 
 /packages/cli/             @clinical-platform/integration-and-routing
 /packages/compliance/    @clinical-platform/compliance-and-safety
+/packages/config/        @clinical-platform/integration-and-routing
 /packages/contracts/     @clinical-platform/integration-and-routing
 /packages/core-models/   @clinical-platform/integration-and-routing
 /packages/database/      @clinical-platform/clinical-operations

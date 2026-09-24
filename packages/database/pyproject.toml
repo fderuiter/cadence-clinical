@@ -10,6 +10,7 @@ version = "0.1.0"
 description = "Database utilities package"
 requires-python = ">=3.14"
 dependencies = [
+    "packages-config",
     "alembic>=1.13.0",
     "asyncpg>=0.29.0",
     "fastapi>=0.139.2,<0.140.0",
