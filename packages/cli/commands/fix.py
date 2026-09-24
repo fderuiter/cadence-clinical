@@ -70,6 +70,10 @@ def run_fix(
             [sys.executable, "scripts/clean_secrets_baseline.py"],
         ),
         ("ADR Index Validation", [sys.executable, "scripts/validate_adrs.py"]),
+        (
+            "CLI Documentation Generation",
+            [sys.executable, "scripts/generate_cli_docs.py"],
+        ),
     ]
 
     if all_remediations:

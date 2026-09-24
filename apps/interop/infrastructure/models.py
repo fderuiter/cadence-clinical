@@ -2,6 +2,8 @@
 # This file defines the eCOA content and scheduling data models used to author questionnaires/diaries and assign them to subjects.
 # Adheres to FDA 21 CFR Part 11 auditing requirements (created_at, created_by, reason_for_change, version_index).
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import Any

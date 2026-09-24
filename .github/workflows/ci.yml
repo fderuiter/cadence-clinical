@@ -78,6 +78,11 @@ jobs:
         if: always()
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
 
+      - name: Run C# Architecture Sentinel Tests
+        id: run_csharp_sentinels
+        if: always()
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj
+
       - name: Run Hexagonal Contract Verification
         id: run_contracts
         if: always()

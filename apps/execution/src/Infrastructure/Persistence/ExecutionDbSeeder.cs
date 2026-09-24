@@ -26,15 +26,15 @@ public static class ExecutionDbSeeder
             var initialCaches = new[]
             {
                 SiteComplianceCache.Create(
-                    StudyCode.From("CADENCE-101"),
-                    SiteCode.From("SITE-101"),
+                    new StudyCode("CADENCE-101"),
+                    new SiteCode("SITE-101"),
                     "SITE_ACTIVATION",
                     isComplete: true,
                     missingDocuments: Array.Empty<string>()
                 ),
                 SiteComplianceCache.Create(
-                    StudyCode.From("CADENCE-101"),
-                    SiteCode.From("SITE-102"),
+                    new StudyCode("CADENCE-101"),
+                    new SiteCode("SITE-102"),
                     "CONDUCT",
                     isComplete: true,
                     missingDocuments: Array.Empty<string>()
@@ -48,9 +48,9 @@ public static class ExecutionDbSeeder
         if (!await dbContext.ClinicalSubjects.AnyAsync(ct).ConfigureAwait(false))
         {
             var initialSubject = ClinicalSubject.Create(
-                subjectCode: SubjectCode.From("SUBJ-101-001"),
-                studyCode: StudyCode.From("CADENCE-101"),
-                siteCode: SiteCode.From("SITE-101"),
+                subjectCode: new SubjectCode("SUBJ-101-001"),
+                studyCode: new StudyCode("CADENCE-101"),
+                siteCode: new SiteCode("SITE-101"),
                 enrollmentIndex: 0,
                 encryptedDemographics: null,
                 stratFactors: null

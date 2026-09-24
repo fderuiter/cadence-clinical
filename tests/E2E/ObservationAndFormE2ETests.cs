@@ -26,7 +26,7 @@ public class ObservationAndFormE2ETests : IClassFixture<ExecutionE2EFactory>
     public async Task GetFormSubmissionDetail_WhenFormNotFound_Returns404NotFound()
     {
         // Act
-        var response = await _client.GetAsync("/api/v1/execution/forms/non-existent-form-id");
+        var response = await _client.GetAsync("/api/v1/execution/forms/non-existent-form-id", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

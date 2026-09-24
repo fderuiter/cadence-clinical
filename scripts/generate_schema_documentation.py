@@ -1342,9 +1342,14 @@ def extract_all_service_schemas() -> dict[str, Any]:
         from apps.execution.database.models import Base as ExecutionBase
     except ImportError:
         ExecutionBase = None  # noqa: N806
+    import apps.knowledge.infrastructure.training_models  # noqa: F401
+    from apps.fileshare.infrastructure.models import Base as FileshareBase
+    from apps.imaging.infrastructure.models import Base as ImagingBase
     from apps.interop.infrastructure.models import Base as InteropBase
+    from apps.knowledge.infrastructure.models import Base as KnowledgeBase
     from apps.notifications.infrastructure.models import Base as NotificationsBase
     from apps.org.infrastructure.models import Base as OrgBase
+    from apps.payments.infrastructure.models import Base as PaymentsBase
     from apps.quality.infrastructure.models import Base as QualityBase
     from apps.safety.infrastructure.models import Base as SafetyBase
     from apps.tickets.infrastructure.models import Base as TicketsBase
@@ -1363,6 +1368,10 @@ def extract_all_service_schemas() -> dict[str, Any]:
             ("tickets", "Tickets / Support", TicketsBase, "#64748b"),
             ("ctms", "CTMS", CtmsBase, "#0284c7"),
             ("quality", "Quality / EQMS", QualityBase, "#84cc16"),
+            ("fileshare", "Fileshare / Storage", FileshareBase, "#6366f1"),
+            ("imaging", "Imaging / DICOM", ImagingBase, "#14b8a6"),
+            ("payments", "Payments / Grants", PaymentsBase, "#84cc16"),
+            ("knowledge", "Knowledge / Training", KnowledgeBase, "#a855f7"),
         ]
         if base_cls is not None
     ]

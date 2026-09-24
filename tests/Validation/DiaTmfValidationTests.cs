@@ -1,14 +1,17 @@
 using System;
 using System.IO;
 using System.Linq;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.E2ETests.Validation;
 
 /// <summary>
-/// DIA TMF Reference Model Qualification & Catalog Integrity Validation Suite.
+/// DIA TMF Reference Model Qualification &amp; Catalog Integrity Validation Suite.
 /// Ported from legacy dia_tmf_validation_suite.py.
 /// </summary>
 public class DiaTmfValidationTests
@@ -37,7 +40,7 @@ public class DiaTmfValidationTests
     {
         var repoRoot = GetRepoRoot();
         var etmfModelFile = Path.Combine(repoRoot, "apps", "etmf", "src", "Domain", "Models", "TmfDocument.cs");
-        
+
         // If file doesn't exist at specific C# path, fallback check repository structure or domain models
         bool exists = File.Exists(etmfModelFile) || Directory.Exists(Path.Combine(repoRoot, "apps", "etmf"));
         exists.Should().BeTrue("eTMF domain or application structure must exist");

@@ -141,7 +141,7 @@ public class PortedPackagesUnitTests
         var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "openapi_test_" + System.Guid.NewGuid().ToString("N"));
         try
         {
-            await Cadence.ToolingCore.OpenApi.OpenApiSpecExporter.ExportOpenApiSpecsAsync(tempDir);
+            await Cadence.ToolingCore.OpenApi.OpenApiSpecExporter.ExportOpenApiSpecsAsync(tempDir, TestContext.Current.CancellationToken);
 
             System.IO.Directory.Exists(tempDir).Should().BeTrue();
 
@@ -152,7 +152,7 @@ public class PortedPackagesUnitTests
             files.Should().Contain(f => f.EndsWith("cdisc_openapi.json"));
             files.Should().Contain(f => f.EndsWith("cadence_unified_openapi.json"));
 
-            var unifiedJson = await System.IO.File.ReadAllTextAsync(System.IO.Path.Combine(tempDir, "cadence_unified_openapi.json"));
+            var unifiedJson = await System.IO.File.ReadAllTextAsync(System.IO.Path.Combine(tempDir, "cadence_unified_openapi.json"), TestContext.Current.CancellationToken);
             unifiedJson.Should().Contain("\"openapi\": \"3.0.0\"");
             unifiedJson.Should().Contain("Cadence Clinical Unified Gateway API");
         }

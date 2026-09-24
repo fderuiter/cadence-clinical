@@ -204,6 +204,7 @@ ALLOWED_ROOT_FILES = {
     "Cadence.sln",
     "NuGet.Config",
     "global.json",
+    "NuGet.Config",
     ".editorconfig",
 }
 

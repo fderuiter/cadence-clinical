@@ -1,3 +1,7 @@
+extern alias designer;
+extern alias execution;
+extern alias gateway;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,13 +25,10 @@ public static class Program
         Console.WriteLine("========================================================================");
 
         string? outputDir = null;
-        for (int i = 0; i < args.Length; i++)
+        int outputFlagIndex = Array.FindIndex(args, a => a == "--output-dir" || a == "-o");
+        if (outputFlagIndex >= 0 && outputFlagIndex + 1 < args.Length)
         {
-            if ((args[i] == "--output-dir" || args[i] == "-o") && i + 1 < args.Length)
-            {
-                outputDir = args[i + 1];
-                i++;
-            }
+            outputDir = args[outputFlagIndex + 1];
         }
 
         if (string.IsNullOrWhiteSpace(outputDir))
@@ -50,9 +51,9 @@ public static class Program
 
         var services = new List<DotnetServiceRegistration>
         {
-            new("execution", "Execution_", typeof(Cadence.Apps.Execution.Program)),
-            new("designer", "Designer_", typeof(Cadence.Apps.Designer.Program)),
-            new("gateway", "Gateway_", typeof(Cadence.Apps.Gateway.Program))
+            new("execution", "Execution_", typeof(execution::Cadence.Apps.Execution.Program)),
+            new("designer", "Designer_", typeof(designer::Cadence.Apps.Designer.Program)),
+            new("gateway", "Gateway_", typeof(gateway::Cadence.Apps.Gateway.Program))
         };
 
         var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
@@ -73,20 +74,20 @@ public static class Program
                 }
                 else
                 {
-                    Console.Error.WriteLine($"[ERROR] Failed to compile OpenAPI spec for '{svc.Name}'.");
+                    await Console.Error.WriteLineAsync($"[ERROR] Failed to compile OpenAPI spec for '{svc.Name}'.");
                     success = false;
                 }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] Exception compiling '{svc.Name}': {ex.Message}");
+                await Console.Error.WriteLineAsync($"[ERROR] Exception compiling '{svc.Name}': {ex.Message}");
                 success = false;
             }
         }
 
         if (!success)
         {
-            Console.Error.WriteLine("\n[FAILURE] One or more .NET microservice OpenAPI exports failed.");
+            await Console.Error.WriteLineAsync("\n[FAILURE] One or more .NET microservice OpenAPI exports failed.");
             return 1;
         }
 
@@ -101,7 +102,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR] Failed to generate aggregated cdisc_openapi.json: {ex.Message}");
+            await Console.Error.WriteLineAsync($"[ERROR] Failed to generate aggregated cdisc_openapi.json: {ex.Message}");
             return 1;
         }
 
@@ -127,7 +128,7 @@ public static class Program
         var response = await client.GetAsync("/openapi/v1.json");
         if (!response.IsSuccessStatusCode)
         {
-            Console.Error.WriteLine($"HTTP GET /openapi/v1.json returned status {response.StatusCode}");
+            await Console.Error.WriteLineAsync($"HTTP GET /openapi/v1.json returned status {response.StatusCode}");
             return null;
         }
 
