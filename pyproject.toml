@@ -219,3 +219,6 @@ dev = [
 packages = [
     "apps"
 ]
+
+[project.scripts]
+cadence = "packages.cli.main:main"

@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import and_, or_, select
 
 from apps.tickets.infrastructure.models import TERMINAL_STATES, Ticket
+from packages.config import get_tickets_settings
 
 logger = logging.getLogger("tickets_escalation")
 
@@ -86,9 +87,8 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
     """
     logger.info("SLA Escalation worker cycle started.")
     now = datetime.now()
-    cooldown_seconds = float(
-        os.getenv("TICKETS_ESCALATION_INTERVAL_SECONDS", "86400.0")  # deid-ignore
-    )
+    settings = get_tickets_settings()
+    cooldown_seconds = float(settings.tickets_escalation_interval_seconds)
     cooldown_cutoff = now - timedelta(seconds=cooldown_seconds)
 
     terminal_state_strs = [

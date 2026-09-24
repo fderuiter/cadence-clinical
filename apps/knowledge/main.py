@@ -8,8 +8,6 @@ is delegated to apps/tickets/ via the internal gateway signing pattern.
 Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
 """
 
-import os
-
 from fastapi import FastAPI
 
 import apps.knowledge.infrastructure.training_models  # noqa: F401
@@ -24,14 +22,16 @@ from apps.knowledge.presentation.routers.protocols import (
 from apps.knowledge.presentation.routers.training import (
     router as training_router,
 )
+from packages.config import get_knowledge_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-DATABASE_URL = os.getenv("KNOWLEDGE_DATABASE_URL", "sqlite+aiosqlite:///./knowledge.db")
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+settings = get_knowledge_settings()
+DATABASE_URL = settings.knowledge_database_url
+BRAND_NAME = settings.brand_name
 
 validate_branding("knowledge")
 

@@ -93,6 +93,7 @@ from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
     LockedFactorMutationError,
 )
+from packages.config import get_execution_settings
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import (
     ROLE_CRA,
@@ -107,15 +108,16 @@ from packages.security.signing import (
     generate_canonical_signature as generate_canonical_signature,
 )
 
+settings = get_execution_settings()
 ProtocolVersionRef = ProtocolVersionRefDTO
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+DATABASE_URL = settings.execution_database_url
 
 assert_secure_secrets(
     "execution",
     {
-        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
-        "BIOSTAT_EXPORT_SALT": os.getenv("BIOSTAT_EXPORT_SALT"),
+        "GATEWAY_SECRET": settings.gateway_secret,
+        "BIOSTAT_EXPORT_SALT": settings.biostat_export_salt,
     },
 )
 
@@ -202,7 +204,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     cleans up connections on shutdown.
     """
     is_testing = "PYTEST_CURRENT_TEST" in os.environ or "TESTING" in os.environ
-    run_workers = os.getenv("RUN_BACKGROUND_WORKERS", "true").lower() == "true"
+    run_workers = settings.run_background_workers
 
     if not is_testing:
         db_manager.init_db(DATABASE_URL)
@@ -274,7 +276,8 @@ class ProblemDetails(BaseModel):
     invalid_params: list[InvalidParam] | None = None
 
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
+BRAND_DOMAIN = settings.brand_domain
 
 validate_branding("execution")
 app = FastAPI(
@@ -327,7 +330,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             InvalidParam(field=field_path, reason=msg, value=val_str)
         )
         messages.append(f"{field_path}: {msg}")
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     detail_msg = (
         f"The request body fails to satisfy schema rules ({', '.join(messages)}). Refer to 'invalid_params' for details."
         if messages
@@ -366,7 +369,7 @@ async def authorization_denied_handler(
 async def subject_eligibility_error_handler(
     request: Request, exc: SubjectEligibilityError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/eligibility-violation",
         title="Subject Eligibility Violation",
@@ -382,7 +385,7 @@ async def subject_eligibility_error_handler(
 async def coding_assignment_not_found_handler(
     request: Request, exc: CodingAssignmentNotFoundError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/coding-assignment-not-found",
         title="Coding Assignment Not Found",
@@ -398,7 +401,7 @@ async def coding_assignment_not_found_handler(
 async def invalid_coding_action_handler(
     request: Request, exc: InvalidCodingActionError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/invalid-coding-action",
         title="Invalid Coding Action",
@@ -414,7 +417,7 @@ async def invalid_coding_action_handler(
 async def dictionary_not_found_handler(
     request: Request, exc: DictionaryNotFoundError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/dictionary-not-found",
         title="Dictionary Not Found",
@@ -430,7 +433,7 @@ async def dictionary_not_found_handler(
 async def change_request_not_found_handler(
     request: Request, exc: ChangeRequestNotFoundError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/change-request-not-found",
         title="Change Request Not Found",
@@ -446,7 +449,7 @@ async def change_request_not_found_handler(
 async def invalid_change_request_action_handler(
     request: Request, exc: InvalidChangeRequestActionError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/invalid-change-request-action",
         title="Invalid Change Request Action",
@@ -482,7 +485,7 @@ async def invalid_state_transition_handler(
 async def permission_error_handler(
     request: Request, exc: PermissionError
 ) -> JSONResponse:
-    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    brand_domain = BRAND_DOMAIN
     problem = ProblemDetails(
         type=f"https://api.{brand_domain}/errors/resource-locked",
         title="Resource Locked",

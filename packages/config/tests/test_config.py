@@ -99,3 +99,72 @@ def test_cache_clear_resets_cached_settings(monkeypatch):
     s3 = get_notifications_settings()
     assert s3 is not s1
     assert s3.smtp_host == "192.168.1.50"
+
+
+def test_all_settings_classes_ignore_extra_env_vars(monkeypatch):
+    """Verify extra="ignore" allows unexpected environment variables without throwing errors."""
+    monkeypatch.setenv("UNEXPECTED_RUNTIME_ENV_VAR", "some_value_123")
+    from packages.config import ALL_SETTINGS_CLASSES
+
+    for cls in ALL_SETTINGS_CLASSES:
+        inst = cls()
+        assert not hasattr(inst, "UNEXPECTED_RUNTIME_ENV_VAR")
+
+
+def test_all_settings_getters_and_classes():
+    """Verify all 20+ microservice settings classes instantiate properly with default settings."""
+    from packages.config import (
+        ALL_SETTINGS_CLASSES,
+        get_ai_gateway_settings,
+        get_common_settings,
+        get_compliance_settings,
+        get_ctms_settings,
+        get_deid_settings,
+        get_designer_settings,
+        get_econsent_settings,
+        get_eisf_settings,
+        get_etmf_settings,
+        get_execution_settings,
+        get_fileshare_settings,
+        get_gateway_settings,
+        get_imaging_settings,
+        get_interop_settings,
+        get_knowledge_settings,
+        get_notifications_settings,
+        get_org_settings,
+        get_payments_settings,
+        get_quality_settings,
+        get_safety_settings,
+        get_security_settings,
+        get_storage_settings,
+        get_telemetry_settings,
+        get_tickets_settings,
+    )
+
+    assert len(ALL_SETTINGS_CLASSES) >= 20
+
+    assert get_common_settings().app_env == "development"
+    assert get_knowledge_settings().knowledge_service_url == "http://127.0.0.1:8006"
+    assert get_execution_settings().outbox_attempt_cap == 5
+    assert get_designer_settings().designer_database_url is not None
+    assert get_gateway_settings().gateway_internal_secret is not None
+    assert get_security_settings().jwt_algorithm == "RS256"
+    assert get_deid_settings().deid_salt is not None
+    assert get_telemetry_settings().log_level == "INFO"
+    assert get_storage_settings().storage_sse_algorithm == "AES256"
+    assert get_compliance_settings() is not None
+    assert get_ctms_settings() is not None
+    assert get_econsent_settings() is not None
+    assert get_eisf_settings() is not None
+    assert get_etmf_settings() is not None
+    assert get_fileshare_settings() is not None
+    assert get_imaging_settings() is not None
+    assert get_interop_settings() is not None
+    assert get_notifications_settings() is not None
+    assert get_org_settings() is not None
+    assert get_payments_settings() is not None
+    assert get_quality_settings() is not None
+    assert get_safety_settings() is not None
+    assert get_tickets_settings() is not None
+    assert get_ai_gateway_settings().ai_tier_1_model == "ollama/llama3"
+

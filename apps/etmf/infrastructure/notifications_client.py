@@ -5,9 +5,9 @@ Delegates to the unified NotificationDispatcher in packages/security/notificatio
 """
 
 import logging
-import os
 from typing import Any
 
+from packages.config import get_etmf_settings
 from packages.security import GatewayBaseClient
 
 logger = logging.getLogger("etmf-notifications-client")
@@ -26,12 +26,9 @@ async def publish_expiration_notification(
         Tuple of (success_bool, notification_id_or_none, error_message_or_none).
     """
     try:
-        notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
-        timeout_env = os.getenv("ETMF_NOTIFICATIONS_CLIENT_TIMEOUT", "2.0")
-        try:
-            timeout = float(timeout_env)
-        except ValueError:
-            timeout = 2.0
+        settings = get_etmf_settings()
+        notifications_url = settings.notifications_url
+        timeout = float(settings.etmf_notifications_client_timeout)
 
         client = GatewayBaseClient(base_url=notifications_url, timeout=timeout)
         response = await client.request(

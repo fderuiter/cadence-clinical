@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 import httpx
 from fastapi import HTTPException
 
+from packages.config import get_etmf_settings
 from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("etmf-lock-client")
@@ -57,10 +58,9 @@ async def verify_trial_lock_status(is_testing: bool | None = None) -> bool:
         # Avoid direct sibling apps.execution module access via sys.modules hacks.
         return False
 
-    execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    settings = get_etmf_settings()
+    execution_url = settings.execution_url
+    gateway_secret_env = settings.gateway_secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -125,10 +125,9 @@ async def trigger_global_trial_lock(
         # Avoid direct sibling apps.execution module access via sys.modules hacks.
         return
 
-    execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    settings = get_etmf_settings()
+    execution_url = settings.execution_url
+    gateway_secret_env = settings.gateway_secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
