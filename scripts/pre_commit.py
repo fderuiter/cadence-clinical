@@ -16,11 +16,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from scripts.runtime_guard import enforce_python_runtime
 
 enforce_python_runtime()
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def get_staged_files(repo_root: Path | None = None) -> list[str]:
@@ -168,6 +170,28 @@ def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
     )
     if res_imp.returncode != 0:
         errors.append(f"Import boundary violation:\n{res_imp.stdout}\n{res_imp.stderr}")
+
+    # Dependency analyzer check (forbidden asymmetric crypto packages)
+    res_deps = subprocess.run(
+        ["uv", "run", "--python", "3.14", "python", "scripts/validate_dependencies.py"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if res_deps.returncode != 0:
+        errors.append(f"Forbidden package dependency violation:\n{res_deps.stdout}\n{res_deps.stderr}")
+
+    # OpenAPI schema drift and type check
+    res_openapi = subprocess.run(
+        ["uv", "run", "--python", "3.14", "python", "scripts/pre_commit_openapi.py"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if res_openapi.returncode != 0:
+        errors.append(f"OpenAPI schema drift or typecheck violation:\n{res_openapi.stdout}\n{res_openapi.stderr}")
 
     return {
         "passed": len(errors) == 0,
