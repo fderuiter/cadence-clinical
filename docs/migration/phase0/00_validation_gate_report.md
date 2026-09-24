@@ -154,7 +154,7 @@ A DAG built only from `import` statements is the wrong instrument for this codeb
 | Pair | Forward edge | Reverse edge | Tier relationship | Risk |
 |---|---|---|---|---|
 | Execution ↔ CTMS | `apps/execution/greenlight_gating.py:77` (`CTMS_SERVICE_URL`) | `apps/ctms/application/doa_service.py:15` etc. (`EXECUTION_URL`) | Different tiers (2 vs 3) | Lower — later tier can build against a frozen contract |
-| Execution ↔ Etmf | `apps/execution/workers/outbox_worker.py:132` (`ETMF_URL`) | `apps/etmf/infrastructure/lock_client.py:60` (`EXECUTION_URL`) | Different tiers (2 vs 3) | Lower — same reasoning |
+| Execution ↔ Etmf | `apps/execution/workers/outbox_worker.py:132` (`ETMF_URL`) | `apps/etmf/adapters/lock_client.py:60` (`EXECUTION_URL`) | Different tiers (2 vs 3) | Lower — same reasoning |
 | **Execution ↔ Designer** | `apps/execution/designer_client.py:31` (`os.getenv("DESIGNER_URL")`), consumed by `apps/execution/eligibility_service.py` | `apps/designer/presentation/routers/designer_routes.py:2618` (`os.getenv("EXECUTION_SERVICE_URL")`) | **Both Tier 1/2 — same tier** | **Genuine cycle** |
 
 Confirmed directly in this session:

@@ -12,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import and_, or_, select
 
-from apps.tickets.infrastructure.models import TERMINAL_STATES, Ticket
+from apps.tickets.adapters.models import TERMINAL_STATES, Ticket
 from packages.config import get_tickets_settings
 
 logger = logging.getLogger("tickets_escalation")
@@ -199,7 +199,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
 
                     await db.flush()
 
-                    from apps.tickets.infrastructure.repositories import (
+                    from apps.tickets.adapters.repositories import (
                         TICKET_ESCALATE,
                         write_ticket_audit_log,
                     )
@@ -271,7 +271,7 @@ async def start_background_ticket_escalation() -> None:
 
     session_maker = db_manager.get_session_maker()
 
-    poll_interval = float(os.getenv("TICKETS_ESCALATION_POLL_INTERVAL_SECONDS", "60.0"))
+    poll_interval = float(get_tickets_settings().tickets_escalation_poll_interval_seconds)
     _should_run = True
 
     async def escalation_loop():

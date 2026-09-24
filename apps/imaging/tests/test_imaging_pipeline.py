@@ -12,7 +12,7 @@ import pytest
 from pydicom.dataset import FileDataset, FileMetaDataset
 from sqlalchemy import select
 
-from apps.imaging.infrastructure.models import (
+from apps.imaging.adapters.models import (
     DeidentificationCertificateModel,
     ImagingInstanceEnvelopeModel,
     ImagingSeriesEnvelopeModel,

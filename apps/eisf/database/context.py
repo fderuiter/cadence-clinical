@@ -1,3 +1,3 @@
-from apps.eisf.infrastructure.database import current_session, get_session
+from apps.eisf.adapters.database import current_session, get_session
 
 __all__ = ["current_session", "get_session"]

@@ -11,15 +11,15 @@ from datetime import UTC, date, datetime
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
+from apps.eisf.adapters.adapter import classify_eisf_document_local
+from apps.eisf.adapters.database import transactional
+from apps.eisf.adapters.models import ISFAuditLog, ISFDocument
 from apps.eisf.domain.eisf_transport_models import (
     EISFDocumentDetail,
     EISFDocumentUploadRequest,
     EISFFolderNode,
 )
 from apps.eisf.domain.ports import EISFRepositoryPort
-from apps.eisf.infrastructure.adapter import classify_eisf_document_local
-from apps.eisf.infrastructure.database import transactional
-from apps.eisf.infrastructure.models import ISFAuditLog, ISFDocument
 from apps.eisf.presentation.dtos import (
     BinderCompletenessResponse,
     BinderSectionStatus,
@@ -54,7 +54,7 @@ def get_eisf_repository() -> EISFRepositoryPort:
 
     if hasattr(main_module, "_repo_instance"):
         return main_module._repo_instance
-    from apps.eisf.infrastructure.repositories import SQLEISFRepository
+    from apps.eisf.adapters.repositories import SQLEISFRepository
 
     return SQLEISFRepository()
 
@@ -566,7 +566,7 @@ async def create_document(
 
     correlation_key = payload.correlation_key
     if not correlation_key:
-        from apps.eisf.infrastructure.adapter import derive_correlation_key
+        from apps.eisf.adapters.adapter import derive_correlation_key
 
         artifact_type = (payload.metadata_json or {}).get(
             "artifact_type"
@@ -680,7 +680,7 @@ async def ingest_document(
 
     correlation_key = payload.correlation_key
     if not correlation_key:
-        from apps.eisf.infrastructure.adapter import derive_correlation_key
+        from apps.eisf.adapters.adapter import derive_correlation_key
 
         artifact_type = (
             (payload.metadata_json or {}).get("artifact_type")
@@ -1058,7 +1058,7 @@ async def propagate_to_etmf(
     import logging
 
     logging.getLogger("eisf_sync")
-    from apps.eisf.infrastructure.adapter import (
+    from apps.eisf.adapters.adapter import (
         derive_correlation_key,
         map_eisf_to_etmf,
     )
@@ -1172,7 +1172,7 @@ async def sync_documents(
     updated_count = 0
     ignored_count = 0
 
-    from apps.eisf.infrastructure.adapter import derive_correlation_key
+    from apps.eisf.adapters.adapter import derive_correlation_key
 
     for item in payload.submissions:
         await enforce_site_isolation(principal, item.site_id, repo)

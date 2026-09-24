@@ -20,6 +20,15 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.payments.adapters.models import (
+    BudgetContractModel,
+    ErpSyncLogModel,
+    InvoiceLineItemModel,
+    PayableModel,
+    RemittanceAdviceModel,
+    SelfBillingInvoiceModel,
+    SplitPayeeConfigModel,
+)
 from apps.payments.domain.exceptions import (
     ContractNotFoundError,
     InvoiceNotFoundError,
@@ -33,15 +42,6 @@ from apps.payments.domain.models import (
     InvoiceStatus,
     PayableStatus,
     RemittanceDispatchStatus,
-)
-from apps.payments.infrastructure.models import (
-    BudgetContractModel,
-    ErpSyncLogModel,
-    InvoiceLineItemModel,
-    PayableModel,
-    RemittanceAdviceModel,
-    SelfBillingInvoiceModel,
-    SplitPayeeConfigModel,
 )
 from apps.payments.presentation.dtos import ErpWebhookPayload
 from apps.payments.services.audit import record_payment_audit_log

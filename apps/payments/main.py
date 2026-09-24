@@ -9,7 +9,7 @@ Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
 from fastapi import FastAPI
 
 from apps.payments.adapters.database import db_manager, get_db_session
-from apps.payments.infrastructure.models import Base
+from apps.payments.adapters.models import Base
 from apps.payments.presentation.routers import payments_router
 from packages.config import get_payments_settings
 from packages.database import get_relational_db_lifespan

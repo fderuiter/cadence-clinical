@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from apps.notifications.infrastructure.database import db_manager
-from apps.notifications.infrastructure.models import Base
+from apps.notifications.adapters.database import db_manager
+from apps.notifications.adapters.models import Base
 from apps.notifications.presentation.dtos import (
     NotificationCreate,
     NotificationResponse,

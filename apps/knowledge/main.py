@@ -10,9 +10,9 @@ Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
 
 from fastapi import FastAPI
 
-import apps.knowledge.infrastructure.training_models  # noqa: F401
+import apps.knowledge.adapters.training_models  # noqa: F401
 from apps.knowledge.adapters.database import db_manager, get_db_session
-from apps.knowledge.infrastructure.models import Base
+from apps.knowledge.adapters.models import Base
 from apps.knowledge.presentation.routers.articles import (
     router as articles_router,
 )

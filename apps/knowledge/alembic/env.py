@@ -16,8 +16,8 @@ if str(ROOT_DIR) not in sys.path:
 
 # Import models
 try:
-    import apps.knowledge.infrastructure.training_models  # noqa: F401
-    from apps.knowledge.infrastructure.models import Base
+    import apps.knowledge.adapters.training_models  # noqa: F401
+    from apps.knowledge.adapters.models import Base
 
     target_metadata = Base.metadata
 except ImportError:

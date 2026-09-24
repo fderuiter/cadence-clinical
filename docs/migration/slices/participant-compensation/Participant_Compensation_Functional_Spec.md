@@ -10,7 +10,7 @@
 - `apps/payments/services/participant_compensation_service.py` (`ParticipantCompensationService` — business-rule engine)
 - `apps/payments/presentation/routers/participant.py` (FastAPI HTTP surface, response mapping, authorization gates)
 
-**Supporting files read for full contract fidelity (not primary transcription targets, but referenced below):** `apps/payments/domain/exceptions.py`, `apps/payments/domain/ports.py`, `apps/payments/infrastructure/models.py` (SQLAlchemy column/constraint definitions), `apps/payments/presentation/dtos.py` (request/response validators), `apps/payments/services/audit.py`, `apps/payments/main.py`, `packages/hexagonal/__init__.py` (RFC 7807 error envelope), `packages/database/datetime_helpers.py` (`UTCDateTime`), `packages/security/rbac.py` and `packages/security/middleware.py` (authorization boundary).
+**Supporting files read for full contract fidelity (not primary transcription targets, but referenced below):** `apps/payments/domain/exceptions.py`, `apps/payments/domain/ports.py`, `apps/payments/adapters/models.py` (SQLAlchemy column/constraint definitions), `apps/payments/presentation/dtos.py` (request/response validators), `apps/payments/services/audit.py`, `apps/payments/main.py`, `packages/hexagonal/__init__.py` (RFC 7807 error envelope), `packages/database/datetime_helpers.py` (`UTCDateTime`), `packages/security/rbac.py` and `packages/security/middleware.py` (authorization boundary).
 
 **Governing Regulatory Standards:** 21 CFR Part 11 (audit trail, immutability), IRS Form 1099/W-9 reporting ($600 annual threshold, 26 U.S.C. § 6041), 45 CFR 46 / IRB anti-coercion stipend rules, EU CTR 536/2014 Article 37 (plain-language trial result summaries).
 

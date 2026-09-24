@@ -117,7 +117,7 @@ System Requirements: `PRD-CSM-001`, `PRD-CSM-002`, `PRD-CSM-003`, `PRD-CSM-004`,
 ## 6. Implementation & Verification
 
 * **Core Engine**: `apps/quality/application/services/quality_surveillance_runner.py`
-* **HTTP Client Adapter**: `apps/quality/infrastructure/execution_client.py`
+* **HTTP Client Adapter**: `apps/quality/adapters/execution_client.py`
 * **Domain Models**: `apps/quality/domain/surveillance_models.py`
 * **Presentation Layer**: `apps/quality/presentation/routers/surveillance.py`
 * **DTO Contracts**: `apps/quality/presentation/dtos.py`

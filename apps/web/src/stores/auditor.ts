@@ -90,7 +90,7 @@ export const useAuditorStore = defineStore("auditor", {
           params.end_time = this.filters.dateRange.end;
         }
         const res = await auditorService.getAuditLogs(params);
-        this.auditEvents = res?.items || [];
+        this.auditEvents = (res?.items || []) as any;
       } catch (err: any) {
         this.error = err.message || "Failed to fetch audit logs";
         console.error("fetchAuditLogs error:", err);

@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.econsent.adapters.models import Base, ConsentAuditLog
+from apps.econsent.adapters.repositories import SQLConsentAuditRepository
 from apps.econsent.domain.entities import ConsentAuditLogEntity
-from apps.econsent.infrastructure.repositories import SQLConsentAuditRepository
 from packages.compliance.audit import verify_audit_chain
 
 

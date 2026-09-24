@@ -21,6 +21,11 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_models import LakehouseCanonicalRecord
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
+from apps.interop.adapters.models import Base
+from apps.interop.adapters.sensor_repository import SensorRepository
 from apps.interop.application.sensor_service import SensorService
 from apps.interop.domain.lakehouse_models import (
     DataStreamType,
@@ -47,11 +52,6 @@ from apps.interop.domain.sensor_processor import (
     transform_to_fhir_observations,
     transform_to_omh_packets,
 )
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_models import LakehouseCanonicalRecord
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
-from apps.interop.infrastructure.models import Base
-from apps.interop.infrastructure.sensor_repository import SensorRepository
 from apps.interop.main import app
 from packages.security.rbac_helpers import build_gateway_headers
 

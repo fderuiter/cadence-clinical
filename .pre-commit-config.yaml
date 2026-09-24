@@ -96,6 +96,14 @@ repos:
         files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
         pass_filenames: false
 
+      - id: path-requirement-sanitizer
+        name: Path Sanitizer and Requirement Prefix Normalizer
+        entry: uv run --python 3.14 python scripts/compliance_utility.py --sanitize
+        language: system
+        files: \.md$
+        exclude: ^docs/SDLC/runs/
+        pass_filenames: true
+
       - id: validate-markdown
         name: Validate Custom Markdown
         entry: uv run --python 3.14 python scripts/validate_markdown.py
@@ -145,6 +153,14 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: validate-api-clients
+        name: Validate OpenAPI Frontend Clients AST Contract
+        entry: uv run --python 3.14 python scripts/validate_api_clients.py
+        language: system
+        files: ^(apps/web/src/api/|docs/openapi/cdisc_openapi\.json$|scripts/validate_api_clients\.py$)
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: auto-stage-schema-doc
         name: Auto-Stage Schema Documentation
         entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py
@@ -162,7 +178,7 @@ repos:
         name: Backend Port Contract Static Verification
         entry: uv run --python 3.14 python scripts/verify_contracts.py
         language: system
-        files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/infrastructure/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
+        files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/adapters/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
         pass_filenames: false
 
       - id: query-style-linter

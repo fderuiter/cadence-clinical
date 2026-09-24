@@ -25,6 +25,7 @@ from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
+from apps.knowledge.adapters.models import KnowledgeArticle
 from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.domain.search import (
     calculate_lexical_score,
@@ -32,7 +33,6 @@ from apps.knowledge.domain.search import (
     generate_highlighted_snippet,
     strip_markdown,
 )
-from apps.knowledge.infrastructure.models import KnowledgeArticle
 from apps.knowledge.main import app
 from packages.testing.security import create_test_auth_headers
 

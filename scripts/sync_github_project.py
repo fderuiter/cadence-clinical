@@ -38,7 +38,7 @@ if sys.version_info < (3, 14):
         )
         sys.exit(1)
 
-from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
+from scripts.runtime_guard import enforce_python_runtime
 
 PROJECT_NUMBER = 17
 OWNER = "fderuiter"

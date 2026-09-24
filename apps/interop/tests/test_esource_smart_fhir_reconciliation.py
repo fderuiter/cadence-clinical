@@ -15,6 +15,14 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.esource_repository import (
+    EsourceReconciliationRepository,
+)
+from apps.interop.adapters.models import (
+    Base,
+    InteropAuditLog,
+)
 from apps.interop.application.esource_ingestion_service import (
     EsourceIngestionService,
 )
@@ -32,14 +40,6 @@ from apps.interop.domain.esource_models import (
     EhrSystemType,
     ReconciliationAction,
     ReconciliationStatus,
-)
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.esource_repository import (
-    EsourceReconciliationRepository,
-)
-from apps.interop.infrastructure.models import (
-    Base,
-    InteropAuditLog,
 )
 from apps.interop.main import app
 from packages.security.rbac_helpers import build_gateway_headers

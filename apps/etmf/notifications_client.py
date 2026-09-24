@@ -1,4 +1,4 @@
-from apps.etmf.infrastructure.notifications_client import (
+from apps.etmf.adapters.notifications_client import (
     publish_expiration_notification,
 )
 

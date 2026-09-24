@@ -67,7 +67,7 @@ Requirements: `PRD-TCK-001`, `PRD-TCK-002`, `PRD-TCK-003`, `PRD-SYS-051`.
 
 ## 4. Decision Outcome
 
-- **Chosen Option:** **Option A**. We implement `ClinicalIssueHub` as a pure, local-substitutable domain component under `apps/tickets/domain/services.py` backed by schema expansions in `apps/tickets/infrastructure/models.py`, API endpoints in `apps/tickets/presentation/routers/tickets.py`, and dual-phase escalation sweeps in `apps/tickets/escalation.py`.
+- **Chosen Option:** **Option A**. We implement `ClinicalIssueHub` as a pure, local-substitutable domain component under `apps/tickets/domain/services.py` backed by schema expansions in `apps/tickets/adapters/models.py`, API endpoints in `apps/tickets/presentation/routers/tickets.py`, and dual-phase escalation sweeps in `apps/tickets/escalation.py`.
 - **Justification:** Selected as primary architectural approach.
 
 ### Key Specifications:
@@ -95,7 +95,7 @@ Requirements: `PRD-TCK-001`, `PRD-TCK-002`, `PRD-TCK-003`, `PRD-SYS-051`.
 ## 6. Implementation & Verification
 
 * **Domain Engine:** `apps/tickets/domain/services.py`, `apps/tickets/domain/models.py`
-* **Data Models & Repositories:** `apps/tickets/infrastructure/models.py`, `apps/tickets/adapters/repositories.py`
+* **Data Models & Repositories:** `apps/tickets/adapters/models.py`, `apps/tickets/adapters/repositories.py`
 * **Presentation Layer:** `apps/tickets/presentation/routers/tickets.py`, `apps/tickets/presentation/dtos.py`
 * **Escalation Worker:** `apps/tickets/escalation.py`
 * **Verification Suites:** Unit and integration tests under `apps/tickets/tests/` with `@req:PRD-TCK-001`, `@req:PRD-TCK-002`, `@req:PRD-TCK-003` tags.

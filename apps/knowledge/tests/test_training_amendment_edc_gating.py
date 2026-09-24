@@ -12,13 +12,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.domain.training_models import (
-    AssignmentStatus,
-)
-from apps.knowledge.infrastructure.models import Base
-from apps.knowledge.infrastructure.training_models import (
+from apps.knowledge.adapters.models import Base
+from apps.knowledge.adapters.training_models import (
     TrainingAssignment,
     TrainingAuditLog,
+)
+from apps.knowledge.domain.training_models import (
+    AssignmentStatus,
 )
 from apps.knowledge.main import app
 from apps.knowledge.services.training_service import TrainingService

@@ -92,6 +92,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Program>, IAsyncLifetim
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseNpgsql(_postgresContainer.GetConnectionString());
+                    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
@@ -99,15 +100,10 @@ public class ExecutionE2EFactory : WebApplicationFactory<Program>, IAsyncLifetim
             }
             else
             {
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
-
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_inMemoryDbName);
-                    options.UseInternalServiceProvider(inMemoryServices);
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
@@ -122,6 +118,22 @@ public class ExecutionE2EFactory : WebApplicationFactory<Program>, IAsyncLifetim
         });
 
         base.ConfigureWebHost(builder);
+    }
+
+    protected override Microsoft.Extensions.Hosting.IHost CreateHost(Microsoft.Extensions.Hosting.IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+        if (_isDockerAvailable && _postgresContainer != null)
+        {
+            db.Database.Migrate();
+        }
+        else
+        {
+            db.Database.EnsureCreated();
+        }
+        return host;
     }
 
     private static bool CheckDockerSocketAvailable()

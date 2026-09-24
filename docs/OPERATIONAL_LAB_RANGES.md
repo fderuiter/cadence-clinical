@@ -1,6 +1,6 @@
 # Lab Reference Range Management - Operational & Technical Guide
 
-**Document ID:** CC-OPS-LAB-001
+**Document ID:** CC-OPS-PRD-LAB-001
 **Version:** 1.0.0
 **Status:** Approved
 **Classification:** Restricted (GxP / Confidential)

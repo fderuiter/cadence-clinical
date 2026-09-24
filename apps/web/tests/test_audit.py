@@ -13,8 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 
 from apps.quality.adapters.database import db_manager
-from apps.quality.adapters.models import Base
-from apps.quality.infrastructure.models import QualityAuditLog
+from apps.quality.adapters.models import Base, QualityAuditLog
 from apps.quality.main import app
 from apps.quality.presentation.dtos import AuditLogResponse
 from packages.security.rbac_helpers import build_gateway_headers

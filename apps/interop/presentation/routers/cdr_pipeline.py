@@ -19,6 +19,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.lakehouse_repository import LakehouseRepository
 from apps.interop.application.cdr_pipeline_service import CDRPipelineService
 from apps.interop.domain.cdr.models import (
     DatasetJSONDocument,
@@ -28,8 +30,6 @@ from apps.interop.domain.cdr.models import (
 )
 from apps.interop.domain.cdr.submission_engine import CdiscSubmissionEngine
 from apps.interop.domain.lakehouse_models import LakehouseAction
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
 from apps.interop.presentation.cdr_pipeline_dtos import (
     ADaMPipelineResponse,
     DomainCatalogResponse,

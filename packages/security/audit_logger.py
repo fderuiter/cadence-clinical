@@ -166,9 +166,9 @@ def resolve_current_session() -> Any | None:
     # Dynamically resolve context modules to satisfy package import boundary constraints
     targets = [
         ("apps." + "execution.database.context", "current_session"),
-        ("apps." + "eisf.infrastructure.database", "current_session"),
-        ("apps." + "etmf.infrastructure.database", "current_session"),
-        ("apps." + "quality.infrastructure.database", "current_session"),
+        ("apps." + "eisf.adapters.database", "current_session"),
+        ("apps." + "etmf.adapters.database", "current_session"),
+        ("apps." + "quality.adapters.database", "current_session"),
     ]
 
     for mod_name, var_name in targets:

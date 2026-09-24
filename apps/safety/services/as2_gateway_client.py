@@ -18,6 +18,10 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.adapters.models import (
+    AS2Transmission,
+    write_as2_audit_log,
+)
 from apps.safety.domain.as2_models import (
     AckStatus,
     AckType,
@@ -31,10 +35,6 @@ from apps.safety.domain.as2_models import (
     RegulatoryAckParseResult,
     SignatureAlgorithm,
     TransmissionStatus,
-)
-from apps.safety.infrastructure.models import (
-    AS2Transmission,
-    write_as2_audit_log,
 )
 from apps.safety.services.crypto_smime import (
     calculate_mic,

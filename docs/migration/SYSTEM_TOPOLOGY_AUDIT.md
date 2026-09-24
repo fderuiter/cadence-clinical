@@ -2,7 +2,7 @@
 
 **Project:** Cadence Clinical Research Software Platform
 **Target Runtime:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
-**Governing ADRs:** [ADR-2233](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+**Governing ADRs:** [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
 
 ---
@@ -284,7 +284,7 @@ A significant portion of the platform relies on unstructured PostgreSQL `JSON` /
 
 ### 3.5 Dynamic Upward Session Reflection in Core Security
 
-`packages/security/audit_logger.py` (`resolve_current_session()`) utilizes `importlib.import_module` at runtime to dynamically inspect higher-level service database contexts (`apps.execution.database.context`, `apps.eisf.infrastructure.database`, `apps.etmf.infrastructure.database`, `apps.quality.infrastructure.database`). This circular dependency violates clean architectural layering. In .NET 10, this is eradicated by delegating audit capture to Entity Framework Core 10 `ISaveChangesInterceptor` (`GxPAuditInterceptor`) registered per-service in DI.
+`packages/security/audit_logger.py` (`resolve_current_session()`) utilizes `importlib.import_module` at runtime to dynamically inspect higher-level service database contexts (`apps.execution.database.context`, `apps.eisf.adapters.database`, `apps.etmf.adapters.database`, `apps.quality.adapters.database`). This circular dependency violates clean architectural layering. In .NET 10, this is eradicated by delegating audit capture to Entity Framework Core 10 `ISaveChangesInterceptor` (`GxPAuditInterceptor`) registered per-service in DI.
 
 ### 3.6 In-Process OpenAPI Schema Aggregation in Gateway
 

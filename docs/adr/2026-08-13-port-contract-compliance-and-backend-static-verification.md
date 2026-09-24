@@ -41,7 +41,7 @@ This decision implements requirements under PRD-SYS-001.
 - **Overview:** Use a focused `mypy` execution targeted specifically at the repository contracts and their implementations, and run it as an automated gate in `pnpm check`, the `Makefile`, and pre-commit hooks.
 - ***Pros:***
   - ✅ Catch mismatching signatures instantly at development time.
-  - ✅ High execution speed (sub-2 seconds) targeting the specific files.
+  - ✅ High execution speed (PRD-SUB-002 seconds) targeting the specific files.
   - ✅ Easy integration into the existing pre-push and PR pipelines.
 - ***Cons:***
   - ❌ Requires a small amount of configuration/setup overhead.
@@ -62,7 +62,7 @@ This decision implements requirements under PRD-SYS-001.
 - **Affected Repositories / Services:**
   - `apps/execution/domain/ports.py` (Source of truth repository interfaces)
   - `apps/execution/adapters/repositories.py` (Facade re-exports)
-  - `apps/execution/infrastructure/repositories/execution_repositories.py` (Concrete database and in-memory mock repositories)
+  - `apps/execution/adapters/repositories/execution_repositories.py` (Concrete database and in-memory mock repositories)
   - `scripts/verify_contracts.py` (Static contract type checking orchestrator)
 - **Verification Plan:**
   - Run `uv run python scripts/verify_contracts.py` to confirm that all repository signatures fully comply with their ports.

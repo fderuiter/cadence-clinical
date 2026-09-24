@@ -10,6 +10,7 @@ version = "0.1.0"
 description = "De-identification utilities package"
 requires-python = ">=3.14"
 dependencies = [
+    "packages-config",
     "pydantic>=2.6.0",
     "python-dateutil>=2.8.2",
     "pyyaml>=6.0.1",

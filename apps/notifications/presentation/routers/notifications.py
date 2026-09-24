@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.notifications.infrastructure.database import db_manager
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.database import db_manager
+from apps.notifications.adapters.models import (
     Notification,
     NotificationAuditLog,
     NotificationCategory,

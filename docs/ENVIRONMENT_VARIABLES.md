@@ -81,7 +81,7 @@ It provides a complete reference for all operational environment variables used 
 | `ETMF_SERVICE_URL` | `str` | `http://localhost:8006` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `ETMF_URL` | `str` | `http://localhost:8003` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/eisf/presentation/routers/eisf.py:1134`<br>`apps/eisf/presentation/routers/eisf.py:1539`<br>`apps/eisf/presentation/routers/eisf.py:1643`<br>*(+3 more)* |
 | `EXECUTION_SERVICE_URL` | `str | None` | *(None)* | Yes | EDC Execution REST endpoint URL | `packages/config/settings.py:432`<br>`packages/config/settings.py:1` |
-| `EXECUTION_URL` | `str` | `http://localhost:8002` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/quality/infrastructure/execution_client.py:42`<br>`packages/config/settings.py:66`<br>`packages/config/settings.py:1` |
+| `EXECUTION_URL` | `str` | `http://localhost:8002` | No | Operational setting for Microservice REST Endpoints & URLs. | `apps/quality/adapters/execution_client.py:42`<br>`packages/config/settings.py:66`<br>`packages/config/settings.py:1` |
 | `EXTERNAL_ARCHIVAL_URL` | `str` | `http://localhost:8004` | No | Send document to the external archival system | `apps/etmf/workers/outbox_worker.py:41` |
 | `FDA_ESG_AS2_URL` | `str` | `https://esg.fda.gov/as2` | No | Operational setting for Microservice REST Endpoints & URLs. | *Pre-configured template variable* |
 | `FILESHARE_URL` | `str` | `http://localhost:8011` | No | Operational setting for Microservice REST Endpoints & URLs. | `packages/config/settings.py:78`<br>`packages/config/settings.py:1` |
@@ -228,9 +228,9 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `PYTEST_CURRENT_TEST` | `str` | *(None)* | Yes | Operational setting for Helpdesk & Tickets Service. | `apps/etmf/infrastructure/cryptography.py:16`<br>`apps/etmf/infrastructure/cryptography.py:324`<br>`apps/notifications/presentation/routers/notifications.py:259`<br>*(+2 more)* |
+| `PYTEST_CURRENT_TEST` | `str` | *(None)* | Yes | Operational setting for Helpdesk & Tickets Service. | `apps/etmf/adapters/cryptography.py:16`<br>`apps/etmf/adapters/cryptography.py:324`<br>`apps/notifications/presentation/routers/notifications.py:259`<br>*(+2 more)* |
 | `TICKETS_ESCALATION_INTERVAL_SECONDS` | `float` | `86400.0` | No | Operational setting for Helpdesk & Tickets Service. | `apps/tickets/tests/test_tickets_escalation.py:252`<br>`packages/config/settings.py:286`<br>`packages/config/settings.py:1` |
-| `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` | `float` | `60.0` | No | Temporarily set poll interval to a small value | `apps/tickets/escalation.py:274`<br>`apps/tickets/tests/test_tickets_escalation.py:416`<br>`packages/config/settings.py:289`<br>*(+1 more)* |
+| `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` | `float` | `60.0` | No | Temporarily set poll interval to a small value | `apps/tickets/tests/test_tickets_escalation.py:416`<br>`packages/config/settings.py:289`<br>`packages/config/settings.py:1` |
 
 ## eConsent Service
 
@@ -244,7 +244,7 @@ It provides a complete reference for all operational environment variables used 
 
 | Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `ALLOW_MOCK_SIGNATURES` | `int` | `1` | No | Operational setting for Site Payments Service. | `apps/etmf/infrastructure/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
+| `ALLOW_MOCK_SIGNATURES` | `int` | `1` | No | Operational setting for Site Payments Service. | `apps/etmf/adapters/cryptography.py:24`<br>`apps/payments/tests/conftest.py:16`<br>`scripts/introspect_pg_schema.py:124`<br>*(+1 more)* |
 
 ## EDC Execution Service
 
