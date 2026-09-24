@@ -409,7 +409,9 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
         elif full:
             print("ℹ  [Preflight] Full rebuild requested.")
 
-        print("▶  Compiling solution binaries: dotnet build Cadence.sln --configuration Release --no-restore")
+        print(
+            "▶  Compiling solution binaries: dotnet build Cadence.sln --configuration Release --no-restore"
+        )
         try:
             _run(
                 [
@@ -424,19 +426,32 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
             print("✔  [Preflight] Solution build succeeded.")
         except subprocess.CalledProcessError:
             print("\n" + "!" * 70, file=sys.stderr)
-            print("✘  [PREFLIGHT ERROR] Failed to compile .NET test assemblies.", file=sys.stderr)
-            print("   Command: dotnet build Cadence.sln --configuration Release --no-restore", file=sys.stderr)
-            print("   If working in an offline environment without pre-restored packages,", file=sys.stderr)
-            print("   run compliance synchronization with '--draft' mode to bypass strict test execution:", file=sys.stderr)
+            print(
+                "✘  [PREFLIGHT ERROR] Failed to compile .NET test assemblies.",
+                file=sys.stderr,
+            )
+            print(
+                "   Command: dotnet build Cadence.sln --configuration Release --no-restore",
+                file=sys.stderr,
+            )
+            print(
+                "   If working in an offline environment without pre-restored packages,",
+                file=sys.stderr,
+            )
+            print(
+                "   run compliance synchronization with '--draft' mode to bypass strict test execution:",
+                file=sys.stderr,
+            )
             print("     uv run python scripts/sync_gxp.py --draft", file=sys.stderr)
             print("!" * 70 + "\n", file=sys.stderr)
             if draft:
                 print("⚠  Build failed; continuing in draft mode.")
                 return
-            else:
-                sys.exit(1)
+            sys.exit(1)
     else:
-        print("✔  [Preflight] Test assemblies present and up-to-date. Skipping build step.")
+        print(
+            "✔  [Preflight] Test assemblies present and up-to-date. Skipping build step."
+        )
 
     try:
         _run(
@@ -460,7 +475,10 @@ def step_run_tests(dry_run: bool, full: bool = False, draft: bool = False) -> No
         else:
             print("\n" + "!" * 70, file=sys.stderr)
             print("✘  Dotnet test execution failed.", file=sys.stderr)
-            print("   Fix failing tests before syncing GxP docs, or run in '--draft' mode:", file=sys.stderr)
+            print(
+                "   Fix failing tests before syncing GxP docs, or run in '--draft' mode:",
+                file=sys.stderr,
+            )
             print("     uv run python scripts/sync_gxp.py --draft", file=sys.stderr)
             print("!" * 70 + "\n", file=sys.stderr)
             sys.exit(1)

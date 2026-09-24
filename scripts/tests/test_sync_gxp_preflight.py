@@ -9,8 +9,6 @@ import tempfile
 import time
 from pathlib import Path
 
-import pytest
-
 # Ensure repository root is in sys.path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
