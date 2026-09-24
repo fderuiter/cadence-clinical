@@ -101,6 +101,7 @@ ALLOWED_COMMON_TOOLS = {
     "export",
     "powershell",
     "pre-commit",
+    "cadence",
     "poetry",
     "make",
     "chmod",

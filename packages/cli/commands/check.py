@@ -86,6 +86,10 @@ def run_check(
         ),
         ("secrets-scan", [sys.executable, "scripts/clean_secrets_baseline.py"]),
         ("adr-validation", [sys.executable, "scripts/validate_adrs.py"]),
+        (
+            "cli-docs-drift",
+            [sys.executable, "scripts/generate_cli_docs.py", "--check"],
+        ),
         ("markdown-validation", [sys.executable, "scripts/validate_markdown.py"]),
         (
             "security-audit",

@@ -11,7 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
-    <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,4 +18,3 @@
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 </Project>
-

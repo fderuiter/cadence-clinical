@@ -5,13 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
-    <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +21,5 @@
          base EF Core abstractions are referenced here; no relational/provider package (Npgsql, Sqlite,
          InMemory) is needed by this shared library at all. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 </Project>

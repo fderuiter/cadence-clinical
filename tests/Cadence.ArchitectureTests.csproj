@@ -19,10 +19,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- MIG-SUBJ-023: this project's own default compile glob (tests/**/*.cs, since it lives directly in
          tests/ alongside Cadence.UnitTests.csproj) would otherwise also try to compile
          SubjectEndpointsRoutingTests.cs here. That file needs Microsoft.AspNetCore.Mvc.Testing (not
