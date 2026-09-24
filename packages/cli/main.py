@@ -25,6 +25,7 @@ from packages.cli.commands.fix import fix_app  # noqa: E402
 from packages.cli.commands.gxp import gxp_app  # noqa: E402
 from packages.cli.commands.record import record_app  # noqa: E402
 from packages.cli.commands.scaffold import scaffold_app  # noqa: E402
+from packages.cli.commands.settings import settings_app  # noqa: E402
 from packages.cli.commands.setup import setup_app  # noqa: E402
 from packages.cli.commands.test import test_app  # noqa: E402
 from packages.cli.mcp.server import CadenceMcpServer  # noqa: E402
@@ -78,6 +79,7 @@ app.add_typer(check_app, name="check")
 app.add_typer(fix_app, name="fix")
 app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
+app.add_typer(settings_app, name="settings")
 app.add_typer(setup_app, name="setup")
 app.add_typer(record_app, name="record")
 app.add_typer(gxp_app, name="gxp")

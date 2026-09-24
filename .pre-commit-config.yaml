@@ -153,7 +153,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      - id: generate-schema-doc
+      - id: validate-api-clients
+        name: Validate OpenAPI Frontend Clients AST Contract
+        entry: uv run --python 3.14 python scripts/validate_api_clients.py
+        language: system
+        files: ^(apps/web/src/api/|docs/openapi/cdisc_openapi\.json$|scripts/validate_api_clients\.py$)
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: auto-stage-schema-doc
         name: Auto-Stage Schema Documentation
         # Generates visual schema and CDISC USDM compliance specifications
         entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py

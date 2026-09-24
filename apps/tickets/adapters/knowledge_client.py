@@ -8,21 +8,21 @@ Requirements: PRD-TCK-005, PRD-SYS-051
 from __future__ import annotations
 
 import logging
-import os
 import time
 from collections.abc import Callable
 from typing import Any
 
 import httpx
 
+from packages.config import get_gateway_settings, get_knowledge_settings
 from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("tickets-knowledge-client")
 
-KNOWLEDGE_SERVICE_URL = os.environ.get("KNOWLEDGE_SERVICE_URL", "http://127.0.0.1:8006")
-INTERNAL_SECRET = os.environ.get(
-    "GATEWAY_INTERNAL_SECRET", "cadence-dev-secret-change-in-prod"
-).encode("utf-8")
+_knowledge_settings = get_knowledge_settings()
+_gateway_settings = get_gateway_settings()
+KNOWLEDGE_SERVICE_URL = _knowledge_settings.knowledge_service_url
+INTERNAL_SECRET = _gateway_settings.gateway_internal_secret.encode("utf-8")
 
 _IN_PROCESS_SEARCH_PROVIDER: Callable[..., Any] | None = None
 

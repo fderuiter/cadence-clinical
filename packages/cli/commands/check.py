@@ -116,6 +116,17 @@ def run_check(
             [sys.executable, "scripts/validate_openapi_drift.py"],
         ),
         ("contract-verification", [sys.executable, "scripts/verify_contracts.py"]),
+        (
+            "settings-schema",
+            [
+                sys.executable,
+                "-m",
+                "packages.cli.main",
+                "settings",
+                "export",
+                "--check",
+            ],
+        ),
         ("env-vars", [sys.executable, "scripts/extract_env_vars.py", "--check"]),
     ]
 

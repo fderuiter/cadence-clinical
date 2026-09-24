@@ -1,7 +1,8 @@
-import os
 from typing import Any
 
 import httpx
+
+from packages.config import get_safety_settings
 
 
 class SafetyDatabaseAdapter:
@@ -16,14 +17,15 @@ class SafetyDatabaseAdapter:
         ingestion_url: str | None = None,
         client: httpx.AsyncClient | None = None,
     ):
+        settings = get_safety_settings()
         self.endpoint_url: str = (
             endpoint_url
-            or os.getenv("SAFETY_DB_TRANSMISSION_ENDPOINT")
+            or settings.safety_db_transmission_endpoint
             or "http://localhost:8006/api/v1/safety/transmit-mock"
         )
         self.ingestion_url: str = (
             ingestion_url
-            or os.getenv("SAFETY_DB_INGESTION_ENDPOINT")
+            or settings.safety_db_ingestion_endpoint
             or "http://localhost:8006/api/v1/safety/cases-mock"
         )
         self.client = client

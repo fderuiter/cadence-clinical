@@ -265,6 +265,16 @@ class SafetySettings(CommonSettings):
     safety_database_url: str = Field(
         default="sqlite+aiosqlite:///:memory:", validation_alias="SAFETY_DATABASE_URL"
     )
+    safety_db_transmission_endpoint: str | None = Field(
+        default=None,
+        validation_alias="SAFETY_DB_TRANSMISSION_ENDPOINT",
+        description="Safety transmission API endpoint URL",
+    )
+    safety_db_ingestion_endpoint: str | None = Field(
+        default=None,
+        validation_alias="SAFETY_DB_INGESTION_ENDPOINT",
+        description="Safety cases ingestion API endpoint URL",
+    )
 
 
 class TicketsSettings(CommonSettings):
@@ -295,6 +305,26 @@ class ImagingSettings(CommonSettings):
     imaging_database_url: str = Field(
         default="sqlite+aiosqlite:///:memory:", validation_alias="IMAGING_DATABASE_URL"
     )
+    imaging_storage_bucket: str = Field(
+        default="imaging-dicom",
+        validation_alias="IMAGING_STORAGE_BUCKET",
+        description="S3/MinIO bucket name for storing imaging DICOM objects",
+    )
+    minio_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="MINIO_ENDPOINT_URL",
+        description="MinIO endpoint URL override",
+    )
+    storage_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="STORAGE_ENDPOINT_URL",
+        description="Generic storage endpoint URL override",
+    )
+    aws_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="AWS_ENDPOINT_URL",
+        description="AWS endpoint URL override",
+    )
 
 
 class AiGatewaySettings(CommonSettings):
@@ -303,6 +333,27 @@ class AiGatewaySettings(CommonSettings):
     ai_gateway_database_url: str = Field(
         default="sqlite+aiosqlite:///:memory:",
         validation_alias="AI_GATEWAY_DATABASE_URL",
+        description="AI Gateway relational database connection string",
+    )
+    ai_tier_1_model: str = Field(
+        default="ollama/llama3",
+        validation_alias="AI_TIER_1_MODEL",
+        description="Tier 1 fast local/edge LLM model identifier",
+    )
+    ai_tier_2_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias="AI_TIER_2_MODEL",
+        description="Tier 2 balanced cloud LLM model identifier",
+    )
+    ai_tier_3_model: str = Field(
+        default="gpt-4o",
+        validation_alias="AI_TIER_3_MODEL",
+        description="Tier 3 high-reasoning complex LLM model identifier",
+    )
+    ai_tier_1_embed_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias="AI_TIER_1_EMBED_MODEL",
+        description="Default text embedding model identifier",
     )
 
 
@@ -352,6 +403,156 @@ class StorageSettings(CommonSettings):
     )
     google_drive_folder_id: str | None = Field(
         default=None, validation_alias="GOOGLE_DRIVE_FOLDER_ID"
+    )
+
+
+class KnowledgeSettings(CommonSettings):
+    """Localized configuration for the Knowledge & Support Hub service."""
+
+    knowledge_database_url: str = Field(
+        default="sqlite+aiosqlite:///./knowledge.db",
+        validation_alias="KNOWLEDGE_DATABASE_URL",
+        description="Knowledge service relational database URL",
+    )
+    knowledge_service_url: str = Field(
+        default="http://127.0.0.1:8006",
+        validation_alias="KNOWLEDGE_SERVICE_URL",
+        description="Knowledge service REST endpoint URL",
+    )
+
+
+class ExecutionSettings(CommonSettings):
+    """Localized configuration for the EDC Execution service."""
+
+    execution_database_url: str = Field(
+        default="sqlite+aiosqlite:///:memory:",
+        validation_alias="EXECUTION_DATABASE_URL",
+        description="EDC Execution database connection string",
+    )
+    execution_service_url: str | None = Field(
+        default=None,
+        validation_alias="EXECUTION_SERVICE_URL",
+        description="EDC Execution REST endpoint URL",
+    )
+    anomaly_worker_poll_interval_seconds: float = Field(
+        default=30.0,
+        validation_alias="ANOMALY_WORKER_POLL_INTERVAL_SECONDS",
+        description="AI anomaly detection worker polling interval in seconds",
+    )
+    coding_cache_ttl: int = Field(
+        default=86400,
+        validation_alias="CODING_CACHE_TTL",
+        description="Medical coding term matcher cache TTL in seconds",
+    )
+    lab_range_cache_ttl: int = Field(
+        default=3600,
+        validation_alias="LAB_RANGE_CACHE_TTL",
+        description="Lab normal range cache TTL in seconds",
+    )
+    query_escalation_digest_seconds: float = Field(
+        default=86400.0,
+        validation_alias="QUERY_ESCALATION_DIGEST_SECONDS",
+        description="Data query escalation email digest interval in seconds",
+    )
+    query_escalation_interval_seconds: float = Field(
+        default=86400.0,
+        validation_alias="QUERY_ESCALATION_INTERVAL_SECONDS",
+        description="Data query escalation check loop interval in seconds",
+    )
+    run_background_workers: bool = Field(
+        default=True,
+        validation_alias="RUN_BACKGROUND_WORKERS",
+        description="Flag to toggle execution background polling workers",
+    )
+    sealer_interval_seconds: float = Field(
+        default=60.0,
+        validation_alias="SEALER_INTERVAL_SECONDS",
+        description="Audit trail Merkle block sealer interval in seconds",
+    )
+    rtsm_master_secret: str = Field(
+        default="dev-rtsm-master-secret-placeholder",
+        validation_alias="RTSM_MASTER_SECRET",
+        description="RTSM randomization master secret key",
+    )
+    biostat_export_salt: str = Field(
+        default="dev-biostat-export-salt-placeholder",
+        validation_alias="BIOSTAT_EXPORT_SALT",
+        description="Biostat statistical export pseudonymization salt",
+    )
+    outbox_attempt_cap: int = Field(
+        default=5,
+        validation_alias="OUTBOX_ATTEMPT_CAP",
+        description="Transactional outbox retry attempt cap",
+    )
+    outbox_batch_size: int = Field(
+        default=20,
+        validation_alias="OUTBOX_BATCH_SIZE",
+        description="Transactional outbox batch processing size",
+    )
+    outbox_max_concurrency: int = Field(
+        default=10,
+        validation_alias="OUTBOX_MAX_CONCURRENCY",
+        description="Transactional outbox max concurrency worker limit",
+    )
+    outbox_poll_interval_seconds: float = Field(
+        default=5.0,
+        validation_alias="OUTBOX_POLL_INTERVAL_SECONDS",
+        description="Transactional outbox polling loop interval in seconds",
+    )
+
+
+class DesignerSettings(CommonSettings):
+    """Localized configuration for the Study Designer service."""
+
+    designer_database_url: str = Field(
+        default="sqlite+aiosqlite:///:memory:",
+        validation_alias="DESIGNER_DATABASE_URL",
+        description="Study Designer database connection string",
+    )
+
+
+class GatewaySettings(CommonSettings):
+    """Localized configuration for the API Gateway service."""
+
+    gateway_internal_secret: str = Field(
+        default="dev-gateway-internal-secret-placeholder",
+        validation_alias="GATEWAY_INTERNAL_SECRET",
+        description="Gateway internal service authentication secret",
+    )
+
+
+class SecuritySettings(CommonSettings):
+    """Localized configuration for Security & Identity modules."""
+
+    jwt_algorithm: str = Field(
+        default="RS256",
+        validation_alias="JWT_ALGORITHM",
+        description="OIDC JWT token verification algorithm",
+    )
+    jwt_secret_key: str = Field(
+        default="dev-jwt-secret-key-12345",
+        validation_alias="JWT_SECRET_KEY",
+        description="JWT secret key for HMAC fallback validation",
+    )
+
+
+class DeidSettings(CommonSettings):
+    """Localized configuration for De-identification package."""
+
+    deid_salt: str = Field(
+        default="secure-clinical-salt-98765",
+        validation_alias="DEID_SALT",
+        description="De-identification hashing salt",
+    )
+
+
+class TelemetrySettings(CommonSettings):
+    """Localized configuration for Telemetry & Logging."""
+
+    log_level: str = Field(
+        default="INFO",
+        validation_alias="LOG_LEVEL",
+        description="Structured application log verbosity level",
     )
 
 
@@ -446,6 +647,41 @@ def get_ai_gateway_settings() -> AiGatewaySettings:
 
 
 @lru_cache
+def get_knowledge_settings() -> KnowledgeSettings:
+    return KnowledgeSettings()
+
+
+@lru_cache
+def get_execution_settings() -> ExecutionSettings:
+    return ExecutionSettings()
+
+
+@lru_cache
+def get_designer_settings() -> DesignerSettings:
+    return DesignerSettings()
+
+
+@lru_cache
+def get_gateway_settings() -> GatewaySettings:
+    return GatewaySettings()
+
+
+@lru_cache
+def get_security_settings() -> SecuritySettings:
+    return SecuritySettings()
+
+
+@lru_cache
+def get_deid_settings() -> DeidSettings:
+    return DeidSettings()
+
+
+@lru_cache
+def get_telemetry_settings() -> TelemetrySettings:
+    return TelemetrySettings()
+
+
+@lru_cache
 def get_storage_settings() -> StorageSettings:
     return StorageSettings()
 
@@ -453,6 +689,34 @@ def get_storage_settings() -> StorageSettings:
 @lru_cache
 def get_compliance_settings() -> ComplianceSettings:
     return ComplianceSettings()
+
+
+ALL_SETTINGS_CLASSES: list[type[BaseSettings]] = [
+    CommonSettings,
+    NotificationsSettings,
+    EConsentSettings,
+    CTMSSettings,
+    FileshareSettings,
+    InteropSettings,
+    EISFSettings,
+    EtmfSettings,
+    OrgSettings,
+    QualitySettings,
+    SafetySettings,
+    TicketsSettings,
+    PaymentsSettings,
+    ImagingSettings,
+    AiGatewaySettings,
+    KnowledgeSettings,
+    ExecutionSettings,
+    DesignerSettings,
+    GatewaySettings,
+    SecuritySettings,
+    DeidSettings,
+    TelemetrySettings,
+    StorageSettings,
+    ComplianceSettings,
+]
 
 
 def clear_settings_caches() -> None:
@@ -472,5 +736,12 @@ def clear_settings_caches() -> None:
     get_payments_settings.cache_clear()
     get_imaging_settings.cache_clear()
     get_ai_gateway_settings.cache_clear()
+    get_knowledge_settings.cache_clear()
+    get_execution_settings.cache_clear()
+    get_designer_settings.cache_clear()
+    get_gateway_settings.cache_clear()
+    get_security_settings.cache_clear()
+    get_deid_settings.cache_clear()
+    get_telemetry_settings.cache_clear()
     get_storage_settings.cache_clear()
     get_compliance_settings.cache_clear()

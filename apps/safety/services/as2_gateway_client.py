@@ -45,6 +45,7 @@ from apps.safety.services.crypto_smime import (
 )
 from apps.safety.services.mdn_parser import MDNParser
 from apps.safety.services.regulatory_ack_parser import RegulatoryAckParser
+from packages.config import get_safety_settings
 
 logger = logging.getLogger("safety-as2-gateway")
 
@@ -73,10 +74,11 @@ def get_default_partner_configs() -> dict[AS2Authority, AS2PartnerConfig]:
         organization="Health Canada",
     )
 
+    settings = get_safety_settings()
     return {
         AS2Authority.FDA_ESG: AS2PartnerConfig(
             as2_id="FDA-ESG",
-            url=os.getenv("FDA_ESG_AS2_URL", "https://esg.fda.gov/as2"),
+            url=settings.fda_esg_as2_url,
             encryption_certificate_pem=os.getenv("FDA_ESG_CERT", fda_cert),
             signing_certificate_pem=os.getenv("FDA_ESG_CERT", fda_cert),
             request_signed_mdn=True,
@@ -86,7 +88,7 @@ def get_default_partner_configs() -> dict[AS2Authority, AS2PartnerConfig]:
         ),
         AS2Authority.EMA_GATEWAY: AS2PartnerConfig(
             as2_id="EMA-GATEWAY",
-            url=os.getenv("EMA_AS2_URL", "https://eudravigilance.ema.europa.eu/as2"),
+            url=settings.ema_as2_url,
             encryption_certificate_pem=os.getenv("EMA_GATEWAY_CERT", ema_cert),
             signing_certificate_pem=os.getenv("EMA_GATEWAY_CERT", ema_cert),
             request_signed_mdn=True,
@@ -96,7 +98,7 @@ def get_default_partner_configs() -> dict[AS2Authority, AS2PartnerConfig]:
         ),
         AS2Authority.PMDA: AS2PartnerConfig(
             as2_id="PMDA-GATEWAY",
-            url=os.getenv("PMDA_AS2_URL", "https://gateway.pmda.go.jp/as2"),
+            url=settings.pmda_as2_url,
             encryption_certificate_pem=os.getenv("PMDA_CERT", pmda_cert),
             signing_certificate_pem=os.getenv("PMDA_CERT", pmda_cert),
             request_signed_mdn=True,
@@ -106,7 +108,7 @@ def get_default_partner_configs() -> dict[AS2Authority, AS2PartnerConfig]:
         ),
         AS2Authority.MHRA: AS2PartnerConfig(
             as2_id="MHRA-GATEWAY",
-            url=os.getenv("MHRA_AS2_URL", "https://sub.mhra.gov.uk/as2"),
+            url=settings.mhra_as2_url,
             encryption_certificate_pem=os.getenv("MHRA_CERT", mhra_cert),
             signing_certificate_pem=os.getenv("MHRA_CERT", mhra_cert),
             request_signed_mdn=True,
@@ -116,7 +118,7 @@ def get_default_partner_configs() -> dict[AS2Authority, AS2PartnerConfig]:
         ),
         AS2Authority.HEALTH_CANADA: AS2PartnerConfig(
             as2_id="HC-GATEWAY",
-            url=os.getenv("HC_AS2_URL", "https://gateway.hc-sc.gc.ca/as2"),
+            url=settings.hc_as2_url,
             encryption_certificate_pem=os.getenv("HC_CERT", hc_cert),
             signing_certificate_pem=os.getenv("HC_CERT", hc_cert),
             request_signed_mdn=True,

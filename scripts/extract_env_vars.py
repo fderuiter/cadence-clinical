@@ -424,6 +424,58 @@ def scan_source_files(repo_root: Path) -> dict[str, dict[str, Any]]:
     for name in env_vars:
         env_vars[name]["locations"].sort(key=lambda loc: (loc[0], loc[1]))
 
+    # Pydantic BaseSettings Inspection
+    try:
+        from packages.config.settings import ALL_SETTINGS_CLASSES
+
+        for cls in ALL_SETTINGS_CLASSES:
+            for field_name, field_info in cls.model_fields.items():
+                alias = field_info.validation_alias
+                var_name = str(alias) if alias else field_name.upper()
+                if not var_name or not re.match(r"^[A-Z0-9_]+$", var_name):
+                    continue
+
+                def_val = field_info.default
+                if def_val is not None and str(def_val) != "PydanticUndefined":
+                    san_val = sanitize_default_value(var_name, str(def_val))
+                else:
+                    san_val = None
+
+                desc = field_info.description or ""
+                tp = str(field_info.annotation) if field_info.annotation else "str"
+                tp_clean = (
+                    tp.replace("typing.", "").replace("<class '", "").replace("'>", "")
+                )
+
+                if var_name not in env_vars:
+                    env_vars[var_name] = {
+                        "name": var_name,
+                        "defaults": set(),
+                        "locations": [],
+                        "methods": {"pydantic.BaseSettings"},
+                        "comments": [],
+                        "type": tp_clean,
+                        "description": desc,
+                        "domain": classify_domain(
+                            var_name, "packages/config/settings.py"
+                        ),
+                    }
+                else:
+                    env_vars[var_name]["methods"].add("pydantic.BaseSettings")
+                    if desc and "description" not in env_vars[var_name]:
+                        env_vars[var_name]["description"] = desc
+                    if tp_clean and "type" not in env_vars[var_name]:
+                        env_vars[var_name]["type"] = tp_clean
+
+                if san_val is not None and san_val != "":
+                    env_vars[var_name]["defaults"].add(san_val)
+
+                loc = ("packages/config/settings.py", 1)
+                if loc not in env_vars[var_name]["locations"]:
+                    env_vars[var_name]["locations"].append(loc)
+    except Exception:
+        pass
+
     return env_vars
 
 
@@ -605,9 +657,9 @@ def generate_markdown_docs(
         doc.append(f"## {domain}")
         doc.append("")
         doc.append(
-            "| Variable | Default Value | Required | Description / Comments | Source Code Locations |"
+            "| Variable | Type | Default Value | Required | Description / Comments | Source Code Locations |"
         )
-        doc.append("| :--- | :--- | :---: | :--- | :--- |")
+        doc.append("| :--- | :--- | :--- | :---: | :--- | :--- |")
 
         for vname in sorted(vars_in_domain):
             val_str = ""
@@ -619,8 +671,20 @@ def generate_markdown_docs(
             is_req = "No" if val_str != "" else "Yes"
             val_display = f"`{val_str}`" if val_str != "" else "*(None)*"
 
+            var_type = "str"
+            if vname in scanned_vars and "type" in scanned_vars[vname]:
+                var_type = scanned_vars[vname]["type"]
+            elif val_str.isdigit():
+                var_type = "int"
+            elif val_str in ("true", "false"):
+                var_type = "bool"
+
+            type_display = f"`{var_type}`"
+
             desc = ""
-            if (
+            if vname in scanned_vars and scanned_vars[vname].get("description"):
+                desc = scanned_vars[vname]["description"]
+            elif (
                 vname in existing_env
                 and existing_env[vname]["comment"]
                 and not existing_env[vname]["comment"].startswith("Source: ")
@@ -643,7 +707,9 @@ def generate_markdown_docs(
             else:
                 loc_str = "*Pre-configured template variable*"
 
-            doc.append(f"| `{vname}` | {val_display} | {is_req} | {desc} | {loc_str} |")
+            doc.append(
+                f"| `{vname}` | {type_display} | {val_display} | {is_req} | {desc} | {loc_str} |"
+            )
 
         doc.append("")
 

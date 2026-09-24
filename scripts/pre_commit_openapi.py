@@ -242,6 +242,31 @@ def check_and_run_exporter() -> int:
         print(f"[ERROR] Failed to execute TypeScript typecheck: {e}", file=sys.stderr)
         return 1
 
+    # Run AST contract linter on frontend API clients
+    validate_api_clients_script = os.path.join(
+        app_root, "scripts", "validate_api_clients.py"
+    )
+    print("Running AST contract linter on frontend API clients...")
+    try:
+        api_clients_result = subprocess.run(
+            [python_exec, validate_api_clients_script],
+            cwd=app_root,
+            capture_output=True,
+            text=True,
+        )
+        if api_clients_result.returncode != 0:
+            print(
+                "[ERROR] AST contract linter failed! Explicit `any` casts or unmapped API routes detected.",
+                file=sys.stderr,
+            )
+            print(api_clients_result.stdout, file=sys.stderr)
+            print(api_clients_result.stderr, file=sys.stderr)
+            return api_clients_result.returncode
+        print("AST contract linter validation passed successfully!")
+    except subprocess.SubprocessError as e:
+        print(f"[ERROR] Failed to execute AST contract linter: {e}", file=sys.stderr)
+        return 1
+
     # Automatically stage any newly generated OpenAPI JSON and TypeScript type changes
     print(
         "Staging newly compiled OpenAPI schemas and TypeScript types into the current commit..."
