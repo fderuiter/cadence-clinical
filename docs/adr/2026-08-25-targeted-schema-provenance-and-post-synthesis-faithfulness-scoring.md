@@ -14,7 +14,7 @@ During protocol digitization and synthesis of eCRF forms and Schedule of Activit
 The system requires:
 1. Extending eCRF form schemas, field definitions, and SoA cell representations with granular citation coordinate metadata (`section_number`, `page_number`, `citation_marker`).
 2. Standardizing verbatim citation marker syntax across all synthesis modules (`[Protocol {version}, Section {section}, Page {page}]` or `[Protocol {version}, Page {page}]`).
-3. An automated post-synthesis faithfulness evaluator computing mathematical confidence scores against a groundedness threshold (`0.85`) under a strict sub-5.0s SLA without blocking clinical authoring workflows.
+3. An automated post-synthesis faithfulness evaluator computing mathematical confidence scores against a groundedness threshold (`0.85`) under a strict PRD-SUB-005.0s SLA without blocking clinical authoring workflows.
 
 Applicable system requirements: `PRD-CRF-004`, `PRD-DDF-001`, `PRD-SYS-001`, `PRD-MDR-007`.
 
@@ -22,7 +22,7 @@ Applicable system requirements: `PRD-CRF-004`, `PRD-DDF-001`, `PRD-SYS-001`, `PR
 
 * **Regulatory Traceability (21 CFR Part 11):** Every synthesized eCRF field and SoA matrix cell must link back to specific section and page coordinates in the source protocol.
 * **Non-Blocking User Workflow:** Faithfulness scores below threshold (`0.85`) should flag outputs for review (`FLAGGED_LOW_FAITHFULNESS`) and populate user warnings rather than failing pipeline execution.
-* **Performance SLA:** Evaluator execution must complete in sub-5.0 seconds.
+* **Performance SLA:** Evaluator execution must complete in PRD-SUB-005.0 seconds.
 * **API Response Transparency:** Verification metrics (`faithfulness_score`, `is_faithful`, `verification_status`, `citation_coverage`, `warnings`) must be included in API response DTOs (`CommitUSDMResponse`, `DAGJobStatusResponse`, `USDMProtocolExtractionResponse`).
 
 ## 3. Options Considered
