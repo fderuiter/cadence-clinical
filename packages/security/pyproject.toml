@@ -10,6 +10,7 @@ version = "0.1.0"
 description = "Security utilities package"
 requires-python = ">=3.14"
 dependencies = [
+    "packages-config",
     "packages-telemetry",
     "fastapi>=0.139.2,<0.140.0",
     "httpx>=0.27.0",
