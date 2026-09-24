@@ -203,6 +203,7 @@ ALLOWED_ROOT_FILES = {
     "Directory.Build.props",
     "Cadence.sln",
     "global.json",
+    "NuGet.Config",
     ".editorconfig",
 }
 

@@ -75,6 +75,13 @@ repos:
         files: \.(py|js|vue|css|cs)$
         pass_filenames: true
 
+      - id: validate-cli-docs
+        name: Validate CLI Docs Parity
+        entry: uv run --python 3.14 python scripts/generate_cli_docs.py --check
+        language: system
+        files: ^(packages/cli/|docs/cli\.md|scripts/generate_cli_docs\.py)
+        pass_filenames: false
+
       - id: validate-adrs
         name: Validate ADRs
         entry: uv run --python 3.14 python scripts/validate_adrs.py
@@ -127,6 +134,13 @@ repos:
       - id: auto-stage-openapi
         name: Auto-Stage OpenAPI Schemas
         entry: uv run --python 3.14 python scripts/pre_commit_openapi.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: auto-stage-schema-doc
+        name: Auto-Stage Schema Documentation
+        entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py
         language: system
         pass_filenames: false
         stages: [pre-commit]

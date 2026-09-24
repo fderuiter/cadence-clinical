@@ -11,8 +11,7 @@ from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 
-if TYPE_CHECKING:
-    from packages.security.permissions import PermissionEnum
+from packages.security.permissions import PermissionEnum
 
 from packages.security.context import (
     current_change_reason,

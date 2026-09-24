@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using Cadence.Apps.Ctms;
+using Cadence.Apps.Etmf;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Fileshare;
+using Cadence.Apps.Quality;
 using Cadence.Core.Domain;
 using Cadence.Testing;
 
@@ -38,7 +42,7 @@ public class ArchitectureSentinelTests
     }
 
     /// <summary>
-    /// Validates 21 CFR Part 11 regulatory invariant: All DDD aggregate roots must implement IGxPAuditable.
+    /// Validates 21 CFR Part 11 regulatory invariant: All DDD aggregate roots across domain assemblies must implement IGxPAuditable.
     /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AggregateRoots_MustImplement_IGxPAuditableContract")]
@@ -47,11 +51,30 @@ public class ArchitectureSentinelTests
     public void AggregateRootsMustImplementIGxPAuditableContract()
     {
         // Arrange
-        var aggregateType = typeof(AggregateRoot<string>);
+        var domainAssemblies = new[]
+        {
+            typeof(AggregateRoot<>).Assembly,
+            typeof(ClinicalSubject).Assembly,
+            typeof(CtmsStudy).Assembly,
+            typeof(TmfDocument).Assembly,
+            typeof(QualityDeviation).Assembly,
+            typeof(FileRecord).Assembly
+        }.Distinct();
+
+        var aggregateRootTypes = domainAssemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.IsClass && !t.IsAbstract)
+            .Where(t => typeof(AggregateRootBase).IsAssignableFrom(t) || IsAssignableToGenericType(t, typeof(AggregateRoot<>)))
+            .ToList();
+
+        aggregateRootTypes.Should().NotBeEmpty("Domain assemblies must contain concrete aggregate root types");
 
         // Assert
-        typeof(IGxPAuditable).IsAssignableFrom(aggregateType).Should().BeTrue(
-            "All AggregateRoot types must implement IGxPAuditable to enforce 21 CFR Part 11 audit trails");
+        foreach (var type in aggregateRootTypes)
+        {
+            typeof(IGxPAuditable).IsAssignableFrom(type).Should().BeTrue(
+                $"Aggregate root type '{type.FullName}' must implement IGxPAuditable to enforce 21 CFR Part 11 audit trails");
+        }
     }
 
     /// <summary>
@@ -81,7 +104,7 @@ public class ArchitectureSentinelTests
 
     /// <summary>
     /// Validates Clean Architecture boundary purity: Core domain models, value objects, domain rules, and ports
-    /// in Cadence.Apps.Execution.Domain must have zero references to ASP.NET Core or MassTransit.
+    /// across all C# execution domain namespaces must have zero references to ASP.NET Core or MassTransit.
     /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ExecutionDomainLayer_MustNotReference_AspNetCoreOrMassTransit")]
@@ -93,12 +116,7 @@ public class ArchitectureSentinelTests
         var executionAssembly = typeof(ClinicalSubject).Assembly;
         var domainTypes = executionAssembly.GetTypes()
             .Where(t => t.Namespace != null &&
-                        (t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Subjects", StringComparison.Ordinal) ||
-                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Compliance", StringComparison.Ordinal) ||
-                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Observations", StringComparison.Ordinal) ||
-                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Forms", StringComparison.Ordinal) ||
-                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Queries", StringComparison.Ordinal) ||
-                         t.Namespace.StartsWith("Cadence.Apps.Execution.Domain.Ports", StringComparison.Ordinal)))
+                        t.Namespace.StartsWith("Cadence.Apps.Execution.Domain", StringComparison.Ordinal))
             // MIG-SUBJ-010 explicit exception: DomainErrorHttpMapping and DomainErrorExtensions serve as the
             // isolated ProblemDetails HTTP mapping bridge at the boundary.
             .Where(t => t != typeof(DomainErrorHttpMapping) && t != typeof(DomainErrorExtensions))
@@ -153,4 +171,18 @@ public class ArchitectureSentinelTests
                                       (t.Namespace ?? "").StartsWith("MassTransit", StringComparison.Ordinal),
                 "ClinicalSubject signatures must remain completely pure of web or messaging infrastructure");
     }
+
+    private static bool IsAssignableToGenericType(Type givenType, Type genericType)
+    {
+        var currentType = givenType;
+        while (currentType != null && currentType != typeof(object))
+        {
+            var cur = currentType.IsGenericType ? currentType.GetGenericTypeDefinition() : currentType;
+            if (genericType == cur)
+                return true;
+            currentType = currentType.BaseType;
+        }
+        return false;
+    }
 }
+

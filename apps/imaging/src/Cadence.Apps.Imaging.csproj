@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
+    <OutputType>Library</OutputType>
     <RootNamespace>Cadence.Apps.Imaging</RootNamespace>
     <Description>Cadence Clinical Imaging Service (.NET 10 / C# 14 Minimal APIs).</Description>
   </PropertyGroup>
