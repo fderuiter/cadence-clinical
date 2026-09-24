@@ -442,15 +442,9 @@ def scan_source_files(repo_root: Path) -> dict[str, dict[str, Any]]:
                     san_val = None
 
                 desc = field_info.description or ""
-                tp = (
-                    str(field_info.annotation)
-                    if field_info.annotation
-                    else "str"
-                )
+                tp = str(field_info.annotation) if field_info.annotation else "str"
                 tp_clean = (
-                    tp.replace("typing.", "")
-                    .replace("<class '", "")
-                    .replace("'>", "")
+                    tp.replace("typing.", "").replace("<class '", "").replace("'>", "")
                 )
 
                 if var_name not in env_vars:
@@ -713,7 +707,9 @@ def generate_markdown_docs(
             else:
                 loc_str = "*Pre-configured template variable*"
 
-            doc.append(f"| `{vname}` | {type_display} | {val_display} | {is_req} | {desc} | {loc_str} |")
+            doc.append(
+                f"| `{vname}` | {type_display} | {val_display} | {is_req} | {desc} | {loc_str} |"
+            )
 
         doc.append("")
 

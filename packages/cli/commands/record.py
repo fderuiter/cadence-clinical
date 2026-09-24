@@ -259,10 +259,7 @@ def setup_gdrive(
     from packages.config import get_storage_settings
 
     storage_settings = get_storage_settings()
-    key_path = (
-        credentials_path
-        or storage_settings.google_application_credentials
-    )
+    key_path = credentials_path or storage_settings.google_application_credentials
     target_folder = folder_id or storage_settings.google_drive_folder_id
 
     if not key_path:

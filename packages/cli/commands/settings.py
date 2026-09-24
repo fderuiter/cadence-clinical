@@ -39,7 +39,9 @@ def export_settings(
     if check:
         cmd.append("--check")
 
-    res = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True, check=False)
+    res = subprocess.run(
+        cmd, cwd=str(repo_root), capture_output=True, text=True, check=False
+    )
     duration = round(time.time() - start_time, 2)
 
     success = res.returncode == 0
@@ -69,7 +71,9 @@ def export_settings(
         "SYNCED" if success else "DRIFT DETECTED",
         style="green" if success else "red",
     )
-    doc.add_metric("Mode", "Validation Check" if check else "Export Write", style="cyan")
+    doc.add_metric(
+        "Mode", "Validation Check" if check else "Export Write", style="cyan"
+    )
     doc.add_metric("Duration", f"{duration}s", style="magenta")
 
     if success:
@@ -86,6 +90,8 @@ def export_settings(
             status="fail",
             detail=res.stdout.strip() or res.stderr.strip() or "Schema drift detected.",
         )
-        doc.set_cta("Run 'uv run cadence settings export' to regenerate configuration templates.")
+        doc.set_cta(
+            "Run 'uv run cadence settings export' to regenerate configuration templates."
+        )
         doc.display()
         sys.exit(1)

@@ -167,4 +167,3 @@ def test_all_settings_getters_and_classes():
     assert get_safety_settings() is not None
     assert get_tickets_settings() is not None
     assert get_ai_gateway_settings().ai_tier_1_model == "ollama/llama3"
-

@@ -15,7 +15,6 @@ from email.utils import formatdate
 
 import defusedxml.ElementTree as ET
 import httpx
-from packages.config import get_safety_settings
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +45,7 @@ from apps.safety.services.crypto_smime import (
 )
 from apps.safety.services.mdn_parser import MDNParser
 from apps.safety.services.regulatory_ack_parser import RegulatoryAckParser
+from packages.config import get_safety_settings
 
 logger = logging.getLogger("safety-as2-gateway")
 

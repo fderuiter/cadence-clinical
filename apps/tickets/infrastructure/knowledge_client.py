@@ -8,7 +8,6 @@ Requirements: PRD-TCK-005, PRD-SYS-051
 from __future__ import annotations
 
 import logging
-import os
 import time
 from collections.abc import Callable
 from typing import Any

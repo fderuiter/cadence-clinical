@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import time
 from typing import Any
 
@@ -42,9 +41,7 @@ class LiteLLMAdapter(AIEnginePort):
         self.tier_2_model: str = (
             tier_2_model or settings.ai_tier_2_model or "gpt-4o-mini"
         )
-        self.tier_3_model: str = (
-            tier_3_model or settings.ai_tier_3_model or "gpt-4o"
-        )
+        self.tier_3_model: str = tier_3_model or settings.ai_tier_3_model or "gpt-4o"
         self.tier_1_embed_model: str = (
             tier_1_embed_model
             or settings.ai_tier_1_embed_model
