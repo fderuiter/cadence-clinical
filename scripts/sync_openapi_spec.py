@@ -33,6 +33,7 @@ os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
 os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
 
+
 def load_aggregated_spec() -> dict[str, Any]:
     """Aggregate OpenAPI schemas directly from docs/openapi/*.json."""
     cdisc_file = os.path.join(app_root, "docs", "openapi", "cdisc_openapi.json")
