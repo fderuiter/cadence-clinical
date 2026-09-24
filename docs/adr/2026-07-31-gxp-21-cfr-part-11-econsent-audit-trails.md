@@ -21,12 +21,27 @@ Traced requirement: PRD-SYS-001.
 
 ## 3. Options Considered
 
-1. **Database and SQLAlchemy Event-Level Immutability (Chosen)**: Register event listeners on models `ConsentFormRecord` and `ConsentSignature` in `apps/execution/database/models.py` to block updates/deletes before flush, coupled with a dedicated `EConsentService` to manage state changes safely.
-2. **REST API Gateway Validation Only**: Enforce compliance solely at the API gateway or endpoint level. This option is less secure because direct service calls or downstream code modifications could bypass verification.
+### Option 1: **Database and SQLAlchemy Event-Level Immutability (Chosen)**: Register event listeners on models `ConsentFormRecord` and `ConsentSignature` in `apps/execution/database/models.py` to block updates/deletes before flush, coupled with a dedicated `EConsentService` to manage state changes safely.
+
+- **Overview:** **Database and SQLAlchemy Event-Level Immutability (Chosen)**: Register event listeners on models `ConsentFormRecord` and `ConsentSignature` in `apps/execution/database/models.py` to block updates/deletes before flush, coupled with a dedicated `EConsentService` to manage state changes safely.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **REST API Gateway Validation Only**: Enforce compliance solely at the API gateway or endpoint level. This option is less secure because direct service calls or downstream code modifications could bypass verification.
+
+- **Overview:** **REST API Gateway Validation Only**: Enforce compliance solely at the API gateway or endpoint level. This option is less secure because direct service calls or downstream code modifications could bypass verification.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1. Immutability is enforced directly at the SQLAlchemy ORM model level, meaning no process or code can modify or delete a signed consent signature/record without raising a database-level transaction error. This guarantees high-integrity 21 CFR Part 11 compliance.
+- **Chosen Option:** Option 1. Immutability is enforced directly at the SQLAlchemy ORM model level, meaning no process or code can modify or delete a signed consent signature/record without raising a database-level transaction error. This guarantees high-integrity 21 CFR Part 11 compliance.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

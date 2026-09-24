@@ -25,15 +25,15 @@ This decision implements requirements under Trace-8.
 
 Refactoring 900+ test fixtures to explicitly forward empty or mock scope parameters when generating V2 gateway signatures.
 
-- **Pros:** Extremely explicit signature constraints.
-- **Cons:** Extremely high implementation effort, substantial merge friction, and high fragility.
+- ***Pros:*** Extremely explicit signature constraints.
+- ***Cons:*** Extremely high implementation effort, substantial merge friction, and high fragility.
 
 ### Option 2: Introduce Legacy V2 Fallback Mechanism in Signature Verification (Selected)
 
 Modify `verify_gateway_signature` to fallback to a legacy serialization representation (excluding scope-level variables) if the primary signature verification fails.
 
-- **Pros:** Preserves backward-compatibility with existing tests and integration points out-of-the-box with zero regression.
-- **Cons:** Slightly increased complexity in the signing validation path.
+- ***Pros:*** Preserves backward-compatibility with existing tests and integration points out-of-the-box with zero regression.
+- ***Cons:*** Slightly increased complexity in the signing validation path.
 
 ## 4. Decision Outcome
 

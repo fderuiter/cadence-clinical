@@ -509,8 +509,6 @@ def generate_markdown_docs(
                 desc = existing_env[vname]["comment"]
             elif vname in scanned_vars and scanned_vars[vname]["comments"]:
                 desc = scanned_vars[vname]["comments"][0]
-            elif vname in existing_env and existing_env[vname]["comment"]:
-                desc = existing_env[vname]["comment"]
             else:
                 desc = f"Operational setting for {domain}."
 

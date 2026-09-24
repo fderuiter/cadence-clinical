@@ -1,6 +1,6 @@
 # ADR-189: Centralized Brand and Domain Validation Guardrail
 
-- Status: Accepted
+- **Status:** Accepted
 - Date: 2026-08-11
 - Authors: @google-labs-jules[bot]
 - Deciders: @fderuiter
@@ -24,18 +24,18 @@ Prior to this decision, duplicate boot-time brand name, Keycloak realms, and dom
 
 Keep local boot-time loops inside each `main.py`.
 
-- **Pros:** No shared security package dependency.
-- **Cons:** High code duplication and maintenance friction; drift prone.
+- ***Pros:*** No shared security package dependency.
+- ***Cons:*** High code duplication and maintenance friction; drift prone.
 
 ### Option 2: Centralized Validation Utility in `packages/security` (Selected)
 
 Implement `validate_branding` helper in the security package and import/call it at service startup.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Consolidates duplicate logic into a single testable helper.
   - ✅ Restricts default and legacy domains/branding across all microservices uniformly.
   - ✅ Uses catchable `RuntimeError` allowing easy mock and testing.
-- **Cons:**
+- ***Cons:***
   - ❌ Downstream microservices gain an explicit dependency on `packages/security` at boot time (already exists for RBAC/identity).
 
 ## 4. Decision Outcome

@@ -24,9 +24,9 @@ In a multi-tenant clinical research platform, ensuring strong isolation of datab
 
 Application routes manually call reset statements before committing or closing a connection.
 
-- **Pros:**
+- ***Pros:***
   - Simple to implement in isolated endpoints.
-- **Cons:**
+- ***Cons:***
   - ❌ Highly error-prone; developers could easily forget to clear the context.
   - ❌ Increases boilerplate code across all microservices.
 
@@ -34,11 +34,11 @@ Application routes manually call reset statements before committing or closing a
 
 Leverage SQLAlchemy pool lifecycle events (`"checkout"`, `"checkin"`, `"close"`) to automatically reset connection state settings and evict tracked connection mappings dynamically.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Completely automated, centralized, and transparent to the application logic.
   - ✅ Guaranteed state cleanup upon checkout and checkin.
   - ✅ High-performance $O(1)$ dictionary lookup and eviction for tracking connection-level configs.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires careful handling of connection IDs to prevent weakref errors or memory leaks.
 
 ## 4. Decision Outcome

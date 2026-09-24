@@ -29,20 +29,20 @@ To resolve this, we have refactored the Study Designer using a hexagonal archite
 ### Option 1: Inline Cypher & Direct Database Driver Coupling
 
 - **Overview:** Maintain inline Cypher queries and direct Neo4j connections inside `apps/designer/delta.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ Less abstraction overhead.
-- **Cons:**
+- ***Cons:***
   - ❌ Severe architectural regression risks.
   - ❌ Complex/brittle mocking required for unit testing and offline simulations.
 
 ### Option 2: Decoupled Hexagonal Storage with Dynamic Registry (Selected)
 
 - **Overview:** Refactor the persistence mechanics into a separate adapter layer (`apps/designer/adapters/repositories.py`) and establish a dynamic registry where the concrete database adapter registers its implementation callbacks to the domain facade on startup.
-- **Pros:**
+- ***Pros:***
   - ✅ Absolute isolation of the core domain from Neo4j.
   - ✅ Programmatic import protection via static analysis and architectural tests.
   - ✅ Simplified, robust offline/mock simulation states in memory.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires callback dynamic registration boilerplate on application startup.
 
 ## 4. Decision Outcome

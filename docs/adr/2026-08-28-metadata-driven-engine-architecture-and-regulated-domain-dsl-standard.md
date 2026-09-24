@@ -1,9 +1,9 @@
 # ADR-2228: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard
 
-* **Status:** Accepted
-* **Date:** 2026-08-28
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-28
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirements:** `PRD-SYS-001`, `PRD-SYS-003`, `PRD-MDR-001`, `PRD-CRF-004`, `PRD-CRF-009`, `PRD-CRF-010`, `PRD-CRF-012`, `PRD-SYS-050`
 
 ---
@@ -26,15 +26,33 @@ Every protocol-specific rule change or amendment currently requires code modific
 
 ## 3. Options Considered
 
-1. **Option A (Selected) - The Standardized Engine Triad with Domain DSLs & Immutable Versioning**:
-   - Establish a universal engine framework across all 7 functional domains (Core Platform, Execution EDC, RTSM, Financials/CTMS, Quality/Safety, Interop/ETL, AI Gateway).
+### Option 1: **Option A (Selected) - The Standardized Engine Triad with Domain DSLs & Immutable Versioning**:
+
+- **Overview:** - Establish a universal engine framework across all 7 functional domains (Core Platform, Execution EDC, RTSM, Financials/CTMS, Quality/Safety, Interop/ETL, AI Gateway).
    - Enforce the Builder-Schema-Evaluator triad with immutable version pinning and 21 CFR Part 11 electronic signature publication gates.
-2. **Option B - Ad-Hoc Python Script Execution (Embedded Python/Lua Scripts)**:
-   - Allow users to write raw Python or Lua scripts in the UI and execute them via `eval()` or `exec()`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B - Ad-Hoc Python Script Execution (Embedded Python/Lua Scripts)**:
+
+- **Overview:** - Allow users to write raw Python or Lua scripts in the UI and execute them via `eval()` or `exec()`.
    - *Rejected*: Massive security vulnerability (RCE), impossible to statically validate, and non-compliant with GxP sandbox standards.
-3. **Option C - Status Quo Code-Driven Hardcoding**:
-   - Continue implementing study-specific rules in Python source code files.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C - Status Quo Code-Driven Hardcoding**:
+
+- **Overview:** - Continue implementing study-specific rules in Python source code files.
    - *Rejected*: Inflexible, high operational cost per study amendment, and slow time-to-market.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 

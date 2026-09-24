@@ -25,20 +25,20 @@ Prior to this change, client-side MSW mock handlers lacked centralized browser-c
 ### Option 1: Ad-hoc Mock Signature Checking in Individual Handler Files
 
 - **Overview:** Implement custom validation logic inside individual MSW route handlers.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to throw together for single tests.
-- **Cons:**
+- ***Cons:***
   - ❌ Duplicate code and inconsistent signature enforcement across endpoints.
   - ❌ Hard to maintain when Gateway signature rules evolve.
 
 ### Option 2: Shared `mockGateway` Simulator in `@cadence/ui` (Selected)
 
 - **Overview:** Create a centralized `mockGateway.js` module in `packages/ui` exporting path-prefix validators, Subject-role whitelist checkers, and `validateGatewayRequest` utilizing browser Crypto APIs via `signing.js`.
-- **Pros:**
+- ***Pros:***
   - ✅ Centralized, reusable Gateway security simulation for MSW and client test runners.
   - ✅ Full alignment with API Gateway Version 2 signature spec and Subject RBAC rules.
   - ✅ Unit tested via Vitest in `packages/ui/tests/mockGateway.test.js`.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires exposing `mockGateway` export entry in `packages/ui/package.json`.
 
 ## 4. Decision Outcome

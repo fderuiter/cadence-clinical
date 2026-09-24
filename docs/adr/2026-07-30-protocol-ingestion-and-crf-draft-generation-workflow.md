@@ -24,16 +24,17 @@ This decision enforces requirements under **PRD-SYS-001** (GxP 21 CFR Part 11 Re
 ### Option A: Read-Only Candidates with Promotion Gate (Selected)
 
 - **Overview:** Ingestion parses files into temporary/reviewable candidates stored in a designated ingestion table/mock store. Reviewers must accept/edit/reject every item, and the UI blocks promotion until all items are reviewed. Promotion requires explicit permission and writes only accepted/edited items into a non-published DRAFT protocol version.
-- **Pros:** Clean GxP auditing, zero risk of pollution to active/published protocol versions, and strict human-in-the-loop oversight.
+- ***Pros:*** Clean GxP auditing, zero risk of pollution to active/published protocol versions, and strict human-in-the-loop oversight.
 
 ### Option B: Direct/Automatic Version Draft Ingestion
 
 - **Overview:** Ingestion directly creates a study version draft and populates it, relying on subsequent standard study version edit/delete workflows.
-- **Cons:** Harder to track which variables/visits were generated vs. manually authored, lacks confidence-threshold badge presentation, and increases potential database clutter.
+- ***Cons:*** Harder to track which variables/visits were generated vs. manually authored, lacks confidence-threshold badge presentation, and increases potential database clutter.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces GxP compliance boundaries (reviews, audits, reasons) and isolates clinical trial structures from unverified automated AI or extraction parses until formal approval.
+- **Chosen Option:** **Option A** because it enforces GxP compliance boundaries (reviews, audits, reasons) and isolates clinical trial structures from unverified automated AI or extraction parses until formal approval.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -23,19 +23,27 @@ This decision implements requirements under Trace-6.
 ## 3. Options Considered
 
 ### Option 1: Monolithic Extension
-
 Merge CTMS workflows into the execution engine (`apps/execution`) or designer service (`apps/designer`).
 
 - ❌ Increases coupling between clinical design schemas and administrative/operational data.
 - ❌ Harder to scale microservices independently.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ### Option 2: Isolated CTMS Service with Gateway Integration (Selected)
-
 Establish a separate FastAPI service under `apps/ctms/`, deployable as its own container stack service, with database isolation, central gateway auth/header propagation, and precise RBAC checks.
 
 - ✅ Clear architectural boundary for CTMS.
 - ✅ Supports environment-configured DB variables (`CTMS_DATABASE_URL`).
 - ✅ Perfect separation of database schemas and operational microservice components.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 

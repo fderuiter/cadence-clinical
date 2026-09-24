@@ -1,9 +1,9 @@
 # ADR-2218: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine
 
-* **Status:** Accepted
-* **Date:** 2026-08-25
-* **Authors:** @google-labs-jules[bot]
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-25
+- **Authors:** @google-labs-jules[bot]
+- **Deciders:** @fderuiter
 
 ---
 
@@ -21,12 +21,27 @@ Designing clinical trial protocol cohorts requires evaluating complex multi-crit
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Asynchronous Cohort Feasibility Engine in Designer with PostgreSQL Advisory Locking and Kleene 3VL Simulation.**
-2. **Option B: Synchronous inline evaluation without advisory locks or background worker queuing.**
+### Option 1: **Option A (Selected): Dedicated Asynchronous Cohort Feasibility Engine in Designer with PostgreSQL Advisory Locking and Kleene 3VL Simulation.**
+
+- **Overview:** **Option A (Selected): Dedicated Asynchronous Cohort Feasibility Engine in Designer with PostgreSQL Advisory Locking and Kleene 3VL Simulation.**
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Synchronous inline evaluation without advisory locks or background worker queuing.**
+
+- **Overview:** **Option B: Synchronous inline evaluation without advisory locks or background worker queuing.**
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it provides non-blocking API endpoints, prevents duplicate background jobs across concurrent users via advisory locks, enforces air-gapped de-identification, and quantifies missing data risks using Kleene 3VL logic.
+- **Chosen Option:** Option A because it provides non-blocking API endpoints, prevents duplicate background jobs across concurrent users via advisory locks, enforces air-gapped de-identification, and quantifies missing data risks using Kleene 3VL logic.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

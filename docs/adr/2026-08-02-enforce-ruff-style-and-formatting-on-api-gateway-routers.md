@@ -19,12 +19,27 @@ To maintain code quality and prevent technical debt across the platform services
 
 ## 3. Options Considered
 
-1. Automatically format and fix all import and style violations across the API gateway using Ruff.
-2. Manually suppress lint warnings using inline comments.
+### Option 1: Automatically format and fix all import and style violations across the API gateway using Ruff.
+
+- **Overview:** Automatically format and fix all import and style violations across the API gateway using Ruff.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: Manually suppress lint warnings using inline comments.
+
+- **Overview:** Manually suppress lint warnings using inline comments.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1, because automatically formatting and fixing imports using the central Ruff configuration ensures codebase consistency, ease of maintainability, and alignment with general repo-wide checks without adding unnecessary bypass configurations.
+- **Chosen Option:** Option 1, because automatically formatting and fixing imports using the central Ruff configuration ensures codebase consistency, ease of maintainability, and alignment with general repo-wide checks without adding unnecessary bypass configurations.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

@@ -25,20 +25,20 @@ This ADR specifically relates to requirements under **PRD-SYS-001**.
 ### Option 1: Incremental Individual Form Signatures
 
 - **Overview:** Prompt the user to re-authenticate separately for each individual eCRF form.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies implementation by reusing single-signature modals.
-- **Cons:**
+- ***Cons:***
   - ❌ Unacceptable user fatigue when signing off on tens of forms in a subject casebook.
   - ❌ Does not allow atomic transaction boundaries for multi-form sign-offs.
 
 ### Option 2: 21 CFR Part 11 Compliant Batch eSignature Modal & Store [Selected]
 
 - **Overview:** Provide a specialized multi-step modal displaying the forms list with SHA-256 preview hashes, prompting for dual-component credentials and controlled meanings, and manifesting a confirmation certificate upon success.
-- **Pros:**
+- ***Pros:***
   - ✅ High usability with a summary list of all batch forms.
   - ✅ Absolute regulatory compliance with dual-component password re-authentication and controlled meanings.
   - ✅ Atomic transaction boundary via a single secure API request.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires creating a dedicated Vue modal component and Pinia state store.
 
 ## 4. Decision Outcome

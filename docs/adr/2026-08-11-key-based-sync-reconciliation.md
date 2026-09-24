@@ -19,19 +19,31 @@ In the Subject Portal offline synchronization workflow, mismatch vulnerabilities
 
 ## 3. Options Considered
 
-1. **Option 1: Unique Key-Based Reconciliation with Chronological Index Fallback (Selected)**
-   - **Overview:** Use explicit tracking key parameters (`sequence_number` and `client_id`) passed back from backend endpoints as `offline_sync_markers` to reconcile local queued submissions precisely. If tracking keys are completely absent, fall back to array-index matching.
-   - **Pros:** Deterministic state tracking under out-of-order responses, robust omission guardrail preserving unmatched items in a pending state, full backward compatibility.
-   - **Cons:** Slightly increased payload size due to sync marker metadata.
+### Option 1: **Option 1: Unique Key-Based Reconciliation with Chronological Index Fallback (Selected)**
 
-2. **Option 2: Pure Chronological Array Index Position Matching**
-   - **Overview:** Reconcile status updates assuming the order returned by the server perfectly mirrors the order sent.
-   - **Pros:** Simple implementation.
-   - **Cons:** Susceptible to out-of-order response matching and partial submission failures, violating clinical safety standards (PRD-SYS-001).
+- **Overview:** - **Overview:** Use explicit tracking key parameters (`sequence_number` and `client_id`) passed back from backend endpoints as `offline_sync_markers` to reconcile local queued submissions precisely. If tracking keys are completely absent, fall back to array-index matching.
+   - ***Pros:*** Deterministic state tracking under out-of-order responses, robust omission guardrail preserving unmatched items in a pending state, full backward compatibility.
+   - ***Cons:*** Slightly increased payload size due to sync marker metadata.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option 2: Pure Chronological Array Index Position Matching**
+
+- **Overview:** - **Overview:** Reconcile status updates assuming the order returned by the server perfectly mirrors the order sent.
+   - ***Pros:*** Simple implementation.
+   - ***Cons:*** Susceptible to out-of-order response matching and partial submission failures, violating clinical safety standards (PRD-SYS-001).
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1** because it perfectly guarantees clinical history integrity, enforces the Omission Guardrail, resolves IndexedDB lifecycle limitations via bulk transaction blocks, and is fully backward compatible with legacy APIs.
+- **Chosen Option:** **Option 1** because it perfectly guarantees clinical history integrity, enforces the Omission Guardrail, resolves IndexedDB lifecycle limitations via bulk transaction blocks, and is fully backward compatible with legacy APIs.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

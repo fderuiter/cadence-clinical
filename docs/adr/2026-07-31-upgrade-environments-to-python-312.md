@@ -25,12 +25,27 @@ By standardizing all workspaces, build pipelines, and container execution enviro
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Standardize all development environments, dependency specifications, Docker bases, and GitHub Actions workflows on Python 3.12.
-2. **Option B (Alternative):** Maintain the dual 3.11/3.12 support, exposing the project to environmental drift and manual GxP compliance overhead.
+### Option 1: **Option A (Selected):** Standardize all development environments, dependency specifications, Docker bases, and GitHub Actions workflows on Python 3.12.
+
+- **Overview:** **Option A (Selected):** Standardize all development environments, dependency specifications, Docker bases, and GitHub Actions workflows on Python 3.12.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative):** Maintain the dual 3.11/3.12 support, exposing the project to environmental drift and manual GxP compliance overhead.
+
+- **Overview:** **Option B (Alternative):** Maintain the dual 3.11/3.12 support, exposing the project to environmental drift and manual GxP compliance overhead.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: Option A because it completely eliminates environment drift, fulfills GxP integrity requirements (PRD-SYS-001), and aligns our developer environment with production runtimes.
+- **Chosen Option:** Option A because it completely eliminates environment drift, fulfills GxP integrity requirements (PRD-SYS-001), and aligns our developer environment with production runtimes.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

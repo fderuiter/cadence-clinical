@@ -29,21 +29,21 @@ Note: A pre-existing numbering collision exists in the codebase where multiple d
 ### Option 1: Inline guard logic inside Execution routers
 
 - **Overview:** Keep the existing local role checks and manually append conditional gates for both Data Manager and Sponsor Admin.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement inside `apps/execution/main.py`.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates the centralized RBAC principle.
   - ❌ Decentralized guards are harder to verify, audit, and keep consistent with global compliance requirements.
 
 ### Option 2: Consolidation using Centralized `require_roles` Dependency [Selected]
 
 - **Overview:** Authorize both `ROLE_DATA_MANAGER` and `ROLE_SPONSOR_ADMIN` as allowed roles in FastAPI's declarative route `Depends(require_roles(...))` and remove unused decentralized helpers.
-- **Pros:**
+- ***Pros:***
   - ✅ Leverages the robust, tested `ROLE_EXPANSIONS` mappings inside `packages/security/rbac.py` which normalizes alias inputs (e.g., `Sponsor Admin`, `sponsor_admin`, `dm`, `data_manager`).
   - ✅ Uniform policy application across all lock and unlock endpoints.
   - ✅ Restricts the read-only status endpoint `/api/v1/execution/locks` strictly to read-capable roles (`ROLE_DATA_MANAGER` and `ROLE_CRA`).
   - ✅ Clear trust boundaries: untrusted/absent/malformed roles are rejected at the gateway middleware and dependency injection layer before any lock mutations are executed.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires updating multiple endpoints in `main.py` and maintaining test mock signatures.
 
 ## 4. Decision Outcome

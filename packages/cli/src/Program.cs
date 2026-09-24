@@ -36,11 +36,12 @@ public static class Program
                 .WithDescription("Executes self-healing auto-formatting and ADR validation pipeline");
 
             config.AddBranch("gxp", gxp =>
+            {
                 gxp.AddCommand<GxPSyncCommand>("sync")
                     .WithDescription("Executes test suites and regenerates RTM compliance docs");
-            gxp.AddCommand<GxPValidateCommand>("validate")
-                .WithDescription("Validates RTM compliance matrix against design requirements");
-        });
+                gxp.AddCommand<GxPValidateCommand>("validate")
+                    .WithDescription("Validates RTM compliance matrix against design requirements");
+            });
 
         config.AddBranch("db", db =>
         {

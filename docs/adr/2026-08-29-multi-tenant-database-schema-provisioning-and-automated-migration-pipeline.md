@@ -24,20 +24,39 @@ Under PRD-SYS-041 and PRD-SYS-053, the Cadence platform requires an automated sc
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Dedicated Schema-per-Tenant with Dynamic Session `search_path` and Transactional DDL Pipeline**
-   - Each sponsor/tenant receives an isolated PostgreSQL schema (`tenant_xyz`).
+### Option 1: **Option A (Selected): Dedicated Schema-per-Tenant with Dynamic Session `search_path` and Transactional DDL Pipeline**
+
+- **Overview:** - Each sponsor/tenant receives an isolated PostgreSQL schema (`tenant_xyz`).
    - Shared models in `apps/execution/database/models` are dynamically created inside the tenant schema using `Base.metadata.create_all` with `search_path` configuration.
    - Triggers and genesis cryptographic blocks are deployed automatically during provisioning.
    - Transactional rollback purges the schema if provisioning fails.
-2. **Option B: Shared Single-Schema with Row-Level Security (RLS) and Tenant ID Columns**
-   - All tenant rows mixed in a single global table with `tenant_id` column.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Shared Single-Schema with Row-Level Security (RLS) and Tenant ID Columns**
+
+- **Overview:** - All tenant rows mixed in a single global table with `tenant_id` column.
    - Higher operational risk of data leakage via misconfigured ORM queries or missing `.where()` clauses. Harder to satisfy strict sponsor data separation audits.
-3. **Option C: Database-per-Tenant**
-   - High infrastructure overhead, connection pool exhaustion, and slow provisioning times for dynamic multi-tenant SaaS.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 3: **Option C: Database-per-Tenant**
+
+- **Overview:** - High infrastructure overhead, connection pool exhaustion, and slow provisioning times for dynamic multi-tenant SaaS.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Dedicated Schema-per-Tenant with Dynamic Session `search_path`)** because it provides mathematical data isolation at the PostgreSQL catalog level, simplifies backup and archival per sponsor, enforces 21 CFR Part 11 triggers natively per table, and integrates seamlessly with Cadence's SQLAlchemy async ORM infrastructure.
+- **Chosen Option:** **Option A (Dedicated Schema-per-Tenant with Dynamic Session `search_path`)** because it provides mathematical data isolation at the PostgreSQL catalog level, simplifies backup and archival per sponsor, enforces 21 CFR Part 11 triggers natively per table, and integrates seamlessly with Cadence's SQLAlchemy async ORM infrastructure.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

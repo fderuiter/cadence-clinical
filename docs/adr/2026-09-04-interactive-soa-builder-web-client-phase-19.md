@@ -22,16 +22,24 @@ This decision implements requirements under PRD-SYS-001.
 ## 3. Options Considered
 
 ### Option 1: Integrate Interactive state management in the shared UI packages
-
 Add `createSoaBuilderMatrix` and a backwards-compatible `createClinicalVisitMatrix` wrapper to `packages/ui/index.js`, alongside an in-memory interactive rendering state machine.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ### Option 2: Keep everything isolated in the web application bundle
-
 Do not share any rendering helpers between the ui package and other clinical sub-systems.
+- ***Pros:***
+  - ✅ Addresses requirements
+- ***Cons:***
+  - ❌ Trade-offs accepted
+
 
 ## 4. Decision Outcome
 
-Chosen Option: Option 1. This ensures central quality control, standardized styling rules, and reusable accessibility structures.
+- **Chosen Option:** Option 1. This ensures central quality control, standardized styling rules, and reusable accessibility structures.
 
 ## 5. Consequences & Trade-offs
 

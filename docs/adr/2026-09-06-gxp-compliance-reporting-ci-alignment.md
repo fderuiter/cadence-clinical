@@ -27,20 +27,20 @@ This decision addresses requirements under **PRD-SYS-001** and **PRD-SYS-003**.
 ### Option 1: Ad-hoc manual configuration and partial lint suppression
 
 - **Overview:** Manually download the `axe.min.js` file and suppress lint warnings in gateway routers using inline `# noqa` comments.
-- **Pros:**
+- ***Pros:***
   - ✅ Minimizes local git changes.
-- **Cons:**
+- ***Cons:***
   - ❌ Pragmatically fragile and prone to future breakage in clean environments.
   - ❌ Unused variables and raw imports remain as technical debt.
 
 ### Option 2: Full local dependency integration, lint resolution, and automated synchronization
 
 - **Overview:** Formally include `axe-core` as part of the workspace devDependencies, completely resolve ESLint unused variable rules in `subject-portal` and Ruff formatting/import sorting rules in `apps/gateway/`, and run automated GxP SDLC report synchronization.
-- **Pros:**
+- ***Pros:***
   - ✅ Clean, deterministic, and warning-free gate verification.
   - ✅ Automatic synchronization of SDP reports through sync scripting.
   - ✅ Eliminates silent failures in accessibility checking.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires checking in updated GxP trace documents.
 
 ## 4. Decision Outcome

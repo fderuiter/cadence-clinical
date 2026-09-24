@@ -28,16 +28,16 @@ This decision implements requirements under Trace-2.
 
 Allow fallback to legacy 4-field signatures regardless of whether scope parameters are present in the request headers.
 
-- **Pros:** Simplest implementation.
-- **Cons:** High security risk, allows clients to claim scopes without cryptographically signing them.
+- ***Pros:*** Simplest implementation.
+- ***Cons:*** High security risk, allows clients to claim scopes without cryptographically signing them.
 
 ### Option 2: Strictly Scoped Fallback Restriction & Shared Normalization (Selected)
 
 Restrict the legacy fallback logic to execute only when no active scope parameters are present. If scope parameters are active, the signature MUST be verified against the modern scope-aware payload (canonical 8-field with tenant or 7-field fallback preserving scopes).
 In addition, introduce a shared `normalize_scope_values` helper co-located in `packages/security/signing.py` to normalize and coerce scope inputs on both sides of the trust boundary.
 
-- **Pros:** Secure, prevents scope-spoofing, ensures gateway/middleware alignment, satisfies security middleware test constraints.
-- **Cons:** None.
+- ***Pros:*** Secure, prevents scope-spoofing, ensures gateway/middleware alignment, satisfies security middleware test constraints.
+- ***Cons:*** None.
 
 ## 4. Decision Outcome
 

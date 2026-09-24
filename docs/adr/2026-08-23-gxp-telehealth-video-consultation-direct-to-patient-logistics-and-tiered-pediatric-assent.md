@@ -1,9 +1,9 @@
 # ADR-2207: GxP Telehealth Video Consultation, Direct-to-Patient Logistics, and Tiered Pediatric Assent
 
-* **Status:** Accepted
-* **Date:** 2026-08-23
-* **Authors:** @fderuiter
-* **Deciders:** Cadence Clinical Architecture Board
+- **Status:** Accepted
+- **Date:** 2026-08-23
+- **Authors:** @fderuiter
+- **Deciders:** Cadence Clinical Architecture Board
 
 ---
 
@@ -25,18 +25,31 @@ Decentralized and hybrid clinical trials (DCT) require robust, patient-centric c
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Unified DCT Engine in Interop Gateway with Domain-Driven Services**
-   - Implement pure domain models and processors in `apps/interop/domain/dct_models.py` and `dct_processor.py`.
+### Option 1: **Option A (Selected): Unified DCT Engine in Interop Gateway with Domain-Driven Services**
+
+- **Overview:** - Implement pure domain models and processors in `apps/interop/domain/dct_models.py` and `dct_processor.py`.
    - Implement relational persistence models and repositories in `apps/interop/infrastructure/dct_models.py` and `dct_repository.py`.
    - Expose standard REST endpoints under `/api/v1/interop/dct/*` with comprehensive Pydantic v2 DTOs.
    - Build a full-featured, accessible `TelehealthDtpConsole.vue` in `apps/web/src/components/clinical/`.
-2. **Option B: Fragmented Per-Service Split**
-   - Distribute telehealth to fileshare, DTP to RTSM/execution, in-home visits to CTMS, and pediatric assent to eConsent.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Fragmented Per-Service Split**
+
+- **Overview:** - Distribute telehealth to fileshare, DTP to RTSM/execution, in-home visits to CTMS, and pediatric assent to eConsent.
    - *Rejected:* Increases distributed transaction overhead, cross-service network latency, and complicates offline sync synchronization across disparate databases.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it provides a cohesive, high-performance, and auditable decentralized clinical trials architecture. The unified DCT subsystem bridges telehealth signaling, tiered pediatric assent, cold chain logistics, and mobile home health workflows with centralized GxP audit logging and end-to-end cryptographic sealing.
+- **Chosen Option:** **Option A** because it provides a cohesive, high-performance, and auditable decentralized clinical trials architecture. The unified DCT subsystem bridges telehealth signaling, tiered pediatric assent, cold chain logistics, and mobile home health workflows with centralized GxP audit logging and end-to-end cryptographic sealing.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

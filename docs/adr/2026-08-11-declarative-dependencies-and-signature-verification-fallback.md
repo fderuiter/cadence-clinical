@@ -25,14 +25,14 @@ This decision implements requirements under Trace-7.
 ### Option 1: Strictly Require Modern Propagation Payloads Only
 
 - **Overview:** Reject any incoming request that does not include site-specific or sponsor-specific parameters in the signature verification payload.
-- **Pros:** Highly secure, immediate standardization.
-- **Cons:** Breaks backward compatibility with existing mock configurations and regression tests that use legacy identity-only signature payloads.
+- ***Pros:*** Highly secure, immediate standardization.
+- ***Cons:*** Breaks backward compatibility with existing mock configurations and regression tests that use legacy identity-only signature payloads.
 
 ### Option 2: Fallback Dual-Verification Protocol and Route-Level Dependencies
 
 - **Overview:** Standardize execution routes using FastAPI `Depends` for role validation and fallback to legacy identity-only payload checks if the modern verification fails.
-- **Pros:** Secure, robust, backward-compatible, clean static boundary enforcement.
-- **Cons:** Introduces a small fallback verification block in the verification utility.
+- ***Pros:*** Secure, robust, backward-compatible, clean static boundary enforcement.
+- ***Cons:*** Introduces a small fallback verification block in the verification utility.
 
 ## 4. Decision Outcome
 

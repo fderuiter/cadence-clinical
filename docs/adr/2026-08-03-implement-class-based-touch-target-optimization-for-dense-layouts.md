@@ -24,25 +24,26 @@ To resolve this, we have moved from global, element-level overrides to an opt-in
 ### Option 1: Global Element-Level CSS Overrides
 
 - **Overview:** Enforce `min-height: 44px` globally across all native tags (`button`, `select`, `textarea`, `input`) across all viewports.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplest implementation with 100% automatic touch target compliance on all screens.
-- **Cons:**
+- ***Cons:***
   - ❌ Causes layout inflation and excessive vertical scrolling on desktop screens.
   - ❌ Severe negative impact on administrative and clinical coordination workflows on desktop.
 
 ### Option 2: Opt-In Helper Class Model with Dynamic Viewport Toggling (Selected)
 
 - **Overview:** Remove global overrides and implement explicit touch target utility classes (such as `.touch-target`, `.min-touch-target`, and `.touch-target-interactive`) leveraging the CSS custom property `--touch-target-min: 44px`. Combine this with dynamic viewport-based Vue class bindings (e.g. `:class="{ 'touch-target-interactive': designerStore.viewport !== 'desktop' }"`) to activate optimization classes only on mobile and tablet viewports.
-- **Pros:**
+- ***Pros:***
   - ✅ Guarantees 100% compact, high-density structures on desktop screens.
   - ✅ Dynamically scales touch targets to a fully compliant `44px` on simulated mobile/tablet viewports.
   - ✅ Zero external design library or CSS utility framework overhead.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires explicit class bindings on interactive input widgets.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 2 (Opt-In Helper Class Model with Dynamic Viewport Toggling)** because it resolves the layout distortion and workflow issues on desktop while fully preserving WCAG 2.1 AA accessibility and touch target compliance on tablet and mobile viewports, satisfying **PRD-CRF-015**.
+- **Chosen Option:** **Option 2 (Opt-In Helper Class Model with Dynamic Viewport Toggling)** because it resolves the layout distortion and workflow issues on desktop while fully preserving WCAG 2.1 AA accessibility and touch target compliance on tablet and mobile viewports, satisfying **PRD-CRF-015**.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

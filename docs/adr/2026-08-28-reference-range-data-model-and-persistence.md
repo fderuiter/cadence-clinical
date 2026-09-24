@@ -25,20 +25,20 @@ This decision implements requirements under PRD-SYS-001.
 
 Define actual database columns mapping the new structured schema requirements (`lab_source`, `sex`, `range_low`, `range_high`) while defining standard SQLAlchemy synonyms (`source`, `sex_applicability`, `low_bound`, `high_bound`) pointing to them. Add additive nullable evaluation outcome columns (`range_indicator`, `is_out_of_range`, `reference_range_low`, `reference_range_high`) to `ClinicalObservation`.
 
-- **Pros:**
+- ***Pros:***
   - ✅ High compliance with the new target data model layout.
   - ✅ 100% backward compatibility with all existing app code, business logic, and test suites.
   - ✅ Highly performant, direct schema representation.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires careful handling of serialization in audit trails (auditing physical columns).
 
 ### Option 2: Full schema reconstruction and manual data mapping
 
 Recreate the tables from scratch with the new names and discard or manually map existing tables during deployment.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Simpler mapping in Python code.
-- **Cons:**
+- ***Cons:***
   - ❌ Risk of data loss and significant downtime during migration in live clinical environments.
 
 ## 4. Decision Outcome

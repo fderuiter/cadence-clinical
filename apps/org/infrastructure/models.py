@@ -6,6 +6,8 @@ DelegationOfAuthority, and append-only OrgAuditLog in compliance with FDA 21 CFR
 Part 11 and GxP standards.
 """
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import Any

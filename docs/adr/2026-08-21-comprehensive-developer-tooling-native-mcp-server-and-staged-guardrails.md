@@ -1,9 +1,9 @@
 # ADR-2189: Comprehensive Developer Tooling Native MCP Server and Staged Guardrails
 
-* **Status:** Accepted
-* **Date:** 2026-08-21
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-21
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 * **Requirement ID:** PRD-SYS-049
 
 ---
@@ -29,13 +29,13 @@ Prior developer workflows exhibited several friction points:
 
 ### Option 1: Fragmented Shell Scripts & Ad-Hoc CLI Print Statements
 - **Overview:** Maintain standalone Python scripts under `scripts/` with disparate CLI arguments and unstructured Rich console output.
-- **Pros:** Low initial implementation effort.
-- **Cons:** High cognitive overhead, poor agent interoperability, no standardized pre-commit automation, context-heavy token waste for AI agents.
+- ***Pros:*** Low initial implementation effort.
+- ***Cons:*** High cognitive overhead, poor agent interoperability, no standardized pre-commit automation, context-heavy token waste for AI agents.
 
 ### Option 2: Heavy Monolithic Pre-Commit & Shell Wrappers
 - **Overview:** Run all 10 architecture gates and full test suites on every git commit.
-- **Pros:** Comprehensive validation.
-- **Cons:** 30+ second commit latency, frequent commit aborts, developer friction leading to `--no-verify` bypasses.
+- ***Pros:*** Comprehensive validation.
+- ***Cons:*** 30+ second commit latency, frequent commit aborts, developer friction leading to `--no-verify` bypasses.
 
 ### Option 3: Unified Multi-Pillar Developer Tooling Architecture (Selected)
 - **Overview:** Orchestrate four unified developer tooling pillars:
@@ -43,12 +43,12 @@ Prior developer workflows exhibited several friction points:
   2. **Two-Tier Staged Pre-Commit Hook:** Sub-500ms staged file checks + sub-1.5s repo invariant assertions.
   3. **Centralized `TerminalDocument` Builder:** Authored terminal documents with narrative headers, status metric cards, aligned columns, and contextual CTAs, paired with strict NDJSON/JSON output in non-TTY contexts.
   4. **Deterministic Self-Healing Engine:** Auto-repair SQLite scratch schemas, install git hooks, format code, sort imports, index ADRs, and export schemas via `cadence doctor --auto-fix` and `cadence fix --all`.
-- **Pros:**
+- ***Pros:***
   - Zero-translation-loss agent execution without shell escaping.
   - Sub-2s commit loop guaranteeing clean CI runs.
   - Consistent terminal aesthetics and clear developer next actions.
   - Automated self-healing for common developer environment drift.
-- **Cons:** Requires initial scaffolding and maintenance of the MCP tool schemas and terminal document formatting abstractions.
+- ***Cons:*** Requires initial scaffolding and maintenance of the MCP tool schemas and terminal document formatting abstractions.
 
 ## 4. Decision Outcome
 

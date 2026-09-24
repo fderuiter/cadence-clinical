@@ -24,20 +24,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Status Quo (Decentralized implementations)
 
 - **Overview:** Maintain application-level duplication of hashing helpers and HTML rendering templates.
-- **Pros:**
+- ***Pros:***
   - ✅ No coordination across application and packages boundaries.
-- **Cons:**
+- ***Cons:***
   - ❌ Higher maintenance overhead and security risk from differing cryptographic implementations.
   - ❌ Direct violation of GxP standards around change management and software consistency.
 
 ### Option 2: Centralize Shared Components and Cryptographic Utilities under Shared packages
 
 - **Overview:** Centralize SHA-256 helper in `packages/ui` (and export from entry point) and clinical radio grid markup generation, using shared package imports in web and subject portals.
-- **Pros:**
+- ***Pros:***
   - ✅ Single point of truth for critical cryptographic hashing and standard form layouts.
   - ✅ Seamless recursive Prettier and Ruff linting/formatting workspace enforcement.
   - ✅ Clearer SDLC and requirements traceability (PR templates checklist).
-- **Cons:**
+- ***Cons:***
   - ❌ Requires package rebuilds and proper dependency workspace resolution.
 
 ## 4. Decision Outcome
