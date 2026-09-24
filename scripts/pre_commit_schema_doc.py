@@ -22,6 +22,7 @@ def get_staged_files() -> list[str]:
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
             capture_output=True,
             text=True,
+            cwd=str(REPO_ROOT),
             check=True,
         )
         return [line.strip() for line in result.stdout.splitlines() if line.strip()]
