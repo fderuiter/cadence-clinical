@@ -32,8 +32,8 @@
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
-    <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
-    <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" Aliases="gateway" />
+    <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" Aliases="designer" />
     <ProjectReference Include="..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
     <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
     <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />

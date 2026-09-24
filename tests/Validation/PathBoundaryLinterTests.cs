@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace Cadence.E2ETests.Validation;
@@ -27,16 +30,6 @@ public class PathBoundaryLinterTests
     private static (bool IsValid, string Error) ValidateFile(string relPath)
     {
         var normalized = relPath.Replace("\\", "/");
-        if (normalized.StartsWith("apps/") || normalized.StartsWith("packages/") || normalized.StartsWith("tests/") || normalized.StartsWith("scripts/") || normalized.StartsWith("docs/"))
-        {
-            return (true, string.Empty);
-        }
-
-        if (normalized == "pyproject.toml" || normalized == "eslint.config.mjs" || normalized == "Cadence.sln")
-        {
-            return (true, string.Empty);
-        }
-
         if (normalized.EndsWith(".vue") && !normalized.StartsWith("apps/") && !normalized.StartsWith("packages/"))
         {
             return (false, "Vue components (*.vue) must reside inside frontend structures");
@@ -45,6 +38,16 @@ public class PathBoundaryLinterTests
         if (normalized.EndsWith(".sh") && !normalized.StartsWith("scripts/"))
         {
             return (false, "Shell scripts (*.sh) must reside in scripts");
+        }
+
+        if (normalized.StartsWith("apps/") || normalized.StartsWith("packages/") || normalized.StartsWith("tests/") || normalized.StartsWith("scripts/") || normalized.StartsWith("docs/"))
+        {
+            return (true, string.Empty);
+        }
+
+        if (normalized == "pyproject.toml" || normalized == "eslint.config.mjs" || normalized == "Cadence.sln")
+        {
+            return (true, string.Empty);
         }
 
         return (false, "File resides outside permitted root-level directories");

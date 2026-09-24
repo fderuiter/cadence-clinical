@@ -40,30 +40,8 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddJsonConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-    options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
-    {
-        Indented = false
-    };
-});
-
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing =>
-    {
-        tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-    })
-    .WithMetrics(metrics =>
-    {
-        metrics
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-    });
+ConfigureLogging(builder.Logging);
+ConfigureTelemetry(builder.Services);
 
 builder.Services.AddOpenApi();
 
@@ -318,6 +296,24 @@ if (args.Contains("--seed"))
 }
 
 await app.RunAsync();
+
+static void ConfigureLogging(ILoggingBuilder logging)
+{
+    logging.ClearProviders();
+    logging.AddJsonConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+        options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions { Indented = false };
+    });
+}
+
+static void ConfigureTelemetry(IServiceCollection services)
+{
+    services.AddOpenTelemetry()
+        .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation())
+        .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation());
+}
 
 // MIG-SUBJ-023: the standard, minimal ASP.NET Core idiom making the implicit top-level-statement `Program`
 // class (`internal` by default) visible to `Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>`

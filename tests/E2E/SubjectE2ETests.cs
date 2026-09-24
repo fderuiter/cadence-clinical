@@ -27,7 +27,7 @@ public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
     public async Task GetSubjectDetail_WhenSubjectNotFound_Returns404NotFound()
     {
         // Act
-        var response = await _client.GetAsync("/api/v1/execution/subjects/non-existent-subject-id");
+        var response = await _client.GetAsync("/api/v1/execution/subjects/non-existent-subject-id", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -46,7 +46,7 @@ public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
         var content = new StringContent(JsonSerializer.Serialize(requestPayload), System.Text.Encoding.UTF8, "application/json");
 
         // Act
-        var response = await _client.PostAsync("/api/v1/execution/subjects", content);
+        var response = await _client.PostAsync("/api/v1/execution/subjects", content, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Match(s => s == HttpStatusCode.Created || s == HttpStatusCode.BadRequest || s == HttpStatusCode.InternalServerError);

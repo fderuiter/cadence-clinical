@@ -3,6 +3,8 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+from __future__ import annotations
+
 import os
 import uuid
 from datetime import UTC, datetime

@@ -14,9 +14,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
-    <ProjectReference Include="..\..\..\..\apps\designer\src\Cadence.Apps.Designer.csproj" />
-    <ProjectReference Include="..\..\..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\apps\execution\src\Cadence.Apps.Execution.csproj" Aliases="execution" />
+    <ProjectReference Include="..\..\..\..\apps\designer\src\Cadence.Apps.Designer.csproj" Aliases="designer" />
+    <ProjectReference Include="..\..\..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" Aliases="gateway" />
     <ProjectReference Include="..\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
