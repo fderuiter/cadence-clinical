@@ -16,6 +16,7 @@ dependencies = [
     "packages-tooling-core",
     "packages-testing",
     "packages-storage",
+    "packages-config",
 ]
 
 [tool.hatch.build.targets.wheel]

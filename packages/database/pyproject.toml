@@ -17,6 +17,7 @@ dependencies = [
     "sqlalchemy>=2.0.28",
     "packages-hexagonal",
     "packages-security",
+    "packages-config",
 ]
 
 [tool.hatch.build.targets.wheel]

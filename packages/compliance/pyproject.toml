@@ -16,6 +16,7 @@ dependencies = [
     "packages-security",
     "packages-deid",
     "packages-database",
+    "packages-config",
 ]
 
 

@@ -265,6 +265,16 @@ class SafetySettings(CommonSettings):
     safety_database_url: str = Field(
         default="sqlite+aiosqlite:///:memory:", validation_alias="SAFETY_DATABASE_URL"
     )
+    safety_db_transmission_endpoint: str | None = Field(
+        default=None,
+        validation_alias="SAFETY_DB_TRANSMISSION_ENDPOINT",
+        description="Safety transmission API endpoint URL",
+    )
+    safety_db_ingestion_endpoint: str | None = Field(
+        default=None,
+        validation_alias="SAFETY_DB_INGESTION_ENDPOINT",
+        description="Safety cases ingestion API endpoint URL",
+    )
 
 
 class TicketsSettings(CommonSettings):
@@ -294,6 +304,26 @@ class ImagingSettings(CommonSettings):
 
     imaging_database_url: str = Field(
         default="sqlite+aiosqlite:///:memory:", validation_alias="IMAGING_DATABASE_URL"
+    )
+    imaging_storage_bucket: str = Field(
+        default="imaging-dicom",
+        validation_alias="IMAGING_STORAGE_BUCKET",
+        description="S3/MinIO bucket name for storing imaging DICOM objects",
+    )
+    minio_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="MINIO_ENDPOINT_URL",
+        description="MinIO endpoint URL override",
+    )
+    storage_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="STORAGE_ENDPOINT_URL",
+        description="Generic storage endpoint URL override",
+    )
+    aws_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="AWS_ENDPOINT_URL",
+        description="AWS endpoint URL override",
     )
 
 

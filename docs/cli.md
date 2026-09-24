@@ -221,6 +221,21 @@ cadence scaffold service analytics
 cadence scaffold adr "Use Event Driven Architecture" --domain core-platform --req PRD-SYS-001
 ```
 
+### `cadence settings`
+
+Manage microservice configuration settings models and template exports.
+
+#### Subcommands
+
+##### `cadence settings export`
+
+Export Pydantic settings models into .env.example and docs/ENVIRONMENT_VARIABLES.md.
+
+| Option / Argument | Type | Description | Default |
+| --- | --- | --- | --- |
+| `--check` | boolean | Check for configuration drift without modifying files | `false` |
+| `--json` | boolean | Emit output in structured JSON format | `false` |
+
 ### `cadence setup`
 
 Environment setup, cryptographic key generation, and cloud credential bootstrapping.
