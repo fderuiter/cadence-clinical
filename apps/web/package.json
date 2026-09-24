@@ -3,6 +3,7 @@
   "dependencies": {
     "hls.js": "^1.7.2",
     "keycloak-js": "^26.2.4",
+    "openapi-fetch": "^0.13.0",
     "pinia": "^4.0.3",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
