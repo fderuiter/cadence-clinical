@@ -41,16 +41,22 @@ def should_trigger_schema_doc(staged_files: list[str]) -> bool:
     for f in staged_files:
         if "scripts/generate_schema_documentation.py" in f:
             return True
-        if not f.endswith(".py"):
+        if not f.endswith(".py") and not f.endswith(".cs"):
             continue
         parts = f.split(os.sep)
         filename = parts[-1]
         if (
             "models.py" in filename
             or "database.py" in filename
+            or "Entities.cs" in filename
+            or "DbContext.cs" in filename
             or "infrastructure" in parts
+            or "Infrastructure" in parts
+            or "domain" in parts
+            or "Domain" in parts
             or "adapters" in parts
             or "alembic" in parts
+            or "Migrations" in parts
         ):
             return True
     return False

@@ -153,7 +153,7 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      - id: auto-stage-schema-doc
+      - id: generate-schema-doc
         name: Auto-Stage Schema Documentation
         entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py
         language: system
