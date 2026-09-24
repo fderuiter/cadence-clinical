@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-import os
 import re
 import time
 from collections.abc import Callable
@@ -264,9 +263,12 @@ class GraphDatabaseManager:
         if self._driver is not None:
             return
 
-        uri = uri or os.getenv("NEO4J_URI")
-        user = user or os.getenv("NEO4J_USER")
-        password = password or os.getenv("NEO4J_PASSWORD")
+        from packages.config import get_common_settings
+
+        settings = get_common_settings()
+        uri = uri or settings.neo4j_uri
+        user = user or settings.neo4j_user
+        password = password or settings.neo4j_password
 
         if not uri:
             logger.warning(

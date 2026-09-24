@@ -3,7 +3,6 @@
 Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 """
 
-import os
 from typing import Any
 
 from packages.storage.adapters.minio_adapter import MinioStorageAdapter
@@ -19,9 +18,12 @@ def get_storage_port() -> StoragePort[dict[str, Any]]:
     if _storage_singleton is not None:
         return _storage_singleton
 
-    bucket_name = os.getenv("IMAGING_STORAGE_BUCKET", "cadence-imaging")
-    minio_url = os.getenv("MINIO_ENDPOINT_URL") or os.getenv("STORAGE_ENDPOINT_URL")
-    s3_endpoint = os.getenv("AWS_ENDPOINT_URL")
+    from packages.config import get_imaging_settings
+
+    settings = get_imaging_settings()
+    bucket_name = settings.imaging_storage_bucket
+    minio_url = settings.minio_endpoint_url or settings.storage_endpoint_url
+    s3_endpoint = settings.aws_endpoint_url
 
     if minio_url:
         _storage_singleton = MinioStorageAdapter(

@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import datetime
 import hashlib
 import hmac
-import os
 import uuid
 from typing import Any
 
@@ -29,8 +28,10 @@ except ImportError:
 
 
 def get_audit_log_secret_key() -> str:
-    """Retrieve the audit log HMAC secret from environment, failing if unset."""
-    secret = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+    """Retrieve the audit log HMAC secret from settings, failing if unset."""
+    from packages.config import get_common_settings
+
+    secret = (get_common_settings().audit_log_secret_key or "").strip()
     if not secret:
         raise RuntimeError(
             "AUDIT_LOG_SECRET_KEY environment variable is missing or empty"

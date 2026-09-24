@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 import httpx
@@ -24,12 +23,13 @@ async def forward_icf_to_etmf(
     Uses HMAC-SHA256 Gateway signature V2 for secure internal service authentication.
     Returns the ingested document ID on success, and raises on failure.
     """
-    etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003").rstrip("/")
+    from packages.config import get_econsent_settings
+
+    settings = get_econsent_settings()
+    etmf_base_url = settings.etmf_url.rstrip("/")
     url = f"{etmf_base_url}/api/v1/etmf/ingest"
 
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    gateway_secret_env = settings.gateway_secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)

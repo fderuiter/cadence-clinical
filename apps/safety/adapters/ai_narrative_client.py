@@ -7,7 +7,6 @@ import contextlib
 import hashlib
 import json
 import logging
-import os
 import time
 from typing import Any
 
@@ -29,16 +28,19 @@ class AISafetyNarrativeClient:
     """Client for generating ICH E2B(R3) compliant safety narratives via apps/ai_gateway."""
 
     def __init__(self, base_url: str | None = None, timeout: float = 15.0) -> None:
-        url = base_url or os.getenv("AI_GATEWAY_URL") or "http://localhost:8000"
+        from packages.config import get_safety_settings
+
+        settings = get_safety_settings()
+        url = base_url or settings.ai_gateway_url
         self.base_url: str = url.rstrip("/")
         self.timeout = timeout
 
     def _get_auth_headers(
         self, change_reason: str = "Safety Narrative Drafting"
     ) -> dict[str, str]:
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
+        from packages.config import get_safety_settings
+
+        gateway_secret_env = get_safety_settings().gateway_secret
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)

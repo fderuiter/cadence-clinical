@@ -13,7 +13,6 @@ import hashlib
 import hmac
 import io
 import json
-import os
 import uuid
 from collections.abc import Callable
 from datetime import UTC
@@ -24,6 +23,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import JSON, DateTime, Integer, String, event, inspect, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
+from packages.config import get_common_settings
 from packages.database import (
     AuditChainIntegrityError,
     AuditImmutabilityError,
@@ -38,9 +38,9 @@ from packages.database.audit import (
     Part11AuditMixin,
 )
 
-AUDIT_LOG_SECRET_KEY = os.getenv(
-    "AUDIT_LOG_SECRET_KEY", "default-cadence-audit-secret-key"
-).strip()
+
+def _get_audit_secret() -> str:
+    return get_common_settings().audit_log_secret_key.strip()
 
 
 def compute_audit_digest(
@@ -74,11 +74,7 @@ def compute_audit_digest(
     Returns:
         Hex-encoded SHA-256 HMAC digest string.
     """
-    key = (
-        secret_key
-        or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
-        or AUDIT_LOG_SECRET_KEY
-    )
+    key = secret_key or _get_audit_secret()
     canonical_payload = (
         f"{event_id}|{service_name}|{action_type}|{entity_name}|{entity_id}|"
         f"{user_id}|{tenant_id}|{reason_for_change}|{timestamp}|{previous_digest}"

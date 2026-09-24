@@ -1,4 +1,3 @@
-import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -1460,9 +1459,9 @@ async def update_grant(
             sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
                 "x-sig-token"
             )
-            secret = os.getenv(
-                "GATEWAY_SECRET", "internal-gateway-secret-12345"
-            ).encode()  # pragma: allowlist secret
+            from packages.config import get_ctms_settings
+
+            secret = get_ctms_settings().gateway_secret.encode()
 
             success, result_auth = verify_sig_token(
                 sig_token=sig_token,
@@ -2081,9 +2080,9 @@ async def process_visit_sync(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    from packages.config import get_ctms_settings
+
+    gateway_secret_str = get_ctms_settings().gateway_secret
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"
@@ -2370,9 +2369,11 @@ async def list_ctms_resupply_events(
     if status:
         params["status"] = status
 
+    from packages.config import get_ctms_settings
+
     try:
         client = GatewayBaseClient(
-            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+            base_url=get_ctms_settings().execution_url, timeout=5.0
         )
         response = await client.request(
             method="GET",
@@ -2408,6 +2409,7 @@ async def approve_ctms_resupply_event(
     """Approve resupply event, securely signing and delegating downstream."""
     import httpx
 
+    from packages.config import get_ctms_settings
     from packages.security.gateway_client import GatewayBaseClient
     from packages.security.rbac import can_access_site, can_access_study
 
@@ -2420,7 +2422,7 @@ async def approve_ctms_resupply_event(
     # 1. Fetch resupply events to check permissions
     try:
         client = GatewayBaseClient(
-            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+            base_url=get_ctms_settings().execution_url, timeout=5.0
         )
         response = await client.request(
             method="GET",
@@ -2524,6 +2526,7 @@ async def reject_ctms_resupply_event(
     """Reject resupply event, securely signing and delegating downstream."""
     import httpx
 
+    from packages.config import get_ctms_settings
     from packages.security.gateway_client import GatewayBaseClient
     from packages.security.rbac import can_access_site, can_access_study
 
@@ -2536,7 +2539,7 @@ async def reject_ctms_resupply_event(
     # 1. Fetch resupply events to check permissions
     try:
         client = GatewayBaseClient(
-            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+            base_url=get_ctms_settings().execution_url, timeout=5.0
         )
         response = await client.request(
             method="GET",

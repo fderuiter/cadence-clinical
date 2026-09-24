@@ -1,5 +1,6 @@
-import os
 import sys
+
+from packages.config import get_common_settings
 
 INSECURE_FALLBACKS = {
     "internal-gateway-secret-12345",
@@ -21,7 +22,8 @@ def assert_secure_secrets(
     staging or production environments, and any critical secret is missing or uses
     an insecure fallback value.
     """
-    app_env = os.getenv("APP_ENV", "").strip().lower()
+    settings = get_common_settings()
+    app_env = settings.app_env.strip().lower()
 
     # Non-development environments (e.g. production or staging)
     if app_env and app_env not in ("development", "dev", "test"):
@@ -62,16 +64,17 @@ def validate_branding(service_name: str, is_gateway: bool = False) -> None:
     Halts the boot sequence by raising a RuntimeError if legacy or default domain
     or unconfigured values are detected in production or staging environments.
     """
-    app_env = os.getenv("APP_ENV", "").strip().lower()
+    settings = get_common_settings()
+    app_env = settings.app_env.strip().lower()
     is_prod_or_staging = app_env not in ("development", "dev", "test", "")
 
     if is_prod_or_staging:
         invalid = []
-        brand_name = os.getenv("BRAND_NAME")
+        brand_name = settings.brand_name
         if not brand_name or brand_name.strip() == "Cadence Clinical":
             invalid.append("BRAND_NAME")
 
-        brand_domain = os.getenv("BRAND_DOMAIN")
+        brand_domain = settings.brand_domain
         if (
             not brand_domain
             or brand_domain.strip() == "cadenceclinical.com"
@@ -80,11 +83,11 @@ def validate_branding(service_name: str, is_gateway: bool = False) -> None:
             invalid.append("BRAND_DOMAIN")
 
         if is_gateway:
-            keycloak_realm = os.getenv("KEYCLOAK_REALM")
+            keycloak_realm = settings.keycloak_realm
             if not keycloak_realm or keycloak_realm.strip() == "cadence":
                 invalid.append("KEYCLOAK_REALM")
 
-            keycloak_client_id = os.getenv("KEYCLOAK_CLIENT_ID")
+            keycloak_client_id = settings.keycloak_client_id
             if (
                 not keycloak_client_id
                 or keycloak_client_id.strip() == "cadence-clinical"

@@ -5,7 +5,6 @@ Requirements: PRD-CRF-007, PRD-SYS-001
 
 import hashlib
 import hmac
-import os
 from typing import Any
 
 from packages.deid.detector import DeidDetector
@@ -27,7 +26,9 @@ def deidentify_free_text(
 
 def pseudonymize_identifier(identifier: str) -> str:
     """Create deterministic irreversible HMAC-SHA256 pseudonym for an identifier."""
-    salt = os.getenv("PSEUDONYMIZATION_SALT", default="secure-clinical-salt-98765")
+    from packages.config import get_interop_settings
+
+    salt = get_interop_settings().pseudonymization_salt
     return hmac.new(salt.encode(), identifier.encode(), hashlib.sha256).hexdigest()
 
 

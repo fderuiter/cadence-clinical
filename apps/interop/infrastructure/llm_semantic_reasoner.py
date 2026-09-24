@@ -5,7 +5,6 @@ Requirements: PRD-CRF-007, PRD-SYS-051
 
 import json
 import logging
-import os
 import re
 from typing import Any
 
@@ -35,7 +34,9 @@ class LLMSemanticReasoner(LLMSemanticReasonerPort):
         ai_gateway_url: str | None = None,
         embedding_matcher: EmbeddingMatcher | None = None,
     ) -> None:
-        self.ai_gateway_url = ai_gateway_url or os.getenv("AI_GATEWAY_URL")
+        from packages.config import get_interop_settings
+
+        self.ai_gateway_url = ai_gateway_url or get_interop_settings().ai_gateway_url
         self.embedding_matcher = embedding_matcher or EmbeddingMatcher()
         self.deid_detector = DeidDetector()
 
@@ -80,9 +81,9 @@ class LLMSemanticReasoner(LLMSemanticReasonerPort):
         self, text: str, study_id: str
     ) -> list[SemanticMappedItem]:
         """Call AI Gateway structured generation endpoint with gateway authentication."""
-        gateway_secret = os.getenv(
-            "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-        )
+        from packages.config import get_interop_settings
+
+        gateway_secret = get_interop_settings().gateway_secret
         headers = generate_gateway_signature(
             user_id="interop-service",
             roles=["sponsor_dm", "sysadmin"],

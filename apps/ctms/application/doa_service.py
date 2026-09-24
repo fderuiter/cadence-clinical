@@ -3,16 +3,18 @@
 Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
+from packages.config import get_ctms_settings
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,
 )
 
-EXECUTION_URL = (os.getenv("EXECUTION_URL") or "http://localhost:8002").rstrip("/")
+
+def _get_execution_url() -> str:
+    return get_ctms_settings().execution_url.rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
@@ -69,7 +71,7 @@ async def delegate_task(
 
     Verifies the staff member is trained and creates a pending record.
     """
-    client = GatewayBaseClient(base_url=EXECUTION_URL)
+    client = GatewayBaseClient(base_url=_get_execution_url())
     response = await client.request(
         method="POST",
         path="/api/v1/execution/doa/delegate",
@@ -102,7 +104,7 @@ async def approve_delegation_with_esignature(
     totp_code: str | None = None,
 ) -> DOADelegationRecordObj:
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
-    client = GatewayBaseClient(base_url=EXECUTION_URL)
+    client = GatewayBaseClient(base_url=_get_execution_url())
     response = await client.request(
         method="POST",
         path="/api/v1/execution/doa/endorse",
@@ -133,7 +135,7 @@ async def revoke_delegation(
     reason_for_change: str,
 ) -> DOADelegationRecordObj:
     """Revoke a task delegation record and mark its end date."""
-    client = GatewayBaseClient(base_url=EXECUTION_URL)
+    client = GatewayBaseClient(base_url=_get_execution_url())
     response = await client.request(
         method="POST",
         path="/api/v1/execution/doa/revoke",
@@ -211,7 +213,7 @@ class DOAManagerService:
 
         Requirements: PRD-SYS-001
         """
-        client = GatewayBaseClient(base_url=EXECUTION_URL)
+        client = GatewayBaseClient(base_url=_get_execution_url())
         response = await client.request(
             method="POST",
             path="/api/v1/execution/doa/endorse_task",

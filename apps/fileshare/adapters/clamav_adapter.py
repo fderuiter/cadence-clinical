@@ -6,7 +6,6 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 
 import asyncio
 import logging
-import os
 import struct
 from collections.abc import AsyncIterable
 
@@ -28,8 +27,11 @@ class ClamAVScanAdapter(ScanPort):
         timeout: float = 30.0,
         engine_name: str = "clamav-1.3",
     ) -> None:
-        self.host = host if host is not None else os.getenv("CLAMAV_HOST", "127.0.0.1")
-        self.port = port if port is not None else int(os.getenv("CLAMAV_PORT", "3310"))
+        from packages.config import get_fileshare_settings
+
+        settings = get_fileshare_settings()
+        self.host = host if host is not None else settings.clamav_host
+        self.port = port if port is not None else settings.clamav_port
         self.timeout = timeout
         self.engine_name = engine_name
 

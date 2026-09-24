@@ -5,28 +5,26 @@ Provides REST APIs for Organization, Site, and Personnel (SiteStaff) directory m
 with 21 CFR Part 11 and GxP compliant append-only version history and audit trails.
 """
 
-import os
-
 from fastapi import FastAPI
 
 from apps.org.infrastructure.database import db_manager
 from apps.org.infrastructure.models import Base
 from apps.org.presentation.routers.org import router as org_router
+from packages.config import get_org_settings
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.telemetry import setup_telemetry
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
-).encode()  # pragma: allowlist secret
+settings = get_org_settings()
+GATEWAY_SECRET = settings.gateway_secret.encode()
 
-DATABASE_URL = os.getenv("ORG_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+DATABASE_URL = settings.org_database_url
 
-assert_secure_secrets("org", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
+assert_secure_secrets("org", {"GATEWAY_SECRET": settings.gateway_secret})
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_NAME = settings.brand_name
 
 
 validate_branding("org")

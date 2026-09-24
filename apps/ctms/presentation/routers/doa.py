@@ -3,7 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -154,9 +153,9 @@ async def sign_off_delegation(
         raise HTTPException(status_code=404, detail="Delegation record not found")
 
     sig_token = request.headers.get("X-Sig-Token") or request.headers.get("x-sig-token")
-    secret = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    ).encode()  # pragma: allowlist secret
+    from packages.config import get_ctms_settings
+
+    secret = get_ctms_settings().gateway_secret.encode()
 
     success, res_auth = verify_sig_token(
         sig_token=sig_token,
