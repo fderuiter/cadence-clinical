@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+using Cadence.Cli.Services;
+
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -9,11 +11,7 @@ public class DbResetCommand : Command
 {
     public override int Execute(CommandContext context)
     {
-        AnsiConsole.MarkupLine("[cyan]Resetting local databases (PostgreSQL/SQLite/Neo4j)...[/]");
-        var psi = new ProcessStartInfo("python3", "scripts/reset_db.py") { UseShellExecute = false };
-        using var p = Process.Start(psi);
-        p?.WaitForExit();
-        return p?.ExitCode ?? 0;
+        return DatabaseResetService.ResetDatabasesAsync(allowOffline: true).GetAwaiter().GetResult();
     }
 }
 

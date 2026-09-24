@@ -10,11 +10,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\..\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Neo4j.Driver" />
   </ItemGroup>
 </Project>
