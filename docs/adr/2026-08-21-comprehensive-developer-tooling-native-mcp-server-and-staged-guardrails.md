@@ -40,7 +40,7 @@ Prior developer workflows exhibited several friction points:
 ### Option 3: Unified Multi-Pillar Developer Tooling Architecture (Selected)
 - **Overview:** Orchestrate four unified developer tooling pillars:
   1. **Native Stdio MCP Server (`cadence mcp`):** Directly expose typed repository tools to AI coding agents via stdio JSON-RPC.
-  2. **Two-Tier Staged Pre-Commit Hook:** Sub-500ms staged file checks + sub-1.5s repo invariant assertions.
+  2. **Two-Tier Staged Pre-Commit Hook:** Sub-500ms staged file checks + PRD-SUB-001.5s repo invariant assertions.
   3. **Centralized `TerminalDocument` Builder:** Authored terminal documents with narrative headers, status metric cards, aligned columns, and contextual CTAs, paired with strict NDJSON/JSON output in non-TTY contexts.
   4. **Deterministic Self-Healing Engine:** Auto-repair SQLite scratch schemas, install git hooks, format code, sort imports, index ADRs, and export schemas via `cadence doctor --auto-fix` and `cadence fix --all`.
 - ***Pros:***
