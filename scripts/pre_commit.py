@@ -180,7 +180,9 @@ def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
         check=False,
     )
     if res_deps.returncode != 0:
-        errors.append(f"Forbidden package dependency violation:\n{res_deps.stdout}\n{res_deps.stderr}")
+        errors.append(
+            f"Forbidden package dependency violation:\n{res_deps.stdout}\n{res_deps.stderr}"
+        )
 
     # OpenAPI schema drift and type check
     res_openapi = subprocess.run(
@@ -191,7 +193,9 @@ def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
         check=False,
     )
     if res_openapi.returncode != 0:
-        errors.append(f"OpenAPI schema drift or typecheck violation:\n{res_openapi.stdout}\n{res_openapi.stderr}")
+        errors.append(
+            f"OpenAPI schema drift or typecheck violation:\n{res_openapi.stdout}\n{res_openapi.stderr}"
+        )
 
     return {
         "passed": len(errors) == 0,

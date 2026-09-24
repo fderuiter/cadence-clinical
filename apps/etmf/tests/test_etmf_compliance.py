@@ -4,7 +4,6 @@ import datetime
 
 import pytest
 import pytest_asyncio
-from apps.execution.trial_lock import TrialLockManager
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -27,6 +26,7 @@ from apps.etmf.sealer import (
     validate_etmf_ledger_integrity,
 )
 from apps.etmf.tests.test_etmf import get_auth_headers
+from apps.execution.trial_lock import TrialLockManager
 
 
 @pytest.fixture(autouse=True)

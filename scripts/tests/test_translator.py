@@ -8,6 +8,7 @@ import defusedxml.ElementTree as ET
 import httpx
 import pytest
 import pytest_asyncio
+
 from apps.execution.database.context import (
     audit_context,
     current_change_reason,
@@ -469,6 +470,7 @@ async def test_study_published_expired_timestamp_rejection():
 @pytest.mark.asyncio
 async def test_rules_compilation_and_artifact_generation():
     from apps.designer.rules import ExpressionNode, FieldReference
+
     from apps.execution.translator import compile_condition_to_xpath
 
     # 1. Test unit-level translation of expressions

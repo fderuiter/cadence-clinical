@@ -4,14 +4,12 @@ import logging
 import threading
 import time
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from packages.security.permissions import PermissionEnum
 
 from packages.security.context import (
     current_change_reason,
@@ -19,6 +17,7 @@ from packages.security.context import (
     current_timestamp,
     current_user_id,
 )
+from packages.security.permissions import PermissionEnum
 
 
 class DownstreamReplayCache:

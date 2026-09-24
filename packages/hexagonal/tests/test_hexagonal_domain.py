@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
+
 from apps.execution.adapters.repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,

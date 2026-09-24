@@ -112,6 +112,7 @@ def run_check(
             [sys.executable, "scripts/validate_architecture_drift.py"],
         ),
         ("contract-verification", [sys.executable, "scripts/verify_contracts.py"]),
+        ("env-vars", [sys.executable, "scripts/extract_env_vars.py", "--check"]),
     ]
 
     selected_gates = [g for g in all_gates if not gate or g[0] == gate]

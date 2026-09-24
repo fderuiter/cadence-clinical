@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
+import packages  # noqa: F401
 from apps.execution.domain.safety_models import (
     CausalityEnum,
     SeriousnessCriteriaEnum,
 )
 from apps.execution.services.e2b_parser import E2BR3Parser
-
-import packages  # noqa: F401
 
 
 def test_parse_e2b_xml_valid_payload() -> None:

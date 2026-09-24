@@ -1,16 +1,16 @@
 import os
 
-import apps.execution.database.audit  # noqa: F401
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
+
+import apps.execution.database.audit  # noqa: F401
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog, Base
 from apps.execution.services.change_request_service import (
     CURRENT_SETTINGS,
     ComplianceChangeRequestService,
 )
-from sqlalchemy import select
-
 from packages.security.context import audit_context
 
 

@@ -8,6 +8,15 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
+
+from apps.ctms.database import db_manager
+from apps.ctms.services.doa_service import (
+    DOAManagerService,
+    approve_delegation_with_esignature,
+    delegate_task,
+    revoke_delegation,
+)
 from apps.execution.database.models import (
     Base as ExecBase,
 )
@@ -25,15 +34,6 @@ from apps.execution.presentation.routers.doa import (
     approve_task_endpoint,
     delegate_task_endpoint,
     revoke_delegation_endpoint,
-)
-from sqlalchemy import select
-
-from apps.ctms.database import db_manager
-from apps.ctms.services.doa_service import (
-    DOAManagerService,
-    approve_delegation_with_esignature,
-    delegate_task,
-    revoke_delegation,
 )
 
 
