@@ -292,8 +292,8 @@ make sync-gxp
 
 This runs three steps automatically:
 
-1. `uv run pytest -n auto --junitxml=report.xml`
-2. `uv run python scripts/generate_rtm.py`
+1. `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"`
+2. `python scripts/generate_rtm.py --report report_dotnet.trx`
 3. `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
 
 Then commit and push:
@@ -307,32 +307,28 @@ git push
 
 ```bash
 # Validate-only (no test run, no file changes) — useful for a quick check
-uv run python scripts/sync_gxp.py --dry-run
+python scripts/sync_gxp.py --dry-run
 
 # Full sync AND auto-commit in one step
-uv run python scripts/sync_gxp.py --commit
+python scripts/sync_gxp.py --commit
 ```
 
 ### Mapping requirement IDs in tests
 
-For the RTM to track your test, add a requirement ID to the test docstring:
+For the RTM to track your test, declare the requirement ID using xUnit `[Trait("Requirement", "...")]` attributes, `[GxPRequirement("...")]`, or XML documentation comments:
 
-```python
-# skip
-async def test_enrollment_transition():
-    """Validate subject state machine on enrollment.
-
-    @req:PRD-SYS-042
-    """
+```csharp
+[Fact]
+[Trait("Requirement", "PRD-SYS-042")]
+[GxPRequirement("PRD-SYS-042")]
+public async Task ValidateSubjectEnrollmentTransition()
+{
+    /// <summary>
+    /// Validates subject state machine on enrollment.
+    /// @req:PRD-SYS-042
+    /// </summary>
     ...
-```
-
-Here is another example of a standard test signature that gets validated:
-
-```python
-# tests/test_remove_jules_labels.py
-def test_remove_label_success(mock_run):
-    pass
+}
 ```
 
 ---
@@ -388,9 +384,9 @@ See [Tier 2](#tier-2--architecture-decisions-adr) above.
 ### Gate 3 — Test Coverage
 
 - Tests live in `tests/`.
-- Backend: `pytest` + `pytest-asyncio`. Minimum **80%** coverage enforced.
+- Backend: .NET 10 xUnit v3 (`dotnet test`). Minimum **80%** coverage enforced.
 - Frontend/packages: `vitest`.
-- Reference requirement IDs in test docstrings for RTM traceability.
+- Reference requirement IDs using xUnit attributes (`[Trait("Requirement", "...")]` or `[GxPRequirement("...")])`) or XML doc comments (`/// @req:...`) for RTM traceability.
 
 ---
 
@@ -449,8 +445,8 @@ Key distinctions:
 
 ## 9. Binary File Hygiene
 
-- **Never commit `.docx` files.** They are gitignored. Use `uv run python scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
-- **Never commit `report.xml`.** It is gitignored. Generate it locally with `uv run pytest --junitxml=report.xml` but do not stage it.
+- **Never commit `.docx` files.** They are gitignored. Use `python scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
+- **Never commit test execution reports (`*.trx`, `report.xml`).** They are gitignored. Generate them locally via `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"` but do not stage them.
 - **Never commit `.env` or secret files.** Use `detect-secrets` baseline workflow.
 
 ---

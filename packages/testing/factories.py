@@ -1,5 +1,7 @@
 """Standardized clinical domain entity factories for unit and integration testing."""
 
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime
 from typing import Any

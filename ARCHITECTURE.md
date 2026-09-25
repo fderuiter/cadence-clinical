@@ -41,7 +41,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
  │ • Electronic Consent (Port 8017 : SQLite/PG) │ │ • Electronic Trial Master File (Port 8004)   │
  │                                              │ │ • Electronic Investigator Files (Port 8016)  │
  │                                              │ │ • FileShare & StoragePort (Port 8018 : MinIO)│
- │                                              │ │ • Compliance Engine (Port 8019 : Pytest/GxP) │
+ │                                              │ │ • Compliance Engine (Port 8019 : xUnit/GxP)  │
  └──────────────────────────────────────────────┘ └──────────────────────────────────────────────┘
 ```
 
@@ -210,7 +210,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 19. Compliance Engine (`apps/compliance` — Port 8019)
 - **Role:** Centralized Regulatory Verification & Qualification.
-- **Datastore:** Pytest + Audit Ledgers.
+- **Datastore:** .NET 10 xUnit v3 + Audit Ledgers.
 - **Core Responsibilities:**
   - Full automated qualification test execution (IQ/OQ/PQ suites).
   - 100% GxP Requirements Traceability Matrix (RTM) synchronization.
