@@ -1,0 +1,1 @@
+"""Quality adapters package."""

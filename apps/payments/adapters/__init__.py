@@ -1,0 +1,1 @@
+"""Payments adapters package."""

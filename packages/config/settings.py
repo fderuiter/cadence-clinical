@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Centralized Pydantic BaseSettings models for Cadence Clinical microservices and shared packages."""
 
 from functools import lru_cache

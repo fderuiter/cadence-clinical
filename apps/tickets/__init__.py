@@ -1,0 +1,1 @@
+"""Tickets service package."""
