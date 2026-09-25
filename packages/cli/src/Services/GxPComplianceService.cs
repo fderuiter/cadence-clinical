@@ -22,7 +22,17 @@ public static class GxPComplianceService
         }
 
         var argStr = string.Join(" ", args);
-        var psi = new ProcessStartInfo("python3", string.IsNullOrEmpty(argStr) ? "scripts/sync_gxp.py" : $"scripts/sync_gxp.py {argStr}")
+        var pythonExe = "python3";
+        if (System.IO.File.Exists(".venv/bin/python3"))
+        {
+            pythonExe = ".venv/bin/python3";
+        }
+        else if (System.IO.File.Exists(".venv/bin/python"))
+        {
+            pythonExe = ".venv/bin/python";
+        }
+
+        var psi = new ProcessStartInfo(pythonExe, string.IsNullOrEmpty(argStr) ? "scripts/sync_gxp.py" : $"scripts/sync_gxp.py {argStr}")
         {
             UseShellExecute = false
         };

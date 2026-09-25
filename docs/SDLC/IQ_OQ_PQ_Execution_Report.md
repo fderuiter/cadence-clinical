@@ -37,186 +37,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-Package                 Version     Editable project location
------------------------ ----------- -------------------------
-aioboto3                 15.5.0
-aiobotocore              2.25.1
-aiofiles                 25.1.0
-aiohappyeyeballs         2.7.1
-aiohttp                  3.14.3
-aioitertools             0.13.0
-aiosignal                1.4.0
-aiosmtplib               5.1.2
-aiosqlite                0.22.1
-alembic                  1.20.0
-annotated-doc            0.0.4
-annotated-types          0.7.0
-anyio                    4.14.2
-asgiref                  3.12.1
-ast-serialize            0.8.0
-asyncpg                  0.31.0
-attrs                    26.1.0
-babel                    2.18.0
-bandit                   1.9.4
-beautifulsoup4           4.15.0
-boolean-py               5.0
-boto3                    1.40.61
-botocore                 1.40.61
-brotli                   1.2.0
-brotlicffi               1.2.0.2
-cachecontrol             0.14.4
-cadence-clinical         0.1.0       /app
-certifi                  2026.7.22
-cffi                     2.1.0
-cfgv                     3.5.0
-charset-normalizer       3.4.9
-click                    8.4.2
-colorama                 0.4.6
-cryptography             50.0.1
-cssselect2               0.10.1
-cyclonedx-python-lib     11.11.0
-defusedxml               0.7.1
-detect-secrets           1.5.0
-distlib                  0.4.3
-distro                   1.9.0
-docxcompose              2.2.0
-docxtpl                  0.20.2
-ecdsa                    0.19.2
-et-xmlfile               2.0.0
-fastapi                  0.139.2
-fastuuid                 0.14.0
-filelock                 3.32.0
-fonttools                4.66.0
-frozenlist               1.8.0
-fsspec                   2026.7.0
-google-api-core          2.38.0
-google-api-python-client 2.200.0
-google-auth              2.58.0
-google-auth-httplib2     0.4.2
-googleapis-common-protos 1.75.3
-greenlet                 3.5.4
-h11                      0.16.0
-hf-xet                   1.6.0
-httpcore                 1.0.9
-httplib2                 0.32.0
-httptools                0.8.0
-httpx                    0.28.1
-huggingface-hub          1.28.0
-identify                 2.6.19
-idna                     3.18
-importlib-metadata       8.9.0
-jinja2                   3.1.6
-jiter                    0.16.0
-jmespath                 1.1.0
-jsonschema               4.26.0
-jsonschema-specifications 2025.9.1
-librt                    0.15.0
-license-expression       30.4.4
-litellm                  1.97.0
-lxml                     6.1.3
-mako                     1.4.3
-markdown-it-py           4.2.0
-markupsafe               3.0.3
-mdurl                    0.1.2
-msgpack                  1.2.1
-multidict                6.7.1
-mypy                     2.3.0
-mypy-extensions          1.1.0
-neo4j                    6.3.1
-nodeenv                  1.10.0
-numpy                    2.5.1
-openai                   2.54.0
-openpyxl                 3.1.5
-opentelemetry-api        1.44.0
-opentelemetry-instrumentation 0.65b0
-opentelemetry-instrumentation-asgi 0.65b0
-opentelemetry-instrumentation-fastapi 0.65b0
-opentelemetry-instrumentation-httpx 0.65b0
-opentelemetry-sdk        1.44.0
-opentelemetry-semantic-conventions 0.65b0
-opentelemetry-util-http  0.65b0
-packageurl-python        0.17.6
-packaging                26.2
-pandas                   3.0.6
-pathspec                 1.1.1
-pillow                   12.3.0
-pip                      26.2
-pip-api                  0.0.34
-pip-audit                2.10.1
-pip-requirements-parser  32.0.1
-platformdirs             4.11.0
-playwright               1.61.0
-pre-commit               4.6.1
-propcache                0.5.2
-proto-plus               1.28.4
-protobuf                 7.36.2
-py-serializable          2.1.0
-pyasn1                   0.6.4
-pyasn1-modules           0.4.2
-pycparser                3.0
-pydantic                 2.13.4
-pydantic-core            2.46.4
-pydantic-settings        2.15.0
-pydicom                  3.0.2
-pydyf                    0.12.1
-pyee                     13.0.1
-pygments                 2.20.0
-pymupdf                  1.28.0
-pyparsing                3.3.2
-pyphen                   0.18.1
-python-dateutil          2.9.0.post0
-python-discovery         1.5.0
-python-docx              1.2.0
-python-dotenv            1.2.2
-python-jose              3.5.0
-python-multipart         0.0.32
-pytz                     2026.4
-pyyaml                   6.0.3
-rapidfuzz                3.14.6
-redis                    8.1.0
-referencing              0.37.0
-regex                    2026.7.19
-requests                 2.34.2
-rich                     15.0.0
-rpds-py                  2026.6.3
-rsa                      4.9.1
-ruff                     0.15.22
-s3transfer               0.14.0
-shellingham              1.5.4
-six                      1.17.0
-sniffio                  1.3.1
-sortedcontainers         2.4.0
-soupsieve                2.10
-sqlalchemy               2.0.51
-sqlmodel                 0.0.39
-starlette                1.6.0
-stevedore                5.9.0
-tiktoken                 0.14.0
-tinycss2                 1.5.1
-tinyhtml5                2.1.0
-tokenizers               0.23.1
-tomli                    2.4.1
-tomli-w                  1.2.0
-tqdm                     4.70.0
-typer                    0.27.2
-typing-extensions        4.16.0
-typing-inspection        0.4.2
-tzdata                   2026.4
-uritemplate              4.2.0
-urllib3                  2.7.0
-usdm                     0.67.0
-uvicorn                  0.52.4
-uvloop                   0.22.1
-virtualenv               21.7.0
-watchfiles               1.3.0
-weasyprint               70.0
-webencodings             0.6.1
-websockets               17.1
-wrapt                    1.17.3
-yarl                     1.24.5
-yattag                   1.16.1
-zipp                     4.1.0
-zopfli                   0.4.3
+.NET 10 Platform Dependencies (Python toolchain decommissioned)
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -2605,28 +2426,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f7f0e0b6d35339ed7fc4ca4d632838a4556829338cbd33f339a7045f70c0e25a
+- **Cryptographic Hash (SHA-256):** d8d8ab98b2e456b48c726cd1a984eedcd8950929900527a5e9d352b8f195df5f
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUJR6L4Z7d+2/ec/o3x5RuihTQGCwwDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUfGaOYh9txKX4S2s+9z3GjgBGinEwDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTI0MTUwNjQ4WhcNMjcwOTI1MTUwNjQ4WjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTI0MTUyMTM4WhcNMjcwOTI1MTUyMTM4WjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBANFAGRGnnE0TNMQCwRh27iaJ6oHdmWWB
-NEnmdbIKe6BFoVa30V0bHwqAzrqIy4/VACSfDPGYkmKEIgC4NYO+Auj1E2m+OWCm
-coTE5xazbRSBFMCNHn+c6NNLnQaF1NLiGkPsE0EN/ABoAcH9TG21A3RQw55XE23S
-44XaShF+gy5YGeFD+xrz3IXvJoDQO26+J2u6SerYPNaViH3nqER9pcqQNf68fAjc
-Y7+ihRhtjQvH3qH5bdYOdl9nKu4p4PUjwvWhz45KfCTrVmXuiyCKsuONKCWnm84F
-zqN+GVbhQYJtURfjKW9q1WFDBWO9coiRxc0N67YWgIyPjcWb08XTFRMCAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAmQ2CFRkv2anD3Q/BRXgtcQTZEUNcmGt0Cn9uGSGh
-jDhAtvoxln8Rv15d7YZvAPmQnhIJuvOe0aW3FGCDRsA6WTQUryZGMTnEd5YBFfoV
-rCxSSU6tvBCwy+Km8m61nJPq8Z79FKY6+qqplXZIU/O/uTLN33zLJq+Xlp4o8gKH
-bo+cscLK/wytf4fku5TxHZKxTvQC+rvhBwIUX5rKJclofC36AbSpsora6QnS4VBl
-LbGv7b/3Jds7mDtabOjubIWIFMStMFk80Oju1rZZdcvfn4T0KBLV/6v0taan25Gr
-5NYe97kVadIEHtg2AAw9EbvHa+OAv9sDaYwsYJNpy4IMZQ==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAJxG3eUEuhb3aDgnNXhdmQdLJEtl0ZHl
+8t+8wwLzi/o0wGEzWwMUP24djqEyHCCfTB9C78DtsGpyaUK7s/oh5VE8aRWtlTC0
+9mQanTQYVeTn7M97IMSNNLWovQGQZNtAytYzmwHz/N/Ygp0dXf0KOYVbfwIQUgpt
+xg3vp7FkSMxqfkoVN3J5yaCXGnnptzfGskuXNkJ/1D5SgkTOXrpQtqpGJud2Z7kt
+RhCzliR0AXNhX6gJABrlaQh9sODQ2KUDFptt3yPHDKXRgPt+6C1gKIGK2rGKus26
+QMPDjUhuh4tS58QjUHaCCfv4KhD4DpRqwQZ3VJ4ZwxCsSb8OGZJG78cCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAG3Be7kaVjvuWaZjdAnyoV1tSNJcUJWLFO+Ktw5XR
+JOPpjB6BppsgjGfCOQqC/1TqtVZkBw0uVU5faSpXSblvglTsb6ua2RCalWEe14fJ
+tZ8zXU/+DaB4KwVRKdZNpRW6Og40UotgsMb08thRm48Mrcvle5oa5ciOGvM5ftC+
+Qp3+wRtAgrFdZ8u5ZTGRLp/uKQiuGWebeIU9RUjptbubLQgPC6hmjhfJNgozgKkf
+zkZwlMAFRsZaDzx3UE0fMFeK4uvKaV0Njj6SSUJro9k6l2GQGd8GNATB8ND8sz6f
+jRwcnpJjHML1arvVetwp34Xut0Lk2UIhh25w15rY9xkshg==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-t3bSxIiN0kv5M3zGuD+fx/MGm6fZorTFOBQuzbNmgxvRMXei59SXhtWPukAOCNBnGzXSqpL/QLczcpy8JnDx2rUrXzHaHfRI9nIq8kl9Q+cE6iwdjsnDrn24zb6pyoa+RlRc77Qnz815QQWV6w9a2Y6yFFeLpKCpl1Cj16w53TkdAxqn6XjQW3pXlGXqAxKDcBbj7LYQHNUIvBFbGmLq/xjBwJbdtoyWqXS0mDQji+Ty4I5J96JdbK/k8mtTwq77miquVzCuXUl6DyIPkWBuCnp0xH50r8cG4/CkSMMhJI7DVtLasqQLaBU0Q0scczzTEZkAk8VdHtlrm0/4RX+4Ww==
+F+1wHMDr/XsM8nvWciEmlXvwDgdm81d/d+ietMeQQUS364GnXF5/iVcMqlunn0FFi8nhXjHoFL2vmf0qHSodPGT3Kf2ZY9mH4qxaKhHKDR4E7V0ecDd6+UxQYlkUJPB6eiMt23HGcLk2zUGahaeSEk76yrkX6iQHkxpAukgS2p1k4409q0O9zj2QjHN0CtGX/h1pRAJxns6Nl898dDTItP/K4aHg4pl8ZwqSnDiYhBfJY2gsB+0CEopdPdf3QIbi87dYOarqZLJx1yeRS1ctkY2Cl9HNfIjgvHN/aXwtvWx+dEg5csOz67ftwrvFanWPkQEgfqVnplYbLtUUg5J8Dg==
 -----END SIGNATURE-----

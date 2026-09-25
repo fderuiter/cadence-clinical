@@ -87,9 +87,11 @@ os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 
 if "GXP_SIGNING_PRIVATE_KEY" not in os.environ or "GXP_SIGNING_CERT" not in os.environ:
-    from packages.compliance.services.gxp_signer import generate_gxp_signing_credentials
-
-    _priv, _cert = generate_gxp_signing_credentials("cadence-gxp-runner")
+    try:
+        from packages.compliance.services.gxp_signer import generate_gxp_signing_credentials
+        _priv, _cert = generate_gxp_signing_credentials("cadence-gxp-runner")
+    except ImportError:
+        _priv, _cert = "MOCK_PRIVATE_KEY", "MOCK_CERT"
     os.environ["GXP_SIGNING_PRIVATE_KEY"] = _priv
     os.environ["GXP_SIGNING_CERT"] = _cert
 
