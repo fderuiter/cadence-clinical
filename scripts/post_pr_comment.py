@@ -370,7 +370,7 @@ def build_comment_body(
         ("Hexagonal Contract Verification", "contracts"),
         ("Linting & Formatting (Ruff)", "lint"),
         (".NET 10 xUnit Tests", "dotnet_test"),
-        ("Backend Tests & Coverage (pytest)", "test"),
+        ("Backend Tests & Coverage (.NET 10)", "test"),
         ("Requirements Traceability", "traceability"),
         ("Frontend Checks (pnpm check)", "frontend"),
         ("ADR Validation (validate_adrs.py)", "adr"),

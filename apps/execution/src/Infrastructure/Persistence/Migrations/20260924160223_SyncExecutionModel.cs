@@ -28,13 +28,40 @@ public partial class SyncExecutionModel : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "clinical_observations");
+        migrationBuilder.DropColumn(
+            name: "LabSource",
+            table: "clinical_observations");
 
-        migrationBuilder.DropTable(
-            name: "clinical_queries");
+        migrationBuilder.DropColumn(
+            name: "LabSiteId",
+            table: "clinical_observations");
 
-        migrationBuilder.DropTable(
-            name: "form_submissions");
+        migrationBuilder.DropColumn(
+            name: "LabIndicator",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "LabOutOfRange",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "MatchedNormalBounds",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "RangeIndicator",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "IsOutOfRange",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "ReferenceRangeLow",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "ReferenceRangeHigh",
+            table: "clinical_observations");
     }
 }

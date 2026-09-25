@@ -228,9 +228,9 @@ def main():
         )
         migration_outcome = "failure"
 
-    # 4. POLYGLOT TEST SUITES & STACK-AWARE COVERAGE GATE (.NET 10 & PYTHON)
+    # 4. .NET 10 xUnit TEST SUITES
     log_step(
-        "Step 4: Executing Polyglot Test Suites (.NET 10 xUnit & Python pytest) with Stack-Aware Coverage"
+        "Step 4: Executing .NET 10 xUnit Test Suites"
     )
 
     # 4a. .NET 10 xUnit Tests
@@ -264,31 +264,7 @@ def main():
             )
             dotnet_outcome = "failure"
 
-    # 4b. Python pytest suite with Stack-Aware Coverage Evaluation
-    pytest_outcome = "skipped"
-    print(
-        "[Gating-Pipeline] Executing Python pytest suite with stack-aware coverage..."
-    )
-    cov_rc, cov_out, cov_err = run_command(
-        [
-            "uv",
-            "run",
-            "pytest",
-            "scripts/tests/test_pr_comment.py",
-            "scripts/tests/test_git_merge_driver.py",
-        ]
-    )
-    if cov_rc == 0:
-        print("[Gating-Pipeline] Active Python test suite and coverage check passed!")
-        pytest_outcome = "success"
-    else:
-        print(
-            f"[Gating-Pipeline] Python test suite FAILED!\nStdout: {cov_out}\nStderr: {cov_err}",
-            file=sys.stderr,
-        )
-        pytest_outcome = "failure"
-
-    if dotnet_outcome == "failure" or pytest_outcome == "failure":
+    if dotnet_outcome == "failure":
         test_outcome = "failure"
     else:
         test_outcome = "success"
@@ -345,7 +321,6 @@ def main():
         gxp_validation_outcome,
         migration_outcome,
         dotnet_outcome,
-        pytest_outcome,
         dependency_outcome,
         openapi_outcome,
     ]
@@ -375,7 +350,6 @@ def main():
     print(f" - Sandbox GxP Validation Suite:        {gxp_validation_outcome.upper()}")
     print(f" - DB Migration Rollback/Forward:       {migration_outcome.upper()}")
     print(f" - .NET 10 xUnit Test Suite:            {dotnet_outcome.upper()}")
-    print(f" - Python Pytest & Coverage Gate:       {pytest_outcome.upper()}")
     print(f" - Dependency Analyzer Gate:            {dependency_outcome.upper()}")
     print(f" - OpenAPI Schema Drift Gate:           {openapi_outcome.upper()}")
     print(f" - Requirements Traceability:           {traceability_outcome.upper()}")

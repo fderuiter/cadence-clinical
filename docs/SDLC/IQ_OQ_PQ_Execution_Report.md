@@ -11,8 +11,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2266
-- **Passed:** 2266 🟢
+- **Total Automated Test Cases Run:** 2342
+- **Passed:** 2342 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -37,199 +37,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-Package                 Version     Editable project location
------------------------ ----------- -------------------------
-aioboto3                 15.5.0
-aiobotocore              2.25.1
-aiofiles                 25.1.0
-aiohappyeyeballs         2.7.1
-aiohttp                  3.14.3
-aioitertools             0.13.0
-aiosignal                1.4.0
-aiosmtplib               5.1.2
-aiosqlite                0.22.1
-alembic                  1.20.0
-annotated-doc            0.0.4
-annotated-types          0.7.0
-anyio                    4.14.2
-asgiref                  3.12.1
-ast-serialize            0.8.0
-asyncpg                  0.31.0
-attrs                    26.1.0
-babel                    2.18.0
-bandit                   1.9.4
-beautifulsoup4           4.15.0
-boolean-py               5.0
-boto3                    1.40.61
-botocore                 1.40.61
-brotli                   1.2.0
-brotlicffi               1.2.0.2
-cachecontrol             0.14.4
-cadence-clinical         0.1.0       /app
-certifi                  2026.7.22
-cffi                     2.1.0
-cfgv                     3.5.0
-charset-normalizer       3.4.9
-click                    8.4.2
-colorama                 0.4.6
-coverage                 7.15.2
-cryptography             50.0.1
-cssselect2               0.10.1
-cyclonedx-python-lib     11.11.0
-defusedxml               0.7.1
-detect-secrets           1.5.0
-distlib                  0.4.3
-distro                   1.9.0
-docxcompose              2.2.0
-docxtpl                  0.20.2
-ecdsa                    0.19.2
-et-xmlfile               2.0.0
-execnet                  2.1.2
-fastapi                  0.139.2
-fastuuid                 0.14.0
-filelock                 3.32.0
-fonttools                4.66.0
-frozenlist               1.8.0
-fsspec                   2026.7.0
-google-api-core          2.38.0
-google-api-python-client 2.200.0
-google-auth              2.58.0
-google-auth-httplib2     0.4.2
-googleapis-common-protos 1.75.3
-greenlet                 3.5.4
-h11                      0.16.0
-hf-xet                   1.6.0
-httpcore                 1.0.9
-httplib2                 0.32.0
-httptools                0.8.0
-httpx                    0.28.1
-huggingface-hub          1.28.0
-identify                 2.6.19
-idna                     3.18
-importlib-metadata       8.9.0
-iniconfig                2.3.0
-jinja2                   3.1.6
-jiter                    0.16.0
-jmespath                 1.1.0
-jsonschema               4.26.0
-jsonschema-specifications 2025.9.1
-librt                    0.15.0
-license-expression       30.4.4
-litellm                  1.97.0
-lxml                     6.1.3
-mako                     1.4.3
-markdown-it-py           4.2.0
-markupsafe               3.0.3
-mdurl                    0.1.2
-msgpack                  1.2.1
-multidict                6.7.1
-mypy                     2.3.0
-mypy-extensions          1.1.0
-neo4j                    6.3.1
-nodeenv                  1.10.0
-numpy                    2.5.1
-openai                   2.54.0
-openpyxl                 3.1.5
-opentelemetry-api        1.44.0
-opentelemetry-instrumentation 0.65b0
-opentelemetry-instrumentation-asgi 0.65b0
-opentelemetry-instrumentation-fastapi 0.65b0
-opentelemetry-instrumentation-httpx 0.65b0
-opentelemetry-sdk        1.44.0
-opentelemetry-semantic-conventions 0.65b0
-opentelemetry-util-http  0.65b0
-packageurl-python        0.17.6
-packaging                26.2
-pandas                   3.0.6
-pathspec                 1.1.1
-pillow                   12.3.0
-pip                      26.2
-pip-api                  0.0.34
-pip-audit                2.10.1
-pip-requirements-parser  32.0.1
-platformdirs             4.11.0
-playwright               1.61.0
-pluggy                   1.6.0
-pre-commit               4.6.1
-propcache                0.5.2
-proto-plus               1.28.4
-protobuf                 7.36.2
-py-serializable          2.1.0
-pyasn1                   0.6.4
-pyasn1-modules           0.4.2
-pycparser                3.0
-pydantic                 2.13.4
-pydantic-core            2.46.4
-pydantic-settings        2.15.0
-pydicom                  3.0.2
-pydyf                    0.12.1
-pyee                     13.0.1
-pygments                 2.20.0
-pymupdf                  1.28.0
-pyparsing                3.3.2
-pyphen                   0.18.1
-pytest                   9.1.1
-pytest-archon            0.0.7
-pytest-asyncio           1.4.0
-pytest-base-url          2.1.0
-pytest-cov               7.1.0
-pytest-playwright        0.8.0
-pytest-xdist             3.8.0
-python-dateutil          2.9.0.post0
-python-discovery         1.5.0
-python-docx              1.2.0
-python-dotenv            1.2.2
-python-jose              3.5.0
-python-multipart         0.0.32
-python-slugify           8.0.4
-pytz                     2026.4
-pyyaml                   6.0.3
-rapidfuzz                3.14.6
-redis                    8.1.0
-referencing              0.37.0
-regex                    2026.7.19
-requests                 2.34.2
-rich                     15.0.0
-rpds-py                  2026.6.3
-rsa                      4.9.1
-ruff                     0.15.22
-s3transfer               0.14.0
-shellingham              1.5.4
-six                      1.17.0
-sniffio                  1.3.1
-sortedcontainers         2.4.0
-soupsieve                2.10
-sqlalchemy               2.0.51
-sqlmodel                 0.0.39
-starlette                1.6.0
-stevedore                5.9.0
-text-unidecode           1.3
-tiktoken                 0.14.0
-tinycss2                 1.5.1
-tinyhtml5                2.1.0
-tokenizers               0.23.1
-tomli                    2.4.1
-tomli-w                  1.2.0
-tqdm                     4.70.0
-typer                    0.27.2
-typing-extensions        4.16.0
-typing-inspection        0.4.2
-tzdata                   2026.4
-uritemplate              4.2.0
-urllib3                  2.7.0
-usdm                     0.67.0
-uvicorn                  0.52.4
-uvloop                   0.22.1
-virtualenv               21.7.0
-watchfiles               1.3.0
-weasyprint               70.0
-webencodings             0.6.1
-websockets               17.1
-wrapt                    1.17.3
-yarl                     1.24.5
-yattag                   1.16.1
-zipp                     4.1.0
-zopfli                   0.4.3
+.NET 10 Platform Dependencies (Python toolchain decommissioned)
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -290,6 +98,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `BatchEvaluation_ConcurrentExecution_ThreadSafeAndDeterministic` | `` | PRD-SYS-004, SRS-EDC-005 | 🟢 PASSED | < 1s |
 | `BatchEvaluation_MultiObservationContext_DetectsDiscrepanciesAcrossVisits` | `` | PRD-SYS-004, SRS-EDC-002, SRS-EDC-005 | 🟢 PASSED | < 1s |
+| `BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `` | PRD-RND-002 | 🟢 PASSED | < 1s |
+| `BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `` | PRD-RND-002 | 🟢 PASSED | < 1s |
 | `BlockedActivation_ReturnsFixedCodeAndType` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `BlockedEnrollment_ReturnsFixedCodeAndType` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `BodyMatches_GivenLiteralExpectedValue_ComparesDirectly` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -302,6 +112,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `BodyMatches_GivenUnchangedSentinelAndDivergingPostState_Fails` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BodyMatches_GivenUnchangedSentinelAndMatchingPreState_Passes` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BodyMatches_GivenUnchangedSentinelWithNoPreStateSupplied_ThrowsExplainingWhy` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `` | PRD-RND-001 | 🟢 PASSED | < 1s |
+| `BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `` | PRD-RND-001 | 🟢 PASSED | < 1s |
+| `BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `` | PRD-RND-001 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -970,6 +783,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectConsentId_New_ProducesUniqueValues` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_New_ProducesUniqueValues` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_ToString_ReturnsGuidValue` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_All23ServiceOptions_InstantiateWithDefaults` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_CommonOptions_HasDefaultValuesMatchingPython` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_Options_BindsFromConfigurationDictionary` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.RuleEvaluator_EvaluatesAstAndJsonLogic` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditChainVerifier_ValidatesIntactChain` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditDigestCalculator_ComputesExpectedHash` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Ddf_Models_ConstructsSuccessfully` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1005,6 +837,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `ComplianceStatus_EndToEnd_NoCacheRowExists_Returns200WithFalseAndEmptyDefaults` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Compliance_AuditChainVerifier_ValidatesIntactChain` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Compliance_AuditDigestCalculator_ComputesExpectedHash` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Config_All23ServiceOptions_InstantiateWithDefaults` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `Config_CommonOptions_HasDefaultValuesMatchingPython` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `Config_Options_BindsFromConfigurationDictionary` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Configure_HasUniqueIndexOnSubjectCode` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Configure_IgnoresComputedMissingDocumentsPropertyItself` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1049,6 +884,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `Create_TwoSubjects_ProduceDistinctIds` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `` | PRD-SUP-001 | 🟢 PASSED | < 1s |
+| `DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `` | PRD-SUP-001 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatHolds_DoesNotThrow` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `Ddf_Models_ConstructsSuccessfully` | `` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1189,6 +1026,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `IsPostRandomization_ForUnlockedStates_ReturnsFalse` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `LabRangeEvaluation_GoldenMasterVectors_MatchExpectedIndicators` | `` | PRD-SYS-042, PRD-SYS-121, SRS-EDC-001 | 🟢 PASSED | < 1s |
 | `LabRangeService_EvaluatesNormalAndOutOfRangeValues` | `` | PRD-SYS-001, PRD-SYS-121, SRS-EDC-001 | 🟢 PASSED | < 1s |
+| `LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `` | PRD-TOX-001 | 🟢 PASSED | < 1s |
+| `LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `` | PRD-TOX-001 | 🟢 PASSED | < 1s |
 | `LoadScenarios_GivenAMismatchedFixturePair_ThrowsRatherThanSilentlyOmittingTheOrphanedScenario` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `LoadScenarios_GivenAnInputEntryWithNoCounterpart_DoesNotSilentlyDropIt` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `LoadScenarios_GivenOutputEntriesWithNoInputCounterpart_DoesNotThrow` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1206,6 +1045,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `MergeResubmission_RequiresReconsent_AlwaysReplacedUnconditionally` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `MergeResubmission_VersionTag_AlwaysReplacedUnconditionally` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `` | PRD-RND-003 | 🟢 PASSED | < 1s |
 | `MissingDocuments_CastToMutableListAndMutated_DoesNotAffectAggregateState` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `` | PRD-SYS-001, PRD-SYS-002, PRD-SYS-053, SRS-EDC-002, SRS-EDC-003 | 🟢 PASSED | < 1s |
 | `NominalScenario_MatchesGoldenMaster` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1217,6 +1057,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation` | `` | PRD-SYS-001, PRD-SYS-121, SRS-EDC-001 | 🟢 PASSED | < 1s |
 | `OperationEnvelopeResponse_SerializesWithSpecFieldNames` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `OutlierDetection_IdentifiesStatisticalOutliers` | `` | PRD-SYS-001, PRD-SYS-121, SRS-EDC-001 | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED | < 1s |
+| `ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `` | PRD-TCK-005 | 🟢 PASSED | < 1s |
+| `ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `` | PRD-TCK-005 | 🟢 PASSED | < 1s |
 | `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `QueryLifecycle_FullTransitionSequence_Succeeds` | `` | PRD-SYS-007, SRS-EDC-004 | 🟢 PASSED | < 1s |
 | `RaiseQuery_CreatesQueryInOpenState` | `` | PRD-SYS-007, PRD-SYS-053, SRS-EDC-004 | 🟢 PASSED | < 1s |
@@ -1241,6 +1086,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `RegulatedTestSuites_MustFeature_GxPRequirementAttributes` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions` | `` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions` | `` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `RuleEvaluator_EvaluatesAstAndJsonLogic` | `` | PRD-RUL-001 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenARowDeletedOutFromUnderTheRetryingWriter_ExhaustsRetriesAndStillThrowsDbUpdateConcurrencyException` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenAStaleWriteThatAnotherWriterAlreadyCommitted_ResolvesTheConflictAndPersistsThisCallersChange` | `` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields` | `` | PRD-SUB-001, PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -2478,6 +2324,44 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `SubjectConsentId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `SubjectId_New_ProducesUniqueValues` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `SubjectId_ToString_ReturnsGuidValue` | `Cadence.UnitTests.Execution.Subjects.ValueObjectTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_All23ServiceOptions_InstantiateWithDefaults` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_CommonOptions_HasDefaultValuesMatchingPython` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_Options_BindsFromConfigurationDictionary` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Config_All23ServiceOptions_InstantiateWithDefaults` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Config_CommonOptions_HasDefaultValuesMatchingPython` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Config_Options_BindsFromConfigurationDictionary` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.DomainEngineUnitTests.RuleEvaluator_EvaluatesAstAndJsonLogic` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `RuleEvaluator_EvaluatesAstAndJsonLogic` | `Cadence.UnitTests.Packages.DomainEngineUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests.Packages.PortedPackagesUnitTests` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2542,28 +2426,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f287a5accb8ef238f91b280346ea5542a58a87c8a4be9fd7e7de285c213a5fbe
+- **Cryptographic Hash (SHA-256):** d8d8ab98b2e456b48c726cd1a984eedcd8950929900527a5e9d352b8f195df5f
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUJmGmmEacgLUeTNQsAyzmtj2jN2EwDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUfGaOYh9txKX4S2s+9z3GjgBGinEwDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTI0MTQyNDMwWhcNMjcwOTI1MTQyNDMwWjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTI0MTUyMTM4WhcNMjcwOTI1MTUyMTM4WjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAJhpGbjxgEdEa5/Dn8e4FZ0pTCdNHhgo
-c2IlH/Efz7RdS7gsCgdN04vnvgVsR2ohYmtvRnZNG7PF+Yvx02hUK6qQvRAUj9qE
-aoGxCrjuOYkDa6k1WMSNgYThPKd+BSMQLSwVaX+eylIO16hilSVqnwTy1JKo0fJg
-pgL514kZPLIqR7+pfegPEpIEWKbOhy1CRdw3emn+YpolHFMuH8sK+W2/kv41/Rip
-faVAYRswFe3TzzKkwsWnQpPx/yVy6RUXP7+PpaBUjE3pJUk5X+ajH6z3i4UlYbR/
-vMTE110Ko5Z0GQdIcvshh0wvsz8dTL+e8a6D3feTW6g6Q2HywRwo4zkCAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAOKUL7UqWis0OL0iKEStSrt51yuVXLUxkFv4TviAq
-Dc/uCZNhC9CxNOpSWHZMybZylA2pcjhOAkW5pvRriwrBGtG8R7Phxy5BdGqxH8DW
-2lNSxpd/I/wKIvKqnD301K4LO45oN0PEQcJNZ4ymL4zgCXV5Xkgnoy59L63McwI3
-0YIKjadUyyZOPhtWcFZ8XzYzbl75RNXP0z7dg1+xoZeqiZ7zIKDrY+hzgvxGyiXF
-rkBgQ4KYVIiMZT3Riei0Q9BNGG+XSfc7OLhG/vqbjRbsHA6ZzAxPFYIbdKcRNtAq
-XV9c+AE4LhtaIzV3o0M6DuV3VEal5X0LSdv0qnb8zlEe5w==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAJxG3eUEuhb3aDgnNXhdmQdLJEtl0ZHl
+8t+8wwLzi/o0wGEzWwMUP24djqEyHCCfTB9C78DtsGpyaUK7s/oh5VE8aRWtlTC0
+9mQanTQYVeTn7M97IMSNNLWovQGQZNtAytYzmwHz/N/Ygp0dXf0KOYVbfwIQUgpt
+xg3vp7FkSMxqfkoVN3J5yaCXGnnptzfGskuXNkJ/1D5SgkTOXrpQtqpGJud2Z7kt
+RhCzliR0AXNhX6gJABrlaQh9sODQ2KUDFptt3yPHDKXRgPt+6C1gKIGK2rGKus26
+QMPDjUhuh4tS58QjUHaCCfv4KhD4DpRqwQZ3VJ4ZwxCsSb8OGZJG78cCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAG3Be7kaVjvuWaZjdAnyoV1tSNJcUJWLFO+Ktw5XR
+JOPpjB6BppsgjGfCOQqC/1TqtVZkBw0uVU5faSpXSblvglTsb6ua2RCalWEe14fJ
+tZ8zXU/+DaB4KwVRKdZNpRW6Og40UotgsMb08thRm48Mrcvle5oa5ciOGvM5ftC+
+Qp3+wRtAgrFdZ8u5ZTGRLp/uKQiuGWebeIU9RUjptbubLQgPC6hmjhfJNgozgKkf
+zkZwlMAFRsZaDzx3UE0fMFeK4uvKaV0Njj6SSUJro9k6l2GQGd8GNATB8ND8sz6f
+jRwcnpJjHML1arvVetwp34Xut0Lk2UIhh25w15rY9xkshg==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-VemICHICU9I5jIhpuboPY1XTrLx9Tjt38wfNJfbDS4HzTs5DdTzYWsSBYEmadsi0b18z2mzsDTjCGDuN+ba+uR1Vtt3bkPHeDbXc099Cz9/NVvZSFq+XFoMw0qKoQX3CSiuQStUeyjJMVvT8U12eMK75a29lh26fX7KPh92rxu6J7McS8LfSlJwlRX49dq+fKGpCPwyazZ8TSuSFk1qzxpAD/36ZYKLPHMEE05JDgI7JxN8MNhlwgad3rQft1DNakY9HvM5ITIYYBkAU73DuRhAlAV7fpR/o6HHh6sdUUg51zmddGEu5qFfo+eHNt+b1fz4CpEBxHvkfUq21ENS8rA==
+F+1wHMDr/XsM8nvWciEmlXvwDgdm81d/d+ietMeQQUS364GnXF5/iVcMqlunn0FFi8nhXjHoFL2vmf0qHSodPGT3Kf2ZY9mH4qxaKhHKDR4E7V0ecDd6+UxQYlkUJPB6eiMt23HGcLk2zUGahaeSEk76yrkX6iQHkxpAukgS2p1k4409q0O9zj2QjHN0CtGX/h1pRAJxns6Nl898dDTItP/K4aHg4pl8ZwqSnDiYhBfJY2gsB+0CEopdPdf3QIbi87dYOarqZLJx1yeRS1ctkY2Cl9HNfIjgvHN/aXwtvWx+dEg5csOz67ftwrvFanWPkQEgfqVnplYbLtUUg5J8Dg==
 -----END SIGNATURE-----

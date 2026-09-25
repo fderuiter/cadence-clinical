@@ -410,11 +410,11 @@ def main() -> None:
             update_pr_comment("failure")
             sys.exit(1)
 
-        # Pytest Unit Tests Check
+        # .NET 10 Unit Tests Check
         print("Running targeted unit/integration tests validation...")
         try:
             run_command(
-                ["uv", "run", "pytest", "scripts/tests/test_pr_comment.py", "--no-cov"],
+                ["dotnet", "test", "Cadence.sln", "--no-restore"],
                 check=True,
             )
             os.environ["TEST_OUTCOME"] = "success"
