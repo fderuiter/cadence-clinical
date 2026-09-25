@@ -53,7 +53,9 @@ public static class SecurityAuditService
                 rel.EndsWith(".test.js", StringComparison.OrdinalIgnoreCase) ||
                 rel.EndsWith(".test.ts", StringComparison.OrdinalIgnoreCase) ||
                 rel.EndsWith("mockGateway.js", StringComparison.OrdinalIgnoreCase) ||
-                rel.EndsWith("build-docs.js", StringComparison.OrdinalIgnoreCase))
+                rel.EndsWith("build-docs.js", StringComparison.OrdinalIgnoreCase) ||
+                rel.EndsWith("SecurityAuditorService.cs", StringComparison.OrdinalIgnoreCase) ||
+                rel.EndsWith("SecurityAuditService.cs", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

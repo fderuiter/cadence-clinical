@@ -13,18 +13,21 @@ public static class SecurityAuditorService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Executing hardcoded secret scanner and security audit...");
 
-        var candidateFiles = files != null && files.Length > 0
+        var candidateFiles = (files != null && files.Length > 0
             ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists)
-            : Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
+            : Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories))
                 .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
                             !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}"));
+                            !f.Contains($"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}") &&
+                            !f.EndsWith("SecurityAuditorService.cs"));
 
         int findings = 0;
         string[] secretPatterns = ["AKIA[0-9A-Z]{16}", "-----BEGIN PRIVATE KEY-----", "-----BEGIN RSA PRIVATE KEY-----"];
 
         foreach (var file in candidateFiles)
         {
+            if (file.EndsWith("SecurityAuditorService.cs", StringComparison.OrdinalIgnoreCase)) continue;
+
             string ext = Path.GetExtension(file).ToLowerInvariant();
             if (BinaryExtensions.Contains(ext)) continue;
 
