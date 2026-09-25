@@ -19,3 +19,4 @@ public static class OpenApiStageService
         return exitCode == 0;
     }
 }
+

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.OpenApi;
