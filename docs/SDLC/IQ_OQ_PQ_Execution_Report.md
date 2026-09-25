@@ -52,18 +52,6 @@ alembic                  1.20.0
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
-apps-ai-gateway          0.1.0
-apps-ctms                0.1.0
-apps-econsent            0.1.0
-apps-eisf                0.1.0
-apps-etmf                0.1.0
-apps-interop             0.1.0
-apps-notifications       0.1.0
-apps-org                 0.1.0
-apps-payments            0.1.0
-apps-quality             0.1.0
-apps-safety              0.1.0
-apps-tickets             0.1.0
 asgiref                  3.12.1
 ast-serialize            0.8.0
 asyncpg                  0.31.0
@@ -78,15 +66,13 @@ brotli                   1.2.0
 brotlicffi               1.2.0.2
 cachecontrol             0.14.4
 cadence-clinical         0.1.0       /app
-cadence-fileshare        0.1.0
-cadence-imaging          0.1.0
-cadence-knowledge        0.1.0
 certifi                  2026.7.22
 cffi                     2.1.0
 cfgv                     3.5.0
 charset-normalizer       3.4.9
 click                    8.4.2
 colorama                 0.4.6
+coverage                 7.15.2
 cryptography             50.0.1
 cssselect2               0.10.1
 cyclonedx-python-lib     11.11.0
@@ -98,6 +84,7 @@ docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
+execnet                  2.1.2
 fastapi                  0.139.2
 fastuuid                 0.14.0
 filelock                 3.32.0
@@ -120,6 +107,7 @@ huggingface-hub          1.28.0
 identify                 2.6.19
 idna                     3.18
 importlib-metadata       8.9.0
+iniconfig                2.3.0
 jinja2                   3.1.6
 jiter                    0.16.0
 jmespath                 1.1.0
@@ -161,6 +149,7 @@ pip-audit                2.10.1
 pip-requirements-parser  32.0.1
 platformdirs             4.11.0
 playwright               1.61.0
+pluggy                   1.6.0
 pre-commit               4.6.1
 propcache                0.5.2
 proto-plus               1.28.4
@@ -179,12 +168,20 @@ pygments                 2.20.0
 pymupdf                  1.28.0
 pyparsing                3.3.2
 pyphen                   0.18.1
+pytest                   9.1.1
+pytest-archon            0.0.7
+pytest-asyncio           1.4.0
+pytest-base-url          2.1.0
+pytest-cov               7.1.0
+pytest-playwright        0.8.0
+pytest-xdist             3.8.0
 python-dateutil          2.9.0.post0
 python-discovery         1.5.0
 python-docx              1.2.0
 python-dotenv            1.2.2
 python-jose              3.5.0
 python-multipart         0.0.32
+python-slugify           8.0.4
 pytz                     2026.4
 pyyaml                   6.0.3
 rapidfuzz                3.14.6
@@ -206,6 +203,7 @@ sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.6.0
 stevedore                5.9.0
+text-unidecode           1.3
 tiktoken                 0.14.0
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
@@ -2544,28 +2542,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f2a0800877a146e25364d69c957cdf3973c7ef12574430e88e9bf51757b9d4c9
+- **Cryptographic Hash (SHA-256):** f287a5accb8ef238f91b280346ea5542a58a87c8a4be9fd7e7de285c213a5fbe
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUVMditoFC7dIp+p4w9DsR8elDr98wDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUJmGmmEacgLUeTNQsAyzmtj2jN2EwDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTI0MTQxNzAxWhcNMjcwOTI1MTQxNzAxWjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTI0MTQyNDMwWhcNMjcwOTI1MTQyNDMwWjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAI5inPxwQezX5Xmk8RFpjVbID7osjuih
-ylKEcbo0A67OgAkcAk5afHQCtPuAUvPG32njgUNJmBzOyW5Mf1I84mBGQWG8aplg
-+djYkb14ncYjJKNWgks1PQ1xwMM12DoFDWNGVsaZaY4PTaNwMOqg0FjqFIe0XPn3
-fSTjO/QVfjp9xOqu+2Gx+wkWHDka+ZRwbY1DBY8FPeAzOOP900oEu4Z2bk7uju3I
-JDAVTIcvXLsvmM70JcOjH09yAZZclmyNkHw7u1ScwFp2fZb+dQnfFQGLLaqa3gkr
-68yAJxlIybLJUaRydivO8OGGdvokMeL3AiTVdTrSwZ2LXj5Xg/IMDd8CAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAA2RlWzDgidkQi3ftITSNjGmNrl9oIaeWcteGhBHh
-oEP+C5xjw31VowiwiC+ogDp0FyNeIPO6NilRVlyLOnwjT/T6/+OxPCC47zv5qMFk
-MTbICtUyijkr47plf4Fmrd6O2zxq3xRFpcLw7qed4zFhSwMd5DDA++kZ4AtzuCdM
-BqTqE6JX7CzP5rgcm40zyr60xu7VUX8Sou9ssgET/Wk9k+Kc9idH1uI61fHDhB6W
-IXHgu2c3ADOs94kjcu8GoHKE0Ex+LpAdBvi0dJM5X5v0iyzbIGxAQnW0dU/cKjcF
-Nxx9d8RkKe17L3BNH6SBC9lbx6QEi4aZgerPR6iibsRBNw==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAJhpGbjxgEdEa5/Dn8e4FZ0pTCdNHhgo
+c2IlH/Efz7RdS7gsCgdN04vnvgVsR2ohYmtvRnZNG7PF+Yvx02hUK6qQvRAUj9qE
+aoGxCrjuOYkDa6k1WMSNgYThPKd+BSMQLSwVaX+eylIO16hilSVqnwTy1JKo0fJg
+pgL514kZPLIqR7+pfegPEpIEWKbOhy1CRdw3emn+YpolHFMuH8sK+W2/kv41/Rip
+faVAYRswFe3TzzKkwsWnQpPx/yVy6RUXP7+PpaBUjE3pJUk5X+ajH6z3i4UlYbR/
+vMTE110Ko5Z0GQdIcvshh0wvsz8dTL+e8a6D3feTW6g6Q2HywRwo4zkCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAOKUL7UqWis0OL0iKEStSrt51yuVXLUxkFv4TviAq
+Dc/uCZNhC9CxNOpSWHZMybZylA2pcjhOAkW5pvRriwrBGtG8R7Phxy5BdGqxH8DW
+2lNSxpd/I/wKIvKqnD301K4LO45oN0PEQcJNZ4ymL4zgCXV5Xkgnoy59L63McwI3
+0YIKjadUyyZOPhtWcFZ8XzYzbl75RNXP0z7dg1+xoZeqiZ7zIKDrY+hzgvxGyiXF
+rkBgQ4KYVIiMZT3Riei0Q9BNGG+XSfc7OLhG/vqbjRbsHA6ZzAxPFYIbdKcRNtAq
+XV9c+AE4LhtaIzV3o0M6DuV3VEal5X0LSdv0qnb8zlEe5w==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-UwEHEMzbi90aq7Bdgoe2YCA02lNiH0LTO284cU17NUr6qAfMjJ2TTR3sLmYMPbEGPovF7qzgRusoTorkJE068pDx3RPRhvWIhfgZK155I68162F7X/PUlz1558U6ipDAoo/rlurkN0vrQxPjnInNzT9tu1oBhencUlZ4AydSzQJ0UM+2cF3tsjcN3tnX/76Fx8RE0xrzOq/C4R+d6ExMTS1F/9KY/IaL5dQIQEgIfX25gmVtQpGT0cd/hyMqjeu7bXC8HeUz5meGnzbj30tfWjV001QNrJCWsf9JL0Se0GDOJcEcxaTZXaC9SH33k8fB8trVuOwIkXoYr1Fn9W0hKQ==
+VemICHICU9I5jIhpuboPY1XTrLx9Tjt38wfNJfbDS4HzTs5DdTzYWsSBYEmadsi0b18z2mzsDTjCGDuN+ba+uR1Vtt3bkPHeDbXc099Cz9/NVvZSFq+XFoMw0qKoQX3CSiuQStUeyjJMVvT8U12eMK75a29lh26fX7KPh92rxu6J7McS8LfSlJwlRX49dq+fKGpCPwyazZ8TSuSFk1qzxpAD/36ZYKLPHMEE05JDgI7JxN8MNhlwgad3rQft1DNakY9HvM5ITIYYBkAU73DuRhAlAV7fpR/o6HHh6sdUUg51zmddGEu5qFfo+eHNt+b1fz4CpEBxHvkfUq21ENS8rA==
 -----END SIGNATURE-----

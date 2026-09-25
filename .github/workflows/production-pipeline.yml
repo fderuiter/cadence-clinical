@@ -53,11 +53,11 @@ jobs:
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         run: |
-          uv run python scripts/validate_vulnerabilities.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Generate Reports with Overrides
         run: |
-          uv run python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
       - name: Verify Isolated Generation
         run: |

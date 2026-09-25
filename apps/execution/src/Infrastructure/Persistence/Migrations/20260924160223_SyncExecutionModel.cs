@@ -12,59 +12,17 @@ public partial class SyncExecutionModel : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "LabSource",
-            table: "clinical_observations",
-            type: "text",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "LabSiteId",
-            table: "clinical_observations",
-            type: "text",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "LabIndicator",
-            table: "clinical_observations",
-            type: "text",
-            nullable: true);
-
-        migrationBuilder.AddColumn<bool>(
-            name: "LabOutOfRange",
-            table: "clinical_observations",
-            type: "boolean",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "MatchedNormalBounds",
-            table: "clinical_observations",
-            type: "text",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "RangeIndicator",
-            table: "clinical_observations",
-            type: "text",
-            nullable: true);
-
-        migrationBuilder.AddColumn<bool>(
-            name: "IsOutOfRange",
-            table: "clinical_observations",
-            type: "boolean",
-            nullable: true);
-
-        migrationBuilder.AddColumn<double>(
-            name: "ReferenceRangeLow",
-            table: "clinical_observations",
-            type: "double precision",
-            nullable: true);
-
-        migrationBuilder.AddColumn<double>(
-            name: "ReferenceRangeHigh",
-            table: "clinical_observations",
-            type: "double precision",
-            nullable: true);
+        migrationBuilder.Sql(@"
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""LabSource"" text;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""LabSiteId"" text;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""LabIndicator"" text;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""LabOutOfRange"" boolean;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""MatchedNormalBounds"" text;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""RangeIndicator"" text;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""IsOutOfRange"" boolean;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""ReferenceRangeLow"" double precision;
+            ALTER TABLE clinical_observations ADD COLUMN IF NOT EXISTS ""ReferenceRangeHigh"" double precision;
+        ");
     }
 
     /// <inheritdoc />

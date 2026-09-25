@@ -193,12 +193,12 @@ jobs:
       - name: Verify OpenAPI Specification Drift Sentinel
         id: run_openapi_drift
         if: always()
-        run: uv run python scripts/validate_openapi_drift.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check openapi
 
       - name: Run Requirements Traceability Validation
         id: run_traceability
         if: always()
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp validate
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check rtm
 
       - name: Run code duplication verification
         id: run_duplication
@@ -212,12 +212,12 @@ jobs:
             CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
-            uv run python scripts/detect_duplication.py $CHANGED_FILES
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
           else
             # Fallback to scanning git status (staged/unstaged files)
             CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css|cs)$' || true)
             if [ -n "$CHANGED_FILES" ]; then
-              uv run python scripts/detect_duplication.py $CHANGED_FILES
+              dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
             else
               echo "No relevant files changed."
             fi
@@ -302,15 +302,15 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: uv run python scripts/validate_vulnerabilities.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Run secret detection
         id: run_secrets
         if: always()
         run: |
           git add .secrets.baseline
-          uv run pre-commit run detect-secrets --all-files
-          uv run python scripts/audit_security.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
 
       - name: Run DEID compliance scan
         id: run_deid_scan
@@ -319,13 +319,13 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"
-            uv run python -m packages.deid.cli $CHANGED_FILES
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid $CHANGED_FILES
           else
             echo "No changed files to scan."
           fi

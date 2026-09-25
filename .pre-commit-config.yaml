@@ -5,12 +5,6 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.22
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.7
     hooks:
@@ -49,56 +43,56 @@ repos:
 
       - id: dotnet-format
         name: .NET C# Code Formatting Check (.editorconfig)
-        entry: dotnet format whitespace Cadence.sln --verify-no-changes --no-restore
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check dotnet-format
         language: system
         files: \.(cs|csproj|sln)$
         pass_filenames: false
 
       - id: dotnet-format-style
         name: .NET Roslyn Code Style & Analyzer Gate
-        entry: dotnet format style Cadence.sln --verify-no-changes --no-restore
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check dotnet-format-style
         language: system
         files: \.(cs|csproj|sln)$
         pass_filenames: false
 
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
-        entry: uv run --python 3.14 python scripts/clean_secrets_baseline.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets-baseline
         language: system
         files: \.secrets\.baseline$
         pass_filenames: false
 
       - id: detect-code-duplication
         name: Detect Code Duplication
-        entry: uv run --python 3.14 python scripts/detect_duplication.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check detect-code-duplication
         language: system
         files: \.(py|js|vue|css|cs)$
         pass_filenames: true
 
       - id: validate-cli-docs
         name: Validate CLI Docs Parity
-        entry: uv run --python 3.14 python scripts/generate_cli_docs.py --check
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-cli-docs
         language: system
-        files: ^(packages/cli/|docs/cli\.md|scripts/generate_cli_docs\.py)
+        files: ^(packages/cli/|docs/cli\.md)
         pass_filenames: false
 
       - id: validate-adrs
         name: Validate ADRs
-        entry: uv run --python 3.14 python scripts/validate_adrs.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-adrs
         language: system
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
       - id: validate-architecture-drift
         name: Validate Architecture Drift
-        entry: uv run --python 3.14 python scripts/validate_architecture_drift.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-architecture-drift
         language: system
         files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
         pass_filenames: false
 
       - id: path-requirement-sanitizer
         name: Path Sanitizer and Requirement Prefix Normalizer
-        entry: uv run --python 3.14 python scripts/compliance_utility.py --sanitize
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check path-requirement-sanitizer
         language: system
         files: \.md$
         exclude: ^docs/SDLC/runs/
@@ -106,113 +100,105 @@ repos:
 
       - id: validate-markdown
         name: Validate Custom Markdown
-        entry: uv run --python 3.14 python scripts/validate_markdown.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-markdown
         language: system
         files: \.md$
 
       - id: validate-environment-variables
         name: Validate Environment Variables
-        entry: uv run --python 3.14 python scripts/extract_env_vars.py --check
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-environment-variables
         language: system
         files: ^(apps/|packages/|scripts/|\.env\.example$|docs/ENVIRONMENT_VARIABLES\.md$)
         pass_filenames: false
 
       - id: validate-readmes
         name: Validate README Documentation Coverage & Headers
-        entry: uv run --python 3.14 python scripts/validate_readmes.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-readmes
         language: system
-        files: ^(packages/|apps/|scripts/validate_readmes\.py)
+        files: ^(packages/|apps/|scripts/)
         pass_filenames: false
 
       - id: validate-imports
         name: Cross-Service Import Validator
-        entry: uv run --python 3.14 python scripts/validate_imports.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-imports
         language: system
-        files: ^(apps/|packages/|scripts/validate_imports\.py)
+        files: ^(apps/|packages/)
         pass_filenames: false
 
       - id: audit-security
         name: Security Audit & Hardcoded Secret Scanner
-        entry: uv run --python 3.14 python scripts/audit_security.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check audit-security
         language: system
-        files: \.(py|js|ts|tsx|jsx|json|md|log|txt|yaml|yml|sh|toml|ini|env|conf|properties)$
+        files: \.(py|js|ts|tsx|jsx|json|md|log|txt|yaml|yml|sh|toml|ini|env|conf|properties|cs)$
         pass_filenames: true
         stages: [pre-commit]
 
       - id: deid-compliance-scan
         name: DEID Compliance Scan
-        entry: uv run --python 3.14 python -m packages.deid.cli
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid-compliance-scan
         language: system
-        files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
+        files: \.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$
         pass_filenames: true
 
       - id: auto-stage-openapi
         name: Auto-Stage OpenAPI Schemas
-        entry: uv run --python 3.14 python scripts/pre_commit_openapi.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check auto-stage-openapi
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
       - id: validate-api-clients
         name: Validate OpenAPI Frontend Clients AST Contract
-        entry: uv run --python 3.14 python scripts/validate_api_clients.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-api-clients
         language: system
-        files: ^(apps/web/src/api/|docs/openapi/cdisc_openapi\.json$|scripts/validate_api_clients\.py$)
+        files: ^(apps/web/src/api/|docs/openapi/cdisc_openapi\.json$)
         pass_filenames: false
         stages: [pre-commit]
 
       - id: auto-stage-schema-doc
         name: Auto-Stage Schema Documentation
-        # Generates visual schema and CDISC USDM compliance specifications
-        entry: uv run --python 3.14 python scripts/pre_commit_schema_doc.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check auto-stage-schema-doc
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
       - id: validate-path-patterns
         name: Lightweight Path-Pattern Boundary Linter
-        entry: uv run --python 3.14 python scripts/validate_path_patterns.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-path-patterns
         language: system
         pass_filenames: true
 
       - id: backend-static-verify
         name: Backend Port Contract Static Verification
-        entry: uv run --python 3.14 python scripts/verify_contracts.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check backend-static-verify
         language: system
         files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/adapters/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
         pass_filenames: false
 
       - id: query-style-linter
         name: Pre-Commit Query Style Linter
-        entry: uv run --python 3.14 python scripts/pre_commit_query_linter.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check query-style-linter
         language: system
-        files: \.py$
-        exclude: ^(tests/|scripts/)
+        files: \.cs$
         pass_filenames: true
 
       - id: validate-vulnerabilities
         name: GxP Dependency Vulnerability Audit
-        entry: uv run --python 3.14 python scripts/validate_vulnerabilities.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-vulnerabilities
         language: system
         files: ^(pyproject\.toml|uv\.lock|pnpm-lock\.yaml|package\.json)$
         pass_filenames: false
 
       - id: validate-dependencies
         name: Frontend Dependency Cryptographic Check
-        entry: uv run --python 3.14 python scripts/validate_dependencies.py
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-dependencies
         language: system
         files: package\.json$
         pass_filenames: false
 
-      # -----------------------------------------------------------------------
-      # GxP RTM Staleness Check (pre-push only)
-      # Validates that docs/SDLC/ is in sync with the committed test suite.
-      # Run 'make sync-gxp' or 'pnpm sync-gxp' to regenerate if this fails.
-      # Skip for a single push with: SKIP=gxp-rtm-validate git push
-      # -----------------------------------------------------------------------
       - id: gxp-rtm-validate
         name: GxP RTM Staleness Check
-        entry: uv run --python 3.14 python scripts/generate_rtm.py --validate
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check gxp-rtm-validate
         language: system
         pass_filenames: false
         stages: [pre-push]
