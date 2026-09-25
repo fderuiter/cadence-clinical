@@ -285,7 +285,7 @@ Ensure your host machine meets the minimum system requirements:
 Start the infrastructure dependencies (PostgreSQL, Neo4j, Keycloak, Mailhog, and MinIO) in detached mode:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose --profile python -f docker/docker-compose.yml up -d --build
 ```
 
 ### 3. Synchronize Dependencies & Run System Doctor

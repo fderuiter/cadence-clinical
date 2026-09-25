@@ -188,12 +188,12 @@ stage "Clinical Datastores" "Probing PostgreSQL (5432) and Neo4j (7687)..."
 if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 5432 2>/dev/null; then
   ok "PostgreSQL running on port 5432."
 else
-  info "PostgreSQL not reachable. Start via: docker compose up -d postgres"
+  info "PostgreSQL not reachable. Start via: docker compose --profile python up -d postgres"
 fi
 if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 7687 2>/dev/null; then
   ok "Neo4j Bolt running on port 7687."
 else
-  info "Neo4j not reachable. Start via: docker compose up -d neo4j"
+  info "Neo4j not reachable. Start via: docker compose --profile python up -d neo4j"
 fi
 
 # --------------------------------------------------------------------------

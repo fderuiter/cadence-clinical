@@ -132,9 +132,9 @@ function Test-TcpPort($port) {
     finally { $client.Close() }
 }
 if (Test-TcpPort 5432) { Write-Ok "PostgreSQL running on port 5432." }
-else { Write-Info "PostgreSQL not reachable. Start via: docker compose up -d postgres" }
+else { Write-Info "PostgreSQL not reachable. Start via: docker compose --profile python up -d postgres" }
 if (Test-TcpPort 7687) { Write-Ok "Neo4j Bolt running on port 7687." }
-else { Write-Info "Neo4j not reachable. Start via: docker compose up -d neo4j" }
+else { Write-Info "Neo4j not reachable. Start via: docker compose --profile python up -d neo4j" }
 
 # 5. Environment configuration (.env)
 Write-Host "`n[5/6] Environment Configuration (.env)" -ForegroundColor Cyan

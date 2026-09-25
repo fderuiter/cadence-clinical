@@ -171,7 +171,7 @@ Cadence Clinical Research Software is built using high-performance, compliance-r
 The entire database and authentication ecosystem runs inside Docker containers. Start the full infrastructure sandbox (Neo4j, PostgreSQL, and Keycloak) in a single command:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose --profile python -f docker/docker-compose.yml up -d --build
 ```
 
 For credentials, port configurations, and detailed key mappings, refer to the [Local Development Environment Guide](LOCAL_DEV_ENVIRONMENT.md).
