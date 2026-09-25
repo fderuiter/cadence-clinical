@@ -552,7 +552,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest -n auto scripts/tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
+        run: dotnet test Cadence.sln --configuration Release --filter "Category=Integration|Category=E2E" --logger "trx;LogFileName=report_dotnet.trx"
 
       - name: Upload integration test report
         if: always()

@@ -102,25 +102,6 @@ ignore = [
 #   RIGHT:  Model.is_active.is_(False)     # emits: col IS FALSE
 # ---------------------------------------------------------------------------
 
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "--cov=apps --cov=packages --dist=worksteal --import-mode=importlib"
-testpaths = [
-    "tests",
-]
-python_files = "test_*.py *_test.py *tests.py *suite.py"
-asyncio_mode = "auto"
-filterwarnings = [
-    "error::DeprecationWarning",
-    "error::pytest.PytestCollectionWarning",
-    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
-    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
-    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
-    "ignore:The default datetime adapter is deprecated as of Python 3.12.*:DeprecationWarning",
-    "ignore:HarfBuzz-Subset will be required by future versions of WeasyPrint.*:DeprecationWarning",
-    "ignore:Using `httpx` with `starlette.testclient` is deprecated.*:starlette.exceptions.StarletteDeprecationWarning",
-]
-
 [tool.coverage.run]
 source = [
     "apps",
@@ -198,20 +179,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
     "ruff>=0.3.0",
     "aiosqlite>=0.22.1",
-    "pytest-cov>=7.1.0",
     "pre-commit>=4.6.1",
     "detect-secrets>=1.5.0",
     "bandit>=1.9.4",
     "pip-audit>=2.10.1",
     "ecdsa>=0.19.2",
     "playwright>=1.40.0",
-    "pytest-playwright>=0.4.0",
-    "pytest-xdist>=3.5.0",
-    "pytest-archon>=0.0.5",
     "mypy>=1.9.0",
 ]
 

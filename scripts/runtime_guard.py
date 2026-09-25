@@ -44,7 +44,7 @@ def enforce_python_runtime(
         disable_reexec = os.environ.get(
             "CADENCE_DISABLE_RUNTIME_REEXEC", ""
         ).lower() in ("1", "true", "yes")
-        is_testing = "pytest" in sys.modules
+        is_testing = False
 
         if auto_reexec and not disable_reexec and not is_testing:
             uv_bin = shutil.which("uv")

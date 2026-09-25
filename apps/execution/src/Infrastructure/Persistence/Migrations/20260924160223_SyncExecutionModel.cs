@@ -12,178 +12,98 @@ public partial class SyncExecutionModel : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.CreateTable(
-            name: "clinical_observations",
-            columns: table => new
-            {
-                Id = table.Column<Guid>(type: "uuid", nullable: false),
-                SubjectId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                StudyId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                SiteId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                VisitId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                Domain = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                ObservationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                TestCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                TestName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                Value = table.Column<double>(type: "double precision", nullable: true),
-                ValueString = table.Column<string>(type: "text", nullable: true),
-                Unit = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                NormalizedValue = table.Column<double>(type: "double precision", nullable: true),
-                NormalizedUnit = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                IsOutlier = table.Column<bool>(type: "boolean", nullable: false),
-                IsSdvVerified = table.Column<bool>(type: "boolean", nullable: false),
-                SdvVerifiedBy = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                SdvVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                PageId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                IsSdvFlagged = table.Column<bool>(type: "boolean", nullable: false),
-                SdvFlagReason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                ProtocolVersionTag = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                ProtocolVersionIndex = table.Column<int>(type: "integer", nullable: true),
-                additional_properties = table.Column<string>(type: "jsonb", nullable: false),
-                LabSource = table.Column<string>(type: "text", nullable: true),
-                LabSiteId = table.Column<string>(type: "text", nullable: true),
-                LabIndicator = table.Column<string>(type: "text", nullable: true),
-                LabOutOfRange = table.Column<bool>(type: "boolean", nullable: true),
-                MatchedNormalBounds = table.Column<string>(type: "text", nullable: true),
-                RangeIndicator = table.Column<string>(type: "text", nullable: true),
-                IsOutOfRange = table.Column<bool>(type: "boolean", nullable: true),
-                ReferenceRangeLow = table.Column<double>(type: "double precision", nullable: true),
-                ReferenceRangeHigh = table.Column<double>(type: "double precision", nullable: true),
-                _version = table.Column<long>(type: "bigint", nullable: false, defaultValue: 0L),
-                CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                CreatedBy = table.Column<string>(type: "text", nullable: false),
-                ReasonForChange = table.Column<string>(type: "text", nullable: false),
-                VersionIndex = table.Column<long>(type: "bigint", nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_clinical_observations", x => x.Id);
-            });
-
-        migrationBuilder.CreateTable(
-            name: "clinical_queries",
-            columns: table => new
-            {
-                Id = table.Column<Guid>(type: "uuid", nullable: false),
-                StudyId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                SiteId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                SubjectId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                VisitId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                Domain = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                TestCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                Explanation = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                Response = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                ObservationId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                FieldLink = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                Message = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                Origin = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                Priority = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                RuleId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                Responder = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                Resolver = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                ResolvedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                CancellationReason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                EscalatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                FormId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                FieldId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                QueryType = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                ActionRequired = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                _version = table.Column<long>(type: "bigint", nullable: false, defaultValue: 0L),
-                CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                CreatedBy = table.Column<string>(type: "text", nullable: false),
-                ReasonForChange = table.Column<string>(type: "text", nullable: false),
-                VersionIndex = table.Column<long>(type: "bigint", nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_clinical_queries", x => x.Id);
-            });
-
-        migrationBuilder.CreateTable(
-            name: "form_submissions",
-            columns: table => new
-            {
-                Id = table.Column<Guid>(type: "uuid", nullable: false),
-                StudyId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                SiteId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                SubjectId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                VisitId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                FormId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                ProtocolVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                payload = table.Column<string>(type: "jsonb", nullable: true),
-                signature_manifest = table.Column<string>(type: "jsonb", nullable: true),
-                IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                IsReadonly = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                ClonedFromId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
-                _version = table.Column<long>(type: "bigint", nullable: false, defaultValue: 0L),
-                CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                CreatedBy = table.Column<string>(type: "text", nullable: false),
-                ReasonForChange = table.Column<string>(type: "text", nullable: false),
-                VersionIndex = table.Column<long>(type: "bigint", nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_form_submissions", x => x.Id);
-            });
-
-        migrationBuilder.CreateIndex(
-            name: "idx_observation_coords",
+        migrationBuilder.AddColumn<string>(
+            name: "LabSource",
             table: "clinical_observations",
-            columns: new[] { "StudyId", "SubjectId", "VisitId", "Domain", "TestCode" });
+            type: "text",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "idx_observation_subject_date",
+        migrationBuilder.AddColumn<string>(
+            name: "LabSiteId",
             table: "clinical_observations",
-            columns: new[] { "SubjectId", "ObservationDate" });
+            type: "text",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "ix_clinical_observations_site_id",
+        migrationBuilder.AddColumn<string>(
+            name: "LabIndicator",
             table: "clinical_observations",
-            column: "SiteId");
+            type: "text",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "idx_query_observation_id",
-            table: "clinical_queries",
-            column: "ObservationId");
+        migrationBuilder.AddColumn<bool>(
+            name: "LabOutOfRange",
+            table: "clinical_observations",
+            type: "boolean",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "idx_query_subject_status",
-            table: "clinical_queries",
-            columns: new[] { "SubjectId", "Status" });
+        migrationBuilder.AddColumn<string>(
+            name: "MatchedNormalBounds",
+            table: "clinical_observations",
+            type: "text",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "idx_query_target",
-            table: "clinical_queries",
-            columns: new[] { "StudyId", "SubjectId", "VisitId", "Domain", "TestCode" });
+        migrationBuilder.AddColumn<string>(
+            name: "RangeIndicator",
+            table: "clinical_observations",
+            type: "text",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "ix_clinical_queries_site_id",
-            table: "clinical_queries",
-            column: "SiteId");
+        migrationBuilder.AddColumn<bool>(
+            name: "IsOutOfRange",
+            table: "clinical_observations",
+            type: "boolean",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "idx_form_submissions_coords",
-            table: "form_submissions",
-            columns: new[] { "StudyId", "SubjectId", "VisitId", "FormId" });
+        migrationBuilder.AddColumn<double>(
+            name: "ReferenceRangeLow",
+            table: "clinical_observations",
+            type: "double precision",
+            nullable: true);
 
-        migrationBuilder.CreateIndex(
-            name: "ix_form_submissions_site_id",
-            table: "form_submissions",
-            column: "SiteId");
+        migrationBuilder.AddColumn<double>(
+            name: "ReferenceRangeHigh",
+            table: "clinical_observations",
+            type: "double precision",
+            nullable: true);
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "clinical_observations");
+        migrationBuilder.DropColumn(
+            name: "LabSource",
+            table: "clinical_observations");
 
-        migrationBuilder.DropTable(
-            name: "clinical_queries");
+        migrationBuilder.DropColumn(
+            name: "LabSiteId",
+            table: "clinical_observations");
 
-        migrationBuilder.DropTable(
-            name: "form_submissions");
+        migrationBuilder.DropColumn(
+            name: "LabIndicator",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "LabOutOfRange",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "MatchedNormalBounds",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "RangeIndicator",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "IsOutOfRange",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "ReferenceRangeLow",
+            table: "clinical_observations");
+
+        migrationBuilder.DropColumn(
+            name: "ReferenceRangeHigh",
+            table: "clinical_observations");
     }
 }

@@ -48,7 +48,7 @@ aioitertools             0.13.0
 aiosignal                1.4.0
 aiosmtplib               5.1.2
 aiosqlite                0.22.1
-alembic                  1.18.5
+alembic                  1.20.0
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
@@ -75,7 +75,7 @@ boolean-py               5.0
 boto3                    1.40.61
 botocore                 1.40.61
 brotli                   1.2.0
-brotlicffi               1.2.0.1
+brotlicffi               1.2.0.2
 cachecontrol             0.14.4
 cadence-clinical         0.1.0       /app
 cadence-fileshare        0.1.0
@@ -87,9 +87,8 @@ cfgv                     3.5.0
 charset-normalizer       3.4.9
 click                    8.4.2
 colorama                 0.4.6
-coverage                 7.15.2
 cryptography             50.0.1
-cssselect2               0.9.0
+cssselect2               0.10.1
 cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
@@ -99,18 +98,17 @@ docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
-execnet                  2.1.2
 fastapi                  0.139.2
 fastuuid                 0.14.0
 filelock                 3.32.0
-fonttools                4.63.0
+fonttools                4.66.0
 frozenlist               1.8.0
 fsspec                   2026.7.0
-google-api-core          2.34.0
-google-api-python-client 2.199.0
-google-auth              2.56.3
-google-auth-httplib2     0.4.1
-googleapis-common-protos 1.75.1
+google-api-core          2.38.0
+google-api-python-client 2.200.0
+google-auth              2.58.0
+google-auth-httplib2     0.4.2
+googleapis-common-protos 1.75.3
 greenlet                 3.5.4
 h11                      0.16.0
 hf-xet                   1.6.0
@@ -122,7 +120,6 @@ huggingface-hub          1.28.0
 identify                 2.6.19
 idna                     3.18
 importlib-metadata       8.9.0
-iniconfig                2.3.0
 jinja2                   3.1.6
 jiter                    0.16.0
 jmespath                 1.1.0
@@ -131,8 +128,8 @@ jsonschema-specifications 2025.9.1
 librt                    0.15.0
 license-expression       30.4.4
 litellm                  1.97.0
-lxml                     6.1.1
-mako                     1.3.12
+lxml                     6.1.3
+mako                     1.4.3
 markdown-it-py           4.2.0
 markupsafe               3.0.3
 mdurl                    0.1.2
@@ -140,7 +137,7 @@ msgpack                  1.2.1
 multidict                6.7.1
 mypy                     2.3.0
 mypy-extensions          1.1.0
-neo4j                    6.2.0
+neo4j                    6.3.1
 nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
@@ -155,7 +152,7 @@ opentelemetry-semantic-conventions 0.65b0
 opentelemetry-util-http  0.65b0
 packageurl-python        0.17.6
 packaging                26.2
-pandas                   3.0.3
+pandas                   3.0.6
 pathspec                 1.1.1
 pillow                   12.3.0
 pip                      26.2
@@ -164,11 +161,10 @@ pip-audit                2.10.1
 pip-requirements-parser  32.0.1
 platformdirs             4.11.0
 playwright               1.61.0
-pluggy                   1.6.0
 pre-commit               4.6.1
 propcache                0.5.2
-proto-plus               1.28.3
-protobuf                 7.36.0
+proto-plus               1.28.4
+protobuf                 7.36.2
 py-serializable          2.1.0
 pyasn1                   0.6.4
 pyasn1-modules           0.4.2
@@ -182,24 +178,16 @@ pyee                     13.0.1
 pygments                 2.20.0
 pymupdf                  1.28.0
 pyparsing                3.3.2
-pyphen                   0.17.2
-pytest                   9.1.1
-pytest-archon            0.0.7
-pytest-asyncio           1.4.0
-pytest-base-url          2.1.0
-pytest-cov               7.1.0
-pytest-playwright        0.8.0
-pytest-xdist             3.8.0
+pyphen                   0.18.1
 python-dateutil          2.9.0.post0
 python-discovery         1.5.0
 python-docx              1.2.0
 python-dotenv            1.2.2
 python-jose              3.5.0
 python-multipart         0.0.32
-python-slugify           8.0.4
-pytz                     2026.2
+pytz                     2026.4
 pyyaml                   6.0.3
-rapidfuzz                3.14.5
+rapidfuzz                3.14.6
 redis                    8.1.0
 referencing              0.37.0
 regex                    2026.7.19
@@ -213,12 +201,11 @@ shellingham              1.5.4
 six                      1.17.0
 sniffio                  1.3.1
 sortedcontainers         2.4.0
-soupsieve                2.9.1
+soupsieve                2.10
 sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.6.0
 stevedore                5.9.0
-text-unidecode           1.3
 tiktoken                 0.14.0
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
@@ -226,20 +213,20 @@ tokenizers               0.23.1
 tomli                    2.4.1
 tomli-w                  1.2.0
 tqdm                     4.70.0
-typer                    0.27.1
+typer                    0.27.2
 typing-extensions        4.16.0
 typing-inspection        0.4.2
-tzdata                   2026.3
+tzdata                   2026.4
 uritemplate              4.2.0
 urllib3                  2.7.0
 usdm                     0.67.0
-uvicorn                  0.51.0
+uvicorn                  0.52.4
 uvloop                   0.22.1
 virtualenv               21.7.0
-watchfiles               1.2.0
+watchfiles               1.3.0
 weasyprint               70.0
-webencodings             0.5.1
-websockets               16.1.1
+webencodings             0.6.1
+websockets               17.1
 wrapt                    1.17.3
 yarl                     1.24.5
 yattag                   1.16.1
@@ -2557,28 +2544,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** d00b0c71adb0e80369a5b5aaec22d5fcceb17ffa71ff58612cd0c265f39ad0bf
+- **Cryptographic Hash (SHA-256):** f2a0800877a146e25364d69c957cdf3973c7ef12574430e88e9bf51757b9d4c9
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUQVTVWJcKg5cQ8idOra2S1cNILEowDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUVMditoFC7dIp+p4w9DsR8elDr98wDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTIzMTUwNzE3WhcNMjcwOTI0MTUwNzE3WjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTI0MTQxNzAxWhcNMjcwOTI1MTQxNzAxWjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAL6YAZXnqSlBaewxlaMNm0szPWQN8TJ5
-c7Bgc35psSoUab4ayKCJBInlNfhCq0ed2h03f4GzHf1vJqs1uGPqViKXAfYrQXZa
-SEpBd1gM/MW+2vyIe7e6iCCmtkn57OB+57CZpGLnRb1WY/4s3dv+JdEMyyA/X9GW
-hB869qP8nGZAO/iY2OYfbJsX2GxDchTZi2EYEwkPoSBB++bbQt1dxF1gsTz0PcsC
-DBw6mNbHJIxZCUMyMftNtRxKhYM1/st9qFbGXfN6XbXogal/08uSlYKqxlQ/iblr
-gDPbCxphfa0GF9sA2kOfXF8tOU/tXM9Ua5eHCXTGnji0gXtVi48TvfECAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAlAqaEetUHDqn/A+bf3DcFMc6zz28zdsZ2CYgCwl+
-gtQXi1kujVKqwjST52OUH67gyWTfTTG3Zv0oUkmDESOFfSpNzVgfbv2kbEehDfDu
-ToXm+4UQ4PsX9o4Hv86aQhO9WxEDTzQ4LzcLeJZ8JjbTHd2AA80x96/+4/HhNo5i
-SeXWE3cLpzb6FRvrv+kk9eK2EUVbBw5x/6kFzy6aaMlD+cgZtwp633oXkIfxtqyp
-0uAV7F/H9WkTk0sxrIV+/+pzJGY5ZXFFSR6Glct/uwb9TEpdpywh/uHb9sNrmxRA
-wywZ76vTcpIbRvk+K401v0qwmGD6TKbRc06hOoy629hsRg==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAI5inPxwQezX5Xmk8RFpjVbID7osjuih
+ylKEcbo0A67OgAkcAk5afHQCtPuAUvPG32njgUNJmBzOyW5Mf1I84mBGQWG8aplg
++djYkb14ncYjJKNWgks1PQ1xwMM12DoFDWNGVsaZaY4PTaNwMOqg0FjqFIe0XPn3
+fSTjO/QVfjp9xOqu+2Gx+wkWHDka+ZRwbY1DBY8FPeAzOOP900oEu4Z2bk7uju3I
+JDAVTIcvXLsvmM70JcOjH09yAZZclmyNkHw7u1ScwFp2fZb+dQnfFQGLLaqa3gkr
+68yAJxlIybLJUaRydivO8OGGdvokMeL3AiTVdTrSwZ2LXj5Xg/IMDd8CAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAA2RlWzDgidkQi3ftITSNjGmNrl9oIaeWcteGhBHh
+oEP+C5xjw31VowiwiC+ogDp0FyNeIPO6NilRVlyLOnwjT/T6/+OxPCC47zv5qMFk
+MTbICtUyijkr47plf4Fmrd6O2zxq3xRFpcLw7qed4zFhSwMd5DDA++kZ4AtzuCdM
+BqTqE6JX7CzP5rgcm40zyr60xu7VUX8Sou9ssgET/Wk9k+Kc9idH1uI61fHDhB6W
+IXHgu2c3ADOs94kjcu8GoHKE0Ex+LpAdBvi0dJM5X5v0iyzbIGxAQnW0dU/cKjcF
+Nxx9d8RkKe17L3BNH6SBC9lbx6QEi4aZgerPR6iibsRBNw==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-AJrKLzKalibAH3OVRMt/04Z0lCIpNiLjjotH7r3qPIc4FNUkz/ZiY3EngEQyxMAl3yEtig8vtP1Wlp+Qm523S0/IF3nd9J7UzwNrzsCYVPBUAd8Sc8AbGQUBdmW19epZMBA4RbhPKLQxOVeb21Guix8SWiZLh0xmub8YWC471UEaSgHleeGcFMMv8e07XUsFhILJl735zDtmhpZASFyx16QY2hszsD8pq+FEsB+4K+8AuPuc3Cr8b24Z2e+ydhMBq4GFwzD3avIkMPCN82XnXYogplh/vdlRPgnUN5RHwUxJSPEMv6WwPM5Es4UUd1sV9N/o1EXSgcn6yeYI9Y+UJw==
+UwEHEMzbi90aq7Bdgoe2YCA02lNiH0LTO284cU17NUr6qAfMjJ2TTR3sLmYMPbEGPovF7qzgRusoTorkJE068pDx3RPRhvWIhfgZK155I68162F7X/PUlz1558U6ipDAoo/rlurkN0vrQxPjnInNzT9tu1oBhencUlZ4AydSzQJ0UM+2cF3tsjcN3tnX/76Fx8RE0xrzOq/C4R+d6ExMTS1F/9KY/IaL5dQIQEgIfX25gmVtQpGT0cd/hyMqjeu7bXC8HeUz5meGnzbj30tfWjV001QNrJCWsf9JL0Se0GDOJcEcxaTZXaC9SH33k8fB8trVuOwIkXoYr1Fn9W0hKQ==
 -----END SIGNATURE-----
