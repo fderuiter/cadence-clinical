@@ -19,6 +19,9 @@ public class BudgetContractConfiguration : IEntityTypeConfiguration<BudgetContra
         builder.Property(x => x.ContractName).HasMaxLength(255).IsRequired();
         builder.Property(x => x.TierLevel).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.TotalBudget).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.OverheadPercentage).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingPercentage).HasColumnType("numeric(18,4)");
         builder.Property(x => x.EffectiveDate).HasMaxLength(50);
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
@@ -43,6 +46,11 @@ public class FeeScheduleConfiguration : IEntityTypeConfiguration<FeeSchedule>
         builder.HasIndex(x => x.FormId);
         builder.Property(x => x.ProcedureCode).HasMaxLength(100).IsRequired();
         builder.Property(x => x.ProcedureName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.BaseAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.OverheadPercentage).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingPercentage).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.PatientStipend).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TravelReimbursement).HasColumnType("numeric(18,4)");
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
     }
@@ -60,6 +68,7 @@ public class SplitPayeeConfigConfiguration : IEntityTypeConfiguration<SplitPayee
         builder.Property(x => x.PayeeId).HasMaxLength(100).IsRequired();
         builder.Property(x => x.PayeeName).HasMaxLength(255).IsRequired();
         builder.Property(x => x.PayeeRole).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.AllocationPercentage).HasColumnType("numeric(18,4)");
         builder.Property(x => x.BankAccountReference).HasMaxLength(100);
         builder.Property(x => x.TaxIdentifier).HasMaxLength(100);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
@@ -93,6 +102,14 @@ public class PayableConfiguration : IEntityTypeConfiguration<Payable>
         builder.Property(x => x.TriggerEventId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.TriggerEventId).IsUnique();
         builder.Property(x => x.TriggerSource).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.BaseAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.OverheadAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.PatientStipendAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TravelReimbursementAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.GrossAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingRate).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.NetAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
@@ -116,6 +133,10 @@ public class PayableAllocationConfiguration : IEntityTypeConfiguration<PayableAl
         builder.HasIndex(x => x.PayeeId);
         builder.Property(x => x.PayeeName).HasMaxLength(255).IsRequired();
         builder.Property(x => x.PayeeRole).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.AllocationPercentage).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.GrossShare).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingShare).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.NetShare).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
@@ -138,6 +159,7 @@ public class HoldbackReserveConfiguration : IEntityTypeConfiguration<HoldbackRes
         builder.HasIndex(x => x.ContractId);
         builder.Property(x => x.PayableId).HasMaxLength(36).IsRequired();
         builder.HasIndex(x => x.PayableId).IsUnique();
+        builder.Property(x => x.HoldbackAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
@@ -195,6 +217,13 @@ public class SelfBillingInvoiceConfiguration : IEntityTypeConfiguration<SelfBill
         builder.Property(x => x.PeriodStart).HasMaxLength(50).IsRequired();
         builder.Property(x => x.PeriodEnd).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.TotalBaseAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalOverheadAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalPatientStipend).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalTravelReimbursement).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalGrossAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalHoldbackAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TotalNetAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
         builder.Property(x => x.ApprovedBy).HasMaxLength(255);
@@ -228,6 +257,14 @@ public class InvoiceLineItemConfiguration : IEntityTypeConfiguration<InvoiceLine
         builder.HasIndex(x => x.VisitCode);
         builder.Property(x => x.ProcedureCode).HasMaxLength(100);
         builder.Property(x => x.ProcedureName).HasMaxLength(255);
+        builder.Property(x => x.BaseAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.OverheadAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.PatientStipend).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TravelReimbursement).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.GrossAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingRate).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.WithholdingAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.NetAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
@@ -249,6 +286,10 @@ public class RemittanceAdviceConfiguration : IEntityTypeConfiguration<Remittance
         builder.HasIndex(x => x.StudyId);
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.SiteId);
+        builder.Property(x => x.GrossAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.OverheadAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.HoldbackAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.NetAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.PdfSha256Hash).HasMaxLength(64).IsRequired();
         builder.Property(x => x.SignedBy).HasMaxLength(255);
@@ -298,6 +339,12 @@ public class ParticipantWalletConfiguration : IEntityTypeConfiguration<Participa
         builder.HasIndex(x => x.StudyId);
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.SiteId);
+        builder.Property(x => x.CurrentBalance).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.LifetimeStipends).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.LifetimeReimbursements).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.LifetimeDisbursements).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TaxableYtd).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.AntiCoercionCap).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);

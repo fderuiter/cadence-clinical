@@ -53,6 +53,7 @@
     <Compile Remove="Execution/Integration/**" />
     <Compile Remove="Audit/GxPAuditTrailGenerationTests.cs" />
     <Compile Remove="Packages/**" />
+    <Compile Remove="Payments/**" />
     <Compile Remove="E2E/**" />
     <Compile Remove="Validation/**" />
   </ItemGroup>
