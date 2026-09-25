@@ -195,4 +195,57 @@ public class EfAuditLogWriterTests
         writerEntries[0].UserId.Should().Be("user-1");
         writerEntries[0].Action.Should().Be("ENROLL_SUBJECT");
     }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task WriteAsync_GivenCallsWithIdenticalTimestamps_ProducesValidMerkleChain()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        var fixedClock = new FakeClock(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+        await using (var context1 = CreateContext(dbName))
+        {
+            var writer = new EfAuditLogWriter(context1, fixedClock);
+            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "Step 1", null, null, TestContext.Current.CancellationToken);
+            await context1.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context2 = CreateContext(dbName))
+        {
+            var writer = new EfAuditLogWriter(context2, fixedClock);
+            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "TRANSITION_ENROLLED", "user-1", "Step 2", null, null, TestContext.Current.CancellationToken);
+            await context2.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context3 = CreateContext(dbName))
+        {
+            var writer = new EfAuditLogWriter(context3, fixedClock);
+            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "UPDATE_DEMOGRAPHICS", "user-1", "Step 3", null, null, TestContext.Current.CancellationToken);
+            await context3.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var verifyContext = CreateContext(dbName);
+        var entries = await verifyContext.AuditLogEntries.AsNoTracking()
+            .Where(e => e.EntityName == "clinical_subjects")
+            .OrderBy(e => e.VersionIndex)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        entries.Should().HaveCount(3);
+        entries[0].PredecessorHash.Should().BeEmpty();
+        entries[1].PredecessorHash.Should().Be(entries[0].BlockHash);
+        entries[2].PredecessorHash.Should().Be(entries[1].BlockHash);
+        entries[1].VersionIndex.Should().Be(2);
+        entries[2].VersionIndex.Should().Be(3);
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            string expectedPredecessor = i == 0 ? string.Empty : entries[i - 1].BlockHash;
+            e.PredecessorHash.Should().Be(expectedPredecessor);
+
+            string computedHash = AuditLogEntry.ComputeBlockHash(
+                e.EntityName, e.EntityId, e.Action, e.Timestamp, e.UserId, e.VersionIndex, e.ChangesJson, e.PredecessorHash);
+            e.BlockHash.Should().Be(computedHash);
+        }
+    }
 }

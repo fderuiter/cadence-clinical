@@ -14,7 +14,7 @@ namespace Cadence.Database;
 /// EF Core SaveChangesInterceptor enforcing 21 CFR Part 11 immutable audit trail fields and Merkle block hashing.
 /// @req:PRD-SYS-053
 /// </summary>
-public class GxPAuditInterceptor(Func<string> currentUserProvider) : SaveChangesInterceptor
+public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime>? clockProvider = null) : SaveChangesInterceptor
 {
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
@@ -28,7 +28,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider) : SaveChanges
 
         DbContext context = eventData.Context;
         string currentUser = currentUserProvider();
-        DateTime now = DateTime.UtcNow;
+        DateTime now = (clockProvider ?? (() => DateTime.UtcNow))();
 
         foreach (var entry in context.ChangeTracker.Entries<IGxPAuditable>())
         {
@@ -65,7 +65,10 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider) : SaveChanges
             {
                 predecessorHash = await context.Set<AuditLogEntry>()
                     .Where(e => e.EntityName == entityName)
+                    .Where(e => !context.Set<AuditLogEntry>().Any(sub => sub.EntityName == entityName && sub.PredecessorHash == e.BlockHash))
                     .OrderByDescending(e => e.Timestamp)
+                    .ThenByDescending(e => e.VersionIndex)
+                    .ThenByDescending(e => e.Id)
                     .Select(e => e.BlockHash)
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? string.Empty;
             }

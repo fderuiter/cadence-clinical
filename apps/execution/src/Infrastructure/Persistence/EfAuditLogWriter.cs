@@ -51,7 +51,10 @@ public sealed class EfAuditLogWriter(ExecutionDbContext dbContext, IClock clock)
     {
         var predecessor = await dbContext.AuditLogEntries
             .Where(e => e.EntityName == tableName)
+            .Where(e => !dbContext.AuditLogEntries.Any(sub => sub.EntityName == tableName && sub.PredecessorHash == e.BlockHash))
             .OrderByDescending(e => e.Timestamp)
+            .ThenByDescending(e => e.VersionIndex)
+            .ThenByDescending(e => e.Id)
             .Select(e => new { e.BlockHash, e.VersionIndex })
             .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 
