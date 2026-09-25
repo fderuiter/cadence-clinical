@@ -48,7 +48,7 @@ namespace Cadence.UnitTests.Execution;
 /// </para>
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed class ExecutionApiFactory : WebApplicationFactory<Program>
+public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
 {
     /// <summary>The snake_case wire-convention options matching <c>Program.cs</c>'s own
     /// <c>ConfigureHttpJsonOptions</c> call, for tests that need to (de)serialize request/response bodies

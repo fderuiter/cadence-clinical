@@ -27,7 +27,7 @@ namespace Cadence.E2ETests.E2E;
 /// Manages Testcontainers.PostgreSql container lifecycle with resilient InMemory fallback when Docker is offline.
 /// @req:PRD-SYS-001, PRD-SUB-001
 /// </summary>
-public class ExecutionE2EFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>, IAsyncLifetime
 {
     private PostgreSqlContainer? _postgresContainer;
     private bool _isDockerAvailable;

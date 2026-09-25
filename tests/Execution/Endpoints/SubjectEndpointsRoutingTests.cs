@@ -710,10 +710,10 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     /// Files entry, not this ticket's. `Program.cs`'s own remarks additionally note that
     /// <c>AddEntityFrameworkOutbox&lt;ExecutionDbContext&gt;()</c> cannot start cleanly today without
     /// <c>ExecutionDbContext</c> registered (also `MIG-SUBJ-024`'s job) -- so booting the real, current
-    /// <see cref="Program"/> unmodified is neither possible nor within this ticket's scope.
+    /// <see cref="Cadence.Apps.Execution.Program"/> unmodified is neither possible nor within this ticket's scope.
     /// </para>
     /// <para>
-    /// <see cref="Program"/> is used purely as <see cref="WebApplicationFactory{TEntryPoint}"/>'s required
+    /// <see cref="Cadence.Apps.Execution.Program"/> is used purely as <see cref="WebApplicationFactory{TEntryPoint}"/>'s required
     /// marker/content-root-inference type, per the ticket's own instruction to test via
     /// <c>WebApplicationFactory&lt;Program&gt;</c>. <see cref="CreateHostBuilder"/> is overridden to build an
     /// entirely independent minimal host that maps exactly (and only) <c>MapSubjectEndpoints()</c> -- the one
@@ -722,7 +722,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     /// registrations.
     /// </para>
     /// </summary>
-    private sealed class SubjectEndpointsTestFactory : WebApplicationFactory<Program>
+    private sealed class SubjectEndpointsTestFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
     {
         public FakeSubjectApplicationService Service { get; } = new();
 
