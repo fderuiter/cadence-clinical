@@ -133,7 +133,7 @@ uv run cadence fix --all
 
 ## 5. GxP Compliance Synchronization (`cadence gxp sync`)
 
-Whenever test functions are added, modified, or requirement tags (`@req:PRD-SYS-xxx`) are updated, run:
+Whenever test functions are added, modified, or requirement tags (`@req:PRD-SYS-XXX`) are updated, run:
 
 ```bash
 uv run cadence gxp sync
