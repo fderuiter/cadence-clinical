@@ -92,5 +92,5 @@ jobs:
           if [ -f ".github/trusted-base/scripts/post_pr_comment.py" ]; then
             uv run python .github/trusted-base/scripts/post_pr_comment.py
           else
-            uv run python scripts/post_pr_comment.py
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
           fi

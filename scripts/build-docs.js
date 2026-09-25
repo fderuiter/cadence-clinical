@@ -243,6 +243,19 @@ function sweepAndPreprocessDocs(docsDir) {
           newUrl = path.relative(docSubDir, "LICENSE.md").replace(/\\/g, "/");
         }
 
+        const rawTargetClean = cleanUrl.split("#")[0].split("?")[0];
+        if (
+          rawTargetClean &&
+          !cleanUrl.startsWith("../") &&
+          !cleanUrl.startsWith("/") &&
+          fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
+          !fs.existsSync(path.join(path.dirname(fullPath), rawTargetClean))
+        ) {
+          const anchor = cleanUrl.includes("#") ? "#" + cleanUrl.split("#")[1] : "";
+          const relPath = path.relative(path.dirname(fullPath), path.join(repoRoot, rawTargetClean)).replace(/\\/g, "/");
+          newUrl = relPath + anchor;
+        }
+
         const targetClean = newUrl.split("#")[0].split("?")[0];
         if (targetClean) {
           const resolvedPath = path.resolve(path.dirname(fullPath), targetClean);
@@ -284,10 +297,10 @@ try {
       "Warning: Shared UI primitives package build failed, continuing anyway..."
     );
   }
-  runCommand("uv run python scripts/validate_adrs.py");
-  runCommand("uv run python scripts/validate_markdown.py");
-  runCommand("uv run python scripts/generate_schema_documentation.py");
-  runCommand("uv run python scripts/generate_api_docs.py");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-api-docs");
 
   // 2. Run compliance compiler
   console.log("--- Step 2: Running Compliance Tracer ---");
@@ -299,9 +312,9 @@ try {
     envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
 
   if (hasReport && !isEnvDraft) {
-    runCommand("uv run python scripts/generate_rtm.py");
+    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm");
   } else {
-    runCommand("uv run python scripts/generate_rtm.py --draft");
+    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --draft");
   }
 
   // 3. Prepare files for VitePress
