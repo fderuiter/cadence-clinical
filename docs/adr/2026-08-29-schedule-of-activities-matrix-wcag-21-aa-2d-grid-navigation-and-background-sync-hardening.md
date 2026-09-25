@@ -88,7 +88,7 @@ export function useGridNavigation(initialRow = 0, initialCol = 0) {
 
 ### 2. WAI-ARIA Matrix Semantics
 
-Components [`ClinicalSoAMatrix.vue`](apps/web/src/components/clinical/ClinicalSoAMatrix.vue) and [`SoAMatrixEditor.vue`](apps/web/src/components/clinical/SoAMatrixEditor.vue) declare full ARIA hierarchies:
+Components `ClinicalSoAMatrix.vue` and `SoAMatrixEditor.vue` declare full ARIA hierarchies:
 
 - Root container: `role="grid"` with `aria-label="Schedule of Activities Matrix"`.
 - Table rows: `role="row"`.
@@ -98,7 +98,7 @@ Components [`ClinicalSoAMatrix.vue`](apps/web/src/components/clinical/ClinicalSo
 
 ### 3. Background Sync & Exception Guarding
 
-In [`apps/web/src/stores/clinical.ts`](apps/web/src/stores/clinical.ts):
+In `apps/web/src/stores/clinical.ts`:
 
 - `startSyncTimer` executes with `.catch()` boundary guards and safe interval error logging.
 - `window.alert()` calls are replaced with reactive `this.soaError` store states for non-blocking UI alert banners.
@@ -117,10 +117,10 @@ In [`apps/web/src/stores/clinical.ts`](apps/web/src/stores/clinical.ts):
 
 ## 6. Implementation & Verification
 
-- **Composable**: [`apps/web/src/composables/useGridNavigation.ts`](apps/web/src/composables/useGridNavigation.ts).
-- **Matrix Components**: [`apps/web/src/components/clinical/ClinicalSoAMatrix.vue`](apps/web/src/components/clinical/ClinicalSoAMatrix.vue), [`apps/web/src/components/clinical/SoAMatrixEditor.vue`](apps/web/src/components/clinical/SoAMatrixEditor.vue).
-- **Store & Portal**: [`apps/web/src/stores/clinical.ts`](apps/web/src/stores/clinical.ts), [`apps/subject-portal/src/index.js`](apps/subject-portal/src/index.js).
+- **Composable**: `apps/web/src/composables/useGridNavigation.ts`.
+- **Matrix Components**: `apps/web/src/components/clinical/ClinicalSoAMatrix.vue`, `apps/web/src/components/clinical/SoAMatrixEditor.vue`.
+- **Store & Portal**: `apps/web/src/stores/clinical.ts`, `apps/subject-portal/src/index.js`.
 - **Unit Tests**:
-  - [`apps/web/tests/components/Grid2DKeyboardNavigation.spec.js`](apps/web/tests/components/Grid2DKeyboardNavigation.spec.js) (Roving focus, keyboard arrow routing, Space/Enter toggling, axe accessibility checks).
-  - [`apps/web/tests/usdm_validation.test.js`](apps/web/tests/usdm_validation.test.js) (Reactive error states).
+  - `apps/web/tests/components/Grid2DKeyboardNavigation.spec.js` (Roving focus, keyboard arrow routing, Space/Enter toggling, axe accessibility checks).
+  - `apps/web/tests/usdm_validation.test.js` (Reactive error states).
   - 546 web unit tests passing cleanly.

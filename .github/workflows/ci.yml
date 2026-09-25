@@ -840,7 +840,7 @@ jobs:
           TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
           MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
           ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
-        run: uv run python scripts/post_pr_comment.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'
@@ -948,7 +948,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
         run: |
-          uv run python scripts/sync_ruleset.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-ruleset
 
   release-and-archive:
     name: Call Production Pipeline
