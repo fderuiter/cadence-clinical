@@ -127,23 +127,44 @@ export const useAuthStore = defineStore("auth", {
         console.error("Failed to parse auth from storage", e);
       }
     }
+
+    let restoredPersona = "super_admin";
+    let hasSavedPersona = false;
+    if (saved && typeof saved.currentPersona === "string") {
+      const preset = PERSONA_PRESETS.find((p) => p.key === saved.currentPersona);
+      if (preset) {
+        restoredPersona = saved.currentPersona;
+        hasSavedPersona = true;
+      }
+    }
+
+    const matchedPreset = PERSONA_PRESETS.find((p) => p.key === restoredPersona);
+    const defaultRoles = hasSavedPersona && matchedPreset
+      ? [...matchedPreset.roles]
+      : [
+          "Sponsor Admin",
+          "Sponsor Designer",
+          "Data Manager",
+          "Site Investigator",
+          "CRC",
+          "CRA",
+          "Monitor",
+          "Auditor",
+        ];
+
+    const restoredRoles =
+      saved && Array.isArray(saved.rawRoles) && saved.rawRoles.length > 0
+        ? saved.rawRoles
+        : defaultRoles;
+
     return {
       isAuthenticated: saved.isAuthenticated || false,
       accessToken: saved.accessToken || null,
       idToken: saved.idToken || null,
       refreshToken: saved.refreshToken || null,
       user: saved.user || null, // includes identity details like username, email, firstName, lastName, and id
-      rawRoles: saved.rawRoles || [
-        "Sponsor Admin",
-        "Sponsor Designer",
-        "Data Manager",
-        "Site Investigator",
-        "CRC",
-        "CRA",
-        "Monitor",
-        "Auditor",
-      ],
-      currentPersona: saved.currentPersona || "super_admin",
+      rawRoles: restoredRoles,
+      currentPersona: restoredPersona,
       isDemoMode: saved.isDemoMode !== undefined ? saved.isDemoMode : true, // defaults to true, set to false if Keycloak initializes successfully
     };
   },
@@ -189,19 +210,31 @@ export const useAuthStore = defineStore("auth", {
   },
   actions: {
     persist() {
-      if (typeof window !== "undefined" && window.sessionStorage) {
-        window.sessionStorage.setItem(
-          "cadence_auth",
-          JSON.stringify({
-            isAuthenticated: this.isAuthenticated,
-            accessToken: this.accessToken,
-            idToken: this.idToken,
-            refreshToken: this.refreshToken,
-            user: this.user,
-            rawRoles: this.rawRoles,
-            isDemoMode: this.isDemoMode,
-          })
-        );
+      if (typeof window !== "undefined") {
+        if (!this.isAuthenticated) {
+          if (window.sessionStorage) {
+            window.sessionStorage.removeItem("cadence_auth");
+          }
+          if (window.localStorage) {
+            window.localStorage.removeItem("cadence_auth");
+          }
+          return;
+        }
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem(
+            "cadence_auth",
+            JSON.stringify({
+              isAuthenticated: this.isAuthenticated,
+              accessToken: this.accessToken,
+              idToken: this.idToken,
+              refreshToken: this.refreshToken,
+              user: this.user,
+              rawRoles: this.rawRoles,
+              currentPersona: this.currentPersona,
+              isDemoMode: this.isDemoMode,
+            })
+          );
+        }
       }
     },
     setAuth(keycloak) {
@@ -229,6 +262,7 @@ export const useAuthStore = defineStore("auth", {
         this.refreshToken = null;
         this.user = null;
         this.rawRoles = [];
+        this.currentPersona = "super_admin";
       }
       this.persist();
     },
@@ -347,6 +381,11 @@ export const useAuthStore = defineStore("auth", {
         this.isDemoMode = true;
         this.rawRoles = [];
       }
+      this.currentPersona = "super_admin";
+      this.user = null;
+      this.accessToken = null;
+      this.idToken = null;
+      this.refreshToken = null;
       this.persist();
     },
     async refresh(minValidity = 30) {
