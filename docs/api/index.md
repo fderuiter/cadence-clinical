@@ -22,14 +22,14 @@ The Cadence Clinical platform routes all client requests through a centralized r
 
 | Microservice | Base Route | Port | Endpoints | Persistence | Documentation |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Central API Gateway & Auth Proxy** | `/api/v1` | `8000` | `1036` | `Stateless / Keycloak OIDC` | [View Reference](./gateway.md) |
+| **Central API Gateway & Auth Proxy** | `/api/v1` | `8000` | `0` | `Stateless / Keycloak OIDC` | [View Reference](./gateway.md) |
 | **Compliance & Qualification Engine** | `/api/v1/compliance` | `8019` | `1` | `Pytest + Audit Ledgers` | [View Reference](./compliance.md) |
 
 ### Protocol & Study Design
 
 | Microservice | Base Route | Port | Endpoints | Persistence | Documentation |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Study Designer & MDR (USDM)** | `/api/v1/designer` | `8001` | `143` | `Neo4j Graph Database` | [View Reference](./designer.md) |
+| **Study Designer & MDR (USDM)** | `/api/v1/designer` | `8001` | `0` | `Neo4j Graph Database` | [View Reference](./designer.md) |
 | **Knowledge & SOP Engine** | `/api/v1/knowledge` | `8011` | `47` | `PostgreSQL / SQLite` | [View Reference](./knowledge.md) |
 | **Clinical AI Gateway** | `/api/v1/ai` | `8013` | `8` | `Ephemeral / REST` | [View Reference](./ai_gateway.md) |
 
