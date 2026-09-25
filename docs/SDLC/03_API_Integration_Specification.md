@@ -12911,7 +12911,7 @@ paths:
       description: 'Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.
 
 
-        @req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199'
+        @req:PRD-CEC-001, @req:PRD-SYS-124, @req:PRD-ADR-2199'
       operationId: create_and_package_dossier_api_v1_execution_cec_dossiers_post
       requestBody:
         required: true
@@ -13008,7 +13008,7 @@ paths:
       description: 'Retrieves a role-blinded projection of a dossier, enforcing reader isolation.
 
 
-        @req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199'
+        @req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-ADR-2199'
       operationId: get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get
       parameters:
       - name: dossier_id
@@ -13078,7 +13078,7 @@ paths:
       description: 'Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.
 
 
-        @req:PRD-CEC-002, @req:ADR-2199'
+        @req:PRD-CEC-002, @req:PRD-ADR-2199'
       operationId: submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post
       parameters:
       - name: dossier_id
@@ -13116,7 +13116,7 @@ paths:
       description: 'Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.
 
 
-        @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199'
+        @req:PRD-CEC-002, @req:PRD-SYS-124, @req:PRD-ADR-2199'
       operationId: adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post
       parameters:
       - name: dossier_id
@@ -13340,7 +13340,7 @@ paths:
         Supports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.
 
 
-        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: parse_udi_api_v1_execution_devices_parse_udi_post
       requestBody:
         content:
@@ -13369,7 +13369,7 @@ paths:
       description: 'Registers serialized investigational medical device and IVD inventory items in RTSM.
 
 
-        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: register_inventory_api_v1_execution_devices_inventory_post
       requestBody:
         required: true
@@ -13400,7 +13400,7 @@ paths:
       description: 'Retrieves investigational medical device inventory matching query filters.
 
 
-        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: list_inventory_api_v1_execution_devices_inventory_get
       parameters:
       - name: study_id
@@ -13488,7 +13488,7 @@ paths:
         Enforces strict quarantine and expiration blocking rules.
 
 
-        @req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: dispense_api_v1_execution_devices_dispense_post
       requestBody:
         content:
@@ -13517,7 +13517,7 @@ paths:
       description: 'Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.
 
 
-        @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: log_deficiency_api_v1_execution_devices_deficiencies_post
       requestBody:
         required: true
@@ -13545,7 +13545,7 @@ paths:
       description: 'Lists reported medical device deficiencies and malfunctions for a study.
 
 
-        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: list_deficiencies_api_v1_execution_devices_deficiencies_get
       parameters:
       - name: study_id
@@ -13600,7 +13600,7 @@ paths:
       description: 'Retrieves a single device deficiency report by ID.
 
 
-        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get
       parameters:
       - name: deficiency_id
@@ -13630,7 +13630,7 @@ paths:
       description: 'Manually places a device serial or lot into QUARANTINED status with dispensation blocking.
 
 
-        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: initiate_quarantine_api_v1_execution_devices_quarantine_post
       requestBody:
         required: true
@@ -13658,7 +13658,7 @@ paths:
       description: 'Lists device quarantine records for a clinical trial study.
 
 
-        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: list_quarantines_api_v1_execution_devices_quarantine_get
       parameters:
       - name: study_id
@@ -13713,7 +13713,7 @@ paths:
       description: 'Releases a device quarantine record under 21 CFR Part 11 electronic signature.
 
 
-        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: release_quarantine_api_v1_execution_devices_quarantine_release_post
       requestBody:
         content:
@@ -13742,7 +13742,7 @@ paths:
       description: 'Retrieves operational metrics for the Medical Device & IVD Investigation console.
 
 
-        @req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+        @req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209'
       operationId: get_device_summary_api_v1_execution_devices_summary_get
       parameters:
       - name: study_id
@@ -13774,7 +13774,7 @@ paths:
       description: 'Queries device specifications from the FDA AccessGUDID reference registry.
 
 
-        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post
       requestBody:
         content:
@@ -13803,7 +13803,7 @@ paths:
       description: 'Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.
 
 
-        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: verify_udi_endpoint_api_v1_execution_devices_verify_udi_post
       parameters:
       - name: raw_barcode
@@ -13877,7 +13877,7 @@ paths:
       description: 'Registers an IVD clinical biospecimen collection in the specimen ledger.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post
       requestBody:
         required: true
@@ -13905,7 +13905,7 @@ paths:
       description: 'Lists IVD biospecimens matching query filters.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get
       parameters:
       - name: study_id
@@ -13972,7 +13972,7 @@ paths:
       description: 'Retrieves a single IVD biospecimen record with complete audit logs and history.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get
       parameters:
       - name: specimen_id
@@ -14002,7 +14002,7 @@ paths:
       description: 'Logs an auditable chain-of-custody transfer event for an IVD specimen.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209'
       operationId: log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post
       parameters:
       - name: specimen_id
@@ -14038,7 +14038,7 @@ paths:
       description: 'Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-003, @req:PRD-ADR-2209'
       operationId: log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post
       parameters:
       - name: specimen_id
@@ -14074,7 +14074,7 @@ paths:
       description: 'Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-002, @req:PRD-ADR-2209'
       operationId: sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post
       parameters:
       - name: specimen_id
@@ -14110,7 +14110,7 @@ paths:
       description: 'Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).
 
 
-        @req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209'
+        @req:PRD-SYS-188, @req:PRD-DEV-004, @req:PRD-ADR-2209'
       operationId: compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post
       requestBody:
         content:
@@ -24436,7 +24436,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: register_device_api_v1_interop_sensors_devices_post
       requestBody:
         required: true
@@ -24466,7 +24466,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_devices_api_v1_interop_sensors_devices_get
       parameters:
       - name: study_id
@@ -24547,7 +24547,7 @@ paths:
 
         @req:PRD-DCT-001
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: ingest_telemetry_stream_api_v1_interop_sensors_ingest_post
       requestBody:
         content:
@@ -24578,7 +24578,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_daily_summaries_api_v1_interop_sensors_daily_summaries_get
       parameters:
       - name: study_id
@@ -24654,7 +24654,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_safety_alerts_api_v1_interop_sensors_safety_alerts_get
       parameters:
       - name: study_id
@@ -24728,7 +24728,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post
       parameters:
       - name: alert_id
@@ -24766,7 +24766,7 @@ paths:
 
         @req:PRD-DCT-002
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get
       parameters:
       - name: study_id
@@ -24798,7 +24798,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post
       requestBody:
         required: true
@@ -24828,7 +24828,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get
       parameters:
       - name: study_id
@@ -24870,7 +24870,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get
       parameters:
       - name: session_id
@@ -24902,7 +24902,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post
       parameters:
       - name: session_id
@@ -24940,7 +24940,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post
       parameters:
       - name: session_id
@@ -24978,7 +24978,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post
       parameters:
       - name: session_id
@@ -25016,7 +25016,7 @@ paths:
 
         @req:PRD-DCT-005
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post
       parameters:
       - name: session_id
@@ -25054,7 +25054,7 @@ paths:
 
         @req:PRD-DCT-006
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post
       requestBody:
         required: true
@@ -25084,7 +25084,7 @@ paths:
 
         @req:PRD-DCT-006
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get
       parameters:
       - name: study_id
@@ -25126,7 +25126,7 @@ paths:
 
         @req:PRD-DCT-006
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get
       parameters:
       - name: assent_id
@@ -25158,7 +25158,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post
       requestBody:
         required: true
@@ -25188,7 +25188,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get
       parameters:
       - name: study_id
@@ -25238,7 +25238,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get
       parameters:
       - name: tracking_number
@@ -25270,7 +25270,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post
       parameters:
       - name: tracking_number
@@ -25308,7 +25308,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post
       parameters:
       - name: tracking_number
@@ -25346,7 +25346,7 @@ paths:
 
         @req:PRD-DCT-003
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post
       parameters:
       - name: tracking_number
@@ -25384,7 +25384,7 @@ paths:
 
         @req:PRD-DCT-004
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post
       requestBody:
         required: true
@@ -25414,7 +25414,7 @@ paths:
 
         @req:PRD-DCT-004
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: list_in_home_visits_api_v1_interop_dct_home_health_visits_get
       parameters:
       - name: study_id
@@ -25472,7 +25472,7 @@ paths:
 
         @req:PRD-DCT-004
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get
       parameters:
       - name: visit_id
@@ -25504,7 +25504,7 @@ paths:
 
         @req:PRD-DCT-004
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post
       parameters:
       - name: visit_id
@@ -25542,7 +25542,7 @@ paths:
 
         @req:PRD-DCT-004
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post
       parameters:
       - name: visit_id
@@ -25586,7 +25586,7 @@ paths:
 
         @req:PRD-DCT-006
 
-        @req:ADR-2199'
+        @req:PRD-ADR-2199'
       operationId: get_dct_metrics_api_v1_interop_dct_metrics__study_id__get
       parameters:
       - name: study_id
