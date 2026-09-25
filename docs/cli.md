@@ -76,8 +76,9 @@ Run backend and frontend test suites with filtering, coverage, and watch mode.
 | `--dotnet` | boolean | Run .NET 10 xUnit integration tests (Cadence.E2ETests) | `false` |
 | `--failed-first`, `--lf` | boolean | Run failed tests first | `false` |
 | `--cov`, `--no-cov` | boolean | Enable coverage checking | `true` |
-| `--xdist`, `--no-xdist` | boolean | Run tests in parallel with pytest-xdist | `true` |
-| `--verbose`, `-v` | boolean | Verbose pytest output | `false` |
+| `--filter`, `-f` | str | Filter .NET tests using xUnit expression (e.g. 'Category=Unit') | - |
+| `--verbosity` | str | Set .NET test verbosity level (quiet, minimal, normal, detailed, diagnostic) | - |
+| `--verbose`, `-v` | boolean | Verbose .NET test output | `false` |
 | `--watch`, `-w` | boolean | Watch file system and automatically rerun relevant tests on change | `false` |
 | `--fast` | boolean | Fast authoring mode: disable coverage overhead and run unit tests only | `false` |
 

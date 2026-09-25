@@ -117,6 +117,7 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "packages/database/tests/test_delta.py",
     "packages/database/tests/test_migrate.py",
     "packages/database/tests/test_ledger_and_triggers.py",
+    "packages/database/tests/test_service_database_adapter.py",
     "packages/security/tests/test_rbac_enforcement.py",
     "packages/security/tests/test_cryptography.py",
     "packages/security/tests/test_rbac.py",
