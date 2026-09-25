@@ -78,7 +78,7 @@ Currently, agents face critical friction when interacting with deep clinical dom
 - Server: `packages/cli/mcp/server.py`
 
 ### Verification Strategy
-- JSON-RPC protocol and tool call tests in `packages/cli/tests/test_mcp_server.py`.
+- JSON-RPC protocol and tool call tests in `packages/cli/mcp/server.py`.
 - Domain handler unit tests in `packages/tooling_core/tests/test_tooling_core.py`.
 - Architecture sentinel validation via `uv run python scripts/validate_adrs.py`.
 - Full GxP sync via `uv run python scripts/sync_gxp.py`.

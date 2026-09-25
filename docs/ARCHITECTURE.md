@@ -253,7 +253,7 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   - Secure short-lived presigned upload and download URLs for direct browser transfer.
   - SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
 
-#### 19. Compliance Engine (`apps/compliance` — Port 8019)
+#### 19. Compliance Engine (`packages/compliance` — Port 8019)
 - **Role:** Centralized Regulatory Verification & Qualification.
 - **Datastore:** Pytest + Audit Ledgers.
 - **Core Responsibilities:**

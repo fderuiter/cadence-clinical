@@ -20,7 +20,7 @@ The `ui` package operates as a modular shared library within the Cadence Clinica
 Exports shared utilities, domain interfaces, and models for `ui`.
 
 #### Exposed CLI Commands
-- `build`: `node scripts/generate-types.js && vite build`
+- `build`: `node apps/web/src/types/generate-types.js && vite build`
 - `test`: `vitest run --testTimeout=30000`
 - `lint`: `eslint .`
 - `format`: `prettier --write .`

@@ -205,7 +205,7 @@ The Cadence monorepo is organized as a unified workspace managed with `uv` for P
 | :-------------------- | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- | :----------------- |
 | **`apps/web`**        | Clinical Workspace SPA    | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite | **Supported**      |
 | **`apps/gateway`**    | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs.     | FastAPI + HTTPX      | **Supported**      |
-| **`apps/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | .NET 10 xUnit v3 + Playwright | **Supported**      |
+| **`packages/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | .NET 10 xUnit v3 + Playwright | **Supported**      |
 
 ### Layer 6: Shared Core Packages & SDKs
 

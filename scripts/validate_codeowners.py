@@ -46,7 +46,7 @@ def is_valid_team(owner: str) -> bool:
 def normalize_path(p: str) -> str:
     """
     Normalizes a CODEOWNERS pattern or directory path into a canonical form
-    suitable for exact string comparison (e.g. 'apps/compliance').
+    suitable for exact string comparison (e.g. 'packages/compliance').
     """
     p = p.strip()
     p = p.replace("\\", "/")

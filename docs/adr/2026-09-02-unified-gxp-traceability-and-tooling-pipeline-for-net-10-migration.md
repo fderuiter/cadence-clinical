@@ -15,7 +15,7 @@ However, a comprehensive infrastructure and workflow audit identified critical g
 1. **GxP Compliance & RTM Generation Gap:** `scripts/generate_rtm.py` and `scripts/sync_gxp.py` only scan `.py` test files with pytest, ignoring `.cs` test files (`[GxPRequirement("...")]`, `/// @req:...`) and failing to ingest xUnit/TRX test execution results. As tests transition to .NET, the Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`) drops requirement coverage.
 2. **Git Hook Desynchronization:** `.githooks/pre-commit` and `pre-commit.ps1` enforce `dotnet format` and ADR validation, but `git config core.hooksPath` is not set by default. Meanwhile, the project's `.pre-commit-config.yaml` (installed via `pnpm setup:dev` / `make setup`) exclusively checks Python and frontend assets, allowing unformatted C# code to bypass local commit gates.
 3. **Developer CLI Packaging & Command Routing:** `packages/cli/src/Program.cs` lacks execution implementations for `test`, `gxp sync`, `doctor`, and `check`. Furthermore, `Cadence.Cli` is not registered in a `.config/dotnet-tools.json` local manifest, causing documented `dotnet cadence` commands to fail upon execution.
-4. **CI/CD Runtime Mismatch:** `.github/workflows/dotnet-ci.yml` sets up Python 3.12, which triggers an immediate fatal failure in `scripts/runtime_guard.py` (which requires Python 3.14+) when running `scripts/sync_gxp.py`.
+4. **CI/CD Runtime Mismatch:** `.github/workflows/ci.yml` sets up Python 3.12, which triggers an immediate fatal failure in `scripts/runtime_guard.py` (which requires Python 3.14+) when running `scripts/sync_gxp.py`.
 5. **Docker Compose Environment:** `docker/Dockerfile.dotnet` exists, but `docker/docker-compose.yml` lacks a corresponding `dotnet` profile service.
 
 ---
@@ -35,7 +35,7 @@ However, a comprehensive infrastructure and workflow audit identified critical g
 * Extend `scripts/generate_rtm.py` and `scripts/sync_gxp.py` to scan `.cs` files for `[GxPRequirement("...")]` and `/// @req:...` docstrings, merging xUnit test results (`.trx` / JUnit XML) with pytest `report.xml`.
 * Integrate `dotnet format Cadence.sln --verify-no-changes` directly into `.pre-commit-config.yaml` alongside existing Python linters.
 * Establish a `.config/dotnet-tools.json` local tool manifest and complete the command dispatcher in `Cadence.Cli`.
-* Update `.github/workflows/dotnet-ci.yml` to Python 3.14+ and expand PR triggers.
+* Update `.github/workflows/ci.yml` to Python 3.14+ and expand PR triggers.
 * Add the `dotnet` service profile in `docker/docker-compose.yml`.
 - ***Pros:***
   - ✅ Addresses requirements
@@ -73,7 +73,7 @@ However, a comprehensive infrastructure and workflow audit identified critical g
    - Implement `Cadence.Cli` handlers for `check` (running ArchUnitNET tests and dotnet format), `doctor` (verifying .NET 10 SDK, Postgres, Neo4j, Python runtime), `gxp sync` (delegating to `sync_gxp.py`), and `test` (running xUnit suites).
    - Add local tool manifest `.config/dotnet-tools.json`.
 
-4. **CI/CD Workflow Alignment (`.github/workflows/dotnet-ci.yml`):**
+4. **CI/CD Workflow Alignment (`.github/workflows/ci.yml`):**
    - Update Python setup step: `python-version: "3.14"`.
    - Add `dotnet test` with TRX logger and diff verification against updated GxP docs.
    - Expand PR triggers to all branches targeting `main`, `master`, and `dotnet-migration`.
@@ -102,7 +102,7 @@ However, a comprehensive infrastructure and workflow audit identified critical g
   - `scripts/generate_rtm.py`, `scripts/sync_gxp.py`
   - `.pre-commit-config.yaml`
   - `packages/cli/src/Program.cs`, `packages/cli/src/Cadence.Cli.csproj`, `.config/dotnet-tools.json`
-  - `.github/workflows/dotnet-ci.yml`
+  - `.github/workflows/ci.yml`
   - `docker/docker-compose.yml`
 * Verification:
   - Run `python scripts/validate_adrs.py` to ensure ADR index integrity.

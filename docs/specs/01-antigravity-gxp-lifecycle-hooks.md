@@ -182,7 +182,7 @@ The `pre_tool_guardrail.py` script enforces the following deterministic rule set
 - Test suites must execute in sub-second time without external process spawning or internet connectivity.
 
 ### Tested Surfaces
-1. **`PreToolUse` Guardrail Tests (`scripts/tests/test_antigravity_gxp_hooks.py`):**
+1. **`PreToolUse` Guardrail Tests (`tests/test_antigravity_gxp_hooks.py`):**
    - Validates blocking of prohibited git commands (`push --force`, `reset --hard`, `clean -fdx`).
    - Validates blocking of dangerous shell commands (`rm -rf`, `DROP DATABASE`).
    - Validates blocking of direct edits to locked GxP documents.

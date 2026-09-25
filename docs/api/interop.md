@@ -906,7 +906,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/cdr/validate/d
 Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -986,7 +986,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipme
 Query DTP shipments with cold-chain indicators and tracking states.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1057,7 +1057,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipmen
 Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1126,7 +1126,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipmen
 Confirm delivery at subject residence with recipient signature and greenlight checks.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1208,7 +1208,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipme
 Record signed Chain of Custody handoff across depot, courier hubs, and final mile.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1292,7 +1292,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipme
 Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.
 
 @req:PRD-DCT-003
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1371,7 +1371,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/dtp/shipme
 Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.
 
 @req:PRD-DCT-006
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1454,7 +1454,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/econsent/p
 Query executed pediatric assent and LAR consent records.
 
 @req:PRD-DCT-006
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1524,7 +1524,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/econsent/pe
 Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.
 
 @req:PRD-DCT-006
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1593,7 +1593,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/econsent/pe
 Schedule visiting healthcare nurse appointment with protocol procedure tasks.
 
 @req:PRD-DCT-004
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1675,7 +1675,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/home-healt
 Query in-home nursing visits by study, site, nurse, or subject.
 
 @req:PRD-DCT-004
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1747,7 +1747,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/home-health
 Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.
 
 @req:PRD-DCT-004
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1816,7 +1816,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/home-health
 Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).
 
 @req:PRD-DCT-004
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1896,7 +1896,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/home-healt
 Reconcile mobile eCRF clinical data entered offline by visiting nurse.
 
 @req:PRD-DCT-004
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1980,7 +1980,7 @@ Retrieve real-time DCT dashboard KPI metrics for study.
 @req:PRD-DCT-004
 @req:PRD-DCT-005
 @req:PRD-DCT-006
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2049,7 +2049,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/metrics/{st
 Schedule a new WebRTC telehealth video consultation session.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2127,7 +2127,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth
 Query scheduled and active telehealth consultation sessions.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2197,7 +2197,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth/
 Retrieve details of a single telehealth video session by ID or room ID.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2266,7 +2266,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth/
 Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2349,7 +2349,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth
 Synchronize eConsent page position, active highlights, and scroll percentage.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2435,7 +2435,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth
 Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2521,7 +2521,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth
 Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.
 
 @req:PRD-DCT-005
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6246,7 +6246,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/sce/validate-l
 Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6319,7 +6319,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/sensors/daily-s
 Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6404,7 +6404,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/sensors/device
 List registered medical IoT sensor devices for a clinical study.
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6485,7 +6485,7 @@ Applies:
 
 @req:PRD-DCT-002
 @req:PRD-DCT-001
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6572,7 +6572,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/sensors/ingest
 Retrieve real-time IoT sensor telemetry metrics across a clinical study.
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6641,7 +6641,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/sensors/metrics
 Retrieve triggered biometric safety threshold alerts for clinical investigation.
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -6714,7 +6714,7 @@ curl -X GET 'http://localhost:8000/api/v1/interop/api/v1/interop/sensors/safety-
 Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.
 
 @req:PRD-DCT-002
-@req:PRD-ADR-2199
+@req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 

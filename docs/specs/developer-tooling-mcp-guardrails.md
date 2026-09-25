@@ -112,19 +112,19 @@ Build a unified, four-pillar developer tooling architecture:
 - Zero network or external Docker dependencies for unit test execution.
 
 ### Tested Surfaces
-1. **CLI Commands (`packages/cli/tests/test_cadence_cli.py`):**
+1. **CLI Commands (`packages/cli/src/Program.cs`):**
    - Assert `doctor`, `check`, `fix`, `test`, `mcp` subcommands with `typer.testing.CliRunner`.
    - Validate both human-readable document output and `--json` structured parity.
-2. **MCP Server Protocol (`packages/cli/tests/test_mcp_server.py`):**
+2. **MCP Server Protocol (`packages/cli/mcp/server.py`):**
    - Send JSON-RPC `initialize`, `tools/list`, and `tools/call` payloads to the stdio server handler.
    - Verify tool schema validity, parameter validation, and zoom envelope output.
-3. **Pre-Commit Runner (`scripts/tests/test_pre_commit.py`):**
+3. **Pre-Commit Runner (`tests/test_pre_commit.py`):**
    - Test staged file detection, formatting remediation, and repository invariant gate passing.
 4. **Terminal Formatting (`packages/cli/tests/test_formatting.py`):**
    - Verify `TerminalDocument` layout rendering, column alignment, and non-TTY JSON fallback.
 
 ### Prior Art
-- CLI unit tests in `packages/cli/tests/test_cadence_cli.py`.
+- CLI unit tests in `packages/cli/src/Program.cs`.
 - Quality gate validation in `scripts/validate_path_patterns.py` and `scripts/validate_imports.py`.
 
 ---

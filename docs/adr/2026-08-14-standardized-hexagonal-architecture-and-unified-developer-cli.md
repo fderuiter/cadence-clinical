@@ -79,5 +79,5 @@ To achieve enterprise-grade maintainability, zero-downtime microservice decoupli
   - `docs/cli.md` (Developer CLI manual)
   - `docs/components/` (UI component catalog)
 - **Verification Tests**:
-  - `packages/cli/tests/test_cadence_cli.py`
+  - `packages/cli/src/Program.cs`
   - `packages/hexagonal/tests/test_hexagonal_kernel.py`

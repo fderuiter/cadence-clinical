@@ -36,8 +36,8 @@ It provides a complete reference for all operational environment variables used 
 | `CADENCE_DISABLE_RUNTIME_REEXEC` | `str` | *(None)* | Yes | Check if auto re-execution via uv should be attempted | `scripts/runtime_guard.py:44` |
 | `CADENCE_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Global Platform & Environment. | `scripts/post_pr_comment.py:632` |
 | `CADENCE_TEST_MODE` | `bool` | `false` | No | Set true in CI/test runs to disable external LLM/APIs | *Pre-configured template variable* |
-| `DEBUG` | `bool` | `true` | No | Operational setting for Global Platform & Environment. | `scripts/tests/test_markdown_validator.py:637` |
-| `ENVIRONMENT` | `str` | *(None)* | Yes | Operational setting for Global Platform & Environment. | `scripts/tests/test_markdown_validator.py:636` |
+| `DEBUG` | `bool` | `true` | No | Operational setting for Global Platform & Environment. | `tests/test_markdown_validator.py:637` |
+| `ENVIRONMENT` | `str` | *(None)* | Yes | Operational setting for Global Platform & Environment. | `tests/test_markdown_validator.py:636` |
 | `LOG_LEVEL` | `str` | `INFO` | No | Operational setting for Global Platform & Environment. | `packages/config/settings.py:552` |
 
 ## Enterprise Branding & Domain Identity
@@ -265,7 +265,7 @@ It provides a complete reference for all operational environment variables used 
 | :--- | :--- | :--- | :---: | :--- | :--- |
 | `ADR_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:640`<br>`scripts/run_gating_pipeline.py:338` |
 | `ARCHITECTURE_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:649` |
-| `AUDIT_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:598`<br>`scripts/tests/test_pr_comment.py:75`<br>`scripts/tests/test_pr_comment.py:78` |
+| `AUDIT_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:598`<br>`tests/test_pr_comment.py:75`<br>`tests/test_pr_comment.py:78` |
 | `CI` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/validate_markdown.py:1000`<br>`scripts/validate_markdown.py:1020` |
 | `CLAMAV_HOST` | `str` | `127.0.0.1` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:218` |
 | `CONFLICT_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:642`<br>`scripts/run_gating_pipeline.py:330`<br>`scripts/self_heal.py:112` |
@@ -274,7 +274,7 @@ It provides a complete reference for all operational environment variables used 
 | `DOTNET_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:636` |
 | `DOTNET_TEST_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:635`<br>`scripts/run_gating_pipeline.py:333` |
 | `DUPLICATION_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:644`<br>`scripts/run_gating_pipeline.py:340` |
-| `ENV` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/tests/test_markdown_validator.py:635` |
+| `ENV` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `tests/test_markdown_validator.py:635` |
 | `FAIL_ON_PROJECT_SYNC_ERROR` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/sync_github_project.py:93`<br>`scripts/sync_github_project.py:452` |
 | `FAIL_ON_REMOVE_JULES_LABELS_ERROR` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/remove_jules_labels.py:40` |
 | `FAIL_ON_RULESET_SYNC_ERROR` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/sync_github_project.py:94`<br>`scripts/sync_github_project.py:453`<br>`scripts/sync_ruleset.py:133`<br>*(+1 more)* |
@@ -303,10 +303,10 @@ It provides a complete reference for all operational environment variables used 
 | `REDIS_CHANNEL` | `str` | `econsent_cache_invalidation` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:181` |
 | `RTM_DRAFT` | `str` | *(None)* | Yes | Automatically enable draft mode if the environment variable is set | `scripts/generate_rtm.py:1289`<br>`scripts/generate_rtm.py:1290` |
 | `RUN_BACKGROUND_WORKERS` | `bool` | `true` | No | Operational setting for Operational Microservice Configuration. | `packages/config/settings.py:462` |
-| `STATIC_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:599`<br>`scripts/tests/test_pr_comment.py:76`<br>`scripts/tests/test_pr_comment.py:79` |
+| `STATIC_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:599`<br>`tests/test_pr_comment.py:76`<br>`tests/test_pr_comment.py:79` |
 | `TESTING` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `apps/econsent/workers/archival_worker.py:154`<br>`apps/etmf/workers/document_intelligence_worker.py:177`<br>`apps/etmf/workers/outbox_worker.py:87`<br>*(+5 more)* |
 | `TESTING_RULES_SYNC` | `str` | *(None)* | Yes | Check if we are in a headless/mock test environment | `scripts/sync_ruleset.py:108` |
-| `TEST_AST_VAR_7` | `str` | `inline_default` | No | Explicit inline annotation in scripts/tests/test_extract_env_vars.py:65 | `scripts/tests/test_extract_env_vars.py:96` |
+| `TEST_AST_VAR_7` | `str` | `inline_default` | No | Explicit inline annotation in tests/test_extract_env_vars.py:65 | `tests/test_extract_env_vars.py:96` |
 | `TEST_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:638`<br>`scripts/run_gating_pipeline.py:334`<br>`scripts/self_heal.py:398`<br>*(+4 more)* |
 | `TEST_SUITE_RUN` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/sync_ruleset.py:134` |
 | `TRACEABILITY_OUTCOME` | `str` | *(None)* | Yes | Operational setting for Operational Microservice Configuration. | `scripts/post_pr_comment.py:645`<br>`scripts/run_gating_pipeline.py:335` |

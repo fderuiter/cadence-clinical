@@ -145,7 +145,7 @@ Cross-referenced against `01_system_topology.md` §2.2 (asynchronous/background 
 $ for each apps/<context>/: rg "^(from|import) apps\.<other-context>" --type py -g '!*/tests/*'
 (zero matches, all contexts)
 ```
-Confirmed independently: **zero cross-app Python `import` statements exist in production code anywhere in the repository.** (32 cross-app imports were found in total, but every single one is confined to a `tests/` directory — test fixtures importing another service's DB models/app object for integration test setup, not production coupling.) This matches `01_system_topology.md`/`05_orphan_audit_gate.md`'s own claim and is the correct basis for treating the *static* dependency graph as acyclic.
+Confirmed independently: **zero cross-app Python `import` statements exist in production code anywhere in the repository.** (32 cross-app imports were found in total, but every single one is confined to a `tests/` directory — test fixtures importing another service's DB models/app object for integration test setup, not production coupling.) This matches `01_system_topology.md` and `05_orphan_audit_gate.md`'s own claim and is the correct basis for treating the *static* dependency graph as acyclic.
 
 ### 4b. The runtime dependency graph is not acyclic — and this is where the real risk is
 

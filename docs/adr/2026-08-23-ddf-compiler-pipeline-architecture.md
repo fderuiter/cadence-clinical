@@ -75,5 +75,5 @@ We extract the DDF compiler into a dedicated package featuring:
 * Package architecture: shared compiler modules (`compiler.py`, `models.py`, `ports.py`, `stages/`, `rules/`, `templates/`).
 * Adapters: `apps/execution/translator.py` facade.
 * Unified Designer rules: `apps/designer/rules.py` and `apps/designer/inverse_mapper.py` utilize canonical AST definitions.
-* Verification: `scripts/tests/test_translator.py`, `scripts/tests/test_translation_recovery.py`.
+* Verification: `tests/test_translator.py`, `tests/test_translation_recovery.py`.
 

@@ -82,6 +82,6 @@ However, unregulated agent operations introduce significant risks in regulated l
 - Diagnostics auto-heal in `packages/cli/commands/doctor.py`
 
 ### Verification Strategy
-- Comprehensive unit and contract tests in `scripts/tests/test_antigravity_gxp_hooks.py` with `@req:PRD-SYS-053`.
+- Comprehensive unit and contract tests in `tests/test_antigravity_gxp_hooks.py` with `@req:PRD-SYS-053`.
 - Architecture sentinel validation via `uv run python scripts/validate_adrs.py`.
 - Full GxP compliance document regeneration via `uv run python scripts/sync_gxp.py`.

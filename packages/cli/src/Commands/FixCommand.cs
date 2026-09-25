@@ -28,6 +28,11 @@ public class FixCommand : Command
         OpenApiToolingService.SyncOpenApiSpec(repoRoot);
         OpenApiToolingService.GenerateApiDocs(repoRoot);
 
+        AnsiConsole.MarkupLine("\n  4. Remediating Markdown Paths & References...");
+        var psiMd = new ProcessStartInfo("uv", "run python scripts/validate_markdown.py --fix") { UseShellExecute = false };
+        using var pMd = Process.Start(psiMd);
+        pMd?.WaitForExit();
+
         AnsiConsole.MarkupLine("\n[bold green]Self-Healing Pipeline Complete.[/]");
         return 0;
     }

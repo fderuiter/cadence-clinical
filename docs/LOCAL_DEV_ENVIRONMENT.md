@@ -64,7 +64,7 @@ The Cadence Clinical platform orchestrates **20+ specialized microservices**, su
 | **`eisf`** | `8016` | `apps/eisf/` | PostgreSQL / SQLite | Electronic Investigator Site Files (eISF) site binders & PI certification manifests |
 | **`econsent`** | `8017` | `apps/econsent/` | PostgreSQL / SQLite | Digital Informed Consent, amendment re-consent gating, & cryptographic sealing |
 | **`fileshare`** | `8018` | `apps/fileshare/` | MinIO (`9000`) + SQL | StoragePort S3 abstraction, presigned transfer URLs, & Part 11 document envelopes |
-| **`compliance`** | `8019` | `apps/compliance/` | .NET 10 xUnit v3 + Audit Logs | Automated qualification testing, IQ/OQ/PQ assertions, & GxP sync engine |
+| **`compliance`** | `8019` | `packages/compliance/` | .NET 10 xUnit v3 + Audit Logs | Automated qualification testing, IQ/OQ/PQ assertions, & GxP sync engine |
 | **`web`** | `5173` | `apps/web/` | Vite SPA Client | Vue 3 Unified Clinical Workspace (Multi-Persona Switcher) |
 | **`subject-portal`** | `5174` | `apps/subject-portal/` | IndexedDB PWA | Offline-First Participant-Facing eCOA/ePRO Progressive Web App |
 

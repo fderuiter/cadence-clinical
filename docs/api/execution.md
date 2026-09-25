@@ -2392,7 +2392,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/cec/charter
 **Clinical & GxP Rationale:**  
 Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.
 
-@req:PRD-CEC-001, @req:PRD-SYS-124, @req:PRD-ADR-2199
+@req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2553,7 +2553,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/cec/dossier
 **Clinical & GxP Rationale:**  
 Retrieves a role-blinded projection of a dossier, enforcing reader isolation.
 
-@req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-ADR-2199
+@req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2622,7 +2622,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/cec/dossier
 **Clinical & GxP Rationale:**  
 Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.
 
-@req:PRD-CEC-002, @req:PRD-ADR-2199
+@req:PRD-CEC-002, @req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2706,7 +2706,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/cec/dossie
 **Clinical & GxP Rationale:**  
 Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.
 
-@req:PRD-CEC-002, @req:PRD-SYS-124, @req:PRD-ADR-2199
+@req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3732,7 +3732,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/coding/queu
 **Clinical & GxP Rationale:**  
 Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.
 
-@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3824,7 +3824,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/de
 **Clinical & GxP Rationale:**  
 Lists reported medical device deficiencies and malfunctions for a study.
 
-@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3894,7 +3894,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/def
 **Clinical & GxP Rationale:**  
 Retrieves a single device deficiency report by ID.
 
-@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3964,7 +3964,7 @@ Dispenses an investigational medical device to a study participant.
 
 Enforces strict quarantine and expiration blocking rules.
 
-@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4042,7 +4042,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/di
 **Clinical & GxP Rationale:**  
 Queries device specifications from the FDA AccessGUDID reference registry.
 
-@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4114,7 +4114,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/gu
 **Clinical & GxP Rationale:**  
 Registers serialized investigational medical device and IVD inventory items in RTSM.
 
-@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4201,7 +4201,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/in
 **Clinical & GxP Rationale:**  
 Retrieves investigational medical device inventory matching query filters.
 
-@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4274,7 +4274,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/inv
 **Clinical & GxP Rationale:**  
 Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).
 
-@req:PRD-SYS-188, @req:PRD-DEV-004, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4360,7 +4360,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/iv
 **Clinical & GxP Rationale:**  
 Registers an IVD clinical biospecimen collection in the specimen ledger.
 
-@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4444,7 +4444,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/iv
 **Clinical & GxP Rationale:**  
 Lists IVD biospecimens matching query filters.
 
-@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4515,7 +4515,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/ivd
 **Clinical & GxP Rationale:**  
 Retrieves a single IVD biospecimen record with complete audit logs and history.
 
-@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4583,7 +4583,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/ivd
 **Clinical & GxP Rationale:**  
 Logs an auditable chain-of-custody transfer event for an IVD specimen.
 
-@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4669,7 +4669,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/iv
 **Clinical & GxP Rationale:**  
 Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.
 
-@req:PRD-SYS-188, @req:PRD-DEV-003, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4754,7 +4754,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/iv
 **Clinical & GxP Rationale:**  
 Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.
 
-@req:PRD-SYS-188, @req:PRD-DEV-002, @req:PRD-ADR-2209
+@req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4841,7 +4841,7 @@ Parses and validates a Unique Device Identifier (UDI) barcode string.
 
 Supports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.
 
-@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4913,7 +4913,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/pa
 **Clinical & GxP Rationale:**  
 Manually places a device serial or lot into QUARANTINED status with dispensation blocking.
 
-@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -4992,7 +4992,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/qu
 **Clinical & GxP Rationale:**  
 Lists device quarantine records for a clinical trial study.
 
-@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -5062,7 +5062,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/qua
 **Clinical & GxP Rationale:**  
 Releases a device quarantine record under 21 CFR Part 11 electronic signature.
 
-@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -5137,7 +5137,7 @@ curl -X POST 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/qu
 **Clinical & GxP Rationale:**  
 Retrieves operational metrics for the Medical Device & IVD Investigation console.
 
-@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209
+@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -5205,7 +5205,7 @@ curl -X GET 'http://localhost:8000/api/v1/execution/api/v1/execution/devices/sum
 **Clinical & GxP Rationale:**  
 Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.
 
-@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209
+@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 

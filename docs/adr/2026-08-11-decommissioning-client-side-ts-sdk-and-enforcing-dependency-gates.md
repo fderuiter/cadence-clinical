@@ -11,7 +11,7 @@
 
 To comply with GxP regulatory requirements and 21 CFR Part 11 standards (PRD-SYS-001), electronic signature generation and verification must occur strictly within secure backend microservices. Allowing client-side execution or verification of public-key / asymmetric signatures introduces severe security risks, including the potential for local-state bypass, client-side certificate store manipulation, and exposure of key verification paths in the Javascript runtime.
 
-Historically, a client-side TypeScript Wrapper SDK (`packages/ui/sdk.ts`) was proposed to handle signature generation and validation checks in frontend packages. This approach violates the core system requirement of strict backend isolation for cryptographic operations. We need to decommission the legacy client-side TS Wrapper SDK and establish a robust, fail-fast dependency gating mechanism in the monorepo to guarantee that no asymmetric cryptographic packages are introduced into frontend application bundles.
+Historically, a client-side TypeScript Wrapper SDK (`packages/ui/src/index.ts`) was proposed to handle signature generation and validation checks in frontend packages. This approach violates the core system requirement of strict backend isolation for cryptographic operations. We need to decommission the legacy client-side TS Wrapper SDK and establish a robust, fail-fast dependency gating mechanism in the monorepo to guarantee that no asymmetric cryptographic packages are introduced into frontend application bundles.
 
 ## 2. Decision Drivers & Constraints
 
@@ -23,7 +23,7 @@ Historically, a client-side TypeScript Wrapper SDK (`packages/ui/sdk.ts`) was pr
 
 ### Option 1: Keep Client-Side TS SDK with Strict Review Guidelines
 
-- **Overview:** Maintain `packages/ui/sdk.ts` and rely on code review processes to ensure that developers do not introduce client-side verification vulnerabilities or local bypass logic.
+- **Overview:** Maintain `packages/ui/src/index.ts` and rely on code review processes to ensure that developers do not introduce client-side verification vulnerabilities or local bypass logic.
 - ***Pros:***
   - ✅ Keeps a unified frontend utility class for developers.
 - ***Cons:***
@@ -57,11 +57,11 @@ Historically, a client-side TypeScript Wrapper SDK (`packages/ui/sdk.ts`) was pr
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:**
-  - `packages/ui/sdk.ts` (deleted)
+  - `packages/ui/src/index.ts` (deleted)
   - `packages/ui/tests/sdk.test.ts` (deleted)
   - `packages/ui/index.js` (updated exports)
   - `scripts/validate_dependencies.py` (new dependency validation linter)
-  - `scripts/tests/test_validate_dependencies.py` (new tests)
+  - `tests/test_validate_dependencies.py` (new tests)
 - **Verification Plan:**
   - Run `uv run python scripts/validate_dependencies.py` to verify workspace compliance.
-  - Execute `pytest scripts/tests/test_validate_dependencies.py` to ensure correct package detection.
+  - Execute `pytest tests/test_validate_dependencies.py` to ensure correct package detection.
