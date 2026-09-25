@@ -29,7 +29,7 @@ public class FixCommand : Command
         OpenApiToolingService.GenerateApiDocs(repoRoot);
 
         AnsiConsole.MarkupLine("\n  4. Remediating Markdown Paths & References...");
-        var psiMd = new ProcessStartInfo("uv", "run python scripts/validate_markdown.py --fix") { UseShellExecute = false };
+        var psiMd = new ProcessStartInfo("uv", "run python scripts/validate_markdown.py --fix") { UseShellExecute = false, WorkingDirectory = repoRoot };
         using var pMd = Process.Start(psiMd);
         pMd?.WaitForExit();
 
