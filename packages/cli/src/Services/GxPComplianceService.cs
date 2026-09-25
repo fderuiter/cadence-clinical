@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 
 using Cadence.ToolingCore.Services;
 
@@ -28,22 +26,6 @@ public static class GxPComplianceService
     public static int ValidateCompliance()
     {
         return SyncCompliance(dryRun: true, commit: false);
-    }
-
-    private static int RunProcess(string fileName, string arguments, string workingDirectory)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false
-        };
-
-        using var process = Process.Start(psi);
-        if (process == null) return 1;
-        process.WaitForExit();
-        return process.ExitCode;
     }
 }
 
