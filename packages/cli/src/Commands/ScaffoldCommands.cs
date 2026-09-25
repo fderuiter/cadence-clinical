@@ -1,5 +1,8 @@
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
 
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -36,65 +39,116 @@ public class ScaffoldAdrCommand : Command<ScaffoldAdrCommand.Settings>
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {settings.Title}[/]");
         string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string adrDir = System.IO.Path.Combine(repoRoot, "docs", "adr");
-        System.IO.Directory.CreateDirectory(adrDir);
-
-        int maxNum = 100;
-        foreach (var file in System.IO.Directory.GetFiles(adrDir, "*.md"))
-        {
-            string fileName = System.IO.Path.GetFileName(file);
-            if (fileName.Equals("TEMPLATE.md", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Equals("index.md", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            try
-            {
-                string firstLine = System.IO.File.ReadLines(file).FirstOrDefault() ?? "";
-                var match = System.Text.RegularExpressions.Regex.Match(firstLine, @"ADR-(\d+):");
-                if (match.Success && int.TryParse(match.Groups[1].Value, out int num) && num > maxNum)
-                {
-                    maxNum = num;
-                }
-            }
-            catch (Exception ex)
-            {
-                // Unreadable ADR file skipped during number discovery
-                AnsiConsole.MarkupLine($"[yellow]Warning: Could not read ADR file '{fileName}': {ex.Message}[/]");
-            }
-        }
-
-        int adrNum = maxNum + 1;
+        string title = settings.Title;
         string todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        string slug = System.Text.RegularExpressions.Regex.Replace(settings.Title.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
-        slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');
+        string slug = Regex.Replace(title.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
+        slug = Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');
         string filename = $"{todayStr}-{slug}.md";
-        string filepath = System.IO.Path.Combine(adrDir, filename);
+        string adrDir = Path.Combine(repoRoot, "docs", "adr");
+        Directory.CreateDirectory(adrDir);
+        string filepath = Path.Combine(adrDir, filename);
 
-        if (System.IO.File.Exists(filepath))
+        if (File.Exists(filepath))
         {
             AnsiConsole.MarkupLine($"[red]Error: ADR file already exists: {filepath}[/]");
             return 1;
         }
 
-        string content = $@"# ADR-{adrNum}: {settings.Title}
+        int maxNum = 0;
+        foreach (var f in Directory.GetFiles(adrDir, "*.md"))
+        {
+            string fname = Path.GetFileName(f);
+            if (fname == "TEMPLATE.md" || fname == "index.md") continue;
+            try
+            {
+                using var reader = new StreamReader(f);
+                string? firstLine = reader.ReadLine();
+                if (firstLine != null)
+                {
+                    var match = Regex.Match(firstLine, @"ADR-(\d+):");
+                    if (match.Success)
+                    {
+                        maxNum = Math.Max(maxNum, int.Parse(match.Groups[1].Value));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Ignore unreadable ADR header files during number discovery
+            }
+        }
+        int adrNum = maxNum > 0 ? maxNum + 1 : 100;
+
+        string template = $@"# ADR-{adrNum}: {title}
 
 - **Status:** Accepted
 - **Date:** {todayStr}
 - **Authors:** @fderuiter
-- **Requirements:** PRD-SYS-053
+- **Deciders:** @fderuiter
 
-## Context
-Provide background context and the problem statement here.
+---
 
-## Decision
-Detail the architecture decision made and why.
+## 1. Context & Problem Statement
 
-## Consequences
-Detail positive and negative consequences of this decision.
+Describe the background, architectural context, and the specific technical or business problem this decision addresses. Reference the applicable system requirement (PRD-SYS-001).
+
+## 2. Decision Drivers & Constraints
+
+- **Driver 1:** Technical constraint 1
+- **Driver 2:** Business/GxP requirement (PRD-SYS-001)
+
+## 3. Options Considered
+
+### Option 1: Proposed Architecture / Primary Approach (Selected)
+
+- **Overview:** Brief description of primary option and architecture.
+- **Pros:**
+  - ✅ Satisfies requirement PRD-SYS-001
+  - ✅ Maintains operational boundaries and compliance tracing
+- **Cons:**
+  - ❌ Requires additional component or abstraction layer
+
+### Option 2: Alternative Architecture / Status Quo
+
+- **Overview:** Brief description of alternative option.
+- **Pros:**
+  - ✅ Requires minimal initial scaffolding
+- **Cons:**
+  - ❌ Fails to fully address requirements or long-term maintainability
+
+## 4. Decision Outcome
+
+- **Chosen Option:** Option 1
+- **Justification:** Chosen because it satisfies PRD-SYS-001 while ensuring system maintainability, auditability, and clear operational boundaries.
+
+## 5. Consequences & Trade-offs
+
+- **Positive Impact:** Clear operational boundaries and compliance tracing for requirement PRD-SYS-001.
+- **Negative Impact / Technical Debt:** Maintenance overhead of additional structured abstractions.
+- **Mitigation Strategy:** Automated test coverage and CI lint validation.
+
+## 6. Implementation & Verification
+
+- **Affected Repositories / Services:** Relevant modules and services.
+- **Verification Plan:** Automated unit and architecture tests added under `tests/`.
 ";
-        System.IO.File.WriteAllText(filepath, content, System.Text.Encoding.UTF8);
-        AnsiConsole.MarkupLine($"[bold green]Successfully created ADR-{adrNum} at docs/adr/{filename}[/]");
+
+        File.WriteAllText(filepath, template);
+        AnsiConsole.MarkupLine($"[green]Successfully created ADR file: {filepath}[/]");
+
+        string indexFile = Path.Combine(adrDir, "index.md");
+        if (File.Exists(indexFile))
+        {
+            string indexContent = File.ReadAllText(indexFile);
+            string entry = $"- [{todayStr}: {title}]({filename})";
+            if (!indexContent.Contains(filename))
+            {
+                File.AppendAllText(indexFile, $"\n{entry}\n");
+                AnsiConsole.MarkupLine($"[green]Successfully indexed {filename} in {indexFile}[/]");
+            }
+        }
+
         return 0;
     }
 }
+
