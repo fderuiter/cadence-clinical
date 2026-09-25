@@ -1,3 +1,4606 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 9,
+        "end": 29
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 9,
+        "end": 29
+      },
+      "preview": "const PACKAGE_VERSION = \u00222.15.0\u0022;\nconst INTEGRITY_CHECKSUM = \u002203cb67ac84128e63d7cd722a6e5b7f1e\u0022; // pragma: allowlist secret\nconst IS_MOCKED_RESPONSE = Symbol(\u0022isMockedResponse\u0022);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 10,
+        "end": 31
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 10,
+        "end": 31
+      },
+      "preview": "const INTEGRITY_CHECKSUM = \u002203cb67ac84128e63d7cd722a6e5b7f1e\u0022; // pragma: allowlist secret\nconst IS_MOCKED_RESPONSE = Symbol(\u0022isMockedResponse\u0022);\nconst activeClientIds = new Set();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 11,
+        "end": 32
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 11,
+        "end": 32
+      },
+      "preview": "const IS_MOCKED_RESPONSE = Symbol(\u0022isMockedResponse\u0022);\nconst activeClientIds = new Set();\naddEventListener(\u0022install\u0022, function () {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 12,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 12,
+        "end": 35
+      },
+      "preview": "const activeClientIds = new Set();\naddEventListener(\u0022install\u0022, function () {\n  self.skipWaiting();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 14,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 14,
+        "end": 36
+      },
+      "preview": "addEventListener(\u0022install\u0022, function () {\n  self.skipWaiting();\n});\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 15,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 15,
+        "end": 37
+      },
+      "preview": "  self.skipWaiting();\n});\naddEventListener(\u0022activate\u0022, function (event) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 16,
+        "end": 39
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 16,
+        "end": 39
+      },
+      "preview": "});\naddEventListener(\u0022activate\u0022, function (event) {\n  event.waitUntil(self.clients.claim());\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 18,
+        "end": 40
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 18,
+        "end": 40
+      },
+      "preview": "addEventListener(\u0022activate\u0022, function (event) {\n  event.waitUntil(self.clients.claim());\n});\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 19,
+        "end": 41
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 19,
+        "end": 41
+      },
+      "preview": "  event.waitUntil(self.clients.claim());\n});\naddEventListener(\u0022message\u0022, async function (event) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 20,
+        "end": 42
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 20,
+        "end": 42
+      },
+      "preview": "});\naddEventListener(\u0022message\u0022, async function (event) {\n  const clientId = Reflect.get(event.source || {}, \u0022id\u0022);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 22,
+        "end": 43
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 22,
+        "end": 43
+      },
+      "preview": "addEventListener(\u0022message\u0022, async function (event) {\n  const clientId = Reflect.get(event.source || {}, \u0022id\u0022);\n  if (!clientId || !self.clients) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 23,
+        "end": 44
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 23,
+        "end": 44
+      },
+      "preview": "  const clientId = Reflect.get(event.source || {}, \u0022id\u0022);\n  if (!clientId || !self.clients) {\n    return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 25,
+        "end": 47
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 25,
+        "end": 47
+      },
+      "preview": "  if (!clientId || !self.clients) {\n    return;\n  const client = await self.clients.get(clientId);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 26,
+        "end": 48
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 26,
+        "end": 48
+      },
+      "preview": "    return;\n  const client = await self.clients.get(clientId);\n  if (!client) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 29,
+        "end": 49
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 29,
+        "end": 49
+      },
+      "preview": "  const client = await self.clients.get(clientId);\n  if (!client) {\n    return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 31,
+        "end": 50
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 31,
+        "end": 50
+      },
+      "preview": "  if (!client) {\n    return;\n  const allClients = await self.clients.matchAll({\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 32,
+        "end": 51
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 32,
+        "end": 51
+      },
+      "preview": "    return;\n  const allClients = await self.clients.matchAll({\n    type: \u0022window\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 35,
+        "end": 52
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 35,
+        "end": 52
+      },
+      "preview": "  const allClients = await self.clients.matchAll({\n    type: \u0022window\u0022,\n  });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 36,
+        "end": 53
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 36,
+        "end": 53
+      },
+      "preview": "    type: \u0022window\u0022,\n  });\n  switch (event.data) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 37,
+        "end": 54
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 37,
+        "end": 54
+      },
+      "preview": "  });\n  switch (event.data) {\n    case \u0022KEEPALIVE_REQUEST\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 39,
+        "end": 55
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 39,
+        "end": 55
+      },
+      "preview": "  switch (event.data) {\n    case \u0022KEEPALIVE_REQUEST\u0022: {\n      sendToClient(client, {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 40,
+        "end": 58
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 40,
+        "end": 58
+      },
+      "preview": "    case \u0022KEEPALIVE_REQUEST\u0022: {\n      sendToClient(client, {\n        type: \u0022KEEPALIVE_RESPONSE\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 41,
+        "end": 59
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 41,
+        "end": 59
+      },
+      "preview": "      sendToClient(client, {\n        type: \u0022KEEPALIVE_RESPONSE\u0022,\n      });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 42,
+        "end": 61
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 42,
+        "end": 61
+      },
+      "preview": "        type: \u0022KEEPALIVE_RESPONSE\u0022,\n      });\n      break;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 43,
+        "end": 62
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 43,
+        "end": 62
+      },
+      "preview": "      });\n      break;\n    case \u0022INTEGRITY_CHECK_REQUEST\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 44,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 44,
+        "end": 63
+      },
+      "preview": "      break;\n    case \u0022INTEGRITY_CHECK_REQUEST\u0022: {\n      sendToClient(client, {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 47,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 47,
+        "end": 64
+      },
+      "preview": "    case \u0022INTEGRITY_CHECK_REQUEST\u0022: {\n      sendToClient(client, {\n        type: \u0022INTEGRITY_CHECK_RESPONSE\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 48,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "      sendToClient(client, {\n        type: \u0022INTEGRITY_CHECK_RESPONSE\u0022,\n        payload: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 49,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "        type: \u0022INTEGRITY_CHECK_RESPONSE\u0022,\n        payload: {\n          packageVersion: PACKAGE_VERSION,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 50,
+        "end": 67
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "        payload: {\n          packageVersion: PACKAGE_VERSION,\n          checksum: INTEGRITY_CHECKSUM,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 51,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "          packageVersion: PACKAGE_VERSION,\n          checksum: INTEGRITY_CHECKSUM,\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 52,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "          checksum: INTEGRITY_CHECKSUM,\n        },\n      });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 53,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 53,
+        "end": 70
+      },
+      "preview": "        },\n      });\n      break;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 54,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 54,
+        "end": 73
+      },
+      "preview": "      });\n      break;\n    case \u0022MOCK_ACTIVATE\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 55,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 55,
+        "end": 74
+      },
+      "preview": "      break;\n    case \u0022MOCK_ACTIVATE\u0022: {\n      activeClientIds.add(clientId);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 58,
+        "end": 76
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 58,
+        "end": 76
+      },
+      "preview": "    case \u0022MOCK_ACTIVATE\u0022: {\n      activeClientIds.add(clientId);\n      sendToClient(client, {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 59,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 59,
+        "end": 77
+      },
+      "preview": "      activeClientIds.add(clientId);\n      sendToClient(client, {\n        type: \u0022MOCKING_ENABLED\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 61,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 61,
+        "end": 78
+      },
+      "preview": "      sendToClient(client, {\n        type: \u0022MOCKING_ENABLED\u0022,\n        payload: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 62,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 62,
+        "end": 81
+      },
+      "preview": "        type: \u0022MOCKING_ENABLED\u0022,\n        payload: {\n          client: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 63,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 63,
+        "end": 82
+      },
+      "preview": "        payload: {\n          client: {\n            id: client.id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 64,
+        "end": 85
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 64,
+        "end": 85
+      },
+      "preview": "          client: {\n            id: client.id,\n            frameType: client.frameType,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 65,
+        "end": 88
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 65,
+        "end": 88
+      },
+      "preview": "            id: client.id,\n            frameType: client.frameType,\n          },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 66,
+        "end": 90
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 66,
+        "end": 90
+      },
+      "preview": "            frameType: client.frameType,\n          },\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 67,
+        "end": 91
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 67,
+        "end": 91
+      },
+      "preview": "          },\n        },\n      });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 68,
+        "end": 94
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 68,
+        "end": 94
+      },
+      "preview": "        },\n      });\n      break;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 69,
+        "end": 95
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 69,
+        "end": 95
+      },
+      "preview": "      });\n      break;\n    case \u0022CLIENT_CLOSED\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 70,
+        "end": 100
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 70,
+        "end": 100
+      },
+      "preview": "      break;\n    case \u0022CLIENT_CLOSED\u0022: {\n      activeClientIds.delete(clientId);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 73,
+        "end": 101
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 73,
+        "end": 101
+      },
+      "preview": "    case \u0022CLIENT_CLOSED\u0022: {\n      activeClientIds.delete(clientId);\n      const remainingClients = allClients.filter((client) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 74,
+        "end": 102
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 74,
+        "end": 102
+      },
+      "preview": "      activeClientIds.delete(clientId);\n      const remainingClients = allClients.filter((client) =\u003E {\n        return client.id !== clientId;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 76,
+        "end": 103
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 76,
+        "end": 103
+      },
+      "preview": "      const remainingClients = allClients.filter((client) =\u003E {\n        return client.id !== clientId;\n      });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 77,
+        "end": 104
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 77,
+        "end": 104
+      },
+      "preview": "        return client.id !== clientId;\n      });\n      if (remainingClients.length === 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 78,
+        "end": 110
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 78,
+        "end": 110
+      },
+      "preview": "      });\n      if (remainingClients.length === 0) {\n        self.registration.unregister();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 81,
+        "end": 111
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 81,
+        "end": 111
+      },
+      "preview": "      if (remainingClients.length === 0) {\n        self.registration.unregister();\n      break;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 82,
+        "end": 114
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 82,
+        "end": 114
+      },
+      "preview": "        self.registration.unregister();\n      break;\n});\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 85,
+        "end": 115
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 85,
+        "end": 115
+      },
+      "preview": "      break;\n});\naddEventListener(\u0022fetch\u0022, function (event) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 88,
+        "end": 116
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 88,
+        "end": 116
+      },
+      "preview": "});\naddEventListener(\u0022fetch\u0022, function (event) {\n  const requestInterceptedAt = Date.now();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 90,
+        "end": 123
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 90,
+        "end": 123
+      },
+      "preview": "addEventListener(\u0022fetch\u0022, function (event) {\n  const requestInterceptedAt = Date.now();\n  if (event.request.mode === \u0022navigate\u0022) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 91,
+        "end": 124
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 91,
+        "end": 124
+      },
+      "preview": "  const requestInterceptedAt = Date.now();\n  if (event.request.mode === \u0022navigate\u0022) {\n    return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 94,
+        "end": 125
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 94,
+        "end": 125
+      },
+      "preview": "  if (event.request.mode === \u0022navigate\u0022) {\n    return;\n  if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 95,
+        "end": 126
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 95,
+        "end": 126
+      },
+      "preview": "    return;\n  if (\n    event.request.cache === \u0022only-if-cached\u0022 \u0026\u0026\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 100,
+        "end": 127
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 100,
+        "end": 127
+      },
+      "preview": "  if (\n    event.request.cache === \u0022only-if-cached\u0022 \u0026\u0026\n    event.request.mode !== \u0022same-origin\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 101,
+        "end": 128
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 101,
+        "end": 128
+      },
+      "preview": "    event.request.cache === \u0022only-if-cached\u0022 \u0026\u0026\n    event.request.mode !== \u0022same-origin\u0022\n  ) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 102,
+        "end": 129
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 102,
+        "end": 129
+      },
+      "preview": "    event.request.mode !== \u0022same-origin\u0022\n  ) {\n    return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 103,
+        "end": 130
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 103,
+        "end": 130
+      },
+      "preview": "  ) {\n    return;\n  if (activeClientIds.size === 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 104,
+        "end": 131
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 104,
+        "end": 131
+      },
+      "preview": "    return;\n  if (activeClientIds.size === 0) {\n    return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 110,
+        "end": 136
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 110,
+        "end": 136
+      },
+      "preview": "  if (activeClientIds.size === 0) {\n    return;\n  const requestId = crypto.randomUUID();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 111,
+        "end": 137
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 111,
+        "end": 137
+      },
+      "preview": "    return;\n  const requestId = crypto.randomUUID();\n  event.respondWith(handleRequest(event, requestId, requestInterceptedAt));\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 114,
+        "end": 144
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 114,
+        "end": 144
+      },
+      "preview": "  const requestId = crypto.randomUUID();\n  event.respondWith(handleRequest(event, requestId, requestInterceptedAt));\n});\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 115,
+        "end": 145
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 115,
+        "end": 145
+      },
+      "preview": "  event.respondWith(handleRequest(event, requestId, requestInterceptedAt));\n});\nasync function handleRequest(event, requestId, requestInterceptedAt) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 116,
+        "end": 146
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 116,
+        "end": 146
+      },
+      "preview": "});\nasync function handleRequest(event, requestId, requestInterceptedAt) {\n  const client = await resolveMainClient(event);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 123,
+        "end": 147
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 123,
+        "end": 147
+      },
+      "preview": "async function handleRequest(event, requestId, requestInterceptedAt) {\n  const client = await resolveMainClient(event);\n  const requestCloneForEvents = event.request.clone();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 124,
+        "end": 150
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 124,
+        "end": 150
+      },
+      "preview": "  const client = await resolveMainClient(event);\n  const requestCloneForEvents = event.request.clone();\n  const response = await getResponse(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 125,
+        "end": 152
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 125,
+        "end": 152
+      },
+      "preview": "  const requestCloneForEvents = event.request.clone();\n  const response = await getResponse(\n    event,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 126,
+        "end": 153
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 126,
+        "end": 153
+      },
+      "preview": "  const response = await getResponse(\n    event,\n    client,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 127,
+        "end": 155
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 127,
+        "end": 155
+      },
+      "preview": "    event,\n    client,\n    requestId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 128,
+        "end": 156
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 128,
+        "end": 156
+      },
+      "preview": "    client,\n    requestId,\n    requestInterceptedAt\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 129,
+        "end": 157
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 129,
+        "end": 157
+      },
+      "preview": "    requestId,\n    requestInterceptedAt\n  );\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 130,
+        "end": 158
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 130,
+        "end": 158
+      },
+      "preview": "    requestInterceptedAt\n  );\n  if (client \u0026\u0026 activeClientIds.has(client.id)) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 131,
+        "end": 159
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 131,
+        "end": 159
+      },
+      "preview": "  );\n  if (client \u0026\u0026 activeClientIds.has(client.id)) {\n    const serializedRequest = await serializeRequest(requestCloneForEvents);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 136,
+        "end": 160
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 136,
+        "end": 160
+      },
+      "preview": "  if (client \u0026\u0026 activeClientIds.has(client.id)) {\n    const serializedRequest = await serializeRequest(requestCloneForEvents);\n    const isEventStreamResponse = response.headers\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 137,
+        "end": 161
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 137,
+        "end": 161
+      },
+      "preview": "    const serializedRequest = await serializeRequest(requestCloneForEvents);\n    const isEventStreamResponse = response.headers\n      .get(\u0022content-type\u0022)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 144,
+        "end": 162
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 144,
+        "end": 162
+      },
+      "preview": "    const isEventStreamResponse = response.headers\n      .get(\u0022content-type\u0022)\n      ?.toLowerCase()\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 145,
+        "end": 163
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 145,
+        "end": 163
+      },
+      "preview": "      .get(\u0022content-type\u0022)\n      ?.toLowerCase()\n      .startsWith(\u0022text/event-stream\u0022);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 146,
+        "end": 164
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 146,
+        "end": 164
+      },
+      "preview": "      ?.toLowerCase()\n      .startsWith(\u0022text/event-stream\u0022);\n    const responseClone = isEventStreamResponse ? null : response.clone();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 147,
+        "end": 165
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 147,
+        "end": 165
+      },
+      "preview": "      .startsWith(\u0022text/event-stream\u0022);\n    const responseClone = isEventStreamResponse ? null : response.clone();\n    sendToClient(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 150,
+        "end": 166
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 150,
+        "end": 166
+      },
+      "preview": "    const responseClone = isEventStreamResponse ? null : response.clone();\n    sendToClient(\n      client,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 152,
+        "end": 167
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 152,
+        "end": 167
+      },
+      "preview": "    sendToClient(\n      client,\n        type: \u0022RESPONSE\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 153,
+        "end": 168
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 153,
+        "end": 168
+      },
+      "preview": "      client,\n        type: \u0022RESPONSE\u0022,\n        payload: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 155,
+        "end": 169
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 155,
+        "end": 169
+      },
+      "preview": "        type: \u0022RESPONSE\u0022,\n        payload: {\n          isMockedResponse: IS_MOCKED_RESPONSE in response,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 156,
+        "end": 170
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 156,
+        "end": 170
+      },
+      "preview": "        payload: {\n          isMockedResponse: IS_MOCKED_RESPONSE in response,\n          request: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 157,
+        "end": 171
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 157,
+        "end": 171
+      },
+      "preview": "          isMockedResponse: IS_MOCKED_RESPONSE in response,\n          request: {\n            id: requestId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 158,
+        "end": 172
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 158,
+        "end": 172
+      },
+      "preview": "          request: {\n            id: requestId,\n            ...serializedRequest,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 159,
+        "end": 173
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 159,
+        "end": 173
+      },
+      "preview": "            id: requestId,\n            ...serializedRequest,\n          },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 160,
+        "end": 174
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 160,
+        "end": 174
+      },
+      "preview": "            ...serializedRequest,\n          },\n          response: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 161,
+        "end": 177
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 161,
+        "end": 177
+      },
+      "preview": "          },\n          response: {\n            type: response.type,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 162,
+        "end": 188
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 162,
+        "end": 188
+      },
+      "preview": "          response: {\n            type: response.type,\n            status: response.status,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 163,
+        "end": 189
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 163,
+        "end": 189
+      },
+      "preview": "            type: response.type,\n            status: response.status,\n            statusText: response.statusText,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 164,
+        "end": 191
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 164,
+        "end": 191
+      },
+      "preview": "            status: response.status,\n            statusText: response.statusText,\n            headers: Object.fromEntries(response.headers.entries()),\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 165,
+        "end": 192
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 165,
+        "end": 192
+      },
+      "preview": "            statusText: response.statusText,\n            headers: Object.fromEntries(response.headers.entries()),\n            body: responseClone ? responseClone.body : null,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 166,
+        "end": 195
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 166,
+        "end": 195
+      },
+      "preview": "            headers: Object.fromEntries(response.headers.entries()),\n            body: responseClone ? responseClone.body : null,\n          },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 167,
+        "end": 196
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 167,
+        "end": 196
+      },
+      "preview": "            body: responseClone ? responseClone.body : null,\n          },\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 168,
+        "end": 199
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 168,
+        "end": 199
+      },
+      "preview": "          },\n        },\n      },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 169,
+        "end": 200
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 169,
+        "end": 200
+      },
+      "preview": "        },\n      },\n      responseClone \u0026\u0026 responseClone.body\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 170,
+        "end": 201
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 170,
+        "end": 201
+      },
+      "preview": "      },\n      responseClone \u0026\u0026 responseClone.body\n        ? [serializedRequest.body, responseClone.body]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 171,
+        "end": 203
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 171,
+        "end": 203
+      },
+      "preview": "      responseClone \u0026\u0026 responseClone.body\n        ? [serializedRequest.body, responseClone.body]\n        : []\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 172,
+        "end": 204
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 172,
+        "end": 204
+      },
+      "preview": "        ? [serializedRequest.body, responseClone.body]\n        : []\n    );\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 173,
+        "end": 206
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 173,
+        "end": 206
+      },
+      "preview": "        : []\n    );\n  return response;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 174,
+        "end": 207
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 174,
+        "end": 207
+      },
+      "preview": "    );\n  return response;\nasync function resolveMainClient(event) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 177,
+        "end": 208
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 177,
+        "end": 208
+      },
+      "preview": "  return response;\nasync function resolveMainClient(event) {\n  const client = await self.clients.get(event.clientId);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 188,
+        "end": 211
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 188,
+        "end": 211
+      },
+      "preview": "async function resolveMainClient(event) {\n  const client = await self.clients.get(event.clientId);\n  if (activeClientIds.has(event.clientId)) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 189,
+        "end": 212
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 189,
+        "end": 212
+      },
+      "preview": "  const client = await self.clients.get(event.clientId);\n  if (activeClientIds.has(event.clientId)) {\n    return client;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 191,
+        "end": 222
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 191,
+        "end": 222
+      },
+      "preview": "  if (activeClientIds.has(event.clientId)) {\n    return client;\n  if (client?.frameType === \u0022top-level\u0022) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 192,
+        "end": 225
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 192,
+        "end": 225
+      },
+      "preview": "    return client;\n  if (client?.frameType === \u0022top-level\u0022) {\n    return client;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 195,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 195,
+        "end": 227
+      },
+      "preview": "  if (client?.frameType === \u0022top-level\u0022) {\n    return client;\n  const allClients = await self.clients.matchAll({\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 196,
+        "end": 230
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 196,
+        "end": 230
+      },
+      "preview": "    return client;\n  const allClients = await self.clients.matchAll({\n    type: \u0022window\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 199,
+        "end": 235
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 199,
+        "end": 235
+      },
+      "preview": "  const allClients = await self.clients.matchAll({\n    type: \u0022window\u0022,\n  });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 200,
+        "end": 236
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 200,
+        "end": 236
+      },
+      "preview": "    type: \u0022window\u0022,\n  });\n  return allClients\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 201,
+        "end": 237
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 201,
+        "end": 237
+      },
+      "preview": "  });\n  return allClients\n    .filter((client) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 203,
+        "end": 238
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 203,
+        "end": 238
+      },
+      "preview": "  return allClients\n    .filter((client) =\u003E {\n      return client.visibilityState === \u0022visible\u0022;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 204,
+        "end": 239
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 204,
+        "end": 239
+      },
+      "preview": "    .filter((client) =\u003E {\n      return client.visibilityState === \u0022visible\u0022;\n    })\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 206,
+        "end": 240
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 206,
+        "end": 240
+      },
+      "preview": "      return client.visibilityState === \u0022visible\u0022;\n    })\n    .find((client) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 207,
+        "end": 242
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 207,
+        "end": 242
+      },
+      "preview": "    })\n    .find((client) =\u003E {\n      return activeClientIds.has(client.id);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 208,
+        "end": 243
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 208,
+        "end": 243
+      },
+      "preview": "    .find((client) =\u003E {\n      return activeClientIds.has(client.id);\n    });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 211,
+        "end": 244
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 211,
+        "end": 244
+      },
+      "preview": "      return activeClientIds.has(client.id);\n    });\nasync function getResponse(event, client, requestId, requestInterceptedAt) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 212,
+        "end": 245
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 212,
+        "end": 245
+      },
+      "preview": "    });\nasync function getResponse(event, client, requestId, requestInterceptedAt) {\n  const requestClone = event.request.clone();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 222,
+        "end": 249
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 222,
+        "end": 249
+      },
+      "preview": "async function getResponse(event, client, requestId, requestInterceptedAt) {\n  const requestClone = event.request.clone();\n  function passthrough() {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 225,
+        "end": 253
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 225,
+        "end": 253
+      },
+      "preview": "  const requestClone = event.request.clone();\n  function passthrough() {\n    const headers = new Headers(requestClone.headers);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 227,
+        "end": 254
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 227,
+        "end": 254
+      },
+      "preview": "  function passthrough() {\n    const headers = new Headers(requestClone.headers);\n    const acceptHeader = headers.get(\u0022accept\u0022);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 230,
+        "end": 261
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 230,
+        "end": 261
+      },
+      "preview": "    const headers = new Headers(requestClone.headers);\n    const acceptHeader = headers.get(\u0022accept\u0022);\n    if (acceptHeader) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 235,
+        "end": 262
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 235,
+        "end": 262
+      },
+      "preview": "    const acceptHeader = headers.get(\u0022accept\u0022);\n    if (acceptHeader) {\n      const values = acceptHeader.split(\u0022,\u0022).map((value) =\u003E value.trim());\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 236,
+        "end": 266
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 236,
+        "end": 266
+      },
+      "preview": "    if (acceptHeader) {\n      const values = acceptHeader.split(\u0022,\u0022).map((value) =\u003E value.trim());\n      const filteredValues = values.filter(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 237,
+        "end": 267
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 237,
+        "end": 267
+      },
+      "preview": "      const values = acceptHeader.split(\u0022,\u0022).map((value) =\u003E value.trim());\n      const filteredValues = values.filter(\n        (value) =\u003E value !== \u0022msw/passthrough\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 238,
+        "end": 268
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 238,
+        "end": 268
+      },
+      "preview": "      const filteredValues = values.filter(\n        (value) =\u003E value !== \u0022msw/passthrough\u0022\n      );\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 239,
+        "end": 270
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 239,
+        "end": 270
+      },
+      "preview": "        (value) =\u003E value !== \u0022msw/passthrough\u0022\n      );\n      if (filteredValues.length \u003E 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 240,
+        "end": 271
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 240,
+        "end": 271
+      },
+      "preview": "      );\n      if (filteredValues.length \u003E 0) {\n        headers.set(\u0022accept\u0022, filteredValues.join(\u0022, \u0022));\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 242,
+        "end": 272
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 242,
+        "end": 272
+      },
+      "preview": "      if (filteredValues.length \u003E 0) {\n        headers.set(\u0022accept\u0022, filteredValues.join(\u0022, \u0022));\n      } else {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 243,
+        "end": 273
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 243,
+        "end": 273
+      },
+      "preview": "        headers.set(\u0022accept\u0022, filteredValues.join(\u0022, \u0022));\n      } else {\n        headers.delete(\u0022accept\u0022);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 244,
+        "end": 274
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 244,
+        "end": 274
+      },
+      "preview": "      } else {\n        headers.delete(\u0022accept\u0022);\n    return fetch(requestClone, { headers });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 245,
+        "end": 275
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 245,
+        "end": 275
+      },
+      "preview": "        headers.delete(\u0022accept\u0022);\n    return fetch(requestClone, { headers });\n  if (!client) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 249,
+        "end": 276
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 249,
+        "end": 276
+      },
+      "preview": "    return fetch(requestClone, { headers });\n  if (!client) {\n    return passthrough();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 253,
+        "end": 277
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 253,
+        "end": 277
+      },
+      "preview": "  if (!client) {\n    return passthrough();\n  if (!activeClientIds.has(client.id)) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 254,
+        "end": 278
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 254,
+        "end": 278
+      },
+      "preview": "    return passthrough();\n  if (!activeClientIds.has(client.id)) {\n    return passthrough();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 261,
+        "end": 280
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 261,
+        "end": 280
+      },
+      "preview": "  if (!activeClientIds.has(client.id)) {\n    return passthrough();\n  const serializedRequest = await serializeRequest(event.request);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 262,
+        "end": 281
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 262,
+        "end": 281
+      },
+      "preview": "    return passthrough();\n  const serializedRequest = await serializeRequest(event.request);\n  const clientMessage = await sendToClient(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 266,
+        "end": 282
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 266,
+        "end": 282
+      },
+      "preview": "  const serializedRequest = await serializeRequest(event.request);\n  const clientMessage = await sendToClient(\n    client,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 267,
+        "end": 285
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 267,
+        "end": 285
+      },
+      "preview": "  const clientMessage = await sendToClient(\n    client,\n      type: \u0022REQUEST\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 268,
+        "end": 286
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 268,
+        "end": 286
+      },
+      "preview": "    client,\n      type: \u0022REQUEST\u0022,\n      payload: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 270,
+        "end": 290
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 270,
+        "end": 290
+      },
+      "preview": "      type: \u0022REQUEST\u0022,\n      payload: {\n        id: requestId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 271,
+        "end": 299
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 271,
+        "end": 299
+      },
+      "preview": "      payload: {\n        id: requestId,\n        interceptedAt: requestInterceptedAt,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 272,
+        "end": 300
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 272,
+        "end": 300
+      },
+      "preview": "        id: requestId,\n        interceptedAt: requestInterceptedAt,\n        ...serializedRequest,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 273,
+        "end": 301
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 273,
+        "end": 301
+      },
+      "preview": "        interceptedAt: requestInterceptedAt,\n        ...serializedRequest,\n      },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 274,
+        "end": 303
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 274,
+        "end": 303
+      },
+      "preview": "        ...serializedRequest,\n      },\n    },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 275,
+        "end": 304
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 275,
+        "end": 304
+      },
+      "preview": "      },\n    },\n    [serializedRequest.body]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 276,
+        "end": 305
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 276,
+        "end": 305
+      },
+      "preview": "    },\n    [serializedRequest.body]\n  );\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 277,
+        "end": 308
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 277,
+        "end": 308
+      },
+      "preview": "    [serializedRequest.body]\n  );\n  switch (clientMessage.type) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 278,
+        "end": 311
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 278,
+        "end": 311
+      },
+      "preview": "  );\n  switch (clientMessage.type) {\n    case \u0022MOCK_RESPONSE\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 280,
+        "end": 312
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 280,
+        "end": 312
+      },
+      "preview": "  switch (clientMessage.type) {\n    case \u0022MOCK_RESPONSE\u0022: {\n      return respondWithMock(clientMessage.data);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 281,
+        "end": 313
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 281,
+        "end": 313
+      },
+      "preview": "    case \u0022MOCK_RESPONSE\u0022: {\n      return respondWithMock(clientMessage.data);\n    case \u0022PASSTHROUGH\u0022: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 282,
+        "end": 314
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 282,
+        "end": 314
+      },
+      "preview": "      return respondWithMock(clientMessage.data);\n    case \u0022PASSTHROUGH\u0022: {\n      return passthrough();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 285,
+        "end": 315
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 285,
+        "end": 315
+      },
+      "preview": "    case \u0022PASSTHROUGH\u0022: {\n      return passthrough();\n  return passthrough();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 286,
+        "end": 322
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 286,
+        "end": 322
+      },
+      "preview": "      return passthrough();\n  return passthrough();\nfunction sendToClient(client, message, transferrables = []) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 290,
+        "end": 327
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 290,
+        "end": 327
+      },
+      "preview": "  return passthrough();\nfunction sendToClient(client, message, transferrables = []) {\n  return new Promise((resolve, reject) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 299,
+        "end": 328
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 299,
+        "end": 328
+      },
+      "preview": "function sendToClient(client, message, transferrables = []) {\n  return new Promise((resolve, reject) =\u003E {\n    const channel = new MessageChannel();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 300,
+        "end": 331
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 300,
+        "end": 331
+      },
+      "preview": "  return new Promise((resolve, reject) =\u003E {\n    const channel = new MessageChannel();\n    channel.port1.onmessage = (event) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 301,
+        "end": 333
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 301,
+        "end": 333
+      },
+      "preview": "    const channel = new MessageChannel();\n    channel.port1.onmessage = (event) =\u003E {\n      if (event.data \u0026\u0026 event.data.error) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 303,
+        "end": 334
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 303,
+        "end": 334
+      },
+      "preview": "    channel.port1.onmessage = (event) =\u003E {\n      if (event.data \u0026\u0026 event.data.error) {\n        return reject(event.data.error);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 304,
+        "end": 335
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 304,
+        "end": 335
+      },
+      "preview": "      if (event.data \u0026\u0026 event.data.error) {\n        return reject(event.data.error);\n      resolve(event.data);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 305,
+        "end": 336
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 305,
+        "end": 336
+      },
+      "preview": "        return reject(event.data.error);\n      resolve(event.data);\n    client.postMessage(message, [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 308,
+        "end": 338
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 308,
+        "end": 338
+      },
+      "preview": "      resolve(event.data);\n    client.postMessage(message, [\n      channel.port2,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 311,
+        "end": 344
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 311,
+        "end": 344
+      },
+      "preview": "    client.postMessage(message, [\n      channel.port2,\n      ...transferrables.filter(Boolean),\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 312,
+        "end": 345
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 312,
+        "end": 345
+      },
+      "preview": "      channel.port2,\n      ...transferrables.filter(Boolean),\n    ]);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 313,
+        "end": 346
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 313,
+        "end": 346
+      },
+      "preview": "      ...transferrables.filter(Boolean),\n    ]);\n  });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 314,
+        "end": 347
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 314,
+        "end": 347
+      },
+      "preview": "    ]);\n  });\nfunction respondWithMock(response) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 315,
+        "end": 348
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 315,
+        "end": 348
+      },
+      "preview": "  });\nfunction respondWithMock(response) {\n  if (response.status === 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 322,
+        "end": 349
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 322,
+        "end": 349
+      },
+      "preview": "function respondWithMock(response) {\n  if (response.status === 0) {\n    return Response.error();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 327,
+        "end": 350
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 327,
+        "end": 350
+      },
+      "preview": "  if (response.status === 0) {\n    return Response.error();\n  const mockedResponse = new Response(response.body, response);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 328,
+        "end": 351
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 328,
+        "end": 351
+      },
+      "preview": "    return Response.error();\n  const mockedResponse = new Response(response.body, response);\n  Reflect.defineProperty(mockedResponse, IS_MOCKED_RESPONSE, {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 331,
+        "end": 352
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 331,
+        "end": 352
+      },
+      "preview": "  const mockedResponse = new Response(response.body, response);\n  Reflect.defineProperty(mockedResponse, IS_MOCKED_RESPONSE, {\n    value: true,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 333,
+        "end": 353
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 333,
+        "end": 353
+      },
+      "preview": "  Reflect.defineProperty(mockedResponse, IS_MOCKED_RESPONSE, {\n    value: true,\n    enumerable: true,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 334,
+        "end": 354
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 334,
+        "end": 354
+      },
+      "preview": "    value: true,\n    enumerable: true,\n  });\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 335,
+        "end": 355
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 335,
+        "end": 355
+      },
+      "preview": "    enumerable: true,\n  });\n  return mockedResponse;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 336,
+        "end": 356
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 336,
+        "end": 356
+      },
+      "preview": "  });\n  return mockedResponse;\nasync function serializeRequest(request) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 338,
+        "end": 357
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 338,
+        "end": 357
+      },
+      "preview": "  return mockedResponse;\nasync function serializeRequest(request) {\n  return {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "start": 344,
+        "end": 358
+      },
+      "loc2": {
+        "file": "apps/web/public/mockServiceWorker.js",
+        "start": 344,
+        "end": 358
+      },
+      "preview": "async function serializeRequest(request) {\n  return {\n    url: request.url,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 6,
+        "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 6,
+        "end": 22
+      },
+      "preview": "  http.all(\u0022*\u0022, async ({ request }) =\u003E {\n    const url = new URL(request.url);\n    const isApiCall =\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 7,
+        "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 7,
+        "end": 23
+      },
+      "preview": "    const url = new URL(request.url);\n    const isApiCall =\n      url.port === \u00228000\u0022 ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 10,
+        "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 10,
+        "end": 24
+      },
+      "preview": "    const isApiCall =\n      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 11,
+        "end": 25
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 11,
+        "end": 25
+      },
+      "preview": "      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 12,
+        "end": 26
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 12,
+        "end": 26
+      },
+      "preview": "      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 13,
+        "end": 27
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 13,
+        "end": 27
+      },
+      "preview": "      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 14,
+        "end": 29
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 14,
+        "end": 29
+      },
+      "preview": "      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 15,
+        "end": 30
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 15,
+        "end": 30
+      },
+      "preview": "      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 16,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 16,
+        "end": 33
+      },
+      "preview": "      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 17,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 17,
+        "end": 35
+      },
+      "preview": "      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 18,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 18,
+        "end": 36
+      },
+      "preview": "      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 19,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 19,
+        "end": 37
+      },
+      "preview": "      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 20,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 20,
+        "end": 38
+      },
+      "preview": "      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 21,
+        "end": 39
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 21,
+        "end": 39
+      },
+      "preview": "      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 22,
+        "end": 43
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 22,
+        "end": 43
+      },
+      "preview": "      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 23,
+        "end": 44
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 23,
+        "end": 44
+      },
+      "preview": "      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 24,
+        "end": 45
+      },
+      "loc2": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 24,
+        "end": 45
+      },
+      "preview": "      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n      url.pathname.startsWith(\u0022/terminology/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 3,
+        "end": 25
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 3,
+        "end": 25
+      },
+      "preview": "const FOCUSABLE_SELECTOR =\n  \u0027button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\u0022-1\u0022])\u0027;\nconst isVisible = (el) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 4,
+        "end": 27
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 4,
+        "end": 27
+      },
+      "preview": "  \u0027button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\u0022-1\u0022])\u0027;\nconst isVisible = (el) =\u003E {\n  if (typeof window === \u0022undefined\u0022) return true;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 6,
+        "end": 28
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 6,
+        "end": 28
+      },
+      "preview": "const isVisible = (el) =\u003E {\n  if (typeof window === \u0022undefined\u0022) return true;\n  const style = window.getComputedStyle(el);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 7,
+        "end": 29
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 7,
+        "end": 29
+      },
+      "preview": "  if (typeof window === \u0022undefined\u0022) return true;\n  const style = window.getComputedStyle(el);\n  if (style.display === \u0022none\u0022 || style.visibility === \u0022hidden\u0022) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 8,
+        "end": 31
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 8,
+        "end": 31
+      },
+      "preview": "  const style = window.getComputedStyle(el);\n  if (style.display === \u0022none\u0022 || style.visibility === \u0022hidden\u0022) {\n    return false;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 9,
+        "end": 32
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 9,
+        "end": 32
+      },
+      "preview": "  if (style.display === \u0022none\u0022 || style.visibility === \u0022hidden\u0022) {\n    return false;\n  const isJsdDom =\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 10,
+        "end": 33
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 10,
+        "end": 33
+      },
+      "preview": "    return false;\n  const isJsdDom =\n    navigator.userAgent.includes(\u0022jsdom\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 14,
+        "end": 34
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 14,
+        "end": 34
+      },
+      "preview": "  const isJsdDom =\n    navigator.userAgent.includes(\u0022jsdom\u0022) ||\n    navigator.userAgent.includes(\u0022Node.js\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 15,
+        "end": 36
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 15,
+        "end": 36
+      },
+      "preview": "    navigator.userAgent.includes(\u0022jsdom\u0022) ||\n    navigator.userAgent.includes(\u0022Node.js\u0022) ||\n    typeof window.happyDOM !== \u0022undefined\u0022;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 16,
+        "end": 37
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 16,
+        "end": 37
+      },
+      "preview": "    navigator.userAgent.includes(\u0022Node.js\u0022) ||\n    typeof window.happyDOM !== \u0022undefined\u0022;\n  if (isJsdDom) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 17,
+        "end": 38
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 17,
+        "end": 38
+      },
+      "preview": "    typeof window.happyDOM !== \u0022undefined\u0022;\n  if (isJsdDom) {\n    return true;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 18,
+        "end": 41
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 18,
+        "end": 41
+      },
+      "preview": "  if (isJsdDom) {\n    return true;\n  return el.offsetWidth \u003E 0 || el.offsetHeight \u003E 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 19,
+        "end": 42
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 19,
+        "end": 42
+      },
+      "preview": "    return true;\n  return el.offsetWidth \u003E 0 || el.offsetHeight \u003E 0;\n  let previousActiveElement = null;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 21,
+        "end": 44
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 21,
+        "end": 44
+      },
+      "preview": "  return el.offsetWidth \u003E 0 || el.offsetHeight \u003E 0;\n  let previousActiveElement = null;\n  const handleKeyDown = (e) =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 25,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 25,
+        "end": 45
+      },
+      "preview": "  let previousActiveElement = null;\n  const handleKeyDown = (e) =\u003E {\n    if (e.key !== \u0022Tab\u0022) return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 27,
+        "end": 46
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 27,
+        "end": 46
+      },
+      "preview": "  const handleKeyDown = (e) =\u003E {\n    if (e.key !== \u0022Tab\u0022) return;\n    if (!targetRef.value) return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 28,
+        "end": 47
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 28,
+        "end": 47
+      },
+      "preview": "    if (e.key !== \u0022Tab\u0022) return;\n    if (!targetRef.value) return;\n    const container = targetRef.value;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 29,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 29,
+        "end": 48
+      },
+      "preview": "    if (!targetRef.value) return;\n    const container = targetRef.value;\n    const focusableElements = Array.from(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 31,
+        "end": 49
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 31,
+        "end": 49
+      },
+      "preview": "    const container = targetRef.value;\n    const focusableElements = Array.from(\n      container.querySelectorAll(FOCUSABLE_SELECTOR)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 32,
+        "end": 50
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 32,
+        "end": 50
+      },
+      "preview": "    const focusableElements = Array.from(\n      container.querySelectorAll(FOCUSABLE_SELECTOR)\n    ).filter(isVisible);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 33,
+        "end": 52
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 33,
+        "end": 52
+      },
+      "preview": "      container.querySelectorAll(FOCUSABLE_SELECTOR)\n    ).filter(isVisible);\n    if (focusableElements.length === 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 34,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 34,
+        "end": 53
+      },
+      "preview": "    ).filter(isVisible);\n    if (focusableElements.length === 0) {\n      e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 36,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 36,
+        "end": 54
+      },
+      "preview": "    if (focusableElements.length === 0) {\n      e.preventDefault();\n      return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 37,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 37,
+        "end": 55
+      },
+      "preview": "      e.preventDefault();\n      return;\n    const firstEl = focusableElements[0];\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 38,
+        "end": 56
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 38,
+        "end": 56
+      },
+      "preview": "      return;\n    const firstEl = focusableElements[0];\n    const lastEl = focusableElements[focusableElements.length - 1];\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 41,
+        "end": 57
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 41,
+        "end": 57
+      },
+      "preview": "    const firstEl = focusableElements[0];\n    const lastEl = focusableElements[focusableElements.length - 1];\n    if (e.shiftKey) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 42,
+        "end": 58
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 42,
+        "end": 58
+      },
+      "preview": "    const lastEl = focusableElements[focusableElements.length - 1];\n    if (e.shiftKey) {\n      if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 44,
+        "end": 63
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 44,
+        "end": 63
+      },
+      "preview": "    if (e.shiftKey) {\n      if (\n        document.activeElement === firstEl ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 45,
+        "end": 64
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 45,
+        "end": 64
+      },
+      "preview": "      if (\n        document.activeElement === firstEl ||\n        !container.contains(document.activeElement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 46,
+        "end": 66
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 46,
+        "end": 66
+      },
+      "preview": "        document.activeElement === firstEl ||\n        !container.contains(document.activeElement)\n      ) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 47,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 47,
+        "end": 68
+      },
+      "preview": "        !container.contains(document.activeElement)\n      ) {\n        e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 48,
+        "end": 69
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 48,
+        "end": 69
+      },
+      "preview": "      ) {\n        e.preventDefault();\n        lastEl.focus();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 49,
+        "end": 71
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 49,
+        "end": 71
+      },
+      "preview": "        e.preventDefault();\n        lastEl.focus();\n    } else {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 50,
+        "end": 72
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 50,
+        "end": 72
+      },
+      "preview": "        lastEl.focus();\n    } else {\n      if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 52,
+        "end": 73
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 52,
+        "end": 73
+      },
+      "preview": "    } else {\n      if (\n        document.activeElement === lastEl ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 53,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 53,
+        "end": 75
+      },
+      "preview": "      if (\n        document.activeElement === lastEl ||\n        !container.contains(document.activeElement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 54,
+        "end": 76
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 54,
+        "end": 76
+      },
+      "preview": "        document.activeElement === lastEl ||\n        !container.contains(document.activeElement)\n      ) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 55,
+        "end": 79
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 55,
+        "end": 79
+      },
+      "preview": "        !container.contains(document.activeElement)\n      ) {\n        e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 56,
+        "end": 81
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 56,
+        "end": 81
+      },
+      "preview": "      ) {\n        e.preventDefault();\n        firstEl.focus();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 57,
+        "end": 82
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 57,
+        "end": 82
+      },
+      "preview": "        e.preventDefault();\n        firstEl.focus();\n  onMounted(async () =\u003E {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 58,
+        "end": 83
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 58,
+        "end": 83
+      },
+      "preview": "        firstEl.focus();\n  onMounted(async () =\u003E {\n    previousActiveElement = document.activeElement;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 63,
+        "end": 84
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 63,
+        "end": 84
+      },
+      "preview": "  onMounted(async () =\u003E {\n    previousActiveElement = document.activeElement;\n    await nextTick();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 64,
+        "end": 85
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 64,
+        "end": 85
+      },
+      "preview": "    previousActiveElement = document.activeElement;\n    await nextTick();\n    if (targetRef.value) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 66,
+        "end": 86
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 66,
+        "end": 86
+      },
+      "preview": "    await nextTick();\n    if (targetRef.value) {\n      document.addEventListener(\u0022keydown\u0022, handleKeyDown);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 68,
+        "end": 87
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 68,
+        "end": 87
+      },
+      "preview": "    if (targetRef.value) {\n      document.addEventListener(\u0022keydown\u0022, handleKeyDown);\n      const focusableElements = Array.from(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 69,
+        "end": 88
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 69,
+        "end": 88
+      },
+      "preview": "      document.addEventListener(\u0022keydown\u0022, handleKeyDown);\n      const focusableElements = Array.from(\n        targetRef.value.querySelectorAll(FOCUSABLE_SELECTOR)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 71,
+        "end": 90
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 71,
+        "end": 90
+      },
+      "preview": "      const focusableElements = Array.from(\n        targetRef.value.querySelectorAll(FOCUSABLE_SELECTOR)\n      ).filter(isVisible);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 155,
+        "end": 169
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 508,
+        "end": 522
+      },
+      "preview": "    selectedFileName,\n    editingItemId,\n    editItemValue,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 156,
+        "end": 170
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 509,
+        "end": 523
+      },
+      "preview": "    editingItemId,\n    editItemValue,\n    editItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 157,
+        "end": 171
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 510,
+        "end": 524
+      },
+      "preview": "    editItemValue,\n    editItemReason,\n    rejectingItemId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 158,
+        "end": 172
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 511,
+        "end": 525
+      },
+      "preview": "    editItemReason,\n    rejectingItemId,\n    rejectItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 159,
+        "end": 173
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 512,
+        "end": 526
+      },
+      "preview": "    rejectingItemId,\n    rejectItemReason,\n    promoteChangeReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 160,
+        "end": 174
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 513,
+        "end": 527
+      },
+      "preview": "    rejectItemReason,\n    promoteChangeReason,\n    unreviewedCount,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 73,
+        "end": 87
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 472,
+        "end": 486
+      },
+      "preview": "    signoffTargetType,\n    signoffTargetId,\n    customTargetId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 74,
+        "end": 88
+      },
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 473,
+        "end": 487
+      },
+      "preview": "    signoffTargetId,\n    customTargetId,\n    signoffReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 20,
+        "end": 34
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 109,
+        "end": 123
+      },
+      "preview": "  },\n  username: {\n    type: String,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 21,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 110,
+        "end": 124
+      },
+      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 22,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 111,
+        "end": 125
+      },
+      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 23,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 112,
+        "end": 126
+      },
+      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 24,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 113,
+        "end": 127
+      },
+      "preview": "  },\n  signerName: {\n    type: String,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3349,
+        "end": 3367
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 345,
+        "end": 362
+      },
+      "preview": "  });\n\u003C/script\u003E\n\u003Cstyle scoped\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 346,
+        "end": 363
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 346,
+        "end": 363
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 348,
+        "end": 364
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 348,
+        "end": 364
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3355,
+        "end": 3371
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 841,
+        "end": 857
+      },
+      "preview": "  display: flex;\n  position: fixed;\n  top: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3356,
+        "end": 3372
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 842,
+        "end": 858
+      },
+      "preview": "  position: fixed;\n  top: 0;\n  left: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3357,
+        "end": 3373
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 843,
+        "end": 859
+      },
+      "preview": "  top: 0;\n  left: 0;\n  right: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3358,
+        "end": 3374
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 844,
+        "end": 860
+      },
+      "preview": "  left: 0;\n  right: 0;\n  bottom: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3359,
+        "end": 3377
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 845,
+        "end": 863
+      },
+      "preview": "  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 446,
+        "end": 470
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1094,
+        "end": 1117
+      },
+      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 566,
+        "end": 584
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1254,
+        "end": 1272
+      },
+      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 567,
+        "end": 585
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1255,
+        "end": 1273
+      },
+      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1215,
+        "end": 1234
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1482,
+        "end": 1501
+      },
+      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1216,
+        "end": 1235
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1483,
+        "end": 1502
+      },
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1217,
+        "end": 1238
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1484,
+        "end": 1505
+      },
+      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1218,
+        "end": 1239
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1485,
+        "end": 1506
+      },
+      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1219,
+        "end": 1240
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1486,
+        "end": 1507
+      },
+      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1220,
+        "end": 1243
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1487,
+        "end": 1510
+      },
+      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1221,
+        "end": 1244
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1488,
+        "end": 1511
+      },
+      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1424,
+        "end": 1444
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
+      },
+      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1427,
+        "end": 1445
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
+      },
+      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1428,
+        "end": 1446
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
+      },
+      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 297,
+        "end": 315
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 407,
+        "end": 425
+      },
+      "preview": "select {\n  width: 100%;\n  padding: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 298,
+        "end": 316
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 408,
+        "end": 426
+      },
+      "preview": "  width: 100%;\n  padding: 8px;\n  border: 1px solid #cbd5e1;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 299,
+        "end": 317
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 409,
+        "end": 427
+      },
+      "preview": "  padding: 8px;\n  border: 1px solid #cbd5e1;\n  border-radius: 4px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 300,
+        "end": 318
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 410,
+        "end": 428
+      },
+      "preview": "  border: 1px solid #cbd5e1;\n  border-radius: 4px;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 301,
+        "end": 319
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 411,
+        "end": 429
+      },
+      "preview": "  border-radius: 4px;\n  font-size: 13px;\n  background: white;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 302,
+        "end": 320
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 412,
+        "end": 430
+      },
+      "preview": "  font-size: 13px;\n  background: white;\n  box-sizing: border-box;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 303,
+        "end": 323
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 413,
+        "end": 433
+      },
+      "preview": "  background: white;\n  box-sizing: border-box;\n.error-msg {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 304,
+        "end": 324
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 414,
+        "end": 434
+      },
+      "preview": "  box-sizing: border-box;\n.error-msg {\n  margin-top: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 311,
+        "end": 331
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 421,
+        "end": 441
+      },
+      "preview": "  font-weight: 500;\n.modal-footer {\n  padding: 12px 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 314,
+        "end": 332
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 424,
+        "end": 442
+      },
+      "preview": ".modal-footer {\n  padding: 12px 16px;\n  border-top: 1px solid #e2e8f0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 315,
+        "end": 333
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 425,
+        "end": 443
+      },
+      "preview": "  padding: 12px 16px;\n  border-top: 1px solid #e2e8f0;\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 316,
+        "end": 336
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 426,
+        "end": 446
+      },
+      "preview": "  border-top: 1px solid #e2e8f0;\n  display: flex;\n  justify-content: flex-end;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 6,
+        "end": 21
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 30,
+        "end": 45
+      },
+      "preview": "    \u003C/div\u003E\n    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 8,
+        "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 32,
+        "end": 46
+      },
+      "preview": "    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 9,
+        "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 33,
+        "end": 47
+      },
+      "preview": "    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 10,
+        "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 11,
+        "end": 25
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 35,
+        "end": 49
+      },
+      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 12,
+        "end": 26
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 36,
+        "end": 50
+      },
+      "preview": "        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 13,
+        "end": 27
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 37,
+        "end": 51
+      },
+      "preview": "        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 14,
+        "end": 28
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 38,
+        "end": 52
+      },
+      "preview": "        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n        \u003Cstrong\u003EB\u003C/strong\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 49,
+        "end": 63
+      },
+      "preview": "      \u003C/button\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 42,
+        "end": 56
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 50,
+        "end": 64
+      },
+      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 43,
+        "end": 57
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 51,
+        "end": 65
+      },
+      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 56,
+        "end": 71
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 91,
+        "end": 106
+      },
+      "preview": "        hasher = hashlib.sha256()\n        chunk_size = 65536\n        if not data:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 57,
+        "end": 72
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 92,
+        "end": 107
+      },
+      "preview": "        chunk_size = 65536\n        if not data:\n            hasher.update(b\u0022\u0022)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 58,
+        "end": 74
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 93,
+        "end": 109
+      },
+      "preview": "        if not data:\n            hasher.update(b\u0022\u0022)\n        else:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 59,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 94,
+        "end": 110
+      },
+      "preview": "            hasher.update(b\u0022\u0022)\n        else:\n            for i in range(0, len(data), chunk_size):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 102,
+        "end": 119
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 135,
+        "end": 152
+      },
+      "preview": "                    raise StorageObjectNotFoundError(f\u0022Object not found: {key}\u0022) from e\n                raise\n            metadata = response.get(\u0022Metadata\u0022, {})\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 103,
+        "end": 121
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 136,
+        "end": 154
+      },
+      "preview": "                raise\n            metadata = response.get(\u0022Metadata\u0022, {})\n            expected_sha256 = metadata.get(\u0022sha256\u0022)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 105,
+        "end": 122
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 138,
+        "end": 155
+      },
+      "preview": "            metadata = response.get(\u0022Metadata\u0022, {})\n            expected_sha256 = metadata.get(\u0022sha256\u0022)\n            content_chunks = []\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 106,
+        "end": 123
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 139,
+        "end": 156
+      },
+      "preview": "            expected_sha256 = metadata.get(\u0022sha256\u0022)\n            content_chunks = []\n            hasher = hashlib.sha256()\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 108,
+        "end": 124
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 141,
+        "end": 157
+      },
+      "preview": "            content_chunks = []\n            hasher = hashlib.sha256()\n            async with response[\u0022Body\u0022] as stream:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 109,
+        "end": 125
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 142,
+        "end": 158
+      },
+      "preview": "            hasher = hashlib.sha256()\n            async with response[\u0022Body\u0022] as stream:\n                while True:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 110,
+        "end": 126
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 143,
+        "end": 159
+      },
+      "preview": "            async with response[\u0022Body\u0022] as stream:\n                while True:\n                    chunk = await stream.read(65536)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 111,
+        "end": 127
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 144,
+        "end": 160
+      },
+      "preview": "                while True:\n                    chunk = await stream.read(65536)\n                    if not chunk:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 112,
+        "end": 129
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 145,
+        "end": 162
+      },
+      "preview": "                    chunk = await stream.read(65536)\n                    if not chunk:\n                        break\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 113,
+        "end": 131
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 146,
+        "end": 164
+      },
+      "preview": "                    if not chunk:\n                        break\n                    content_chunks.append(chunk)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 114,
+        "end": 132
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 147,
+        "end": 165
+      },
+      "preview": "                        break\n                    content_chunks.append(chunk)\n                    hasher.update(chunk)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 115,
+        "end": 133
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 148,
+        "end": 166
+      },
+      "preview": "                    content_chunks.append(chunk)\n                    hasher.update(chunk)\n            content = b\u0022\u0022.join(content_chunks)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 116,
+        "end": 134
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 149,
+        "end": 167
+      },
+      "preview": "                    hasher.update(chunk)\n            content = b\u0022\u0022.join(content_chunks)\n            calculated_hash = hasher.hexdigest()\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 118,
+        "end": 135
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 151,
+        "end": 168
+      },
+      "preview": "            content = b\u0022\u0022.join(content_chunks)\n            calculated_hash = hasher.hexdigest()\n            if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 119,
+        "end": 136
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 152,
+        "end": 169
+      },
+      "preview": "            calculated_hash = hasher.hexdigest()\n            if (\n                expected_sha256 is not None\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 121,
+        "end": 137
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 154,
+        "end": 170
+      },
+      "preview": "            if (\n                expected_sha256 is not None\n                and calculated_hash.lower() != expected_sha256.lower()\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/storage/s3_store.py",
+        "start": 122,
+        "end": 138
+      },
+      "loc2": {
+        "file": "packages/storage/adapters/s3_adapter.py",
+        "start": 155,
+        "end": 171
+      },
+      "preview": "                expected_sha256 is not None\n                and calculated_hash.lower() != expected_sha256.lower()\n            ):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 53,
+        "end": 67
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 53
+      },
+      "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 54,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 54
+      },
+      "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 55,
+        "end": 69
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 55
+      },
+      "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 80,
+        "end": 94
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 43,
+        "end": 57
+      },
+      "preview": "  },\n  query: {\n    type: Object,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 81,
+        "end": 95
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 44,
+        "end": 58
+      },
+      "preview": "  query: {\n    type: Object,\n    default: null,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 82,
+        "end": 96
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 45,
+        "end": 59
+      },
+      "preview": "    type: Object,\n    default: null,\n  },\n..."
+    }
+  ]
 }

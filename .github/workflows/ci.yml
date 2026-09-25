@@ -761,10 +761,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body "### Cadence Quality Gate Verification Results
-
-All .NET 10 quality sentinels, architecture checks, and security gates passed successfully." || echo "::warning::PR comment skipped or failed."
+          CADENCE_OUTCOME: ${{ needs.style.outputs.cadence_outcome }}
+          CONTRACTS_OUTCOME: ${{ needs.style.outputs.contracts_outcome }}
+          LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
+          DOTNET_TEST_OUTCOME: ${{ needs.dotnet-tests.outputs.test_outcome }}
+          TEST_OUTCOME: ${{ (needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success') && 'success' || 'failure' }}
+          FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
+          ADR_OUTCOME: ${{ needs.style.outputs.adr_outcome }}
+          AUDIT_OUTCOME: ${{ needs.security.outputs.audit_outcome }}
+          STATIC_OUTCOME: ${{ needs.security.outputs.static_outcome }}
+          SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
+          DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
+          DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
+          TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
+          MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
+          ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'
@@ -856,7 +868,10 @@ All .NET 10 quality sentinels, architecture checks, and security gates passed su
         uses: actions/checkout@v7
 
       - name: Sync Ruleset
-        run: echo "Branch ruleset synchronized."
+        env:
+          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-ruleset
 
   release-and-archive:
     name: Call Production Pipeline
