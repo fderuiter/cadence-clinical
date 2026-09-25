@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """Two-tier git pre-commit hook runner for Cadence Clinical.
 
-Executes sub-second staged checks (Ruff lint/format, secrets) and repository
-assertions before commits are finalized. Auto-installed via cadence doctor.
+Delegates staged checks and repository assertions to the unified quality runner.
+Auto-installed via cadence doctor.
 
-Requirements: PRD-SYS-049, ADR-2189
+Requirements: PRD-SYS-049, ADR-2189, Requirement 3
 """
 
 from __future__ import annotations
 
-import shutil
 import stat
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +19,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.runtime_guard import enforce_python_runtime
+from scripts.quality_runner import (
+    QualityRunner,
+    get_staged_files as runner_get_staged_files,
+    run_quality_checks,
+)
 
 enforce_python_runtime()
 
@@ -34,26 +37,13 @@ def get_staged_files(repo_root: Path | None = None) -> list[str]:
     Returns:
         List of relative staged file paths.
     """
-    root = repo_root or REPO_ROOT
-    try:
-        res = subprocess.run(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res.returncode == 0:
-            return [line.strip() for line in res.stdout.splitlines() if line.strip()]
-    except Exception:
-        pass
-    return []
+    return runner_get_staged_files(repo_root or REPO_ROOT)
 
 
 def run_tier1_staged_checks(
     staged_files: list[str], repo_root: Path | None = None
 ) -> dict[str, Any]:
-    """Executes fast Tier 1 checks on staged Python, C#, and configuration files.
+    """Executes fast Tier 1 checks on staged Python, C#, and configuration files via quality runner.
 
     Args:
         staged_files: List of staged file paths.
@@ -63,93 +53,21 @@ def run_tier1_staged_checks(
         Result dictionary containing passed status and error details.
     """
     root = repo_root or REPO_ROOT
-    py_files = [f for f in staged_files if f.endswith(".py")]
-    cs_files = [f for f in staged_files if f.endswith(".cs") or f.endswith(".csproj")]
+    results = run_quality_checks(staged=True, staged_files=staged_files, repo_root=root)
+    t1_checks = [c for c in results["checks"] if c["name"] in ("ruff", "dotnet_format")]
+    t1_passed = all(c["passed"] for c in t1_checks)
+    t1_errors = [c["error_message"] for c in t1_checks if not c["passed"] and c["error_message"]]
 
-    if not py_files and not cs_files:
-        return {"passed": True, "staged_count": 0, "errors": []}
-
-    errors: list[str] = []
-
-    if py_files:
-        # 1. Run ruff check --fix on staged python files
-        res_check = subprocess.run(
-            ["uv", "run", "--python", "3.14", "ruff", "check", "--fix", *py_files],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res_check.returncode != 0:
-            errors.append(f"Ruff lint error:\n{res_check.stdout}\n{res_check.stderr}")
-
-        # 2. Run ruff format on staged python files
-        res_fmt = subprocess.run(
-            ["uv", "run", "--python", "3.14", "ruff", "format", *py_files],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res_fmt.returncode != 0:
-            errors.append(f"Ruff format error:\n{res_fmt.stdout}\n{res_fmt.stderr}")
-
-        # 3. Re-stage any auto-fixed files
-        subprocess.run(
-            ["git", "add", *py_files],
-            cwd=str(root),
-            capture_output=True,
-            check=False,
-        )
-
-    if cs_files and shutil.which("dotnet"):
-        res_cs_fmt = subprocess.run(
-            [
-                "dotnet",
-                "format",
-                "whitespace",
-                "Cadence.sln",
-                "--verify-no-changes",
-                "--no-restore",
-            ],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res_cs_fmt.returncode != 0:
-            errors.append(
-                f"C# formatting error (.editorconfig):\n{res_cs_fmt.stdout}\n{res_cs_fmt.stderr}"
-            )
-
-        res_cs_style = subprocess.run(
-            [
-                "dotnet",
-                "format",
-                "style",
-                "Cadence.sln",
-                "--verify-no-changes",
-                "--no-restore",
-            ],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res_cs_style.returncode != 0:
-            errors.append(
-                f"C# Roslyn analyzer and code style error:\n{res_cs_style.stdout}\n{res_cs_style.stderr}"
-            )
-
+    py_cs_count = len([f for f in staged_files if f.endswith((".py", ".cs", ".csproj"))])
     return {
-        "passed": len(errors) == 0,
-        "staged_count": len(py_files) + len(cs_files),
-        "errors": errors,
+        "passed": t1_passed,
+        "staged_count": py_cs_count,
+        "errors": t1_errors,
     }
 
 
 def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
-    """Executes fast Tier 2 repository-level architectural invariants.
+    """Executes fast Tier 2 repository-level architectural invariants via quality runner.
 
     Args:
         repo_root: Optional repository root path.
@@ -158,48 +76,19 @@ def run_tier2_repo_checks(repo_root: Path | None = None) -> dict[str, Any]:
         Result dictionary containing passed status and error details.
     """
     root = repo_root or REPO_ROOT
-    errors: list[str] = []
-
-    # Fast import boundaries check
-    res_imp = subprocess.run(
-        ["uv", "run", "--python", "3.14", "python", "scripts/validate_imports.py"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if res_imp.returncode != 0:
-        errors.append(f"Import boundary violation:\n{res_imp.stdout}\n{res_imp.stderr}")
-
-    # Dependency analyzer check (forbidden asymmetric crypto packages)
-    res_deps = subprocess.run(
-        ["uv", "run", "--python", "3.14", "python", "scripts/validate_dependencies.py"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if res_deps.returncode != 0:
-        errors.append(
-            f"Forbidden package dependency violation:\n{res_deps.stdout}\n{res_deps.stderr}"
-        )
-
-    # OpenAPI schema drift and type check
-    res_openapi = subprocess.run(
-        ["uv", "run", "--python", "3.14", "python", "scripts/pre_commit_openapi.py"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if res_openapi.returncode != 0:
-        errors.append(
-            f"OpenAPI schema drift or typecheck violation:\n{res_openapi.stdout}\n{res_openapi.stderr}"
-        )
+    staged = get_staged_files(root)
+    results = run_quality_checks(staged=True, staged_files=staged, repo_root=root)
+    t2_checks = [
+        c
+        for c in results["checks"]
+        if c["name"] in ("import_boundaries", "dependency_analysis", "openapi_drift")
+    ]
+    t2_passed = all(c["passed"] for c in t2_checks)
+    t2_errors = [c["error_message"] for c in t2_checks if not c["passed"] and c["error_message"]]
 
     return {
-        "passed": len(errors) == 0,
-        "errors": errors,
+        "passed": t2_passed,
+        "errors": t2_errors,
     }
 
 
@@ -237,17 +126,13 @@ def install_pre_commit_hook(repo_root: Path | None = None) -> tuple[bool, str]:
 
 
 def main() -> int:
-    """CLI entry point for git pre-commit hook."""
+    """CLI entry point for git pre-commit hook using unified quality runner."""
     staged = get_staged_files()
-    t1 = run_tier1_staged_checks(staged)
-    if not t1["passed"]:
-        for err in t1["errors"]:
-            print(err, file=sys.stderr)
-        return 1
+    runner = QualityRunner(repo_root=REPO_ROOT)
+    res = runner.run_staged_checks(staged_files=staged)
 
-    t2 = run_tier2_repo_checks()
-    if not t2["passed"]:
-        for err in t2["errors"]:
+    if not res["passed"]:
+        for err in res["errors"]:
             print(err, file=sys.stderr)
         return 1
 

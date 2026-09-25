@@ -11,6 +11,10 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.quality_runner import run_quality_checks
 
 
 def log_step(msg: str) -> None:
@@ -271,32 +275,26 @@ def main():
 
     # 4c. FORBIDDEN DEPENDENCY VALIDATION & OPENAPI SCHEMA DRIFT GATES
     log_step(
-        "Step 4c: Validating Cryptographic Package Dependencies & OpenAPI Schema Drift"
+        "Step 4c: Executing Unified Quality Engine (Dependencies & OpenAPI Schema Drift)"
     )
-    dep_rc, dep_out, dep_err = run_command(
-        ["uv", "run", "python", "scripts/validate_dependencies.py"]
-    )
-    if dep_rc == 0:
+    quality_res = run_quality_checks(staged=False, repo_root=REPO_ROOT)
+
+    dep_check = next((c for c in quality_res["checks"] if c["name"] == "dependency_analysis"), None)
+    if dep_check and dep_check["passed"]:
         print("[Gating-Pipeline] Dependency validation gate passed cleanly.")
         dependency_outcome = "success"
     else:
-        print(
-            f"[Gating-Pipeline] Dependency validation FAILED!\n{dep_out}\n{dep_err}",
-            file=sys.stderr,
-        )
+        dep_err = dep_check["error_message"] if dep_check else "Check failed"
+        print(f"[Gating-Pipeline] Dependency validation FAILED!\n{dep_err}", file=sys.stderr)
         dependency_outcome = "failure"
 
-    openapi_rc, openapi_out, openapi_err = run_command(
-        ["uv", "run", "python", "scripts/pre_commit_openapi.py"]
-    )
-    if openapi_rc == 0:
+    openapi_check = next((c for c in quality_res["checks"] if c["name"] == "openapi_drift"), None)
+    if openapi_check and openapi_check["passed"]:
         print("[Gating-Pipeline] OpenAPI schema drift gate passed cleanly.")
         openapi_outcome = "success"
     else:
-        print(
-            f"[Gating-Pipeline] OpenAPI schema drift check FAILED!\n{openapi_out}\n{openapi_err}",
-            file=sys.stderr,
-        )
+        openapi_err = openapi_check["error_message"] if openapi_check else "Check failed"
+        print(f"[Gating-Pipeline] OpenAPI schema drift check FAILED!\n{openapi_err}", file=sys.stderr)
         openapi_outcome = "failure"
 
     # 5. POST/UPDATE UNIFIED STATUS COMMENT
