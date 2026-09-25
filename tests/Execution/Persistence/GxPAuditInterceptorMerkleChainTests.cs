@@ -48,10 +48,10 @@ public class GxPAuditInterceptorMerkleChainTests
         public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
     }
 
-    private static MerkleChainTestDbContext CreateContext(string databaseName) =>
+    private static MerkleChainTestDbContext CreateContext(string databaseName, Func<DateTime>? clockProvider = null) =>
         new(new DbContextOptionsBuilder<MerkleChainTestDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org"))
+            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", clockProvider))
             .Options);
 
     [Fact]
@@ -158,5 +158,66 @@ public class GxPAuditInterceptorMerkleChainTests
             .Where(e => e.EntityName == nameof(RawAuditableEntity))
             .ToListAsync(TestContext.Current.CancellationToken);
         written.Should().HaveCount(1);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        DateTime fixedTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        Func<DateTime> clock = () => fixedTime;
+
+        var aggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
+
+        await using (var context1 = CreateContext(dbName, clock))
+        {
+            context1.GuidAggregates.Add(aggregate);
+            await context1.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context2 = CreateContext(dbName, clock))
+        {
+            var tracked = await context2.GuidAggregates.SingleAsync(a => a.Id == aggregate.Id, TestContext.Current.CancellationToken);
+            tracked.Name = "Beta";
+            await context2.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context3 = CreateContext(dbName, clock))
+        {
+            var tracked = await context3.GuidAggregates.SingleAsync(a => a.Id == aggregate.Id, TestContext.Current.CancellationToken);
+            tracked.Name = "Gamma";
+            await context3.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context4 = CreateContext(dbName, clock))
+        {
+            var tracked = await context4.GuidAggregates.SingleAsync(a => a.Id == aggregate.Id, TestContext.Current.CancellationToken);
+            tracked.Name = "Delta";
+            await context4.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var verifyContext = CreateContext(dbName);
+        var entries = await verifyContext.AuditLogEntries
+            .Where(e => e.EntityName == nameof(GuidKeyedAggregate))
+            .OrderBy(e => e.VersionIndex)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        entries.Should().HaveCount(4);
+        entries[0].PredecessorHash.Should().BeEmpty();
+        entries[1].PredecessorHash.Should().Be(entries[0].BlockHash);
+        entries[2].PredecessorHash.Should().Be(entries[1].BlockHash);
+        entries[3].PredecessorHash.Should().Be(entries[2].BlockHash);
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            string expectedPredecessor = i == 0 ? string.Empty : entries[i - 1].BlockHash;
+            e.PredecessorHash.Should().Be(expectedPredecessor);
+
+            string computedHash = AuditLogEntry.ComputeBlockHash(
+                e.EntityName, e.EntityId, e.Action, e.Timestamp, e.UserId, e.VersionIndex, e.ChangesJson, e.PredecessorHash);
+            e.BlockHash.Should().Be(computedHash);
+        }
     }
 }
