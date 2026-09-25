@@ -58,6 +58,21 @@ jobs:
         if: always()
         run: pnpm -r format && pnpm -r lint
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Run Unified Python Quality Engine
+        id: run_quality_engine
+        if: always()
+        run: uv run --python 3.14 python scripts/quality_runner.py --all-files
+
       - name: Set up .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:

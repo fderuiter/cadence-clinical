@@ -571,7 +571,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1080,7 +1080,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

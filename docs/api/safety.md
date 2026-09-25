@@ -82,7 +82,7 @@ ICH E2B(R3) Individual Case Safety Reports (ICSR) XML compilation, NCI-CTCAE v5.
 **Clinical & GxP Rationale:**  
 Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -156,7 +156,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/as2/ack' \
 **Clinical & GxP Rationale:**  
 Process an asynchronous Message Disposition Notification (MDN) callback.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -229,7 +229,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/as2/mdn' \
 **Clinical & GxP Rationale:**  
 Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -308,7 +308,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/as2/transmission
 **Clinical & GxP Rationale:**  
 List append-only AS2 B2B transmission ledger records with optional filters.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -381,7 +381,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/as2/transmissions
 **Clinical & GxP Rationale:**  
 Retrieve full audit history and status of an AS2 B2B transmission by ID.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -449,7 +449,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/as2/transmissions
 **Clinical & GxP Rationale:**  
 Retry a failed AS2 transmission.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -784,7 +784,7 @@ Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case
 
 Calculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -869,7 +869,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/device-investiga
 **Clinical & GxP Rationale:**  
 Lists device safety investigation cases matching query parameters.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -940,7 +940,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/device-investigat
 **Clinical & GxP Rationale:**  
 Retrieves a single device safety investigation case by ID.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1008,7 +1008,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/device-investigat
 **Clinical & GxP Rationale:**  
 Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1165,7 +1165,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/device-investiga
 **Clinical & GxP Rationale:**  
 Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1501,7 +1501,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/export-jobs/{id}'
 **Clinical & GxP Rationale:**  
 Calculate cumulative and interval patient-years of exposure.
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -1812,7 +1812,7 @@ Requirements: PRD-SYS-052
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1944,7 +1944,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/narratives/{id}/
 **Clinical & GxP Rationale:**  
 List compiled periodic regulatory safety reports with optional filters.
 
-Requirements: PRD-PVG-004, ADR-2199
+Requirements: PRD-PVG-004, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2015,7 +2015,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/periodic-reports'
 **Clinical & GxP Rationale:**  
 Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2103,7 +2103,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/periodic-reports
 **Clinical & GxP Rationale:**  
 Retrieve full structured JSON payload of a periodic regulatory safety report by ID.
 
-Requirements: PRD-PVG-004, ADR-2199
+Requirements: PRD-PVG-004, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2171,7 +2171,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/periodic-reports/
 **Clinical & GxP Rationale:**  
 Export a periodic safety report as HTML, XML, or JSON.
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2240,7 +2240,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/periodic-reports/
 **Clinical & GxP Rationale:**  
 Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2322,7 +2322,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/periodic-reports
 **Clinical & GxP Rationale:**  
 Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
 
-Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2938,7 +2938,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/rules/countdown-a
 **Clinical & GxP Rationale:**  
 Evaluate adverse event against global expedited safety reporting rules and persist evaluation.
 
-Requirements: PRD-PVG-001, PRD-PVG-008, ADR-2199
+Requirements: PRD-PVG-001, PRD-PVG-008, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3243,7 +3243,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/rules/evaluation
 **Clinical & GxP Rationale:**  
 List safety signal review alerts with optional filtering by status, severity, or study.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3314,7 +3314,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/alerts' \
 **Clinical & GxP Rationale:**  
 Retrieve details of an individual safety signal review alert.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3382,7 +3382,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/alerts/{i
 **Clinical & GxP Rationale:**  
 Review and update the clinical triage disposition of a safety signal alert.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3464,7 +3464,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/alerts/{
 **Clinical & GxP Rationale:**  
 Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.
 
-Requirements: PRD-PVG-003, PRD-PVG-008, ADR-2199
+Requirements: PRD-PVG-003, PRD-PVG-008, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3547,7 +3547,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/alerts/{
 **Clinical & GxP Rationale:**  
 Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3631,7 +3631,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/detect' 
 **Clinical & GxP Rationale:**  
 List historical disproportionality signal detection scan runs.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3700,7 +3700,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/runs' \
 **Clinical & GxP Rationale:**  
 Retrieve full metric tables and details for a signal detection scan run.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3768,7 +3768,7 @@ curl -X GET 'http://localhost:8000/api/v1/safety/api/v1/safety/signals/runs/{id}
 **Clinical & GxP Rationale:**  
 Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -3847,7 +3847,7 @@ curl -X POST 'http://localhost:8000/api/v1/safety/api/v1/safety/snapshots/lock' 
 **Clinical & GxP Rationale:**  
 Cryptographically verify the bitwise integrity of a locked regulatory snapshot.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
