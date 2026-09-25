@@ -40,7 +40,14 @@ public static class GxPComplianceService
             }
         }
 
-        AnsiConsole.MarkupLine("\n[bold green]GxP Compliance Synchronization Complete.[/]");
+        bool rtmValid = GxpRtmValidatorService.ValidateGxpRtm();
+        if (!rtmValid)
+        {
+            AnsiConsole.MarkupLine("[red]GxP compliance validation failed![/]");
+            return 1;
+        }
+
+        AnsiConsole.MarkupLine("\n[bold green]GxP Compliance Synchronization Complete (Native C#).[/]");
         return 0;
     }
 
