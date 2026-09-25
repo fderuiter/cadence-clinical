@@ -1,4 +1,4 @@
-# FHIR & eSource Gateway
+﻿# FHIR & eSource Gateway
 
 > **Functional Domain:** `Patient Engagement & Interoperability`  
 > **Service Host Port:** `localhost:8007`  
@@ -369,7 +369,7 @@ Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset defin
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

@@ -10,6 +10,7 @@ using Cadence.Sentinels;
 using Cadence.Storage;
 using Cadence.Testing;
 using Cadence.ToolingCore;
+using Cadence.ToolingCore.OpenApi;
 
 using FluentAssertions;
 
@@ -163,5 +164,22 @@ public class PortedPackagesUnitTests
                 System.IO.Directory.Delete(tempDir, true);
             }
         }
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-049")]
+    public void ToolingCore_OpenApiToolingService_ValidatesDriftInProcess()
+    {
+        string repoRoot = OpenApiToolingService.FindRepoRoot();
+        int exitCode = OpenApiToolingService.ValidateOpenApiDrift(repoRoot);
+        exitCode.Should().Be(0);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public void Compliance_RtmGeneratorService_SyncsInProcessWithoutPython()
+    {
+        int exitCode = RtmGeneratorService.GenerateRtm(outputDir: "docs/SDLC", reportPath: "report_dotnet.trx", draft: true, validateOnly: true);
+        exitCode.Should().Be(0);
     }
 }

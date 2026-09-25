@@ -1,4 +1,4 @@
-# Quality & CAPA Management
+﻿# Quality & CAPA Management
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8006`  
@@ -409,7 +409,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1599,9 +1599,9 @@ No detailed description provided.
 | `methodology` | `string` | No | RCA methodology used (FIVE_WHYS, ISHIKAWA_FISHBONE, HUMAN_FACTORS) |
 | `investigation_details` | `string` | ✔ Yes | Full details of the investigation |
 | `root_cause_summary` | `string` | ✔ Yes | Summary of the determined root cause |
-| `five_whys_chain` | `object` | `Array<any>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
+| `five_whys_chain` | `object` | `Array<object>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
 | `fishbone_categories` | `object` | `null` | No | Ishikawa 6M categories (Man, Machine, Material, Method, Measurement, Milieu) |
-| `contributing_factors` | `Array<any>` | `null` | No | Contributing factor tags and classifications |
+| `contributing_factors` | `Array<object>` | `null` | No | Contributing factor tags and classifications |
 | `version_index` | `integer` | `null` | No | Current expected version index for optimistic locking |
 
 #### Response Codes & Schemas
@@ -1681,9 +1681,9 @@ No detailed description provided.
 | `methodology` | `string` | No | RCA methodology used (FIVE_WHYS, ISHIKAWA_FISHBONE, HUMAN_FACTORS) |
 | `investigation_details` | `string` | ✔ Yes | Full details of the investigation |
 | `root_cause_summary` | `string` | ✔ Yes | Summary of the determined root cause |
-| `five_whys_chain` | `object` | `Array<any>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
+| `five_whys_chain` | `object` | `Array<object>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
 | `fishbone_categories` | `object` | `null` | No | Ishikawa 6M categories (Man, Machine, Material, Method, Measurement, Milieu) |
-| `contributing_factors` | `Array<any>` | `null` | No | Contributing factor tags and classifications |
+| `contributing_factors` | `Array<object>` | `null` | No | Contributing factor tags and classifications |
 | `version_index` | `integer` | `null` | No | Current expected version index for optimistic locking |
 
 #### Response Codes & Schemas
@@ -3096,7 +3096,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -3392,7 +3392,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

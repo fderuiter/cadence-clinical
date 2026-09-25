@@ -1,4 +1,4 @@
-# Knowledge & SOP Engine
+﻿# Knowledge & SOP Engine
 
 > **Functional Domain:** `Protocol & Study Design`  
 > **Service Host Port:** `localhost:8011`  
@@ -2401,10 +2401,6 @@ Uploads a PDF or document binary, parses pages, and indexes dense vector chunks.
 - **Authentication:** OIDC Bearer Token (Keycloak)
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
-
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
 
 #### Response Codes & Schemas
 

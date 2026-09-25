@@ -1,4 +1,4 @@
-# Multi-Channel Notifications Dispatcher
+﻿# Multi-Channel Notifications Dispatcher
 
 > **Functional Domain:** `Patient Engagement & Interoperability`  
 > **Service Host Port:** `localhost:8010`  
