@@ -1842,7 +1842,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `ETMF_HTTPValidationError` |
 
 #### Client Code Examples
@@ -3271,7 +3271,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Ctms_HTTPValidationError` |
 
 #### Client Code Examples
@@ -9545,10 +9545,6 @@ biomedical concept mapping, eCRF synthesis, and USDM compilation) with schema va
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -9910,10 +9906,6 @@ Accepts PDF, DOCX, or text files.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -10048,7 +10040,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10257,7 +10249,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10336,7 +10328,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10412,7 +10404,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10480,7 +10472,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10536,15 +10528,11 @@ No detailed description provided.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `201` | Successful Response | `any` |
+| `201` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -10739,7 +10727,7 @@ Returns classification, fidelity details, source format, detected/resolved versi
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -11465,7 +11453,7 @@ If the payload is invalid, raises a structured HTTP 422 ProblemDetails response.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -11522,10 +11510,6 @@ Imports raw dictionary files and schedules a background parsing task.
 - **Authentication:** OIDC Bearer Token (Keycloak)
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
-
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
 
 #### Response Codes & Schemas
 
@@ -11865,10 +11849,6 @@ Requirements: PRD-SYS-001
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -11943,7 +11923,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Execution_HTTPValidationError` |
 
 #### Client Code Examples
@@ -15756,7 +15736,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Eisf_HTTPValidationError` |
 
 #### Client Code Examples
@@ -16265,7 +16245,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Eisf_HTTPValidationError` |
 
 #### Client Code Examples
@@ -17039,7 +17019,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `ETMF_HTTPValidationError` |
 
 #### Client Code Examples
@@ -17758,7 +17738,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `ETMF_HTTPValidationError` |
 
 #### Client Code Examples
@@ -18988,7 +18968,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `ETMF_HTTPValidationError` |
 
 #### Client Code Examples
@@ -19126,7 +19106,7 @@ Generates a compliant ZIP package containing `tmf-ems.xml`, `tmf-ems.json`,
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `ETMF_HTTPValidationError` |
 
 #### Client Code Examples
@@ -19466,7 +19446,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 
 #### Client Code Examples
 
@@ -24792,7 +24772,7 @@ Export all study observations, subjects, visits, and forms as CDISC ODM XML.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Execution_HTTPValidationError` |
 
 #### Client Code Examples
@@ -40543,15 +40523,11 @@ Returns the clean, de-identified DICOM bytes with certificate metadata headers.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Imaging_HTTPValidationError` |
 
 #### Client Code Examples
@@ -40621,7 +40597,7 @@ Streams the stored de-identified DICOM binary file.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Imaging_HTTPValidationError` |
 
 #### Client Code Examples
@@ -41270,10 +41246,6 @@ Uploads and de-identifies DICOM file(s) or ZIP archives in-flight before persist
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -41576,7 +41548,7 @@ Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset defin
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Interop_HTTPValidationError` |
 
 #### Client Code Examples
@@ -43809,7 +43781,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/interop/dct/telehealth/session
 **Clinical & GxP Rationale:**  
 Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -43883,7 +43855,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/interop/devices/export-package
 **Clinical & GxP Rationale:**  
 Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -43973,7 +43945,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/interop/devices/mir-report' \
 **Clinical & GxP Rationale:**  
 Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.
 
-Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209
+Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -44046,7 +44018,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/interop/devices/sdtm/dd' \
 **Clinical & GxP Rationale:**  
 Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.
 
-Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209
+Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -50525,10 +50497,6 @@ Uploads a PDF or document binary, parses pages, and indexes dense vector chunks.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -50666,15 +50634,11 @@ Raises:
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -56125,7 +56089,7 @@ Downloads binary PDF remittance advice statement.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Payments_HTTPValidationError` |
 
 #### Client Code Examples
@@ -58753,7 +58717,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Quality_HTTPValidationError` |
 
 #### Client Code Examples
@@ -59943,9 +59907,9 @@ No detailed description provided.
 | `methodology` | `string` | No | RCA methodology used (FIVE_WHYS, ISHIKAWA_FISHBONE, HUMAN_FACTORS) |
 | `investigation_details` | `string` | ✔ Yes | Full details of the investigation |
 | `root_cause_summary` | `string` | ✔ Yes | Summary of the determined root cause |
-| `five_whys_chain` | `object` | `Array<any>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
+| `five_whys_chain` | `object` | `Array<object>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
 | `fishbone_categories` | `object` | `null` | No | Ishikawa 6M categories (Man, Machine, Material, Method, Measurement, Milieu) |
-| `contributing_factors` | `Array<any>` | `null` | No | Contributing factor tags and classifications |
+| `contributing_factors` | `Array<object>` | `null` | No | Contributing factor tags and classifications |
 | `version_index` | `integer` | `null` | No | Current expected version index for optimistic locking |
 
 #### Response Codes & Schemas
@@ -60025,9 +59989,9 @@ No detailed description provided.
 | `methodology` | `string` | No | RCA methodology used (FIVE_WHYS, ISHIKAWA_FISHBONE, HUMAN_FACTORS) |
 | `investigation_details` | `string` | ✔ Yes | Full details of the investigation |
 | `root_cause_summary` | `string` | ✔ Yes | Summary of the determined root cause |
-| `five_whys_chain` | `object` | `Array<any>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
+| `five_whys_chain` | `object` | `Array<object>` | `null` | No | Structured 5-Whys causal hierarchy (why_1 through why_5) |
 | `fishbone_categories` | `object` | `null` | No | Ishikawa 6M categories (Man, Machine, Material, Method, Measurement, Milieu) |
-| `contributing_factors` | `Array<any>` | `null` | No | Contributing factor tags and classifications |
+| `contributing_factors` | `Array<object>` | `null` | No | Contributing factor tags and classifications |
 | `version_index` | `integer` | `null` | No | Current expected version index for optimistic locking |
 
 #### Response Codes & Schemas
@@ -61440,7 +61404,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Quality_HTTPValidationError` |
 
 #### Client Code Examples
@@ -61736,7 +61700,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Quality_HTTPValidationError` |
 
 #### Client Code Examples
@@ -63211,7 +63175,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/quality/surveillance/run' \
 **Clinical & GxP Rationale:**  
 Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63285,7 +63249,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/as2/ack' \
 **Clinical & GxP Rationale:**  
 Process an asynchronous Message Disposition Notification (MDN) callback.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63358,7 +63322,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/as2/mdn' \
 **Clinical & GxP Rationale:**  
 Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63437,7 +63401,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/as2/transmissions' \
 **Clinical & GxP Rationale:**  
 List append-only AS2 B2B transmission ledger records with optional filters.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63510,7 +63474,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/as2/transmissions' \
 **Clinical & GxP Rationale:**  
 Retrieve full audit history and status of an AS2 B2B transmission by ID.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63578,7 +63542,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/as2/transmissions/{id}' 
 **Clinical & GxP Rationale:**  
 Retry a failed AS2 transmission.
 
-Requirements: PRD-PVG-002, ADR-2199
+Requirements: PRD-PVG-002, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63913,7 +63877,7 @@ Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case
 
 Calculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -63998,7 +63962,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/device-investigations' 
 **Clinical & GxP Rationale:**  
 Lists device safety investigation cases matching query parameters.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -64069,7 +64033,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/device-investigations' \
 **Clinical & GxP Rationale:**  
 Retrieves a single device safety investigation case by ID.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -64137,7 +64101,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/device-investigations/{i
 **Clinical & GxP Rationale:**  
 Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.
 
-Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -64294,7 +64258,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/device-investigations/{
 **Clinical & GxP Rationale:**  
 Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -64630,7 +64594,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/export-jobs/{id}' \
 **Clinical & GxP Rationale:**  
 Calculate cumulative and interval patient-years of exposure.
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -64941,7 +64905,7 @@ Requirements: PRD-SYS-052
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Safety_HTTPValidationError` |
 
 #### Client Code Examples
@@ -65073,7 +65037,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/narratives/{id}/sign' \
 **Clinical & GxP Rationale:**  
 List compiled periodic regulatory safety reports with optional filters.
 
-Requirements: PRD-PVG-004, ADR-2199
+Requirements: PRD-PVG-004, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -65144,7 +65108,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/periodic-reports' \
 **Clinical & GxP Rationale:**  
 Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -65232,7 +65196,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/periodic-reports/compil
 **Clinical & GxP Rationale:**  
 Retrieve full structured JSON payload of a periodic regulatory safety report by ID.
 
-Requirements: PRD-PVG-004, ADR-2199
+Requirements: PRD-PVG-004, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -65300,7 +65264,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/periodic-reports/{id}' \
 **Clinical & GxP Rationale:**  
 Export a periodic safety report as HTML, XML, or JSON.
 
-Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -65369,7 +65333,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/periodic-reports/{id}/ex
 **Clinical & GxP Rationale:**  
 Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -65451,7 +65415,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/periodic-reports/{id}/q
 **Clinical & GxP Rationale:**  
 Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
 
-Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199
+Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66067,7 +66031,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/rules/countdown-alerts' 
 **Clinical & GxP Rationale:**  
 Evaluate adverse event against global expedited safety reporting rules and persist evaluation.
 
-Requirements: PRD-PVG-001, PRD-PVG-008, ADR-2199
+Requirements: PRD-PVG-001, PRD-PVG-008, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66372,7 +66336,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/rules/evaluations/{id}/
 **Clinical & GxP Rationale:**  
 List safety signal review alerts with optional filtering by status, severity, or study.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66443,7 +66407,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/signals/alerts' \
 **Clinical & GxP Rationale:**  
 Retrieve details of an individual safety signal review alert.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66511,7 +66475,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/signals/alerts/{id}' \
 **Clinical & GxP Rationale:**  
 Review and update the clinical triage disposition of a safety signal alert.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66593,7 +66557,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/signals/alerts/{id}/rev
 **Clinical & GxP Rationale:**  
 Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.
 
-Requirements: PRD-PVG-003, PRD-PVG-008, ADR-2199
+Requirements: PRD-PVG-003, PRD-PVG-008, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66676,7 +66640,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/signals/alerts/{id}/sig
 **Clinical & GxP Rationale:**  
 Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66760,7 +66724,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/signals/detect' \
 **Clinical & GxP Rationale:**  
 List historical disproportionality signal detection scan runs.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66829,7 +66793,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/signals/runs' \
 **Clinical & GxP Rationale:**  
 Retrieve full metric tables and details for a signal detection scan run.
 
-Requirements: PRD-PVG-003, ADR-2199
+Requirements: PRD-PVG-003, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66897,7 +66861,7 @@ curl -X GET 'http://localhost:8000/api/v1/api/v1/safety/signals/runs/{id}' \
 **Clinical & GxP Rationale:**  
 Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -66976,7 +66940,7 @@ curl -X POST 'http://localhost:8000/api/v1/api/v1/safety/snapshots/lock' \
 **Clinical & GxP Rationale:**  
 Cryptographically verify the bitwise integrity of a locked regulatory snapshot.
 
-Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+Requirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -67812,7 +67776,7 @@ PDF or DOCX document using shared layout templates.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -68636,7 +68600,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -73198,7 +73162,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -73803,7 +73767,7 @@ Export regulatory Part 11 immutable audit trail records in JSON or CSV format.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Tickets_HTTPValidationError` |
 
 #### Client Code Examples
@@ -74175,10 +74139,6 @@ Upload an audited evidence attachment with SHA-256 integrity hash.
 | Name | In | Type | Required | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `path` | `string` | ✔ Yes | — |
-
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
 
 #### Response Codes & Schemas
 
@@ -75655,7 +75615,7 @@ Requirements: Phase 2 Ingestion
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `201` | Successful Response | `any` |
+| `201` | Successful Response | `object` |
 | `422` | Validation Error | `Designer_HTTPValidationError` |
 
 #### Client Code Examples
@@ -75723,7 +75683,7 @@ Export stored clinical subject observations in CDISC ODM XML format (Dictionary 
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `Execution_HTTPValidationError` |
 
 #### Client Code Examples

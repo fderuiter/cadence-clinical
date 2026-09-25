@@ -369,7 +369,7 @@ Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset defin
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2602,7 +2602,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/dct/telehealth
 **Clinical & GxP Rationale:**  
 Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2676,7 +2676,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/devices/export
 **Clinical & GxP Rationale:**  
 Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).
 
-Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
+Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2766,7 +2766,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/devices/mir-re
 **Clinical & GxP Rationale:**  
 Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.
 
-Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209
+Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 
@@ -2839,7 +2839,7 @@ curl -X POST 'http://localhost:8000/api/v1/interop/api/v1/interop/devices/sdtm/d
 **Clinical & GxP Rationale:**  
 Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.
 
-Requirements: PRD-DEV-004, ISO 14155:2020, ADR-2209
+Requirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209
 
 #### Security & Access Control (21 CFR Part 11)
 

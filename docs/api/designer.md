@@ -1239,10 +1239,6 @@ biomedical concept mapping, eCRF synthesis, and USDM compilation) with schema va
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -1604,10 +1600,6 @@ Accepts PDF, DOCX, or text files.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -1742,7 +1734,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1951,7 +1943,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2030,7 +2022,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2106,7 +2098,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2174,7 +2166,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2230,15 +2222,11 @@ No detailed description provided.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Mandatory 60s `sig_token` required for Part 11 sign-off
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `201` | Successful Response | `any` |
+| `201` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -2433,7 +2421,7 @@ Returns classification, fidelity details, source format, detected/resolved versi
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -3159,7 +3147,7 @@ If the payload is invalid, raises a structured HTTP 422 ProblemDetails response.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -3220,15 +3208,11 @@ Raises:
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -4909,7 +4893,7 @@ PDF or DOCX document using shared layout templates.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -5733,7 +5717,7 @@ No detailed description provided.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -10295,7 +10279,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -10593,7 +10577,7 @@ Requirements: Phase 2 Ingestion
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `201` | Successful Response | `any` |
+| `201` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

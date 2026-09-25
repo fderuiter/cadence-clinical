@@ -2402,10 +2402,6 @@ Uploads a PDF or document binary, parses pages, and indexes dense vector chunks.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |

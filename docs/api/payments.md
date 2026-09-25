@@ -1842,7 +1842,7 @@ Downloads binary PDF remittance advice statement.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

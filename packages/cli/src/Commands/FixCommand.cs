@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.OpenApi;
 
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -14,7 +15,8 @@ public class FixCommand : Command
         AnsiConsole.MarkupLine("[bold cyan]Executing Self-Healing Pipeline...[/]\n");
 
         AnsiConsole.MarkupLine("  1. Auto-formatting C# Codebase...");
-        var psi = new ProcessStartInfo("dotnet", "format Cadence.sln") { UseShellExecute = false };
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        var psi = new ProcessStartInfo("dotnet", "format Cadence.sln") { UseShellExecute = false, WorkingDirectory = repoRoot };
         using var p = Process.Start(psi);
         p?.WaitForExit();
 
@@ -22,15 +24,11 @@ public class FixCommand : Command
         AdrValidatorService.ValidateAdrs(checkGitDiff: false);
 
         AnsiConsole.MarkupLine("\n  3. Synchronizing OpenAPI Specifications & Documentation...");
-        var psiSpec = new ProcessStartInfo("uv", "run python scripts/sync_openapi_spec.py") { UseShellExecute = false };
-        using var pSpec = Process.Start(psiSpec);
-        pSpec?.WaitForExit();
-
-        var psiDocs = new ProcessStartInfo("uv", "run python scripts/generate_api_docs.py") { UseShellExecute = false };
-        using var pDocs = Process.Start(psiDocs);
-        pDocs?.WaitForExit();
+        OpenApiToolingService.SyncOpenApiSpec(repoRoot);
+        OpenApiToolingService.GenerateApiDocs(repoRoot);
 
         AnsiConsole.MarkupLine("\n[bold green]Self-Healing Pipeline Complete.[/]");
         return 0;
     }
 }
+
