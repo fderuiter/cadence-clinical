@@ -212,7 +212,7 @@ fi
 # --------------------------------------------------------------------------
 stage "Final Validation" "Running 'cadence doctor' across the whole stack..."
 if command -v uv >/dev/null 2>&1; then
-  uv run --python 3.14 cadence doctor || warn_failed "'cadence doctor' reported issues above — review before continuing."
+  dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor || warn_failed "'cadence doctor' reported issues above — review before continuing."
 else
   info "Skipped 'cadence doctor' (uv not available)."
 fi
