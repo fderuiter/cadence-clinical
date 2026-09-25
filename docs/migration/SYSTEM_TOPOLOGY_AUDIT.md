@@ -109,7 +109,7 @@ flowchart TD
 3. **Operational Engineering Scripts (`scripts/`):**
    - `scripts/reset_db.py`: Orchestrates multi-database resets across Postgres and Neo4j.
    - `scripts/introspect_pg_schema.py`: Compares live PostgreSQL schema against SQLAlchemy metadata.
-   - `scripts/sync_gxp.py`: Central regulatory sync script parsing `@req:PRD-SYS-xxx` tags, parsing test results, and regenerating the RTM.
+   - `scripts/sync_gxp.py`: Central regulatory sync script parsing `@req:PRD-SYS-XXX` tags, parsing test results, and regenerating the RTM.
    - `scripts/manage_migrations.sh` / `.ps1`: EF Core migration management.
    - `scripts/migrate_service_wizard.sh` / `.ps1`: Scaffolds Clean Architecture service skeletons.
    - `scripts/decommission_service_wizard.sh` / `.ps1`: Guided retirement of Python services.

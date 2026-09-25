@@ -196,7 +196,7 @@ public static class SubjectEndpoints
 
 - Test application workflows using `xunit.v3`, `FluentAssertions`, and `InMemoryRepository<T>`.
 - Every test validating a regulatory or functional requirement **must** declare:
-  1. XML doc comment with `/// @req:PRD-SYS-xxx`
+  1. XML doc comment with `/// @req:PRD-SYS-XXX`
   2. `[GxPRequirement("PRD-SYS-xxx")]` custom attribute
 
 ```csharp
@@ -275,7 +275,7 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 ### 1. Behavioral Parity & Schema Verification
 
 - Validate that the new .NET 10 Minimal API endpoint schemas (`/openapi/v1.json`) match or cleanly supersede the legacy Python FastAPI schemas.
-- Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-xxx`) tested in the Python test suite are covered in the new xUnit test suite with equal or greater test assertion coverage.
+- Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-XXX`) tested in the Python test suite are covered in the new xUnit test suite with equal or greater test assertion coverage.
 
 ### 2. Gateway Route Cutover
 
