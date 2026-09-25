@@ -330,6 +330,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 7. DevOps, Tooling & CI/CD
 - [2026-09-25: Phased Workspace Member Unlinking and Toolchain Decommissioning Protocol](2026-09-25-phased-workspace-member-unlinking-and-toolchain-decommissioning-protocol.md)
 
+- [2026-09-25: Decommission Python Scripts to Native .NET 10 Tooling Services and Cadence.Cli Commands](2026-09-25-decommission-python-scripts-to-native-dotnet-10-tooling.md)
 - [2026-09-03: Full-Stack Environment Setup Wizard and Python Workspace Glob Hardening](2026-09-03-full-stack-environment-setup-wizard-and-python-workspace-glob-hardening.md)
 
 - [2026-09-02: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration](2026-09-02-unified-gxp-traceability-and-tooling-pipeline-for-net-10-migration.md)

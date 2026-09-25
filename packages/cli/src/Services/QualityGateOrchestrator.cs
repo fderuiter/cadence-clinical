@@ -4,6 +4,8 @@ using System.IO;
 
 using Cadence.ToolingCore.OpenApi;
 
+using Cadence.ToolingCore.Services;
+
 using Spectre.Console;
 
 namespace Cadence.Cli.Services;

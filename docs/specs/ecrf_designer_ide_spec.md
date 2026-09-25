@@ -4,7 +4,7 @@
 **Target Domain:** `apps/designer`, `apps/execution`, `apps/ai_gateway`, `apps/web`, `packages/ddf`, `packages/engine_core`  
 **GxP Compliance Standards:** FDA 21 CFR Part 11, EU Annex 11, ICH GCP E6(R2), GAMP 5 Category 4 (Configured Software)  
 **Requirements Traceability:** `PRD-CRF-001`, `PRD-CRF-004`, `PRD-CRF-009`, `PRD-CRF-010`, `PRD-CRF-012`, `PRD-DDF-001`, `PRD-SYS-001`, `PRD-SYS-050`, `PRD-SYS-051`, `PRD-SYS-052`, `PRD-SYS-054`  
-**Architectural Decision Record:** [ADR-2231](docs/adr/2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
+**Architectural Decision Record:** [ADR-2231](../adr/2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md)
 
 ---
 
