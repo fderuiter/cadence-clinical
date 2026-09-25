@@ -1,4 +1,4 @@
-﻿# Clinical AI Gateway
+# Clinical AI Gateway
 
 > **Functional Domain:** `Protocol & Study Design`  
 > **Service Host Port:** `localhost:8013`  

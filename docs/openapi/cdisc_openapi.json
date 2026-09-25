@@ -18873,7 +18873,7 @@
           "CEC Adjudication"
         ],
         "summary": "Create And Package Dossier",
-        "description": "Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.\n\n@req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199",
+        "description": "Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.\n\n@req:PRD-CEC-001, @req:PRD-SYS-124, @req:PRD-ADR-2199",
         "operationId": "create_and_package_dossier_api_v1_execution_cec_dossiers_post",
         "requestBody": {
           "required": true,
@@ -19025,7 +19025,7 @@
           "CEC Adjudication"
         ],
         "summary": "Get Dossier Blinded View",
-        "description": "Retrieves a role-blinded projection of a dossier, enforcing reader isolation.\n\n@req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199",
+        "description": "Retrieves a role-blinded projection of a dossier, enforcing reader isolation.\n\n@req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-ADR-2199",
         "operationId": "get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get",
         "parameters": [
           {
@@ -19129,7 +19129,7 @@
           "CEC Adjudication"
         ],
         "summary": "Submit Reader Assessment",
-        "description": "Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.\n\n@req:PRD-CEC-002, @req:ADR-2199",
+        "description": "Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.\n\n@req:PRD-CEC-002, @req:PRD-ADR-2199",
         "operationId": "submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post",
         "parameters": [
           {
@@ -19184,7 +19184,7 @@
           "CEC Adjudication"
         ],
         "summary": "Adjudicate Chair Tie Breaker",
-        "description": "Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.\n\n@req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199",
+        "description": "Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.\n\n@req:PRD-CEC-002, @req:PRD-SYS-124, @req:PRD-ADR-2199",
         "operationId": "adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post",
         "parameters": [
           {
@@ -19501,7 +19501,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Parse Udi",
-        "description": "Parses and validates a Unique Device Identifier (UDI) barcode string.\n\nSupports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Parses and validates a Unique Device Identifier (UDI) barcode string.\n\nSupports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "parse_udi_api_v1_execution_devices_parse_udi_post",
         "requestBody": {
           "content": {
@@ -19543,7 +19543,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Register Inventory",
-        "description": "Registers serialized investigational medical device and IVD inventory items in RTSM.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Registers serialized investigational medical device and IVD inventory items in RTSM.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "register_inventory_api_v1_execution_devices_inventory_post",
         "requestBody": {
           "required": true,
@@ -19587,7 +19587,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Inventory",
-        "description": "Retrieves investigational medical device inventory matching query filters.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves investigational medical device inventory matching query filters.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_inventory_api_v1_execution_devices_inventory_get",
         "parameters": [
           {
@@ -19726,7 +19726,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Dispense",
-        "description": "Dispenses an investigational medical device to a study participant.\n\nEnforces strict quarantine and expiration blocking rules.\n\n@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Dispenses an investigational medical device to a study participant.\n\nEnforces strict quarantine and expiration blocking rules.\n\n@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "dispense_api_v1_execution_devices_dispense_post",
         "requestBody": {
           "content": {
@@ -19768,7 +19768,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Deficiency",
-        "description": "Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.\n\n@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.\n\n@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "log_deficiency_api_v1_execution_devices_deficiencies_post",
         "requestBody": {
           "required": true,
@@ -19808,7 +19808,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Deficiencies",
-        "description": "Lists reported medical device deficiencies and malfunctions for a study.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Lists reported medical device deficiencies and malfunctions for a study.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_deficiencies_api_v1_execution_devices_deficiencies_get",
         "parameters": [
           {
@@ -19893,7 +19893,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Deficiency",
-        "description": "Retrieves a single device deficiency report by ID.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves a single device deficiency report by ID.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get",
         "parameters": [
           {
@@ -19936,7 +19936,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Initiate Quarantine",
-        "description": "Manually places a device serial or lot into QUARANTINED status with dispensation blocking.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Manually places a device serial or lot into QUARANTINED status with dispensation blocking.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "initiate_quarantine_api_v1_execution_devices_quarantine_post",
         "requestBody": {
           "required": true,
@@ -19976,7 +19976,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Quarantines",
-        "description": "Lists device quarantine records for a clinical trial study.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Lists device quarantine records for a clinical trial study.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_quarantines_api_v1_execution_devices_quarantine_get",
         "parameters": [
           {
@@ -20061,7 +20061,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Release Quarantine",
-        "description": "Releases a device quarantine record under 21 CFR Part 11 electronic signature.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Releases a device quarantine record under 21 CFR Part 11 electronic signature.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "release_quarantine_api_v1_execution_devices_quarantine_release_post",
         "requestBody": {
           "content": {
@@ -20103,7 +20103,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Device Summary",
-        "description": "Retrieves operational metrics for the Medical Device & IVD Investigation console.\n\n@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves operational metrics for the Medical Device & IVD Investigation console.\n\n@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "get_device_summary_api_v1_execution_devices_summary_get",
         "parameters": [
           {
@@ -20148,7 +20148,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Lookup Gudid Endpoint",
-        "description": "Queries device specifications from the FDA AccessGUDID reference registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Queries device specifications from the FDA AccessGUDID reference registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post",
         "requestBody": {
           "content": {
@@ -20190,7 +20190,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Verify Udi Endpoint",
-        "description": "Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "verify_udi_endpoint_api_v1_execution_devices_verify_udi_post",
         "parameters": [
           {
@@ -20314,7 +20314,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Register Specimen Endpoint",
-        "description": "Registers an IVD clinical biospecimen collection in the specimen ledger.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Registers an IVD clinical biospecimen collection in the specimen ledger.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post",
         "requestBody": {
           "required": true,
@@ -20354,7 +20354,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Specimens Endpoint",
-        "description": "Lists IVD biospecimens matching query filters.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Lists IVD biospecimens matching query filters.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get",
         "parameters": [
           {
@@ -20464,7 +20464,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Specimen Endpoint",
-        "description": "Retrieves a single IVD biospecimen record with complete audit logs and history.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Retrieves a single IVD biospecimen record with complete audit logs and history.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get",
         "parameters": [
           {
@@ -20507,7 +20507,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Custody Endpoint",
-        "description": "Logs an auditable chain-of-custody transfer event for an IVD specimen.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Logs an auditable chain-of-custody transfer event for an IVD specimen.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post",
         "parameters": [
           {
@@ -20560,7 +20560,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Freeze Thaw Endpoint",
-        "description": "Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.\n\n@req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209",
+        "description": "Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.\n\n@req:PRD-SYS-188, @req:PRD-DEV-003, @req:PRD-ADR-2209",
         "operationId": "log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post",
         "parameters": [
           {
@@ -20613,7 +20613,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Sample Integrity Check Endpoint",
-        "description": "Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.\n\n@req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209",
+        "description": "Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.\n\n@req:PRD-SYS-188, @req:PRD-DEV-002, @req:PRD-ADR-2209",
         "operationId": "sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post",
         "parameters": [
           {
@@ -20666,7 +20666,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Compute Assay Performance Endpoint",
-        "description": "Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).\n\n@req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209",
+        "description": "Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).\n\n@req:PRD-SYS-188, @req:PRD-DEV-004, @req:PRD-ADR-2209",
         "operationId": "compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post",
         "requestBody": {
           "content": {
@@ -36779,7 +36779,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Register & map approved medical IoT sensor device",
-        "description": "Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "register_device_api_v1_interop_sensors_devices_post",
         "requestBody": {
           "required": true,
@@ -36819,7 +36819,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "List registered medical IoT devices",
-        "description": "List registered medical IoT sensor devices for a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "List registered medical IoT sensor devices for a clinical study.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_devices_api_v1_interop_sensors_devices_get",
         "parameters": [
           {
@@ -36918,7 +36918,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Ingest continuous biometric IoT sensor telemetry",
-        "description": "Ingest continuous time-series telemetry streams from approved medical IoT devices.\n\nApplies:\n1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping\n2. Clock drift correction between device RTC and gateway UTC\n3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas\n4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)\n5. Automated safety threshold alert evaluation\n6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse\n\n@req:PRD-DCT-002\n@req:PRD-DCT-001\n@req:ADR-2199",
+        "description": "Ingest continuous time-series telemetry streams from approved medical IoT devices.\n\nApplies:\n1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping\n2. Clock drift correction between device RTC and gateway UTC\n3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas\n4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)\n5. Automated safety threshold alert evaluation\n6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse\n\n@req:PRD-DCT-002\n@req:PRD-DCT-001\n@req:PRD-ADR-2199",
         "operationId": "ingest_telemetry_stream_api_v1_interop_sensors_ingest_post",
         "requestBody": {
           "content": {
@@ -36960,7 +36960,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Query calculated daily summary endpoints",
-        "description": "Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_daily_summaries_api_v1_interop_sensors_daily_summaries_get",
         "parameters": [
           {
@@ -37079,7 +37079,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Query automated safety threshold alerts",
-        "description": "Retrieve triggered biometric safety threshold alerts for clinical investigation.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve triggered biometric safety threshold alerts for clinical investigation.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_safety_alerts_api_v1_interop_sensors_safety_alerts_get",
         "parameters": [
           {
@@ -37196,7 +37196,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Acknowledge safety alert with electronic signature",
-        "description": "Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post",
         "parameters": [
           {
@@ -37249,7 +37249,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Get connected IoT sensor dashboard metrics",
-        "description": "Retrieve real-time IoT sensor telemetry metrics across a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve real-time IoT sensor telemetry metrics across a clinical study.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get",
         "parameters": [
           {
@@ -37292,7 +37292,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Schedule WebRTC telehealth video visit",
-        "description": "Schedule a new WebRTC telehealth video consultation session.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Schedule a new WebRTC telehealth video consultation session.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post",
         "requestBody": {
           "required": true,
@@ -37332,7 +37332,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List telehealth video consultation sessions",
-        "description": "Query scheduled and active telehealth consultation sessions.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Query scheduled and active telehealth consultation sessions.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get",
         "parameters": [
           {
@@ -37398,7 +37398,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single telehealth session details",
-        "description": "Retrieve details of a single telehealth video session by ID or room ID.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Retrieve details of a single telehealth video session by ID or room ID.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get",
         "parameters": [
           {
@@ -37441,7 +37441,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Generate HMAC-SHA256 signed room authorization token",
-        "description": "Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post",
         "parameters": [
           {
@@ -37494,7 +37494,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Exchange WebRTC session signaling message",
-        "description": "Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post",
         "parameters": [
           {
@@ -37547,7 +37547,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Synchronize eConsent interactive co-viewing state",
-        "description": "Synchronize eConsent page position, active highlights, and scroll percentage.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Synchronize eConsent page position, active highlights, and scroll percentage.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post",
         "parameters": [
           {
@@ -37600,7 +37600,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Archive GxP recording with SHA-256 digital seal (21 CFR Part 11)",
-        "description": "Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post",
         "parameters": [
           {
@@ -37653,7 +37653,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Submit tiered pediatric assent & LAR dual-signature manifest",
-        "description": "Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post",
         "requestBody": {
           "required": true,
@@ -37693,7 +37693,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List executed pediatric assents",
-        "description": "Query executed pediatric assent and LAR consent records.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Query executed pediatric assent and LAR consent records.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get",
         "parameters": [
           {
@@ -37759,7 +37759,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Verify cryptographic bundle seal of pediatric assent",
-        "description": "Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get",
         "parameters": [
           {
@@ -37802,7 +37802,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Create Direct-to-Patient (DTP) courier dispatch order",
-        "description": "Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post",
         "requestBody": {
           "required": true,
@@ -37842,7 +37842,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List Direct-to-Patient drug shipments",
-        "description": "Query DTP shipments with cold-chain indicators and tracking states.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Query DTP shipments with cold-chain indicators and tracking states.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get",
         "parameters": [
           {
@@ -37924,7 +37924,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single DTP shipment details by tracking number",
-        "description": "Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get",
         "parameters": [
           {
@@ -37967,7 +37967,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Ingest cold-chain temperature telemetry points & calculate MKT",
-        "description": "Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post",
         "parameters": [
           {
@@ -38020,7 +38020,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Record Chain of Custody (CoC) handoff event",
-        "description": "Record signed Chain of Custody handoff across depot, courier hubs, and final mile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Record signed Chain of Custody handoff across depot, courier hubs, and final mile.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post",
         "parameters": [
           {
@@ -38073,7 +38073,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Confirm final delivery with recipient signature",
-        "description": "Confirm delivery at subject residence with recipient signature and greenlight checks.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Confirm delivery at subject residence with recipient signature and greenlight checks.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post",
         "parameters": [
           {
@@ -38126,7 +38126,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Schedule decentralized in-home nursing visit",
-        "description": "Schedule visiting healthcare nurse appointment with protocol procedure tasks.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Schedule visiting healthcare nurse appointment with protocol procedure tasks.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post",
         "requestBody": {
           "required": true,
@@ -38166,7 +38166,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List in-home visiting clinician appointments",
-        "description": "Query in-home nursing visits by study, site, nurse, or subject.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Query in-home nursing visits by study, site, nurse, or subject.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "list_in_home_visits_api_v1_interop_dct_home_health_visits_get",
         "parameters": [
           {
@@ -38264,7 +38264,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single in-home visit details",
-        "description": "Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get",
         "parameters": [
           {
@@ -38307,7 +38307,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Update visiting nurse visit progress and completed procedures",
-        "description": "Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post",
         "parameters": [
           {
@@ -38360,7 +38360,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Reconcile offline-cached mobile eCRF clinical data entry",
-        "description": "Reconcile mobile eCRF clinical data entered offline by visiting nurse.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Reconcile mobile eCRF clinical data entered offline by visiting nurse.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post",
         "parameters": [
           {
@@ -38413,7 +38413,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve aggregated DCT operational metrics",
-        "description": "Retrieve real-time DCT dashboard KPI metrics for study.\n\n@req:PRD-DCT-003\n@req:PRD-DCT-004\n@req:PRD-DCT-005\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Retrieve real-time DCT dashboard KPI metrics for study.\n\n@req:PRD-DCT-003\n@req:PRD-DCT-004\n@req:PRD-DCT-005\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "get_dct_metrics_api_v1_interop_dct_metrics__study_id__get",
         "parameters": [
           {
@@ -39058,7 +39058,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Sdtm Dd Endpoint",
-        "description": "Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "description": "Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post",
         "requestBody": {
           "content": {
@@ -39100,7 +39100,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Sdtm Do Endpoint",
-        "description": "Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "description": "Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post",
         "requestBody": {
           "content": {
@@ -39142,7 +39142,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Mdr Incident Report Endpoint",
-        "description": "Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "description": "Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209",
         "operationId": "generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post",
         "requestBody": {
           "content": {
@@ -39184,7 +39184,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Export Package Endpoint",
-        "description": "Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, ADR-2209",
+        "description": "Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, PRD-ADR-2209",
         "operationId": "generate_export_package_endpoint_api_v1_interop_devices_export_package_post",
         "requestBody": {
           "content": {
@@ -50860,7 +50860,7 @@
     "/api/v1/safety/rules/evaluate": {
       "post": {
         "summary": "Evaluate Expedited Safety Rules Endpoint",
-        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, ADR-2199",
+        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, PRD-ADR-2199",
         "operationId": "evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post",
         "requestBody": {
           "content": {
@@ -51155,7 +51155,7 @@
     "/api/v1/safety/as2/transmissions": {
       "post": {
         "summary": "Send As2 Transmission Endpoint",
-        "description": "Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post",
         "requestBody": {
           "required": true,
@@ -51192,7 +51192,7 @@
       },
       "get": {
         "summary": "List As2 Transmissions Endpoint",
-        "description": "List append-only AS2 B2B transmission ledger records with optional filters.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "List append-only AS2 B2B transmission ledger records with optional filters.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get",
         "parameters": [
           {
@@ -51311,7 +51311,7 @@
     "/api/v1/safety/as2/transmissions/{id}": {
       "get": {
         "summary": "Get As2 Transmission Endpoint",
-        "description": "Retrieve full audit history and status of an AS2 B2B transmission by ID.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Retrieve full audit history and status of an AS2 B2B transmission by ID.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get",
         "parameters": [
           {
@@ -51351,7 +51351,7 @@
     "/api/v1/safety/as2/mdn": {
       "post": {
         "summary": "Process Inbound Mdn Endpoint",
-        "description": "Process an asynchronous Message Disposition Notification (MDN) callback.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Process an asynchronous Message Disposition Notification (MDN) callback.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post",
         "requestBody": {
           "content": {
@@ -51390,7 +51390,7 @@
     "/api/v1/safety/as2/ack": {
       "post": {
         "summary": "Process Regulatory Ack Endpoint",
-        "description": "Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post",
         "requestBody": {
           "content": {
@@ -51429,7 +51429,7 @@
     "/api/v1/safety/as2/transmissions/{id}/retry": {
       "post": {
         "summary": "Retry As2 Transmission Endpoint",
-        "description": "Retry a failed AS2 transmission.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Retry a failed AS2 transmission.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post",
         "parameters": [
           {
@@ -51469,7 +51469,7 @@
     "/api/v1/safety/signals/detect": {
       "post": {
         "summary": "Execute Signal Detection Scan Endpoint",
-        "description": "Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post",
         "requestBody": {
           "content": {
@@ -51508,7 +51508,7 @@
     "/api/v1/safety/signals/runs": {
       "get": {
         "summary": "List Signal Detection Runs Endpoint",
-        "description": "List historical disproportionality signal detection scan runs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "List historical disproportionality signal detection scan runs.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get",
         "parameters": [
           {
@@ -51576,7 +51576,7 @@
     "/api/v1/safety/signals/runs/{id}": {
       "get": {
         "summary": "Get Signal Detection Run Endpoint",
-        "description": "Retrieve full metric tables and details for a signal detection scan run.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Retrieve full metric tables and details for a signal detection scan run.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get",
         "parameters": [
           {
@@ -51618,7 +51618,7 @@
     "/api/v1/safety/signals/alerts": {
       "get": {
         "summary": "List Signal Alerts Endpoint",
-        "description": "List safety signal review alerts with optional filtering by status, severity, or study.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "List safety signal review alerts with optional filtering by status, severity, or study.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get",
         "parameters": [
           {
@@ -51717,7 +51717,7 @@
     "/api/v1/safety/signals/alerts/{id}": {
       "get": {
         "summary": "Get Signal Alert Endpoint",
-        "description": "Retrieve details of an individual safety signal review alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Retrieve details of an individual safety signal review alert.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get",
         "parameters": [
           {
@@ -51757,7 +51757,7 @@
     "/api/v1/safety/signals/alerts/{id}/review": {
       "post": {
         "summary": "Review Signal Alert Endpoint",
-        "description": "Review and update the clinical triage disposition of a safety signal alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Review and update the clinical triage disposition of a safety signal alert.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post",
         "parameters": [
           {
@@ -51807,7 +51807,7 @@
     "/api/v1/safety/signals/alerts/{id}/sign": {
       "post": {
         "summary": "Sign Signal Alert Endpoint",
-        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.\n\nRequirements: PRD-PVG-003, PRD-PVG-008, ADR-2199",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.\n\nRequirements: PRD-PVG-003, PRD-PVG-008, PRD-ADR-2199",
         "operationId": "sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post",
         "parameters": [
           {
@@ -51857,7 +51857,7 @@
     "/api/v1/safety/exposure/calculate": {
       "post": {
         "summary": "Calculate Subject Exposure Endpoint",
-        "description": "Calculate cumulative and interval patient-years of exposure.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Calculate cumulative and interval patient-years of exposure.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "calculate_subject_exposure_endpoint_api_v1_safety_exposure_calculate_post",
         "requestBody": {
           "content": {
@@ -51896,7 +51896,7 @@
     "/api/v1/safety/snapshots/lock": {
       "post": {
         "summary": "Lock Regulatory Snapshot Endpoint",
-        "description": "Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "lock_regulatory_snapshot_endpoint_api_v1_safety_snapshots_lock_post",
         "requestBody": {
           "content": {
@@ -51935,7 +51935,7 @@
     "/api/v1/safety/snapshots/verify": {
       "post": {
         "summary": "Verify Regulatory Snapshot Endpoint",
-        "description": "Cryptographically verify the bitwise integrity of a locked regulatory snapshot.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Cryptographically verify the bitwise integrity of a locked regulatory snapshot.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "verify_regulatory_snapshot_endpoint_api_v1_safety_snapshots_verify_post",
         "requestBody": {
           "content": {
@@ -51974,7 +51974,7 @@
     "/api/v1/safety/periodic-reports/compile": {
       "post": {
         "summary": "Compile Periodic Safety Report Endpoint",
-        "description": "Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post",
         "requestBody": {
           "content": {
@@ -52013,7 +52013,7 @@
     "/api/v1/safety/periodic-reports": {
       "get": {
         "summary": "List Periodic Safety Reports Endpoint",
-        "description": "List compiled periodic regulatory safety reports with optional filters.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "description": "List compiled periodic regulatory safety reports with optional filters.\n\nRequirements: PRD-PVG-004, PRD-ADR-2199",
         "operationId": "list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get",
         "parameters": [
           {
@@ -52112,7 +52112,7 @@
     "/api/v1/safety/periodic-reports/{id}": {
       "get": {
         "summary": "Get Periodic Safety Report Endpoint",
-        "description": "Retrieve full structured JSON payload of a periodic regulatory safety report by ID.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "description": "Retrieve full structured JSON payload of a periodic regulatory safety report by ID.\n\nRequirements: PRD-PVG-004, PRD-ADR-2199",
         "operationId": "get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get",
         "parameters": [
           {
@@ -52152,7 +52152,7 @@
     "/api/v1/safety/periodic-reports/{id}/sign": {
       "post": {
         "summary": "Sign Periodic Safety Report Endpoint",
-        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.\n\nRequirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.\n\nRequirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post",
         "parameters": [
           {
@@ -52202,7 +52202,7 @@
     "/api/v1/safety/periodic-reports/{id}/qppv-sign": {
       "post": {
         "summary": "Qppv Sign Periodic Safety Report Endpoint",
-        "description": "Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "qppv_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__qppv_sign_post",
         "parameters": [
           {
@@ -52252,7 +52252,7 @@
     "/api/v1/safety/periodic-reports/{id}/export": {
       "get": {
         "summary": "Export Periodic Safety Report Endpoint",
-        "description": "Export a periodic safety report as HTML, XML, or JSON.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Export a periodic safety report as HTML, XML, or JSON.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "export_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__export_get",
         "parameters": [
           {
@@ -52328,7 +52328,7 @@
     "/api/v1/safety/device-investigations": {
       "post": {
         "summary": "Open Device Safety Investigation Endpoint",
-        "description": "Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.\n\nCalculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209",
+        "description": "Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.\n\nCalculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post",
         "requestBody": {
           "required": true,
@@ -52365,7 +52365,7 @@
       },
       "get": {
         "summary": "List Device Safety Investigations Endpoint",
-        "description": "Lists device safety investigation cases matching query parameters.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "description": "Lists device safety investigation cases matching query parameters.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209",
         "operationId": "list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get",
         "parameters": [
           {
@@ -52464,7 +52464,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}": {
       "get": {
         "summary": "Get Device Safety Investigation Endpoint",
-        "description": "Retrieves a single device safety investigation case by ID.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "description": "Retrieves a single device safety investigation case by ID.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209",
         "operationId": "get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get",
         "parameters": [
           {
@@ -52504,7 +52504,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}/adjudicate": {
       "put": {
         "summary": "Adjudicate Device Safety Investigation Endpoint",
-        "description": "Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209",
+        "description": "Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put",
         "parameters": [
           {
@@ -52554,7 +52554,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}/regulatory-report": {
       "post": {
         "summary": "Generate Device Vigilance Report Endpoint",
-        "description": "Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "description": "Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209",
         "operationId": "generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post",
         "parameters": [
           {

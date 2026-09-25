@@ -1,4 +1,4 @@
-﻿# Blinded DICOM Adjudication
+# Blinded DICOM Adjudication
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8015`  

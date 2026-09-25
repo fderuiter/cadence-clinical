@@ -1,4 +1,4 @@
-﻿# Object Storage & FileShare Gateway
+# Object Storage & FileShare Gateway
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8018`  

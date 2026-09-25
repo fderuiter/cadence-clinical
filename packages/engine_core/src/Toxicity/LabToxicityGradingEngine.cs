@@ -26,7 +26,11 @@ public class LabToxicityGradingEngine
 
         rules["ALT"] = new ToxicityRuleDefinition
         {
-            TestCode = "ALT", TestName = "Alanine Aminotransferase", Category = ToxicityCategory.HEPATIC, Scale = "CTCAE_V5", MeddraTerm = "Alanine aminotransferase increased",
+            TestCode = "ALT",
+            TestName = "Alanine Aminotransferase",
+            Category = ToxicityCategory.HEPATIC,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Alanine aminotransferase increased",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, ">1.0 to 3.0x ULN", "ULN_MULTIPLIER", 1.0, 3.0),
@@ -38,7 +42,11 @@ public class LabToxicityGradingEngine
 
         rules["AST"] = new ToxicityRuleDefinition
         {
-            TestCode = "AST", TestName = "Aspartate Aminotransferase", Category = ToxicityCategory.HEPATIC, Scale = "CTCAE_V5", MeddraTerm = "Aspartate aminotransferase increased",
+            TestCode = "AST",
+            TestName = "Aspartate Aminotransferase",
+            Category = ToxicityCategory.HEPATIC,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Aspartate aminotransferase increased",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, ">1.0 to 3.0x ULN", "ULN_MULTIPLIER", 1.0, 3.0),
@@ -50,7 +58,11 @@ public class LabToxicityGradingEngine
 
         rules["BILIRUBIN"] = new ToxicityRuleDefinition
         {
-            TestCode = "BILIRUBIN", TestName = "Total Bilirubin", Category = ToxicityCategory.HEPATIC, Scale = "CTCAE_V5", MeddraTerm = "Blood bilirubin increased",
+            TestCode = "BILIRUBIN",
+            TestName = "Total Bilirubin",
+            Category = ToxicityCategory.HEPATIC,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Blood bilirubin increased",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, ">1.0 to 1.5x ULN", "ULN_MULTIPLIER", 1.0, 1.5),
@@ -62,7 +74,11 @@ public class LabToxicityGradingEngine
 
         rules["CREATININE"] = new ToxicityRuleDefinition
         {
-            TestCode = "CREATININE", TestName = "Serum Creatinine", Category = ToxicityCategory.RENAL, Scale = "CTCAE_V5", MeddraTerm = "Blood creatinine increased",
+            TestCode = "CREATININE",
+            TestName = "Serum Creatinine",
+            Category = ToxicityCategory.RENAL,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Blood creatinine increased",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, ">1.0 to 1.5x ULN", "ULN_MULTIPLIER", 1.0, 1.5),
@@ -74,7 +90,11 @@ public class LabToxicityGradingEngine
 
         rules["PLATELETS"] = new ToxicityRuleDefinition
         {
-            TestCode = "PLATELETS", TestName = "Platelet Count", Category = ToxicityCategory.HEMATOLOGY, Scale = "CTCAE_V5", MeddraTerm = "Platelet count decreased",
+            TestCode = "PLATELETS",
+            TestName = "Platelet Count",
+            Category = ToxicityCategory.HEMATOLOGY,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Platelet count decreased",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, "<LLN - 75,000/mm3", "ABSOLUTE_RANGE", MinValue: 75000, MaxValue: 150000),
@@ -86,7 +106,11 @@ public class LabToxicityGradingEngine
 
         rules["POTASSIUM_LOW"] = new ToxicityRuleDefinition
         {
-            TestCode = "POTASSIUM_LOW", TestName = "Potassium (Hypokalemia)", Category = ToxicityCategory.ELECTROLYTES, Scale = "CTCAE_V5", MeddraTerm = "Hypokalaemia",
+            TestCode = "POTASSIUM_LOW",
+            TestName = "Potassium (Hypokalemia)",
+            Category = ToxicityCategory.ELECTROLYTES,
+            Scale = "CTCAE_V5",
+            MeddraTerm = "Hypokalaemia",
             Grades = new List<GradeCutoff>
             {
                 new(CTCAEGrade.GRADE_1, "<LLN - 3.0 mmol/L", "ABSOLUTE_RANGE", MinValue: 3.0, MaxValue: 3.5),

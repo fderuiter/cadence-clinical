@@ -1,4 +1,4 @@
-﻿# Organization Directory
+# Organization Directory
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8008`  

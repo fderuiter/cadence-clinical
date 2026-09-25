@@ -1,4 +1,4 @@
-﻿# Quality & CAPA Management
+# Quality & CAPA Management
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8006`  
