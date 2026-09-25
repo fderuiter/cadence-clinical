@@ -275,7 +275,8 @@ public static class AdrValidatorService
         var architecturalChanges = changedFiles.Where(IsArchitecturalFile).ToList();
         if (architecturalChanges.Count == 0) return true;
 
-        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && File.Exists(f));
+        string repoRoot = FindRepoRoot();
+        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && File.Exists(Path.Combine(repoRoot, f)));
         if (!newAdrAdded)
         {
             AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.[/]");

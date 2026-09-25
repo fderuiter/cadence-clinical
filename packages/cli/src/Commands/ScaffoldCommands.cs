@@ -35,6 +35,14 @@ public class ScaffoldAdrCommand : Command<ScaffoldAdrCommand.Settings>
     public override int Execute(CommandContext context, Settings settings)
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {settings.Title}[/]");
-        return 0;
+        string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
+        var psi = new ProcessStartInfo("python3", $"\"{Path.Combine(repoRoot, "scripts", "create_adr.py")}\" --title \"{settings.Title}\" --domain devops-ci")
+        {
+            WorkingDirectory = repoRoot,
+            UseShellExecute = false
+        };
+        using var p = Process.Start(psi);
+        p?.WaitForExit();
+        return p?.ExitCode ?? 0;
     }
 }

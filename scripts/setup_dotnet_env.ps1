@@ -93,6 +93,13 @@ foreach ($tool in $tools) {
     }
 }
 
+$toolsDir = Join-Path $env:USERPROFILE ".dotnet\tools"
+if (-not (Test-Path $toolsDir)) { New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null }
+$cmdPath = Join-Path $toolsDir "dotnet-cadence.cmd"
+$cmdContent = "@echo off`r`ndotnet run --project `"$PSScriptRoot\..\packages\cli\src\Cadence.Cli.csproj`" -- %*"
+Set-Content -Path $cmdPath -Value $cmdContent -Encoding ASCII
+Write-Host "  [OK] dotnet cadence CLI wrapper configured." -ForegroundColor Green
+
 # 3. Development HTTPS certificates
 Write-Host "`n[3/5] Configuring HTTPS Development Certificates..." -ForegroundColor Yellow
 if (-not $SkipCertTrust) {
