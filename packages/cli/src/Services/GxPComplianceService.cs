@@ -1,6 +1,6 @@
 using System;
 
-using Cadence.Compliance;
+using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
 
@@ -12,17 +12,11 @@ public static class GxPComplianceService
     {
         AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");
 
-        int exitCode = RtmGeneratorService.GenerateRtm(
-            outputDir: "docs/SDLC",
-            reportPath: "report_dotnet.trx",
-            draft: dryRun,
-            validateOnly: dryRun
-        );
-
-        if (exitCode != 0)
+        int res = SyncGxPService.SyncCompliance(dryRun, commit);
+        if (res != 0)
         {
             AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
-            return exitCode;
+            return res;
         }
 
         AnsiConsole.MarkupLine("\n[bold green]GxP Compliance Synchronization Complete.[/]");

@@ -434,9 +434,7 @@ jobs:
       - name: Run backend unit tests and stack-aware coverage
         id: run_tests
         if: always()
-        env:
-          TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run python scripts/evaluate_coverage.py
+        run: dotnet test Cadence.sln
 
       - name: Upload unit test report
         if: always()
@@ -774,7 +772,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge JUnit XML Reports
-        run: uv run python scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
       - name: Generate Compliance Reports
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync

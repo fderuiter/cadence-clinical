@@ -35,6 +35,39 @@ public static class Program
             config.AddCommand<FixCommand>("fix")
                 .WithDescription("Executes self-healing auto-formatting and ADR validation pipeline");
 
+            config.AddCommand<DetectDuplicationCommand>("detect-duplication");
+            config.AddCommand<ValidateImportsCommand>("validate-imports");
+            config.AddCommand<ValidateDependenciesCommand>("validate-dependencies");
+            config.AddCommand<ValidatePathPatternsCommand>("validate-path-patterns");
+            config.AddCommand<ValidateReadmesCommand>("validate-readmes");
+            config.AddCommand<ValidateCodeownersCommand>("validate-codeowners");
+            config.AddCommand<ValidateMarkdownCommand>("validate-markdown");
+            config.AddCommand<QueryLinterCommand>("query-linter");
+            config.AddCommand<ExtractEnvVarsCommand>("extract-env-vars");
+            config.AddCommand<VerifyContractsCommand>("verify-contracts");
+            config.AddCommand<AuditSecurityCommand>("audit-security");
+            config.AddCommand<ValidateVulnerabilitiesCommand>("validate-vulnerabilities");
+            config.AddCommand<CleanSecretsBaselineCommand>("clean-secrets-baseline");
+            config.AddCommand<ValidateArchitectureDriftCommand>("validate-architecture-drift");
+            config.AddCommand<SyncOpenApiSpecCommand>("sync-openapi-spec");
+            config.AddCommand<ValidateOpenApiDriftCommand>("validate-openapi-drift");
+            config.AddCommand<GenerateApiDocsCommand>("generate-api-docs");
+            config.AddCommand<GenerateSchemaDocCommand>("generate-schema-doc");
+            config.AddCommand<PreCommitOpenApiCommand>("pre-commit-openapi");
+            config.AddCommand<PreCommitSchemaDocCommand>("pre-commit-schema-doc");
+            config.AddCommand<ValidateApiClientsCommand>("validate-api-clients");
+            config.AddCommand<GenerateCliDocsCommand>("generate-cli-docs");
+            config.AddCommand<GenerateRtmCommand>("generate-rtm");
+            config.AddCommand<ComplianceUtilityCommand>("compliance-utility");
+            config.AddCommand<VerifyGxPSignaturesCommand>("verify-gxp-signatures");
+            config.AddCommand<SyncGithubProjectCommand>("sync-github-project");
+            config.AddCommand<SyncRulesetCommand>("sync-ruleset");
+            config.AddCommand<PostPrCommentCommand>("post-pr-comment");
+            config.AddCommand<RemoveJulesLabelsCommand>("remove-jules-labels");
+            config.AddCommand<CleanTestDbsCommand>("clean-test-dbs");
+            config.AddCommand<CheckPortsCommand>("check-ports");
+            config.AddCommand<RunGatingPipelineCommand>("run-gating-pipeline");
+
             config.AddBranch("gxp", gxp =>
             {
                 gxp.AddCommand<GxPSyncCommand>("sync")
