@@ -48,22 +48,10 @@ aioitertools             0.13.0
 aiosignal                1.4.0
 aiosmtplib               5.1.2
 aiosqlite                0.22.1
-alembic                  1.18.5
+alembic                  1.20.0
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
-apps-ai-gateway          0.1.0
-apps-ctms                0.1.0
-apps-econsent            0.1.0
-apps-eisf                0.1.0
-apps-etmf                0.1.0
-apps-interop             0.1.0
-apps-notifications       0.1.0
-apps-org                 0.1.0
-apps-payments            0.1.0
-apps-quality             0.1.0
-apps-safety              0.1.0
-apps-tickets             0.1.0
 asgiref                  3.12.1
 ast-serialize            0.8.0
 asyncpg                  0.31.0
@@ -75,12 +63,9 @@ boolean-py               5.0
 boto3                    1.40.61
 botocore                 1.40.61
 brotli                   1.2.0
-brotlicffi               1.2.0.1
+brotlicffi               1.2.0.2
 cachecontrol             0.14.4
 cadence-clinical         0.1.0       /app
-cadence-fileshare        0.1.0
-cadence-imaging          0.1.0
-cadence-knowledge        0.1.0
 certifi                  2026.7.22
 cffi                     2.1.0
 cfgv                     3.5.0
@@ -89,7 +74,7 @@ click                    8.4.2
 colorama                 0.4.6
 coverage                 7.15.2
 cryptography             50.0.1
-cssselect2               0.9.0
+cssselect2               0.10.1
 cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
@@ -103,14 +88,14 @@ execnet                  2.1.2
 fastapi                  0.139.2
 fastuuid                 0.14.0
 filelock                 3.32.0
-fonttools                4.63.0
+fonttools                4.66.0
 frozenlist               1.8.0
 fsspec                   2026.7.0
-google-api-core          2.34.0
-google-api-python-client 2.199.0
-google-auth              2.56.3
-google-auth-httplib2     0.4.1
-googleapis-common-protos 1.75.1
+google-api-core          2.38.0
+google-api-python-client 2.200.0
+google-auth              2.58.0
+google-auth-httplib2     0.4.2
+googleapis-common-protos 1.75.3
 greenlet                 3.5.4
 h11                      0.16.0
 hf-xet                   1.6.0
@@ -131,8 +116,8 @@ jsonschema-specifications 2025.9.1
 librt                    0.15.0
 license-expression       30.4.4
 litellm                  1.97.0
-lxml                     6.1.1
-mako                     1.3.12
+lxml                     6.1.3
+mako                     1.4.3
 markdown-it-py           4.2.0
 markupsafe               3.0.3
 mdurl                    0.1.2
@@ -140,7 +125,7 @@ msgpack                  1.2.1
 multidict                6.7.1
 mypy                     2.3.0
 mypy-extensions          1.1.0
-neo4j                    6.2.0
+neo4j                    6.3.1
 nodeenv                  1.10.0
 numpy                    2.5.1
 openai                   2.54.0
@@ -155,7 +140,7 @@ opentelemetry-semantic-conventions 0.65b0
 opentelemetry-util-http  0.65b0
 packageurl-python        0.17.6
 packaging                26.2
-pandas                   3.0.3
+pandas                   3.0.6
 pathspec                 1.1.1
 pillow                   12.3.0
 pip                      26.2
@@ -167,8 +152,8 @@ playwright               1.61.0
 pluggy                   1.6.0
 pre-commit               4.6.1
 propcache                0.5.2
-proto-plus               1.28.3
-protobuf                 7.36.0
+proto-plus               1.28.4
+protobuf                 7.36.2
 py-serializable          2.1.0
 pyasn1                   0.6.4
 pyasn1-modules           0.4.2
@@ -182,7 +167,7 @@ pyee                     13.0.1
 pygments                 2.20.0
 pymupdf                  1.28.0
 pyparsing                3.3.2
-pyphen                   0.17.2
+pyphen                   0.18.1
 pytest                   9.1.1
 pytest-archon            0.0.7
 pytest-asyncio           1.4.0
@@ -197,9 +182,9 @@ python-dotenv            1.2.2
 python-jose              3.5.0
 python-multipart         0.0.32
 python-slugify           8.0.4
-pytz                     2026.2
+pytz                     2026.4
 pyyaml                   6.0.3
-rapidfuzz                3.14.5
+rapidfuzz                3.14.6
 redis                    8.1.0
 referencing              0.37.0
 regex                    2026.7.19
@@ -213,7 +198,7 @@ shellingham              1.5.4
 six                      1.17.0
 sniffio                  1.3.1
 sortedcontainers         2.4.0
-soupsieve                2.9.1
+soupsieve                2.10
 sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.6.0
@@ -226,20 +211,20 @@ tokenizers               0.23.1
 tomli                    2.4.1
 tomli-w                  1.2.0
 tqdm                     4.70.0
-typer                    0.27.1
+typer                    0.27.2
 typing-extensions        4.16.0
 typing-inspection        0.4.2
-tzdata                   2026.3
+tzdata                   2026.4
 uritemplate              4.2.0
 urllib3                  2.7.0
 usdm                     0.67.0
-uvicorn                  0.51.0
+uvicorn                  0.52.4
 uvloop                   0.22.1
 virtualenv               21.7.0
-watchfiles               1.2.0
+watchfiles               1.3.0
 weasyprint               70.0
-webencodings             0.5.1
-websockets               16.1.1
+webencodings             0.6.1
+websockets               17.1
 wrapt                    1.17.3
 yarl                     1.24.5
 yattag                   1.16.1
@@ -2557,28 +2542,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** d00b0c71adb0e80369a5b5aaec22d5fcceb17ffa71ff58612cd0c265f39ad0bf
+- **Cryptographic Hash (SHA-256):** f287a5accb8ef238f91b280346ea5542a58a87c8a4be9fd7e7de285c213a5fbe
 
 -----BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUQVTVWJcKg5cQ8idOra2S1cNILEowDQYJKoZIhvcNAQEL
+MIIDTjCCAjagAwIBAgIUJmGmmEacgLUeTNQsAyzmtj2jN2EwDQYJKoZIhvcNAQEL
 BQAwYTE7MDkGA1UEAwwyQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNh
 ZGVuY2UtZ3hwLXJ1bm5lcikxIjAgBgNVBAoMGUNhZGVuY2UgQ2xpbmljYWwgU29m
-dHdhcmUwHhcNMjYwOTIzMTUwNzE3WhcNMjcwOTI0MTUwNzE3WjBhMTswOQYDVQQD
+dHdhcmUwHhcNMjYwOTI0MTQyNDMwWhcNMjcwOTI1MTQyNDMwWjBhMTswOQYDVQQD
 DDJDYWRlbmNlIEd4UCBWYWxpZGF0aW9uIFJ1bm5lciAoY2FkZW5jZS1neHAtcnVu
 bmVyKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTCCASIwDQYJ
-KoZIhvcNAQEBBQADggEPADCCAQoCggEBAL6YAZXnqSlBaewxlaMNm0szPWQN8TJ5
-c7Bgc35psSoUab4ayKCJBInlNfhCq0ed2h03f4GzHf1vJqs1uGPqViKXAfYrQXZa
-SEpBd1gM/MW+2vyIe7e6iCCmtkn57OB+57CZpGLnRb1WY/4s3dv+JdEMyyA/X9GW
-hB869qP8nGZAO/iY2OYfbJsX2GxDchTZi2EYEwkPoSBB++bbQt1dxF1gsTz0PcsC
-DBw6mNbHJIxZCUMyMftNtRxKhYM1/st9qFbGXfN6XbXogal/08uSlYKqxlQ/iblr
-gDPbCxphfa0GF9sA2kOfXF8tOU/tXM9Ua5eHCXTGnji0gXtVi48TvfECAwEAATAN
-BgkqhkiG9w0BAQsFAAOCAQEAlAqaEetUHDqn/A+bf3DcFMc6zz28zdsZ2CYgCwl+
-gtQXi1kujVKqwjST52OUH67gyWTfTTG3Zv0oUkmDESOFfSpNzVgfbv2kbEehDfDu
-ToXm+4UQ4PsX9o4Hv86aQhO9WxEDTzQ4LzcLeJZ8JjbTHd2AA80x96/+4/HhNo5i
-SeXWE3cLpzb6FRvrv+kk9eK2EUVbBw5x/6kFzy6aaMlD+cgZtwp633oXkIfxtqyp
-0uAV7F/H9WkTk0sxrIV+/+pzJGY5ZXFFSR6Glct/uwb9TEpdpywh/uHb9sNrmxRA
-wywZ76vTcpIbRvk+K401v0qwmGD6TKbRc06hOoy629hsRg==
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAJhpGbjxgEdEa5/Dn8e4FZ0pTCdNHhgo
+c2IlH/Efz7RdS7gsCgdN04vnvgVsR2ohYmtvRnZNG7PF+Yvx02hUK6qQvRAUj9qE
+aoGxCrjuOYkDa6k1WMSNgYThPKd+BSMQLSwVaX+eylIO16hilSVqnwTy1JKo0fJg
+pgL514kZPLIqR7+pfegPEpIEWKbOhy1CRdw3emn+YpolHFMuH8sK+W2/kv41/Rip
+faVAYRswFe3TzzKkwsWnQpPx/yVy6RUXP7+PpaBUjE3pJUk5X+ajH6z3i4UlYbR/
+vMTE110Ko5Z0GQdIcvshh0wvsz8dTL+e8a6D3feTW6g6Q2HywRwo4zkCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAOKUL7UqWis0OL0iKEStSrt51yuVXLUxkFv4TviAq
+Dc/uCZNhC9CxNOpSWHZMybZylA2pcjhOAkW5pvRriwrBGtG8R7Phxy5BdGqxH8DW
+2lNSxpd/I/wKIvKqnD301K4LO45oN0PEQcJNZ4ymL4zgCXV5Xkgnoy59L63McwI3
+0YIKjadUyyZOPhtWcFZ8XzYzbl75RNXP0z7dg1+xoZeqiZ7zIKDrY+hzgvxGyiXF
+rkBgQ4KYVIiMZT3Riei0Q9BNGG+XSfc7OLhG/vqbjRbsHA6ZzAxPFYIbdKcRNtAq
+XV9c+AE4LhtaIzV3o0M6DuV3VEal5X0LSdv0qnb8zlEe5w==
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-AJrKLzKalibAH3OVRMt/04Z0lCIpNiLjjotH7r3qPIc4FNUkz/ZiY3EngEQyxMAl3yEtig8vtP1Wlp+Qm523S0/IF3nd9J7UzwNrzsCYVPBUAd8Sc8AbGQUBdmW19epZMBA4RbhPKLQxOVeb21Guix8SWiZLh0xmub8YWC471UEaSgHleeGcFMMv8e07XUsFhILJl735zDtmhpZASFyx16QY2hszsD8pq+FEsB+4K+8AuPuc3Cr8b24Z2e+ydhMBq4GFwzD3avIkMPCN82XnXYogplh/vdlRPgnUN5RHwUxJSPEMv6WwPM5Es4UUd1sV9N/o1EXSgcn6yeYI9Y+UJw==
+VemICHICU9I5jIhpuboPY1XTrLx9Tjt38wfNJfbDS4HzTs5DdTzYWsSBYEmadsi0b18z2mzsDTjCGDuN+ba+uR1Vtt3bkPHeDbXc099Cz9/NVvZSFq+XFoMw0qKoQX3CSiuQStUeyjJMVvT8U12eMK75a29lh26fX7KPh92rxu6J7McS8LfSlJwlRX49dq+fKGpCPwyazZ8TSuSFk1qzxpAD/36ZYKLPHMEE05JDgI7JxN8MNhlwgad3rQft1DNakY9HvM5ITIYYBkAU73DuRhAlAV7fpR/o6HHh6sdUUg51zmddGEu5qFfo+eHNt+b1fz4CpEBxHvkfUq21ENS8rA==
 -----END SIGNATURE-----

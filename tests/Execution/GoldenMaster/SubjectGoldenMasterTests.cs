@@ -137,7 +137,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     /// why this connection is a dedicated anchor rather than the one <see cref="ExecutionDbContext"/> instances
     /// actually query through.
     /// </summary>
-    private sealed record TestApi(WebApplicationFactory<Program> Factory, SqliteConnection Connection);
+    private sealed record TestApi(WebApplicationFactory<Cadence.Apps.Execution.Program> Factory, SqliteConnection Connection);
 
     /// <summary>
     /// Caches the built <see cref="TestApi"/> per shared <see cref="ExecutionApiFactory"/> instance (reference
@@ -187,7 +187,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         }
     }
 
-    private readonly WebApplicationFactory<Program> _testApi;
+    private readonly WebApplicationFactory<Cadence.Apps.Execution.Program> _testApi;
 
     public SubjectGoldenMasterTests(ExecutionApiFactory factory) =>
         _testApi = TestApiCache.GetOrAdd(factory, f => new Lazy<TestApi>(() => BuildTestApi(f))).Value.Factory;
@@ -268,7 +268,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         var anchorConnection = new SqliteConnection(connectionString);
         anchorConnection.Open();
 
-        WebApplicationFactory<Program> derived = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        WebApplicationFactory<Cadence.Apps.Execution.Program> derived = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
             services.Configure<DemographicsEncryptionOptions>(o => o.KeyBase64 = TestEncryptionKeyBase64);
             services.AddLogging(b => b.AddProvider(new DiagnosticLoggerProvider()));

@@ -317,12 +317,12 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     /// <see cref="FakeSiteComplianceApplicationService"/>, independent of `Program.cs`'s own composition
     /// root -- matching <c>SubjectEndpointsRoutingTests.SubjectEndpointsTestFactory</c>'s exact approach
     /// (`MIG-SUBJ-023`), so these tests remain true routing/filter-wiring tests of this ticket's own surface.
-    /// <see cref="Program"/> is used purely as <see cref="WebApplicationFactory{TEntryPoint}"/>'s required
+    /// <see cref="Cadence.Apps.Execution.Program"/> is used purely as <see cref="WebApplicationFactory{TEntryPoint}"/>'s required
     /// marker/content-root-inference type. The REAL composition root (every DI registration this ticket adds
     /// to `Program.cs`) is instead exercised by <see cref="ExecutionProgramStartupTests"/> below, in this
     /// same file, per this ticket's own "dedicated startup smoke test" requirement.
     /// </summary>
-    private sealed class SiteComplianceEndpointsTestFactory : WebApplicationFactory<Program>
+    private sealed class SiteComplianceEndpointsTestFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
     {
         public FakeSiteComplianceApplicationService Service { get; } = new();
 
@@ -512,14 +512,14 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     /// <summary>
-    /// Wraps the REAL <see cref="Program"/> composition root, overriding only
+    /// Wraps the REAL <see cref="Cadence.Apps.Execution.Program"/> composition root, overriding only
     /// <see cref="ExecutionDbContext"/>'s underlying provider (Npgsql -&gt; a uniquely-named
     /// <c>Microsoft.EntityFrameworkCore.InMemory</c> database per factory instance) -- see this class's own
     /// remarks for why a dedicated internal service provider, not just a swapped <c>UseXxx(...)</c> call, is
     /// required to make this override actually work. Every other registration `Program.cs` makes
     /// (MassTransit's `UsingInMemory` transport included) is left completely untouched.
     /// </summary>
-    private sealed class ExecutionProgramTestFactory : WebApplicationFactory<Program>
+    private sealed class ExecutionProgramTestFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
     {
         public static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
