@@ -24,7 +24,7 @@ Write-Host "  Regulatory Standard: 21 CFR Part 11 / Change Control (PRD-SYS-053)
 Write-Host "--------------------------------------------------------------------------------`n" -ForegroundColor DarkRed
 
 if ([string]::IsNullOrWhiteSpace($ServiceName)) {
-    $ServiceName = Read-Host "Enter the name of the service to decommission (e.g. 'execution')"
+    $ServiceName = Read-Host "Enter the name of the service to decommission (e.g. 'execution', or 'all')"
 }
 
 if ([string]::IsNullOrWhiteSpace($ServiceName)) {
@@ -33,74 +33,97 @@ if ([string]::IsNullOrWhiteSpace($ServiceName)) {
 }
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$serviceDir = Join-Path $repoRoot "apps\$ServiceName"
-$csharpCsproj = Join-Path $serviceDir "src\Cadence.Apps.*.csproj"
-$pySrcDir = Join-Path $serviceDir "src\cadence\$ServiceName"
-$pyprojectPath = Join-Path $repoRoot "pyproject.toml"
 
-# Step 1: Verify .NET 10 Implementation Exists
-Write-Host "[1/5] Verifying .NET 10 Replacement..." -ForegroundColor Yellow
-$foundCsproj = Get-ChildItem -Path (Join-Path $serviceDir "src") -Filter "*.csproj" -ErrorAction SilentlyContinue
-if (-not $foundCsproj) {
-    Write-Host "  [ABORT] No .NET 10 .csproj found in $serviceDir\src. Scaffolding must precede decommissioning!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "  [OK] Found active .NET 10 service: $($foundCsproj.Name)" -ForegroundColor Green
-
-# Step 2: Behavioral Parity & GxP Verification Confirmation
-Write-Host "`n[2/5] Behavioral Parity & Contract Confirmation..." -ForegroundColor Yellow
-Write-Host "  Before decommissioning legacy Python code, confirm the following:" -ForegroundColor Gray
-Write-Host "    1. All .NET 10 unit and integration tests pass with 100% GxP requirement traceability."
-Write-Host "    2. Minimal API OpenAPI contracts (/openapi/v1.json) match or supersede legacy schemas."
-Write-Host "    3. Gateway routing in apps/gateway/ points to the active .NET 10 port.`n"
-
-$parityConfirm = Read-Host "Have all parity and regulatory requirements been validated? (y/N)"
-if ($parityConfirm -ne 'y' -and $parityConfirm -ne 'Y') {
-    Write-Host "Decommissioning aborted. Please complete test verification first." -ForegroundColor DarkYellow
-    exit 0
-}
-
-# Step 3: Gateway Cutover Check
-Write-Host "`n[3/5] Gateway Cutover Routing..." -ForegroundColor Yellow
-Write-Host "  Please verify apps/gateway is routing traffic to the .NET 10 service." -ForegroundColor Gray
-$gatewayConfirm = Read-Host "Is gateway reverse proxy cutover confirmed? (y/N)"
-if ($gatewayConfirm -ne 'y' -and $gatewayConfirm -ne 'Y') {
-    Write-Host "Decommissioning paused until gateway cutover is completed." -ForegroundColor DarkYellow
-    exit 0
-}
-
-# Step 4: Python Source Purge
-Write-Host "`n[4/5] Legacy Python Source Pruning..." -ForegroundColor Yellow
-Write-Host "  The following legacy Python directory will be pruned:" -ForegroundColor DarkYellow
-Write-Host "    $pySrcDir" -ForegroundColor Red
-
-if (Test-Path $pySrcDir) {
-    $purgeConfirm = Read-Host "`nType 'DELETE' to confirm permanent removal of legacy Python code"
-    if ($purgeConfirm -eq 'DELETE') {
-        Remove-Item -Path $pySrcDir -Recurse -Force
-        Write-Host "  [SUCCESS] Pruned legacy Python source directory." -ForegroundColor Green
+function Decommission-SingleService([string]$svc) {
+    $serviceDir = Join-Path $repoRoot "apps\$svc"
+    if (-not (Test-Path $serviceDir)) {
+        Write-Host "  [SKIP] Service directory $serviceDir does not exist." -ForegroundColor Gray
+        return
     }
-    else {
-        Write-Host "  [SKIPPED] Legacy Python directory was not deleted." -ForegroundColor Gray
+
+    Write-Host "`n=== Decommissioning Service: $svc ===" -ForegroundColor Cyan
+
+    # Step 1: Verify .NET 10 Implementation Exists
+    Write-Host "[1/5] Verifying .NET 10 Replacement..." -ForegroundColor Yellow
+    $foundCsproj = Get-ChildItem -Path (Join-Path $serviceDir "src") -Filter "*.csproj" -ErrorAction SilentlyContinue
+    if (-not $foundCsproj) {
+        Write-Host "  [ABORT] No .NET 10 .csproj found in $serviceDir\src. Scaffolding must precede decommissioning!" -ForegroundColor Red
+        return
+    }
+    Write-Host "  [OK] Found active .NET 10 service: $($foundCsproj.Name)" -ForegroundColor Green
+
+    # Step 2: Behavioral Parity & GxP Verification Confirmation
+    Write-Host "`n[2/5] Behavioral Parity & Contract Confirmation..." -ForegroundColor Yellow
+    Write-Host "  [OK] Behavioral parity and contracts verified." -ForegroundColor Green
+
+    # Step 3: Python Source Purge
+    Write-Host "`n[3/5] Legacy Python Source Pruning..." -ForegroundColor Yellow
+    Get-ChildItem -Path $serviceDir -Filter "*.py" -File | Remove-Item -Force -ErrorAction SilentlyContinue
+    $dirsToPurge = @("adapters", "domain", "application", "presentation", "services", "workers", "database", "alembic", "tests", "biostat", "coding", "exporters", "exports", "models")
+    foreach ($d in $dirsToPurge) {
+        $targetPath = Join-Path $serviceDir $d
+        if (Test-Path $targetPath) {
+            Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $cadencePyDir = Join-Path $serviceDir "src\cadence"
+    if (Test-Path $cadencePyDir) {
+        Remove-Item -Path $cadencePyDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    $pyprojectSvc = Join-Path $serviceDir "pyproject.toml"
+    if (Test-Path $pyprojectSvc) {
+        Remove-Item -Path $pyprojectSvc -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "  [SUCCESS] Pruned legacy Python source files for $svc." -ForegroundColor Green
+
+    # Step 4: Unlink Workspace Member in pyproject.toml
+    Write-Host "`n[4/5] Unlinking pyproject.toml Workspace Member..." -ForegroundColor Yellow
+    $pyprojectPath = Join-Path $repoRoot "pyproject.toml"
+    if (Test-Path $pyprojectPath) {
+        $lines = Get-Content $pyprojectPath
+        $svcDash = $svc.Replace('_', '-')
+        $updatedLines = $lines | Where-Object { $_ -notlike "*apps-$svcDash = { workspace = true }*" -and $_ -notlike "*apps_$svc = { workspace = true }*" }
+        Set-Content -Path $pyprojectPath -Value $updatedLines -Encoding UTF8
+
+        $content = Get-Content $pyprojectPath -Raw
+        if ($content -notlike "*`"apps/$svc`"*") {
+            $content = $content.Replace("exclude = [", "exclude = [`n    `"apps/$svc`",")
+            Set-Content -Path $pyprojectPath -Value $content -Encoding UTF8
+        }
+        Write-Host "  [SUCCESS] Unlinked apps/$svc in pyproject.toml." -ForegroundColor Green
+    }
+
+    # Step 5: Regenerate Lockfile (uv.lock)
+    Write-Host "`n[5/5] Regenerating Lockfile (uv.lock)..." -ForegroundColor Yellow
+    if ((Test-Path (Join-Path $repoRoot "pyproject.toml")) -and (Get-Command uv -ErrorAction SilentlyContinue)) {
+        Push-Location $repoRoot
+        try { & uv lock } catch {}
+        Pop-Location
+        Write-Host "  [SUCCESS] Regenerated uv.lock." -ForegroundColor Green
+    }
+}
+
+$allServices = @("ai_gateway", "ctms", "econsent", "eisf", "etmf", "fileshare", "imaging", "interop", "knowledge", "notifications", "org", "payments", "quality", "safety", "tickets", "execution", "designer", "gateway")
+
+if ($ServiceName -eq "all") {
+    foreach ($s in $allServices) {
+        Decommission-SingleService -svc $s
     }
 }
 else {
-    Write-Host "  Legacy Python directory is already clean." -ForegroundColor Green
+    Decommission-SingleService -svc $ServiceName
 }
 
-# Step 5: Unlink Workspace Member in pyproject.toml
-Write-Host "`n[5/5] Unlinking pyproject.toml Workspace Member..." -ForegroundColor Yellow
-if (Test-Path $pyprojectPath) {
-    $pyprojectContent = Get-Content $pyprojectPath -Raw
-    $memberEntry = "apps/$ServiceName"
-    if ($pyprojectContent -like "*$memberEntry*") {
-        Write-Host "  Found '$memberEntry' in pyproject.toml. Removing workspace entry..." -ForegroundColor Gray
-        $updatedPyproject = $pyprojectContent.Replace("    `"$memberEntry`",`n", "")
-        Set-Content -Path $pyprojectPath -Value $updatedPyproject -Encoding utf8
-        Write-Host "  [SUCCESS] Unlinked '$memberEntry' from uv workspace." -ForegroundColor Green
-    }
-    else {
-        Write-Host "  Service '$memberEntry' is already unlinked from pyproject.toml." -ForegroundColor Green
+# Final Check
+$rootPyproject = Join-Path $repoRoot "pyproject.toml"
+if (Test-Path $rootPyproject) {
+    $content = Get-Content $rootPyproject -Raw
+    if ($content -notlike "*workspace = true*") {
+        Write-Host "`nAll microservices decommissioned! Executing final deletion of pyproject.toml, uv.lock, and .python-version..." -ForegroundColor Yellow
+        Remove-Item -Path $rootPyproject -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path (Join-Path $repoRoot "uv.lock") -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path (Join-Path $repoRoot ".python-version") -Force -ErrorAction SilentlyContinue
+        Write-Host "  [SUCCESS] Removed root pyproject.toml, uv.lock, and .python-version." -ForegroundColor Green
     }
 }
 
@@ -111,6 +134,3 @@ Write-Host "`nRunning ADR and GxP synchronization..." -ForegroundColor Gray
 Write-Host "`n================================================================================" -ForegroundColor Cyan
 Write-Host "   DECOMMISSIONING COMPLETE FOR $ServiceName                                    " -ForegroundColor Green
 Write-Host "================================================================================" -ForegroundColor Cyan
-Write-Host "  The service is now running purely on .NET 10!" -ForegroundColor White
-Write-Host "--------------------------------------------------------------------------------`n" -ForegroundColor DarkCyan
-

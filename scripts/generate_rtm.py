@@ -759,7 +759,7 @@ def get_installed_packages():
     # and their exact versions directly from the checked-in `uv.lock` file.
     lock_path = "uv.lock"
     if not os.path.exists(lock_path):
-        return "uv.lock not found."
+        return ".NET 10 Platform Dependencies (Python toolchain decommissioned)\n"
 
     with open(lock_path, encoding="utf-8") as f:
         content = f.read()

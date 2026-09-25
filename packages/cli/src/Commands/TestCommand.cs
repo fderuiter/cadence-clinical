@@ -33,8 +33,12 @@ public class TestCommand : Command<TestCommand.Settings>
 
         AnsiConsole.MarkupLine($"[cyan]Executing .NET Test Suites {(string.IsNullOrEmpty(filter) ? "(All)" : filter)}...[/]\n");
 
-        var psi = new ProcessStartInfo("dotnet", $"test Cadence.sln {filter}".Trim())
+        string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
+        string slnPath = System.IO.Path.Combine(repoRoot, "Cadence.sln");
+
+        var psi = new ProcessStartInfo("dotnet", $"test \"{slnPath}\" {filter}".Trim())
         {
+            WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
 

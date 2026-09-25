@@ -69,6 +69,16 @@ for tool in "${TOOLS[@]}"; do
     echo -e "  \033[32m[OK] $tool is configured.\033[0m"
 done
 
+mkdir -p "$HOME/.dotnet/tools"
+cat << "EOF" > "$HOME/.dotnet/tools/dotnet-cadence"
+#!/usr/bin/env bash
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "/app/cadence-clinical")"
+CLI_PROJECT="$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj"
+exec dotnet run --project "$CLI_PROJECT" -- "$@"
+EOF
+chmod +x "$HOME/.dotnet/tools/dotnet-cadence"
+echo -e "  \033[32m[OK] dotnet cadence CLI wrapper is configured.\033[0m"
+
 # 3. Development HTTPS certificates
 echo -e "\n[3/5] Configuring HTTPS Development Certificates..."
 dotnet dev-certs https --clean || true

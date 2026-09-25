@@ -328,6 +328,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-09-25: Phased Workspace Member Unlinking and Toolchain Decommissioning Protocol](2026-09-25-phased-workspace-member-unlinking-and-toolchain-decommissioning-protocol.md)
 
 - [2026-09-03: Full-Stack Environment Setup Wizard and Python Workspace Glob Hardening](2026-09-03-full-stack-environment-setup-wizard-and-python-workspace-glob-hardening.md)
 
