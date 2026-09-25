@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <OutputType>Library</OutputType>
     <RootNamespace>Cadence.Apps.AiGateway</RootNamespace>
     <Description>Cadence Clinical AiGateway Service (.NET 10 / C# 14 Minimal APIs).</Description>
   </PropertyGroup>
@@ -8,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
     <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
   </ItemGroup>

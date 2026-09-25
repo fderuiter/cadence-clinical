@@ -21,34 +21,11 @@ exclude = [
 python-preference = "system"
 
 [tool.uv.workspace]
-members = [
-    "apps/*"
-]
+members = []
 exclude = [
-    "apps/web",
-    "apps/subject-portal",
-    "apps/__pycache__",
-    "apps/gateway",
-    "apps/designer",
-    "apps/execution",
+    "apps/*",
     "packages/*"
 ]
-
-[tool.uv.sources]
-apps-ai-gateway = { workspace = true }
-apps-ctms = { workspace = true }
-apps-econsent = { workspace = true }
-apps-eisf = { workspace = true }
-apps-etmf = { workspace = true }
-apps-fileshare = { workspace = true }
-apps-imaging = { workspace = true }
-apps-interop = { workspace = true }
-apps-notifications = { workspace = true }
-apps-org = { workspace = true }
-apps-payments = { workspace = true }
-apps-quality = { workspace = true }
-apps-safety = { workspace = true }
-apps-tickets = { workspace = true }
 
 [tool.ruff.format]
 quote-style = "double"

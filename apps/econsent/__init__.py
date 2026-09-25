@@ -1,3 +1,0 @@
-"""
-eConsent microservice package.
-"""

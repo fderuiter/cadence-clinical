@@ -1,1 +1,0 @@
-"""Payments Domain Package."""
