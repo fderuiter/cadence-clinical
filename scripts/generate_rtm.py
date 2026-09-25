@@ -349,6 +349,7 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
     )
     test_attr_pattern = re.compile(r"\[(?:Fact|Theory)(?:\(.*\))?\]")
     gxp_attr_pattern = re.compile(r'\[GxPRequirement\("([^"]+)"\)')
+    trait_attr_pattern = re.compile(r'\[Trait\("([^"]+)"\s*,\s*"([^"]+)"\)')
     method_pattern = re.compile(
         r"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\("
     )
@@ -373,6 +374,15 @@ def _scan_csharp_file(filepath, rel_filepath, test_mappings, test_cases_all):
 
         for gxp_match in gxp_attr_pattern.findall(stripped):
             pending_tags.append(gxp_match)
+
+        for trait_key, trait_val in trait_attr_pattern.findall(stripped):
+            if trait_key.lower() in (
+                "requirement",
+                "requirementid",
+                "req",
+                "requirement_id",
+            ) or re.match(r"^(?:PRD-[A-Z0-9]+-\d+|Trace-\d+)$", trait_val, re.IGNORECASE):
+                pending_tags.append(trait_val)
 
         for req in req_doc_pattern.findall(stripped):
             pending_tags.append(req)

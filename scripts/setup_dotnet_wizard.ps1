@@ -118,7 +118,7 @@ if ($pgSuccess -and $pgSocket.Connected) {
     $pgSocket.Close()
 } else {
     Write-Host "  [INFO] PostgreSQL not responding on port 5432." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose up -d postgres' to launch local database." -ForegroundColor Gray
+    Write-Host "         Run 'docker compose --profile python up -d postgres' to launch local database." -ForegroundColor Gray
 }
 
 $neoSocket = New-Object System.Net.Sockets.TcpClient
@@ -129,7 +129,7 @@ if ($neoSuccess -and $neoSocket.Connected) {
     $neoSocket.Close()
 } else {
     Write-Host "  [INFO] Neo4j Bolt not responding on port 7687." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
+    Write-Host "         Run 'docker compose --profile python up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
 }
 
 # ------------------------------------------------------------------------------
