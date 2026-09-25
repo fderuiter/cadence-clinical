@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(PaymentsDbContext))]
     partial class PaymentsDbContextModelSnapshot : ModelSnapshot
     {
@@ -52,8 +53,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("OverheadPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("OverheadPercentage")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ReasonForChange")
                         .HasMaxLength(1000)
@@ -79,8 +80,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<double>("TotalBudget")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalBudget")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -88,8 +89,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<int>("VersionIndex")
                         .HasColumnType("integer");
 
-                    b.Property<double>("WithholdingPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingPercentage")
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -179,8 +180,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<double>("BaseAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("BaseAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ContractId")
                         .IsRequired()
@@ -202,11 +203,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("OverheadPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("OverheadPercentage")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("PatientStipend")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("PatientStipend")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ProcedureCode")
                         .IsRequired()
@@ -225,8 +226,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("RequiresSdv")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("TravelReimbursement")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TravelReimbursement")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -239,8 +240,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<double>("WithholdingPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingPercentage")
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -284,8 +285,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("HoldbackAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("HoldbackAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("PayableId")
                         .IsRequired()
@@ -357,8 +358,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double>("BaseAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("BaseAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -373,22 +374,22 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<double>("GrossAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("InvoiceId")
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double>("NetAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("OverheadAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("OverheadAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("PatientStipend")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("PatientStipend")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("PayableId")
                         .HasMaxLength(36)
@@ -411,8 +412,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("TravelReimbursement")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TravelReimbursement")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -425,11 +426,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<double>("WithholdingAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("WithholdingRate")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingRate")
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -462,8 +463,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<double?>("AntiCoercionCap")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("AntiCoercionCap")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("CardStatus")
                         .IsRequired()
@@ -488,20 +489,20 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<double>("CurrentBalance")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("CurrentBalance")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<bool>("Is1099ThresholdExceeded")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("LifetimeDisbursements")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("LifetimeDisbursements")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("LifetimeReimbursements")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("LifetimeReimbursements")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("LifetimeStipends")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("LifetimeStipends")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ReasonForChange")
                         .HasMaxLength(1000)
@@ -531,8 +532,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(4)
                         .HasColumnType("character varying(4)");
 
-                    b.Property<double>("TaxableYtd")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TaxableYtd")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -584,8 +585,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double>("BaseAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("BaseAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ContractId")
                         .IsRequired()
@@ -609,20 +610,20 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<double>("GrossAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<bool>("IsSdvGated")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("NetAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("OverheadAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("OverheadAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("PatientStipendAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("PatientStipendAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ProcedureCode")
                         .HasMaxLength(100)
@@ -663,8 +664,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("TravelReimbursementAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TravelReimbursementAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("TriggerEventId")
                         .IsRequired()
@@ -692,11 +693,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<double>("WithholdingAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("WithholdingRate")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingRate")
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -730,8 +731,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double>("AllocationPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("AllocationPercentage")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -746,11 +747,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<double>("GrossShare")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("GrossShare")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("NetShare")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("NetShare")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("PayableId")
                         .IsRequired()
@@ -787,8 +788,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<int>("VersionIndex")
                         .HasColumnType("integer");
 
-                    b.Property<double>("WithholdingShare")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("WithholdingShare")
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -901,11 +902,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("GrossAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("HoldbackAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("HoldbackAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("InvoiceId")
                         .IsRequired()
@@ -918,11 +919,11 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("IsSigned")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("NetAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("OverheadAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("OverheadAmount")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("PdfContent")
                         .HasColumnType("text");
@@ -1092,26 +1093,26 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("TotalBaseAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalBaseAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalGrossAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalGrossAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalHoldbackAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalHoldbackAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalNetAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalNetAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalOverheadAmount")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalOverheadAmount")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalPatientStipend")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalPatientStipend")
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double>("TotalTravelReimbursement")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("TotalTravelReimbursement")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1147,8 +1148,8 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double>("AllocationPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("AllocationPercentage")
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("BankAccountReference")
                         .HasMaxLength(100)
@@ -1265,3 +1266,4 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}

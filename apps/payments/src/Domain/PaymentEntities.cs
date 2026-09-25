@@ -10,9 +10,9 @@ public class BudgetContract
     public string ContractName { get; set; } = string.Empty;
     public string TierLevel { get; set; } = "TIER_1_ACADEMIC";
     public string Currency { get; set; } = "USD";
-    public double TotalBudget { get; set; }
-    public double OverheadPercentage { get; set; }
-    public double WithholdingPercentage { get; set; } = 10.0;
+    public decimal TotalBudget { get; set; }
+    public decimal OverheadPercentage { get; set; }
+    public decimal WithholdingPercentage { get; set; } = 10.0m;
     public string? EffectiveDate { get; set; }
     public string Status { get; set; } = "ACTIVE";
     public bool IsActive { get; set; } = true;
@@ -32,11 +32,11 @@ public class FeeSchedule
     public string? FormId { get; set; }
     public string ProcedureCode { get; set; } = string.Empty;
     public string ProcedureName { get; set; } = string.Empty;
-    public double BaseAmount { get; set; }
-    public double OverheadPercentage { get; set; }
-    public double WithholdingPercentage { get; set; } = 10.0;
-    public double PatientStipend { get; set; }
-    public double TravelReimbursement { get; set; }
+    public decimal BaseAmount { get; set; }
+    public decimal OverheadPercentage { get; set; }
+    public decimal WithholdingPercentage { get; set; } = 10.0m;
+    public decimal PatientStipend { get; set; }
+    public decimal TravelReimbursement { get; set; }
     public bool RequiresSdv { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -53,7 +53,7 @@ public class SplitPayeeConfig
     public string PayeeId { get; set; } = string.Empty;
     public string PayeeName { get; set; } = string.Empty;
     public string PayeeRole { get; set; } = string.Empty;
-    public double AllocationPercentage { get; set; }
+    public decimal AllocationPercentage { get; set; }
     public string? BankAccountReference { get; set; }
     public string? TaxIdentifier { get; set; }
     public bool IsActive { get; set; } = true;
@@ -78,14 +78,14 @@ public class Payable
     public string TriggerType { get; set; } = string.Empty;
     public string TriggerEventId { get; set; } = string.Empty;
     public string TriggerSource { get; set; } = "EDC_SERVICE";
-    public double BaseAmount { get; set; }
-    public double OverheadAmount { get; set; }
-    public double PatientStipendAmount { get; set; }
-    public double TravelReimbursementAmount { get; set; }
-    public double GrossAmount { get; set; }
-    public double WithholdingRate { get; set; } = 10.0;
-    public double WithholdingAmount { get; set; }
-    public double NetAmount { get; set; }
+    public decimal BaseAmount { get; set; }
+    public decimal OverheadAmount { get; set; }
+    public decimal PatientStipendAmount { get; set; }
+    public decimal TravelReimbursementAmount { get; set; }
+    public decimal GrossAmount { get; set; }
+    public decimal WithholdingRate { get; set; } = 10.0m;
+    public decimal WithholdingAmount { get; set; }
+    public decimal NetAmount { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "TRIGGERED";
     public bool IsSdvGated { get; set; }
@@ -105,10 +105,10 @@ public class PayableAllocation
     public string PayeeId { get; set; } = string.Empty;
     public string PayeeName { get; set; } = string.Empty;
     public string PayeeRole { get; set; } = string.Empty;
-    public double AllocationPercentage { get; set; }
-    public double GrossShare { get; set; }
-    public double WithholdingShare { get; set; }
-    public double NetShare { get; set; }
+    public decimal AllocationPercentage { get; set; }
+    public decimal GrossShare { get; set; }
+    public decimal WithholdingShare { get; set; }
+    public decimal NetShare { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "ALLOCATED";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -125,7 +125,7 @@ public class HoldbackReserve
     public string SiteId { get; set; } = string.Empty;
     public string ContractId { get; set; } = string.Empty;
     public string PayableId { get; set; } = string.Empty;
-    public double HoldbackAmount { get; set; }
+    public decimal HoldbackAmount { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "HELD";
     public string? ReleaseAuthorizedBy { get; set; }
@@ -170,13 +170,13 @@ public class SelfBillingInvoice
     public string PeriodStart { get; set; } = string.Empty;
     public string PeriodEnd { get; set; } = string.Empty;
     public string Currency { get; set; } = "USD";
-    public double TotalBaseAmount { get; set; }
-    public double TotalOverheadAmount { get; set; }
-    public double TotalPatientStipend { get; set; }
-    public double TotalTravelReimbursement { get; set; }
-    public double TotalGrossAmount { get; set; }
-    public double TotalHoldbackAmount { get; set; }
-    public double TotalNetAmount { get; set; }
+    public decimal TotalBaseAmount { get; set; }
+    public decimal TotalOverheadAmount { get; set; }
+    public decimal TotalPatientStipend { get; set; }
+    public decimal TotalTravelReimbursement { get; set; }
+    public decimal TotalGrossAmount { get; set; }
+    public decimal TotalHoldbackAmount { get; set; }
+    public decimal TotalNetAmount { get; set; }
     public int PayableCount { get; set; }
     public string Status { get; set; } = "DRAFT";
     public string? ApprovedBy { get; set; }
@@ -205,14 +205,14 @@ public class InvoiceLineItem
     public string VisitCode { get; set; } = string.Empty;
     public string? ProcedureCode { get; set; }
     public string? ProcedureName { get; set; }
-    public double BaseAmount { get; set; }
-    public double OverheadAmount { get; set; }
-    public double PatientStipend { get; set; }
-    public double TravelReimbursement { get; set; }
-    public double GrossAmount { get; set; }
-    public double WithholdingRate { get; set; } = 10.0;
-    public double WithholdingAmount { get; set; }
-    public double NetAmount { get; set; }
+    public decimal BaseAmount { get; set; }
+    public decimal OverheadAmount { get; set; }
+    public decimal PatientStipend { get; set; }
+    public decimal TravelReimbursement { get; set; }
+    public decimal GrossAmount { get; set; }
+    public decimal WithholdingRate { get; set; } = 10.0m;
+    public decimal WithholdingAmount { get; set; }
+    public decimal NetAmount { get; set; }
     public string Currency { get; set; } = "USD";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = "system";
@@ -229,10 +229,10 @@ public class RemittanceAdvice
     public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
     public string Currency { get; set; } = "USD";
-    public double GrossAmount { get; set; }
-    public double OverheadAmount { get; set; }
-    public double HoldbackAmount { get; set; }
-    public double NetAmount { get; set; }
+    public decimal GrossAmount { get; set; }
+    public decimal OverheadAmount { get; set; }
+    public decimal HoldbackAmount { get; set; }
+    public decimal NetAmount { get; set; }
     public string PdfSha256Hash { get; set; } = string.Empty;
     public string? PdfContent { get; set; }
     public bool IsSealed { get; set; } = true;
@@ -274,13 +274,13 @@ public class ParticipantWallet
     public string SubjectId { get; set; } = string.Empty;
     public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
-    public double CurrentBalance { get; set; }
-    public double LifetimeStipends { get; set; }
-    public double LifetimeReimbursements { get; set; }
-    public double LifetimeDisbursements { get; set; }
+    public decimal CurrentBalance { get; set; }
+    public decimal LifetimeStipends { get; set; }
+    public decimal LifetimeReimbursements { get; set; }
+    public decimal LifetimeDisbursements { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "ACTIVE";
-    public double TaxableYtd { get; set; }
+    public decimal TaxableYtd { get; set; }
     public bool Is1099ThresholdExceeded { get; set; }
     public string W9Status { get; set; } = "NOT_REQUIRED";
     public DateTime? W9SubmittedAt { get; set; }
@@ -291,7 +291,7 @@ public class ParticipantWallet
     public string? VirtualCardToken { get; set; }
     public string? VirtualCardMask { get; set; }
     public string? VirtualCardExpiry { get; set; }
-    public double? AntiCoercionCap { get; set; }
+    public decimal? AntiCoercionCap { get; set; }
     public string? AchRoutingNumber { get; set; }
     public string? AchAccountMask { get; set; }
     public string? AchAccountHolder { get; set; }
