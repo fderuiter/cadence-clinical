@@ -1,4 +1,4 @@
-# Cadence Clinical REST API Reference
+﻿# Cadence Clinical REST API Reference
 
 > **Unified Microservice Architecture & GxP Endpoint Contract.**  
 > _All endpoints exposed through the central API Gateway (`localhost:8000/api/v1/*`) with Keycloak OIDC authentication and HMAC signature verification._

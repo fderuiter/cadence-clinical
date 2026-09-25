@@ -1,4 +1,4 @@
-# EDC Execution Engine
+﻿# EDC Execution Engine
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8002`  
@@ -338,10 +338,6 @@ Imports raw dictionary files and schedules a background parsing task.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -680,10 +676,6 @@ Requirements: PRD-SYS-001
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
@@ -758,7 +750,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -6153,7 +6145,7 @@ Export all study observations, subjects, visits, and forms as CDISC ODM XML.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -16843,7 +16835,7 @@ Export stored clinical subject observations in CDISC ODM XML format (Dictionary 
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples

@@ -1,5 +1,6 @@
 using System;
-using System.Diagnostics;
+
+using Cadence.Compliance;
 
 using Spectre.Console;
 
@@ -11,31 +12,17 @@ public static class GxPComplianceService
     {
         AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");
 
-        var args = new System.Collections.Generic.List<string>();
-        if (dryRun)
-        {
-            args.Add("--dry-run");
-        }
-        if (commit)
-        {
-            args.Add("--commit");
-        }
+        int exitCode = RtmGeneratorService.GenerateRtm(
+            outputDir: "docs/SDLC",
+            reportPath: "report_dotnet.trx",
+            draft: dryRun,
+            validateOnly: dryRun
+        );
 
-        var argStr = string.Join(" ", args);
-        var psi = new ProcessStartInfo("python3", string.IsNullOrEmpty(argStr) ? "scripts/sync_gxp.py" : $"scripts/sync_gxp.py {argStr}")
+        if (exitCode != 0)
         {
-            UseShellExecute = false
-        };
-
-        using var proc = Process.Start(psi);
-        if (proc != null)
-        {
-            proc.WaitForExit();
-            if (proc.ExitCode != 0)
-            {
-                AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
-                return proc.ExitCode;
-            }
+            AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
+            return exitCode;
         }
 
         AnsiConsole.MarkupLine("\n[bold green]GxP Compliance Synchronization Complete.[/]");
@@ -47,3 +34,4 @@ public static class GxPComplianceService
         return SyncCompliance(dryRun: true, commit: false);
     }
 }
+

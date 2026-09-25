@@ -1,4 +1,4 @@
-# Clinical Issue Hub & Query Escalation
+﻿# Clinical Issue Hub & Query Escalation
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8012`  
@@ -525,7 +525,7 @@ Export regulatory Part 11 immutable audit trail records in JSON or CSV format.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -897,10 +897,6 @@ Upload an audited evidence attachment with SHA-256 integrity hash.
 | Name | In | Type | Required | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `path` | `string` | ✔ Yes | — |
-
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
 
 #### Response Codes & Schemas
 

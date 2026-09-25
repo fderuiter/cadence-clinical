@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+using Cadence.ToolingCore.OpenApi;
+
 using Spectre.Console;
 
 namespace Cadence.Cli.Services;

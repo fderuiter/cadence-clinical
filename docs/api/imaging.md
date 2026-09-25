@@ -1,4 +1,4 @@
-# Blinded DICOM Adjudication
+﻿# Blinded DICOM Adjudication
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8015`  
@@ -973,15 +973,11 @@ Returns the clean, de-identified DICOM bytes with certificate metadata headers.
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
 
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
-
 #### Response Codes & Schemas
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1051,7 +1047,7 @@ Streams the stored de-identified DICOM binary file.
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
@@ -1699,10 +1695,6 @@ Uploads and de-identifies DICOM file(s) or ZIP archives in-flight before persist
 - **Authentication:** OIDC Bearer Token (Keycloak)
 - **Gateway Headers:** Verified `X-Gateway-Signature` (HMAC-SHA256)
 - **Step-Up Electronic Signature:** Required if mutating locked records
-
-#### Request Payload Schema (`application/json`)
-
-**Schema Type:** `any`
 
 #### Response Codes & Schemas
 
