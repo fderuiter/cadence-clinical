@@ -1,5 +1,6 @@
 using System;
-using System.IO;
+
+using Cadence.ToolingCore.Contracts;
 
 using Spectre.Console;
 
@@ -12,16 +13,19 @@ public static class ContractsVerifierService
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
         AnsiConsole.MarkupLine("[cyan]Executing Backend Port Contract Static Verification...[/]");
 
-        string executionDomain = Path.Combine(repoRoot, "apps", "execution", "src");
-        if (Directory.Exists(executionDomain))
+        var result = ContractVerifier.VerifyBackendContracts(repoRoot);
+
+        foreach (var err in result.Errors)
+        {
+            AnsiConsole.MarkupLine($"[red]{err}[/]");
+        }
+
+        if (result.IsValid)
         {
             AnsiConsole.MarkupLine("  [green][[OK]] Hexagonal port contracts static verification passed.[/]");
         }
-        else
-        {
-            AnsiConsole.MarkupLine("  [green][[OK]] Static contract verification passed.[/]");
-        }
 
-        return true;
+        return result.IsValid;
     }
 }
+
