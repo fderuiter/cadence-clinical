@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.IO;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.OpenApi;
 
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -22,15 +24,11 @@ public class FixCommand : Command
         AdrValidatorService.ValidateAdrs(checkGitDiff: false);
 
         AnsiConsole.MarkupLine("\n  3. Synchronizing OpenAPI Specifications & Documentation...");
-        var psiSpec = new ProcessStartInfo("uv", "run python scripts/sync_openapi_spec.py") { UseShellExecute = false };
-        using var pSpec = Process.Start(psiSpec);
-        pSpec?.WaitForExit();
-
-        var psiDocs = new ProcessStartInfo("uv", "run python scripts/generate_api_docs.py") { UseShellExecute = false };
-        using var pDocs = Process.Start(psiDocs);
-        pDocs?.WaitForExit();
+        string openApiDir = Path.Combine(QualityGateOrchestrator.FindRepoRoot(), "docs", "openapi");
+        OpenApiSpecExporter.ExportOpenApiSpecsAsync(openApiDir).GetAwaiter().GetResult();
 
         AnsiConsole.MarkupLine("\n[bold green]Self-Healing Pipeline Complete.[/]");
         return 0;
     }
 }
+

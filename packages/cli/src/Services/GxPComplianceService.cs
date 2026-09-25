@@ -1,5 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+
+using Cadence.Compliance;
 
 using Spectre.Console;
 
@@ -11,40 +14,29 @@ public static class GxPComplianceService
     {
         AnsiConsole.MarkupLine("[cyan]Synchronizing GxP Compliance Documentation (PRD-SYS-053)...[/]\n");
 
-        var args = new System.Collections.Generic.List<string>();
-        if (dryRun)
+        int result = RtmGeneratorService.GenerateRtm(
+            outputDir: "docs/SDLC",
+            reportPath: "report_dotnet.trx",
+            draft: dryRun,
+            validateOnly: dryRun,
+            dynamicTimestamp: false);
+
+        if (result != 0)
         {
-            args.Add("--dry-run");
-        }
-        if (commit)
-        {
-            args.Add("--commit");
+            AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
+            return result;
         }
 
-        var argStr = string.Join(" ", args);
-        var pythonExe = "python3";
-        if (System.IO.File.Exists(".venv/bin/python3"))
+        if (!dryRun)
         {
-            pythonExe = ".venv/bin/python3";
-        }
-        else if (System.IO.File.Exists(".venv/bin/python"))
-        {
-            pythonExe = ".venv/bin/python";
-        }
+            string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+            int addCode = RunProcess("git", "add -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md", repoRoot);
+            if (addCode != 0) return addCode;
 
-        var psi = new ProcessStartInfo(pythonExe, string.IsNullOrEmpty(argStr) ? "scripts/sync_gxp.py" : $"scripts/sync_gxp.py {argStr}")
-        {
-            UseShellExecute = false
-        };
-
-        using var proc = Process.Start(psi);
-        if (proc != null)
-        {
-            proc.WaitForExit();
-            if (proc.ExitCode != 0)
+            if (commit)
             {
-                AnsiConsole.MarkupLine("[red]GxP compliance synchronization failed![/]");
-                return proc.ExitCode;
+                int commitCode = RunProcess("git", "commit -m \"docs(rtm): sync GxP compliance docs with current test state\"", repoRoot);
+                if (commitCode != 0) return commitCode;
             }
         }
 
@@ -56,4 +48,21 @@ public static class GxPComplianceService
     {
         return SyncCompliance(dryRun: true, commit: false);
     }
+
+    private static int RunProcess(string fileName, string arguments, string workingDirectory)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return 1;
+        process.WaitForExit();
+        return process.ExitCode;
+    }
 }
+
