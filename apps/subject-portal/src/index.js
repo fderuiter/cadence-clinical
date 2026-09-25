@@ -24,6 +24,10 @@ import {
   initSessionKey,
   setActiveUserId,
   clearSessionKey,
+  clearSessionKeyFromDB,
+  saveSessionKeyToDB,
+  getSessionKeyFromDB,
+  restoreSessionKeyFromDB,
   clearInMemoryKey,
   getInMemorySessionKey,
   setInMemorySessionKey,
@@ -460,7 +464,8 @@ function renderTasks() {
 
   if (loadingEl) loadingEl.style.display = "none";
   if (failureEl) failureEl.style.display = "none";
-  if (container) container.style.display = "none";
+  if (!container) return;
+  container.style.display = "none";
 
   if (state.tasksLoading) {
     if (loadingEl) loadingEl.style.display = "block";
@@ -1242,7 +1247,8 @@ function renderInbox() {
 
   if (loadingEl) loadingEl.style.display = "none";
   if (failureEl) failureEl.style.display = "none";
-  if (container) container.style.display = "none";
+  if (!container) return;
+  container.style.display = "none";
 
   if (state.notificationsLoading) {
     if (loadingEl) loadingEl.style.display = "block";
@@ -2142,12 +2148,22 @@ async function initializeApp() {
   }
   setActiveUserId(state.session.userId);
 
-  const sessionMaterial =
-    state.session.token || state.session.userId || "demo-material";
-  try {
-    await initSessionKey(sessionMaterial, state.session.userId);
-  } catch (err) {
-    console.warn("Failed to initialize session key:", err);
+  if (!getInMemorySessionKey()) {
+    try {
+      await restoreSessionKeyFromDB(state.session.userId);
+    } catch (err) {
+      console.warn("Failed to restore session key from IndexedDB:", err);
+    }
+  }
+
+  if (!getInMemorySessionKey()) {
+    const sessionMaterial =
+      state.session.token || state.session.userId || "demo-material";
+    try {
+      await initSessionKey(sessionMaterial, state.session.userId);
+    } catch (err) {
+      console.warn("Failed to initialize session key:", err);
+    }
   }
 
   // Initialize MSW Mock Gateway Worker in development / offline browser mode
@@ -2788,10 +2804,9 @@ async function initializeApp() {
   if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
-        "[App] Network offline detected. Verifying security PIN wrapper..."
+        "[App] Network offline detected. Preserving session key for offline operation..."
       );
       state.session.isOfflineMode = true;
-      clearInMemoryKey();
       await checkPINWrapper();
     });
   }
@@ -2894,7 +2909,7 @@ async function handlePINUnlockSubmit() {
   }
 }
 
-// User logout events trigger immediate deletion of the cached OIDC identifier from local storage
+// User logout events trigger immediate deletion of the cached OIDC identifier and persisted session key
 async function logout() {
   try {
     localStorage.removeItem("oidc_user_id");
@@ -2902,12 +2917,14 @@ async function logout() {
     console.warn("Failed to clear oidc_user_id from localStorage:", err);
   }
 
+  const prevUserId = state.session.userId;
   state.session.userId = "subject_001";
   state.session.token = null;
   state.session.isOfflineMode = true;
   state.session.isDemoMode = true;
 
-  clearSessionKey();
+  clearSessionKey(prevUserId);
+  await clearSessionKeyFromDB(prevUserId);
 
   if (
     window.keycloakInstance &&

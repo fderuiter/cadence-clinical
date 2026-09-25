@@ -385,13 +385,16 @@ export async function encryptAESGCM(payload, rawKey, version = 1, aad = null) {
   // 12-byte random nonce
   const nonce = globalThis.crypto.getRandomValues(new Uint8Array(12));
 
-  const cryptoKey = await globalThis.crypto.subtle.importKey(
-    "raw",
-    rawKey,
-    { name: "AES-GCM" },
-    false,
-    ["encrypt"]
-  );
+  const cryptoKey =
+    rawKey && typeof rawKey === "object" && rawKey.algorithm
+      ? rawKey
+      : await globalThis.crypto.subtle.importKey(
+          "raw",
+          rawKey,
+          { name: "AES-GCM" },
+          false,
+          ["encrypt"]
+        );
 
   const encryptParams = {
     name: "AES-GCM",
@@ -453,13 +456,16 @@ export async function decryptAESGCM(
   const nonce = packedBytes.slice(4, 16);
   const ciphertextAndTag = packedBytes.slice(16);
 
-  const cryptoKey = await globalThis.crypto.subtle.importKey(
-    "raw",
-    rawKey,
-    { name: "AES-GCM" },
-    false,
-    ["decrypt"]
-  );
+  const cryptoKey =
+    rawKey && typeof rawKey === "object" && rawKey.algorithm
+      ? rawKey
+      : await globalThis.crypto.subtle.importKey(
+          "raw",
+          rawKey,
+          { name: "AES-GCM" },
+          false,
+          ["decrypt"]
+        );
 
   const decryptParams = {
     name: "AES-GCM",
