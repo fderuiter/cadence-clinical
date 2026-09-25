@@ -1,4 +1,4 @@
-# Clinical Trial Management System (CTMS)
+﻿# Clinical Trial Management System (CTMS)
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8005`  
@@ -1287,7 +1287,7 @@ Requirements: PRD-SYS-001
 
 | HTTP Status | Description | Response Schema |
 | :--- | :--- | :--- |
-| `200` | Successful Response | `any` |
+| `200` | Successful Response | `object` |
 | `422` | Validation Error | `HTTPValidationError` |
 
 #### Client Code Examples
