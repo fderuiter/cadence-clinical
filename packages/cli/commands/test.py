@@ -98,11 +98,19 @@ def run_test(
     coverage: bool = typer.Option(
         True, "--cov/--no-cov", help="Enable coverage checking"
     ),
-    xdist: bool = typer.Option(
-        True, "--xdist/--no-xdist", help="Run tests in parallel with pytest-xdist"
+    filter: str = typer.Option(
+        None,
+        "--filter",
+        "-f",
+        help="Filter .NET tests using xUnit expression (e.g. 'Category=Unit')",
+    ),
+    verbosity: str = typer.Option(
+        None,
+        "--verbosity",
+        help="Set .NET test verbosity level (quiet, minimal, normal, detailed, diagnostic)",
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Verbose pytest output"
+        False, "--verbose", "-v", help="Verbose .NET test output"
     ),
     watch: bool = typer.Option(
         False,
@@ -123,6 +131,8 @@ def run_test(
     if frontend:
         print_info("Running frontend Vitest test suites...")
         cmd = ["pnpm", "-r", "test"]
+        if watch:
+            cmd.append("--watch")
         res = subprocess.run(cmd, cwd=str(repo_root))
         if json_mode:
             output_json(
@@ -137,6 +147,8 @@ def run_test(
     if e2e or dotnet:
         print_info("Running .NET 10 E2E integration tests...")
         cmd = ["dotnet", "test", "tests/Cadence.E2ETests.csproj"]
+        if watch:
+            cmd = ["dotnet", "watch", "test", "tests/Cadence.E2ETests.csproj"]
         res = subprocess.run(cmd, cwd=str(repo_root))
         if json_mode:
             output_json(
@@ -150,10 +162,14 @@ def run_test(
 
     # Build backend dotnet test command
     base_cmd = ["dotnet", "test", str(repo_root / "Cadence.sln")]
-    if verbose:
+    if verbosity:
+        base_cmd.extend(["--verbosity", verbosity])
+    elif verbose:
         base_cmd.extend(["--verbosity", "detailed"])
 
-    if unit or fast and not integration:
+    if filter:
+        base_cmd.extend(["--filter", filter])
+    elif unit or (fast and not integration):
         base_cmd.extend(["--filter", "Category!=E2E&Category!=Validation"])
     elif integration and not unit:
         base_cmd.extend(["--filter", "Category=E2E|Category=Validation"])
@@ -205,72 +221,32 @@ def run_test(
                 print_error(f"Tests failed with exit code {exit_code}")
             sys.exit(exit_code)
 
-    # Watch Mode Loop
-    print_header(
-        "Cadence Test Watcher",
-        "Watching apps/, packages/, tests/ for changes (Ctrl+C to quit)...",
-    )
+    # Native Watch Mode Delegation
+    watch_cmd = ["dotnet", "watch", "test", str(repo_root / "Cadence.sln")]
+    if verbosity:
+        watch_cmd.extend(["--verbosity", verbosity])
+    elif verbose:
+        watch_cmd.extend(["--verbosity", "detailed"])
 
-    dep_graph = TestDependencyGraph(repo_root=repo_root)
-    dep_graph.load_or_build()
+    if filter:
+        watch_cmd.extend(["--filter", filter])
+    elif unit or (fast and not integration):
+        watch_cmd.extend(["--filter", "Category!=E2E&Category!=Validation"])
+    elif integration and not unit:
+        watch_cmd.extend(["--filter", "Category=E2E|Category=Validation"])
 
-    # Track mtimes of Python files
-    def _snapshot_mtimes() -> dict[Path, float]:
-        mtimes = {}
-        for p in repo_root.glob("**/*.py"):
-            if ".venv" in p.parts or "__pycache__" in p.parts or ".git" in p.parts:
-                continue
-            with contextlib.suppress(OSError):
-                mtimes[p] = p.stat().st_mtime
-        return mtimes
-
-    last_snapshot = _snapshot_mtimes()
-
-    # Initial Run
-    cmd = list(base_cmd)
     if target_path:
-        cmd.append(target_path)
-    console.print(f"[bold cyan]▶ Initial Test Run: {' '.join(cmd)}[/bold cyan]")
-    _run_test_iteration(cmd, repo_root)
+        watch_cmd.append(target_path)
+
+    if not json_mode:
+        print_header(
+            "Cadence Test Watcher",
+            f"Delegating test watching to native dotnet watch: {' '.join(watch_cmd)}",
+        )
 
     try:
-        while True:
-            time.sleep(0.5)
-            current_snapshot = _snapshot_mtimes()
-            modified = []
-            for p, mtime in current_snapshot.items():
-                if p not in last_snapshot or mtime > last_snapshot[p]:
-                    modified.append(p)
-
-            last_snapshot = current_snapshot
-
-            if modified:
-                console.print(
-                    f"\n[bold yellow]↻ Detected change in {len(modified)} file(s):[/bold yellow]"
-                )
-                for m in modified[:3]:
-                    console.print(f"  • {m.relative_to(repo_root)}")
-
-                # Determine target test
-                specific_target = None
-                for m in modified:
-                    resolved = _find_target_test_file(m, repo_root, dep_graph)
-                    if resolved:
-                        specific_target = resolved
-                        break
-
-                iter_cmd = list(base_cmd)
-                if specific_target:
-                    iter_cmd.append(specific_target)
-                elif target_path:
-                    iter_cmd.append(target_path)
-
-                console.print(
-                    f"[bold cyan]▶ Running: {' '.join(iter_cmd)}[/bold cyan]\n"
-                )
-                _run_test_iteration(iter_cmd, repo_root)
-                console.print("[dim]Watching for file changes...[/dim]")
-
+        res = subprocess.run(watch_cmd, cwd=str(repo_root))
+        sys.exit(res.returncode)
     except KeyboardInterrupt:
         print_info("\nTest watcher stopped.")
         sys.exit(0)

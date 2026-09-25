@@ -205,7 +205,7 @@ The Cadence monorepo is organized as a unified workspace managed with `uv` for P
 | :-------------------- | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- | :----------------- |
 | **`apps/web`**        | Clinical Workspace SPA    | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite | **Supported**      |
 | **`apps/gateway`**    | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs.     | FastAPI + HTTPX      | **Supported**      |
-| **`apps/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | Pytest + Playwright  | **Supported**      |
+| **`apps/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | .NET 10 xUnit v3 + Playwright | **Supported**      |
 
 ### Layer 6: Shared Core Packages & SDKs
 
@@ -362,7 +362,7 @@ Cadence Clinical is engineered from the ground up to satisfy strict global regul
 
 - **GxP Audit Trails**: Every mutating transaction captures `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic SHA-256 digest chained to the predecessor record.
 - **Strict Boolean Filter Pattern (E712)**: To prevent silent SQL emission bugs (`col = 1` vs `col IS TRUE`) on nullable columns, all SQLAlchemy queries strictly utilize `.is_(True)` and `.is_(False)`.
-- **Automated GxP Traceability (RTM)**: 100% of test docstrings link directly to requirements via `@req:PRD-SYS-xxx` tags, verified in CI and synchronized via `uv run cadence gxp sync`.
+- **Automated GxP Traceability (RTM)**: 100% of test cases link directly to requirements via xUnit `[Trait("Requirement", "PRD-SYS-xxx")]` attributes, `[GxPRequirement("PRD-SYS-xxx")]`, or `/// @req:` doc comments, verified in CI and synchronized via `python scripts/sync_gxp.py`.
 
 ---
 
@@ -415,7 +415,7 @@ Our development trajectory is organized into four sequential strategic phases:
 
 Continuous Integration is strictly enforced on every branch and Pull Request via GitHub Actions (`.github/workflows/ci.yml`). PRs must pass **all 10 architecture sentinels and quality gates** before merging:
 
-1. **Unit & Integration Test Suite**: Live PostgreSQL and SQLite test runs with zero failures and mandatory `pytest-xdist` run-isolation.
+1. **Unit & Integration Test Suite**: Live PostgreSQL and Testcontainers test runs with zero failures and mandatory .NET 10 xUnit v3 run isolation.
 2. **Strict Ruff Linting & Import Ordering**: Zero lint errors and strict alphabetical isort ordering (I001).
 3. **SQLAlchemy Boolean Filter Sentinel**: Enforces `.is_(True)` / `.is_(False)` per GxP safety rules (E712).
 4. **Architectural Boundary Linter**: Verifies zero cross-service database model imports across microservice domains.
