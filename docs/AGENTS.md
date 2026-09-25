@@ -315,4 +315,4 @@ The CI `compliance` gate regenerates the Requirements Traceability Matrix (RTM) 
 python scripts/sync_gxp.py
 ```
 
-This runs test execution, parses `@req:PRD-SYS-xxx` tags and `.trx` / JUnit results, regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and stages them in git.
+This runs test execution, parses `@req:PRD-SYS-XXX` tags and `.trx` / JUnit results, regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and stages them in git.
