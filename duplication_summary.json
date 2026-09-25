@@ -3070,71 +3070,6 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 20,
-        "end": 34
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 109,
-        "end": 123
-      },
-      "preview": "  },\n  username: {\n    type: String,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 21,
-        "end": 35
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 110,
-        "end": 124
-      },
-      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 22,
-        "end": 36
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 111,
-        "end": 125
-      },
-      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 23,
-        "end": 37
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 112,
-        "end": 126
-      },
-      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 24,
-        "end": 38
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 113,
-        "end": 127
-      },
-      "preview": "  },\n  signerName: {\n    type: String,\n..."
-    },
-    {
-      "loc1": {
         "file": "apps/web/src/composables/useFocusTrap.js",
         "start": 3,
         "end": 25
@@ -3746,42 +3681,107 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1094,
-        "end": 1117
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 20,
+        "end": 34
       },
       "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 446,
-        "end": 470
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 109,
+        "end": 123
       },
-      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
+      "preview": "  },\n  username: {\n    type: String,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1254,
-        "end": 1272
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 21,
+        "end": 35
       },
       "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 566,
-        "end": 584
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 110,
+        "end": 124
       },
-      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
+      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1255,
-        "end": 1273
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 22,
+        "end": 36
       },
       "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 567,
-        "end": 585
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 111,
+        "end": 125
       },
-      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
+      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 23,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 112,
+        "end": 126
+      },
+      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 24,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 113,
+        "end": 127
+      },
+      "preview": "  },\n  signerName: {\n    type: String,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
     },
     {
       "loc1": {
@@ -3941,94 +3941,81 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1215,
-        "end": 1234
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 446,
+        "end": 470
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1482,
-        "end": 1501
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1094,
+        "end": 1117
       },
-      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
+      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1216,
-        "end": 1235
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 566,
+        "end": 584
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1483,
-        "end": 1502
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1254,
+        "end": 1272
       },
-      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
+      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1217,
-        "end": 1238
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 567,
+        "end": 585
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1484,
-        "end": 1505
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1255,
+        "end": 1273
       },
-      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
+      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1218,
-        "end": 1239
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1424,
+        "end": 1444
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1485,
-        "end": 1506
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
       },
-      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
+      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1219,
-        "end": 1240
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1427,
+        "end": 1445
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1486,
-        "end": 1507
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
       },
-      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
+      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1220,
-        "end": 1243
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1428,
+        "end": 1446
       },
       "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1487,
-        "end": 1510
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
       },
-      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1221,
-        "end": 1244
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1488,
-        "end": 1511
-      },
-      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
+      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
     },
     {
       "loc1": {
@@ -4175,81 +4162,94 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 210,
-        "end": 226
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1215,
+        "end": 1234
       },
       "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 109,
-        "end": 125
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1482,
+        "end": 1501
       },
-      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 211,
-        "end": 227
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1216,
+        "end": 1235
       },
       "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 110,
-        "end": 126
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1483,
+        "end": 1502
       },
-      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 213,
-        "end": 228
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1217,
+        "end": 1238
       },
       "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 112,
-        "end": 127
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1484,
+        "end": 1505
       },
-      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
+      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 756,
-        "end": 776
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1218,
+        "end": 1239
       },
       "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1424,
-        "end": 1444
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1485,
+        "end": 1506
       },
-      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
+      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 759,
-        "end": 777
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1219,
+        "end": 1240
       },
       "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1427,
-        "end": 1445
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1486,
+        "end": 1507
       },
-      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
+      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 760,
-        "end": 778
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1220,
+        "end": 1243
       },
       "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1428,
-        "end": 1446
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1487,
+        "end": 1510
       },
-      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
+      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1221,
+        "end": 1244
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1488,
+        "end": 1511
+      },
+      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
     },
     {
       "loc1": {
@@ -4526,81 +4526,81 @@
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 53,
-        "end": 67
-      },
-      "loc2": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 39,
-        "end": 53
-      },
-      "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
-    },
-    {
-      "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 54,
-        "end": 68
-      },
-      "loc2": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 40,
-        "end": 54
-      },
-      "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
-    },
-    {
-      "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 55,
-        "end": 69
-      },
-      "loc2": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 41,
-        "end": 55
-      },
-      "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
-    },
-    {
-      "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 43,
-        "end": 57
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 80,
         "end": 94
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 43,
+        "end": 57
       },
       "preview": "  },\n  query: {\n    type: Object,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 44,
-        "end": 58
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 81,
         "end": 95
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 44,
+        "end": 58
       },
       "preview": "  query: {\n    type: Object,\n    default: null,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 45,
-        "end": 59
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 82,
         "end": 96
       },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 45,
+        "end": 59
+      },
       "preview": "    type: Object,\n    default: null,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 53,
+        "end": 67
+      },
+      "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 54,
+        "end": 68
+      },
+      "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 55,
+        "end": 69
+      },
+      "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
     }
   ]
 }

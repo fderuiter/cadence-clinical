@@ -16,7 +16,7 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 464
+- **Total Automated Test Cases Run:** 470
 - **Passed:** 0 🟢
 - **Failed/Errors:** 0 🔴
 - **Overall Operational Pass Rate:** 0.00%
@@ -493,6 +493,12 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_OpenApiToolingService_ValidatesDriftInProcess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceLogging_ConfiguresJsonConsoleOptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceTelemetry_RegistersOpenTelemetryServices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceWebDefaults_RegistersLoggingTelemetryAndOpenApi` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.ExtensionMethods_ThrowOnNullArguments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.MapCadenceApiDocumentation_RoutesConfiguredInDevelopment` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
@@ -512,11 +518,11 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** dbf24d8b5b45ac3c0a46dfdc8c3de879f0f30dabf4b56622212e5217b9841645
+- **Cryptographic Hash (SHA-256):** de287563c617b7aa4cfbcc4025ae5b7255b231377a227286bd353d0c46ad3e35
 
 -----BEGIN CERTIFICATE-----
 MIIC...DUMMY
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-ZGJmMjRkOGI1YjQ1YWMzYzBhNDZkZmRjOGMzZGU4NzlmMGYzMGRhYmY0YjU2NjIyMjEyZTUyMTdiOTg0MTY0NQ==
+ZGUyODc1NjNjNjE3YjdhYTRjZmJjYzQwMjVhZTViNzI1NWIyMzEzNzdhMjI3Mjg2YmQzNTNkMGM0NmFkM2UzNQ==
 -----END SIGNATURE-----
