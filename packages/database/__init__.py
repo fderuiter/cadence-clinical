@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import functools
 import inspect
 import json
@@ -609,6 +610,67 @@ class IntegrationOutboxMixin:
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ServiceDatabaseAdapter:
+    """
+    Standardized service database adapter factory.
+    Encapsulates RelationalDatabaseManager, ContextVar session management,
+    transactional decorator, and FastAPI route dependency.
+    """
+
+    def __init__(
+        self,
+        service_name: str,
+        context_var_name: str | None = None,
+    ) -> None:
+        self.service_name = service_name
+        self.db_manager = RelationalDatabaseManager(service_name=service_name)
+
+        var_name = context_var_name or "current_session"
+        self.current_session: contextvars.ContextVar[AsyncSession | None] = (
+            contextvars.ContextVar(var_name, default=None)
+        )
+        self.transactional = create_transactional_decorator(
+            self.db_manager, self.current_session
+        )
+        self.get_db_session = DatabaseSessionDependency(self.db_manager)
+
+    def get_session(self) -> AsyncSession:
+        """Gets the current active database session in this context."""
+        session = self.current_session.get()
+        if session is None:
+            raise RuntimeError(
+                "No database session found in current context. Are you using @transactional?"
+            )
+        return session
+
+    def get_lifespan(
+        self,
+        database_url: str,
+        base_metadata: Any | None = None,
+        startup_hooks: list | None = None,
+        shutdown_hooks: list | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        return get_relational_db_lifespan(
+            db_manager=self.db_manager,
+            database_url=database_url,
+            base_metadata=base_metadata,
+            startup_hooks=startup_hooks,
+            shutdown_hooks=shutdown_hooks,
+            **kwargs,
+        )
+
+
+def create_service_db_adapter(
+    service_name: str,
+    context_var_name: str | None = None,
+) -> ServiceDatabaseAdapter:
+    """Factory function to create a standardized ServiceDatabaseAdapter instance."""
+    return ServiceDatabaseAdapter(
+        service_name=service_name, context_var_name=context_var_name
+    )
 
 
 # Expose new Graph Persistence capabilities while keeping imports resilient
