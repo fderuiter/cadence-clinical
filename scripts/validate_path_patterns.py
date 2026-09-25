@@ -273,10 +273,11 @@ def run_layout_assertions(repo_root: Path):
             )
 
     # 3. Verify Presence of Critical Dependency Manifests
-    if not (repo_root / "pyproject.toml").is_file():
-        raise AssertionError("pyproject.toml manifest is missing!")
-    if not (repo_root / "uv.lock").is_file():
-        raise AssertionError("uv.lock dependency lockfile is missing!")
+    if (repo_root / "pyproject.toml").is_file():
+        if not (repo_root / "uv.lock").is_file():
+            raise AssertionError("uv.lock dependency lockfile is missing!")
+    elif not (repo_root / "Cadence.sln").is_file():
+        raise AssertionError("Neither pyproject.toml nor Cadence.sln solution manifest found!")
 
     # 4. Verify no singular "adapter" directory exists in any active microservice
     apps_dir = repo_root / "apps"

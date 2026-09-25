@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 
+using Cadence.Cli.Services;
+
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -17,7 +19,8 @@ public class WizardOnboardingCommand : Command
     {
         bool isWindows = OperatingSystem.IsWindows();
         string scriptName = isWindows ? $"{scriptBaseName}.ps1" : $"{scriptBaseName}.sh";
-        string scriptPath = Path.Combine("scripts", scriptName);
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string scriptPath = Path.Combine(repoRoot, "scripts", scriptName);
 
         if (!File.Exists(scriptPath))
         {
@@ -29,6 +32,7 @@ public class WizardOnboardingCommand : Command
         {
             FileName = isWindows ? "powershell.exe" : "bash",
             Arguments = isWindows ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\"" : $"\"{scriptPath}\"",
+            WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
 
@@ -44,7 +48,8 @@ public class WizardDotnetCommand : Command
     {
         bool isWindows = OperatingSystem.IsWindows();
         string scriptName = isWindows ? "setup_dotnet_wizard.ps1" : "setup_dotnet_wizard.sh";
-        string scriptPath = Path.Combine("scripts", scriptName);
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string scriptPath = Path.Combine(repoRoot, "scripts", scriptName);
 
         if (!File.Exists(scriptPath))
         {
@@ -56,6 +61,7 @@ public class WizardDotnetCommand : Command
         {
             FileName = isWindows ? "powershell.exe" : "bash",
             Arguments = isWindows ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\"" : $"\"{scriptPath}\"",
+            WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
 
@@ -71,7 +77,8 @@ public class WizardMigrateCommand : Command
     {
         bool isWindows = OperatingSystem.IsWindows();
         string scriptName = isWindows ? "migrate_service_wizard.ps1" : "migrate_service_wizard.sh";
-        string scriptPath = Path.Combine("scripts", scriptName);
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string scriptPath = Path.Combine(repoRoot, "scripts", scriptName);
 
         if (!File.Exists(scriptPath))
         {
@@ -83,6 +90,7 @@ public class WizardMigrateCommand : Command
         {
             FileName = isWindows ? "powershell.exe" : "bash",
             Arguments = isWindows ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\"" : $"\"{scriptPath}\"",
+            WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
 
@@ -92,13 +100,20 @@ public class WizardMigrateCommand : Command
     }
 }
 
-public class WizardDecommissionCommand : Command
+public class WizardDecommissionSettings : CommandSettings
 {
-    public override int Execute(CommandContext context)
+    [CommandArgument(0, "[service]")]
+    public string? ServiceName { get; set; }
+}
+
+public class WizardDecommissionCommand : Command<WizardDecommissionSettings>
+{
+    public override int Execute(CommandContext context, WizardDecommissionSettings settings)
     {
         bool isWindows = OperatingSystem.IsWindows();
         string scriptName = isWindows ? "decommission_service_wizard.ps1" : "decommission_service_wizard.sh";
-        string scriptPath = Path.Combine("scripts", scriptName);
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string scriptPath = Path.Combine(repoRoot, "scripts", scriptName);
 
         if (!File.Exists(scriptPath))
         {
@@ -106,10 +121,13 @@ public class WizardDecommissionCommand : Command
             return 1;
         }
 
+        string arg = string.IsNullOrWhiteSpace(settings.ServiceName) ? "" : $"\"{settings.ServiceName}\"";
+
         var psi = new ProcessStartInfo
         {
             FileName = isWindows ? "powershell.exe" : "bash",
-            Arguments = isWindows ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\"" : $"\"{scriptPath}\"",
+            Arguments = isWindows ? $"-ExecutionPolicy Bypass -File \"{scriptPath}\" {arg}" : $"\"{scriptPath}\" {arg}",
+            WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
 

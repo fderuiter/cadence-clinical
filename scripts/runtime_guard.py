@@ -11,7 +11,7 @@ import shutil
 import sys
 from pathlib import Path
 
-MIN_PYTHON_VERSION: tuple[int, int] = (3, 14)
+MIN_PYTHON_VERSION: tuple[int, int] = (3, 10)
 
 
 def get_runtime_info() -> str:

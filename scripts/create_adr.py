@@ -17,8 +17,8 @@ REPO_ROOT = str(Path(__file__).resolve().parent.parent)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-# Enforce Python 3.14+ runtime before loading standard modules or packages
-if sys.version_info < (3, 14):
+# Enforce Python 3.10+ runtime before loading standard modules or packages
+if sys.version_info < (3, 10):
     try:
         from scripts.runtime_guard import enforce_python_runtime
 

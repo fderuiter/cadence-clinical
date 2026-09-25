@@ -58,22 +58,22 @@ ROW_KEYS: dict[str, str] = {
 }
 
 FIX_COMMANDS: dict[str, str] = {
-    "cadence": "`uv run cadence fix`",
-    "contracts": "`uv run python scripts/verify_contracts.py`",
-    "lint": "`uv run ruff check . --fix && uv run ruff format .`",
+    "cadence": "`dotnet cadence fix`",
+    "contracts": "`python3 scripts/verify_contracts.py`",
+    "lint": "`dotnet format Cadence.sln`",
     "dotnet_test": "`dotnet test Cadence.sln`",
-    "test": "`dotnet test Cadence.sln`",
+    "test": "`dotnet cadence test`",
     "frontend": "`pnpm -r format && pnpm -r lint`",
-    "adr": "`uv run python scripts/validate_adrs.py`",
-    "audit": "`uv run pre-commit run detect-secrets --all-files`",
+    "adr": "`python3 scripts/validate_adrs.py`",
+    "audit": "`pre-commit run detect-secrets --all-files`",
     "conflict": "`git fetch origin main && git merge origin/main`",
-    "deid": "`uv run python -m packages.deid.cli`",
-    "duplication": "`uv run python scripts/detect_duplication.py`",
-    "traceability": "`uv run python scripts/generate_rtm.py --validate`",
-    "gxp_validation": "`dotnet test tests/Cadence.E2ETests.csproj --filter Category=Validation`",
-    "migration": "`uv run python3 apps/execution/database/rollback.py`",
-    "markdown": "`uv run python scripts/validate_markdown.py`",
-    "architecture": "`uv run python scripts/validate_architecture_drift.py`",
+    "deid": "`python3 -m packages.deid.cli`",
+    "duplication": "`python3 scripts/detect_duplication.py`",
+    "traceability": "`dotnet cadence gxp validate`",
+    "gxp_validation": "`dotnet cadence gxp sync`",
+    "migration": "`dotnet cadence db migrate`",
+    "markdown": "`python3 scripts/validate_markdown.py`",
+    "architecture": "`dotnet cadence check`",
 }
 
 
