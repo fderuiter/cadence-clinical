@@ -19,6 +19,8 @@ public record ServiceMetadata(
 
 public static class OpenApiToolingService
 {
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
+
     public static readonly IReadOnlyDictionary<string, ServiceMetadata> ServiceCatalog = new Dictionary<string, ServiceMetadata>(StringComparer.OrdinalIgnoreCase)
     {
         ["gateway"] = new("Central API Gateway & Auth Proxy", "Platform & Gateway Infrastructure", 8000, "/api/v1", "Unified reverse proxy handling Keycloak OIDC authentication, HMAC signature propagation, step-up tokens, rate limiting, and OpenAPI aggregation.", "Stateless / Keycloak OIDC"),
@@ -203,7 +205,7 @@ public static class OpenApiToolingService
             return 1;
         }
 
-        string content = File.ReadAllText(markdownPath, Encoding.UTF8);
+        string content = File.ReadAllText(markdownPath, Utf8NoBom);
         string secTitle = "## 7. Complete OpenAPI 3.0 Contract Specification";
         int idx = content.IndexOf(secTitle, StringComparison.Ordinal);
         if (idx == -1)
@@ -240,7 +242,9 @@ public static class OpenApiToolingService
 
         if (validateOnly)
         {
-            if (!string.Equals(content, finalContent, StringComparison.Ordinal))
+            string normContent = content.Replace("\r\n", "\n").Trim();
+            string normFinal = finalContent.Replace("\r\n", "\n").Trim();
+            if (!string.Equals(normContent, normFinal, StringComparison.Ordinal))
             {
                 Console.Error.WriteLine("[ERROR] OpenAPI specification drift detected in docs/SDLC/03_API_Integration_Specification.md!\nPlease run 'cadence fix' to synchronize.");
                 return 1;
@@ -249,7 +253,7 @@ public static class OpenApiToolingService
             return 0;
         }
 
-        File.WriteAllText(markdownPath, finalContent, Encoding.UTF8);
+        File.WriteAllText(markdownPath, finalContent, Utf8NoBom);
         Console.WriteLine("Successfully updated OpenAPI Specification in docs/SDLC/03_API_Integration_Specification.md!");
         return 0;
     }
@@ -279,14 +283,16 @@ public static class OpenApiToolingService
 
             if (validateOnly)
             {
-                if (!File.Exists(targetPath) || File.ReadAllText(targetPath, Encoding.UTF8) != mdContent)
+                string normDisk = File.Exists(targetPath) ? File.ReadAllText(targetPath, Utf8NoBom).Replace("\r\n", "\n").Trim() : "";
+                string normGen = mdContent.Replace("\r\n", "\n").Trim();
+                if (!File.Exists(targetPath) || normDisk != normGen)
                 {
                     driftedFiles.Add($"docs/api/{serviceName}.md");
                 }
             }
             else
             {
-                File.WriteAllText(targetPath, mdContent, Encoding.UTF8);
+                File.WriteAllText(targetPath, mdContent, Utf8NoBom);
                 int routeCount = (spec["paths"] as JsonObject)?.Count ?? 0;
                 Console.WriteLine($"[SUCCESS] Generated API documentation: docs/api/{serviceName}.md ({routeCount} routes)");
             }
@@ -299,7 +305,7 @@ public static class OpenApiToolingService
 
         if (validateOnly)
         {
-            if (!File.Exists(indexPath) || File.ReadAllText(indexPath, Encoding.UTF8) != indexContent)
+            if (!File.Exists(indexPath) || File.ReadAllText(indexPath, Utf8NoBom) != indexContent)
             {
                 driftedFiles.Add("docs/api/index.md");
             }
@@ -316,7 +322,7 @@ public static class OpenApiToolingService
             return 0;
         }
 
-        File.WriteAllText(indexPath, indexContent, Encoding.UTF8);
+        File.WriteAllText(indexPath, indexContent, Utf8NoBom);
         Console.WriteLine($"[SUCCESS] Generated Master API Index: docs/api/index.md ({availableServices.Count} microservices cataloged)");
         return 0;
     }
@@ -774,10 +780,10 @@ public static class OpenApiToolingService
 
         if (node is JsonObject obj)
         {
-            bool first = true;
+            bool isFirstKeyOfArrayItem = isArrayItem;
             foreach (var kv in obj)
             {
-                if (!first && isArrayItem)
+                if (!isFirstKeyOfArrayItem)
                 {
                     sb.Append(indentStr);
                 }
@@ -803,8 +809,7 @@ public static class OpenApiToolingService
                     sb.AppendLine(" null");
                 }
 
-                first = false;
-                isArrayItem = false;
+                isFirstKeyOfArrayItem = false;
             }
         }
         else if (node is JsonArray arr)

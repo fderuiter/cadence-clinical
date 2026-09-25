@@ -1,4 +1,4 @@
-﻿# Knowledge & SOP Engine
+# Knowledge & SOP Engine
 
 > **Functional Domain:** `Protocol & Study Design`  
 > **Service Host Port:** `localhost:8011`  

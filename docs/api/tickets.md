@@ -1,4 +1,4 @@
-﻿# Clinical Issue Hub & Query Escalation
+# Clinical Issue Hub & Query Escalation
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8012`  

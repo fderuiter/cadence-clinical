@@ -2235,7 +2235,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Register & map approved medical IoT sensor device",
-        "description": "Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "register_device_api_v1_interop_sensors_devices_post",
         "requestBody": {
           "required": true,
@@ -2275,7 +2275,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "List registered medical IoT devices",
-        "description": "List registered medical IoT sensor devices for a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "List registered medical IoT sensor devices for a clinical study.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_devices_api_v1_interop_sensors_devices_get",
         "parameters": [
           {
@@ -2374,7 +2374,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Ingest continuous biometric IoT sensor telemetry",
-        "description": "Ingest continuous time-series telemetry streams from approved medical IoT devices.\n\nApplies:\n1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping\n2. Clock drift correction between device RTC and gateway UTC\n3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas\n4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)\n5. Automated safety threshold alert evaluation\n6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse\n\n@req:PRD-DCT-002\n@req:PRD-DCT-001\n@req:ADR-2199",
+        "description": "Ingest continuous time-series telemetry streams from approved medical IoT devices.\n\nApplies:\n1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping\n2. Clock drift correction between device RTC and gateway UTC\n3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas\n4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)\n5. Automated safety threshold alert evaluation\n6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse\n\n@req:PRD-DCT-002\n@req:PRD-DCT-001\n@req:PRD-ADR-2199",
         "operationId": "ingest_telemetry_stream_api_v1_interop_sensors_ingest_post",
         "requestBody": {
           "content": {
@@ -2416,7 +2416,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Query calculated daily summary endpoints",
-        "description": "Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_daily_summaries_api_v1_interop_sensors_daily_summaries_get",
         "parameters": [
           {
@@ -2535,7 +2535,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Query automated safety threshold alerts",
-        "description": "Retrieve triggered biometric safety threshold alerts for clinical investigation.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve triggered biometric safety threshold alerts for clinical investigation.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "list_safety_alerts_api_v1_interop_sensors_safety_alerts_get",
         "parameters": [
           {
@@ -2652,7 +2652,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Acknowledge safety alert with electronic signature",
-        "description": "Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post",
         "parameters": [
           {
@@ -2705,7 +2705,7 @@
           "Biometric Sensors & DCT"
         ],
         "summary": "Get connected IoT sensor dashboard metrics",
-        "description": "Retrieve real-time IoT sensor telemetry metrics across a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "description": "Retrieve real-time IoT sensor telemetry metrics across a clinical study.\n\n@req:PRD-DCT-002\n@req:PRD-ADR-2199",
         "operationId": "get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get",
         "parameters": [
           {
@@ -2748,7 +2748,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Schedule WebRTC telehealth video visit",
-        "description": "Schedule a new WebRTC telehealth video consultation session.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Schedule a new WebRTC telehealth video consultation session.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post",
         "requestBody": {
           "required": true,
@@ -2788,7 +2788,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List telehealth video consultation sessions",
-        "description": "Query scheduled and active telehealth consultation sessions.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Query scheduled and active telehealth consultation sessions.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get",
         "parameters": [
           {
@@ -2854,7 +2854,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single telehealth session details",
-        "description": "Retrieve details of a single telehealth video session by ID or room ID.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Retrieve details of a single telehealth video session by ID or room ID.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get",
         "parameters": [
           {
@@ -2897,7 +2897,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Generate HMAC-SHA256 signed room authorization token",
-        "description": "Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post",
         "parameters": [
           {
@@ -2950,7 +2950,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Exchange WebRTC session signaling message",
-        "description": "Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post",
         "parameters": [
           {
@@ -3003,7 +3003,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Synchronize eConsent interactive co-viewing state",
-        "description": "Synchronize eConsent page position, active highlights, and scroll percentage.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Synchronize eConsent page position, active highlights, and scroll percentage.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post",
         "parameters": [
           {
@@ -3056,7 +3056,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Archive GxP recording with SHA-256 digital seal (21 CFR Part 11)",
-        "description": "Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "description": "Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.\n\n@req:PRD-DCT-005\n@req:PRD-ADR-2199",
         "operationId": "archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post",
         "parameters": [
           {
@@ -3109,7 +3109,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Submit tiered pediatric assent & LAR dual-signature manifest",
-        "description": "Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post",
         "requestBody": {
           "required": true,
@@ -3149,7 +3149,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List executed pediatric assents",
-        "description": "Query executed pediatric assent and LAR consent records.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Query executed pediatric assent and LAR consent records.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get",
         "parameters": [
           {
@@ -3215,7 +3215,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Verify cryptographic bundle seal of pediatric assent",
-        "description": "Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.\n\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get",
         "parameters": [
           {
@@ -3258,7 +3258,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Create Direct-to-Patient (DTP) courier dispatch order",
-        "description": "Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post",
         "requestBody": {
           "required": true,
@@ -3298,7 +3298,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List Direct-to-Patient drug shipments",
-        "description": "Query DTP shipments with cold-chain indicators and tracking states.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Query DTP shipments with cold-chain indicators and tracking states.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get",
         "parameters": [
           {
@@ -3380,7 +3380,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single DTP shipment details by tracking number",
-        "description": "Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get",
         "parameters": [
           {
@@ -3423,7 +3423,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Ingest cold-chain temperature telemetry points & calculate MKT",
-        "description": "Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post",
         "parameters": [
           {
@@ -3476,7 +3476,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Record Chain of Custody (CoC) handoff event",
-        "description": "Record signed Chain of Custody handoff across depot, courier hubs, and final mile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Record signed Chain of Custody handoff across depot, courier hubs, and final mile.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post",
         "parameters": [
           {
@@ -3529,7 +3529,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Confirm final delivery with recipient signature",
-        "description": "Confirm delivery at subject residence with recipient signature and greenlight checks.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "description": "Confirm delivery at subject residence with recipient signature and greenlight checks.\n\n@req:PRD-DCT-003\n@req:PRD-ADR-2199",
         "operationId": "confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post",
         "parameters": [
           {
@@ -3582,7 +3582,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Schedule decentralized in-home nursing visit",
-        "description": "Schedule visiting healthcare nurse appointment with protocol procedure tasks.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Schedule visiting healthcare nurse appointment with protocol procedure tasks.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post",
         "requestBody": {
           "required": true,
@@ -3622,7 +3622,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "List in-home visiting clinician appointments",
-        "description": "Query in-home nursing visits by study, site, nurse, or subject.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Query in-home nursing visits by study, site, nurse, or subject.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "list_in_home_visits_api_v1_interop_dct_home_health_visits_get",
         "parameters": [
           {
@@ -3720,7 +3720,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve single in-home visit details",
-        "description": "Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get",
         "parameters": [
           {
@@ -3763,7 +3763,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Update visiting nurse visit progress and completed procedures",
-        "description": "Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post",
         "parameters": [
           {
@@ -3816,7 +3816,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Reconcile offline-cached mobile eCRF clinical data entry",
-        "description": "Reconcile mobile eCRF clinical data entered offline by visiting nurse.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "description": "Reconcile mobile eCRF clinical data entered offline by visiting nurse.\n\n@req:PRD-DCT-004\n@req:PRD-ADR-2199",
         "operationId": "reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post",
         "parameters": [
           {
@@ -3869,7 +3869,7 @@
           "Decentralized Clinical Trials (DCT)"
         ],
         "summary": "Retrieve aggregated DCT operational metrics",
-        "description": "Retrieve real-time DCT dashboard KPI metrics for study.\n\n@req:PRD-DCT-003\n@req:PRD-DCT-004\n@req:PRD-DCT-005\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "description": "Retrieve real-time DCT dashboard KPI metrics for study.\n\n@req:PRD-DCT-003\n@req:PRD-DCT-004\n@req:PRD-DCT-005\n@req:PRD-DCT-006\n@req:PRD-ADR-2199",
         "operationId": "get_dct_metrics_api_v1_interop_dct_metrics__study_id__get",
         "parameters": [
           {
@@ -4514,7 +4514,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Sdtm Dd Endpoint",
-        "description": "Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "description": "Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post",
         "requestBody": {
           "content": {
@@ -4556,7 +4556,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Sdtm Do Endpoint",
-        "description": "Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "description": "Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post",
         "requestBody": {
           "content": {
@@ -4598,7 +4598,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Mdr Incident Report Endpoint",
-        "description": "Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "description": "Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209",
         "operationId": "generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post",
         "requestBody": {
           "content": {
@@ -4640,7 +4640,7 @@
           "Device Interop & Regulatory Exports"
         ],
         "summary": "Generate Export Package Endpoint",
-        "description": "Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, ADR-2209",
+        "description": "Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, PRD-ADR-2209",
         "operationId": "generate_export_package_endpoint_api_v1_interop_devices_export_package_post",
         "requestBody": {
           "content": {

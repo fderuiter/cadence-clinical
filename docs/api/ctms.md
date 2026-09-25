@@ -1,4 +1,4 @@
-﻿# Clinical Trial Management System (CTMS)
+# Clinical Trial Management System (CTMS)
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8005`  

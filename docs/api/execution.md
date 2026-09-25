@@ -1,4 +1,4 @@
-﻿# EDC Execution Engine
+# EDC Execution Engine
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8002`  

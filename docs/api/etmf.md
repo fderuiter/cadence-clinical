@@ -1,4 +1,4 @@
-﻿# Electronic Trial Master File (eTMF)
+# Electronic Trial Master File (eTMF)
 
 > **Functional Domain:** `Safety, Quality & Governance`  
 > **Service Host Port:** `localhost:8004`  
