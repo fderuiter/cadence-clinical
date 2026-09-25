@@ -208,7 +208,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
   - Secure short-lived presigned upload and download URLs for direct browser transfer.
   - SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
 
-#### 19. Compliance Engine (`apps/compliance` — Port 8019)
+#### 19. Compliance Engine (`packages/compliance` — Port 8019)
 - **Role:** Centralized Regulatory Verification & Qualification.
 - **Datastore:** .NET 10 xUnit v3 + Audit Ledgers.
 - **Core Responsibilities:**

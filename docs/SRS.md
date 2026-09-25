@@ -1359,7 +1359,7 @@ The following matrix cross-references every Software Requirement Specification (
 | `Trace-31` | `PRD-CRF-013` | System Baseline | Site & Tenant Data Isolation | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
 | `Trace-32` | `PRD-CRF-014` | Patient Portal | Failure Recovery & High Availability | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
 | `Trace-33` | `PRD-CRF-015` | Web Portal | In-Memory Accessibility Auditing | Test (T) | OQ | `apps/execution/tests/test_layout_validator_compliance.py` |
-| `Trace-34` | `PRD-SYS-041` | DevOps & SDLC | Label-Based Backlog Gating | Test (T) | IQ | `scripts/tests/test_sync_github_project.py` |
+| `Trace-34` | `PRD-SYS-041` | DevOps & SDLC | Label-Based Backlog Gating | Test (T) | IQ | `tests/test_sync_github_project.py` |
 
 ---
 

@@ -196,6 +196,6 @@ graph TD
 - **`Cadence.Apps.Fileshare` (`apps/fileshare`):** Binary blob storage broker, MinIO/S3 presigned transfer URLs, and media transcoding pipelines (`FFMpegCore`, `nClam`).
 - **`Cadence.Apps.Imaging` (`apps/imaging`):** Blinded dual-reader RECIST 1.1 oncology adjudication and WebGL multi-planar reconstruction (MPR) viewer.
 - **`Cadence.Apps.Knowledge` (`apps/knowledge`):** Contextual SOP delivery, hierarchical specificity scoring, and two-tier controlled article governance.
-- **`Cadence.Apps.Compliance` (`apps/compliance`):** Automated IQ/OQ/PQ regulatory test runner, RTM synchronization, and 21 CFR Part 11 verification.
+- **`Cadence.Compliance` (`packages/compliance`):** Automated IQ/OQ/PQ regulatory test runner, RTM synchronization, and 21 CFR Part 11 verification.
 - **`apps/web` (`apps/web`):** Primary Clinical Investigator, CRC, and Data Manager Vue 3 SPA frontend.
 - **`apps/subject-portal` (`apps/subject-portal`):** Patient/Subject-facing eCOA and eConsent Vue 3 application.

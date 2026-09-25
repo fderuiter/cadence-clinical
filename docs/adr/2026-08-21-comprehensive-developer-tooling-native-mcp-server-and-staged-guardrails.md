@@ -108,5 +108,5 @@ Implement a declarative `TerminalDocument` rendering engine:
   - `packages/cli/commands/check.py` & `fix.py` (integrated with `TerminalDocument` output).
   - `scripts/pre_commit.py` (implements two-tier staged hook logic).
 - **Verification Plan:**
-  - Unit and contract tests under `packages/cli/tests/test_mcp_server.py`, `packages/cli/tests/test_formatting.py`, and `scripts/tests/test_pre_commit.py`.
+  - Unit and contract tests under `packages/cli/mcp/server.py`, `packages/cli/tests/test_formatting.py`, and `tests/test_pre_commit.py`.
   - Full sentinel and GxP synchronization validation via `uv run cadence check --parallel` and `uv run cadence gxp sync`.

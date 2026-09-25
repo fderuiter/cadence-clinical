@@ -74,6 +74,10 @@ def run_fix(
             "CLI Documentation Generation",
             [sys.executable, "scripts/generate_cli_docs.py"],
         ),
+        (
+            "Markdown Path Remediation",
+            [sys.executable, "scripts/validate_markdown.py", "--fix"],
+        ),
     ]
 
     if all_remediations:

@@ -133,21 +133,21 @@ Ports are centrally defined in `packages/cli/ports.py:20-84` and echoed in `dock
 
 | Service | Module | Mechanism | Purpose |
 |---|---|---|---|
-| execution | `workers/outbox_worker.py:218,227` | asyncio loop | Polls `IntegrationOutbox`, dispatches signed HTTP callbacks |
-| execution | `workers/anomaly_worker.py:88-142` | asyncio task | Cross-domain eCRF anomaly detection |
-| execution | `workers/consent_subscriber.py:128-187` | **background thread**, Redis Pub/Sub | Subscribes `econsent_consent_completed`, auto-provisions `ClinicalSubject` on consent completion — see §3.3 for the durability gap |
-| execution | `database/sealer.py:318` | asyncio task | GxP record-sealing (uses `pg_try_advisory_xact_lock(42001)`) |
+| execution | `apps/execution/workers/outbox_worker.py:218,227` | asyncio loop | Polls `IntegrationOutbox`, dispatches signed HTTP callbacks |
+| execution | `apps/execution/workers/anomaly_worker.py:88-142` | asyncio task | Cross-domain eCRF anomaly detection |
+| execution | `apps/execution/workers/consent_subscriber.py:128-187` | **background thread**, Redis Pub/Sub | Subscribes `econsent_consent_completed`, auto-provisions `ClinicalSubject` on consent completion — see §3.3 for the durability gap |
+| execution | `apps/execution/database/sealer.py:318` | asyncio task | GxP record-sealing (uses `pg_try_advisory_xact_lock(42001)`) |
 | execution | `queries_escalation.py:173` | asyncio task | Query-escalation SLA checker (`pg_try_advisory_xact_lock(42002)`) |
-| etmf | `workers/outbox_worker.py:75,82` | asyncio task | Polls `IntegrationOutbox` for eTMF |
-| etmf | `workers/document_intelligence_worker.py:147` | asyncio daemon | Document layout parsing / DIA classification queue |
-| etmf | `sealer.py:295` (`adapters/sealer.py`) | asyncio task | TMF-document sealing |
+| etmf | `apps/etmf/workers/outbox_worker.py:75,82` | asyncio task | Polls `IntegrationOutbox` for eTMF |
+| etmf | `apps/etmf/workers/document_intelligence_worker.py:147` | asyncio daemon | Document layout parsing / DIA classification queue |
+| etmf | `sealer.py:295` (`apps/etmf/adapters/sealer.py`) | asyncio task | TMF-document sealing |
 | etmf | `expiration_scanner.py` | asyncio task | Document/certification expiration scan |
-| fileshare | `workers/transcode_worker.py:336` | asyncio daemon | FFmpeg HLS/DASH transcode queue |
-| fileshare | `workers/conversion_worker.py:234` | asyncio daemon | LibreOffice document→PDF conversion queue |
-| notifications | `workers/notification_worker.py:365,381` | asyncio task | Dispatches `Notification`/`NotificationDelivery` rows |
-| econsent | `workers/archival_worker.py:136,145` | asyncio task | Pushes signed consent records to eTMF |
+| fileshare | `apps/fileshare/workers/transcode_worker.py:336` | asyncio daemon | FFmpeg HLS/DASH transcode queue |
+| fileshare | `apps/fileshare/workers/conversion_worker.py:234` | asyncio daemon | LibreOffice document→PDF conversion queue |
+| notifications | `apps/notifications/workers/notification_worker.py:365,381` | asyncio task | Dispatches `Notification`/`NotificationDelivery` rows |
+| econsent | `apps/econsent/workers/archival_worker.py:136,145` | asyncio task | Pushes signed consent records to eTMF |
 | tickets | `escalation.py:274-296` | asyncio task | SLA escalation, poll interval `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` (default 60s) |
-| designer | `workers/cohort_feasibility_worker.py:115` | request-triggered, Postgres advisory lock | Not a background loop — invoked from the cohort-feasibility router |
+| designer | `apps/designer/workers/cohort_feasibility_worker.py:115` | request-triggered, Postgres advisory lock | Not a background loop — invoked from the cohort-feasibility router |
 
 All lifespans respect a `RUN_BACKGROUND_WORKERS` flag (`apps/execution/main.py:203`) to disable workers under test.
 
@@ -165,7 +165,7 @@ Per-service DB migration entry points (standalone scripts, discovered dynamicall
 
 ### 2.5 Operational scripts (`scripts/`, 104 files, not a bounded context)
 
-Excluding `scripts/tests/` (53 pytest files covering the tooling below) and `scripts/hooks/` (4 Antigravity agent lifecycle hooks: `post_write_check.py`, `pre_invocation_reminder.py`, `pre_tool_guardrail.py`, `stop_sentinel.py`), the remaining 63 files fall into six categories:
+Excluding `tests/` (53 pytest files covering the tooling below) and `scripts/hooks/` (4 Antigravity agent lifecycle hooks: `post_write_check.py`, `pre_invocation_reminder.py`, `pre_tool_guardrail.py`, `stop_sentinel.py`), the remaining 63 files fall into six categories:
 
 - **Validation/compliance linters** (CI-gating): `validate_adrs.py`, `validate_architecture_drift.py`, `validate_codeowners.py`, `validate_dependencies.py`, `validate_imports.py`, `validate_markdown.py`, `validate_path_patterns.py`, `validate_schemas.py`, `validate_vulnerabilities.py`, `verify_contracts.py`, `verify_gxp_signatures.py`, `audit_security.py`, `compliance_utility.py`, `detect_duplication.py`, `check_ports.py`, `check_duplicate_identifiers.js`.
 - **Sync scripts**: `sync_gxp.py`, `sync_github_project.py`, `sync_openapi_spec.py`, `sync_ruleset.py`.
@@ -260,9 +260,9 @@ Only `apps/fileshare` (+ its `fileshare-transcoder` sidecar) is wired to MinIO i
 | `DESIGNER_URL` | 8001 | `apps/interop/{infrastructure,adapters}/designer_client.py`, `apps/gateway/main.py:468`, `apps/execution/designer_client.py:31` |
 | `EXECUTION_URL` | 8002 | `apps/quality/adapters/execution_client.py:42`, `apps/gateway/main.py:469`, `apps/ctms/.../ctms.py:2375,2423,2539`, `apps/ctms/.../doa_service.py:15`, `apps/safety/adapters/execution_client.py:29`, `apps/etmf/{infrastructure,adapters}/lock_client.py:60,128` |
 | `ETMF_URL` | 8003 | `apps/gateway/main.py:470`, `apps/eisf/.../eisf.py:1134,1539,1643`, `apps/econsent/adapters/etmf_client.py:27`, `apps/designer/.../designer_routes.py:1804`, `apps/execution/workers/outbox_worker.py:132` |
-| `INTEROP_URL` | 8004 | `apps/gateway/{main.py:471, presentation/routers/ecoa.py:40}`, `apps/org/.../org.py:390,1534` (fallback) |
+| `INTEROP_URL` | 8004 | `apps/gateway/{main.py:471, apps/gateway/presentation/routers/ecoa.py:40}`, `apps/org/.../org.py:390,1534` (fallback) |
 | `QUALITY_URL` | 8005 | `apps/gateway/main.py:474` (only reader) |
-| `NOTIFICATIONS_URL` | 8006 | `apps/gateway/main.py:473`, `apps/safety/{presentation/routers/safety.py:174, processor.py:116, adapters/processor.py:116}`, `apps/etmf/adapters/notifications_client.py:29`, `packages/security/notifications.py:177` |
+| `NOTIFICATIONS_URL` | 8006 | `apps/gateway/main.py:473`, `apps/safety/{presentation/routers/safety.py:174, processor.py:116, apps/safety/adapters/processor.py:116}`, `apps/etmf/adapters/notifications_client.py:29`, `packages/security/notifications.py:177` |
 | `CTMS_URL` | 8007 | `apps/gateway/main.py:472` (only reader) |
 | `SAFETY_URL` | 8008 | `apps/gateway/main.py:475-477` (only reader) |
 | `TICKETS_URL` | 8009 | `apps/gateway/main.py:478` (only reader) |
@@ -311,8 +311,8 @@ Missing from `.env.example` despite being live in code/compose: `FILESHARE_DATAB
 
 ### 3.6 Raw SQL / Postgres-native features requiring explicit .NET (Npgsql) equivalents
 
-- `SELECT set_config('cadence.current_user_id', :user_id, true)` and siblings (`apps/execution/presentation/routers/subjects.py:425-433`, `database/audit.py:52,62`, `presentation/routers/sdv.py:157,375,554`) — session-scoped GUCs smuggling audit-actor context into DB triggers/RLS. Reproduce via an EF Core `SaveChanges`/`DbConnection` interceptor issuing the equivalent `SET LOCAL` inside the same transaction.
-- `pg_try_advisory_xact_lock(42001)` (`database/sealer.py:50`) and `pg_try_advisory_xact_lock(42002)` (`queries_escalation.py:34`) — transaction-scoped advisory locks. Directly portable via Npgsql raw SQL since the target stays PostgreSQL (ADR-2238).
+- `SELECT set_config('cadence.current_user_id', :user_id, true)` and siblings (`apps/execution/presentation/routers/subjects.py:425-433`, `apps/execution/database/audit.py:52,62`, `apps/execution/presentation/routers/sdv.py:157,375,554`) — session-scoped GUCs smuggling audit-actor context into DB triggers/RLS. Reproduce via an EF Core `SaveChanges`/`DbConnection` interceptor issuing the equivalent `SET LOCAL` inside the same transaction.
+- `pg_try_advisory_xact_lock(42001)` (`apps/execution/database/sealer.py:50`) and `pg_try_advisory_xact_lock(42002)` (`queries_escalation.py:34`) — transaction-scoped advisory locks. Directly portable via Npgsql raw SQL since the target stays PostgreSQL (ADR-2238).
 - eTMF SQLite immutability DDL triggers (`packages/database/__init__.py:472-498`) — must become real Postgres `CREATE TRIGGER ... RAISE EXCEPTION` constraints, not silently dropped when the SQLite-only services move to the platform's unified Postgres standard.
 
 ---

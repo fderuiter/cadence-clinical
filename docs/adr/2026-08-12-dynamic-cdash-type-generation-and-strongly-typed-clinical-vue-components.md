@@ -32,7 +32,7 @@ This decision directly implements requirements under PRD-CRF-006.
 
 ### Option 2: Automated Dynamic Type Generation from CDISC Schemas (Selected)
 
-- **Overview:** Build a dynamic codegen script (`packages/ui/scripts/generate-types.js`) that dynamically parses official CDASH and CDASHIG JSON schemas to generate union and interface types.
+- **Overview:** Build a dynamic codegen script (`packages/ui/apps/web/src/types/generate-types.js`) that dynamically parses official CDASH and CDASHIG JSON schemas to generate union and interface types.
 - ***Pros:***
   - ✅ Generates highly accurate unions representing over 1119 unique CDASH variables.
   - ✅ Very fast (well under 1.5 seconds) and fits into the workspace build cycle.

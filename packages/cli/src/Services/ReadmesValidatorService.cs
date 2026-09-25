@@ -22,6 +22,12 @@ public static class ReadmesValidatorService
 
             foreach (var subDir in Directory.GetDirectories(parent))
             {
+                string dirName = Path.GetFileName(subDir);
+                if (dirName.StartsWith('.') || dirName == "__pycache__" || dirName == "bin" || dirName == "obj" || dirName == "node_modules")
+                {
+                    continue;
+                }
+
                 checkedCount++;
                 string readmePath = Path.Combine(subDir, "README.md");
                 if (!File.Exists(readmePath))

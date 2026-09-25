@@ -204,7 +204,7 @@ Every monetary field in this slice — `ParticipantWalletModel.current_balance/l
 **`create_or_update_lay_summary(study_id, title, ..., summary_id=None, plain_language_sections=None, status="PUBLISHED", ...)`**
 1. If `summary_id` given: load it → `LaySummaryNotFoundError` (404) if missing; overwrite all fields, **`plain_language_sections = plain_language_sections or {}`** (data-loss defect, §1.6/§4.5); `version_index += 1`.
 2. Else: build `default_sections` = caller value or the hardcoded 6-key boilerplate template; insert new row with `published_at = now if status == "PUBLISHED" else None`; `version_index = 1`.
-3. Commit, refresh, write audit entry — action is `LAY_SUMMARY_CREATED` if this was a create, or the **string literal** `"LAY_SUMMARY_UPDATED"` if an update (note: `"LAY_SUMMARY_UPDATED"` is **not** a member of the `AuditAction` enum defined in `domain/models.py` — it is a raw string that happens to match no declared constant, a drift risk if the enum is ever used as the source of truth for allowed actions elsewhere).
+3. Commit, refresh, write audit entry — action is `LAY_SUMMARY_CREATED` if this was a create, or the **string literal** `"LAY_SUMMARY_UPDATED"` if an update (note: `"LAY_SUMMARY_UPDATED"` is **not** a member of the `AuditAction` enum defined in `apps/payments/domain/models.py` — it is a raw string that happens to match no declared constant, a drift risk if the enum is ever used as the source of truth for allowed actions elsewhere).
 
 **`publish_lay_summary(summary_id, irb_approval_number=None, irb_approval_date=None, ...)`**
 1. Load → `LaySummaryNotFoundError` (404) if missing.
@@ -225,7 +225,7 @@ Domain exceptions raised by the service are **not caught in the router** — the
 {
   "type": "https://cadence.clinical/errors/<slug>",
   "title": "<Title>",
-  "status": <int>,
+  "status": 400,
   "detail": "<exception message>",
   "instance": "<request URL>",
   "extensions": {}
@@ -278,7 +278,7 @@ Two router-local `HTTPException` calls bypass the RFC 7807 shape entirely and re
 
 **4.5 — Silent data loss on lay-summary update.** Confirmed defect (§1.6, §2.4): updating a `LaySummaryModel` without supplying `plain_language_sections` overwrites existing rich content with `{}`. This must be an explicit, reviewed fix-or-replicate decision, not something the .NET implementation inherits by accident of a literal line-by-line transcription.
 
-**4.6 — Loosely-typed domain model layer vs. strictly-typed DB layer.** `apps/payments/domain/models.py`'s Pydantic mirrors of these entities (e.g. `ParticipantWalletModel` in the *domain* module, distinct from the *infrastructure* SQLAlchemy class of the same name) type every timestamp as `Any | None` and allow `extra="allow"` on most entities — meaning the domain-layer Pydantic model imposes essentially no structural validation beyond what's explicitly declared, and will silently accept and round-trip arbitrary extra keys. The DTOs in `presentation/dtos.py` (which actually gate the HTTP boundary) are the real source of validation truth for this slice, not the domain models — a naming/layering trap worth flagging explicitly since "domain model" ordinarily implies the authoritative invariant layer.
+**4.6 — Loosely-typed domain model layer vs. strictly-typed DB layer.** `apps/payments/domain/models.py`'s Pydantic mirrors of these entities (e.g. `ParticipantWalletModel` in the *domain* module, distinct from the *infrastructure* SQLAlchemy class of the same name) type every timestamp as `Any | None` and allow `extra="allow"` on most entities — meaning the domain-layer Pydantic model imposes essentially no structural validation beyond what's explicitly declared, and will silently accept and round-trip arbitrary extra keys. The DTOs in `apps/payments/presentation/dtos.py` (which actually gate the HTTP boundary) are the real source of validation truth for this slice, not the domain models — a naming/layering trap worth flagging explicitly since "domain model" ordinarily implies the authoritative invariant layer.
 
 **4.7 — Dead/no-op API parameter.** `issue_reloadable_debit_card`'s `initial_load` (and the corresponding `IssueReloadableCardRequest.initial_load` DTO field, validated `ge=0.0`) is accepted end-to-end through the HTTP layer but never applied to wallet balance or recorded as a transaction anywhere in the service. A client relying on this parameter to fund a newly-issued card will silently get no funds and no error.
 

@@ -38,7 +38,7 @@ No `.csproj` needed a direct `PackageReference` to either package — central tr
 - Both projects wrote to the same restore-generated `project.assets.json` (under each project's `obj/`) and to the same `bin/` output directory.
 - The SDK's default `**/*.cs` glob made each project compile _both_ test files (`ArchitectureSentinelTests.cs` and `SecurityAndDomainTests.cs`), not just its own.
 
-This was confirmed empirically, not just inferred: running `dotnet build Cadence.sln` clean, repeatedly, produced the same `CA1707`/`CA1860` analyzer diagnostics against the same four test methods every time — but attributed to a _different_ project on different runs (`Cadence.ArchitectureTests.csproj` on one run, `Cadence.UnitTests.csproj` on the next). That's the signature of a restore/analyzer-state race between two projects sharing one `obj/` directory, not a flaky analyzer. Building either project in isolation (with `tests/obj` cleared first) always succeeded — which is exactly what let the original stale-pin failure hide this second issue for as long as it did; restore never got far enough to expose it until fix 2a above landed.
+This was confirmed empirically, not just inferred: running `dotnet build Cadence.sln` clean, repeatedly, produced the same `CA1707`/`CA1860` analyzer diagnostics against the same four test methods every time — but attributed to a _different_ project on different runs (`Cadence.ArchitectureTests.csproj` on one run, `Cadence.UnitTests.csproj` on the next). That's the signature of a restore/analyzer-state race between two projects sharing one `obj/` directory, not a flaky analyzer. Building either project in isolation (with `obj` cleared first) always succeeded — which is exactly what let the original stale-pin failure hide this second issue for as long as it did; restore never got far enough to expose it until fix 2a above landed.
 
 **Fix:**
 
@@ -91,8 +91,8 @@ Cadence.Apps.Designer -> .../apps/designer/src/bin/Release/net10.0/Cadence.Apps.
 Cadence.Apps.Gateway -> .../apps/gateway/src/bin/Release/net10.0/Cadence.Apps.Gateway.dll
 Cadence.Contracts -> .../packages/contracts/src/bin/Release/net10.0/Cadence.Contracts.dll
 Cadence.Cli -> .../packages/cli/src/bin/Release/net10.0/cadence.dll
-Cadence.ArchitectureTests -> .../tests/bin/ArchitectureTests/Release/net10.0/Cadence.ArchitectureTests.dll
-Cadence.UnitTests -> .../tests/bin/UnitTests/Release/net10.0/Cadence.UnitTests.dll
+Cadence.ArchitectureTests -> .../bin/ArchitectureTests/Release/net10.0/Cadence.ArchitectureTests.dll
+Cadence.UnitTests -> .../bin/UnitTests/Release/net10.0/Cadence.UnitTests.dll
 
 Build succeeded.
     0 Warning(s)
@@ -100,7 +100,7 @@ Build succeeded.
 Time Elapsed 00:00:07.27
 ```
 
-Also reproduced the exact sequence from `.github/workflows/dotnet-ci.yml`:
+Also reproduced the exact sequence from `.github/workflows/ci.yml`:
 
 ```
 dotnet restore Cadence.sln
