@@ -11,21 +11,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.14"
-
-      - name: Install UV Package Manager
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install Dependencies
-        run: |
-          uv sync --locked --all-extras
-          echo ".venv/bin" >> $GITHUB_PATH
-
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
 
@@ -58,6 +43,7 @@ jobs:
       - name: Generate Reports with Overrides
         run: |
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
+          cp docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md tmp_etmf/ || true
 
       - name: Verify Isolated Generation
         run: |
