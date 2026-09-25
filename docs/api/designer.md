@@ -1,4 +1,4 @@
-﻿# Study Designer & MDR (USDM)
+# Study Designer & MDR (USDM)
 
 > **Functional Domain:** `Protocol & Study Design`  
 > **Service Host Port:** `localhost:8001`  

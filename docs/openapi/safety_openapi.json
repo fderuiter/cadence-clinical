@@ -789,7 +789,7 @@
     "/api/v1/safety/rules/evaluate": {
       "post": {
         "summary": "Evaluate Expedited Safety Rules Endpoint",
-        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, ADR-2199",
+        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, PRD-ADR-2199",
         "operationId": "evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post",
         "requestBody": {
           "content": {
@@ -1084,7 +1084,7 @@
     "/api/v1/safety/as2/transmissions": {
       "post": {
         "summary": "Send As2 Transmission Endpoint",
-        "description": "Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post",
         "requestBody": {
           "required": true,
@@ -1121,7 +1121,7 @@
       },
       "get": {
         "summary": "List As2 Transmissions Endpoint",
-        "description": "List append-only AS2 B2B transmission ledger records with optional filters.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "List append-only AS2 B2B transmission ledger records with optional filters.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get",
         "parameters": [
           {
@@ -1240,7 +1240,7 @@
     "/api/v1/safety/as2/transmissions/{id}": {
       "get": {
         "summary": "Get As2 Transmission Endpoint",
-        "description": "Retrieve full audit history and status of an AS2 B2B transmission by ID.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Retrieve full audit history and status of an AS2 B2B transmission by ID.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get",
         "parameters": [
           {
@@ -1280,7 +1280,7 @@
     "/api/v1/safety/as2/mdn": {
       "post": {
         "summary": "Process Inbound Mdn Endpoint",
-        "description": "Process an asynchronous Message Disposition Notification (MDN) callback.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Process an asynchronous Message Disposition Notification (MDN) callback.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post",
         "requestBody": {
           "content": {
@@ -1319,7 +1319,7 @@
     "/api/v1/safety/as2/ack": {
       "post": {
         "summary": "Process Regulatory Ack Endpoint",
-        "description": "Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post",
         "requestBody": {
           "content": {
@@ -1358,7 +1358,7 @@
     "/api/v1/safety/as2/transmissions/{id}/retry": {
       "post": {
         "summary": "Retry As2 Transmission Endpoint",
-        "description": "Retry a failed AS2 transmission.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "description": "Retry a failed AS2 transmission.\n\nRequirements: PRD-PVG-002, PRD-ADR-2199",
         "operationId": "retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post",
         "parameters": [
           {
@@ -1398,7 +1398,7 @@
     "/api/v1/safety/signals/detect": {
       "post": {
         "summary": "Execute Signal Detection Scan Endpoint",
-        "description": "Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post",
         "requestBody": {
           "content": {
@@ -1437,7 +1437,7 @@
     "/api/v1/safety/signals/runs": {
       "get": {
         "summary": "List Signal Detection Runs Endpoint",
-        "description": "List historical disproportionality signal detection scan runs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "List historical disproportionality signal detection scan runs.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get",
         "parameters": [
           {
@@ -1505,7 +1505,7 @@
     "/api/v1/safety/signals/runs/{id}": {
       "get": {
         "summary": "Get Signal Detection Run Endpoint",
-        "description": "Retrieve full metric tables and details for a signal detection scan run.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Retrieve full metric tables and details for a signal detection scan run.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get",
         "parameters": [
           {
@@ -1547,7 +1547,7 @@
     "/api/v1/safety/signals/alerts": {
       "get": {
         "summary": "List Signal Alerts Endpoint",
-        "description": "List safety signal review alerts with optional filtering by status, severity, or study.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "List safety signal review alerts with optional filtering by status, severity, or study.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get",
         "parameters": [
           {
@@ -1646,7 +1646,7 @@
     "/api/v1/safety/signals/alerts/{id}": {
       "get": {
         "summary": "Get Signal Alert Endpoint",
-        "description": "Retrieve details of an individual safety signal review alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Retrieve details of an individual safety signal review alert.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get",
         "parameters": [
           {
@@ -1686,7 +1686,7 @@
     "/api/v1/safety/signals/alerts/{id}/review": {
       "post": {
         "summary": "Review Signal Alert Endpoint",
-        "description": "Review and update the clinical triage disposition of a safety signal alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "description": "Review and update the clinical triage disposition of a safety signal alert.\n\nRequirements: PRD-PVG-003, PRD-ADR-2199",
         "operationId": "review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post",
         "parameters": [
           {
@@ -1736,7 +1736,7 @@
     "/api/v1/safety/signals/alerts/{id}/sign": {
       "post": {
         "summary": "Sign Signal Alert Endpoint",
-        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.\n\nRequirements: PRD-PVG-003, PRD-PVG-008, ADR-2199",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.\n\nRequirements: PRD-PVG-003, PRD-PVG-008, PRD-ADR-2199",
         "operationId": "sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post",
         "parameters": [
           {
@@ -1786,7 +1786,7 @@
     "/api/v1/safety/exposure/calculate": {
       "post": {
         "summary": "Calculate Subject Exposure Endpoint",
-        "description": "Calculate cumulative and interval patient-years of exposure.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Calculate cumulative and interval patient-years of exposure.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "calculate_subject_exposure_endpoint_api_v1_safety_exposure_calculate_post",
         "requestBody": {
           "content": {
@@ -1825,7 +1825,7 @@
     "/api/v1/safety/snapshots/lock": {
       "post": {
         "summary": "Lock Regulatory Snapshot Endpoint",
-        "description": "Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "lock_regulatory_snapshot_endpoint_api_v1_safety_snapshots_lock_post",
         "requestBody": {
           "content": {
@@ -1864,7 +1864,7 @@
     "/api/v1/safety/snapshots/verify": {
       "post": {
         "summary": "Verify Regulatory Snapshot Endpoint",
-        "description": "Cryptographically verify the bitwise integrity of a locked regulatory snapshot.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Cryptographically verify the bitwise integrity of a locked regulatory snapshot.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "verify_regulatory_snapshot_endpoint_api_v1_safety_snapshots_verify_post",
         "requestBody": {
           "content": {
@@ -1903,7 +1903,7 @@
     "/api/v1/safety/periodic-reports/compile": {
       "post": {
         "summary": "Compile Periodic Safety Report Endpoint",
-        "description": "Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post",
         "requestBody": {
           "content": {
@@ -1942,7 +1942,7 @@
     "/api/v1/safety/periodic-reports": {
       "get": {
         "summary": "List Periodic Safety Reports Endpoint",
-        "description": "List compiled periodic regulatory safety reports with optional filters.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "description": "List compiled periodic regulatory safety reports with optional filters.\n\nRequirements: PRD-PVG-004, PRD-ADR-2199",
         "operationId": "list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get",
         "parameters": [
           {
@@ -2041,7 +2041,7 @@
     "/api/v1/safety/periodic-reports/{id}": {
       "get": {
         "summary": "Get Periodic Safety Report Endpoint",
-        "description": "Retrieve full structured JSON payload of a periodic regulatory safety report by ID.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "description": "Retrieve full structured JSON payload of a periodic regulatory safety report by ID.\n\nRequirements: PRD-PVG-004, PRD-ADR-2199",
         "operationId": "get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get",
         "parameters": [
           {
@@ -2081,7 +2081,7 @@
     "/api/v1/safety/periodic-reports/{id}/sign": {
       "post": {
         "summary": "Sign Periodic Safety Report Endpoint",
-        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.\n\nRequirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.\n\nRequirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post",
         "parameters": [
           {
@@ -2131,7 +2131,7 @@
     "/api/v1/safety/periodic-reports/{id}/qppv-sign": {
       "post": {
         "summary": "Qppv Sign Periodic Safety Report Endpoint",
-        "description": "Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199",
+        "description": "Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.\n\nRequirements: PRD-AGG-001, 21 CFR Part 11, PRD-ADR-2199",
         "operationId": "qppv_sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__qppv_sign_post",
         "parameters": [
           {
@@ -2181,7 +2181,7 @@
     "/api/v1/safety/periodic-reports/{id}/export": {
       "get": {
         "summary": "Export Periodic Safety Report Endpoint",
-        "description": "Export a periodic safety report as HTML, XML, or JSON.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, ADR-2199",
+        "description": "Export a periodic safety report as HTML, XML, or JSON.\n\nRequirements: PRD-PVG-004, PRD-AGG-001, PRD-ADR-2199",
         "operationId": "export_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__export_get",
         "parameters": [
           {
@@ -2257,7 +2257,7 @@
     "/api/v1/safety/device-investigations": {
       "post": {
         "summary": "Open Device Safety Investigation Endpoint",
-        "description": "Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.\n\nCalculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209",
+        "description": "Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.\n\nCalculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post",
         "requestBody": {
           "required": true,
@@ -2294,7 +2294,7 @@
       },
       "get": {
         "summary": "List Device Safety Investigations Endpoint",
-        "description": "Lists device safety investigation cases matching query parameters.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "description": "Lists device safety investigation cases matching query parameters.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209",
         "operationId": "list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get",
         "parameters": [
           {
@@ -2393,7 +2393,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}": {
       "get": {
         "summary": "Get Device Safety Investigation Endpoint",
-        "description": "Retrieves a single device safety investigation case by ID.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "description": "Retrieves a single device safety investigation case by ID.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, PRD-ADR-2209",
         "operationId": "get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get",
         "parameters": [
           {
@@ -2433,7 +2433,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}/adjudicate": {
       "put": {
         "summary": "Adjudicate Device Safety Investigation Endpoint",
-        "description": "Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209",
+        "description": "Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, PRD-ADR-2209",
         "operationId": "adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put",
         "parameters": [
           {
@@ -2483,7 +2483,7 @@
     "/api/v1/safety/device-investigations/{investigation_id}/regulatory-report": {
       "post": {
         "summary": "Generate Device Vigilance Report Endpoint",
-        "description": "Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "description": "Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, PRD-ADR-2209",
         "operationId": "generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post",
         "parameters": [
           {

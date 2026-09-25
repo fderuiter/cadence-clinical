@@ -735,7 +735,7 @@
           "CEC Adjudication"
         ],
         "summary": "Create And Package Dossier",
-        "description": "Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.\n\n@req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199",
+        "description": "Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.\n\n@req:PRD-CEC-001, @req:PRD-SYS-124, @req:PRD-ADR-2199",
         "operationId": "create_and_package_dossier_api_v1_execution_cec_dossiers_post",
         "requestBody": {
           "required": true,
@@ -887,7 +887,7 @@
           "CEC Adjudication"
         ],
         "summary": "Get Dossier Blinded View",
-        "description": "Retrieves a role-blinded projection of a dossier, enforcing reader isolation.\n\n@req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199",
+        "description": "Retrieves a role-blinded projection of a dossier, enforcing reader isolation.\n\n@req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-ADR-2199",
         "operationId": "get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get",
         "parameters": [
           {
@@ -991,7 +991,7 @@
           "CEC Adjudication"
         ],
         "summary": "Submit Reader Assessment",
-        "description": "Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.\n\n@req:PRD-CEC-002, @req:ADR-2199",
+        "description": "Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.\n\n@req:PRD-CEC-002, @req:PRD-ADR-2199",
         "operationId": "submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post",
         "parameters": [
           {
@@ -1046,7 +1046,7 @@
           "CEC Adjudication"
         ],
         "summary": "Adjudicate Chair Tie Breaker",
-        "description": "Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.\n\n@req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199",
+        "description": "Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.\n\n@req:PRD-CEC-002, @req:PRD-SYS-124, @req:PRD-ADR-2199",
         "operationId": "adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post",
         "parameters": [
           {
@@ -1363,7 +1363,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Parse Udi",
-        "description": "Parses and validates a Unique Device Identifier (UDI) barcode string.\n\nSupports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Parses and validates a Unique Device Identifier (UDI) barcode string.\n\nSupports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "parse_udi_api_v1_execution_devices_parse_udi_post",
         "requestBody": {
           "content": {
@@ -1405,7 +1405,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Register Inventory",
-        "description": "Registers serialized investigational medical device and IVD inventory items in RTSM.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Registers serialized investigational medical device and IVD inventory items in RTSM.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "register_inventory_api_v1_execution_devices_inventory_post",
         "requestBody": {
           "required": true,
@@ -1449,7 +1449,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Inventory",
-        "description": "Retrieves investigational medical device inventory matching query filters.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves investigational medical device inventory matching query filters.\n\n@req:PRD-DEV-001, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_inventory_api_v1_execution_devices_inventory_get",
         "parameters": [
           {
@@ -1588,7 +1588,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Dispense",
-        "description": "Dispenses an investigational medical device to a study participant.\n\nEnforces strict quarantine and expiration blocking rules.\n\n@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Dispenses an investigational medical device to a study participant.\n\nEnforces strict quarantine and expiration blocking rules.\n\n@req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "dispense_api_v1_execution_devices_dispense_post",
         "requestBody": {
           "content": {
@@ -1630,7 +1630,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Deficiency",
-        "description": "Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.\n\n@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.\n\n@req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "log_deficiency_api_v1_execution_devices_deficiencies_post",
         "requestBody": {
           "required": true,
@@ -1670,7 +1670,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Deficiencies",
-        "description": "Lists reported medical device deficiencies and malfunctions for a study.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Lists reported medical device deficiencies and malfunctions for a study.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_deficiencies_api_v1_execution_devices_deficiencies_get",
         "parameters": [
           {
@@ -1755,7 +1755,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Deficiency",
-        "description": "Retrieves a single device deficiency report by ID.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves a single device deficiency report by ID.\n\n@req:PRD-DEV-002, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get",
         "parameters": [
           {
@@ -1798,7 +1798,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Initiate Quarantine",
-        "description": "Manually places a device serial or lot into QUARANTINED status with dispensation blocking.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Manually places a device serial or lot into QUARANTINED status with dispensation blocking.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "initiate_quarantine_api_v1_execution_devices_quarantine_post",
         "requestBody": {
           "required": true,
@@ -1838,7 +1838,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Quarantines",
-        "description": "Lists device quarantine records for a clinical trial study.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Lists device quarantine records for a clinical trial study.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "list_quarantines_api_v1_execution_devices_quarantine_get",
         "parameters": [
           {
@@ -1923,7 +1923,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Release Quarantine",
-        "description": "Releases a device quarantine record under 21 CFR Part 11 electronic signature.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Releases a device quarantine record under 21 CFR Part 11 electronic signature.\n\n@req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "release_quarantine_api_v1_execution_devices_quarantine_release_post",
         "requestBody": {
           "content": {
@@ -1965,7 +1965,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Device Summary",
-        "description": "Retrieves operational metrics for the Medical Device & IVD Investigation console.\n\n@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209",
+        "description": "Retrieves operational metrics for the Medical Device & IVD Investigation console.\n\n@req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:PRD-ADR-2209",
         "operationId": "get_device_summary_api_v1_execution_devices_summary_get",
         "parameters": [
           {
@@ -2010,7 +2010,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Lookup Gudid Endpoint",
-        "description": "Queries device specifications from the FDA AccessGUDID reference registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Queries device specifications from the FDA AccessGUDID reference registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post",
         "requestBody": {
           "content": {
@@ -2052,7 +2052,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Verify Udi Endpoint",
-        "description": "Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.\n\n@req:PRD-SYS-187, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "verify_udi_endpoint_api_v1_execution_devices_verify_udi_post",
         "parameters": [
           {
@@ -2176,7 +2176,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Register Specimen Endpoint",
-        "description": "Registers an IVD clinical biospecimen collection in the specimen ledger.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Registers an IVD clinical biospecimen collection in the specimen ledger.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post",
         "requestBody": {
           "required": true,
@@ -2216,7 +2216,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "List Specimens Endpoint",
-        "description": "Lists IVD biospecimens matching query filters.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Lists IVD biospecimens matching query filters.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get",
         "parameters": [
           {
@@ -2326,7 +2326,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Get Specimen Endpoint",
-        "description": "Retrieves a single IVD biospecimen record with complete audit logs and history.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Retrieves a single IVD biospecimen record with complete audit logs and history.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get",
         "parameters": [
           {
@@ -2369,7 +2369,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Custody Endpoint",
-        "description": "Logs an auditable chain-of-custody transfer event for an IVD specimen.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209",
+        "description": "Logs an auditable chain-of-custody transfer event for an IVD specimen.\n\n@req:PRD-SYS-188, @req:PRD-DEV-001, @req:PRD-ADR-2209",
         "operationId": "log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post",
         "parameters": [
           {
@@ -2422,7 +2422,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Log Freeze Thaw Endpoint",
-        "description": "Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.\n\n@req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209",
+        "description": "Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.\n\n@req:PRD-SYS-188, @req:PRD-DEV-003, @req:PRD-ADR-2209",
         "operationId": "log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post",
         "parameters": [
           {
@@ -2475,7 +2475,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Sample Integrity Check Endpoint",
-        "description": "Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.\n\n@req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209",
+        "description": "Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.\n\n@req:PRD-SYS-188, @req:PRD-DEV-002, @req:PRD-ADR-2209",
         "operationId": "sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post",
         "parameters": [
           {
@@ -2528,7 +2528,7 @@
           "Medical Device & IVD Suite"
         ],
         "summary": "Compute Assay Performance Endpoint",
-        "description": "Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).\n\n@req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209",
+        "description": "Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).\n\n@req:PRD-SYS-188, @req:PRD-DEV-004, @req:PRD-ADR-2209",
         "operationId": "compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post",
         "requestBody": {
           "content": {

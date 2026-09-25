@@ -1,4 +1,4 @@
-﻿# Site Payments & Participant Wallet
+# Site Payments & Participant Wallet
 
 > **Functional Domain:** `Clinical Operations & Execution`  
 > **Service Host Port:** `localhost:8014`  
