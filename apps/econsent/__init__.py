@@ -1,1 +1,0 @@
-"""eConsent service package."""

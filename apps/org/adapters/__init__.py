@@ -1,1 +1,0 @@
-"""Org adapters package."""

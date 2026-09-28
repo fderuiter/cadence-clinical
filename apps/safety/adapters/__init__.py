@@ -1,1 +1,0 @@
-"""Safety adapters package."""
