@@ -20,6 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Payments/**" />
     <Compile Remove="Execution/**" />
     <Compile Remove="Audit/**" />
     <Compile Remove="Packages/**" />
