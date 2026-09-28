@@ -78,7 +78,9 @@ const toggleRowSelection = (row) => {
 <template>
   <div class="clinical-data-table-container">
     <div class="table-header">
-      <h3 class="table-title">{{ title }}</h3>
+      <h3 class="table-title">
+        {{ title }}
+      </h3>
       <span class="table-meta">{{ sortedData.length }} total record(s)</span>
     </div>
 
@@ -160,8 +162,8 @@ const toggleRowSelection = (row) => {
       <button
         class="pagination-btn"
         :disabled="currentPage === 1"
-        @click="currentPage--"
         aria-label="Previous page"
+        @click="currentPage--"
       >
         Previous
       </button>
@@ -171,8 +173,8 @@ const toggleRowSelection = (row) => {
       <button
         class="pagination-btn"
         :disabled="currentPage === totalPages"
-        @click="currentPage++"
         aria-label="Next page"
+        @click="currentPage++"
       >
         Next
       </button>

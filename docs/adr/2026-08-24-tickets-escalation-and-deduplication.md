@@ -29,12 +29,12 @@ We must implement a programmatic background escalation worker that:
 
 ### Option 1: Inline Synchronous Request inside DB Transactions
 
-- **Pros:** Simple, immediate notification.
-- **Cons:** High latency on requests, lacks retry resilience, and risks rolling back core database state due to transient network failures.
+- ***Pros:*** Simple, immediate notification.
+- ***Cons:*** High latency on requests, lacks retry resilience, and risks rolling back core database state due to transient network failures.
 
 ### Option 2: Post-Commit Background Poller with Two-Step Transactions (Chosen)
 
-- **Pros:**
+- ***Pros:***
   - Background worker is decoupled from the user request threads.
   - Multi-instance safe through the use of database-level pessimistic locking (`.with_for_update()`).
   - Persists state for tracking and deduplication (`last_escalated_at`, `last_escalation_notified_at`, and `escalation_count`).
@@ -42,7 +42,8 @@ We must implement a programmatic background escalation worker that:
 
 ## 4. Decision Outcome
 
-We adopted **Option 2**. We implemented the overdue escalation system as follows:
+- **Chosen Option:** Option 1
+- **Justification:** We adopted **Option 2**. We implemented the overdue escalation system as follows:
 
 1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/models/__init__.py`.
 2. **Pessimistic Concurrency Locking:** The background poller locks each ticket under `.with_for_update()` before re-verifying constraints, mirroring the pattern in `apps/notifications/main.py`.
@@ -60,10 +61,10 @@ We evaluated event-driven brokers but preferred a lightweight direct poller to k
 
 ### Trade-offs
 
-- **Pros:**
+- ***Pros:***
   - Bulletproof delivery guarantee: any crash between Commit 1 and Commit 2 simply results in a safe notification retry in the next cycle, with no double-escalations.
   - Zero external metrics library overhead; structured logging provides complete telemetry.
-- **Cons:**
+- ***Cons:***
   - Short polling cycles consume database connections, which is mitigated by tunable environmental interval options.
 
 ## 6. Implementation & Verification

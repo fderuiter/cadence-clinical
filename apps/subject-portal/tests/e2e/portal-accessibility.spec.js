@@ -276,4 +276,47 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
 
     expect(auditResults.violations).toEqual([]);
   });
+
+  test("should verify specific WCAG 2.1 AA remediation elements (skip link, main landmark, dropzone, forms, aria-live)", async ({
+    page,
+  }) => {
+    await page.goto("");
+
+    // 1. Skip link & Main Landmark
+    const skipLink = page.locator(".skip-link");
+    await expect(skipLink).toBeAttached();
+    await expect(skipLink).toHaveAttribute("href", "#main-content");
+
+    const mainLandmark = page.locator("main#main-content");
+    await expect(mainLandmark).toBeAttached();
+    await expect(mainLandmark).toHaveAttribute("tabindex", "-1");
+
+    // 2. Sync Status Live Region
+    const syncStatusText = page.locator("#sync-queue-status-text");
+    await expect(syncStatusText).toHaveAttribute("role", "status");
+    await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
+
+    // 3. Financial Wallet Travel Receipt Dropzone
+    await page.click("#tab-btn-wallet button");
+    const dropzone = page.locator("#receipt-upload-dropzone");
+    await expect(dropzone).toBeVisible();
+    await expect(dropzone).toHaveAttribute("tabindex", "0");
+    await expect(dropzone).toHaveAttribute("role", "button");
+    await expect(dropzone).toHaveAttribute(
+      "aria-label",
+      "Upload receipt image for travel reimbursement"
+    );
+
+    // 4. Form wrappers and numeric input attributes
+    await page.click("#tab-btn-tasks button");
+    const startSurveyBtn = page.locator("#task-card-assign_01 .btn-start-task");
+    await startSurveyBtn.click();
+
+    const formWrapper = page.locator("#questionnaire-form");
+    await expect(formWrapper).toBeVisible();
+
+    const numericInput = page.locator("#vssbp");
+    await expect(numericInput).toHaveAttribute("type", "number");
+    await expect(numericInput).toHaveAttribute("inputmode", "numeric");
+  });
 });

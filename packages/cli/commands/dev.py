@@ -1,7 +1,6 @@
 """Dev orchestrator subcommand for starting and monitoring microservices locally."""
 
 import collections
-import os
 import queue
 import select
 import subprocess
@@ -28,26 +27,14 @@ from packages.cli.formatting import (
     print_success,
     print_warning,
 )
+from packages.cli.ports import get_discovered_service_ports, resolve_all_service_ports
+from packages.cli.registry import get_service_profile, normalize_service_name
 
 dev_app = typer.Typer(
     help="Start and orchestrate local microservices with live reloading and interactive TUI."
 )
 
-SERVICE_PORTS = {
-    "gateway": 8000,
-    "designer": 8001,
-    "execution": 8002,
-    "etmf": 8003,
-    "interop": 8004,
-    "quality": 8005,
-    "notifications": 8006,
-    "ctms": 8007,
-    "safety": 8008,
-    "tickets": 8009,
-    "eisf": 8010,
-    "econsent": 8011,
-    "org": 8012,
-}
+SERVICE_PORTS = get_discovered_service_ports()
 
 
 def _spawn_service(
@@ -59,19 +46,9 @@ def _spawn_service(
     log_queue: queue.Queue[tuple[str, str]],
 ) -> subprocess.Popen[Any]:
     """Spawns a microservice subprocess with piped logs."""
-    cmd = [
-        sys.executable,
-        "-m",
-        "uvicorn",
-        f"apps.{service_name}.main:app",
-        "--host",
-        host,
-        "--port",
-        str(port),
-    ]
-    if reload:
-        cmd.append("--reload")
-    env = {**os.environ, "PYTHONPATH": str(repo_root)}
+    profile = get_service_profile(service_name)
+    cmd = profile.get_start_command(host=host, port=port, reload=reload)
+    env = profile.get_environment(host=host, port=port, repo_root=repo_root)
     proc = subprocess.Popen(
         cmd,
         cwd=str(repo_root),
@@ -210,6 +187,34 @@ def run_dev(
 
     repo_root = Path(__file__).resolve().parents[3]
 
+    # Normalize service names and look up profiles from central registry
+    normalized_targets: list[str] = []
+    profiles = {}
+    for s in target_services:
+        try:
+            norm_name = normalize_service_name(s)
+            p = get_service_profile(norm_name)
+            profiles[norm_name] = p
+            normalized_targets.append(norm_name)
+        except KeyError as err:
+            if json_mode:
+                output_json({"error": str(err), "status": "error"})
+                raise typer.Exit(code=1) from err
+            print_warning(f"Error: {err}")
+            raise typer.Exit(code=1) from err
+
+    target_services = normalized_targets
+    resolved_manifest = resolve_all_service_ports(target_services, host=host)
+
+    if not json_mode:
+        for s in target_services:
+            info = resolved_manifest[s]
+            if info["rebound"]:
+                print_warning(
+                    f"[!] Port collision detected for '{s}' on default port {info['default_port']}. "
+                    f"Dynamically rebound to available offset port {info['assigned_port']} (+{info['offset']})."
+                )
+
     if json_mode:
         output_json(
             {
@@ -219,8 +224,19 @@ def run_dev(
                 "services": [
                     {
                         "name": s,
-                        "port": SERVICE_PORTS.get(s, 8000),
-                        "app": f"apps.{s}.main:app",
+                        "runtime": profiles[s].runtime,
+                        "project_path": profiles[s].project_path,
+                        "default_port": resolved_manifest[s]["default_port"],
+                        "assigned_port": resolved_manifest[s]["assigned_port"],
+                        "port": resolved_manifest[s]["assigned_port"],
+                        "rebound": resolved_manifest[s]["rebound"],
+                        "offset": resolved_manifest[s]["offset"],
+                        "migration_script": profiles[s].migration_script,
+                        "app": (
+                            f"apps.{s}.main:app"
+                            if profiles[s].runtime == "python"
+                            else profiles[s].project_path
+                        ),
                     }
                     for s in target_services
                 ],
@@ -230,21 +246,14 @@ def run_dev(
 
     if len(target_services) == 1 and not tui:
         s = target_services[0]
-        port = SERVICE_PORTS.get(s, 8000)
+        profile = profiles[s]
+        port = resolved_manifest[s]["assigned_port"]
         print_header(
-            "Cadence Microservice Runner", f"Starting foreground {s} on port {port}"
+            "Cadence Microservice Runner",
+            f"Starting foreground {s} ({profile.runtime}) on port {port}",
         )
-        cmd = [
-            "uvicorn",
-            f"apps.{s}.main:app",
-            "--host",
-            host,
-            "--port",
-            str(port),
-        ]
-        if reload:
-            cmd.append("--reload")
-        env = {**os.environ, "PYTHONPATH": str(repo_root)}
+        cmd = profile.get_start_command(host=host, port=port, reload=reload)
+        env = profile.get_environment(host=host, port=port, repo_root=repo_root)
         try:
             subprocess.run(cmd, cwd=str(repo_root), env=env)
         except KeyboardInterrupt:
@@ -258,7 +267,7 @@ def run_dev(
     services_state: dict[str, dict[str, Any]] = {}
 
     for s in target_services:
-        port = SERVICE_PORTS.get(s, 8000)
+        port = resolved_manifest[s]["assigned_port"]
         proc = _spawn_service(s, host, port, repo_root, reload, log_queue)
         procs[s] = proc
         services_state[s] = {
@@ -283,7 +292,7 @@ def run_dev(
             ],
         )
         for s in target_services:
-            port = SERVICE_PORTS.get(s, 8000)
+            port = resolved_manifest[s]["assigned_port"]
             table.add_row(s, str(port), str(procs[s].pid), f"http://{host}:{port}/docs")
         console.print(table)
 
@@ -338,7 +347,7 @@ def run_dev(
                         if key == "r":
                             for s in target_services:
                                 procs[s].terminate()
-                                port = SERVICE_PORTS.get(s, 8000)
+                                port = resolved_manifest[s]["assigned_port"]
                                 proc = _spawn_service(
                                     s, host, port, repo_root, reload, log_queue
                                 )
@@ -359,7 +368,7 @@ def run_dev(
                             target = key_map[key]
                             if target in procs:
                                 procs[target].terminate()
-                                port = SERVICE_PORTS.get(target, 8000)
+                                port = resolved_manifest[target]["assigned_port"]
                                 proc = _spawn_service(
                                     target, host, port, repo_root, reload, log_queue
                                 )

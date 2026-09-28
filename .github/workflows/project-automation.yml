@@ -23,20 +23,15 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
         with:
-          enable-cache: true
-
-      - name: Set up Python 3.14
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
+          global-json-file: global.json
 
       - name: Run Project & Issue Sync
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
         run: |
-          uv run python scripts/sync_github_project.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-github-project

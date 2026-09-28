@@ -46,6 +46,16 @@ from packages.security.middleware import (
     GatewayAuthMiddleware,
     require_gateway_permission,
 )
+from packages.security.notifications import (
+    GatewayNotificationDispatcher,
+    InMemoryNotificationDispatcher,
+    NotificationCategory,
+    NotificationDispatcherPort,
+    NotificationEvent,
+    NotificationPriority,
+    get_notification_dispatcher,
+    publish_notification,
+)
 from packages.security.permissions import (
     PermissionEnum,
     RoleEnum,
@@ -100,7 +110,9 @@ from packages.security.signing import (
     capture_certificate_identifiers,
     compute_sha256_hash,
     generate_canonical_signature,
+    generate_greenlight_token,
     verify_canonical_signature,
+    verify_greenlight_token,
 )
 from packages.security.trial_roles import (
     ClinicalStaffRole,
@@ -197,4 +209,14 @@ __all__ = [
     "validate_timezone_aware_datetime",
     "assert_secure_secrets",
     "validate_branding",
+    "NotificationCategory",
+    "NotificationPriority",
+    "NotificationEvent",
+    "NotificationDispatcherPort",
+    "GatewayNotificationDispatcher",
+    "InMemoryNotificationDispatcher",
+    "get_notification_dispatcher",
+    "publish_notification",
+    "generate_greenlight_token",
+    "verify_greenlight_token",
 ]

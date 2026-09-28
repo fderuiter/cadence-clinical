@@ -24,19 +24,19 @@ This decision implements requirements under Trace-10.
 ### Option 1: Shared Execution Database for Notifications
 
 - **Overview:** Store notifications as tables in the core clinical execution database.
-- **Pros:**
+- ***Pros:***
   - ✅ Less architectural overhead.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates microservice isolation principles.
   - ❌ Might impact core clinical execution performance during peak notification loads.
 
 ### Option 2: Standalone Notifications Service
 
 - **Overview:** Build a standalone Notifications service with its own isolated database manager and schema.
-- **Pros:**
+- ***Pros:***
   - ✅ Absolute database isolation and strict microservice encapsulation.
   - ✅ Dedicated audit logging table to record view and transition events.
-- **Cons:**
+- ***Cons:***
   - ❌ Additional service to scaffold and run.
 
 ## 4. Decision Outcome

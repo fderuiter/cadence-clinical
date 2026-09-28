@@ -3,10 +3,12 @@ import concurrent.futures
 import logging
 import os
 import time
+import uuid
 
 import httpx
 
 from packages.security.signing import generate_gateway_signature
+from packages.telemetry.tracer import inject_trace_context
 
 logger = logging.getLogger("packages.security.gateway_client")
 
@@ -14,9 +16,9 @@ logger = logging.getLogger("packages.security.gateway_client")
 def create_service_auth_headers(
     user_id: str, roles: str = "system", change_reason: str = "system_operation"
 ) -> dict[str, str]:
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    )  # pragma: allowlist secret
+    from packages.config import get_common_settings
+
+    gateway_secret_env = get_common_settings().gateway_secret
     secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -30,7 +32,7 @@ def create_service_auth_headers(
         secret=secret,
         change_reason=change_reason,
     )
-    return {
+    headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -38,6 +40,12 @@ def create_service_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
+    inject_trace_context(headers)
+    if "traceparent" not in headers:
+        gen_trace_id = uuid.uuid4().hex
+        gen_span_id = uuid.uuid4().hex[:16]
+        headers["traceparent"] = f"00-{gen_trace_id}-{gen_span_id}-01"
+    return headers
 
 
 def run_async(coro):
@@ -80,11 +88,9 @@ class GatewayBaseClient:
     def __init__(self, base_url: str = "", timeout: float = 5.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        # Resolved gateway secret
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET",
-            "internal-gateway-secret-12345",  # pragma: allowlist secret
-        )
+        from packages.config import get_common_settings
+
+        gateway_secret_env = get_common_settings().gateway_secret
         self.secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)
@@ -117,7 +123,7 @@ class GatewayBaseClient:
             tenant_id=tenant_id,
         )
 
-        return {
+        headers = {
             "X-User-Id": user_id,
             "X-User-Roles": roles,
             "X-Gateway-Timestamp": timestamp,
@@ -125,6 +131,12 @@ class GatewayBaseClient:
             "X-Signature-Version": "2",
             "X-Change-Reason": change_reason,
         }
+        inject_trace_context(headers)
+        if "traceparent" not in headers:
+            gen_trace_id = uuid.uuid4().hex
+            gen_span_id = uuid.uuid4().hex[:16]
+            headers["traceparent"] = f"00-{gen_trace_id}-{gen_span_id}-01"
+        return headers
 
     async def request(
         self,

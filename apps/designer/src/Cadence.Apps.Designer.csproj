@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Apps.Designer</RootNamespace>
+    <Description>Cadence Study Protocol Designer, CDISC USDM metadata authoring, and Neo4j graph repository.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Neo4j.Driver" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+  </ItemGroup>
+</Project>

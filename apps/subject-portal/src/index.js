@@ -24,6 +24,10 @@ import {
   initSessionKey,
   setActiveUserId,
   clearSessionKey,
+  clearSessionKeyFromDB,
+  saveSessionKeyToDB,
+  getSessionKeyFromDB,
+  restoreSessionKeyFromDB,
   clearInMemoryKey,
   getInMemorySessionKey,
   setInMemorySessionKey,
@@ -460,7 +464,8 @@ function renderTasks() {
 
   if (loadingEl) loadingEl.style.display = "none";
   if (failureEl) failureEl.style.display = "none";
-  if (container) container.style.display = "none";
+  if (!container) return;
+  container.style.display = "none";
 
   if (state.tasksLoading) {
     if (loadingEl) loadingEl.style.display = "block";
@@ -670,7 +675,19 @@ async function startQuestionnaire(assignmentId) {
         12
       );
     } else {
-      formHtml += createClinicalInput(id, field.label, "", null, 12);
+      const isNumeric = field.type === "numeric" || field.type === "number";
+      const inputAttrs = {
+        type: isNumeric ? "number" : "text",
+        ...(isNumeric ? { inputmode: "numeric" } : {}),
+      };
+      formHtml += createClinicalInput(
+        id,
+        field.label,
+        "",
+        null,
+        12,
+        inputAttrs
+      );
     }
   });
 
@@ -1230,7 +1247,8 @@ function renderInbox() {
 
   if (loadingEl) loadingEl.style.display = "none";
   if (failureEl) failureEl.style.display = "none";
-  if (container) container.style.display = "none";
+  if (!container) return;
+  container.style.display = "none";
 
   if (state.notificationsLoading) {
     if (loadingEl) loadingEl.style.display = "block";
@@ -2130,12 +2148,34 @@ async function initializeApp() {
   }
   setActiveUserId(state.session.userId);
 
-  const sessionMaterial =
-    state.session.token || state.session.userId || "demo-material";
-  try {
-    await initSessionKey(sessionMaterial, state.session.userId);
-  } catch (err) {
-    console.warn("Failed to initialize session key:", err);
+  if (!getInMemorySessionKey()) {
+    try {
+      await restoreSessionKeyFromDB(state.session.userId);
+    } catch (err) {
+      console.warn("Failed to restore session key from IndexedDB:", err);
+    }
+  }
+
+  if (!getInMemorySessionKey()) {
+    const sessionMaterial =
+      state.session.token || state.session.userId || "demo-material";
+    try {
+      await initSessionKey(sessionMaterial, state.session.userId);
+    } catch (err) {
+      console.warn("Failed to initialize session key:", err);
+    }
+  }
+
+  // Initialize MSW Mock Gateway Worker in development / offline browser mode
+  if (
+    typeof window !== "undefined" &&
+    (import.meta.env?.DEV ||
+      import.meta.env?.MODE === "demo" ||
+      import.meta.env?.VITE_ENABLE_MSW === "true")
+  ) {
+    import("./mocks/browser.js")
+      .then(({ startMswWorker }) => startMswWorker())
+      .catch((err) => console.warn("[MSW] Failed to initialize worker:", err));
   }
 
   // Mount Vue application
@@ -2764,16 +2804,20 @@ async function initializeApp() {
   if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
-        "[App] Network offline detected. Verifying security PIN wrapper..."
+        "[App] Network offline detected. Preserving session key for offline operation..."
       );
       state.session.isOfflineMode = true;
-      clearInMemoryKey();
       await checkPINWrapper();
     });
   }
 }
 
 async function checkPINWrapper() {
+  if (getInMemorySessionKey()) {
+    state.pinUnlock.isOpen = false;
+    state.pinSetup.isOpen = false;
+    return;
+  }
   const config = await getWrappedMasterKeyConfig();
   if (config.wrappedKey) {
     if (!getInMemorySessionKey()) {
@@ -2865,7 +2909,7 @@ async function handlePINUnlockSubmit() {
   }
 }
 
-// User logout events trigger immediate deletion of the cached OIDC identifier from local storage
+// User logout events trigger immediate deletion of the cached OIDC identifier and persisted session key
 async function logout() {
   try {
     localStorage.removeItem("oidc_user_id");
@@ -2873,12 +2917,14 @@ async function logout() {
     console.warn("Failed to clear oidc_user_id from localStorage:", err);
   }
 
+  const prevUserId = state.session.userId;
   state.session.userId = "subject_001";
   state.session.token = null;
   state.session.isOfflineMode = true;
   state.session.isDemoMode = true;
 
-  clearSessionKey();
+  clearSessionKey(prevUserId);
+  await clearSessionKeyFromDB(prevUserId);
 
   if (
     window.keycloakInstance &&
@@ -2944,7 +2990,16 @@ function createClinicalInput(
   gridSpan = 12,
   attributes = {}
 ) {
-  const extraAttrs = Object.entries(attributes)
+  const isNumeric =
+    attributes.type === "numeric" || attributes.type === "number";
+  const inputType = isNumeric ? "number" : attributes.type || "text";
+  const inputModeAttr =
+    attributes.inputmode || (isNumeric ? "numeric" : "")
+      ? ` inputmode="${attributes.inputmode || "numeric"}"`
+      : "";
+
+  const containerAttrs = Object.entries(attributes)
+    .filter(([k]) => k !== "type" && k !== "inputmode")
     .map(([k, v]) => `${k}="${v}"`)
     .join(" ");
 
@@ -2952,10 +3007,10 @@ function createClinicalInput(
   const queryPanelHTML = createQueryPanel(id, query);
 
   return `
-<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${extraAttrs}>
+<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${containerAttrs}>
   <label for="${id}">${label}</label>
   <div class="input-wrapper">
-    <input type="text" id="${id}" name="${id}" value="${value}" />
+    <input type="${inputType}" id="${id}" name="${id}" value="${value}"${inputModeAttr} />
     ${queryFlagHTML}
   </div>
   ${queryPanelHTML}

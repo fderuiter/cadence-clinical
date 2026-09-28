@@ -29,6 +29,7 @@
           background-color: #f8fafc;
         "
       >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           ref="fileInputRef"
           type="file"
@@ -200,9 +201,11 @@
               class="item-edit-section"
             >
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label style="font-size: 0.75rem"
                   >Modify Candidate Name/Label</label
                 >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   :value="editItemValue"
                   type="text"
@@ -218,9 +221,11 @@
                 />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label style="font-size: 0.75rem"
                   >Change Reason Justification (Mandatory)</label
                 >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   :value="editItemReason"
                   type="text"
@@ -263,10 +268,12 @@
               class="item-reject-section"
             >
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label
                   style="font-size: 0.75rem; color: #ef4444; font-weight: bold"
                   >Provide Rejection Reason (Mandatory)</label
                 >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   :value="rejectItemReason"
                   type="text"

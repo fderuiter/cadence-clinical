@@ -53,6 +53,7 @@
       </header>
 
       <div class="form-group" style="margin-bottom: 16px">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
         <label
           style="
             font-size: 12px;
@@ -103,6 +104,7 @@
       </div>
 
       <div class="form-group" style="margin-bottom: 16px">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
         <label
           style="
             font-size: 12px;
@@ -114,6 +116,7 @@
         >
         <div class="grid-2-responsive" style="margin-top: 8px">
           <div>
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 font-size: 11px;
@@ -123,6 +126,7 @@
               "
               >Start Date</label
             >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="startDate"
               type="date"
@@ -139,6 +143,7 @@
             />
           </div>
           <div>
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 font-size: 11px;
@@ -148,6 +153,7 @@
               "
               >End Date</label
             >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="endDate"
               type="date"

@@ -38,7 +38,7 @@
         >
       </div>
 
-      <!-- Demo role tester select -->
+      <!-- Demo role tester select & EHR Reconciliation Drawer toggle -->
       <div
         style="
           display: flex;
@@ -47,6 +47,25 @@
           flex-wrap: wrap;
         "
       >
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+          "
+          @click="showEhrReconciliationDrawer = true"
+        >
+          🏥 EHR Source Reconciliation
+        </button>
+
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
@@ -73,6 +92,20 @@
     >
       <!-- Left Column: CRC Persona Component & CRA Verification Bar Slot -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
+        <!-- CRC Persona Component: Reusable Subject Registration & Screening Card -->
+        <SubjectEnrollmentForm
+          :can-enroll="
+            authStore.isCrc ||
+            activeUserRole === 'site_investigator' ||
+            activeUserRole === 'crc'
+          "
+          :screening-result="screeningResult"
+          :is-screening="isScreening"
+          :is-enrolling="isEnrolling"
+          @enroll="onSubjectEnroll"
+          @screen="onSubjectScreen"
+        />
+
         <CrcFormRenderer
           v-model:selected-subject-id="selectedSubjectId"
           v-model:selected-visit-id="selectedVisitId"
@@ -131,7 +164,24 @@
       >
         <!-- PI Persona Component: Signature Worklist & Re-authentication Drawer/Modal -->
         <!-- prettier-ignore -->
-        <PiSignatureDrawer v-model:signoff-target-type="signoffTargetType" v-model:signoff-target-id="signoffTargetId" v-model:custom-target-id="customTargetId" v-model:signoff-reason="signoffReason" v-model:reauth-username="reauthUsername" v-model:reauth-password="reauthPassword" v-model:reauth-totp="reauthTotp" v-model:simulate-delay="simulateDelay" :available-subjects="availableSubjects" :available-visits="availableVisits" :available-form-submissions="availableFormSubmissions" :valid-signing-reasons="validSigningReasons" :show-reauth-modal="showReauthModal" :reauth-error="reauthError" @submit-signoff="handleSignOffSubmit" @cancel-reauth="cancelReauth" @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
+        <PiSignatureDrawer
+          v-model:signoff-target-type="signoffTargetType"
+          v-model:signoff-target-id="signoffTargetId"
+          v-model:custom-target-id="customTargetId"
+          v-model:signoff-reason="signoffReason"
+          v-model:reauth-username="reauthUsername"
+          v-model:reauth-password="reauthPassword"
+          v-model:reauth-totp="reauthTotp"
+          v-model:simulate-delay="simulateDelay"
+          :available-subjects="availableSubjects"
+          :available-visits="availableVisits"
+          :available-form-submissions="availableFormSubmissions"
+          :valid-signing-reasons="validSigningReasons"
+          :show-reauth-modal="showReauthModal"
+          :reauth-error="reauthError"
+          @submit-signoff="handleSignOffSubmit"
+          @cancel-reauth="cancelReauth"
+          @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
 
         <!-- Live Form State & CDASH Meta Card -->
         <div
@@ -266,6 +316,14 @@
       @confirm="handleResolveConflict"
       @cancel="handleCancelConflict"
     />
+
+    <!-- eSource EHR Source Data Reconciliation Drawer -->
+    <EhrReconciliationDrawer
+      :is-open="showEhrReconciliationDrawer"
+      :study-id="store.currentStudyId || 'STUDY-101'"
+      :subject-id="selectedSubjectId"
+      @close="showEhrReconciliationDrawer = false"
+    />
   </div>
 </template>
 
@@ -278,6 +336,7 @@ import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
+import { executionService } from "../api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";
@@ -288,6 +347,8 @@ import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
 import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
+import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
+import EhrReconciliationDrawer from "../components/clinical/EhrReconciliationDrawer.vue";
 
 // Import Domain Composables
 import { useConsentGating } from "../composables/useConsentGating";
@@ -299,9 +360,49 @@ const store = useClinicalStore();
 const authStore = useAuthStore();
 const route = useRoute();
 
+const showEhrReconciliationDrawer = ref(false);
+
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");
 const selectedVisitId = ref("Screening");
+
+// Screening and Enrollment State (CRC)
+const screeningResult = ref(null);
+const isScreening = ref(false);
+const isEnrolling = ref(false);
+
+async function onSubjectEnroll(payload) {
+  isEnrolling.value = true;
+  try {
+    const res = await store.enrollSubject({
+      id: payload.subject_id,
+      siteId: "SITE-101",
+      protocolVersion: "1.0.0",
+      reason: `Subject ${payload.subject_id} registered and enrolled in ${payload.study_id}.`,
+    });
+    if (res) {
+      selectedSubjectId.value = payload.subject_id;
+    }
+  } catch (err) {
+    console.error("Enrollment failed:", err);
+  } finally {
+    isEnrolling.value = false;
+  }
+}
+
+async function onSubjectScreen(payload) {
+  isScreening.value = true;
+  try {
+    const res = await store.screenSubject(payload.subjectId, {
+      study_id: payload.studyId,
+    });
+    screeningResult.value = res;
+  } catch (err) {
+    console.error("Screening failed:", err);
+  } finally {
+    isScreening.value = false;
+  }
+}
 
 // Demo Role Toggle
 const demoRole = ref("site_investigator");
@@ -1061,7 +1162,7 @@ function clearForm() {
   );
 }
 
-function submitEcrf() {
+async function submitEcrf() {
   let allValid = true;
   let errMsgs = [];
 
@@ -1084,6 +1185,23 @@ function submitEcrf() {
         errMsgs.join("\n")
     );
     return;
+  }
+
+  try {
+    const studyId =
+      store.activeStudyId || store.currentUsdm.studyId || "CADENCE-101";
+    const siteId = store.activeSiteId || "SITE-101";
+    await executionService.submitForm({
+      study_id: studyId,
+      site_id: siteId,
+      subject_id: selectedSubjectId.value,
+      visit_id: selectedVisitId.value,
+      form_id: "VS_DEMO",
+      protocol_version: "1.0.0",
+      payload: { ...store.formValues },
+    });
+  } catch (err) {
+    console.warn("Failed to persist form submission to backend:", err);
   }
 
   store.addLedgerBlock(

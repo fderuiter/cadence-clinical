@@ -7,14 +7,14 @@ import ReasonModal from "./ReasonModal.vue";
 
 defineProps({
   show: { type: Boolean, required: true },
-  title: String,
-  description: String,
-  options: Array,
-  defaultOption: String,
-  idPrefix: String,
-  cancelText: String,
-  confirmText: String,
-  placeholder: String,
+  title: { type: String, default: undefined },
+  description: { type: String, default: undefined },
+  options: { type: Array, default: undefined },
+  defaultOption: { type: String, default: undefined },
+  idPrefix: { type: String, default: undefined },
+  cancelText: { type: String, default: undefined },
+  confirmText: { type: String, default: undefined },
+  placeholder: { type: String, default: undefined },
 });
 
 const emit = defineEmits(["confirm", "cancel"]);

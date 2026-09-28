@@ -24,19 +24,19 @@ This decision implements requirements under Trace-1.
 ### Option 1: Fragmented Node.js and Python Validators
 
 - **Overview:** Retain both `check-links.js` and `validate_markdown.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ No immediate migration effort needed.
-- **Cons:**
+- ***Cons:***
   - ❌ Inconsistent parsing behavior and duplicate code maintenance.
   - ❌ Frequent false positives in CI.
 
 ### Option 2: Unified Python-based Documentation Validator
 
 - **Overview:** Retire `check-links.js` and consolidate all markdown validation, link checks, and command execution dry-runs into an upgraded `validate_markdown.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ Single parser and ruleset, offline-ready, handles block-level comments and code block escaping.
   - ✅ Consistent and reliable local and CI execution.
-- **Cons:**
+- ***Cons:***
   - ❌ Migration cost of updating workflows and pre-commit hooks.
 
 ## 4. Decision Outcome

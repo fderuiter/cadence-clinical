@@ -24,20 +24,20 @@ This ADR addresses the modeling, state gating, and compliance requirements defin
 ### Option 1: Inline/Decentralized Gating and Unencrypted Persistence
 
 - **Overview:** Rely on localized validation in routers and store allocation arms in plaintext within the database.
-- **Pros:**
+- ***Pros:***
   - Simple and fast to implement.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates database-level isolation and blinding security. Plaintext treatments are susceptible to leakage.
   - ❌ Lacks unified audit trail coverage.
 
 ### Option 2: Strong Encrypted Modeling with Pure-Python State Machine and Immutable Ledger (Selected)
 
 - **Overview:** Use strongly-typed Pydantic schemas and AuditedModel-based SQLAlchemy entities with encrypted allocation and seed storage. Validate transitions via a pure-Python state guard.
-- **Pros:**
+- ***Pros:***
   - ✅ Enforces strict, unidirectional subject state transitions.
   - ✅ Ensures perfect alignment with **ADR-014** by integrating with automated database triggers and site/visit locks.
   - ✅ Adheres to **ADR-16** by implementing all allocation logic in pure Python without raw SQL-native side-effects.
-- **Cons:**
+- ***Cons:***
   - ❌ Small overhead from encryption/decryption routines.
 
 ## 4. Decision Outcome

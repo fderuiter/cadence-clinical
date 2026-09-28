@@ -28,19 +28,19 @@ During repository maintenance and continuous verification runs, several test, li
 ### Option 1: Require system-level C dynamic library installations on all execution environments
 
 - **Overview:** Force all developer workstations and CI containers to install `gobject` and `pango`.
-- **Pros:**
+- ***Pros:***
   - ✅ Avoids modifying `rendering.py`.
-- **Cons:**
+- ***Cons:***
   - ❌ Breaks portability across minimal development environments and non-PDF rendering pipelines.
 
 ### Option 2: Lazy loading of WeasyPrint and Vitest setup polyfills (Selected)
 
 - **Overview:** Import `weasyprint` lazily inside `render_protocol_to_pdf()`, add a Vitest `setup.js` for `window.localStorage`, and clean up `package.json` script dependencies.
-- **Pros:**
+- ***Pros:***
   - ✅ Preserves full test suite collection across all 137 test modules without requiring C shared library dependencies during module import.
   - ✅ Resolves all frontend Vitest failures.
   - ✅ Ensures `pnpm check` and `node scripts/build-docs.js` run smoothly.
-- **Cons:**
+- ***Cons:***
   - ❌ `weasyprint` import errors surface at PDF render time rather than import time.
 
 ## 4. Decision Outcome

@@ -114,6 +114,9 @@ ROLE_ALIASES = {
     "leadinvestigator": ROLE_LEAD_INVESTIGATOR,
     "investigator_user": ROLE_INVESTIGATOR,
     "crc": ROLE_CRC,
+    "site crc": ROLE_CRC,
+    "site_crc": ROLE_CRC,
+    "site-crc": ROLE_CRC,
     "clinical research coordinator": ROLE_CRC,
     "study coordinator": ROLE_CRC,
     "study_coordinator": ROLE_CRC,
@@ -981,6 +984,10 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     Returns:
         True if the principal may access the site; False otherwise.
     """
+    if isinstance(principal, (list, tuple, set)):
+        user_site_roles = [r for r in principal if r in SITE_SCOPED_ROLES]
+        return not bool(user_site_roles)
+
     user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
 
     # Fail-closed handling for missing/empty site_id on legacy/study-level rows
@@ -996,18 +1003,27 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     return True
 
 
-def can_access_study(principal: Principal, study_id: str) -> bool:
+def can_access_study(
+    principal: Principal | list[str] | tuple[str, ...], study_id: str
+) -> bool:
     """
     Checks if the principal has access to a specific study.
     Study-scoped users are restricted to their assigned_studies.
     """
+    if isinstance(principal, (list, tuple, set)):
+        return "external_monitor" not in principal
+
     if study_id is None or str(study_id).strip() == "":
         return not ("external_monitor" in principal.roles or principal.assigned_studies)
 
     if "external_monitor" in principal.roles:
-        return study_id in principal.assigned_studies
+        return (
+            "*" in principal.assigned_studies or study_id in principal.assigned_studies
+        )
     if principal.assigned_studies:
-        return study_id in principal.assigned_studies
+        return (
+            "*" in principal.assigned_studies or study_id in principal.assigned_studies
+        )
     return True
 
 
@@ -1297,9 +1313,9 @@ async def get_principal(request: Request) -> Principal:
     )
 
     if ROLE_EXTERNAL_MONITOR in principal.roles:
-        from packages.security.org_client import resolve_personnel_assignments
+        import packages.security.org_client as org_client
 
-        res = await resolve_personnel_assignments(principal.user_id)
+        res = await org_client.resolve_personnel_assignments(principal.user_id)
         if res:
             principal.assigned_sites = res.get("assigned_sites", [])
             principal.assigned_studies = res.get("assigned_studies", [])

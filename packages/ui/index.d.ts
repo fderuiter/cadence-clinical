@@ -4,6 +4,56 @@ import { DefineComponent } from "vue";
 export * from "./src/types/cdash.js";
 
 // Vue Components
+export const AiActionButton: DefineComponent<
+  {
+    label?: string;
+    icon?: string;
+    loading?: boolean;
+    loadingText?: string;
+    disabled?: boolean;
+    variant?: "primary" | "secondary" | "subtle" | "outline";
+    size?: "sm" | "md" | "lg";
+    requiredRoles?: string[] | string;
+    userRoles?: string[] | string;
+    unauthorizedTooltip?: string;
+    ariaLabel?: string;
+  },
+  {},
+  any
+>;
+
+export const ConfidenceBadge: DefineComponent<
+  {
+    score: number;
+    thresholds?: { high?: number; medium?: number };
+    showLabel?: boolean;
+    showScore?: boolean;
+    size?: "sm" | "md" | "lg";
+  },
+  {},
+  any
+>;
+
+export const AiSuggestionDrawer: DefineComponent<
+  {
+    modelValue?: boolean;
+    isOpen?: boolean;
+    title?: string;
+    originalValue?: any;
+    suggestedValue: any;
+    confidenceScore?: number | null;
+    modelIdentifier?: string;
+    promptSummary?: string;
+    entityName?: string;
+    fieldLabel?: string;
+    requireReason?: boolean;
+    isApproving?: boolean;
+    isRejecting?: boolean;
+  },
+  {},
+  any
+>;
+
 export const ClinicalFormField: DefineComponent<
   {
     field: any;
@@ -77,6 +127,34 @@ export const ClinicalQueryPanel: DefineComponent<
     id: string;
     query?: any;
     label: string;
+  },
+  {},
+  any
+>;
+
+export const MediaPlayer: DefineComponent<
+  {
+    src: string;
+    mimeType?: string;
+    title?: string;
+    isWatermarked?: boolean;
+    watermarkText?: string;
+    autoplay?: boolean;
+    initialZoom?: number;
+  },
+  {},
+  any
+>;
+
+export const FileUploadModal: DefineComponent<
+  {
+    modelValue: boolean;
+    studyId: string;
+    siteId?: string | null;
+    title?: string;
+    maxSizeBytes?: number;
+    multipartThresholdBytes?: number;
+    apiEndpoint?: string;
   },
   {},
   any

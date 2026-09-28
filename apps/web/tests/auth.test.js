@@ -451,4 +451,91 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       import.meta.env.MODE = originalMode;
     });
   });
+
+  describe("Session-Bound Persona Serialization & Reload Recovery", () => {
+    it("includes currentPersona in cadence_auth JSON payload in session storage on persona switch", async () => {
+      const authStore = useAuthStore();
+      await authStore.login();
+
+      authStore.switchPersona("site_crc");
+
+      expect(authStore.currentPersona).toBe("site_crc");
+      expect(authStore.normalizedRoles).toContain("crc");
+      expect(authStore.normalizedRoles).toContain("site_investigator");
+
+      const storedRaw = window.sessionStorage.getItem("cadence_auth");
+      expect(storedRaw).not.toBeNull();
+      const payload = JSON.parse(storedRaw);
+      expect(payload.currentPersona).toBe("site_crc");
+      expect(payload.rawRoles).toEqual(["Site Investigator", "CRC"]);
+    });
+
+    it("restores active persona key and corresponding role mappings upon store re-initialization", () => {
+      const savedAuth = {
+        isAuthenticated: true,
+        accessToken: "mock-token",
+        user: { username: "crc_user" },
+        currentPersona: "cra_monitor",
+        rawRoles: ["CRA", "Monitor"],
+        isDemoMode: true,
+      };
+      window.sessionStorage.setItem("cadence_auth", JSON.stringify(savedAuth));
+
+      const newPinia = createPinia();
+      setActivePinia(newPinia);
+      const restoredStore = useAuthStore();
+
+      expect(restoredStore.currentPersona).toBe("cra_monitor");
+      expect(restoredStore.normalizedRoles).toEqual(["cra", "monitor"]);
+      expect(restoredStore.isAuthenticated).toBe(true);
+    });
+
+    it("falls back to super_admin when stored persona data is invalid or corrupted", () => {
+      const corruptedAuth = {
+        isAuthenticated: true,
+        currentPersona: "invalid_hacked_persona_role",
+        rawRoles: ["SomeRole"],
+      };
+      window.sessionStorage.setItem("cadence_auth", JSON.stringify(corruptedAuth));
+
+      const newPinia = createPinia();
+      setActivePinia(newPinia);
+      const restoredStore = useAuthStore();
+
+      expect(restoredStore.currentPersona).toBe("super_admin");
+      expect(restoredStore.isAuthenticated).toBe(true);
+    });
+
+    it("clears session storage and resets in-memory persona state upon logout", async () => {
+      const authStore = useAuthStore();
+      await authStore.login();
+      authStore.switchPersona("auditor");
+
+      expect(window.sessionStorage.getItem("cadence_auth")).not.toBeNull();
+      expect(authStore.currentPersona).toBe("auditor");
+
+      await authStore.logout();
+
+      expect(window.sessionStorage.getItem("cadence_auth")).toBeNull();
+      expect(authStore.currentPersona).toBe("super_admin");
+      expect(authStore.isAuthenticated).toBe(false);
+    });
+
+    it("synchronizes role permissions with persona preset when restoring saved persona", () => {
+      const savedAuthWithoutRoles = {
+        isAuthenticated: true,
+        currentPersona: "site_crc",
+        isDemoMode: true,
+      };
+      window.sessionStorage.setItem("cadence_auth", JSON.stringify(savedAuthWithoutRoles));
+
+      const newPinia = createPinia();
+      setActivePinia(newPinia);
+      const restoredStore = useAuthStore();
+
+      expect(restoredStore.currentPersona).toBe("site_crc");
+      expect(restoredStore.rawRoles).toEqual(["Site Investigator", "CRC"]);
+      expect(restoredStore.normalizedRoles).toEqual(["site_investigator", "crc"]);
+    });
+  });
 });

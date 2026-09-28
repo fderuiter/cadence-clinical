@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
       class="modal-dialog ticket-create-modal"
@@ -123,7 +125,7 @@
             class="form-control"
             placeholder="Detailed description of the issue, circumstances, and immediate containment..."
             required
-          ></textarea>
+          />
         </div>
 
         <div class="form-row">
@@ -228,7 +230,7 @@
           :disabled="loading || !isFormValid"
           @click="handleSubmit"
         >
-          <span v-if="loading" class="spinner"></span>
+          <span v-if="loading" class="spinner" />
           <span v-else>🚀 Log Issue</span>
         </button>
       </div>
@@ -237,7 +239,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 
 const props = defineProps({
   isOpen: {
@@ -251,6 +253,10 @@ const props = defineProps({
   defaultSiteId: {
     type: String,
     default: "",
+  },
+  initialData: {
+    type: Object,
+    default: () => ({}),
   },
 });
 
@@ -272,6 +278,33 @@ const form = reactive({
   entity_id: "",
   reason_for_change: "Initial clinical issue logged",
 });
+
+function applyInitialData() {
+  const init = props.initialData || {};
+  form.title = init.title || "";
+  form.description = init.description || "";
+  form.category = init.category || "PROTOCOL_DEVIATION";
+  form.gxp_severity = init.gxp_severity || "MINOR";
+  form.priority = init.priority || "MEDIUM";
+  form.study_id = init.study_id || props.defaultStudyId || "STUDY-ONC-202";
+  form.site_id = init.site_id || props.defaultSiteId || "SITE-101";
+  form.subject_id = init.subject_id || "";
+  form.entity_type = init.entity_type || "";
+  form.entity_id = init.entity_id || "";
+  form.reason_for_change =
+    init.reason_for_change || "Initial clinical issue logged";
+}
+
+watch(
+  () => props.isOpen,
+  (newVal) => {
+    if (newVal) {
+      errorMessage.value = "";
+      applyInitialData();
+    }
+  },
+  { immediate: true }
+);
 
 const isFormValid = computed(() => {
   return (

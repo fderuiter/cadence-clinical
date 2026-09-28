@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import datetime
 import hashlib
 import hmac
-import os
 import uuid
 from typing import Any
 
@@ -27,9 +26,17 @@ except ImportError:
     SQLField = None  # type: ignore
     SQLModel = object  # type: ignore
 
-AUDIT_LOG_SECRET_KEY = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
-if not AUDIT_LOG_SECRET_KEY:
-    raise RuntimeError("AUDIT_LOG_SECRET_KEY environment variable is missing or empty")
+
+def get_audit_log_secret_key() -> str:
+    """Retrieve the audit log HMAC secret from settings, failing if unset."""
+    from packages.config import get_common_settings
+
+    secret = (get_common_settings().audit_log_secret_key or "").strip()
+    if not secret:
+        raise RuntimeError(
+            "AUDIT_LOG_SECRET_KEY environment variable is missing or empty"
+        )
+    return secret
 
 
 class AuditLogPayload(BaseModel):
@@ -105,9 +112,7 @@ def compute_audit_digest(
         Hex-encoded SHA-256 HMAC digest string.
     """
     if secret_key is None:
-        secret_key = (
-            os.getenv("AUDIT_LOG_SECRET_KEY", "").strip() or AUDIT_LOG_SECRET_KEY
-        )
+        secret_key = get_audit_log_secret_key()
     canonical_payload = (
         f"{event_id}|{service_name}|{action_type}|{entity_name}|{entity_id}|"
         f"{user_id}|{tenant_id}|{reason_for_change}|{timestamp}|{previous_digest}"
@@ -125,6 +130,7 @@ if HAS_SQLMODEL:
         """SQLModel schema for durable audit log persistence."""
 
         __tablename__ = "security_audit_logs"
+        __table_args__ = {"extend_existing": True}
 
         event_id: str = SQLField(
             default_factory=lambda: str(uuid.uuid4()), primary_key=True
@@ -160,9 +166,9 @@ def resolve_current_session() -> Any | None:
     # Dynamically resolve context modules to satisfy package import boundary constraints
     targets = [
         ("apps." + "execution.database.context", "current_session"),
-        ("apps." + "eisf.infrastructure.database", "current_session"),
-        ("apps." + "etmf.infrastructure.database", "current_session"),
-        ("apps." + "quality.infrastructure.database", "current_session"),
+        ("apps." + "eisf.adapters.database", "current_session"),
+        ("apps." + "etmf.adapters.database", "current_session"),
+        ("apps." + "quality.adapters.database", "current_session"),
     ]
 
     for mod_name, var_name in targets:
@@ -519,12 +525,19 @@ class AuditLoggerEngine:
     def __init__(
         self, secret_key: str | None = None, store: AuditStoreAdapter | None = None
     ) -> None:
-        self.secret_key = (
-            secret_key
-            or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
-            or AUDIT_LOG_SECRET_KEY
-        )
+        self._custom_secret_key = secret_key
         self._store = store or InMemoryAuditStore()
+
+    @property
+    def secret_key(self) -> str:
+        """Dynamically resolve audit log secret key or fall back to environment."""
+        if self._custom_secret_key:
+            return self._custom_secret_key
+        return get_audit_log_secret_key()
+
+    @secret_key.setter
+    def secret_key(self, value: str | None) -> None:
+        self._custom_secret_key = value
 
     def register_store(self, store: AuditStoreAdapter) -> None:
         """Register a pluggable audit store backend."""

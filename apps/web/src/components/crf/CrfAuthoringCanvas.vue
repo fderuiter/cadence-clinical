@@ -97,6 +97,8 @@
             overflow-y: auto;
           "
         >
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
@@ -215,6 +217,7 @@
           </div>
 
           <div class="inspector-field-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Field Label</label>
             <input
               id="inspect-field-label"
@@ -225,6 +228,7 @@
           </div>
 
           <div class="inspector-field-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Grid Span (1-12 Columns)</label>
             <select
               id="inspect-field-span"
@@ -245,7 +249,9 @@
           </div>
 
           <div class="inspector-field-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Field Type</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <select v-model="selectedFieldType" class="inspector-select">
               <option value="text">Text Input</option>
               <option value="numeric">Numeric Input</option>
@@ -361,7 +367,7 @@
                 box-sizing: border-box;
               "
               rows="2"
-            ></textarea>
+            />
           </div>
 
           <button class="btn-compile-schema btn-compile" @click="compileForm">

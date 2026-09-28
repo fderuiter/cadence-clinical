@@ -1,0 +1,27 @@
+{
+  "name": "Cadence Clinical .NET 10 DevContainer",
+  "build": {
+    "dockerfile": "../docker/Dockerfile.dotnet",
+    "target": "dev",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "editorconfig.editorconfig",
+        "ckolkman.vscode-postgres",
+        "neo4j.neo4j-for-vscode",
+        "vue.volar"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "Cadence.sln",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "forwardPorts": [8000, 8001, 8002, 5432, 7687],
+  "remoteUser": "root",
+  "postCreateCommand": "bash scripts/setup_wizard.sh --dev"
+}

@@ -30,20 +30,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Ad-hoc Role Gate checks in Endpoint Handlers
 
 - **Overview:** Validate user roles directly inside each endpoint function using local conditions.
-- **Pros:**
+- ***Pros:***
   - ✅ Quick to implement initially.
-- **Cons:**
+- ***Cons:***
   - ❌ Easy to miss security gates on new/cloned endpoints.
   - ❌ No role normalization logic, leading to subtle access issues due to claim formatting discrepancies.
 
 ### Option 2: Declarative Allow-List Dependency & Centralized Lifecycle Engine
 
 - **Overview:** Implement a generic, reusable FastAPI dependency `require_roles(...)` alongside a dedicated query state transition machine (`QueryService`).
-- **Pros:**
+- ***Pros:***
   - ✅ Secure-by-default architecture utilizing allow-lists.
   - ✅ Centralized role normalization (normalizes case, trims whitespace, maps synonym roles).
   - ✅ Guarantees state transition validation and transactional consistency across all entrypoints.
-- **Cons:**
+- ***Cons:***
   - ❌ Introduces a small amount of abstraction and upfront boilerplate.
 
 ## 4. Decision Outcome

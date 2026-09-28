@@ -28,9 +28,9 @@ This decision implements requirements under PRD-SYS-001.
 
 Using shell scripts or standard compose files to tear down existing containers, delete volumes, and restart them from scratch.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Simple to write and guarantees standard fresh states.
-- **Cons:**
+- ***Cons:***
   - ❌ Container boot-up and volume allocation takes too long, failing our 15-second baseline constraint.
   - ❌ Requires local Docker daemon access and cannot run cleanly within mock test suites or lightweight local developer workspaces.
 
@@ -38,12 +38,12 @@ Using shell scripts or standard compose files to tear down existing containers, 
 
 Writing a dedicated Python CLI script (`scripts/reset_db.py`) that connects directly to active databases, drops/re-applies relational schema tables cascadingly, detaches and purges Neo4j graph nodes, and clears/re-migrates all 10 SQLite database files concurrently.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Fast execution under 15 seconds (achieving zero downtime by keeping Docker containers alive).
   - ✅ Provides fine-grained programmatic control to inject strict safety checks, validating URL schemas, and blocking execution if production or remote patterns are detected.
   - ✅ Allows concurrent database resets using asyncio.
   - ✅ Facilitates programmatic seeding of clinical trial studies directly after database reset.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires maintaining database connection, migration, and teardown logic within the script.
 
 ## 4. Decision Outcome

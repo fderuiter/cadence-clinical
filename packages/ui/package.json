@@ -6,6 +6,7 @@
   "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
+    "./mockGateway": "./mockGateway.js",
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
     "./package.json": "./package.json"
@@ -21,17 +22,17 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "axe-core": "^4.12.1"
+    "axe-core": "^4.13.0"
   },
   "peerDependencies": {
-    "vue": "^3.5.40"
+    "vue": "^3.5.42"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.8",
-    "pinia": "^4.0.2",
-    "typescript": "^5.5.4",
-    "vite": "^8.2.0",
+    "pinia": "^4.0.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
     "vitest": "^4.1.10",
-    "vue": "^3.5.40"
+    "vue": "^3.5.42"
   }
 }

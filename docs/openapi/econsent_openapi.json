@@ -1691,6 +1691,157 @@
         }
       }
     },
+    "/api/v1/econsent/reconsent/minor-milestones/evaluate": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Evaluate Minor Milestones",
+        "description": "Evaluates minor subjects against jurisdiction legal age of majority rules.",
+        "operationId": "evaluate_minor_milestones_api_v1_econsent_reconsent_minor_milestones_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MinorMilestoneEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinorMilestoneEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/reconsent/minor-milestones/trigger": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Trigger Majority Reconsent",
+        "description": "Generates mandatory adult re-consent tasks for minor subjects who turned legal age.",
+        "operationId": "trigger_majority_reconsent_api_v1_econsent_reconsent_minor_milestones_trigger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriggerMajorityReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReconsentRequirementResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Trigger Majority Reconsent Api V1 Econsent Reconsent Minor Milestones Trigger Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/reconsent/minor-milestones/pending/{study_id}": {
+      "get": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Get Pending Majority Reconsents",
+        "description": "Retrieves pending adult re-consent requirements resulting from age-of-majority transitions.",
+        "operationId": "get_pending_majority_reconsents_api_v1_econsent_reconsent_minor_milestones_pending__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_pseudonym",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Pseudonym"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReconsentRequirementResponse"
+                  },
+                  "title": "Response Get Pending Majority Reconsents Api V1 Econsent Reconsent Minor Milestones Pending  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/withdrawal": {
       "post": {
         "tags": [
@@ -2128,6 +2279,143 @@
           }
         }
       }
+    },
+    "/api/v1/econsent/readability/analyze": {
+      "post": {
+        "tags": [
+          "Readability Harmonization"
+        ],
+        "summary": "Compute real-time readability metrics for consent text",
+        "description": "Computes Flesch-Kincaid Grade Level, Flesch Reading Ease, and Dale-Chall readability indices.\n\nArgs:\n    payload: ReadabilityAnalysisRequest containing narrative or clause text.\n\nReturns:\n    ReadabilityAnalysisResponse with calculated grade levels, word counts, and target indicators.",
+        "operationId": "analyze_readability_api_v1_econsent_readability_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadabilityAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadabilityAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/readability/harmonize": {
+      "post": {
+        "tags": [
+          "Readability Harmonization"
+        ],
+        "summary": "Generate patient-friendly medical jargon substitutions via AI Gateway Tier 2",
+        "description": "Analyzes text for complex clinical jargon and suggests plain-language substitutions.\n\nArgs:\n    payload: ReadabilityHarmonizationRequest containing original text and target reading level.\n\nReturns:\n    ReadabilityHarmonizationResponse with candidate substitutions, harmonized text, and delta scores.",
+        "operationId": "harmonize_readability_api_v1_econsent_readability_harmonize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadabilityHarmonizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadabilityHarmonizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/clauses/{clause_id}/harmonize": {
+      "post": {
+        "tags": [
+          "Readability Harmonization"
+        ],
+        "summary": "Apply plain-language readability harmonization to a clause with IRB amendment linking",
+        "description": "Applies harmonized text to an ICF clause, incrementing version index and logging 21 CFR Part 11 audit trail.\n\nArgs:\n    request: Request object for extracting user_id and change_reason.\n    clause_id: Identifier of the consent clause being harmonized.\n    payload: ClauseHarmonizationApplyRequest with harmonized text and audit reason.\n    session: Active asynchronous database session.\n\nReturns:\n    ClauseHarmonizationApplyResponse with updated version index and new readability metrics.\n\nRaises:\n    HTTPException: If clause_id is not found or auditor role attempts mutation.",
+        "operationId": "apply_clause_harmonization_api_v1_econsent_clauses__clause_id__harmonize_post",
+        "parameters": [
+          {
+            "name": "clause_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clause Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClauseHarmonizationApplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClauseHarmonizationApplyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2379,6 +2667,100 @@
           "is_substantive"
         ],
         "title": "ClauseDiffDTO"
+      },
+      "ClauseHarmonizationApplyRequest": {
+        "properties": {
+          "harmonized_text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Harmonized Text",
+            "description": "Harmonized plain-language clause text"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 audit reason and protocol amendment reference"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Protocol amendment version reference tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "harmonized_text",
+          "reason_for_change"
+        ],
+        "title": "ClauseHarmonizationApplyRequest"
+      },
+      "ClauseHarmonizationApplyResponse": {
+        "properties": {
+          "clause_id": {
+            "type": "string",
+            "title": "Clause Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ReadabilityMetricsDTO"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clause_id",
+          "version_index",
+          "title",
+          "text",
+          "metrics",
+          "protocol_version",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ClauseHarmonizationApplyResponse"
       },
       "ComposedClauseResponse": {
         "properties": {
@@ -2738,6 +3120,33 @@
           "reason_for_change": {
             "type": "string",
             "title": "Reason For Change"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "default": "tenant_default"
+          },
+          "previous_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Digest"
+          },
+          "sha256_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Digest"
           }
         },
         "type": "object",
@@ -4080,6 +4489,400 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "JargonSubstitutionDTO": {
+        "properties": {
+          "original_term": {
+            "type": "string",
+            "title": "Original Term"
+          },
+          "suggested_term": {
+            "type": "string",
+            "title": "Suggested Term"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "default": "clinical_terminology"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score",
+            "default": 0.95
+          },
+          "start_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Offset"
+          },
+          "end_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_term",
+          "suggested_term",
+          "rationale"
+        ],
+        "title": "JargonSubstitutionDTO"
+      },
+      "MinorMilestoneEvaluationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date",
+            "description": "Evaluation reference date (defaults to today)"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time window for approaching majority",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects"
+        ],
+        "title": "MinorMilestoneEvaluationRequest"
+      },
+      "MinorMilestoneEvaluationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "evaluation_date": {
+            "type": "string",
+            "title": "Evaluation Date"
+          },
+          "total_evaluated": {
+            "type": "integer",
+            "title": "Total Evaluated"
+          },
+          "majority_reached_count": {
+            "type": "integer",
+            "title": "Majority Reached Count"
+          },
+          "approaching_count": {
+            "type": "integer",
+            "title": "Approaching Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/MinorMilestoneResultDTO"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "evaluation_date",
+          "total_evaluated",
+          "majority_reached_count",
+          "approaching_count",
+          "results"
+        ],
+        "title": "MinorMilestoneEvaluationResponse"
+      },
+      "MinorMilestoneResultDTO": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth"
+          },
+          "jurisdiction": {
+            "type": "string",
+            "title": "Jurisdiction"
+          },
+          "current_age_years": {
+            "type": "integer",
+            "title": "Current Age Years"
+          },
+          "exact_age": {
+            "type": "number",
+            "title": "Exact Age"
+          },
+          "legal_age_threshold": {
+            "type": "integer",
+            "title": "Legal Age Threshold"
+          },
+          "majority_reached_date": {
+            "type": "string",
+            "title": "Majority Reached Date"
+          },
+          "has_reached_majority": {
+            "type": "boolean",
+            "title": "Has Reached Majority"
+          },
+          "is_transition_due": {
+            "type": "boolean",
+            "title": "Is Transition Due"
+          },
+          "days_until_majority": {
+            "type": "integer",
+            "title": "Days Until Majority"
+          },
+          "requires_adult_reconsent": {
+            "type": "boolean",
+            "title": "Requires Adult Reconsent"
+          },
+          "milestone_status": {
+            "type": "string",
+            "title": "Milestone Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth",
+          "jurisdiction",
+          "current_age_years",
+          "exact_age",
+          "legal_age_threshold",
+          "majority_reached_date",
+          "has_reached_majority",
+          "is_transition_due",
+          "days_until_majority",
+          "requires_adult_reconsent",
+          "milestone_status"
+        ],
+        "title": "MinorMilestoneResultDTO"
+      },
+      "ReadabilityAnalysisRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Consent narrative or clause text to analyze"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional associated clinical study identifier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ReadabilityAnalysisRequest"
+      },
+      "ReadabilityAnalysisResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/ReadabilityMetricsDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metrics"
+        ],
+        "title": "ReadabilityAnalysisResponse"
+      },
+      "ReadabilityHarmonizationRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Original consent clause or text to harmonize"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional associated clinical study identifier"
+          },
+          "target_grade_level": {
+            "type": "number",
+            "maximum": 12.0,
+            "minimum": 4.0,
+            "title": "Target Grade Level",
+            "description": "Target reading grade level",
+            "default": 8.0
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Protocol amendment version tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ReadabilityHarmonizationRequest"
+      },
+      "ReadabilityHarmonizationResponse": {
+        "properties": {
+          "original_metrics": {
+            "$ref": "#/components/schemas/ReadabilityMetricsDTO"
+          },
+          "harmonized_metrics": {
+            "$ref": "#/components/schemas/ReadabilityMetricsDTO"
+          },
+          "substitutions": {
+            "items": {
+              "$ref": "#/components/schemas/JargonSubstitutionDTO"
+            },
+            "type": "array",
+            "title": "Substitutions"
+          },
+          "harmonized_text": {
+            "type": "string",
+            "title": "Harmonized Text"
+          },
+          "grade_level_delta": {
+            "type": "number",
+            "title": "Grade Level Delta"
+          },
+          "model_identifier": {
+            "type": "string",
+            "title": "Model Identifier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_metrics",
+          "harmonized_metrics",
+          "substitutions",
+          "harmonized_text",
+          "grade_level_delta",
+          "model_identifier"
+        ],
+        "title": "ReadabilityHarmonizationResponse"
+      },
+      "ReadabilityMetricsDTO": {
+        "properties": {
+          "word_count": {
+            "type": "integer",
+            "title": "Word Count"
+          },
+          "sentence_count": {
+            "type": "integer",
+            "title": "Sentence Count"
+          },
+          "syllable_count": {
+            "type": "integer",
+            "title": "Syllable Count"
+          },
+          "difficult_word_count": {
+            "type": "integer",
+            "title": "Difficult Word Count"
+          },
+          "difficult_words": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Difficult Words"
+          },
+          "flesch_reading_ease": {
+            "type": "number",
+            "title": "Flesch Reading Ease"
+          },
+          "flesch_kincaid_grade_level": {
+            "type": "number",
+            "title": "Flesch Kincaid Grade Level"
+          },
+          "dale_chall_score": {
+            "type": "number",
+            "title": "Dale Chall Score"
+          },
+          "dale_chall_grade_level": {
+            "type": "string",
+            "title": "Dale Chall Grade Level"
+          },
+          "is_target_grade_level": {
+            "type": "boolean",
+            "title": "Is Target Grade Level"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "word_count",
+          "sentence_count",
+          "syllable_count",
+          "difficult_word_count",
+          "difficult_words",
+          "flesch_reading_ease",
+          "flesch_kincaid_grade_level",
+          "dale_chall_score",
+          "dale_chall_grade_level",
+          "is_target_grade_level",
+          "interpretation"
+        ],
+        "title": "ReadabilityMetricsDTO"
+      },
       "ReconsentRequirementResponse": {
         "properties": {
           "created_at": {
@@ -4491,6 +5294,62 @@
         ],
         "title": "SubjectConsentStatusResponse"
       },
+      "SubjectMilestoneInput": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth",
+            "description": "Subject DOB in ISO format YYYY-MM-DD"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction",
+            "description": "ISO country or state code",
+            "default": "DEFAULT"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "current_consent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Consent Role",
+            "description": "MINOR_ASSENT, LAR, SUBJECT",
+            "default": "MINOR_ASSENT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth"
+        ],
+        "title": "SubjectMilestoneInput"
+      },
       "TemplateDiffResponse": {
         "properties": {
           "template_id": {
@@ -4574,6 +5433,74 @@
           "reason_for_change"
         ],
         "title": "TranslationTransitionRequest"
+      },
+      "TriggerMajorityReconsentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "adult_version_index": {
+            "type": "integer",
+            "title": "Adult Version Index",
+            "description": "Adult consent template version",
+            "default": 1
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time days (0 = only subjects who reached legal majority)",
+            "default": 0
+          },
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date",
+            "description": "Reference date for majority evaluation (defaults to current date)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP change reason",
+            "default": "Participant reached legal age of majority - Adult re-consent required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "template_id",
+          "subjects"
+        ],
+        "title": "TriggerMajorityReconsentRequest"
       },
       "ValidationError": {
         "properties": {

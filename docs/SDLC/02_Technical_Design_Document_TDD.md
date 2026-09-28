@@ -106,11 +106,12 @@ Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, 
 
 - **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`). Dedicated PostgreSQL containers (`postgres-etmf`, `postgres-ctms`, and `postgres-quality`) are used for `etmf`, `ctms`, and `quality` respectively.
 - **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
+- **Object Storage:** A local MinIO container (`minio`) is utilized for S3-compatible binary payload storage and presigned direct client uploads for the fileshare service (`fileshare`).
 - **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
+- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), Notifications Dispatcher (`notifications`), and Fileshare & Media (`fileshare`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
 - **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
 
-The diagram below represents the local development runtime and mapping of all 20 active local services:
+The diagram below represents the local development runtime and mapping of all 24 active local services:
 
 ```mermaid
 flowchart TD
@@ -132,13 +133,17 @@ flowchart TD
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
         econsent[econsent - Electronic Consent Service]
+        fileshare[fileshare - Fileshare & Media Service]
+        fileshare-transcoder[fileshare-transcoder - Media Transcoding Worker]
+        clamav[clamav - Antivirus Scanning Engine]
 
-        %% Databases
+        %% Databases & Object Storage
         postgres[(postgres - Relational Database)]
         postgres-etmf[(postgres-etmf - Relational Database)]
         postgres-ctms[(postgres-ctms - Relational Database)]
         postgres-quality[(postgres-quality - Relational Database)]
         neo4j[(neo4j - Graph Database)]
+        minio[(minio - Object Storage MinIO)]
 
         %% SQLite file boundaries
         sqlite_eisf[(eisf.db - local SQLite)]
@@ -147,6 +152,7 @@ flowchart TD
         sqlite_safety[(safety.db - local SQLite)]
         sqlite_notifications[(notifications.db - local SQLite)]
         sqlite_econsent[(econsent.db - local SQLite)]
+        sqlite_fileshare[(fileshare.db - local SQLite)]
     end
 
     %% Routing Flow
@@ -166,6 +172,7 @@ flowchart TD
     gateway --> safety
     gateway --> notifications
     gateway --> econsent
+    gateway --> fileshare
 
     %% Shared storage connections
     designer --> neo4j
@@ -182,6 +189,13 @@ flowchart TD
     safety --> sqlite_safety
     notifications --> sqlite_notifications
     econsent --> sqlite_econsent
+    fileshare --> sqlite_fileshare
+
+    %% Object Storage & Workers
+    fileshare --> minio
+    fileshare-transcoder --> minio
+    fileshare --> fileshare-transcoder
+    fileshare --> clamav
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications
@@ -240,6 +254,15 @@ The Notifications Dispatcher is an event-driven background service that handles 
 - **Delivery Modes:** Dispatches alert payloads across four primary channels: `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
 - **Retry Queues:** Implements a SQLite-backed queue with exponential backoff and localized queue monitoring, ensuring delivery under intermittent network failures.
 - **Integration with the Main Platform:** Acts as the primary mechanism for eTMF sync events, query alerts, compliance notifications, and patient portal reminders.
+
+#### 2.3.7 Fileshare & Media Storage Service (`apps/fileshare`)
+
+The Fileshare & Media Storage Service manages binary document storage, direct browser transfer lifecycle, and secure external sharing.
+
+- **Service Boundary:** Decoupled Hexagonal `StoragePort[T]` architecture exposing FastAPI routes behind the API Gateway (`GatewayAuthMiddleware`).
+- **Object Storage Integration:** Interacts with S3/MinIO through `S3StorageAdapter` / `MinioStorageAdapter`, generating short-lived presigned upload and download URLs to bypass server memory.
+- **Envelope Security Pattern:** Persists document metadata, access grants, SHA-256 Merkle root checksums, and legal retention hold flags in relational storage (`fileshare.db` / PostgreSQL).
+- **Audit Logging:** Emits 21 CFR Part 11 compliant immutable audit entries (`FileshareAuditLog`) for all file transfers, share grants, and guest links.
 
 ### 2.4 Distributed Caching Layer
 
@@ -1145,6 +1168,168 @@ The Interoperability service exposes a secure, advisory endpoint allowing extern
 - It pulls active eligibility criteria from the Metadata Designer using gateway V2 signatures, runs the evaluation engine, and returns advisory results.
 - **Zero-State Isolation:** The interop layer is architecturally decoupled from the core EDC databases. It is structurally impossible for a pre-screening request to write, modify, or corrupt subject state in the execution service.
 - **Non-PHI Compliance Auditing:** Each pre-screening evaluation writes an audit entry in the `InteropAuditLog` (using the action `FHIR_PRESCREEN`). To remain HIPAA/GDPR compliant, the details contain strictly pseudonymized tokens and aggregate results; no names, raw clinical readings, or unredacted demographics are recorded.
+
+---
+
+
+### 6.5 Automated Site Financials & Trigger-to-Payable Engine Design
+
+To automate site grant disbursements, `apps/ctms` operates a declarative JSON-based formula calculation engine evaluating procedure fee schedules, institutional overhead markups, split payees, and withholding reserves upon EDC data entry and CRA monitoring sign-off.
+
+```mermaid
+flowchart LR
+    A[EDC Form Submission / CRA SDV] -->|Outbox Event| B[Payment Event Listener]
+    B --> C{Active Budget Schedule}
+    C --> D[Procedure Fee Matrix]
+    C --> E[Institutional Overhead Markup]
+    C --> F[Holdback Reserve 10%]
+    D & E & F --> G[Calculated PaymentLineItem]
+    G --> H[(PaymentAuditLog)]
+    G --> I[Automated Self-Billing PDF & ERP Webhook]
+```
+
+#### 6.5.1 Mathematical Fee & Holdback Derivations
+For a given completed visit procedure $k$:
+$$	ext{Gross Procedure Fee} = 	ext{BaseRate}_k 	imes (1 + 	ext{OverheadRate})$$
+$$	ext{Net Payable} = 	ext{Gross Procedure Fee} 	imes (1 - 	ext{HoldbackRate})$$
+$$	ext{Withholding Reserve} = 	ext{Gross Procedure Fee} 	imes 	ext{HoldbackRate}$$
+
+Split payee disbursements allocate $	ext{Net Payable}$ across payee ratios:
+$$	ext{PayeeDisbursement}_i = 	ext{Net Payable} 	imes 	ext{SplitRatio}_i, \quad \sum 	ext{SplitRatio}_i = 1.0$$
+
+---
+
+### 6.6 Medical Imaging & Blinded Central Endpoint Adjudication Architecture
+
+`apps/fileshare` and `apps/web` provide zero-footprint web DICOM viewing, in-flight pixel and header PHI de-identification, and dual-blinded independent review charter (IRC) adjudication workflows.
+
+```mermaid
+flowchart TD
+    Site[Site Coordinator Upload] --> Ingest[In-Flight PyDICOM De-ID Filter]
+    Ingest -->|Strip Header PHI + Mask Pixel Burn-in| S3[(MinIO / S3 Encrypted Storage)]
+    Ingest --> Manifest[(De-Identification SHA-256 Manifest)]
+    S3 --> WebGL[CornerstoneJS / WebGL Client-Side MPR Viewer]
+    WebGL --> Reader1[Blinded Reader 1 - RECIST 1.1 SLD]
+    WebGL --> Reader2[Blinded Reader 2 - RECIST 1.1 SLD]
+    Reader1 & Reader2 --> Concordance{Concordance Check}
+    Concordance -->|Concordant| AutoCommit[Bind to EDC eCRF & SDTM TU/TR/RS]
+    Concordance -->|Discordant| TieBreaker[Adjudication Committee Chair Step-Up Sign-Off]
+    TieBreaker --> AutoCommit
+```
+
+#### 6.6.1 RECIST 1.1 Derivation Logic
+For target lesions $L_1, \dots, L_m$:
+$$	ext{Sum of Longest Diameters (SLD)}_t = \sum_{j=1}^m 	ext{Diameter}_{j,t}$$
+$$\%	ext{ Change from Baseline} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{baseline}}}{	ext{SLD}_{	ext{baseline}}} 	imes 100$$
+$$\%	ext{ Change from Nadir} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{nadir}}}{	ext{SLD}_{	ext{nadir}}} 	imes 100$$
+
+Response Categorization:
+- **Complete Response (CR):** Disappearance of all target lesions; all pathological lymph nodes $< 10	ext{ mm}$ short axis.
+- **Partial Response (PR):** $\ge 30\%$ decrease in SLD taking as reference the baseline SLD.
+- **Progressive Disease (PD):** $\ge 20\%$ increase in SLD taking as reference the smallest sum on study (nadir), with an absolute increase of at least $5	ext{ mm}$, or appearance of new lesions.
+- **Stable Disease (SD):** Neither sufficient shrinkage to qualify for PR nor sufficient increase to qualify for PD.
+
+---
+
+### 6.7 Native AS2 Regulatory B2B Gateway & Pharmacovigilance Signal Engine
+
+`apps/safety` provides automated expedited regulatory reporting rules, direct B2B AS2 electronic transmission of ICH E2B(R3) XML, and vectorized statistical disproportionality signal detection.
+
+```mermaid
+flowchart LR
+    SAE[SAE Case Intake] --> Rules[Deterministic Multi-Country Rules Engine]
+    Rules -->|FDA 7/15-day & EMA 7/15-day Clocks| Clock[Statutory Countdown Timer]
+    Clock --> XML[ICH E2B-R3 XML Serialization]
+    XML --> AS2[Async Python AS2 S/MIME Client]
+    AS2 -->|B2B EDI Transmission| Authority[FDA ESG / EMA EudraVigilance Gateway]
+    Authority --> MDN[Synchronous / Asynchronous MDN Receipt]
+    MDN --> Parser[ACK A/B/C Signature Verification]
+```
+
+#### 6.7.1 Disproportionality Signal Calculations (2x2 Contingency Matrix)
+
+| Contingency Table | Target Event (+) | All Other Events (-) | Total |
+| :--- | :--- | :--- | :--- |
+| **Investigational Drug (+)** | $a$ | $b$ | $a+b$ |
+| **All Other Drugs / Control (-)** | $c$ | $d$ | $c+d$ |
+| **Total** | $a+c$ | $b+d$ | $N = a+b+c+d$ |
+
+- **Proportional Reporting Ratio (PRR):**
+  $$	ext{PRR} = rac{a / (a+b)}{c / (c+d)}, \quad \chi^2 = rac{N (|ad - bc| - N/2)^2}{(a+b)(c+d)(a+c)(b+d)}$$
+- **Reporting Odds Ratio (ROR):**
+  $$	ext{ROR} = rac{ad}{bc}, \quad 95\% 	ext{ CI} = e^{\ln(	ext{ROR}) \pm 1.96 \sqrt{rac{1}{a} + rac{1}{b} + rac{1}{c} + rac{1}{d}}}$$
+- **Multi-item Gamma Poisson Shrinker (MGPS / EBGM):** Computes Bayesian shrinkage estimates $	ext{EBGM} = E(\lambda | a, E)$ where $E = rac{(a+b)(a+c)}{N}$.
+
+---
+
+### 6.8 Multi-Echelon RTSM Supply Optimization & Cold Chain MKT Engine
+
+`apps/execution` models multi-echelon supply chains, stochastic Monte Carlo resupply forecasting, Arrhenius Mean Kinetic Temperature (MKT) cold-chain excursion analytics, and adaptive oncology dose-escalation algorithms.
+
+#### 6.8.1 Mean Kinetic Temperature (Arrhenius Model)
+$$	ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15} ight) ight)} - 273.15$$
+where $\Delta H / R = 10000	ext{ K}$ is the standard universal activation energy / gas constant ratio, and $T_i$ is the temperature in degrees Celsius at timepoint $i$.
+
+#### 6.8.2 Bayesian Optimal Interval (BOIN) DLT Boundaries
+For target toxicity rate $\phi$ (e.g. 0.25):
+- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi} ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)} ight)}$
+- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2} ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)} ight)}$
+where $\phi_1 = 0.6\phi$ and $\phi_2 = 1.4\phi$. If observed DLT rate $\hat{p}_j \le \lambda_e$, escalate dose; if $\hat{p}_j \ge \lambda_d$, de-escalate dose; otherwise stay at current dose level.
+
+---
+
+### 6.9 Centralized Statistical Monitoring (CSM) & Multi-Variate Anomaly Sentinels
+
+`apps/quality` executes automated cross-site statistical surveillance under ICH E6(R3) to detect fabricated data, terminal digit rounding biases, and anomalous variance shrinkage.
+
+#### 6.9.1 Benford's Law Chi-Square Test
+Leading digit distribution $P(d) = \log_{10}\left(1 + rac{1}{d}ight)$ for $d \in \{1, \dots, 9\}$.
+$$\chi^2 = \sum_{d=1}^9 rac{(O_d - E_d)^2}{E_d}, \quad 	ext{where } E_d = N \cdot P(d)$$
+
+#### 6.9.2 Mahalanobis Distance for Variance Shrinkage
+For a site feature vector $\mathbf{x}_s$ and global trial covariance matrix $\mathbf{\Sigma}$:
+$$D_M(\mathbf{x}_s) = \sqrt{(\mathbf{x}_s - oldsymbol{\mu})^T \mathbf{\Sigma}^{-1} (\mathbf{x}_s - oldsymbol{\mu})}$$
+
+#### 6.9.3 Perceptual Image Hashing (pHash)
+Medical image attachments are evaluated via Discrete Cosine Transform (DCT) 64-bit perceptual hashing. Hamming distance $H(p_1, p_2) \le 3$ flags potential duplicate or reused image attachments across different subjects or sites.
+
+---
+
+### 6.10 Clinical Data Repository (CDR) & Validated Containerized SCE Sandbox
+
+`apps/interop` and `apps/designer` operate a centralized clinical lakehouse aggregating multi-source trial streams, continuous SDTM/ADaM automated pipelines, and a 21 CFR Part 11 compliant containerized statistical computing environment.
+
+```mermaid
+flowchart TD
+    MultiSource[EDC + ePRO + Labs + Sensors + EHR FHIR + Imaging] --> Lakehouse[(Version-Pinned Clinical Lakehouse)]
+    Lakehouse --> SDTM[Automated SDTM Transformer - DM, AE, CM, VS, LB, EX, TU, TR, RS]
+    SDTM --> ADaM[Analysis Derivations - ADSL, ADAE, ADTTE, BDS]
+    ADaM --> Serializer[CDISC Dataset-JSON 1.1/2.0 & Define-XML 2.1 Compiler]
+    Lakehouse --> SCE[Containerized Rootless SCE Sandbox - R / Python]
+    SCE --> Lockfile[Immutable renv.lock / uv.lock Integrity]
+    SCE --> Manifest[Signed Reproducible Execution Manifest]
+```
+
+---
+
+### 6.11 Connected Study Training Gating Interceptor
+
+`apps/gateway` and `apps/knowledge` enforce programmatic write-gating on clinical data capture based on real-time qualification compliance.
+
+```mermaid
+flowchart LR
+    Req[Mutating eCRF Request] --> Gateway[GatewayAuthMiddleware]
+    Gateway --> Check{Active Protocol Training Verified?}
+    Check -->|Yes| Exec[Execute EDC Transaction]
+    Check -->|No| Reject[HTTP 403 Forbidden - TRAINING_REQUIRED]
+    Reject --> UI[Render Read-Only Mode & Training Redirect]
+```
+
+---
+
+### 6.12 Continuous IoT Sensor Telemetry & WebRTC Telehealth
+
+`apps/interop` and `apps/subject-portal` provide streaming biometric ingestion (CGM, actigraphy, spirometry) normalized into Open mHealth / FHIR Observation schemas alongside peer-to-peer WebRTC telehealth video consultations with synchronized eConsent review.
 
 ---
 

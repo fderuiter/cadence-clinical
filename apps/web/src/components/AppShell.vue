@@ -29,6 +29,18 @@
           <span class="search-placeholder">Quick Search...</span>
           <kbd class="shortcut-badge">⌘K</kbd>
         </button>
+
+        <!-- Contextual Help Trigger Button -->
+        <button
+          id="btn-contextual-help-trigger"
+          class="cmd-palette-trigger btn-help-trigger"
+          title="Open In-Page Contextual Guidance & SOPs (F1 or ?)"
+          @click="knowledgeStore.toggleDrawer()"
+        >
+          <span class="search-icon">📖</span>
+          <span class="search-placeholder">Help &amp; SOPs</span>
+          <kbd class="shortcut-badge">?</kbd>
+        </button>
       </div>
 
       <div class="header-right">
@@ -262,6 +274,83 @@
               <li
                 v-if="
                   canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                  ])
+                "
+                id="tab-btn-imaging"
+                class="nav-item"
+                :class="{ active: $route.name === 'imaging' }"
+              >
+                <router-link v-slot="{ navigate }" to="/imaging" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🔬</span>
+                    <span class="nav-label">DICOM &amp; RECIST Viewer</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                v-if="
+                  canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                    'auditor',
+                  ])
+                "
+                id="tab-btn-devices"
+                class="nav-item"
+                :class="{
+                  active:
+                    $route.name === 'devices' ||
+                    $route.name === 'device-investigation',
+                }"
+              >
+                <router-link v-slot="{ navigate }" to="/devices" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🩺</span>
+                    <span class="nav-label">Device &amp; IVD Suite</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-sensors"
+                class="nav-item"
+                :class="{ active: $route.name === 'sensors' }"
+              >
+                <router-link v-slot="{ navigate }" to="/sensors" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">⌚</span>
+                    <span class="nav-label">Connected Sensors &amp; IoT</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-dct"
+                class="nav-item"
+                :class="{ active: $route.name === 'dct' }"
+              >
+                <router-link v-slot="{ navigate }" to="/dct" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">📹</span>
+                    <span class="nav-label"
+                      >Telehealth &amp; DTP Logistics</span
+                    >
+                  </button>
+                </router-link>
+              </li>
+              <li
+                v-if="
+                  canAccess([
                     'data_manager',
                     'sponsor_designer',
                     'sponsor_admin',
@@ -311,6 +400,34 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-participant-wallet"
+                class="nav-item"
+                :class="{ active: $route.name === 'participant-wallet' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/participant-wallet"
+                  custom
+                >
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">💳</span>
+                    <span class="nav-label">Participant Financial Wallet</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-lay-summaries"
+                class="nav-item"
+                :class="{ active: $route.name === 'lay-summaries' }"
+              >
+                <router-link v-slot="{ navigate }" to="/lay-summaries" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">📜</span>
+                    <span class="nav-label">EU CTR Lay Summaries</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 v-if="
                   canAccess([
                     'cra',
@@ -328,6 +445,30 @@
                   <button type="button" @click="navigate">
                     <span class="nav-icon">📁</span>
                     <span class="nav-label">eTMF Document Vault</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-documents"
+                class="nav-item"
+                :class="{ active: $route.name === 'documents' }"
+              >
+                <router-link v-slot="{ navigate }" to="/documents" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🗂️</span>
+                    <span class="nav-label">Documents Hub</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-safety"
+                class="nav-item"
+                :class="{ active: $route.name === 'safety' }"
+              >
+                <router-link v-slot="{ navigate }" to="/safety" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">Safety &amp; DSUR Compiler</span>
                   </button>
                 </router-link>
               </li>
@@ -355,6 +496,31 @@
                   </button>
                 </router-link>
               </li>
+              <li
+                id="tab-btn-knowledge"
+                class="nav-item"
+                :class="{ active: $route.name === 'knowledge' }"
+              >
+                <router-link v-slot="{ navigate }" to="/knowledge" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-label">Knowledge &amp; SOP Hub</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-training"
+                class="nav-item"
+                :class="{ active: $route.name === 'training' }"
+              >
+                <router-link v-slot="{ navigate }" to="/training" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🎓</span>
+                    <span class="nav-label">Study Training &amp; Gating</span>
+                  </button>
+                </router-link>
+              </li>
+
               <li
                 v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
                 id="tab-btn-audit"
@@ -426,7 +592,7 @@
 
         <!-- Sidebar Footer Status -->
         <div class="sidebar-bottom-status">
-          <div class="status-indicator-dot"></div>
+          <div class="status-indicator-dot" />
           <div class="status-text">
             <strong>Engine:</strong> Active Sandbox Mode
           </div>
@@ -656,12 +822,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
+import { useKnowledgeStore } from "../stores/knowledge";
 import { hasRequiredRole } from "../router";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
+const knowledgeStore = useKnowledgeStore();
 
 function canAccess(requiredRoles) {
   if (!requiredRoles || requiredRoles.length === 0) return true;

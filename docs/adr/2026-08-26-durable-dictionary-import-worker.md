@@ -39,10 +39,10 @@ Citing **ADR-050** (which highlighted technical debt and the eventual need for d
 ### Option 1: External Distributed Broker/Queue (e.g., Celery + RabbitMQ/Postgres)
 
 - **Overview:** Introduce a dedicated task queuing framework like Celery using RabbitMQ or PostgreSQL as the backend broker.
-- **Pros:**
+- ***Pros:***
   - ✅ Industry-standard approach for heavy asynchronous background workloads.
   - ✅ Out-of-the-box support for heartbeats, retries, and task state tracking.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates the constraint of avoiding new infrastructure or heavy messaging stacks.
   - ❌ Celery does not integrate cleanly with FastAPI's asynchronous dependency injection and async SQLAlchemy sessions without significant boilerplate.
   - ❌ Difficult to propagate dynamic gateway-signed GxP audit contexts (`user_id`, `change_reason`) natively across distributed workers without custom serialization layers.
@@ -50,20 +50,20 @@ Citing **ADR-050** (which highlighted technical debt and the eventual need for d
 ### Option 2: Postgres-Native Persisted-Dispatch Polling Worker (Selected)
 
 - **Overview:** Build a database-backed, cooperative polling worker running as an in-process `asyncio.Task` loop within the FastAPI lifespan. The worker coordinates tasks using relational database-native locking mechanics (`SELECT ... FOR UPDATE SKIP LOCKED`).
-- **Pros:**
+- ***Pros:***
   - ✅ Zero new infrastructure: relies strictly on the existing PostgreSQL/SQLite relational database.
   - ✅ Proven pattern: mirrors the repository's existing Standalone Notifications Service foundation dispatch loop (`poll_and_dispatch` in `apps/notifications/main.py`) and the background sealer.
   - ✅ Full async compatibility: integrates seamlessly with async SQLAlchemy 2.0 and FastAPI lifespan startup/shutdown hooks.
   - ✅ Perfect GxP audit propagation: because jobs are stored in relational tables, the requesting user's ID, change reason, and step-up signature metadata are preserved in the job payload and can be re-bound dynamically using `audit_context` inside the background task thread.
-- **Cons:**
+- ***Cons:***
   - ❌ Relies on polling, which introduces a minor database read query overhead (mitigated by bounded exponential polling sleep intervals).
 
 ### Option 3: BackgroundTasks + Database Recovery Sweep
 
 - **Overview:** Continue relying on FastAPI's in-process `BackgroundTasks` for standard execution, but add a database-driven startup recovery script that sweeps the `DictionaryImportJob` table upon server boot, identifies stuck `PENDING` or `PROCESSING` jobs, and re-enqueues them into `BackgroundTasks`.
-- **Pros:**
+- ***Pros:***
   - ✅ Minimal changes to the existing controller path.
-- **Cons:**
+- ***Cons:***
   - ❌ Lacks concurrency safety: if multiple application instances scale up concurrently, they may run concurrent recovery sweeps and duplicate the in-memory execution of the same job.
   - ❌ No runtime heartbeat or lease management: if a worker thread dies silently at runtime without a server crash (e.g., OOM on a single thread), the job remains stuck in `PROCESSING` forever until the next global boot.
   - ❌ No built-in retry/backoff or worker-level claiming.

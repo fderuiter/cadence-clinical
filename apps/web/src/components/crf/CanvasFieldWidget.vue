@@ -1,12 +1,16 @@
 <template>
   <div
+    v-keyboard-click="selectField"
+    tabindex="0"
+    role="button"
     class="canvas-field-widget"
     :class="{
       'is-selected': isSelected,
       'has-warning': hasWarning,
     }"
-    v-keyboard-click="selectField"
     @click="selectField"
+    @keydown.enter.prevent="selectField"
+    @keydown.space.prevent="selectField"
   >
     <!-- Field Header / Metadata -->
     <div class="field-widget-top">
@@ -32,8 +36,9 @@
     </div>
 
     <!-- Interactive Field Preview -->
-    <div class="field-preview-container" @click.stop="selectField">
+    <div class="field-preview-container">
       <template v-if="field.type === 'text'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="text"
           disabled
@@ -46,6 +51,7 @@
       </template>
 
       <template v-else-if="field.type === 'numeric'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="number"
           disabled
@@ -58,6 +64,7 @@
       </template>
 
       <template v-else-if="field.type === 'date'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="date"
           disabled
@@ -69,6 +76,7 @@
       </template>
 
       <template v-else-if="field.type === 'select'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <select
           disabled
           class="field-preview-input"

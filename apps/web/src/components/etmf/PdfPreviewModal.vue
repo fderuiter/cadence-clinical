@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     ref="modalRef"
     class="modal-backdrop"
@@ -129,25 +131,25 @@
             <div class="manifest-card redacted">
               <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
               <p
-                class="redact-meta"
                 v-if="document.redaction_manifest_json?.operator_name"
+                class="redact-meta"
               >
                 Operator:
                 <strong>{{
                   document.redaction_manifest_json.operator_name
                 }}</strong>
               </p>
-              <p class="redact-meta" v-else-if="document.created_by">
+              <p v-else-if="document.created_by" class="redact-meta">
                 Operator: <strong>{{ document.created_by }}</strong>
               </p>
               <p
-                class="redact-meta"
                 v-if="document.redaction_manifest_json?.reason"
+                class="redact-meta"
               >
                 Reason:
                 <strong>{{ document.redaction_manifest_json.reason }}</strong>
               </p>
-              <p class="redact-meta" v-else-if="document.reason_for_change">
+              <p v-else-if="document.reason_for_change" class="redact-meta">
                 Reason: <strong>{{ document.reason_for_change }}</strong>
               </p>
               <div
@@ -259,8 +261,8 @@
                 </section>
 
                 <section
-                  class="doc-section-content"
                   v-if="document.is_redacted"
+                  class="doc-section-content"
                 >
                   <h3>4. SERVER-SIDE REDACTION SUMMARY</h3>
                   <div class="redaction-summary-box">

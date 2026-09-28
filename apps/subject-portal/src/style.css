@@ -695,12 +695,49 @@ body {
 
 /* Accessibility & Unified Token Enforcement (WCAG 2.1 AA) */
 
-/* 1. Touch Target Compliance (Requirement 4) - Opt-in helpers only */
+/* Skip Link (Requirement 1) */
+.skip-link {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  background-color: var(--primary-dark, #1e40af);
+  color: #ffffff;
+  padding: 12px 20px;
+  z-index: 10000;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 0;
+  left: 0;
+  outline: 3px solid #f59e0b !important;
+  outline-offset: 2px !important;
+}
+
+/* 1. Touch Target Compliance (WCAG 2.1 AA Requirement) */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-sync-status,
+.btn-start-task,
+.btn-back,
+.nav-item button,
+.dropzone-upload,
 .touch-target,
 .min-touch-target,
 .touch-target-interactive {
-  min-height: var(--touch-target-min, 48px) !important;
-  min-width: var(--touch-target-min, 48px) !important;
+  min-height: var(--touch-target-min, 48px);
+}
+
+.dropzone-upload:focus,
+.dropzone-upload:focus-visible {
+  outline: 3px solid var(--color-accent, #4338ca) !important;
+  outline-offset: 2px !important;
 }
 
 /* 2. Keyboard Navigation Focus Indicators (Requirement 2) */

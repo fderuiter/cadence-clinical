@@ -25,20 +25,20 @@ This decision implements requirements under Trace-8.
 
 Define a dedicated `Subject` realm role in Keycloak. Enforce routing restrictions in `apps/gateway/main.py` allowing clients with the `Subject` role to only access the 8 allowed self-service routes (submit diary, bulk offline sync, instrument details read, and self-scoped assignments, assigned instruments, compliance, notifications reads, and notification acknowledgement). Implement reusable authorization helpers in `apps/interop/auth.py` to bind downstream payload `subject_id` to the authenticated identity.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Defense-in-depth: unauthorized requests are blocked both at the gateway and the microservice.
   - ✅ Reusable helpers can be imported by any future subject-facing interop modules.
   - ✅ Extremely clean separation of duties without code duplication.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires maintaining gateway routing path whitelist for Subjects.
 
 ### Option 2: Relying solely on Downstream Microservice Role Checking
 
 Only validate roles and bind identities inside the interop microservice itself.
 
-- **Pros:**
+- ***Pros:***
   - ✅ Gateway remains completely agnostic to roles.
-- **Cons:**
+- ***Cons:***
   - ❌ Increased risk of misconfiguration leading to unauthorized staff endpoints being exposed to Subjects.
   - ❌ Gateway would forward requests that are destined to be rejected downstream, wasting bandwidth and compute resources.
 

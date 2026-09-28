@@ -6,6 +6,20 @@ const repoRoot = path.resolve(__dirname, "..");
 
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
+if (!process.env.AUDIT_LOG_SECRET_KEY) {
+  process.env.AUDIT_LOG_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+}
+if (!process.env.INBOUND_EMAIL_HMAC_SECRET) {
+  process.env.INBOUND_EMAIL_HMAC_SECRET = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+}
+if (!process.env.GATEWAY_SECRET_KEY) {
+  process.env.GATEWAY_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+}
+
+// Ensure adequate heap allocation for large documentation bundles under VitePress
+if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes("--max-old-space-size")) {
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --max-old-space-size=16384`.trim();
+}
 
 let pnpmCmd = "pnpm";
 
@@ -77,7 +91,7 @@ function runCommand(command) {
   console.log(`Running: ${command}`);
   try {
     // Use repoRoot for cwd to keep the execution portable and environment-agnostic
-    execSync(command, { stdio: "inherit", cwd: repoRoot });
+    execSync(command, { stdio: "inherit", cwd: repoRoot, env: process.env });
   } catch (error) {
     console.error(`Command failed: ${command}`);
     throw error;
@@ -169,6 +183,9 @@ function rewriteLinks(content) {
 function copyAndPreprocess(srcName, destName) {
   const srcPath = path.join(repoRoot, srcName);
   const destPath = path.join(repoRoot, "docs", destName);
+  if (fs.existsSync(destPath) && !originalFilesMap.has(destPath)) {
+    originalFilesMap.set(destPath, fs.readFileSync(destPath, "utf8"));
+  }
   let content = fs.readFileSync(srcPath, "utf8");
   content = rewriteLinks(content);
   fs.writeFileSync(destPath, content, "utf8");
@@ -226,6 +243,19 @@ function sweepAndPreprocessDocs(docsDir) {
           newUrl = path.relative(docSubDir, "LICENSE.md").replace(/\\/g, "/");
         }
 
+        const rawTargetClean = cleanUrl.split("#")[0].split("?")[0];
+        if (
+          rawTargetClean &&
+          !cleanUrl.startsWith("../") &&
+          !cleanUrl.startsWith("/") &&
+          fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
+          !fs.existsSync(path.join(path.dirname(fullPath), rawTargetClean))
+        ) {
+          const anchor = cleanUrl.includes("#") ? "#" + cleanUrl.split("#")[1] : "";
+          const relPath = path.relative(path.dirname(fullPath), path.join(repoRoot, rawTargetClean)).replace(/\\/g, "/");
+          newUrl = relPath + anchor;
+        }
+
         const targetClean = newUrl.split("#")[0].split("?")[0];
         if (targetClean) {
           const resolvedPath = path.resolve(path.dirname(fullPath), targetClean);
@@ -267,9 +297,10 @@ try {
       "Warning: Shared UI primitives package build failed, continuing anyway..."
     );
   }
-  runCommand("uv run python scripts/validate_adrs.py");
-  runCommand("uv run python scripts/validate_markdown.py");
-  runCommand("uv run python scripts/generate_schema_documentation.py");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc");
+  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-api-docs");
 
   // 2. Run compliance compiler
   console.log("--- Step 2: Running Compliance Tracer ---");
@@ -281,9 +312,9 @@ try {
     envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
 
   if (hasReport && !isEnvDraft) {
-    runCommand("uv run python scripts/generate_rtm.py");
+    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm");
   } else {
-    runCommand("uv run python scripts/generate_rtm.py --draft");
+    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --draft");
   }
 
   // 3. Prepare files for VitePress
@@ -312,7 +343,7 @@ try {
 
   // 4. Build VitePress static portal
   console.log("--- Step 4: Compiling VitePress Static Portal ---");
-  runCommand(`${pnpmCmd} vitepress build docs`);
+  runCommand(`${pnpmCmd} exec vitepress build docs`);
 
   console.log("--- Docs Build Completed Successfully! ---");
 } catch (error) {
@@ -336,6 +367,9 @@ try {
     "LICENSE.md",
   ]) {
     const filePath = path.join(repoRoot, "docs", file);
+    if (originalFilesMap.has(filePath)) {
+      continue;
+    }
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);

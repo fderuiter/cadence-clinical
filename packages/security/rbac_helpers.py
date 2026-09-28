@@ -1,4 +1,3 @@
-import os
 import time
 
 from packages.security.signing import generate_gateway_signature
@@ -21,10 +20,9 @@ def build_gateway_headers(
     timestamp = str(time.time())
 
     # Secrets Management: Safe retrieval of GATEWAY_SECRET
-    secret_str = os.getenv("GATEWAY_SECRET")
-    if not secret_str:
-        secret_str = "internal-gateway-secret-12345"  # pragma: allowlist secret
-    secret = secret_str.encode()
+    from packages.config import get_common_settings
+
+    secret = get_common_settings().gateway_secret.encode()
 
     sig = generate_gateway_signature(
         user_id=user_id,

@@ -22,17 +22,18 @@ To support robust, fault-tolerant, and transactionally secure inter-service inte
 
 ### Option 1: Direct Synchronous HTTP Dispatches within API Route Handlers
 
-- **Pros:** Simpler codebase, lower initial effort.
-- **Cons:** Introduces distributed transaction vulnerability, blocks HTTP worker threads during downstream delays, violates strict fault isolation.
+- ***Pros:*** Simpler codebase, lower initial effort.
+- ***Cons:*** Introduces distributed transaction vulnerability, blocks HTTP worker threads during downstream delays, violates strict fault isolation.
 
 ### Option 2: Database-Level Relational Outbox Pattern (Selected)
 
-- **Pros:** Assures transactional safety (ACID) locally. Guarantees eventually consistent state updates downstream via asynchronous polling and idempotent retries. Satisfies 21 CFR Part 11 audit guidelines fully.
-- **Cons:** Slightly increased implementation complexity and a brief eventual-consistency delay.
+- ***Pros:*** Assures transactional safety (ACID) locally. Guarantees eventually consistent state updates downstream via asynchronous polling and idempotent retries. Satisfies 21 CFR Part 11 audit guidelines fully.
+- ***Cons:*** Slightly increased implementation complexity and a brief eventual-consistency delay.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 2 (Relational Outbox Pattern)** because it is the only pattern that ensures atomic local writes alongside event tracking, guaranteeing GxP trace integrity and robust failure recovery under any database or network partition scenarios.
+- **Chosen Option:** **Option 2 (Relational Outbox Pattern)** because it is the only pattern that ensures atomic local writes alongside event tracking, guaranteeing GxP trace integrity and robust failure recovery under any database or network partition scenarios.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 
@@ -42,6 +43,6 @@ Chosen option: **Option 2 (Relational Outbox Pattern)** because it is the only p
 ## 6. Implementation & Verification
 
 - **Core Interface:** Standardized `IntegrationOutboxMixin` declared in `packages/database/__init__.py`.
-- **Service Models:** Concrete `IntegrationOutbox` model added in `apps/execution/database/models.py` and `apps/etmf/infrastructure/models.py`.
+- **Service Models:** Concrete `IntegrationOutbox` model added in `apps/execution/database/models.py` and `apps/etmf/adapters/models.py`.
 - **Polling Loop:** Dedicated background pollers implemented in `apps/execution/workers/outbox_worker.py` and `apps/etmf/workers/outbox_worker.py`.
 - **Testing & Verification:** Comprehensive test cases verify atomic creation, correct state transitions (`PENDING` -> `SUCCESS`/`FAILED`), and exponential backoff boundaries in `apps/execution/tests/test_relational_outbox.py` and `apps/etmf/tests/test_etmf_outbox.py`.

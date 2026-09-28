@@ -210,6 +210,7 @@
           <!-- Re-Authentication Form & Controls (Step 2 & 3) -->
           <form @submit.prevent="handleExecuteSign">
             <div class="form-group" style="margin-bottom: 12px">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label
                 style="
                   display: block;
@@ -221,6 +222,7 @@
               >
                 Signature Meaning / Attestation
               </label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select
                 v-model="signatureMeaning"
                 class="signature-meaning-picker"
@@ -247,8 +249,9 @@
             <!-- Reuse GxpCredentialsInput with Username hidden -->
             <!-- prettier-ignore -->
             <GxpCredentialsInput
-              v-model:password="password" data-pragma="pragma: allowlist"
+              v-model:password="password"
               v-model:totp="totp"
+              data-pragma="pragma: allowlist secret"
               :show-username="false"
               :password-required="true"
               password-label="Password Re-Authentication"
@@ -268,8 +271,7 @@
                 border: '1px solid #cbd5e1',
                 borderRadius: '4px',
                 fontSize: '13px',
-              }"
-            />
+              }"/><!-- pragma: allowlist secret -->
 
             <!-- Error Notification Banner -->
             <div

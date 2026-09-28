@@ -356,32 +356,61 @@ def assert_schema_parity(
         raise AssertionError(error_msg)
 
 
+def _strip_service_prefix(path: str) -> str:
+    """Strip any leading service prefix from a path if present."""
+    parts = path.strip("/").split("/")
+    if len(parts) > 1 and parts[0] not in ("api", "v1", "v2"):
+        return "/" + "/".join(parts[1:])
+    return path
+
+
 def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
     """Match a specification relative path to its registered codebase route, stripping prefixes like /api/v1."""
+    if spec_path in code_routes:
+        return code_routes[spec_path]
+
     clean_spec = spec_path.replace("/api/v1", "").strip("/")
+    clean_spec_nopfx = (
+        _strip_service_prefix(spec_path).replace("/api/v1", "").strip("/")
+    )
 
     for c_path, c_route_info in code_routes.items():
-        norm_path = c_path
-        for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
-            if c_path.startswith(pfx):
-                norm_path = c_path[len(pfx) :]
-                break
-        clean_code = norm_path.replace("/api/v1", "").strip("/")
-        if clean_spec == clean_code:
+        if c_path == spec_path:
+            return c_route_info
+        clean_code = c_path.replace("/api/v1", "").strip("/")
+        clean_code_nopfx = (
+            _strip_service_prefix(c_path).replace("/api/v1", "").strip("/")
+        )
+
+        if clean_spec in (clean_code, clean_code_nopfx) or clean_spec_nopfx in (
+            clean_code,
+            clean_code_nopfx,
+        ):
             return c_route_info
     return None
 
 
-def find_spec_route(code_path: str, spec_paths: dict) -> str:
+def find_spec_route(code_path: str, spec_paths: dict) -> str | None:
     """Match a codebase path to its registered specification path, stripping prefixes like /api/v1."""
-    norm_path = code_path
-    for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
-        if code_path.startswith(pfx):
-            norm_path = code_path[len(pfx) :]
-            break
-    clean_code = norm_path.replace("/api/v1", "").strip("/")
+    if code_path in spec_paths:
+        return code_path
+
+    clean_code = code_path.replace("/api/v1", "").strip("/")
+    clean_code_nopfx = (
+        _strip_service_prefix(code_path).replace("/api/v1", "").strip("/")
+    )
+
     for s_path in spec_paths:
+        if s_path == code_path:
+            return s_path
         clean_spec = s_path.replace("/api/v1", "").strip("/")
-        if clean_code == clean_spec:
+        clean_spec_nopfx = (
+            _strip_service_prefix(s_path).replace("/api/v1", "").strip("/")
+        )
+
+        if clean_code in (clean_spec, clean_spec_nopfx) or clean_code_nopfx in (
+            clean_spec,
+            clean_spec_nopfx,
+        ):
             return s_path
     return None

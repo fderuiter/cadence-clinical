@@ -1,11 +1,24 @@
-import { apiClient } from "./apiClient";
-import type { components } from "./types";
+import { openApiClient, unwrapResponse } from "./client";
+import type { paths } from "./types";
 
-export type StudyResponse = any; // Or components["schemas"]["Designer_StudyResponse"]
+export type StudyResponse =
+  paths["/api/v1/studies/{study_id}"]["get"]["responses"][200]["content"]["application/json"];
 export type CreateRuleRequest =
-  components["schemas"]["Designer_CreateRuleRequest"];
-export type RuleResponse = any;
-export type ConceptResponse = any;
+  paths["/api/v1/studies/{study_id}/rules"]["post"]["requestBody"]["content"]["application/json"];
+export type RuleResponse =
+  paths["/api/v1/studies/{study_id}/rules"]["get"]["responses"][200]["content"]["application/json"];
+export type ConceptResponse =
+  paths["/api/v1/mdr/concepts"]["get"]["responses"][200]["content"]["application/json"];
+
+export type AmendmentBranchPayload =
+  paths["/api/v1/designer/amendments/branch"]["post"]["requestBody"]["content"]["application/json"];
+export type AmendmentDiffPayload =
+  paths["/api/v1/designer/amendments/diff"]["post"]["requestBody"]["content"]["application/json"];
+export type AmendmentImpactPayload =
+  paths["/api/v1/designer/amendments/impact"]["post"]["requestBody"]["content"]["application/json"];
+
+export type CreateStudyVersionBody =
+  paths["/api/v1/studies/{study_id}/versions"]["post"]["requestBody"]["content"]["application/json"];
 
 /**
  * Service module for the Designer microservice (MDR/SDR).
@@ -15,8 +28,13 @@ export const designerService = {
   /**
    * Fetches the details of a study design.
    */
-  getStudy(studyId: string, options: any = {}): Promise<StudyResponse> {
-    return apiClient.get(`/api/v1/studies/${studyId}`, options);
+  getStudy(studyId: string, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/studies/{study_id}", {
+        params: { path: { study_id: studyId } },
+        ...options,
+      })
+    );
   },
 
   /**
@@ -24,17 +42,28 @@ export const designerService = {
    */
   createStudyVersion(
     studyId: string,
-    body: any,
-    options: any = {}
-  ): Promise<any> {
-    return apiClient.post(`/api/v1/studies/${studyId}/versions`, body, options);
+    body: CreateStudyVersionBody,
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/studies/{study_id}/versions", {
+        params: { path: { study_id: studyId } },
+        body,
+        ...options,
+      })
+    );
   },
 
   /**
    * Fetches active metadata rules for a study.
    */
-  getRules(studyId: string, options: any = {}): Promise<RuleResponse[]> {
-    return apiClient.get(`/api/v1/studies/${studyId}/rules`, options);
+  getRules(studyId: string, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/studies/{study_id}/rules", {
+        params: { path: { study_id: studyId } },
+        ...options,
+      })
+    );
   },
 
   /**
@@ -43,54 +72,70 @@ export const designerService = {
   createRule(
     studyId: string,
     rule: CreateRuleRequest,
-    options: any = {}
-  ): Promise<RuleResponse> {
-    return apiClient.post(`/api/v1/studies/${studyId}/rules`, rule, options);
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/studies/{study_id}/rules", {
+        params: { path: { study_id: studyId } },
+        body: rule,
+        ...options,
+      })
+    );
   },
 
   /**
    * Creates an isolated, immutable protocol amendment working branch.
    */
-  createAmendmentBranch(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amendment_type?: string;
-    requires_reconsent?: boolean;
-    change_reason: string;
-    branch_name?: string;
-  }, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/designer/amendments/branch`, payload, options);
+  createAmendmentBranch(
+    payload: AmendmentBranchPayload,
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/designer/amendments/branch", {
+        body: payload,
+        ...options,
+      })
+    );
   },
 
   /**
    * Computes multi-layer visual and semantic protocol diff.
    */
-  fetchAmendmentDiff(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amended_version_tag: string;
-    base_payload?: any;
-    draft_payload?: any;
-  }, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/designer/amendments/diff`, payload, options);
+  fetchAmendmentDiff(
+    payload: AmendmentDiffPayload,
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/designer/amendments/diff", {
+        body: payload,
+        ...options,
+      })
+    );
   },
 
   /**
    * Computes quantitative Amendment Impact Summary.
    */
-  fetchAmendmentImpact(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amended_version_tag: string;
-  }, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/designer/amendments/impact`, payload, options);
+  fetchAmendmentImpact(
+    payload: AmendmentImpactPayload,
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/designer/amendments/impact", {
+        body: payload,
+        ...options,
+      })
+    );
   },
 
   /**
    * Fetches list of concepts from the MDR global library.
    */
-  getConcepts(options: any = {}): Promise<ConceptResponse[]> {
-    return apiClient.get(`/api/v1/mdr/concepts`, options);
+  getConcepts(options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/mdr/concepts", {
+        ...options,
+      })
+    );
   },
 };
-

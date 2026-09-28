@@ -221,6 +221,139 @@
         }
       }
     },
+    "/api/v1/ctms/startup/rules/presets": {
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Get Jurisdiction Rule Presets",
+        "description": "Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.",
+        "operationId": "get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Jurisdiction Rule Presets Api V1 Ctms Startup Rules Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/rules": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Create Or Update Country Prerequisite Rule",
+        "description": "Configures a country-specific prerequisite criterion for site activation.",
+        "operationId": "create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountryPrerequisiteRuleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryPrerequisiteRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "List Country Prerequisite Rules",
+        "description": "Retrieves country-specific prerequisite rules matrix for a study.",
+        "operationId": "list_country_prerequisite_rules_api_v1_ctms_startup_rules_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountryPrerequisiteRuleResponse"
+                  },
+                  "title": "Response List Country Prerequisite Rules Api V1 Ctms Startup Rules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/startup/milestones": {
       "post": {
         "tags": [
@@ -424,6 +557,56 @@
       }
     },
     "/api/v1/ctms/startup/documents/{document_id}/review": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Review Essential Document",
+        "operationId": "review_essential_document_api_v1_ctms_startup_documents__document_id__review_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EssentialDocumentReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EssentialDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "CTMS Site Startup"
@@ -481,6 +664,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Evaluate Site Greenlight",
+        "description": "Evaluates real-time site activation readiness across the 6 key operational facets.",
         "operationId": "evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get",
         "parameters": [
           {
@@ -500,6 +684,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)"
           }
         ],
         "responses": {
@@ -532,6 +728,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Certify Site Greenlight",
+        "description": "Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.",
         "operationId": "certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post",
         "parameters": [
           {
@@ -551,6 +748,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction"
           }
         ],
         "responses": {
@@ -560,6 +769,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight/override": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Override Site Greenlight",
+        "description": "Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.",
+        "operationId": "override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteGreenlightOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Verify Site Greenlight Token Endpoint",
+        "description": "Verifies cryptographic validity and binding of a Site Greenlight Activation Token.",
+        "operationId": "verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GreenlightTokenVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GreenlightTokenVerifyResponse"
                 }
               }
             }
@@ -1205,6 +1520,196 @@
         }
       }
     },
+    "/api/v1/ctms/financials/templates": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Create Budget Template",
+        "operationId": "create_budget_template_api_v1_ctms_financials_templates_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteBudgetTemplateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteBudgetTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Budget Templates",
+        "operationId": "list_budget_templates_api_v1_ctms_financials_templates_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteBudgetTemplateResponse"
+                  },
+                  "title": "Response List Budget Templates Api V1 Ctms Financials Templates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Get Budget Template",
+        "operationId": "get_budget_template_api_v1_ctms_financials_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteBudgetTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/grants/{grant_id}/apply-template": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Apply Template To Grant",
+        "operationId": "apply_template_to_grant_api_v1_ctms_financials_grants__grant_id__apply_template_post",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcedurePaymentGridResponse"
+                  },
+                  "title": "Response Apply Template To Grant Api V1 Ctms Financials Grants  Grant Id  Apply Template Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/financials/procedure-grids": {
       "post": {
         "tags": [
@@ -1259,6 +1764,32 @@
             "schema": {
               "type": "string",
               "title": "Grant Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Active Only"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
             }
           }
         ],
@@ -1315,6 +1846,48 @@
               "type": "string",
               "title": "Visit Name"
             }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "USD",
+              "title": "Currency"
+            }
+          },
+          {
+            "name": "target_currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Currency"
+            }
           }
         ],
         "responses": {
@@ -1324,6 +1897,417 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisitPayableCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/grants/{grant_id}/amend": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Execute Contract Amendment",
+        "operationId": "execute_contract_amendment_api_v1_ctms_financials_grants__grant_id__amend_post",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractAmendmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/grants/{grant_id}/amendments": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Grant Amendments",
+        "operationId": "list_grant_amendments_api_v1_ctms_financials_grants__grant_id__amendments_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContractAmendmentResponse"
+                  },
+                  "title": "Response List Grant Amendments Api V1 Ctms Financials Grants  Grant Id  Amendments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/amendments/{amendment_id}": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Get Grant Amendment",
+        "operationId": "get_grant_amendment_api_v1_ctms_financials_amendments__amendment_id__get",
+        "parameters": [
+          {
+            "name": "amendment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Amendment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/exchange-rates": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Exchange Rates",
+        "operationId": "list_exchange_rates_api_v1_ctms_financials_exchange_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CurrencyExchangeRateResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Exchange Rates Api V1 Ctms Financials Exchange Rates Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Set Exchange Rate",
+        "operationId": "set_exchange_rate_api_v1_ctms_financials_exchange_rates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurrencyExchangeRateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyExchangeRateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/convert": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Convert Currency",
+        "operationId": "convert_currency_api_v1_ctms_financials_convert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurrencyConvertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyConvertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/adjustments": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Create Budget Adjustment",
+        "operationId": "create_budget_adjustment_api_v1_ctms_financials_adjustments_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetAdjustmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetAdjustmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Budget Adjustments",
+        "operationId": "list_budget_adjustments_api_v1_ctms_financials_adjustments_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grant Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetAdjustmentResponse"
+                  },
+                  "title": "Response List Budget Adjustments Api V1 Ctms Financials Adjustments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/adjustments/{adjustment_id}/approve": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Approve Budget Adjustment",
+        "operationId": "approve_budget_adjustment_api_v1_ctms_financials_adjustments__adjustment_id__approve_post",
+        "parameters": [
+          {
+            "name": "adjustment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Adjustment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetAdjustmentResponse"
                 }
               }
             }
@@ -3702,6 +4686,174 @@
   },
   "components": {
     "schemas": {
+      "ApplyTemplateRequest": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id",
+            "description": "Site budget template ID to apply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id"
+        ],
+        "title": "ApplyTemplateRequest"
+      },
+      "BudgetAdjustmentCreate": {
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id",
+            "description": "Investigator grant ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "adjustment_type": {
+            "type": "string",
+            "title": "Adjustment Type",
+            "description": "Type (PASSTHROUGH_REIMBURSEMENT, PROTOCOL_DEVIATION_PENALTY, OUT_OF_WINDOW_PENALTY, SITE_BONUS, DISCRETIONARY_CREDIT)"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Clinical/operational justification"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Adjustment value (positive credit or negative deduction)"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency code",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grant_id",
+          "site_id",
+          "study_id",
+          "adjustment_type",
+          "description",
+          "amount"
+        ],
+        "title": "BudgetAdjustmentCreate"
+      },
+      "BudgetAdjustmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "adjustment_type": {
+            "type": "string",
+            "title": "Adjustment Type"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "grant_id",
+          "site_id",
+          "study_id",
+          "adjustment_type",
+          "description",
+          "amount",
+          "currency",
+          "status",
+          "approved_by",
+          "approved_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "BudgetAdjustmentResponse"
+      },
       "BudgetLineItemCreate": {
         "properties": {
           "category": {
@@ -4205,6 +5357,177 @@
         ],
         "title": "ConflictStrategy"
       },
+      "ContractAmendmentCreate": {
+        "properties": {
+          "summary_of_changes": {
+            "type": "string",
+            "title": "Summary Of Changes",
+            "description": "Detailed summary of contract changes"
+          },
+          "revised_budget": {
+            "type": "number",
+            "title": "Revised Budget",
+            "description": "New amended total grant budget"
+          },
+          "updated_procedures": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Procedures",
+            "description": "Optional updated fee schedule items"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation",
+            "description": "Electronic signature payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary_of_changes",
+          "revised_budget"
+        ],
+        "title": "ContractAmendmentCreate"
+      },
+      "ContractAmendmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "amendment_number": {
+            "type": "integer",
+            "title": "Amendment Number"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date"
+          },
+          "previous_budget": {
+            "type": "number",
+            "title": "Previous Budget"
+          },
+          "revised_budget": {
+            "type": "number",
+            "title": "Revised Budget"
+          },
+          "previous_version_index": {
+            "type": "integer",
+            "title": "Previous Version Index"
+          },
+          "new_version_index": {
+            "type": "integer",
+            "title": "New Version Index"
+          },
+          "summary_of_changes": {
+            "type": "string",
+            "title": "Summary Of Changes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "grant_id",
+          "amendment_number",
+          "effective_date",
+          "previous_budget",
+          "revised_budget",
+          "previous_version_index",
+          "new_version_index",
+          "summary_of_changes",
+          "status",
+          "approved_by",
+          "approved_at",
+          "signature_manifestation",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ContractAmendmentResponse"
+      },
       "CountryMilestoneCreate": {
         "properties": {
           "study_id": {
@@ -4392,6 +5715,311 @@
           "version_index"
         ],
         "title": "CountryMilestoneResponse"
+      },
+      "CountryPrerequisiteRuleCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory",
+            "default": true
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name"
+        ],
+        "title": "CountryPrerequisiteRuleCreate"
+      },
+      "CountryPrerequisiteRuleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name",
+          "is_mandatory",
+          "description",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CountryPrerequisiteRuleResponse"
+      },
+      "CurrencyConvertRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Monetary amount to convert"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency",
+            "description": "Source ISO currency",
+            "default": "USD"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency",
+            "description": "Target ISO currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "to_currency"
+        ],
+        "title": "CurrencyConvertRequest"
+      },
+      "CurrencyConvertResponse": {
+        "properties": {
+          "original_amount": {
+            "type": "number",
+            "title": "Original Amount"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency"
+          },
+          "exchange_rate": {
+            "type": "number",
+            "title": "Exchange Rate"
+          },
+          "converted_amount": {
+            "type": "number",
+            "title": "Converted Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_amount",
+          "from_currency",
+          "to_currency",
+          "exchange_rate",
+          "converted_amount"
+        ],
+        "title": "CurrencyConvertResponse"
+      },
+      "CurrencyExchangeRateCreate": {
+        "properties": {
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "description": "Base ISO currency (e.g. USD)",
+            "default": "USD"
+          },
+          "target_currency": {
+            "type": "string",
+            "title": "Target Currency",
+            "description": "Target ISO currency (e.g. EUR)"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "description": "Exchange multiplier from base to target"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date",
+            "description": "Optional expiry ISO date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_currency",
+          "rate"
+        ],
+        "title": "CurrencyExchangeRateCreate"
+      },
+      "CurrencyExchangeRateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency"
+          },
+          "target_currency": {
+            "type": "string",
+            "title": "Target Currency"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "base_currency",
+          "target_currency",
+          "rate",
+          "effective_date",
+          "expiry_date",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CurrencyExchangeRateResponse"
       },
       "DOALogResponse": {
         "properties": {
@@ -5301,6 +6929,77 @@
           "version_index"
         ],
         "title": "GeneratedLetterResponse"
+      },
+      "GreenlightTokenVerifyRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "GreenlightTokenVerifyRequest"
+      },
+      "GreenlightTokenVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "GreenlightTokenVerifyResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -6567,6 +8266,42 @@
             "title": "Withholding Percentage",
             "description": "Retention/Withholding % (e.g. 10%)",
             "default": 0.0
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id",
+            "description": "Optional CDISC USDM protocol activity ID"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Optional eCRF form ID linkage"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend",
+            "description": "Per-procedure patient stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement",
+            "description": "Per-procedure travel reimbursement",
+            "default": 0.0
           }
         },
         "type": "object",
@@ -6612,6 +8347,38 @@
           "withholding_percentage": {
             "type": "number",
             "title": "Withholding Percentage"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement",
+            "default": 0.0
           },
           "is_active": {
             "type": "boolean",
@@ -7244,6 +9011,231 @@
         ],
         "title": "RevokeDelegationRequest"
       },
+      "SiteBudgetTemplateCreate": {
+        "properties": {
+          "template_name": {
+            "type": "string",
+            "title": "Template Name",
+            "description": "Template unique title"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID scope"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level",
+            "description": "Tier classification (TIER_1_ACADEMIC, TIER_2_COMMUNITY, TIER_3_REGIONAL)",
+            "default": "STANDARD"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency (USD, EUR, GBP, etc.)",
+            "default": "USD"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage",
+            "description": "Default institutional overhead %",
+            "default": 0.0
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage",
+            "description": "Default withholding %",
+            "default": 0.0
+          },
+          "fixed_startup_fee": {
+            "type": "number",
+            "title": "Fixed Startup Fee",
+            "description": "Fixed site startup fee",
+            "default": 0.0
+          },
+          "fixed_closeout_fee": {
+            "type": "number",
+            "title": "Fixed Closeout Fee",
+            "description": "Fixed site closeout fee",
+            "default": 0.0
+          },
+          "irb_fee": {
+            "type": "number",
+            "title": "Irb Fee",
+            "description": "Initial IRB/Ethics review fee",
+            "default": 0.0
+          },
+          "patient_stipend_amount": {
+            "type": "number",
+            "title": "Patient Stipend Amount",
+            "description": "Per-visit patient stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement_rate": {
+            "type": "number",
+            "title": "Travel Reimbursement Rate",
+            "description": "Per-visit travel reimbursement",
+            "default": 0.0
+          },
+          "fixed_fees": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fixed Fees",
+            "description": "List of fixed milestone/setup fees",
+            "default": []
+          },
+          "procedure_items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Procedure Items",
+            "description": "List of procedure schedule items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_name"
+        ],
+        "title": "SiteBudgetTemplateCreate"
+      },
+      "SiteBudgetTemplateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_name": {
+            "type": "string",
+            "title": "Template Name"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage"
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage"
+          },
+          "fixed_startup_fee": {
+            "type": "number",
+            "title": "Fixed Startup Fee"
+          },
+          "fixed_closeout_fee": {
+            "type": "number",
+            "title": "Fixed Closeout Fee"
+          },
+          "irb_fee": {
+            "type": "number",
+            "title": "Irb Fee"
+          },
+          "patient_stipend_amount": {
+            "type": "number",
+            "title": "Patient Stipend Amount"
+          },
+          "travel_reimbursement_rate": {
+            "type": "number",
+            "title": "Travel Reimbursement Rate"
+          },
+          "fixed_fees": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fixed Fees"
+          },
+          "procedure_items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Procedure Items"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "template_name",
+          "study_id",
+          "tier_level",
+          "currency",
+          "overhead_percentage",
+          "withholding_percentage",
+          "fixed_startup_fee",
+          "fixed_closeout_fee",
+          "irb_fee",
+          "patient_stipend_amount",
+          "travel_reimbursement_rate",
+          "fixed_fees",
+          "procedure_items",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SiteBudgetTemplateResponse"
+      },
       "SiteGreenlightGateResponse": {
         "properties": {
           "id": {
@@ -7265,29 +9257,80 @@
             "type": "string",
             "title": "Site Id"
           },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          },
           "overall_status": {
             "type": "string",
             "title": "Overall Status"
           },
+          "facet_regulatory_irb": {
+            "type": "boolean",
+            "title": "Facet Regulatory Irb",
+            "default": false
+          },
+          "facet_cta_budget": {
+            "type": "boolean",
+            "title": "Facet Cta Budget",
+            "default": false
+          },
+          "facet_eisf_baseline": {
+            "type": "boolean",
+            "title": "Facet Eisf Baseline",
+            "default": false
+          },
+          "facet_doa_log": {
+            "type": "boolean",
+            "title": "Facet Doa Log",
+            "default": false
+          },
+          "facet_staff_training": {
+            "type": "boolean",
+            "title": "Facet Staff Training",
+            "default": false
+          },
+          "facet_ip_release": {
+            "type": "boolean",
+            "title": "Facet Ip Release",
+            "default": false
+          },
           "contract_approved": {
             "type": "boolean",
-            "title": "Contract Approved"
+            "title": "Contract Approved",
+            "default": false
           },
           "irb_approved": {
             "type": "boolean",
-            "title": "Irb Approved"
+            "title": "Irb Approved",
+            "default": false
           },
           "form_1572_approved": {
             "type": "boolean",
-            "title": "Form 1572 Approved"
+            "title": "Form 1572 Approved",
+            "default": false
           },
           "doa_signed_off": {
             "type": "boolean",
-            "title": "Doa Signed Off"
+            "title": "Doa Signed Off",
+            "default": false
           },
           "ip_ready": {
             "type": "boolean",
-            "title": "Ip Ready"
+            "title": "Ip Ready",
+            "default": false
+          },
+          "greenlight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greenlight Token"
           },
           "greenlight_certified_by": {
             "anyOf": [
@@ -7310,6 +9353,67 @@
               }
             ],
             "title": "Greenlight Certified At"
+          },
+          "is_overridden": {
+            "type": "boolean",
+            "title": "Is Overridden",
+            "default": false
+          },
+          "override_sponsor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Sponsor User Id"
+          },
+          "override_medical_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Medical User Id"
+          },
+          "override_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Justification"
+          },
+          "override_authorized_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Authorized At"
+          },
+          "evaluation_details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Details"
           },
           "rejection_reason": {
             "anyOf": [
@@ -7352,20 +9456,54 @@
           "study_id",
           "site_id",
           "overall_status",
-          "contract_approved",
-          "irb_approved",
-          "form_1572_approved",
-          "doa_signed_off",
-          "ip_ready",
-          "greenlight_certified_by",
-          "greenlight_certified_at",
-          "rejection_reason",
-          "created_at",
           "created_by",
           "reason_for_change",
           "version_index"
         ],
         "title": "SiteGreenlightGateResponse"
+      },
+      "SiteGreenlightOverrideRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "sponsor_user_id": {
+            "type": "string",
+            "title": "Sponsor User Id"
+          },
+          "medical_user_id": {
+            "type": "string",
+            "title": "Medical User Id"
+          },
+          "sponsor_signature": {
+            "type": "string",
+            "title": "Sponsor Signature"
+          },
+          "medical_signature": {
+            "type": "string",
+            "title": "Medical Signature"
+          },
+          "justification": {
+            "type": "string",
+            "title": "Justification"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "sponsor_user_id",
+          "medical_user_id",
+          "sponsor_signature",
+          "medical_signature",
+          "justification"
+        ],
+        "title": "SiteGreenlightOverrideRequest"
       },
       "SiteMilestoneCreate": {
         "properties": {
@@ -7688,6 +9826,85 @@
           "net_amount": {
             "type": "number",
             "title": "Net Amount"
+          },
+          "visit_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Name"
+          },
+          "procedures_count": {
+            "type": "integer",
+            "title": "Procedures Count",
+            "default": 0
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount",
+            "default": 0.0
+          },
+          "overhead_amount": {
+            "type": "number",
+            "title": "Overhead Amount",
+            "default": 0.0
+          },
+          "patient_stipend_total": {
+            "type": "number",
+            "title": "Patient Stipend Total",
+            "default": 0.0
+          },
+          "travel_reimbursement_total": {
+            "type": "number",
+            "title": "Travel Reimbursement Total",
+            "default": 0.0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "target_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Currency"
+          },
+          "exchange_rate": {
+            "type": "number",
+            "title": "Exchange Rate",
+            "default": 1.0
+          },
+          "converted_net_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted Net Amount"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index"
           }
         },
         "type": "object",

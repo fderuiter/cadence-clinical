@@ -129,7 +129,9 @@
               class="col-visit-header"
               scope="col"
             >
-              <div class="visit-header-title">{{ visit.visit_name }}</div>
+              <div class="visit-header-title">
+                {{ visit.visit_name }}
+              </div>
               <div class="visit-header-meta">Day {{ visit.target_day }}</div>
             </th>
           </tr>

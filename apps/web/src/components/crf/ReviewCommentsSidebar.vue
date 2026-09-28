@@ -135,6 +135,7 @@
       class="add-comment-box"
       style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px"
     >
+      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <textarea
         v-model="newComment"
         placeholder="Add review comment... Use @user to mention reviewers."

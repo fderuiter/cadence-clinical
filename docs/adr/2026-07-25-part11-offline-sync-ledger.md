@@ -26,14 +26,14 @@ This decision implements requirements under Trace-1.
 ### Option 1: Live-Only Sync
 
 - **Overview:** Require direct real-time API calls for all query updates with no offline capabilities.
-- **Pros:** Simpler architecture with zero local ledger state.
-- **Cons:** Unstable network drops lead to data loss and system locking.
+- ***Pros:*** Simpler architecture with zero local ledger state.
+- ***Cons:*** Unstable network drops lead to data loss and system locking.
 
 ### Option 2: Persistent Offline Ledger & Async Sync Queue (Selected)
 
 - **Overview:** Store local clinical queries and cryptographic ledger blocks to `localStorage`. Use an asynchronous background queue inside Pinia to monitor and safely sync ledger blocks to the backend REST endpoint, verifying every transition using JWT-backed single-use compliance tokens (`X-Sig-Token`).
-- **Pros:** Zero data loss, robust offline capability, cryptographically secure.
-- **Cons:** Slightly increased complexity in frontend sync queue tracking and backend HMAC-SHA256 signature verification.
+- ***Pros:*** Zero data loss, robust offline capability, cryptographically secure.
+- ***Cons:*** Slightly increased complexity in frontend sync queue tracking and backend HMAC-SHA256 signature verification.
 
 ## 4. Decision Outcome
 

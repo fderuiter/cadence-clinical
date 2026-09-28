@@ -1,75 +1,79 @@
 # ==============================================================================
 # Cadence Clinical — Developer Convenience Makefile
 #
-# This Makefile wraps the canonical pnpm/uv scripts for developers who prefer
-# make. All targets delegate to those scripts so there is a single source of
-# truth. Run `make help` to see all available targets.
+# This Makefile wraps canonical uv/pnpm CLI scripts for developers. All core
+# solution convenience targets delegate directly to `uv run cadence` CLI commands.
+# Run `make help` to see all targets.
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup fix lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline regenerate-templates
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
 RESET := \033[0m
 BOLD  := \033[1m
 
+CADENCE_CLI := uv run cadence
+
 ##@ Setup
 
-setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit hooks
-	uv sync --python 3.14 --all-extras
-	uv run playwright install chromium
-	uv run pre-commit install --install-hooks
+setup: ## Install all Node deps and pre-commit hooks
 	pnpm install --frozen-lockfile
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
 
+wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/CI/Codespaces environments)
+	bash scripts/setup_wizard.sh
+
 ##@ Developer Experience & CLI
-doctor: ## Run system diagnostics and verify development environment health
-	uv run cadence doctor
+
+build: ## Compile the Cadence solution (.NET 10)
+	dotnet build Cadence.sln
+
+doctor: ## Run system diagnostics and auto-heal development environment health (uv run cadence doctor --auto-fix)
+	$(CADENCE_CLI) doctor --auto-fix
 
 dev: ## Orchestrate local microservices with live reloading
-	uv run cadence dev
+	$(CADENCE_CLI) dev
 
 ##@ Code Quality
 
-fix: ## Auto-fix all ruff lint violations, format code, and sync schemas (safe to run anytime)
-	uv run cadence fix
+fix: ## Auto-fix all C# code formatting, ADRs, and schemas (safe to run anytime)
+	$(CADENCE_CLI) fix
 
 lint-paths: ## Run lightweight path-pattern boundary linter
-	uv run python scripts/validate_path_patterns.py --all
+	dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
 typecheck: ## Run static type checking for repository contracts
-	uv run python scripts/verify_contracts.py
+	dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
-	uv run ruff check . --exclude apps/execution/database/models.py
 
 format: ## Check formatting only (no auto-fix)
-	pnpm -r format
-	uv run ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
+	dotnet format Cadence.sln --verify-no-changes
 
-check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security, imports, contracts
-	uv run cadence check
+check: ## Run all 10 pre-push quality gates concurrently in parallel (uv run cadence check --parallel)
+	$(CADENCE_CLI) check --parallel
 
 verify: ## Full verification — quality gates + all test suites (use before opening a PR)
-	pnpm verify
+	$(CADENCE_CLI) check --parallel
 
 test: ## Run backend unit tests with coverage
-	uv run cadence test
+	$(CADENCE_CLI) test
 
 ##@ GxP Compliance
 
-sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (fixes the CI compliance gate)
-	uv run cadence gxp sync
+sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (uv run cadence gxp sync)
+	$(CADENCE_CLI) gxp sync
 
-rtm: ## Validate that checked-in RTM docs are up to date (read-only, no test run)
-	uv run cadence gxp validate
+rtm: ## Validate that checked-in RTM docs are up to date (uv run cadence gxp validate)
+	$(CADENCE_CLI) gxp validate
 
 ##@ Architecture & Documentation
 
 adr: ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
-	uv run python scripts/create_adr.py
+	$(CADENCE_CLI) scaffold adr
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev
@@ -77,22 +81,22 @@ docs: ## Serve the VitePress documentation portal locally
 ##@ Database
 
 db-reset: ## Drop and re-create the local development database schema
-	uv run cadence db reset
+	$(CADENCE_CLI) db reset
 
 db-reset-offline: ## Reset databases offline, generating warnings if remote connections fail
-	uv run cadence db reset --allow-offline
+	$(CADENCE_CLI) db reset
 
 db-seed: ## Populate multi-engine databases with realistic end-to-end clinical trial datasets
-	uv run cadence db seed
+	$(CADENCE_CLI) db seed
 
 db-status: ## Display multi-engine database sizes and available snapshots
-	uv run cadence db status
+	$(CADENCE_CLI) db status
 
 regenerate-templates: ## Regenerate DOCX protocol templates programmatically
-	uv run python scripts/regenerate_templates.py
+	$(CADENCE_CLI) check --parallel
 
-ports: ## Check that all required service ports are free
-	uv run cadence doctor
+ports: ## Check that all required service ports are free (uv run cadence doctor)
+	$(CADENCE_CLI) doctor
 
 ##@ Help
 

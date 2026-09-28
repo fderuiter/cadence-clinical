@@ -126,19 +126,25 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await wrapper.vm.$nextTick();
 
     expect(wrapper.vm.wizardStep).toBe(1);
-    expect(wrapper.text()).toContain("Step 1: Amendment Classification & Scope");
+    expect(wrapper.text()).toContain(
+      "Step 1: Amendment Classification & Scope"
+    );
 
     // Advance to Step 2
     wrapper.vm.goToWizardStep(2);
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.wizardStep).toBe(2);
-    expect(wrapper.text()).toContain("Step 2: Target Version & Study Scope Selection");
+    expect(wrapper.text()).toContain(
+      "Step 2: Target Version & Study Scope Selection"
+    );
 
     // Advance to Step 3 (Predictive impact analysis)
     wrapper.vm.goToWizardStep(3);
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.wizardStep).toBe(3);
-    expect(wrapper.text()).toContain("Step 3: Predictive Site & Subject Impact Analysis");
+    expect(wrapper.text()).toContain(
+      "Step 3: Predictive Site & Subject Impact Analysis"
+    );
 
     // Advance to Step 4 & publish
     wrapper.vm.goToWizardStep(4);
@@ -182,7 +188,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await wrapper.vm.$nextTick();
 
     expect(wrapper.vm.activeMode).toBe("coordinator");
-    expect(wrapper.text()).toContain("Site Coordinator Bulk Re-Consent Workspace");
+    expect(wrapper.text()).toContain(
+      "Site Coordinator Bulk Re-Consent Workspace"
+    );
 
     // Test site filter select
     const siteSelect = wrapper.find("#site-filter-select");
@@ -263,4 +271,3 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     expect(wrapper.text()).toContain("eCRF Form Definitions");
   });
 });
-

@@ -24,20 +24,20 @@ This decision implements requirements under Trace-1.
 ### Option 1: Browser-based automated accessibility auditing (e.g. Playwright + axe-playwright)
 
 - **Overview:** Starts a browser to render components and runs accessibility checks on the live browser DOM.
-- **Pros:**
+- ***Pros:***
   - ✅ Real layout and color-contrast calculations are fully evaluated.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires installing/starting browsers, making the pipeline heavier.
   - ❌ Slower execution times (violates Constraint of <15% overhead).
 
 ### Option 2: Hybrid Static ESLint and In-Memory JSDOM/Axe Accessibility Auditing
 
 - **Overview:** Use ESLint with `eslint-plugin-vuejs-accessibility` to statically analyze standard Vue templates during linting/development, combined with in-memory `axe-core` DOM assertions on rendered HTML fragments inside our existing `vitest` unit tests using a JSDOM environment.
-- **Pros:**
+- ***Pros:***
   - ✅ Extremely fast (runs in under 1 second).
   - ✅ Catches both static syntax violations (missing `for` on labels, missing keyboard events) and rendered DOM violations (such as invalid ARIA labels or element hierarchy).
   - ✅ Runs entirely in-memory in JSDOM, matching our existing test runner configuration.
-- **Cons:**
+- ***Cons:***
   - ❌ Color contrast cannot be fully calculated as JSDOM does not compute full visual layout.
 
 ## 4. Decision Outcome

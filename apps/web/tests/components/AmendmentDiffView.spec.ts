@@ -1,1 +1,0 @@
-import "../views/AmendmentDiffView.spec";

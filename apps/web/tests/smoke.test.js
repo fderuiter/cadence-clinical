@@ -8,6 +8,7 @@ import EcrfView from "../src/views/EcrfView.vue";
 import CtmsView from "../src/views/CtmsView.vue";
 import AuditView from "../src/views/AuditView.vue";
 import RulesView from "../src/views/RulesView.vue";
+import ImagingView from "../src/views/ImagingView.vue";
 
 // Setup router for testing App.vue with all routes
 const router = createRouter({
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: "/ctms", name: "ctms", component: CtmsView },
     { path: "/audit", name: "audit", component: AuditView },
     { path: "/rules", name: "rules", component: RulesView },
+    { path: "/imaging", name: "imaging", component: ImagingView },
   ],
 });
 
@@ -107,5 +109,21 @@ describe("Vue SPA Smoke Tests", () => {
 
     expect(wrapper.html()).toContain("Interactive Rules Designer");
     expect(wrapper.html()).toContain("Study Active Ruleset");
+  });
+
+  it("mounts ImagingView and renders DICOM MPR viewer with RECIST calipers", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const wrapper = mount(ImagingView, {
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    expect(wrapper.html()).toContain(
+      "Medical Imaging &amp; Oncologic Adjudication Console"
+    );
+    expect(wrapper.html()).toContain("Longitudinal Tumor Response Trajectory");
   });
 });

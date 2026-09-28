@@ -64,7 +64,7 @@ export class IndexedDBManager {
       this.dbName = this.resolveDbName();
     }
     if (this.useMemory) return;
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request = window.indexedDB.open(this.getDbName(), 1);
       request.onerror = () => {
         this.useMemory = true; // fallback
@@ -312,7 +312,7 @@ export class ClientSyncEngine {
         syncStore.setStatus("COMPLETED");
         this.isSyncing = false;
       }
-    } catch (err: any) {
+    } catch {
       syncStore.setStatus("ERROR");
       this.isSyncing = false;
       this.scheduleRetry();

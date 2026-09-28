@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Core.Domain</RootNamespace>
+    <Description>Pure domain entities, aggregate roots, value objects, and GxP audit interfaces for Cadence Clinical.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+</Project>
+

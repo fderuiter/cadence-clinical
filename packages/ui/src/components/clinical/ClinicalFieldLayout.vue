@@ -21,9 +21,7 @@
       <slot
         :id="id"
         :error="error"
-        :errorId="`validation-error-${id}`"
         :error-id="`validation-error-${id}`"
-        :hasError="showError"
         :has-error="showError"
       ></slot>
 

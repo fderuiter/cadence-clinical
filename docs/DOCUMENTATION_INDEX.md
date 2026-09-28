@@ -6,20 +6,22 @@ Welcome to the **Cadence Clinical Platform** master documentation index. This po
 
 ## Documentation Architecture & Taxonomy
 
-Cadence Clinical documentation is organized into a 5-layer hierarchy to maintain traceability across clinical requirements, architectural design decisions, and GxP compliance ledgers:
+Cadence Clinical documentation is organized into a 6-layer hierarchy to maintain traceability across clinical requirements, architectural design decisions, API contracts, and GxP compliance ledgers:
 
 ```mermaid
 graph TD
-    Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md)"]
-    Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, API Specs)"]
-    Layer3["3. Decision Records<br/>(docs/adr/ Domain Categories)"]
-    Layer4["4. Developer & Operational Guides<br/>(AGENTS.md, CONTRIBUTING.md, Dev Env)"]
-    Layer5["5. Validation & GxP Traceability<br/>(RTM.md, Audit Specs, QA Plan)"]
+    Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md, FRD.md)"]
+    Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, Blueprint)"]
+    Layer3["3. REST API Contract Reference<br/>(docs/api/* Microservice Catalogs)"]
+    Layer4["4. Decision Records<br/>(docs/adr/ Domain Categories)"]
+    Layer5["5. Developer & Operational Guides<br/>(AGENTS.md, CONTRIBUTING.md, CLI Guide)"]
+    Layer6["6. Validation & GxP Traceability<br/>(RTM.md, Audit Specs, QA Plan)"]
 
     Layer1 --> Layer2
     Layer2 --> Layer3
-    Layer3 --> Layer5
-    Layer4 --> Layer2
+    Layer2 --> Layer4
+    Layer4 --> Layer6
+    Layer5 --> Layer2
 ```
 
 ---
@@ -28,8 +30,9 @@ graph TD
 
 High-level clinical system contracts, product scope, and functional specifications.
 
-- **[System Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Upstream digital data flow (DDF), clinical metadata management, eCRF data model requirements, and system traceability specifications (`Trace-1` through `Trace-N`).
+- **[Software Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Formally compliant with **ISO/IEC/IEEE 29148:2018** (Clauses 9.5 & 9.6) and **IEC 62304 Class C**, establishing the formal functional baseline across all 24 clinical subsystems, multi-service topology, universal GxP entity schemas, 6 master state lifecycles, atomic 4-part requirements (`SRS-XXX-XXX`), foundational traceability baseline (`Trace-1` through `Trace-34`), and the consolidated Requirements Traceability and Verification Matrix (RTVM).
 - **[Product Requirements Document (PRD)](SDLC/01_Product_Requirements_Document_PRD.md)** (`01_Product_Requirements_Document_PRD.md`): Functional capabilities, user roles, eClinical workflow definitions, and PRD requirement identifiers (`PRD-SYS-xxx`, `PRD-EDC-xxx`, `PRD-CTMS-xxx`, etc.).
+- **[Functional Product Specification & FRD](FUNCTIONAL_PRODUCT_SPECIFICATION.md)** (`FUNCTIONAL_PRODUCT_SPECIFICATION.md`): Reverse-engineered functional requirements document (CAD-SPEC-FRD-001) defining core domain capabilities, system actors, clinical user journeys, and end-to-end data pipelines across all operational subsystems.
 
 ---
 
@@ -38,13 +41,35 @@ High-level clinical system contracts, product scope, and functional specificatio
 Deep technical design specifications, database models, and service boundary definitions.
 
 - **[System Architecture Guide](ARCHITECTURE.md)** (`ARCHITECTURE.md`): High-level system architecture, service communication topology, and database split (Neo4j for MDR, PostgreSQL for EDC).
+- **[.NET 10 Platform Modernization Hub](migration/index.md)** (`docs/migration/index.md`): Master Phase 0 modernization baseline, 18-context decomposition, and .NET 10 transition roadmap.
+  - **[Surface & Data Topology Audit](migration/SYSTEM_TOPOLOGY_AUDIT.md)** (`docs/migration/SYSTEM_TOPOLOGY_AUDIT.md`): Complete entry point catalog, persistence models, and dynamic behavior audit.
+  - **[Dependency & Parity Catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md)** (`docs/migration/DEPENDENCY_AND_PARITY_CATALOG.md`): Python-to-.NET 10 library cross-walk, test fixtures, and golden datasets.
+  - **[Bounded Context Migration Matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md)** (`docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md`): 4-tier dependency sequence and Clean Architecture sentinels.
+  - **[Solution Scaffold Guide](migration/SCAFFOLD_GUIDE.md)** (`docs/migration/SCAFFOLD_GUIDE.md`): Executable solution scaffold guide and verification steps.
+  - **[Forensic Readiness Audit](migration/Migration_Phase0_Readiness_Audit.md)** (`docs/migration/Migration_Phase0_Readiness_Audit.md`): Forensic gap analysis, orphan code audit, floating-point precision risks, and dependency traps.
+  - **[Migration Workflow Playbook](MIGRATION_WORKFLOW.md)** (`docs/MIGRATION_WORKFLOW.md`): Authoritative 6-step service transcription SOP and Python decommissioning recipe.
 - **[Technical Design Document (TDD)](SDLC/02_Technical_Design_Document_TDD.md)** (`02_Technical_Design_Document_TDD.md`): Internal micro-architecture, database schemas, cryptographic signature specs, and service isolation boundaries.
 - **[API Integration Specification](SDLC/03_API_Integration_Specification.md)** (`03_API_Integration_Specification.md`): Gateway routes, request/response payload contracts, RFC 7807 error formats, and authentication propagation headers.
 - **[Data Standards & Interoperability Blueprint](SDLC/04_Data_Standards_Interoperability_Blueprint.md)** (`04_Data_Standards_Interoperability_Blueprint.md`): CDISC USDM v3.0/v4.0, CDISC ODM, SDTM/ADaM exports, FHIR/eSource, and MedDRA/WHODrug medical coding integration.
 
 ---
 
-## 3. Architectural Decision Records (ADRs)
+## 3. Programmatic REST API Contract Reference
+
+Comprehensive, statically extracted OpenAPI 3.1.0 specifications across all 20+ microservices with GxP role gates, step-up tokens, and code snippets.
+
+- **[Master REST API Reference](api/index.md)** (`docs/api/index.md`): Master catalog, gateway proxy topology, Keycloak OIDC headers, and RFC 7807 problem detail models.
+- **[Study Designer & USDM API](api/designer.md)** (`docs/api/designer.md`): CDISC USDM protocol authoring, SoA matrix, and Biomedical Concept endpoints.
+- **[EDC Execution API](api/execution.md)** (`docs/api/execution.md`): Dynamic eCRF schema projection, subject progression, and Dataset-JSON exports.
+- **[CTMS Operations API](api/ctms.md)** (`docs/api/ctms.md`): Monitoring visit reports, site milestones, and 6-facet greenlight activation.
+- **[Safety & Pharmacovigilance API](api/safety.md)** (`docs/api/safety.md`): ICH E2B(R3) ICSR XML, CTCAE grading, and AS2 S/MIME EDI gateway.
+- **[Quality & CAPA API](api/quality.md)** (`docs/api/quality.md`): Protocol deviations, root-cause analyses, Benford CSM forensics, and pHash image duplicate checks.
+- **[Site Payments & Grants API](api/payments.md)** (`docs/api/payments.md`): Procedure fee schedules, multi-payee splits, and participant expense claims.
+- **[Blinded Imaging Adjudication API](api/imaging.md)** (`docs/api/imaging.md`): Blinded dual-reader RECIST 1.1 evaluations and 20% discordance triggers.
+
+---
+
+## 4. Architectural Decision Records (ADRs)
 
 Immutable chronological records of key architectural and technical decisions made throughout system evolution. All ADRs are categorized into 7 functional domains:
 
@@ -59,7 +84,7 @@ Immutable chronological records of key architectural and technical decisions mad
 
 ---
 
-## 4. Developer Experience & Operations
+## 5. Developer Experience & Operations
 
 Guidelines for setting up, building, running, and contributing code to Cadence Clinical.
 
@@ -73,7 +98,7 @@ Guidelines for setting up, building, running, and contributing code to Cadence C
 
 ---
 
-## 5. Validation & GxP Compliance Ledger
+## 6. Validation & GxP Compliance Ledger
 
 GxP audit readiness, requirement traceability, and automated verification reports.
 
@@ -92,7 +117,7 @@ When working on a new GitHub issue or modifying system functionality, follow thi
 
 1. **Requirement Level (`PRD` / `SRS`)**:
    - Check if the change introduces new user capabilities or modifies existing specifications.
-   - If so, update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` with a unique requirement ID (`PRD-SYS-xxx` or `Trace-x`).
+   - If so, update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` with a unique requirement ID (`PRD-SYS-xxx`, `SRS-XXX-xxx`, or `Trace-x`).
 2. **Architecture & Decision Level (`ADR`)**:
    - If the change introduces new dependencies, database model changes, shared package utilities, or gateway routes, create a new ADR using the CLI tool:
      ```bash

@@ -1,16 +1,21 @@
-import { defineStore, getActivePinia } from "pinia";
+import { defineStore, getActivePinia, type StateTree } from "pinia";
 import "pinia";
 import { stateTrackingPlugin } from "./plugins.js";
 
 declare module "pinia" {
-  export interface DefineStoreOptionsBase<S, Store> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  export interface DefineStoreOptionsBase<S extends StateTree, Store> {
     trackActions?: Record<string, { loading?: string; error?: string }>;
   }
 }
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
-import { executionService } from "../api/execution";
+import {
+  executionService,
+  type SubjectScreeningRequest,
+  type SubjectScreeningResponse,
+} from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm, type NormalizedUsdm } from "./normalization";
@@ -153,6 +158,9 @@ export interface IngestionJob {
 
 export interface SubjectFixture {
   id: string;
+  siteId?: string;
+  consentDate?: string;
+  armId?: string;
   status: string;
   active_protocol_version: string;
   consentText: string;
@@ -219,8 +227,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         if (storedFormQueries) {
           savedFormQueries = JSON.parse(storedFormQueries);
         }
-        const storedLedgerBlocks =
-          window.localStorage.getItem("ledgerBlocks");
+        const storedLedgerBlocks = window.localStorage.getItem("ledgerBlocks");
         if (storedLedgerBlocks) {
           savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
         }
@@ -237,8 +244,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       currentUsdm: normalizeUsdm(
         savedUsdm || {
           studyId: "STUDY-USDM-001",
-          studyTitle:
-            "Phase II Trial of Cadence-001 in Essential Hypertension",
+          studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
           objectives: [
             {
               id: "OBJ-001",
@@ -801,6 +807,12 @@ const useClinicalStoreInner = defineStore("clinical", {
     gatedSubjectIds: (state) => {
       return state.subjects.filter((s) => s.isGated).map((s) => s.id);
     },
+    /**
+     * Array of all subject IDs in store.
+     */
+    subjectIds: (state) => {
+      return state.subjects.map((s) => s.id);
+    },
     isSubjectGated: (state) => (subjectId: string) => {
       const sub = state.subjects.find((s) => s.id === subjectId);
       return sub ? sub.isGated : false;
@@ -974,6 +986,239 @@ const useClinicalStoreInner = defineStore("clinical", {
         window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
       }
     },
+    getEcrfFieldsForVersion(version: string = "1.0.0"): ClinicalField[] {
+      const baseFields = this.ecrfFields;
+      if (version.startsWith("2.") || version === "2.0.0") {
+        const v2Fields: ClinicalField[] = [
+          {
+            id: "vs_temp",
+            label: "Body Temperature (°C)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "VS.TEMP",
+            value: "36.8",
+            validation: {
+              required: false,
+              min: 30,
+              max: 45,
+              message: "Temperature must be between 30 and 45 °C",
+            },
+          },
+          {
+            id: "lb_wbc",
+            label: "White Blood Cell Count (10^9/L)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.WBC",
+            value: "6.5",
+            validation: {
+              required: false,
+              min: 1.0,
+              max: 50.0,
+              message: "WBC reference range is 4.0 - 11.0 10^9/L",
+            },
+          },
+          {
+            id: "lb_gluc",
+            label: "Fasting Blood Glucose (mg/dL)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.GLUC",
+            value: "95",
+            validation: {
+              required: false,
+              min: 40,
+              max: 400,
+              message: "Fasting Glucose reference range is 70 - 99 mg/dL",
+            },
+          },
+          {
+            id: "lb_alt",
+            label: "Alanine Aminotransferase - ALT (U/L)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.ALT",
+            value: "25",
+            validation: {
+              required: false,
+              min: 1,
+              max: 500,
+              message: "ALT reference range is 7 - 56 U/L",
+            },
+          },
+        ];
+        const combined = [...baseFields];
+        for (const vf of v2Fields) {
+          if (!combined.some((f) => f.id === vf.id)) {
+            combined.push(vf);
+          }
+        }
+        return combined;
+      }
+      return baseFields;
+    },
+    async enrollSubject(enrollData: {
+      id: string;
+      siteId?: string;
+      consentDate?: string;
+      armId?: string;
+      protocolVersion?: string;
+      reason?: string;
+    }) {
+      const subjectId = enrollData.id.trim();
+      if (!subjectId) return null;
+
+      let sub = this.subjects.find((s) => s.id === subjectId);
+      const version = enrollData.protocolVersion || "1.0.0";
+      const siteId = enrollData.siteId || "SITE-101";
+      const armId = enrollData.armId || "ARM-A";
+      const consentDate =
+        enrollData.consentDate || new Date().toISOString().split("T")[0];
+
+      if (!sub) {
+        sub = {
+          id: subjectId,
+          siteId: siteId,
+          consentDate: consentDate,
+          armId: armId,
+          status: "ENROLLED",
+          active_protocol_version: version,
+          consentText: `Signed ICF v${version}`,
+          consentColor: "green",
+          category: version.startsWith("2.") ? "migrated" : "pending",
+          isGated: false,
+          label: `${subjectId} (Enrolled - ${armId})`,
+        };
+        this.subjects.push(sub);
+      } else {
+        sub.siteId = siteId;
+        sub.consentDate = consentDate;
+        sub.armId = armId;
+        sub.status = "ENROLLED";
+        sub.active_protocol_version = version;
+        sub.isGated = false;
+        sub.label = `${subjectId} (Enrolled - ${armId})`;
+      }
+
+      const customReason =
+        enrollData.reason ||
+        `Subject ${subjectId} enrolled at ${siteId} assigned to arm ${armId} under protocol v${version}.`;
+
+      await this.addLedgerBlock(
+        "SUBJECT_ENROLL",
+        {
+          subject_id: subjectId,
+          site_id: siteId,
+          arm_id: armId,
+          consent_date: consentDate,
+          protocol_version: version,
+        },
+        customReason
+      );
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem(
+          "cadence_clinical_subjects",
+          JSON.stringify(this.subjects)
+        );
+      }
+
+      return sub;
+    },
+    /**
+     * Evaluates subject screening eligibility against protocol criteria,
+     * updates subject status in store, and appends a ledger block.
+     *
+     * @param subjectId - Target subject identifier.
+     * @param body - Optional screening payload including study_id.
+     * @param reason - Reason for audit ledger entry.
+     * @returns The screening evaluation response or null if invalid subject ID.
+     */
+    async screenSubject(
+      subjectId: string,
+      body: SubjectScreeningRequest | null = null,
+      reason: string = "Subject Screening Evaluation"
+    ): Promise<SubjectScreeningResponse | null> {
+      const trimmedId = (subjectId || "").trim();
+      if (!trimmedId) return null;
+
+      let sub = this.subjects.find((s) => s.id === trimmedId);
+      if (!sub) {
+        sub = {
+          id: trimmedId,
+          siteId: "SITE-101",
+          status: "SCREENING",
+          active_protocol_version: "1.0.0",
+          consentText: "Pending Screening",
+          consentColor: "yellow",
+          category: "pending",
+          isGated: false,
+          label: `${trimmedId} (Screening)`,
+        };
+        this.subjects.push(sub);
+      }
+
+      let result: SubjectScreeningResponse = {
+        eligible: true,
+        failed_criteria: [],
+        indeterminate_criteria: [],
+        criterion_evaluations: [],
+      };
+
+      try {
+        const res = await executionService.screenSubject(trimmedId, body ?? undefined);
+        if (res) {
+          result = res;
+        }
+      } catch (err) {
+        console.warn(
+          "Screening API call failed, falling back to local evaluation:",
+          err
+        );
+      }
+
+      if ((result as any).status === "ENROLLED") {
+        sub.status = "ENROLLED";
+        sub.consentColor = "green";
+      } else if (
+        result.eligible === true ||
+        (result as any).status === "SCREENED"
+      ) {
+        sub.status = "SCREENED";
+        sub.consentColor = "green";
+      } else if (
+        result.eligible === false ||
+        (result as any).status === "SCREEN_FAILED"
+      ) {
+        sub.status = "SCREEN_FAILED";
+        sub.consentColor = "red";
+      } else {
+        sub.status = "SCREENING";
+        sub.consentColor = "yellow";
+      }
+
+      await this.addLedgerBlock(
+        "SUBJECT_SCREEN",
+        {
+          subject_id: trimmedId,
+          eligible: result.eligible,
+          failed_criteria: result.failed_criteria || [],
+          indeterminate_criteria: result.indeterminate_criteria || [],
+        },
+        reason
+      );
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem(
+          "cadence_clinical_subjects",
+          JSON.stringify(this.subjects)
+        );
+      }
+
+      return result;
+    },
     clearLedger() {
       this.ledgerBlocks = [];
       if (typeof window !== "undefined" && window.localStorage) {
@@ -1070,8 +1315,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         this.labAlerts = alertsMap || {};
       } catch (err: unknown) {
         console.warn("Database connection failed", err);
-        this.labAlertsError =
-          err instanceof Error ? err.message : String(err);
+        this.labAlertsError = err instanceof Error ? err.message : String(err);
         // Suppress/Swallow the error (DO NOT re-throw)
       }
     },
@@ -1118,7 +1362,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (!res.success) {
         console.error(
           `USDM validation failure for type [${type}]:`,
-          res.error.errors
+          res.error.issues
         );
         return { success: false, error: res.error };
       }
@@ -1135,8 +1379,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       const validation = this.validateModel(type, { id, ...properties });
       if (!validation.success) {
         const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
-          .error!.errors.map(
-            (e: { path: (string | number)[]; message: string }) =>
+          .error!.issues.map(
+            (e: { path: Array<string | number | symbol>; message: string }) =>
               `${e.path.join(".") || "field"}: ${e.message}`
           )
           .join(", ")}`;

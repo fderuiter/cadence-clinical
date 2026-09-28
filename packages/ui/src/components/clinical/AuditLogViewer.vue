@@ -37,7 +37,9 @@ const filteredLogs = computed(() => {
   <div class="audit-log-viewer">
     <div class="audit-header">
       <div class="header-titles">
-        <h3 class="audit-title">{{ title }}</h3>
+        <h3 class="audit-title">
+          {{ title }}
+        </h3>
         <span class="part11-badge">21 CFR Part 11 GxP Immutable</span>
       </div>
       <div class="audit-controls">
@@ -107,8 +109,12 @@ const filteredLogs = computed(() => {
                   <td>
                     <code>{{ change.field }}</code>
                   </td>
-                  <td class="diff-old">{{ change.old_val ?? "null" }}</td>
-                  <td class="diff-new">{{ change.new_val ?? "null" }}</td>
+                  <td class="diff-old">
+                    {{ change.old_val ?? "null" }}
+                  </td>
+                  <td class="diff-new">
+                    {{ change.new_val ?? "null" }}
+                  </td>
                 </tr>
               </tbody>
             </table>

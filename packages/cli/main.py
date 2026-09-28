@@ -1,16 +1,34 @@
-"""Main CLI application entrypoint for Cadence Clinical."""
+import os
 
-import typer
+from scripts.runtime_guard import enforce_python_runtime
 
-from packages.cli.commands.cdisc import cdisc_app
-from packages.cli.commands.check import check_app
-from packages.cli.commands.db import db_app
-from packages.cli.commands.dev import dev_app
-from packages.cli.commands.doctor import doctor_app
-from packages.cli.commands.fix import fix_app
-from packages.cli.commands.gxp import gxp_app
-from packages.cli.commands.scaffold import scaffold_app
-from packages.cli.commands.test import test_app
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "dev-audit-secret-key-cadence-2026-secure-32b"
+)
+os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "dev-secret-inbound-email-hmac-secure-placeholder"
+)
+os.environ.setdefault("SAFETY_SALT", "internal-safety-salt-12345")
+
+enforce_python_runtime(script_name="cadence")
+
+import typer  # noqa: E402
+
+from packages.cli.commands.cdisc import cdisc_app  # noqa: E402
+from packages.cli.commands.check import check_app  # noqa: E402
+from packages.cli.commands.db import db_app  # noqa: E402
+from packages.cli.commands.dev import dev_app  # noqa: E402
+from packages.cli.commands.doctor import doctor_app  # noqa: E402
+from packages.cli.commands.fix import fix_app  # noqa: E402
+from packages.cli.commands.gxp import gxp_app  # noqa: E402
+from packages.cli.commands.record import record_app  # noqa: E402
+from packages.cli.commands.scaffold import scaffold_app  # noqa: E402
+from packages.cli.commands.settings import settings_app  # noqa: E402
+from packages.cli.commands.setup import setup_app  # noqa: E402
+from packages.cli.commands.test import test_app  # noqa: E402
+from packages.cli.mcp.server import CadenceMcpServer  # noqa: E402
 
 app = typer.Typer(
     name="cadence",
@@ -18,6 +36,17 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+mcp_app = typer.Typer(
+    help="Run native JSON-RPC Model Context Protocol (MCP) Stdio server for AI agents."
+)
+
+
+@mcp_app.callback(invoke_without_command=True)
+def run_mcp_server() -> None:
+    """Starts the Cadence Clinical MCP stdio server."""
+    server = CadenceMcpServer()
+    server.run_stdio()
 
 
 @app.callback()
@@ -50,8 +79,12 @@ app.add_typer(check_app, name="check")
 app.add_typer(fix_app, name="fix")
 app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
+app.add_typer(settings_app, name="settings")
+app.add_typer(setup_app, name="setup")
+app.add_typer(record_app, name="record")
 app.add_typer(gxp_app, name="gxp")
 app.add_typer(cdisc_app, name="cdisc")
+app.add_typer(mcp_app, name="mcp")
 
 
 def main() -> None:

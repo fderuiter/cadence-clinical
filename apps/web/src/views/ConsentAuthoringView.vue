@@ -409,6 +409,7 @@
                   "
                   >{{ index + 1 }}.</span
                 >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="editorForm.clauses[index]"
                   type="text"

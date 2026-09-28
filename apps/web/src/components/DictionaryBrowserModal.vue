@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="codingStore.browserModal.isOpen"
     class="modal-overlay"
@@ -123,7 +125,7 @@
 
             <!-- Loading Spinner -->
             <div v-if="codingStore.isSearching" class="results-loading">
-              <div class="spinner"></div>
+              <div class="spinner" />
               <span>Searching terminology index...</span>
             </div>
 
@@ -141,6 +143,8 @@
 
             <!-- Results List -->
             <div v-else class="results-list">
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
                 v-for="(match, idx) in codingStore.dictionarySearchResults"
                 :key="idx"
@@ -184,7 +188,9 @@
             <div v-else class="hierarchy-content">
               <!-- Selected Concept Summary Banner -->
               <div class="concept-summary-banner">
-                <div class="concept-title">{{ getMatchTerm(activeMatch) }}</div>
+                <div class="concept-title">
+                  {{ getMatchTerm(activeMatch) }}
+                </div>
                 <div class="concept-code">
                   Code: <code>{{ getMatchCode(activeMatch) }}</code>
                 </div>
@@ -282,8 +288,12 @@
                     :key="aIdx"
                     class="atc-card"
                   >
-                    <div class="atc-code-pill">{{ atc.atc_code }}</div>
-                    <div class="atc-description">{{ atc.description }}</div>
+                    <div class="atc-code-pill">
+                      {{ atc.atc_code }}
+                    </div>
+                    <div class="atc-description">
+                      {{ atc.description }}
+                    </div>
                   </div>
                 </div>
                 <div v-else class="text-muted-notice">

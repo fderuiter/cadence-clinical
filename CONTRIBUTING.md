@@ -4,8 +4,10 @@ Welcome to the **Cadence Clinical Research Software** platform repository. This 
 single authoritative reference for development workflows, coding standards,
 quality gates, and CI failure recovery procedures.
 
-> **Before you start**: run `make setup` (or `pnpm setup:dev`) once to install
-> all dependencies, Playwright browsers, and local Git hooks.
+> **Before you start**: on a brand-new machine/Codespace/devcontainer, run
+> `make wizard` once to install the .NET 10 SDK plus all dependencies,
+> Playwright browsers, and local Git hooks. Already set up? `make setup` (or
+> `pnpm setup:dev`) refreshes just the Python/Node side.
 
 ---
 
@@ -13,17 +15,21 @@ quality gates, and CI failure recovery procedures.
 
 The most common commands you will reach for day-to-day (via the unified Cadence CLI or Make):
 
-| Task                               | Primary CLI (`cadence`)               | Make / Shortcut |
-| :--------------------------------- | :------------------------------------ | :-------------- |
-| Interactive Dev TUI Cockpit        | `uv run cadence dev --tui`            | `make dev`      |
-| Test Watcher (auto-retest on edit) | `uv run cadence test --watch`         | —               |
-| Fast Unit Tests (sub-second)       | `uv run cadence test --fast`          | —               |
-| Auto-Fix Lint, Format & Schemas    | `uv run cadence fix --all`            | `make fix`      |
-| Quality Gates (10 sentinels)       | `uv run cadence check --parallel`     | `make check`    |
-| Diagnostic Auto-Healing            | `uv run cadence doctor --auto-fix`    | `make doctor`   |
-| Sync GxP Compliance Docs           | `uv run cadence gxp sync`             | `make sync-gxp` |
-| Seed Multi-Engine DB Scenarios     | `uv run cadence db seed --tier full`  | `make seed`     |
-| Scaffold New ADR                   | `uv run cadence scaffold adr "Title"` | `make adr`      |
+| Task                           | .NET 10 / CLI Command                                         | Description / Shortcut                                                    |
+| :----------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------ |
+| Build Entire Solution          | `dotnet build Cadence.sln`                                    | Compiles all projects under net10.0                                       |
+| Fast Unit Tests                | `dotnet test --filter "Category!=Integration"`                | Sub-second unit tests across projects                                     |
+| Architecture Sentinels         | `dotnet test tests/Cadence.ArchitectureTests.csproj`          | Verifies Clean Architecture purity via ArchUnitNET                        |
+| Integration Tests (PG / Neo4j) | `dotnet test --filter "Category=Integration"`                 | Runs tests with Testcontainers                                            |
+| Code Style & Formatting        | `dotnet format --verify-no-changes`                           | Validates .editorconfig & Roslyn rules                                    |
+| Developer Onboarding Wizard    | `dotnet cadence wizard onboarding` / `make wizard`            | Full-stack setup: .NET SDK, Node/pnpm, Python/uv, certs, datastores, .env |
+| .NET-Only Onboarding Wizard    | `dotnet cadence wizard dotnet`                                | Just the .NET 10 SDK, global tools, dev certs                             |
+| Microservice Migration Wizard  | `dotnet cadence wizard migrate <name>`                        | Interactive Clean Architecture scaffolding                                |
+| Service Decommission Wizard    | `dotnet cadence wizard decommission <name>`                   | Guided 4-step legacy Python retirement                                    |
+| Manage Database Migrations     | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Manages EF Core PostgreSQL migrations                                     |
+| Sync GxP Compliance Docs       | `python scripts/sync_gxp.py`                                  | `make sync-gxp`                                                           |
+| Scaffold New ADR               | `python scripts/create_adr.py --title "Title"`                | `make adr`                                                                |
+| Activate Git Pre-Commit Hooks  | `git config core.hooksPath .githooks`                         | Enforces format and ADR checks on commit                                  |
 
 ---
 
@@ -33,13 +39,13 @@ The repository features a unified CLI (`uv run cadence`) designed to maximize de
 
 ### 1. Interactive Dev TUI Cockpit (`cadence dev --tui`)
 
-Runs and monitors all 15 active microservices (`gateway`, `designer`, `execution`, `etmf`, `ctms`, `interop`, etc.) in an interactive terminal cockpit with live health monitoring and log streaming:
+Runs and monitors all 20+ active microservices (`gateway`, `designer`, `execution`, `etmf`, `ctms`, `interop`, etc.) in an interactive terminal cockpit with live health monitoring and log streaming:
 
 - `[r]`: Restart all services
 - `[g]`: Hot-restart Gateway API (`8000`)
 - `[e]`: Hot-restart Execution Engine (`8002`)
 - `[d]`: Hot-restart Designer MDR (`8001`)
-- `[c]`: Hot-restart CTMS (`8007`)
+- `[c]`: Hot-restart CTMS (`8005`)
 - `[q]`: Gracefully exit and terminate processes
 
 ### 2. Smart Test Watcher (`cadence test --watch` & `--fast`)
@@ -134,17 +140,34 @@ Use this table to resolve CI errors without digging through logs:
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
 
-# Install everything and activate Git hooks
+# Brand-new machine, Codespace, or devcontainer? Run the full-stack wizard —
+# it installs the .NET 10 SDK too, which `make setup` does not.
+make wizard
+# Equivalent: bash scripts/setup_wizard.sh   (Windows: scripts/setup_wizard.ps1)
+# Non-interactive (CI/agents): scripts/setup_wizard.sh --dev [--minimal]
+
+# Already have .NET installed and just need Python/Node deps refreshed?
 make setup
 # Equivalent: pnpm setup:dev
 ```
 
-This single command:
+`make wizard` (`scripts/setup_wizard.sh`) detects the environment (local
+workstation, GitHub Codespaces, a devcontainer, a Claude Code remote session,
+or CI) and then, per stage:
 
-1. Installs Python 3.14 dependencies via `uv sync`
-2. Installs Playwright Chromium for integration tests
-3. Installs all pre-commit Git hooks (`pre-commit install --install-hooks`)
-4. Installs Node/pnpm workspace dependencies
+1. Installs/validates the .NET 10 SDK, `dotnet-ef`/`dotnet-format` global
+   tools, and trusts the local HTTPS dev cert
+2. Installs Node/pnpm workspace dependencies (`pnpm install`)
+3. Installs Python 3.14 dependencies via `uv sync`, Playwright Chromium, and
+   all pre-commit Git hooks
+4. Probes local datastores (PostgreSQL, Neo4j) and prints how to start them
+5. Bootstraps `.env` from `.env.example`
+6. Runs `cadence doctor` as a final health check
+
+Pass `--minimal` to skip the Playwright browser download on short-lived
+sessions, or `--dev`/`-y` to skip confirmation prompts. `make setup` remains
+the narrower Python+Node-only path (steps 2–3 above) for machines that
+already have the .NET SDK.
 
 ---
 
@@ -269,8 +292,8 @@ make sync-gxp
 
 This runs three steps automatically:
 
-1. `uv run pytest -n auto --junitxml=report.xml`
-2. `uv run python scripts/generate_rtm.py`
+1. `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"`
+2. `python scripts/generate_rtm.py --report report_dotnet.trx`
 3. `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
 
 Then commit and push:
@@ -284,32 +307,28 @@ git push
 
 ```bash
 # Validate-only (no test run, no file changes) — useful for a quick check
-uv run python scripts/sync_gxp.py --dry-run
+python scripts/sync_gxp.py --dry-run
 
 # Full sync AND auto-commit in one step
-uv run python scripts/sync_gxp.py --commit
+python scripts/sync_gxp.py --commit
 ```
 
 ### Mapping requirement IDs in tests
 
-For the RTM to track your test, add a requirement ID to the test docstring:
+For the RTM to track your test, declare the requirement ID using xUnit `[Trait("Requirement", "...")]` attributes, `[GxPRequirement("...")]`, or XML documentation comments:
 
-```python
-# skip
-async def test_enrollment_transition():
-    """Validate subject state machine on enrollment.
-
-    @req:PRD-SYS-042
-    """
+```csharp
+[Fact]
+[Trait("Requirement", "PRD-SYS-042")]
+[GxPRequirement("PRD-SYS-042")]
+public async Task ValidateSubjectEnrollmentTransition()
+{
+    /// <summary>
+    /// Validates subject state machine on enrollment.
+    /// @req:PRD-SYS-042
+    /// </summary>
     ...
-```
-
-Here is another example of a standard test signature that gets validated:
-
-```python
-# tests/test_remove_jules_labels.py
-def test_remove_label_success(mock_run):
-    pass
+}
 ```
 
 ---
@@ -365,9 +384,9 @@ See [Tier 2](#tier-2--architecture-decisions-adr) above.
 ### Gate 3 — Test Coverage
 
 - Tests live in `tests/`.
-- Backend: `pytest` + `pytest-asyncio`. Minimum **80%** coverage enforced.
+- Backend: .NET 10 xUnit v3 (`dotnet test`). Minimum **80%** coverage enforced.
 - Frontend/packages: `vitest`.
-- Reference requirement IDs in test docstrings for RTM traceability.
+- Reference requirement IDs using xUnit attributes (`[Trait("Requirement", "...")]` or `[GxPRequirement("...")])`) or XML doc comments (`/// @req:...`) for RTM traceability.
 
 ---
 
@@ -426,8 +445,8 @@ Key distinctions:
 
 ## 9. Binary File Hygiene
 
-- **Never commit `.docx` files.** They are gitignored. Use `uv run python scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
-- **Never commit `report.xml`.** It is gitignored. Generate it locally with `uv run pytest --junitxml=report.xml` but do not stage it.
+- **Never commit `.docx` files.** They are gitignored. Use `python scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
+- **Never commit test execution reports (`*.trx`, `report.xml`).** They are gitignored. Generate them locally via `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"` but do not stage them.
 - **Never commit `.env` or secret files.** Use `detect-secrets` baseline workflow.
 
 ---

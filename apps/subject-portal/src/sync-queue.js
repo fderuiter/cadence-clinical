@@ -3,8 +3,74 @@ import { validateEproPayload } from "usdm-schemas";
 
 let inMemorySessionKey = null;
 
-export function clearSessionKey() {
+export async function saveSessionKeyToDB(sessionKey, userId) {
+  try {
+    const db = await openDatabase(userId);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("config", "readwrite");
+      const store = tx.objectStore("config");
+      const request = store.put({ key: "session_key", value: sessionKey });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn("Failed to persist session_key to IndexedDB:", err);
+  }
+}
+
+export async function getSessionKeyFromDB(userId) {
+  try {
+    const db = await openDatabase(userId);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("config", "readonly");
+      const store = tx.objectStore("config");
+      const req = store.get("session_key");
+      req.onsuccess = () => {
+        if (req.result && req.result.value) {
+          resolve(req.result.value);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn("Failed to retrieve session_key from IndexedDB:", err);
+    return null;
+  }
+}
+
+export async function restoreSessionKeyFromDB(userId) {
+  const persistedKey = await getSessionKeyFromDB(userId);
+  if (persistedKey) {
+    inMemorySessionKey = persistedKey;
+    return persistedKey;
+  }
+  return null;
+}
+
+export async function clearSessionKeyFromDB(userId) {
+  try {
+    const db = await openDatabase(userId);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("config", "readwrite");
+      const store = tx.objectStore("config");
+      const req = store.delete("session_key");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn("Failed to delete session_key from IndexedDB:", err);
+  }
+}
+
+export function clearSessionKey(userId) {
   inMemorySessionKey = null;
+  clearSessionKeyFromDB(userId).catch((err) =>
+    console.warn("Could not clear session_key from DB:", err)
+  );
 }
 
 export function clearInMemoryKey() {
@@ -68,13 +134,45 @@ export function getActiveUserId() {
   return currentUserId;
 }
 
+async function createNonExtractableCryptoKey(rawKeyBytes) {
+  if (!rawKeyBytes) return null;
+  if (typeof rawKeyBytes === "object" && rawKeyBytes.algorithm) {
+    return rawKeyBytes;
+  }
+  if (
+    typeof globalThis !== "undefined" &&
+    globalThis.crypto &&
+    globalThis.crypto.subtle
+  ) {
+    try {
+      const keyBytes =
+        rawKeyBytes instanceof Uint8Array
+          ? rawKeyBytes
+          : new Uint8Array(rawKeyBytes);
+      return await globalThis.crypto.subtle.importKey(
+        "raw",
+        keyBytes,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    } catch {
+      return rawKeyBytes;
+    }
+  }
+  return rawKeyBytes;
+}
+
 export async function initSessionKey(sessionMaterial, userId) {
   if (userId) {
     setActiveUserId(userId);
   }
-  const salt = await getOrGenerateSalt();
+  const salt = await getOrGenerateSalt(userId);
   const info = "cadence-subject-portal-offline-v1";
-  inMemorySessionKey = await deriveSessionKey(sessionMaterial, salt, info);
+  const rawBytes = await deriveSessionKey(sessionMaterial, salt, info);
+  const cryptoKey = await createNonExtractableCryptoKey(rawBytes);
+  inMemorySessionKey = cryptoKey;
+  await saveSessionKeyToDB(cryptoKey, userId);
 }
 
 export function openDatabase(userId) {
@@ -364,6 +462,9 @@ export async function queueSubmission({
   username,
 }) {
   if (!inMemorySessionKey) {
+    await restoreSessionKeyFromDB();
+  }
+  if (!inMemorySessionKey) {
     throw new Error(
       "Encryption key not initialized. Cannot queue submission securely."
     );
@@ -427,6 +528,10 @@ export async function queueSubmission({
 async function decryptRecord(record) {
   if (!record) return record;
   const decrypted = { ...record };
+
+  if (!inMemorySessionKey) {
+    await restoreSessionKeyFromDB();
+  }
 
   if (!inMemorySessionKey) {
     decrypted.status = "DECRYPTION_ERROR";
@@ -687,6 +792,9 @@ export async function saveWrappedMasterKeyConfig(wrappedKey, salt) {
 
 export async function saveDraft(assignmentId, answers) {
   if (!inMemorySessionKey) {
+    await restoreSessionKeyFromDB();
+  }
+  if (!inMemorySessionKey) {
     console.warn("No active session key. Cannot save draft.");
     return null;
   }
@@ -721,6 +829,9 @@ export async function saveDraft(assignmentId, answers) {
 }
 
 export async function getDraft(assignmentId) {
+  if (!inMemorySessionKey) {
+    await restoreSessionKeyFromDB();
+  }
   if (!inMemorySessionKey) {
     console.warn("No active session key. Cannot retrieve draft.");
     return null;

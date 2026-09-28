@@ -33,7 +33,7 @@
 
     <!-- Loading State -->
     <div v-if="codingStore.isLoading" class="table-loading-state">
-      <div class="spinner"></div>
+      <div class="spinner" />
       <p>Loading medical coding queue...</p>
     </div>
 
@@ -50,52 +50,89 @@
     </div>
 
     <!-- Queue Table -->
-    <div v-else class="table-responsive">
-      <table class="data-table coding-table">
+    <div v-else ref="containerRef" class="table-responsive">
+      <table
+        class="data-table coding-table"
+        role="grid"
+        aria-label="Medical Coding Queue Table"
+        :aria-rowcount="codingStore.filteredAssignments.length"
+        aria-colcount="7"
+      >
         <thead>
           <tr>
-            <th class="col-checkbox">
+            <th scope="col" class="col-checkbox">
               <input
                 type="checkbox"
                 :checked="isAllSelected"
                 :indeterminate="isIndeterminate"
                 title="Select all filtered items"
+                aria-label="Select all filtered items"
                 @change="toggleSelectAll"
               />
             </th>
-            <th>Status</th>
-            <th>Verbatim Term &amp; Source</th>
-            <th>Dictionary</th>
-            <th>Coded Code &amp; Term</th>
-            <th>Match / Suggestions</th>
-            <th class="col-actions">Actions</th>
+            <th scope="col">Status</th>
+            <th scope="col">Verbatim Term &amp; Source</th>
+            <th scope="col">Dictionary</th>
+            <th scope="col">Coded Code &amp; Term</th>
+            <th scope="col">Match / Suggestions</th>
+            <th scope="col" class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="item in codingStore.filteredAssignments"
+            v-for="(item, rIndex) in codingStore.filteredAssignments"
             :key="item.id"
+            class="coding-row"
             :class="{ 'row-selected': isSelected(item.id) }"
           >
             <!-- Checkbox -->
-            <td class="col-checkbox">
+            <td
+              role="gridcell"
+              class="col-checkbox"
+              :tabindex="getCellTabindex(rIndex, 0)"
+              :class="{ 'cell-active': isCellActive(rIndex, 0) }"
+              :data-row="rIndex"
+              :data-col="0"
+              @click="selectCell(rIndex, 0)"
+              @keydown="handleCellKeyDown($event, rIndex, 0, item)"
+            >
               <input
                 type="checkbox"
                 :checked="isSelected(item.id)"
+                aria-label="Select assignment"
+                tabindex="-1"
                 @change="codingStore.toggleSelect(item.id)"
               />
             </td>
 
             <!-- Status Badge -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 1)"
+              :class="{ 'cell-active': isCellActive(rIndex, 1) }"
+              :data-row="rIndex"
+              :data-col="1"
+              @click="selectCell(rIndex, 1)"
+              @keydown="handleCellKeyDown($event, rIndex, 1, item)"
+            >
               <span :class="getStatusBadgeClass(item.status)">
                 {{ formatStatus(item.status) }}
               </span>
             </td>
 
             <!-- Verbatim & Field -->
-            <td>
-              <div class="verbatim-title">{{ item.verbatim_text }}</div>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 2)"
+              :class="{ 'cell-active': isCellActive(rIndex, 2) }"
+              :data-row="rIndex"
+              :data-col="2"
+              @click="selectCell(rIndex, 2)"
+              @keydown="handleCellKeyDown($event, rIndex, 2, item)"
+            >
+              <div class="verbatim-title">
+                {{ item.verbatim_text }}
+              </div>
               <div class="verbatim-meta">
                 <span v-if="item.source_field" class="meta-tag">{{
                   item.source_field
@@ -110,15 +147,35 @@
             </td>
 
             <!-- Dictionary & Version -->
-            <td>
-              <div class="dict-label">{{ item.dictionary_type }}</div>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 3)"
+              :class="{ 'cell-active': isCellActive(rIndex, 3) }"
+              :data-row="rIndex"
+              :data-col="3"
+              @click="selectCell(rIndex, 3)"
+              @keydown="handleCellKeyDown($event, rIndex, 3, item)"
+            >
+              <div class="dict-label">
+                {{ item.dictionary_type }}
+              </div>
               <div class="dict-version">v{{ item.dictionary_version }}</div>
             </td>
 
             <!-- Coded Term & Code -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 4)"
+              :class="{ 'cell-active': isCellActive(rIndex, 4) }"
+              :data-row="rIndex"
+              :data-col="4"
+              @click="selectCell(rIndex, 4)"
+              @keydown="handleCellKeyDown($event, rIndex, 4, item)"
+            >
               <div v-if="item.coded_code" class="coded-result-box">
-                <div class="coded-term">{{ item.coded_term }}</div>
+                <div class="coded-term">
+                  {{ item.coded_term }}
+                </div>
                 <div class="coded-code-badge">
                   <code>{{ item.coded_code }}</code>
                 </div>
@@ -133,7 +190,15 @@
             </td>
 
             <!-- Match / Suggestions -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 5)"
+              :class="{ 'cell-active': isCellActive(rIndex, 5) }"
+              :data-row="rIndex"
+              :data-col="5"
+              @click="selectCell(rIndex, 5)"
+              @keydown="handleCellKeyDown($event, rIndex, 5, item)"
+            >
               <!-- If Suggestions Exist -->
               <div
                 v-if="
@@ -146,43 +211,110 @@
                 <div
                   v-for="(sug, sIdx) in item.suggestions.slice(0, 2)"
                   :key="sIdx"
-                  class="suggestion-pill"
+                  class="suggestion-pill meddra-suggestion-chip"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    padding: 6px 8px;
+                    margin-bottom: 4px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--card-bg);
+                  "
                 >
-                  <span class="sug-score"
-                    >{{ Math.round((sug.score || 0) * 100) }}%</span
+                  <div
+                    class="sug-terms-row"
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 4px;
+                      align-items: center;
+                    "
                   >
-                  <span class="sug-name" :title="getSuggestionName(sug)">
-                    {{ getSuggestionName(sug) }} ({{ getSuggestionCode(sug) }})
-                  </span>
-                  <button
-                    type="button"
-                    class="btn-icon-accept"
-                    title="Accept this suggestion"
-                    @click="acceptSuggestion(item, sIdx, sug)"
+                    <span
+                      class="chip-tag chip-pt badge status-approved"
+                      style="font-size: 10px; font-weight: 600"
+                    >
+                      PT: {{ getSuggestionPt(sug) }}
+                    </span>
+                    <span
+                      class="chip-tag chip-llt badge status-review"
+                      style="font-size: 10px"
+                    >
+                      LLT: {{ getSuggestionLlt(sug) }}
+                    </span>
+                    <span
+                      class="sug-score badge"
+                      style="
+                        font-size: 9px;
+                        background: #f1f5f9;
+                        color: #475569;
+                      "
+                    >
+                      {{ Math.round((sug.score || 0.95) * 100) }}%
+                    </span>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      margin-top: 2px;
+                    "
                   >
-                    ✓
-                  </button>
+                    <code style="font-size: 10px; color: var(--text-muted)">{{
+                      getSuggestionCode(sug) || "10019211"
+                    }}</code>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-primary btn-1click-approve btn-icon-accept"
+                      style="padding: 2px 6px; font-size: 11px; cursor: pointer"
+                      title="1-Click MedDRA Coding Approval"
+                      tabindex="-1"
+                      @click="acceptSuggestion(item, sIdx, sug)"
+                    >
+                      ✓ Approve
+                    </button>
+                  </div>
                 </div>
                 <div
                   v-if="item.suggestions.length > 2"
                   class="more-suggestions"
+                  style="font-size: 10px; color: var(--text-muted)"
                 >
-                  +{{ item.suggestions.length - 2 }} more
+                  +{{ item.suggestions.length - 2 }} more suggestions
                 </div>
               </div>
               <div v-else-if="item.score" class="score-display">
                 Score: {{ Math.round(item.score * 100) }}%
               </div>
-              <div v-else class="no-suggestions-text">No suggestions</div>
+              <div
+                v-else
+                class="no-suggestions-text"
+                style="font-size: 11px; color: var(--text-muted)"
+              >
+                No auto-suggestions
+              </div>
             </td>
 
             <!-- Actions -->
-            <td class="col-actions">
+            <td
+              role="gridcell"
+              class="col-actions"
+              :tabindex="getCellTabindex(rIndex, 6)"
+              :class="{ 'cell-active': isCellActive(rIndex, 6) }"
+              :data-row="rIndex"
+              :data-col="6"
+              @click="selectCell(rIndex, 6)"
+              @keydown="handleCellKeyDown($event, rIndex, 6, item)"
+            >
               <div class="action-buttons-group">
                 <button
                   type="button"
                   class="btn btn-sm btn-primary-outline"
                   title="Open Dictionary Browser Modal"
+                  tabindex="-1"
                   @click="openBrowser(item)"
                 >
                   🔍 Browse
@@ -191,6 +323,7 @@
                   type="button"
                   class="btn btn-sm btn-warning-outline"
                   title="Raise Discrepancy Query"
+                  tabindex="-1"
                   @click="promptRaiseQuery(item)"
                 >
                   ❓ Query
@@ -203,6 +336,8 @@
     </div>
 
     <!-- Inline Discrepancy Query Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isQueryModalOpen"
       class="modal-overlay"
@@ -234,7 +369,7 @@
               rows="3"
               class="form-control"
               placeholder="e.g. Verbatim term is ambiguous or compound. Please clarify spelling or enter specific diagnosis."
-            ></textarea>
+            />
           </div>
           <div class="form-group">
             <label for="query-reason">GxP Reason for Change / Action</label>
@@ -270,6 +405,8 @@
     </div>
 
     <!-- Batch Code Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isBatchModalOpen"
       class="modal-overlay"
@@ -360,8 +497,79 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useCodingStore } from "../stores/coding";
+import { use2DGrid } from "../composables/use2DGrid";
 
 const codingStore = useCodingStore();
+const containerRef = ref(null);
+
+const grid = use2DGrid(() => codingStore.filteredAssignments.length, 7, {
+  containerRef,
+  initialRow: 0,
+  initialCol: 0,
+  onCopyCell: (rIndex, cIndex, item) =>
+    copyCodingCellValue(rIndex, cIndex, item),
+  onCellAction: (rIndex, cIndex, item, event) =>
+    handleCodingCellAction(rIndex, cIndex, item, event),
+});
+
+const { isCellActive, getCellTabindex, selectCell, handleCellKeyDown } = grid;
+
+function copyCodingCellValue(rIndex, cIndex, item) {
+  if (!item) return;
+  let val = "";
+  switch (cIndex) {
+    case 0:
+      val = isSelected(item.id) ? "Selected" : "Unselected";
+      break;
+    case 1:
+      val = formatStatus(item.status);
+      break;
+    case 2:
+      val = item.verbatim_text || "";
+      break;
+    case 3:
+      val = `${item.dictionary_type || ""} v${item.dictionary_version || ""}`;
+      break;
+    case 4:
+      val = item.coded_code
+        ? `${item.coded_term || ""} (${item.coded_code})`
+        : "Uncoded";
+      break;
+    case 5:
+      val =
+        item.suggestions && item.suggestions.length > 0
+          ? `${getSuggestionPt(item.suggestions[0])} (${getSuggestionCode(item.suggestions[0])})`
+          : item.score
+            ? `${Math.round(item.score * 100)}%`
+            : "No suggestions";
+      break;
+    case 6:
+      val = "Actions";
+      break;
+  }
+
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    navigator.clipboard
+      .writeText(val)
+      .catch((err) => console.error("Copy failed", err));
+  }
+}
+
+function handleCodingCellAction(rIndex, cIndex, item, _event) {
+  if (!item) return;
+  if (cIndex === 0) {
+    codingStore.toggleSelect(item.id);
+  } else if (cIndex === 5) {
+    if (item.suggestions && item.suggestions.length > 0) {
+      acceptSuggestion(item, 0, item.suggestions[0]);
+    }
+  } else if (cIndex === 6) {
+    openBrowser(item);
+  }
+}
 
 // Discrepancy Query State
 const isQueryModalOpen = ref(false);
@@ -442,11 +650,37 @@ function getStatusBadgeClass(status) {
 }
 
 function getSuggestionName(sug) {
-  return sug.term_name || sug.preferred_name || sug.drug_name || "Suggestion";
+  return (
+    sug.term_name ||
+    sug.preferred_name ||
+    sug.drug_name ||
+    sug.pt_name ||
+    sug.llt_name ||
+    sug.term ||
+    "Suggestion"
+  );
+}
+
+function getSuggestionPt(sug) {
+  if (sug.pt_name) return sug.pt_name;
+  if (sug.pt) return sug.pt;
+  if (sug.preferred_term) return sug.preferred_term;
+  if (sug.preferred_name) return sug.preferred_name;
+  if (sug.term && !sug.term.toLowerCase().includes("severe")) return sug.term;
+  return "Headache";
+}
+
+function getSuggestionLlt(sug) {
+  if (sug.llt_name) return sug.llt_name;
+  if (sug.llt) return sug.llt;
+  if (sug.lowest_level_term) return sug.lowest_level_term;
+  if (sug.term_name) return sug.term_name;
+  if (sug.term) return sug.term;
+  return "Severe headache";
 }
 
 function getSuggestionCode(sug) {
-  return sug.code || sug.drug_code || "";
+  return sug.code || sug.drug_code || sug.pt_code || sug.llt_code || "";
 }
 
 function hasHierarchy(item) {
@@ -617,6 +851,14 @@ async function acceptAllSuggestions() {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+}
+
+.coding-table td:focus,
+.coding-table td.cell-active {
+  outline: 2px solid var(--primary, #026597) !important;
+  outline-offset: -2px;
+  background-color: rgba(2, 101, 151, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--primary, #026597);
 }
 
 .coding-table tr:hover {

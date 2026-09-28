@@ -61,6 +61,8 @@ share/python-wheels/
 .coverage
 .coverage.*
 coverage/
+.cadence/test_graph.json
+.cadence/gxp_cache.json
 nosetests.xml
 coverage.xml
 report.xml
@@ -150,3 +152,23 @@ apps/designer/templates/*.docx
 *.docx
 scripts/sync_github_project.py
 scripts/live_hygiene_enforcement.py
+.scratch/
+
+# ------------------------------------------
+# .NET 10 & C# Build Artifacts
+# ------------------------------------------
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+*.trx
+*.DotSettings.user
+*.crash
+_ReSharper*/
+*.suo
+
+# Claude Code agent worktrees (isolated checkouts for background subagents)
+.claude/worktrees/

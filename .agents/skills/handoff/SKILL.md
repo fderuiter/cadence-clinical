@@ -1,18 +1,63 @@
 ---
 name: handoff
-description: "Compact the current conversation into a handoff document for another agent to pick up."
+description: "Compact the current conversation state, architectural decisions, and in-flight work into a structured handoff artifact for another agent or session. Use when concluding a long session, switching tasks, or handing off to another agent."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save to the temporary directory of the user's OS - not the current workspace.
+# Cadence Session Handoff
 
-Include a "suggested skills" section in the document, naming which skills the next agent should call the Skill tool for.
+Compacts the active conversation into an Antigravity handoff artifact so a future agent or session can resume with zero context loss using Antigravity state, task, and artifact tools.
 
-Do not duplicate content already captured in other artifacts (specs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
+## Antigravity Tool Execution Matrix
 
-Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **State Inspection** | `run_command` | `CommandLine="git status -s && git diff --stat"` | Inspect uncommitted changes and branch state |
+| **Transcript Search** | `grep_search` | Target: `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl` | Review earlier user instructions and tool calls |
+| **Handoff Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/handoff.md` | Emit structured handoff document with conversation link |
 
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+---
+
+## 1. Gather Session State
+- Current Conversation ID (from environment / metadata).
+- Active git branch and status (`git status -s`, `git diff --stat`).
+- Settled decisions vs. open questions.
+- Unfinished work items or failing tests.
+
+---
+
+## 2. Generate Handoff Artifact
+
+Write to `<appDataDir>/brain/<conversation-id>/handoff.md` with `ArtifactMetadata`:
+
+```markdown
+# Session Handoff: <Topic/Feature Name>
+
+- **Originating Session**: [Conversation](conversation://<conversation-id>)
+- **Timestamp**: YYYY-MM-DD HH:MM
+- **Branch**: `<branch-name>`
+
+## 1. Executive Summary
+What was accomplished in this session.
+
+## 2. Settled Decisions
+- Decision 1 (rationale, ADR link if created)
+- Decision 2
+
+## 3. Active & In-Flight State
+- Files modified: clickable [file.py:L1-L20](relative/path/to/file.py#L1-L20) links.
+- Test outcomes: commands to run to inspect state.
+
+## 4. Next Actions for Receiving Agent
+1. Immediate next step with exact CLI command.
+2. Open questions requiring user confirmation.
+```
+
+---
+
+## 3. Present Final Response
+Print a brief message in chat pointing the user to the `handoff.md` artifact.
+

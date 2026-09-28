@@ -1,78 +1,51 @@
 ---
 name: domain-modeling
-description: "Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a CONTEXT.md, or recording or editing an ADR."
+description: "Build, sharpen, and maintain the Cadence clinical domain model, vocabulary, and architectural concepts in CONTEXT.md and docs/adr/. Use when introducing domain terms, resolving conceptual ambiguities, or authoring ADRs."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-# Domain Modeling
+# Cadence Domain Modeling
 
-Actively build and sharpen the project's domain model as you design. This is the *active* discipline: challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill: that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
+Actively build, sharpen, and maintain the project's domain model, ubiquitous language, and architectural taxonomy in [`CONTEXT.md`](../../../../CONTEXT.md) and [`docs/adr/`](../../../../docs/adr/) using Antigravity inspection and editing tools.
 
-## File structure
 
-Most repos have a single context:
+## Antigravity Tool Execution Matrix
 
-```
-/
-├── CONTEXT.md
-├── docs/
-│   └── adr/
-│       ├── 0001-event-sourced-orders.md
-│       └── 0002-postgres-for-write-model.md
-└── src/
-```
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Terminology Audit** | `grep_search` | `Query="<term>"`, `SearchPath="apps/"` | Scan codebase for usage of conflicting or legacy terminology |
+| **Glossary Inspection**| `view_file` | `AbsolutePath=".../CONTEXT.md"` | Read current canonical definitions and domain boundaries |
+| **Live Glossary Edit** | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit | Add or update terms under `# Clinical Domain Glossary` |
+| **ADR Scaffolding** | `run_command` | `CommandLine="uv run python scripts/create_adr.py ..."` | Scaffold formal decision record when architectural models change |
 
-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
+---
 
-```
-/
-├── CONTEXT-MAP.md
-├── docs/
-│   └── adr/                          ← system-wide decisions
-├── src/
-│   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
-│   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
-```
+## The Glossary Source of Truth (`CONTEXT.md`)
 
-Create files lazily: only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
+The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, architecture patterns, and domain boundaries.
 
-## During the session
+### Core Disciplines during Design Sessions
 
-### Challenge against the glossary
+1. **Challenge against the glossary**:
+   When a discussion uses a term that conflicts with `CONTEXT.md`, call it out immediately.
+   *"Your glossary defines 'Re-Consent Gating' as blocking data capture until an ICF is registered, but you seem to mean retroactive revocation. Which is it?"*
 
-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y. Which is it?"
+2. **Sharpen fuzzy language**:
+   Propose precise clinical terms. Avoid vague abstractions like "data item", "form event", or "manager". Use canonical terms: `Encounter`, `Activity`, `BiomedicalConcept`, `eCRF Submission`, `Query Discrepancy`.
 
-### Sharpen fuzzy language
+3. **Stress-test with concrete clinical scenarios**:
+   Probe edge cases (e.g. protocol amendment re-consent with in-flight visit submissions, adverse event emergency unblinding during database lock). If conceptual conflicts arise, invoke `ask_question`.
 
-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account': do you mean the Customer or the User? Those are different things."
+4. **Update `CONTEXT.md` inline (MANDATORY TOOL: `replace_file_content`)**:
+   When a new term crystallizes, use `replace_file_content` to add it immediately to `CONTEXT.md` under `# Clinical Domain Glossary` with an exact definition and `_Avoid_` hints where appropriate.
 
-### Discuss concrete scenarios
+5. **Scaffold ADRs for High-Stakes Decisions (MANDATORY TOOL: `run_command`)**:
+   When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
+   ```bash
+   uv run python scripts/create_adr.py --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
+   ```
 
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
 
-### Cross-reference with code
-
-When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible. Which is right?"
-
-### Update CONTEXT.md inline
-
-When a term is resolved, update `CONTEXT.md` right there. Don't batch these up: capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./references/CONTEXT-FORMAT.md).
-
-`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
-
-### Offer ADRs sparingly
-
-Only offer to create an ADR when all three are true:
-
-1. **Hard to reverse**: the cost of changing your mind later is meaningful
-2. **Surprising without context**: a future reader will wonder "why did they do it this way?"
-3. **The result of a real trade-off**: there were genuine alternatives and you picked one for specific reasons
-
-If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./references/ADR-FORMAT.md).

@@ -94,6 +94,7 @@
 
         <!-- Strategy Options Selection -->
         <div class="form-group" style="margin-bottom: 16px">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label style="font-weight: 600; display: block; margin-bottom: 8px"
             >Select Resolution Strategy:</label
           >

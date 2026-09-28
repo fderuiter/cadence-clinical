@@ -1009,6 +1009,115 @@
         }
       }
     },
+    "/api/v1/tickets/{ticket_id}/rag-triage": {
+      "post": {
+        "summary": "Execute Grounded Protocol RAG support triage on an existing ticket",
+        "description": "Execute Grounded Protocol RAG Support Triage on an existing ticket.\n\nApplies strict 85% confidence gating:\n- >= 85%: attaches DRAFT_AI suggestion with exact page/section citations.\n- < 85%: suppresses auto-draft and fails closed to human Data Manager queue.\n\nRequirements: PRD-TCK-005, PRD-SYS-051",
+        "operationId": "triage_ticket_rag_api_v1_tickets__ticket_id__rag_triage_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 5,
+              "title": "Top K"
+            }
+          },
+          {
+            "name": "protocol_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Protocol Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RAGTriageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/rag-triage/preview": {
+      "post": {
+        "summary": "Preview Grounded Protocol RAG support triage before ticket submission",
+        "description": "Preview Grounded Protocol RAG Support Triage before ticket submission.\n\nRequirements: PRD-TCK-005, PRD-SYS-051",
+        "operationId": "preview_ticket_rag_triage_api_v1_tickets_rag_triage_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RAGPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Preview Ticket Rag Triage Api V1 Tickets Rag Triage Preview Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1375,6 +1484,117 @@
         ],
         "title": "PaginatedTicketAuditLogResponse",
         "description": "Paginated representation of ticket audit trail logs."
+      },
+      "RAGPreviewRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query",
+            "description": "Support inquiry text"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study scope identifier"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Optional protocol version filter"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Max candidate chunks to evaluate",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "study_id"
+        ],
+        "title": "RAGPreviewRequest",
+        "description": "Schema for requesting a read-only grounded RAG triage preview."
+      },
+      "RAGTriageResponse": {
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "title": "Ticket Id"
+          },
+          "rag_status": {
+            "type": "string",
+            "title": "Rag Status"
+          },
+          "faithfulness_score": {
+            "type": "number",
+            "title": "Faithfulness Score"
+          },
+          "is_grounded": {
+            "type": "boolean",
+            "title": "Is Grounded"
+          },
+          "draft_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Answer"
+          },
+          "citations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "routed_to_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routed To Role"
+          },
+          "routing_reason": {
+            "type": "string",
+            "title": "Routing Reason"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "rag_status",
+          "faithfulness_score",
+          "is_grounded",
+          "routing_reason"
+        ],
+        "title": "RAGTriageResponse",
+        "description": "Schema representing the outcome of Grounded Protocol RAG Support Ticket Triage."
       },
       "RegulatoryRiskAssessment": {
         "properties": {

@@ -11,7 +11,7 @@
 
 Previously, all unit and integration test files for the Cadence Clinical platform resided in a single centralized `/tests` root directory. As microservices (`apps/`) and shared packages (`packages/`) expanded, housing all tests centrally created module coupling, obscured service-level ownership, and complicated isolated test execution per workspace.
 
-To align with modern monorepo best practices and preserve microservice decoupling, test suites needed to be decentralized into their respective workspace directories (`apps/<service>/tests/`, `packages/<package>/tests/`, and `scripts/tests/`).
+To align with modern monorepo best practices and preserve microservice decoupling, test suites needed to be decentralized into their respective workspace directories (`apps/<service>/tests/`, `packages/<package>/tests/`, and `tests/`).
 
 ## 2. Decision Drivers & Constraints
 
@@ -21,12 +21,27 @@ To align with modern monorepo best practices and preserve microservice decouplin
 
 ## 3. Options Considered
 
-1. **Decentralized Workspace Tests (Selected)**: Move test modules into `apps/<service>/tests/`, `packages/<package>/tests/`, and `scripts/tests/`, while preserving shared test fixtures and qualification suites in `/tests/`.
-2. **Centralized Root Monolith Tests (Status Quo)**: Retain all `test_*.py` files in root `/tests/`.
+### Option 1: **Decentralized Workspace Tests (Selected)**: Move test modules into `apps/<service>/tests/`, `packages/<package>/tests/`, and `tests/`, while preserving shared test fixtures and qualification suites in `/tests/`.
+
+- **Overview:** **Decentralized Workspace Tests (Selected)**: Move test modules into `apps/<service>/tests/`, `packages/<package>/tests/`, and `tests/`, while preserving shared test fixtures and qualification suites in `/tests/`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Centralized Root Monolith Tests (Status Quo)**: Retain all `test_*.py` files in root `/tests/`.
+
+- **Overview:** **Centralized Root Monolith Tests (Status Quo)**: Retain all `test_*.py` files in root `/tests/`.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option 1 (Decentralized Workspace Tests)**.
+- **Chosen Option:** **Option 1 (Decentralized Workspace Tests)**.
+- **Justification:** Selected as primary architectural approach.
 All microservice tests, package tests, and tooling tests have been migrated into their respective workspace directories. `pyproject.toml` updated `testpaths = ["apps", "packages", "scripts", "tests"]`, and root `conftest.py` provides workspace-wide fixture initialization.
 
 ## 5. Consequences & Trade-offs
@@ -37,6 +52,6 @@ All microservice tests, package tests, and tooling tests have been migrated into
 
 ## 6. Implementation & Verification
 
-- **Migrated Directories**: `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/`.
+- **Migrated Directories**: `apps/<name>/tests/`, `packages/<name>/tests/`, `tests/`.
 - **Configuration Updated**: `pyproject.toml`, `conftest.py`, `scripts/generate_rtm.py`, `scripts/sync_gxp.py`, `.github/workflows/ci.yml`, `AGENTS.md`.
 - **Verification**: `uv run python scripts/sync_gxp.py` passes 100% of test suites and generates updated GxP compliance artifacts.

@@ -23,12 +23,27 @@ This traces to requirement **PRD-SYS-001** (GxP Environment Consistency and Syst
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Direct, statically locked upgrade to Python 3.14 across all workspaces, workflows, tooling manifests, local dev environment specifications, and Dockerfile layers.
-2. **Option B (Alternative):** Maintain legacy Python 3.12 runtime and tooling boundaries, creating potential drift across active workflows and sacrificing modern syntax checks.
+### Option 1: **Option A (Selected):** Direct, statically locked upgrade to Python 3.14 across all workspaces, workflows, tooling manifests, local dev environment specifications, and Dockerfile layers.
+
+- **Overview:** **Option A (Selected):** Direct, statically locked upgrade to Python 3.14 across all workspaces, workflows, tooling manifests, local dev environment specifications, and Dockerfile layers.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B (Alternative):** Maintain legacy Python 3.12 runtime and tooling boundaries, creating potential drift across active workflows and sacrificing modern syntax checks.
+
+- **Overview:** **Option B (Alternative):** Maintain legacy Python 3.12 runtime and tooling boundaries, creating potential drift across active workflows and sacrificing modern syntax checks.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it enforces strict, predictable GxP environment compliance (PRD-SYS-001) without dynamic configuration complexity. Furthermore, standardizing on Python 3.14 unlocks highly optimized interpreter execution paths and strict modern Ruff/type-checking configurations.
+- **Chosen Option:** **Option A** because it enforces strict, predictable GxP environment compliance (PRD-SYS-001) without dynamic configuration complexity. Furthermore, standardizing on Python 3.14 unlocks highly optimized interpreter execution paths and strict modern Ruff/type-checking configurations.
+- **Justification:** Selected as primary architectural approach.
 
 ## 5. Consequences & Trade-offs
 

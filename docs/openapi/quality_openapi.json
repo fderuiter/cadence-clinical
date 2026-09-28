@@ -749,6 +749,275 @@
         }
       }
     },
+    "/api/v1/quality/rbqm/ract/factors": {
+      "post": {
+        "summary": "Create Ract Risk Factor",
+        "operationId": "create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RACTRiskFactorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Ract Risk Factors",
+        "operationId": "list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional RACT Category filter",
+              "title": "Category"
+            },
+            "description": "Optional RACT Category filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                  },
+                  "title": "Response List Ract Risk Factors Api V1 Quality Rbqm Ract Factors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/factors/{factor_id}": {
+      "put": {
+        "summary": "Update Ract Risk Factor",
+        "operationId": "update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RACTRiskFactorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Ract Risk Factor",
+        "operationId": "delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/seed-default": {
+      "post": {
+        "summary": "Seed Default Transcelerate Ract",
+        "operationId": "seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                  },
+                  "title": "Response Seed Default Transcelerate Ract Api V1 Quality Rbqm Ract Seed Default Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/summary": {
+      "get": {
+        "summary": "Get Ract Matrix Summary",
+        "operationId": "get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTMatrixSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quality/rbqm/ctq": {
       "post": {
         "summary": "Create Ctq Factor",
@@ -1239,6 +1508,808 @@
                     "$ref": "#/components/schemas/QTLBreachEventResponse"
                   },
                   "title": "Response List Qtl Breaches Api V1 Quality Rbqm Qtls Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers/compile": {
+      "post": {
+        "summary": "Compile Csm Dossier",
+        "operationId": "compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompileCSMDossierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSMDossierResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers": {
+      "get": {
+        "summary": "List Csm Dossiers",
+        "operationId": "list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CSMDossierResponse"
+                  },
+                  "title": "Response List Csm Dossiers Api V1 Quality Rbqm Csm Dossiers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers/{dossier_id}": {
+      "get": {
+        "summary": "Get Csm Dossier",
+        "operationId": "get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSMDossierResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/analyze": {
+      "post": {
+        "summary": "Execute Forensics Analysis",
+        "description": "Executes automated multi-site statistical forensics surveillance.",
+        "operationId": "execute_forensics_analysis_api_v1_quality_forensics_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatisticalForensicsAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs": {
+      "get": {
+        "summary": "List Forensics Runs",
+        "description": "Lists historical statistical forensics surveillance runs.",
+        "operationId": "list_forensics_runs_api_v1_quality_forensics_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                  },
+                  "title": "Response List Forensics Runs Api V1 Quality Forensics Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs/{run_id}": {
+      "get": {
+        "summary": "Get Forensics Run",
+        "description": "Retrieves detailed results for a specific forensics surveillance run.",
+        "operationId": "get_forensics_run_api_v1_quality_forensics_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/sites/{site_id}": {
+      "get": {
+        "summary": "Get Site Forensics History",
+        "description": "Retrieves chronological forensics surveillance results for an individual site.",
+        "operationId": "get_site_forensics_history_api_v1_quality_forensics_sites__site_id__get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteForensicsResponse"
+                  },
+                  "title": "Response Get Site Forensics History Api V1 Quality Forensics Sites  Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs/{run_id}/trigger-kri-alerts": {
+      "post": {
+        "summary": "Trigger Run Kri Alerts",
+        "description": "Dispatches KRI breach events for all flagged anomalous sites in a forensics run.",
+        "operationId": "trigger_run_kri_alerts_api_v1_quality_forensics_runs__run_id__trigger_kri_alerts_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KRIMetricEvaluationResponse"
+                  },
+                  "title": "Response Trigger Run Kri Alerts Api V1 Quality Forensics Runs  Run Id  Trigger Kri Alerts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/simulate": {
+      "post": {
+        "summary": "Simulate Forensics Dataset",
+        "description": "Generates synthetic multi-site clinical datasets for testing and calibration.",
+        "operationId": "simulate_forensics_dataset_api_v1_quality_forensics_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForensicsSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForensicsSimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/duplicate-patients/scan": {
+      "post": {
+        "summary": "Execute Duplicate Patient Scan",
+        "description": "Executes cross-site similarity matching across baseline clinical feature vectors.",
+        "operationId": "execute_duplicate_patient_scan_api_v1_quality_sentinels_duplicate_patients_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicatePatientScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/temporal-anomalies/scan": {
+      "post": {
+        "summary": "Execute Temporal Anomaly Scan",
+        "description": "Detects off-hours entry clusters, rapid burst submissions, and identical procedure intervals.",
+        "operationId": "execute_temporal_anomaly_scan_api_v1_quality_sentinels_temporal_anomalies_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemporalAnomalyScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/image-phash/scan": {
+      "post": {
+        "summary": "Execute Image Phash Scan",
+        "description": "Computes DCT-based perceptual image hashes to detect reused and transformed radiological scans.",
+        "operationId": "execute_image_phash_scan_api_v1_quality_sentinels_image_phash_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageHashScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/data-integrity/comprehensive-scan": {
+      "post": {
+        "summary": "Execute Comprehensive Data Integrity Scan",
+        "description": "Executes a unified comprehensive data integrity scan across duplicate records, timing, and images.",
+        "operationId": "execute_comprehensive_data_integrity_scan_api_v1_quality_sentinels_data_integrity_comprehensive_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataIntegrityComprehensiveScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/runs": {
+      "get": {
+        "summary": "List Data Integrity Runs",
+        "description": "Lists historical data integrity sentinel runs.",
+        "operationId": "list_data_integrity_runs_api_v1_quality_sentinels_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                  },
+                  "title": "Response List Data Integrity Runs Api V1 Quality Sentinels Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/runs/{run_id}": {
+      "get": {
+        "summary": "Get Data Integrity Run",
+        "description": "Retrieves full details and findings for a specific data integrity sentinel run.",
+        "operationId": "get_data_integrity_run_api_v1_quality_sentinels_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySentinelRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/runs/{run_id}/findings": {
+      "get": {
+        "summary": "Get Data Integrity Run Findings",
+        "description": "Retrieves all anomaly findings detected within a sentinel run.",
+        "operationId": "get_data_integrity_run_findings_api_v1_quality_sentinels_runs__run_id__findings_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataIntegrityFindingResponse"
+                  },
+                  "title": "Response Get Data Integrity Run Findings Api V1 Quality Sentinels Runs  Run Id  Findings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/findings/{finding_id}/dispatch-investigation": {
+      "post": {
+        "summary": "Dispatch Manual Investigation",
+        "description": "Dispatches a formal 21 CFR Part 11 investigation deviation for a flagged finding.",
+        "operationId": "dispatch_manual_investigation_api_v1_quality_sentinels_findings__finding_id__dispatch_investigation_post",
+        "parameters": [
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataIntegrityInvestigationDispatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegrityFindingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/sentinels/simulate": {
+      "post": {
+        "summary": "Simulate Sentinel Dataset",
+        "description": "Generates synthetic multi-site clinical datasets with injected fraud anomalies.",
+        "operationId": "simulate_sentinel_dataset_api_v1_quality_sentinels_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataIntegritySimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataIntegritySimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/surveillance/run": {
+      "post": {
+        "summary": "Execute Quality Surveillance Run",
+        "description": "Executes a complete, autonomous cross-domain quality surveillance run.\n\nHarvests clinical data across domains, enforces sample power gating,\nevaluates statistical forensics & computer vision sentinels,\nand idempotently dispatches 21 CFR Part 11 Deviations.",
+        "operationId": "execute_quality_surveillance_run_api_v1_quality_surveillance_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualitySurveillanceRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySurveillanceRunResponse"
                 }
               }
             }
@@ -1948,17 +3019,172 @@
       "get": {
         "summary": "List Audit Logs",
         "operationId": "list_audit_logs_api_v1_quality_audit_logs_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by actor/user ID",
+              "title": "User Id"
+            },
+            "description": "Filter logs by actor/user ID"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by action type",
+              "title": "Action"
+            },
+            "description": "Filter logs by action type"
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by entity type",
+              "title": "Entity Type"
+            },
+            "description": "Filter logs by entity type"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs from start date",
+              "title": "Start Date"
+            },
+            "description": "Filter logs from start date"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs up to end date",
+              "title": "End Date"
+            },
+            "description": "Filter logs up to end date"
+          },
+          {
+            "name": "record_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by record ID",
+              "title": "Record Id"
+            },
+            "description": "Filter logs by record ID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Max logs to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max logs to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Pagination offset",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Pagination offset"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/AuditLogResponse"
                   },
-                  "type": "array",
                   "title": "Response List Audit Logs Api V1 Quality Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2054,6 +3280,74 @@
           "scope_summary"
         ],
         "title": "AuditCreate"
+      },
+      "AuditEventPayload": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id",
+            "description": "Audit event identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO datetime timestamp of event"
+          },
+          "assessment_type": {
+            "type": "string",
+            "title": "Assessment Type",
+            "description": "Assessment or form type"
+          },
+          "procedure_pair": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Pair",
+            "description": "Procedure pair identifier for elapsed interval evaluation"
+          },
+          "elapsed_time_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Time Seconds",
+            "description": "Inter-procedure elapsed interval in seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_id",
+          "subject_id",
+          "site_id",
+          "user_id",
+          "timestamp",
+          "assessment_type"
+        ],
+        "title": "AuditEventPayload"
       },
       "AuditFindingCreate": {
         "properties": {
@@ -2215,6 +3509,17 @@
             "type": "string",
             "title": "Details"
           },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
           "record_id": {
             "anyOf": [
               {
@@ -2225,6 +3530,24 @@
               }
             ],
             "title": "Record Id"
+          },
+          "old_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value"
+          },
+          "new_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value"
           },
           "change_reason": {
             "anyOf": [
@@ -2247,6 +3570,28 @@
               }
             ],
             "title": "Merkle Hash"
+          },
+          "sha256_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Hash"
+          },
+          "signature_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Hash"
           }
         },
         "type": "object",
@@ -2435,6 +3780,64 @@
           "status"
         ],
         "title": "AuditStatusUpdate"
+      },
+      "BenfordConformity": {
+        "type": "string",
+        "enum": [
+          "ACCEPTABLE_CONFORMITY",
+          "CLOSE_CONFORMITY",
+          "MARGINAL_CONFORMITY",
+          "NON_CONFORMING"
+        ],
+        "title": "BenfordConformity"
+      },
+      "BenfordDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "mad": {
+            "type": "number",
+            "title": "Mad"
+          },
+          "conformity": {
+            "$ref": "#/components/schemas/BenfordConformity"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "mad",
+          "conformity",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "BenfordDigitDistributionResponse"
       },
       "BreachStatus": {
         "type": "string",
@@ -3186,6 +4589,161 @@
         "type": "object",
         "title": "CAPAUpdate"
       },
+      "CSMDossierResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "dossier_name": {
+            "type": "string",
+            "title": "Dossier Name"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ract_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ract Summary"
+          },
+          "kri_surveillance_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kri Surveillance Summary"
+          },
+          "site_risk_rankings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Site Risk Rankings"
+          },
+          "anomaly_forensics_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Anomaly Forensics Summary"
+          },
+          "electronic_signature": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Electronic Signature"
+          },
+          "audit_trail_snapshot": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Trail Snapshot"
+          },
+          "merkle_seal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merkle Seal"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "dossier_name",
+          "generated_at",
+          "generated_by",
+          "status",
+          "ract_summary",
+          "kri_surveillance_summary",
+          "site_risk_rankings",
+          "anomaly_forensics_summary",
+          "electronic_signature",
+          "audit_trail_snapshot",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CSMDossierResponse"
+      },
+      "CompileCSMDossierRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "dossier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dossier Name",
+            "description": "Custom name for the compiled inspection dossier"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Full legal name of the reviewing signer"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Role of the signer (e.g. Lead Central Monitor / QA Lead)"
+          },
+          "signature_meaning": {
+            "type": "string",
+            "title": "Signature Meaning",
+            "description": "21 CFR Part 11 controlled signing statement",
+            "default": "I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "signer_name",
+          "signer_role"
+        ],
+        "title": "CompileCSMDossierRequest"
+      },
       "CtQFactorCreate": {
         "properties": {
           "study_id": {
@@ -3292,6 +4850,472 @@
           "reason_for_change"
         ],
         "title": "CtQFactorResponse"
+      },
+      "DataIntegrityComprehensiveScanRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "subjects": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SubjectClinicalVectorPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subjects",
+            "description": "Baseline clinical subject vectors"
+          },
+          "audit_events": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AuditEventPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Events",
+            "description": "Data entry audit events"
+          },
+          "image_attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ImageAttachmentPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Attachments",
+            "description": "Medical image attachments"
+          },
+          "auto_dispatch_investigation": {
+            "type": "boolean",
+            "title": "Auto Dispatch Investigation",
+            "description": "Automatically dispatch Part 11 investigation deviation for critical findings",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "DataIntegrityComprehensiveScanRequest"
+      },
+      "DataIntegrityFindingResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "sentinel_type": {
+            "$ref": "#/components/schemas/DataIntegritySentinelType"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/DeviationSeverity"
+          },
+          "anomaly_flag": {
+            "$ref": "#/components/schemas/ForensicsAnomalyFlag"
+          },
+          "primary_subject_id": {
+            "type": "string",
+            "title": "Primary Subject Id"
+          },
+          "primary_site_id": {
+            "type": "string",
+            "title": "Primary Site Id"
+          },
+          "matched_subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Subject Id"
+          },
+          "matched_site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Site Id"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "similarity_score": {
+            "type": "number",
+            "title": "Similarity Score"
+          },
+          "hamming_distance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hamming Distance"
+          },
+          "transformation_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageTransformationType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_summary": {
+            "type": "string",
+            "title": "Evidence Summary"
+          },
+          "forensic_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Forensic Metadata"
+          },
+          "investigation_deviation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Deviation Id"
+          },
+          "kri_evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kri Evaluation Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DataIntegrityFindingStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "study_id",
+          "sentinel_type",
+          "severity",
+          "anomaly_flag",
+          "primary_subject_id",
+          "primary_site_id",
+          "confidence_score",
+          "similarity_score",
+          "evidence_summary",
+          "forensic_metadata",
+          "status",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "DataIntegrityFindingResponse"
+      },
+      "DataIntegrityFindingStatus": {
+        "type": "string",
+        "enum": [
+          "CONFIRMED",
+          "DISMISSED",
+          "INVESTIGATING",
+          "OPEN"
+        ],
+        "title": "DataIntegrityFindingStatus"
+      },
+      "DataIntegrityInvestigationDispatchRequest": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id",
+            "description": "Data integrity finding ID to dispatch investigation for"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Reason for change / investigation rationale",
+            "default": "Manual investigation ticket dispatch from Data Integrity Sentinel Console"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id"
+        ],
+        "title": "DataIntegrityInvestigationDispatchRequest"
+      },
+      "DataIntegritySentinelRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "scan_timestamp": {
+            "type": "string",
+            "title": "Scan Timestamp"
+          },
+          "sentinel_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sentinel Types"
+          },
+          "total_subjects_scanned": {
+            "type": "integer",
+            "title": "Total Subjects Scanned"
+          },
+          "total_images_scanned": {
+            "type": "integer",
+            "title": "Total Images Scanned"
+          },
+          "total_events_scanned": {
+            "type": "integer",
+            "title": "Total Events Scanned"
+          },
+          "anomalies_detected_count": {
+            "type": "integer",
+            "title": "Anomalies Detected Count"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "summary_findings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary Findings"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/DataIntegrityFindingResponse"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "run_name",
+          "scan_timestamp",
+          "sentinel_types",
+          "total_subjects_scanned",
+          "total_images_scanned",
+          "total_events_scanned",
+          "anomalies_detected_count",
+          "risk_tier",
+          "status",
+          "summary_findings",
+          "findings",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "DataIntegritySentinelRunResponse"
+      },
+      "DataIntegritySentinelType": {
+        "type": "string",
+        "enum": [
+          "COMPREHENSIVE_INTEGRITY_SCAN",
+          "DUPLICATE_PATIENT_RECORD",
+          "PERCEPTUAL_IMAGE_HASH",
+          "TEMPORAL_BEHAVIORAL_ANOMALY"
+        ],
+        "title": "DataIntegritySentinelType"
+      },
+      "DataIntegritySimulationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID for simulation",
+            "default": "STUDY-ONC-2026"
+          },
+          "num_subjects_per_site": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Num Subjects Per Site",
+            "description": "Subjects per benchmark site",
+            "default": 15
+          },
+          "include_duplicate_patient": {
+            "type": "boolean",
+            "title": "Include Duplicate Patient",
+            "description": "Inject cross-site duplicate subject vector",
+            "default": true
+          },
+          "include_temporal_burst": {
+            "type": "boolean",
+            "title": "Include Temporal Burst",
+            "description": "Inject Sunday off-hours rapid burst cluster",
+            "default": true
+          },
+          "include_identical_intervals": {
+            "type": "boolean",
+            "title": "Include Identical Intervals",
+            "description": "Inject identical procedure elapsed intervals",
+            "default": true
+          },
+          "include_image_duplication": {
+            "type": "boolean",
+            "title": "Include Image Duplication",
+            "description": "Inject rotated 90 deg duplicate image scan",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "DataIntegritySimulationRequest"
+      },
+      "DataIntegritySimulationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects_count": {
+            "type": "integer",
+            "title": "Subjects Count"
+          },
+          "audit_events_count": {
+            "type": "integer",
+            "title": "Audit Events Count"
+          },
+          "image_attachments_count": {
+            "type": "integer",
+            "title": "Image Attachments Count"
+          },
+          "simulated_scenarios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Simulated Scenarios"
+          },
+          "sample_subjects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sample Subjects"
+          },
+          "sample_audit_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sample Audit Events"
+          },
+          "sample_image_attachments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sample Image Attachments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects_count",
+          "audit_events_count",
+          "image_attachments_count",
+          "simulated_scenarios",
+          "sample_subjects",
+          "sample_audit_events",
+          "sample_image_attachments"
+        ],
+        "title": "DataIntegritySimulationResponse"
       },
       "DeviationCreate": {
         "properties": {
@@ -3655,6 +5679,65 @@
         ],
         "title": "DeviationType"
       },
+      "DuplicatePatientScanRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "subjects": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SubjectClinicalVectorPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subjects",
+            "description": "List of baseline subject clinical vector payloads"
+          },
+          "raw_subjects": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Subjects",
+            "description": "Optional raw dictionary format for subject vectors"
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.5,
+            "title": "Similarity Threshold",
+            "description": "Minimum composite similarity threshold to flag duplicate",
+            "default": 0.82
+          },
+          "auto_dispatch_investigation": {
+            "type": "boolean",
+            "title": "Auto Dispatch Investigation",
+            "description": "Automatically dispatch Part 11 investigation deviation if critical match",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "DuplicatePatientScanRequest"
+      },
       "EffectivenessOutcome": {
         "type": "string",
         "enum": [
@@ -3664,6 +5747,129 @@
           "PENDING"
         ],
         "title": "EffectivenessOutcome"
+      },
+      "ForensicsAnomalyFlag": {
+        "type": "string",
+        "enum": [
+          "ANOMALOUS_VARIANCE_SHRINKAGE",
+          "BENFORD_NON_CONFORMANCE",
+          "CROSS_SITE_CLONING_SUSPICION",
+          "DATA_FABRICATION_SUSPICION",
+          "DUPLICATE_PATIENT_RECORD",
+          "IDENTICAL_PROCEDURE_INTERVALS",
+          "MULTIVARIATE_MAHALANOBIS_OUTLIER",
+          "OFF_HOURS_BURST_ANOMALY",
+          "PERCEPTUAL_IMAGE_HASH_MATCH",
+          "RAPID_BURST_SUBMISSION",
+          "SUSPICIOUS_TIMESTAMP_CLUSTER",
+          "TERMINAL_DIGIT_ROUNDING_BIAS"
+        ],
+        "title": "ForensicsAnomalyFlag"
+      },
+      "ForensicsSimulationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID for simulation",
+            "default": "STUDY-ONC-2026"
+          },
+          "num_normal_sites": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Num Normal Sites",
+            "description": "Count of compliant benchmark sites",
+            "default": 4
+          },
+          "include_benford_anomaly": {
+            "type": "boolean",
+            "title": "Include Benford Anomaly",
+            "description": "Include site violating Benford's Law",
+            "default": true
+          },
+          "include_rounding_bias": {
+            "type": "boolean",
+            "title": "Include Rounding Bias",
+            "description": "Include site with excessive terminal digit rounding",
+            "default": true
+          },
+          "include_variance_shrinkage": {
+            "type": "boolean",
+            "title": "Include Variance Shrinkage",
+            "description": "Include site with fabricated variance shrinkage",
+            "default": true
+          },
+          "include_multivariate_outlier": {
+            "type": "boolean",
+            "title": "Include Multivariate Outlier",
+            "description": "Include site with shifted multivariate correlation centroid",
+            "default": true
+          },
+          "samples_per_site": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Samples Per Site",
+            "description": "Observations per site",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "title": "ForensicsSimulationRequest"
+      },
+      "ForensicsSimulationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "site_data": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Site Data"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "simulated_anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Simulated Anomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "target_variables",
+          "site_data",
+          "total_sites",
+          "total_observations",
+          "simulated_anomalies"
+        ],
+        "title": "ForensicsSimulationResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3677,6 +5883,165 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImageAttachmentPayload": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id",
+            "description": "Image attachment identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Visit / milestone name",
+            "default": "Screening"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality",
+            "description": "Imaging modality (e.g. CHEST_CT, XRAY, MRI, DERM)",
+            "default": "RADIOLOGY"
+          },
+          "pixel_matrix": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pixel Matrix",
+            "description": "2D grayscale pixel array (e.g. 32x32)"
+          },
+          "base64_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base64 Data",
+            "description": "Optional base64 encoded image string"
+          },
+          "phash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phash",
+            "description": "Precomputed 16-hex pHash string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id",
+          "subject_id",
+          "site_id",
+          "study_id"
+        ],
+        "title": "ImageAttachmentPayload"
+      },
+      "ImageHashScanRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "image_attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ImageAttachmentPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Attachments",
+            "description": "List of medical image attachments"
+          },
+          "raw_images": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Images",
+            "description": "Optional raw dictionary format for image attachments"
+          },
+          "hamming_threshold": {
+            "type": "integer",
+            "maximum": 32.0,
+            "minimum": 0.0,
+            "title": "Hamming Threshold",
+            "description": "Maximum Hamming distance threshold to classify duplicate (<=10)",
+            "default": 10
+          },
+          "auto_dispatch_investigation": {
+            "type": "boolean",
+            "title": "Auto Dispatch Investigation",
+            "description": "Automatically dispatch Part 11 investigation deviation if duplicate found",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "ImageHashScanRequest"
+      },
+      "ImageTransformationType": {
+        "type": "string",
+        "enum": [
+          "BRIGHTNESS_ADJUSTED",
+          "CROPPED_OR_RESCALED",
+          "EXACT",
+          "FLIPPED_HORIZONTAL",
+          "FLIPPED_VERTICAL",
+          "ROTATED_180",
+          "ROTATED_270",
+          "ROTATED_90"
+        ],
+        "title": "ImageTransformationType"
       },
       "KRIBatchEvaluationRequest": {
         "properties": {
@@ -3919,6 +6284,43 @@
           "reason_for_change"
         ],
         "title": "KRIMetricEvaluationResponse"
+      },
+      "MahalanobisMetricsResponse": {
+        "properties": {
+          "mahalanobis_distance": {
+            "type": "number",
+            "title": "Mahalanobis Distance"
+          },
+          "mahalanobis_p_value": {
+            "type": "number",
+            "title": "Mahalanobis P Value"
+          },
+          "correlation_matrix_distance": {
+            "type": "number",
+            "title": "Correlation Matrix Distance"
+          },
+          "site_mean_vector": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Site Mean Vector"
+          },
+          "site_covariance_matrix": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Site Covariance Matrix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mahalanobis_distance",
+          "mahalanobis_p_value",
+          "correlation_matrix_distance",
+          "site_mean_vector",
+          "site_covariance_matrix"
+        ],
+        "title": "MahalanobisMetricsResponse"
       },
       "PromoteFindingToCAPARequest": {
         "properties": {
@@ -4163,6 +6565,605 @@
           "reason_for_change"
         ],
         "title": "QTLResponse"
+      },
+      "QualitySurveillanceRunRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID for autonomous surveillance"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Optional custom name for the surveillance sweep"
+          },
+          "auto_dispatch_deviations": {
+            "type": "boolean",
+            "title": "Auto Dispatch Deviations",
+            "description": "Whether to automatically dispatch 21 CFR Part 11 Deviation records for high-risk anomalies",
+            "default": true
+          },
+          "target_variables": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Variables",
+            "description": "Optional list of target continuous variables for statistical CSM"
+          },
+          "min_subjects_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Subjects Power",
+            "description": "Minimum subjects required per site for statistical distribution gating",
+            "default": 15
+          },
+          "min_observations_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Observations Power",
+            "description": "Minimum observations required per site for statistical distribution gating",
+            "default": 50
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.5,
+            "title": "Similarity Threshold",
+            "description": "Cosine/Manhattan similarity threshold for duplicate patient detection",
+            "default": 0.88
+          },
+          "hamming_threshold": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Hamming Threshold",
+            "description": "Maximum perceptual image Hamming distance threshold",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "QualitySurveillanceRunRequest"
+      },
+      "QualitySurveillanceRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "gated_sites_count": {
+            "type": "integer",
+            "title": "Gated Sites Count"
+          },
+          "analyzed_sites_count": {
+            "type": "integer",
+            "title": "Analyzed Sites Count"
+          },
+          "total_subjects": {
+            "type": "integer",
+            "title": "Total Subjects"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "total_images_scanned": {
+            "type": "integer",
+            "title": "Total Images Scanned"
+          },
+          "total_events_scanned": {
+            "type": "integer",
+            "title": "Total Events Scanned"
+          },
+          "anomalies_count": {
+            "type": "integer",
+            "title": "Anomalies Count"
+          },
+          "deviations_dispatched_count": {
+            "type": "integer",
+            "title": "Deviations Dispatched Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/SiteSurveillanceSummaryResponse"
+            },
+            "type": "array",
+            "title": "Site Summaries"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "deviations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Deviations"
+          },
+          "forensics_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forensics Run Id"
+          },
+          "sentinel_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentinel Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "study_id",
+          "run_name",
+          "timestamp",
+          "total_sites",
+          "gated_sites_count",
+          "analyzed_sites_count",
+          "total_subjects",
+          "total_observations",
+          "total_images_scanned",
+          "total_events_scanned",
+          "anomalies_count",
+          "deviations_dispatched_count",
+          "status",
+          "site_summaries",
+          "findings",
+          "deviations"
+        ],
+        "title": "QualitySurveillanceRunResponse"
+      },
+      "RACTCategory": {
+        "type": "string",
+        "enum": [
+          "SAFETY",
+          "CONSENT",
+          "STUDY_CONDUCT",
+          "DATA_INTEGRITY",
+          "IP_MANAGEMENT",
+          "TECHNOLOGY"
+        ],
+        "title": "RACTCategory"
+      },
+      "RACTCategorySummary": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "total_factors": {
+            "type": "integer",
+            "title": "Total Factors"
+          },
+          "high_count": {
+            "type": "integer",
+            "title": "High Count"
+          },
+          "medium_count": {
+            "type": "integer",
+            "title": "Medium Count"
+          },
+          "low_count": {
+            "type": "integer",
+            "title": "Low Count"
+          },
+          "average_score": {
+            "type": "number",
+            "title": "Average Score"
+          },
+          "linked_kri_count": {
+            "type": "integer",
+            "title": "Linked Kri Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "total_factors",
+          "high_count",
+          "medium_count",
+          "low_count",
+          "average_score",
+          "linked_kri_count"
+        ],
+        "title": "RACTCategorySummary"
+      },
+      "RACTMatrixSummaryResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_risk_factors": {
+            "type": "integer",
+            "title": "Total Risk Factors"
+          },
+          "high_risk_count": {
+            "type": "integer",
+            "title": "High Risk Count"
+          },
+          "medium_risk_count": {
+            "type": "integer",
+            "title": "Medium Risk Count"
+          },
+          "low_risk_count": {
+            "type": "integer",
+            "title": "Low Risk Count"
+          },
+          "overall_average_score": {
+            "type": "number",
+            "title": "Overall Average Score"
+          },
+          "linked_kri_coverage_percentage": {
+            "type": "number",
+            "title": "Linked Kri Coverage Percentage"
+          },
+          "category_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/RACTCategorySummary"
+            },
+            "type": "array",
+            "title": "Category Summaries"
+          },
+          "risk_factors": {
+            "items": {
+              "$ref": "#/components/schemas/RACTRiskFactorResponse"
+            },
+            "type": "array",
+            "title": "Risk Factors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_risk_factors",
+          "high_risk_count",
+          "medium_risk_count",
+          "low_risk_count",
+          "overall_average_score",
+          "linked_kri_coverage_percentage",
+          "category_summaries",
+          "risk_factors"
+        ],
+        "title": "RACTMatrixSummaryResponse"
+      },
+      "RACTRiskFactorCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "category": {
+            "$ref": "#/components/schemas/RACTCategory",
+            "description": "Protocol risk category: SAFETY, CONSENT, STUDY_CONDUCT, DATA_INTEGRITY, IP_MANAGEMENT, TECHNOLOGY"
+          },
+          "risk_topic": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Risk Topic",
+            "description": "Concise risk factor title / topic (e.g. Complex Dosing)"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description",
+            "description": "Detailed description of the potential risk"
+          },
+          "probability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Probability Score",
+            "description": "Likelihood score: 1=Low, 2=Medium, 3=High"
+          },
+          "impact_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Impact Score",
+            "description": "Impact severity score: 1=Low, 2=Medium, 3=High"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Detectability Score",
+            "description": "Detectability score: 1=High (Easy), 2=Medium, 3=Low (Hard)"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy",
+            "description": "Operational risk mitigation and control plan"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Optional code of linked automated Key Risk Indicator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "mitigation_strategy"
+        ],
+        "title": "RACTRiskFactorCreate"
+      },
+      "RACTRiskFactorResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "risk_topic": {
+            "type": "string",
+            "title": "Risk Topic"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description"
+          },
+          "probability_score": {
+            "type": "integer",
+            "title": "Probability Score"
+          },
+          "impact_score": {
+            "type": "integer",
+            "title": "Impact Score"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "title": "Detectability Score"
+          },
+          "total_risk_score": {
+            "type": "integer",
+            "title": "Total Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "total_risk_score",
+          "risk_tier",
+          "mitigation_strategy",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "RACTRiskFactorResponse"
+      },
+      "RACTRiskFactorUpdate": {
+        "properties": {
+          "risk_topic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Topic",
+            "description": "Updated risk topic"
+          },
+          "risk_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Description",
+            "description": "Updated risk description"
+          },
+          "probability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Score",
+            "description": "Updated probability score"
+          },
+          "impact_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Score",
+            "description": "Updated impact score"
+          },
+          "detectability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detectability Score",
+            "description": "Updated detectability score"
+          },
+          "mitigation_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mitigation Strategy",
+            "description": "Updated mitigation strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Updated linked KRI code"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active",
+            "description": "Active status flag"
+          }
+        },
+        "type": "object",
+        "title": "RACTRiskFactorUpdate"
       },
       "RCACreateOrUpdate": {
         "properties": {
@@ -4416,6 +7417,25 @@
         ],
         "title": "RegulatoryClockStatusResponse"
       },
+      "RiskTier": {
+        "type": "string",
+        "enum": [
+          "CRITICAL",
+          "HIGH",
+          "LOW",
+          "MEDIUM"
+        ],
+        "title": "RiskTier"
+      },
+      "RoundingBiasTier": {
+        "type": "string",
+        "enum": [
+          "MODERATE_ROUNDING",
+          "NORMAL",
+          "SEVERE_ROUNDING"
+        ],
+        "title": "RoundingBiasTier"
+      },
       "SeriousBreachConfirmRequest": {
         "properties": {
           "affected_authorities": {
@@ -4624,6 +7644,134 @@
         ],
         "title": "SeriousBreachStatusUpdate"
       },
+      "SiteForensicsResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "benford": {
+            "$ref": "#/components/schemas/BenfordDigitDistributionResponse"
+          },
+          "terminal_digit": {
+            "$ref": "#/components/schemas/TerminalDigitDistributionResponse"
+          },
+          "multivariate": {
+            "$ref": "#/components/schemas/MahalanobisMetricsResponse"
+          },
+          "variance_shrinkage": {
+            "$ref": "#/components/schemas/VarianceShrinkageMetricsResponse"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "is_anomalous_outlier": {
+            "type": "boolean",
+            "title": "Is Anomalous Outlier"
+          },
+          "flagged_anomaly_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Flagged Anomaly Reasons"
+          },
+          "kri_evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kri Evaluation Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "study_id",
+          "site_id",
+          "sample_size",
+          "benford",
+          "terminal_digit",
+          "multivariate",
+          "variance_shrinkage",
+          "composite_risk_score",
+          "risk_tier",
+          "is_anomalous_outlier",
+          "flagged_anomaly_reasons",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "SiteForensicsResponse"
+      },
+      "SiteObservationPayload": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "observations": {
+            "items": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Observations",
+            "description": "List of multi-variable continuous observation dictionaries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "observations"
+        ],
+        "title": "SiteObservationPayload"
+      },
       "SiteRiskProfileResponse": {
         "properties": {
           "id": {
@@ -4649,6 +7797,16 @@
           "risk_rank": {
             "type": "integer",
             "title": "Risk Rank"
+          },
+          "percentile_rank": {
+            "type": "number",
+            "title": "Percentile Rank",
+            "default": 0.0
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier",
+            "default": "LOW"
           },
           "high_risk_kri_count": {
             "type": "integer",
@@ -4692,6 +7850,424 @@
         ],
         "title": "SiteRiskProfileResponse"
       },
+      "SiteSurveillanceSummaryResponse": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "observation_count": {
+            "type": "integer",
+            "title": "Observation Count"
+          },
+          "power_status": {
+            "type": "string",
+            "title": "Power Status"
+          },
+          "is_sample_gated": {
+            "type": "boolean",
+            "title": "Is Sample Gated"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "anomalies_detected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Anomalies Detected"
+          },
+          "deviations_created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deviations Created"
+          },
+          "kri_alerts_triggered": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kri Alerts Triggered"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "sample_size",
+          "observation_count",
+          "power_status",
+          "is_sample_gated",
+          "composite_risk_score",
+          "risk_tier",
+          "anomalies_detected",
+          "deviations_created",
+          "kri_alerts_triggered",
+          "details"
+        ],
+        "title": "SiteSurveillanceSummaryResponse"
+      },
+      "StatisticalForensicsAnalyzeRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables",
+            "description": "Continuous clinical variables for multivariate surveillance",
+            "default": [
+              "systolic_bp",
+              "diastolic_bp",
+              "heart_rate",
+              "lab_creatinine"
+            ]
+          },
+          "site_observations": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Observations",
+            "description": "Mapping of site_id to list of observation dictionaries"
+          },
+          "site_data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SiteObservationPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Data",
+            "description": "Alternative list format of site observation payloads"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Custom name for the surveillance run"
+          },
+          "auto_trigger_kri": {
+            "type": "boolean",
+            "title": "Auto Trigger Kri",
+            "description": "Whether to automatically dispatch KRI breach alerts for flagged sites",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "StatisticalForensicsAnalyzeRequest"
+      },
+      "StatisticalForensicsRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "analysis_timestamp": {
+            "type": "string",
+            "title": "Analysis Timestamp"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "anomalous_sites_count": {
+            "type": "integer",
+            "title": "Anomalous Sites Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_results": {
+            "items": {
+              "$ref": "#/components/schemas/SiteForensicsResponse"
+            },
+            "type": "array",
+            "title": "Site Results"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "run_name",
+          "analysis_timestamp",
+          "target_variables",
+          "total_sites",
+          "total_observations",
+          "anomalous_sites_count",
+          "status",
+          "site_results",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "StatisticalForensicsRunResponse"
+      },
+      "SubjectClinicalVectorPayload": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject unique identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical site ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "demographics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Demographics",
+            "description": "Demographics: age, sex, race, ethnicity, height_cm, weight_kg, bmi, blood_type"
+          },
+          "vital_signs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Vital Signs",
+            "description": "Baseline vital signs: systolic_bp, diastolic_bp, heart_rate, respiratory_rate, temp"
+          },
+          "ecg_intervals": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Ecg Intervals",
+            "description": "12-Lead ECG intervals: pr_interval_ms, qrs_duration_ms, qt_interval_ms, qtc_ms, rr_interval_ms"
+          },
+          "lab_panel": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Lab Panel",
+            "description": "Baseline laboratory panel: creatinine, alt, ast, fasting_glucose, hemoglobin, etc."
+          },
+          "medical_history": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Medical History",
+            "description": "Baseline medical history ICD-10 codes or disease strings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "site_id",
+          "study_id"
+        ],
+        "title": "SubjectClinicalVectorPayload"
+      },
+      "TemporalAnomalyScanRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "audit_events": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AuditEventPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Events",
+            "description": "List of data entry audit events"
+          },
+          "raw_events": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Events",
+            "description": "Optional raw dictionary format of audit events"
+          },
+          "work_hour_start": {
+            "type": "integer",
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Work Hour Start",
+            "description": "Clinic opening hour (0-23)",
+            "default": 7
+          },
+          "work_hour_end": {
+            "type": "integer",
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Work Hour End",
+            "description": "Clinic closing hour (0-23)",
+            "default": 19
+          },
+          "auto_dispatch_investigation": {
+            "type": "boolean",
+            "title": "Auto Dispatch Investigation",
+            "description": "Automatically dispatch Part 11 investigation deviation if critical anomaly",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "TemporalAnomalyScanRequest"
+      },
+      "TerminalDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "zero_five_index": {
+            "type": "number",
+            "title": "Zero Five Index"
+          },
+          "rounding_bias_tier": {
+            "$ref": "#/components/schemas/RoundingBiasTier"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "zero_five_index",
+          "rounding_bias_tier",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "TerminalDigitDistributionResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4731,6 +8307,34 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VarianceShrinkageMetricsResponse": {
+        "properties": {
+          "variance_ratio": {
+            "type": "number",
+            "title": "Variance Ratio"
+          },
+          "variance_shrinkage_p_value": {
+            "type": "number",
+            "title": "Variance Shrinkage P Value"
+          },
+          "kl_divergence": {
+            "type": "number",
+            "title": "Kl Divergence"
+          },
+          "is_variance_shrunk": {
+            "type": "boolean",
+            "title": "Is Variance Shrunk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "variance_ratio",
+          "variance_shrinkage_p_value",
+          "kl_divergence",
+          "is_variance_shrunk"
+        ],
+        "title": "VarianceShrinkageMetricsResponse"
       }
     }
   }

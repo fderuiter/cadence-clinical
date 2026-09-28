@@ -9,46 +9,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install UV Package Manager
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install Dependencies
-        run: |
-          uv sync --locked --all-extras
-          echo ".venv/bin" >> $GITHUB_PATH
+        uses: actions/checkout@v7
 
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
 
       # Set up pnpm and Node.js for frontend vulnerability audit
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
 
+      # Set up .NET SDK and restore C# packages for .NET vulnerability audit
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet Packages
+        run: dotnet restore Cadence.sln
+
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         run: |
-          uv run python scripts/validate_vulnerabilities.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Generate Reports with Overrides
         run: |
-          uv run python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
+          cp docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md tmp_etmf/ || true
 
       - name: Verify Isolated Generation
         run: |

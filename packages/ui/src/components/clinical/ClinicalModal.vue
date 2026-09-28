@@ -73,7 +73,9 @@ onUnmounted(() => {
         tabindex="-1"
       >
         <div class="modal-header">
-          <h2 class="modal-title">{{ title }}</h2>
+          <h2 class="modal-title">
+            {{ title }}
+          </h2>
           <button
             class="modal-close-btn"
             aria-label="Close dialog"

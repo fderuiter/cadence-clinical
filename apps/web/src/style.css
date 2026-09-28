@@ -213,7 +213,7 @@ body {
 .user-avatar {
   width: 28px;
   height: 28px;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -294,7 +294,7 @@ body {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #475569;
   letter-spacing: 0.08em;
   padding-left: 10px;
   margin-bottom: 2px;
@@ -736,24 +736,32 @@ main {
   margin-bottom: 6px;
 }
 
-.badge-open {
-  background-color: var(--error-bg);
-  color: var(--error);
+.badge-open,
+.query-status-open {
+  background-color: #fef08a; /* Yellow badge for OPEN query discrepancy */
+  color: #854d0e;
+  border: 1px solid #facc15;
 }
 
-.badge-reopened {
-  background-color: #e0e7ff;
-  color: var(--color-accent);
+.badge-reopened,
+.query-status-reopened {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde047;
 }
 
-.badge-answered {
-  background-color: var(--warning-bg);
-  color: var(--warning);
+.badge-answered,
+.query-status-answered {
+  background-color: #dbeafe; /* Blue for ANSWERED query discrepancy */
+  color: #1e40af;
+  border: 1px solid #93c5fd;
 }
 
-.badge-closed {
-  background-color: var(--success-bg);
-  color: var(--success);
+.badge-closed,
+.query-status-closed {
+  background-color: #dcfce7; /* Green for CLOSED query discrepancy */
+  color: #166534;
+  border: 1px solid #86efac;
 }
 
 .query-current-msg,
@@ -1113,6 +1121,13 @@ main {
   color: var(--warning);
   background-color: var(--warning-bg);
   border: 1px solid rgba(234, 88, 12, 0.2);
+}
+
+.lookup-status-indicator.lookup-candidate,
+.badge.lookup-candidate {
+  color: #7c3aed;
+  background-color: #f5f3ff;
+  border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
 .lookup-status-icon {

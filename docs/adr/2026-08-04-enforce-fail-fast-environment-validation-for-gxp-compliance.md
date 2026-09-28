@@ -23,20 +23,20 @@ To ensure absolute compliance with **21 CFR Part 11 data integrity standards**, 
 ### Option 1: Hardcoded fallback keys with warning logs
 
 - **Overview:** Keep fallback keys but log warnings when they are used in production.
-- **Pros:**
+- ***Pros:***
   - ✅ Simple to implement.
   - ✅ No container startup crashes.
-- **Cons:**
+- ***Cons:***
   - ❌ Non-compliant with FDA 21 CFR Part 11 and GCP data integrity guidelines.
   - ❌ Misconfigured services are hard to detect early.
 
 ### Option 2: Fail-Fast Startup Validation (Selected)
 
 - **Overview:** Check for environment variables directly upon module loading or service initialization. Raise a `RuntimeError` if missing, preventing startup.
-- **Pros:**
+- ***Pros:***
   - ✅ 100% GxP and regulatory compliant.
   - ✅ Misconfigured environments are caught instantly during local or deployment boot phases.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires test environment setup to explicitly supply safe fallback test values.
 
 ## 4. Decision Outcome

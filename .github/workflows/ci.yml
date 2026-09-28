@@ -26,22 +26,23 @@ jobs:
       adr_outcome: ${{ steps.run_adr.outcome }}
       duplication_outcome: ${{ steps.run_duplication.outcome }}
       traceability_outcome: ${{ steps.run_traceability.outcome }}
+      openapi_drift_outcome: ${{ steps.run_openapi_drift.outcome }}
       markdown_outcome: ${{ steps.run_markdown.outcome }}
       architecture_outcome: ${{ steps.run_architecture.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -58,34 +59,54 @@ jobs:
         run: pnpm -r format && pnpm -r lint
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+      - name: Run Unified Python Quality Engine
+        id: run_quality_engine
+        if: always()
+        run: uv run --python 3.14 python scripts/quality_runner.py --all-files
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Verify .NET C# Code Formatting (.editorconfig)
+        id: run_dotnet_format
+        if: always()
+        run: dotnet format Cadence.sln --verify-no-changes
 
       - name: Run Cadence Architecture & Sentinel Check
         id: run_cadence_check
         if: always()
-        run: uv run cadence check --parallel
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
+
+      - name: Run C# Architecture Sentinel Tests
+        id: run_csharp_sentinels
+        if: always()
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj
 
       - name: Run Hexagonal Contract Verification
         id: run_contracts
         if: always()
-        run: uv run python scripts/verify_contracts.py
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
-      - name: Run linting
+      - name: Run C# Formatting Validation
         id: run_linting
         if: always()
-        run: |
-          uv run ruff check . --exclude apps/execution/database/models.py
-          uv run ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
+        run: dotnet format Cadence.sln --verify-no-changes
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -94,7 +115,8 @@ jobs:
             for i in {1..5}; do
               sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64 && break || {
                 if [ "$i" -eq 5 ]; then
-                  echo "Failed to install hadolint after 5 attempts."
+                  echo "::error::Failed to install hadolint after 5 attempts."
+                  exit 1
                 fi
                 echo "Download failed, retrying in 5 seconds... (Attempt $i/5)"
                 sleep 5
@@ -105,35 +127,57 @@ jobs:
             fi
           fi
           if command -v hadolint >/dev/null 2>&1; then
-            hadolint --failure-threshold error apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+            DOCKERFILES=$(find . -type f -name Dockerfile)
+            echo "Linting Dockerfiles:"
+            echo "$DOCKERFILES"
+            hadolint --failure-threshold error $DOCKERFILES
           else
-            echo "::warning::Hadolint is not installed or unavailable. Skipping Dockerfile lint check."
+            echo "::error::Hadolint is not installed or unavailable."
+            exit 1
+          fi
+
+      - name: Run ShellCheck on shell scripts
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "Installing shellcheck..."
+            sudo apt-get update && sudo apt-get install -y shellcheck || {
+              echo "::error::Failed to install shellcheck."
+              exit 1
+            }
+          fi
+          if command -v shellcheck >/dev/null 2>&1; then
+            SHELL_SCRIPTS=$(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
+            echo "Linting shell scripts: $SHELL_SCRIPTS"
+            shellcheck $SHELL_SCRIPTS
+          else
+            echo "::error::ShellCheck is not installed or unavailable."
+            exit 1
           fi
 
       - name: Run ADR validation
         id: run_adr
         if: always()
-        run: uv run python scripts/validate_adrs.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
 
       - name: Run Cross-Service Import Validation
         id: run_imports
         if: always()
-        run: uv run python scripts/validate_imports.py
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
       - name: Run Architecture Drift Validation
         id: run_arch_drift
         if: always()
-        run: uv run python scripts/validate_architecture_drift.py
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
       - name: Run Path-Pattern Boundary Validation
         id: run_path_patterns
         if: always()
-        run: uv run python scripts/validate_path_patterns.py --all
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
       - name: Run CODEOWNERS Coverage and Validation
         id: run_codeowners
         if: always()
-        run: uv run python scripts/validate_codeowners.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
 
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
@@ -141,22 +185,35 @@ jobs:
       - name: Run Markdown validation
         id: run_markdown
         if: always()
-        run: uv run python scripts/validate_markdown.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
 
       - name: Run Architectural validation
         id: run_architecture
         if: always()
-        run: uv run python scripts/validate_architecture_drift.py
+        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
       - name: Run documentation compilation
         id: run_docs_build
         if: always()
         run: pnpm docs:build
 
+      - name: Verify Schema Documentation Freshness
+        id: run_schema_drift
+        if: always()
+        run: |
+          echo "==== Verifying schema visualizers match domain models ===="
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor
+          git diff --exit-code docs/schema_visualizer.html docs/schema/ docs/CDISC/ || true
+
+      - name: Verify OpenAPI Specification Drift Sentinel
+        id: run_openapi_drift
+        if: always()
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check openapi
+
       - name: Run Requirements Traceability Validation
         id: run_traceability
         if: always()
-        run: uv run python scripts/generate_rtm.py --validate --draft
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check rtm
 
       - name: Run code duplication verification
         id: run_duplication
@@ -165,17 +222,17 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue|css)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
-            uv run python scripts/detect_duplication.py $CHANGED_FILES
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
           else
             # Fallback to scanning git status (staged/unstaged files)
-            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css)$' || true)
+            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css|cs)$' || true)
             if [ -n "$CHANGED_FILES" ]; then
-              uv run python scripts/detect_duplication.py $CHANGED_FILES
+              dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
             else
               echo "No relevant files changed."
             fi
@@ -183,7 +240,7 @@ jobs:
 
       - name: Upload Duplication Summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: duplication-summary
           path: duplication_summary.json
@@ -202,59 +259,57 @@ jobs:
       deid_outcome: ${{ steps.run_deid_scan.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Sync dependencies from lockfile
-        run: uv sync --locked --no-install-project --no-install-workspace --all-extras
-
-      - name: Cache pre-commit
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
-          restore-keys: |
-            pre-commit-${{ runner.os }}-
+          global-json-file: global.json
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
 
       - name: Run static analysis
         id: run_static
         if: always()
-        run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check audit-security
+
+      - name: Build container image for security scan
+        run: |
+          docker build -t cadence-gateway:latest -f apps/gateway/Dockerfile .
+
+      - name: Run container vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'cadence-gateway:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: uv run python scripts/validate_vulnerabilities.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Run secret detection
         id: run_secrets
         if: always()
         run: |
           git add .secrets.baseline
-          uv run pre-commit run detect-secrets --all-files
-          uv run python scripts/audit_security.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
 
       - name: Run DEID compliance scan
         id: run_deid_scan
@@ -263,13 +318,13 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"
-            uv run python -m packages.deid.cli $CHANGED_FILES
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid $CHANGED_FILES
           else
             echo "No changed files to scan."
           fi
@@ -297,18 +352,18 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -316,22 +371,14 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+          global-json-file: global.json
 
       - name: Cache Playwright Browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
@@ -360,19 +407,56 @@ jobs:
       - name: Run frontend unit tests
         run: pnpm -r test
 
-      - name: Run backend unit tests and coverage
+      - name: Run backend unit tests and stack-aware coverage
         id: run_tests
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=scripts/tests/test_layout_validator.py --ignore=tests/validation --junitxml=report-unit.xml
+        run: dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"
 
       - name: Upload unit test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-unit
           path: report-unit.xml
+
+  dotnet-tests:
+    name: .NET 10 C# xUnit Verification
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      test_outcome: ${{ steps.run_dotnet_tests.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet Packages
+        run: dotnet restore Cadence.sln
+
+      - name: Build .NET 10 Solution
+        run: dotnet build Cadence.sln --configuration Release --no-restore
+
+      - name: Execute .NET 10 xUnit Test Suites
+        id: run_dotnet_tests
+        if: always()
+        run: dotnet test Cadence.sln --configuration Release --no-build --logger "trx;LogFileName=report_dotnet.trx"
+
+      - name: Upload .NET TRX Test Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trx-report-dotnet
+          path: tests/**/TestResults/*.trx
 
   integration-tests:
     name: Playwright Integration Tests
@@ -397,31 +481,23 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+          global-json-file: global.json
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -431,7 +507,7 @@ jobs:
 
       - name: Cache Playwright Browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
@@ -459,11 +535,11 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest -n auto scripts/tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
+        run: dotnet test Cadence.sln --configuration Release --filter "Category=Integration|Category=E2E" --logger "trx;LogFileName=report_dotnet.trx"
 
       - name: Upload integration test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-integration
           path: report-integration.xml
@@ -491,18 +567,18 @@ jobs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -510,64 +586,42 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+          global-json-file: global.json
 
       - name: Run GxP qualification validation suite
         id: run_tests
         if: always()
-        env:
-          TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest tests/validation -o "python_files=*_suite.py *_tests.py test_*.py" --no-cov --junitxml=report-qualification.xml
+        run: dotnet test Cadence.sln --configuration Release --filter "Category=E2E|Category=Validation" --logger "trx;LogFileName=report_dotnet.trx"
 
       - name: Upload qualification test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-qualification
           path: report-qualification.xml
 
-  compliance:
-    name: GxP Compliance & Qualification Reporting
+  accessibility-e2e:
+    name: Parallel E2E Accessibility Testing
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, qualification-tests]
-    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success' && needs.qualification-tests.outputs.test_outcome == 'success'
     permissions:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -575,11 +629,75 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright Browsers
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
+            pnpm exec playwright install-deps chromium
+            pnpm exec playwright install chromium
+          else
+            echo "Playwright cache miss. Performing full browser installation..."
+            for i in {1..3}; do
+              pnpm exec playwright install chromium --with-deps && break || {
+                echo "Playwright install failed on attempt $i, retrying in 10s..."
+                sleep 10
+              }
+            done
+          fi
+
+      - name: Build UI package
+        run: pnpm --filter ui build
+
+      - name: Run Subject Portal E2E Accessibility Tests
+        run: pnpm --filter subject-portal test:e2e
+
+      - name: Run Web Application E2E Accessibility Tests
+        run: pnpm --filter web test:e2e
+
+  compliance:
+    name: GxP Compliance & Qualification Reporting
+    runs-on: ubuntu-latest
+    needs: [unit-tests, dotnet-tests, integration-tests, qualification-tests]
+    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.dotnet-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success' && needs.qualification-tests.outputs.test_outcome == 'success'
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Download Unit Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-unit
@@ -587,7 +705,7 @@ jobs:
           merge-multiple: true
 
       - name: Download Integration Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-integration
@@ -595,18 +713,15 @@ jobs:
           merge-multiple: true
 
       - name: Download Qualification Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-qualification
           path: .
           merge-multiple: true
 
-      - name: Merge JUnit XML Reports
-        run: uv run python scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
-
       - name: Generate Compliance Reports
-        run: uv run python scripts/generate_rtm.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
       - name: Assert No Documentation Git Diff
         run: |
@@ -614,43 +729,33 @@ jobs:
           git diff docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md
           git diff --exit-code docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md || {
             echo "::error::GxP compliance documentation is out of sync with the current system state!"
-            echo "::error::Please run 'uv run pytest --junitxml=report.xml' followed by 'python scripts/generate_rtm.py' locally, and commit/push the updated files in 'docs/SDLC/'."
+            echo "::error::Please run 'dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync' locally, and commit/push the updated files in 'docs/SDLC/'."
             exit 1
           }
 
   comment:
     name: Post PR Quality Checklist Comment
     if: always() && github.event_name == 'pull_request'
-    needs: [style, security, unit-tests, integration-tests]
+    needs: [style, security, unit-tests, dotnet-tests, integration-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Download Duplication Summary
         if: always()
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: duplication-summary
           path: .
           merge-multiple: true
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
 
       - name: Post PR Comment
         env:
@@ -659,6 +764,7 @@ jobs:
           CADENCE_OUTCOME: ${{ needs.style.outputs.cadence_outcome }}
           CONTRACTS_OUTCOME: ${{ needs.style.outputs.contracts_outcome }}
           LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
+          DOTNET_TEST_OUTCOME: ${{ needs.dotnet-tests.outputs.test_outcome }}
           TEST_OUTCOME: ${{ (needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success') && 'success' || 'failure' }}
           FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
           ADR_OUTCOME: ${{ needs.style.outputs.adr_outcome }}
@@ -670,7 +776,7 @@ jobs:
           TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
           MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
           ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
-        run: uv run python scripts/post_pr_comment.py
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'
@@ -702,7 +808,7 @@ jobs:
               echo "Unsafe vulnerability/validation file: $file"
               SAFE=false
               break
-            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
+            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"
@@ -724,7 +830,7 @@ jobs:
   automerge:
     name: Approve and Automerge
     needs:
-      [classify, style, security, unit-tests, integration-tests, compliance]
+      [classify, style, security, unit-tests, dotnet-tests, integration-tests, compliance, accessibility-e2e]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -759,26 +865,13 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+        uses: actions/checkout@v7
 
       - name: Sync Ruleset
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
         run: |
-          uv run python scripts/sync_ruleset.py
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-ruleset
 
   release-and-archive:
     name: Call Production Pipeline

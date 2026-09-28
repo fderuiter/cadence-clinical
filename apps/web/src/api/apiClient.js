@@ -148,3 +148,5 @@ export const apiClient = {
     return request(path, { ...options, method: "DELETE" });
   },
 };
+
+export const api = apiClient;

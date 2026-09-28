@@ -2,189 +2,225 @@
 
 ## 1. System Vision & Problem Statement
 
-Traditional clinical trial builds require manual, error-prone translation of protocol documents into downstream EDC systems. This causes multi-month setup delays, risk of discrepancies between protocols and CRFs, and expensive amendment re-work.
+Traditional clinical trial builds require manual, error-prone translation of narrative protocol documents into disconnected downstream Electronic Data Capture (EDC) databases, Clinical Trial Management Systems (CTMS), and safety reporting workflows. This causes multi-month setup delays, discrepancy risks between protocols and eCRFs, and costly amendment rework.
 
-**Cadence Clinical Research Software** solves this by establishing a single, metadata-driven source of truth that automates the generation of downstream trial infrastructure directly from digitized protocol definitions.
+**Cadence Clinical Research Software** establishes a unified, metadata-driven architecture that automates the generation of downstream clinical trial infrastructure directly from digitized protocol definitions (CDISC USDM), bridging upstream **Clinical Metadata Management (MDR/SDR)** with downstream **Electronic Data Capture (EDC)** and operational microservices via an automated **Digital Data Flow (DDF)** pipeline.
 
 ---
 
-## 2. Core Service Domains
+## 2. Core Service Domains & Microservices Catalog
 
-### A. Designer Service (`apps/designer`)
+Cadence is structured as a decoupled, reverse-proxy fronted microservices topology where every service encapsulates a specific clinical or platform domain.
 
+```text
+ ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                   API GATEWAY & PROXY                                    │
+ ├──────────────────────────────────────────────────────────────────────────────────────────┤
+ │  • Gateway Proxy (Port 8000)      • Keycloak OIDC Authentication                         │
+ │  • HMAC Signature Injection       • 60s Step-Up Re-Authentication Tokens                 │
+ └─────────────────────────────┬──────────────────────────────────────────────┬─────────────┘
+                               │                                              │
+                               ▼                                              ▼
+ ┌──────────────────────────────────────────────┐ ┌──────────────────────────────────────────────┐
+ │          PROTOCOL & STUDY DESIGN             │ │        CLINICAL OPERATIONS & EXECUTION       │
+ ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
+ │ • Designer / USDM (Port 8001 : Neo4j)        │ │ • EDC Execution Engine (Port 8002 : Postgres)│
+ │ • Knowledge & SOPs (Port 8011 : SQLite/PG)   │ │ • CTMS Operations (Port 8005 : SQLite/PG)    │
+ │ • Clinical AI Gateway (Port 8013 : REST)     │ │ • Organization Directory (Port 8008 : SQL)   │
+ │ • DDF Compiler Engine (packages/ddf)         │ │ • Clinical Issue Hub (Port 8012 : SQLite/PG) │
+ │                                              │ │ • Site Payments & Grants (Port 8014 : SQL)   │
+ └─────────────────────────────┬────────────────┘ └───────────────────────────┬──────────────────┘
+                               │                                              │
+                               ▼                                              ▼
+ ┌──────────────────────────────────────────────┐ ┌──────────────────────────────────────────────┐
+ │    PATIENT ENGAGEMENT & INTEROPERABILITY     │ │        SAFETY, QUALITY & GOVERNANCE          │
+ ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
+ │ • Subject Portal PWA (Port 5174 : IndexedDB) │ │ • Safety & Pharmacovigilance (Port 8009)     │
+ │ • FHIR & eSource Gateway (Port 8007 : SQL)   │ │ • Quality & CAPA Management (Port 8006)      │
+ │ • Notifications Dispatcher (Port 8010 : SQL) │ │ • Blinded DICOM Adjudication (Port 8015)     │
+ │ • Electronic Consent (Port 8017 : SQLite/PG) │ │ • Electronic Trial Master File (Port 8004)   │
+ │                                              │ │ • Electronic Investigator Files (Port 8016)  │
+ │                                              │ │ • FileShare & StoragePort (Port 8018 : MinIO)│
+ │                                              │ │ • Compliance Engine (Port 8019 : xUnit/GxP)  │
+ └──────────────────────────────────────────────┘ └──────────────────────────────────────────────┘
+```
+
+### A. Protocol & Study Design Layer
+
+#### 1. Designer Service (`apps/designer` — Port 8001)
 - **Role:** Study Definition Repository (SDR) and Clinical Metadata Repository (MDR).
-- **Datastore:** Neo4j Graph Database.
+- **Datastore:** Neo4j Graph Database 5.0+.
 - **Core Responsibilities:**
-  - Protocol structure authoring (Arms, Epochs, Branches, Visits).
-  - Schedule of Activities (SoA) matrix generation.
-  - CDISC USDM export endpoints.
-  - Fine-grained protocol semantic versioning and amendment diffing.
+  - Protocol structure authoring (Study Arms, Epochs, Encounters, Activities, and Biomedical Concepts).
+  - High-density Schedule of Activities (SoA) matrix generation.
+  - Official CDISC USDM v3.0/v4.0 export and validation.
+  - Immutable graph branching and semantic protocol amendment diffing.
 
-### B. Execution Engine (`apps/execution`)
-
-- **Role:** Electronic Data Capture (EDC) Runtime.
-- **Datastore:** PostgreSQL Relational Database.
+#### 2. Knowledge & SOP Service (`apps/knowledge` — Port 8011)
+- **Role:** Clinical SOP Hub & Dynamic Help Drawer Dispatcher.
+- **Datastore:** PostgreSQL / SQLite.
 - **Core Responsibilities:**
-  - Automatic generation of eCRF layouts and validation rules from USDM specifications.
-  - Subject enrollment, matrix tracking, and event scheduling.
-  - Real-time edit-check evaluation during site data entry.
-  - Discrepancy (query) workflow management.
-  - Authenticated SDTM/ADaM Dataset-JSON export, structural/referential export validation, and BiostatExport audit logging.
+  - Contextual SOP delivery mapped to active user persona and frontend route patterns.
+  - Hierarchical specificity scoring for clinical guidance lookup.
+  - Two-tier controlled document versioning (`KnowledgeArticle` and `KnowledgeArticleVersion`).
 
-### C. Web Client (`apps/web`)
-
-- **Role:** Primary User Interface.
+#### 3. Clinical AI Gateway (`apps/ai_gateway` — Port 8013)
+- **Role:** Intelligent Medical Coding & De-Identification Proxy.
+- **Datastore:** Ephemeral in-memory caching / External REST.
 - **Core Responsibilities:**
-  - Renders standard clinical forms directly from XML payloads compiled by the backend translation engine.
-  - Provides site investigators and data managers a unified interface for data entry and clinical study management.
-
-### D. Shared UI Components (`packages/ui`)
-
-- **Role:** Design System Library.
-- **Core Responsibilities:**
-  - Provides reusable, standardized UI components (e.g., inputs, layouts) ensuring design consistency.
-  - Shared seamlessly across frontend packages using the pnpm workspace protocol.
-
-### E. Clinical Metadata Validation & Translation (`apps/designer` and `apps/execution`)
-
-- **Role:** Unified Standard Domain Modeling & Validation.
-- **Core Responsibilities:**
-  - Official CDISC USDM standard representation using the `usdm` package inside the Designer (`apps/designer/`).
-  - In-memory bidirectional transformation adapters (USDM JSON ↔ OpenRosa / CDISC ODM) in the Execution engine (`apps/execution/`).
-
-### F. Gateway & Identity (`apps/gateway`)
-
-- **Role:** Reverse Proxy & Access Control.
-- **Core Responsibilities:**
-  - Keycloak OIDC JWT validation.
-  - Centralized Role-Based Access Control (RBAC) mapping:
-    - `Study Designer` ──► Design permissions in `apps/designer`
-    - `Site Investigator / CRC` ──► Data capture permissions in `apps/execution`
-    - `Data Manager` ──► Query and form management across both domains.
-    - `Monitor` ──► Monitoring, site verification, and CTMS operations in `apps/ctms`
-    - `Grants Manager` ──► Budget, financials, and CTMS administrative operations in `apps/ctms`
-
-### G. Event-Driven eTMF Module (`apps/etmf`)
-
-- **Role:** Electronic Trial Master File (eTMF) Repository and Completeness Tracker.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Ingests, taxonomy-classifies, and versions clinical trial artifacts mapped to DIA TMF Reference Model Zones 1-11.
-  - Implements Expected Document Lists (EDLs) through the `ExpectedDocument` data model to replace static, hardcoded milestone rules.
-  - Computes site-aware, data-driven milestone completeness checks by querying active EDLs and combining study-scope and site-scope required artifacts.
-  - Enforces role-based access control and trial lock restrictions via the Gateway and `GatewayAuthMiddleware` to block read-only inspector roles from mutating definitions or archives.
-  - Maintains a 21 CFR Part 11 compliant audit trail (`TMFAuditLog`) capturing user contexts, timestamps, and justifications for all eTMF views, downloads, EDL updates, and completeness checks.
-
-### H. Clinical Trial Management System (`apps/ctms`)
-
-- **Role:** Administrative, Financial, Operational, and Monitoring Workspace.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Trial, site, and operational metadata tracking (recruitment, milestone verification).
-  - Budget and investigator grant tracking across roles like Grants Manager.
-  - Integration with Keycloak OIDC authentication via the secure API gateway.
-  - Full 21 CFR Part 11 compliant auditing (`CTMSAuditLog`) recording all actions, view queries, and mutations with explicit change reasons.
-  - Role-Based Access Control (RBAC) ensuring write mutations are restricted to roles like `Monitor`, `Grants Manager`, `CRA`, or `Admin`, and read-only queries are restricted to authorized operational personnel.
-
-### I. Quality & CAPA Management Service (`apps/quality`)
-
-- **Role:** Isolated Quality Assurance & Compliance Workspace.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Secure, relational protocol deviation tracking linked directly to systematic root causes and corrective/preventive action models.
-  - Integration with Keycloak OIDC authentication via standard headers proxying through the secure API gateway.
-  - Full 21 CFR Part 11 compliant mutable record auditing with mandatory `version_index` incrementing, standard creation/traceability metadata, and a non-empty change reason header (`X-Change-Reason`).
-  - Immutable, append-only, chronological quality logs (`QualityAuditLog`) of all viewed records, updates, and transitions.
-  - Restricts access to read-only roles (`auditor`, `inspector`, `regulatory_inspector`) from all mutating operations, gates general write access, and authorizes terminal CAPA approvals or closures only to Quality Oversight roles (`quality_manager`, `qa_lead`, `quality_oversight`, `admin`).
-
-### J. Interoperability & Sync Gateway Service (`apps/interop`)
-
-- **Role:** EHR FHIR Data Adapter & ePRO Submission Sync Gateway.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Ingests HL7 FHIR bundles, performs PII stripping and pseudonymization, and CDASH mappings to pre-fill observations.
-  - Receives single or bulk ePRO/eCOA submissions from active study subjects.
-  - Implements multi-strategy offline reconciliation (`CLIENT_WINS`, `SERVER_WINS`, `MERGE`) and isolates/logs conflict details in `EPROSubmissionDefeated`.
-  - Triggers auditable open clinical queries automatically for submissions with structural mismatches.
-  - Computes subject compliance schedules and triggers async background notifications (EMAIL, SMS, WEBHOOK, IN_APP).
-  - Exposes secure least-privilege APIs for patient self-service (instrument details, assignments, compliance, and notification lists) and notification acknowledgement.
-
-### K. Patient/Subject Portal (`apps/subject-portal`)
-
-- **Role:** Standalone Patient-Facing ePRO Web Application.
-- **Core Responsibilities:**
-  - Serves as an isolated, secure Progressive Web App (PWA) client optimized for mobile environments.
-  - Integrates with Keycloak OIDC for authenticated login under the strict `Subject` role.
-  - Implements offline-first caching via service workers and queues signed submissions chronologically inside IndexedDB.
-  - Provides a visual Sync Queue Panel allowing subjects to view transmission logs and online reconciliation decisions.
-  - Supports read capabilities (assigned instruments, compliance rates, assignments, and notification inbox) and interactive notification acknowledgement alongside diary submit and sync operations.
-
-### L. eISF Module (`apps/eisf`)
-
-- **Role:** Electronic Investigator Site File (eISF) Repository.
-- **Datastore:** SQLite / PostgreSQL Relational Database.
-- **Core Responsibilities:**
-  - Ingests, taxonomy-classifies, and versions clinical trial site documents mapped to binder structures.
-  - Enforces rigid site-scoped role authorization and site-isolation boundaries via `enforce_site_isolation` centrally.
-  - Computes site-level completeness checks matching present versus required classifications inside standard binder sections.
-  - Restricts write mutations to CRC/Investigator roles, and blocks read-only Auditor/Inspector roles from modifying files.
-  - Maintains a 21 CFR Part 11 compliant audit trail (`ISFAuditLog`) capturing user contexts, timestamps, and justifications for all site operations.
-  - Supports bidirectional offline sync with automated conflict reconciliation strategies and deduplication mechanisms.
-  - Integrated on host port `8010` and aggregated into the gateway's unified OpenAPI specification.
-
-### M. Controlled Terminology & NCI Thesaurus Subsystem (`apps/designer`, `packages/ui`, `apps/gateway`)
-
-- **Role:** Real-time CDISC CT / NCI Thesaurus integration and live field validation.
-- **Core Responsibilities & Flow:**
-  - **EVS Client (`apps/designer/evs_client.py`):** Establishes an asynchronous client hitting the external NCI EVS REST API, providing robust lookup, search, and type-safe error handling.
-  - **Terminology Cache (`TerminologyCache`):** Combines database/in-memory cache-aside lookup with a thread-safe TTL and automatic fallback to mock/offline datasets on transport or service degradation.
-  - **Routing & Security:** The API Gateway (`apps/gateway/main.py`) performs HMAC-signed proxying and strips prefixes to route external `/api/v1/terminology` traffic directly to the Designer service (ADR-058).
-  - **Signed Web Client:** The frontend client (`apps/web/src/api/terminologyClient.js`) interacts securely via standard in-transit signature verification (ADR-067).
-  - **Consolidated UI Components:** `packages/ui` provides the shared `debounce` utility and `createClinicalLookupInput` helper function, which are consumed by Vue interfaces like `EcrfView.vue` and `MdrView.vue` to achieve responsive typing validation, stale response guards, and accessible ARIA live-region feedback (ADR-065).
-  - **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity in accordance with GxP and 21 CFR Part 11 requirements.
-
-### N. Electronic Consent Service (`apps/econsent`)
-
-- **Role:** Electronic signature capture, patient enrollment consent, and regulatory signature storage.
-- **Datastore:** local `sqlite_econsent` (`econsent.db`) in local development.
-- **Core Responsibilities:**
-  - Enforce Keyclock OIDC authenticated routing via the API Gateway.
-  - Manage secure electronic signatures in accordance with Part 11.
-  - Generate digitally sealed consent logs for audit trials.
-
-### O. Notifications & Webhooks Dispatcher (`apps/notifications`)
-
-- **Role:** Centralized clinical event-driven background alerting and delivery system.
-- **Datastore:** local `sqlite_notifications` (`notifications.db`) in local development.
-- **Core Responsibilities:**
-  - Ingest notification triggers from external microservices (such as eTMF sync events or compliance notifications).
-  - Dispatch payloads across channels including `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
-  - Maintain an immutable, chronologically logged database of dispatch attempts and delivery statuses.
-
-### P. Randomization Trial Supply Management (RTSM) Module (`apps/execution`)
-
-- **Role:** Blinded kit randomization, treatment allocation, and trial supply dispensing logic.
-- **Datastore:** PostgreSQL (sharing/leveraging the execution engine's transactional database).
-- **Core Responsibilities:**
-  - Exposure of treatment allocation endpoints, specifically `/api/v1/execution/rtsm/dispense`.
-  - Enforcement of strict execution validation gates, specifically throwing a `PermissionError` and an HTTP 403 Forbidden status if a subject allocation request is made for a subject not in the `ENROLLED` state.
-  - Preservation of trial blinding integrity during randomized treatment allocation.
+  - Three-tier model routing (Tier 1 Local SLMs, Tier 2 Fast Cloud LLMs, Tier 3 Frontier Models).
+  - Outbound PII/PHI de-identification air-gap with surrogate tokenization.
+  - Hybrid semantic medical coding against MedDRA and WHODrug dictionaries.
+  - 21 CFR Part 11 dual-attribution AI draft ledgers (`DRAFT_AI`).
 
 ---
 
-## 2.2 Local Developer Runtime Topology
+### B. Clinical Operations & Execution Layer
 
-Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, multi-AZ PostgreSQL clusters, Redis distributed caching tiers, and Neo4j graph clusters), the developer-centric local environment runs as a lightweight, single-host orchestration configuration using Docker Compose.
+#### 4. EDC Execution Engine (`apps/execution` — Port 8002)
+- **Role:** Downstream Electronic Data Capture (EDC) Runtime.
+- **Datastore:** PostgreSQL 14+ Relational Database.
+- **Core Responsibilities:**
+  - Dynamic subject eCRF schema projection based on subject-specific protocol version tags.
+  - Subject enrollment lifecycle state machines and visit scheduling.
+  - Real-time edit check execution during site data entry.
+  - Medical coding review, central/local laboratory reference range governance, and CTCAE toxicity grading.
+  - CDISC Dataset-JSON 1.0.0 biostatistical export (SDTM / ADaM).
 
-### Local Configuration Details:
+#### 5. CTMS Operations Service (`apps/ctms` — Port 8005)
+- **Role:** Clinical Trial Management & Site Operational Governance.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Trial and site milestone tracking, CRA workload balancing, and Monitoring Visit Reports (MVR).
+  - 6-Facet Site Greenlight Engine evaluating IRB approvals, CTA contracts, essential regulatory documents, DOA logs, staff training certifications, and investigational product release.
+  - Append-only `CTMSAuditLog` tracking all operational transactions with Part 11 metadata.
 
-- **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`). Dedicated PostgreSQL containers (`postgres-etmf`, `postgres-ctms`, and `postgres-quality`) are used for `etmf`, `ctms`, and `quality` respectively.
-- **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
-- **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
-- **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
+#### 6. Organization Directory (`apps/org` — Port 8008)
+- **Role:** Multi-Tenant Organization & Site Directory.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Master directory of Sponsor, CRO, and Site organizations and personnel.
+  - Principal Investigator Electronic Delegation of Authority (DOA) log with electronic signature step-up tokens.
+  - Role-based site scoping and investigator qualification management.
 
-The diagram below represents the local development runtime and mapping of all 20 active local services:
+#### 7. Clinical Issue Hub (`apps/tickets` — Port 8012)
+- **Role:** Query Discrepancy Escalation & Support SLA Management.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Multi-tier module-based routing across functional clinical queues.
+  - Dual-target SLA tracking (acknowledgment SLA vs. clinical resolution SLA) with automated escalation.
+  - Controlled reopening window enforcement accompanied by mandatory 21 CFR Part 11 change reasons.
+
+#### 8. Site Payments & Participant Compensation (`apps/payments` — Port 8014)
+- **Role:** Investigator Grant Budgets & Participant Financial Wallet.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Procedure-fee rule engine triggered by eCRF visit completion and CRA Source Data Verification (SDV).
+  - Multi-party payee grant split calculations and 10% statutory closeout holdback escrows.
+  - Participant stipend management, mobile receipt OCR reimbursement approval, and IRS 1099 threshold tracking.
+
+---
+
+### C. Patient Engagement & Interoperability Layer
+
+#### 9. Subject Portal (`apps/subject-portal` — Port 5174)
+- **Role:** Offline-First Patient-Facing eCOA/ePRO PWA.
+- **Technology:** Vite + Vue 3 Progressive Web App.
+- **Core Responsibilities:**
+  - Isolated patient-facing interface running under the strict `Subject` role.
+  - IndexedDB offline queue caching ePRO diary submissions during network disconnects.
+  - Visual sync reconciliation queue with collision-free replay strategies.
+
+#### 10. Electronic Consent Service (`apps/econsent` — Port 8017)
+- **Role:** Digital Informed Consent (eConsent) & Re-Consent Engine.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Interactive ICF document compilation with Flesch-Kincaid readability scoring.
+  - Dynamic protocol amendment re-consent gating blocking downstream visit data capture upon protocol revisions.
+  - Minor-to-adult age-of-majority transition tracking.
+  - 21 CFR Part 11 compliant cryptographic signature manifests.
+
+#### 11. Notifications Dispatcher (`apps/notifications` — Port 8010)
+- **Role:** Multi-Channel Clinical Alert & Compliance Messenger.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Asynchronous dispatch across SMTP Email (Jinja2 templates), SMS, HMAC-signed Outbound Webhooks, and In-App inbox.
+  - Mandatory GxP notification policy bypassing user opt-out preferences for safety-critical alerts.
+  - Deterministic notification idempotency keys preventing duplicate alerts across retries.
+
+#### 12. FHIR & eSource Gateway (`apps/interop` — Port 8007)
+- **Role:** EHR Interoperability & Biometric Sensor Streaming.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - SMART on FHIR USCDI clinical data ingestion from hospital EHR systems.
+  - Split-screen CRC review drawer with 1-click clinical acceptance into draft eCRFs.
+  - Open mHealth continuous time-series biometric sensor stream adapter.
+
+---
+
+### D. Safety, Quality & Governance Layer
+
+#### 13. Safety & Pharmacovigilance (`apps/safety` — Port 8009)
+- **Role:** Pharmacovigilance Gateway & Regulatory Safety Transmissions.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - ICH E2B(R3) Individual Case Safety Reports (ICSR) ISO 27953-2 XML compilation.
+  - Automated NCI-CTCAE v5.0 laboratory toxicity grading and WHODrug active ingredient hierarchy verification.
+  - B2B AS2 EDI gateway with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
+
+#### 14. Quality & CAPA Management (`apps/quality` — Port 8006)
+- **Role:** Quality Assurance, Centralized Statistical Monitoring & Forensic Auditing.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Protocol deviation management linked to Root Cause Analysis (RCA) and CAPA corrective workflows.
+  - Centralized Statistical Monitoring (CSM forensics): Benford's Law Chi-Square/MAD, digit preference, and Mahalanobis distance multivariate outlier detection.
+  - 64-bit DCT Perceptual Hashing (pHash) on medical images detecting duplicate scans across sites (Hamming distance $\le 5$).
+
+#### 15. Blinded DICOM Adjudication (`apps/imaging` — Port 8015)
+- **Role:** Clinical Oncology Imaging & RECIST 1.1 Adjudication.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Zero-footprint WebGL Multi-Planar Reconstruction (MPR) axial/sagittal/coronal viewer.
+  - Blinded dual-reader RECIST 1.1 / Lugano oncology evaluations.
+  - Automated 20% Sum of Diameters (SOD) discordance trigger with Chair step-up sign-off.
+
+#### 16. Electronic Trial Master File (`apps/etmf` — Port 8004)
+- **Role:** Regulatory Document Ingestion & Completeness Repository.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - DIA TMF Reference Model v3.2.0 taxonomy classification across 10 canonical zones.
+  - Expected Document Lists (EDLs) and dynamic milestone completeness scoring.
+  - Automated QC lifecycle state engine (`DRAFT` $\rightarrow$ `TECHNICAL_QC` $\rightarrow$ `CLINICAL_QC` $\rightarrow$ `APPROVED`).
+
+#### 17. Electronic Investigator Site Files (`apps/eisf` — Port 8016)
+- **Role:** Site-Scoped Regulatory Binder Repository.
+- **Datastore:** PostgreSQL / SQLite.
+- **Core Responsibilities:**
+  - Site-isolated regulatory binder management inheriting DIA eISF taxonomy structures.
+  - Bidirectional synchronization with Sponsor eTMF artifacts.
+  - Principal Investigator certification audit manifests.
+
+#### 18. FileShare & StoragePort Gateway (`apps/fileshare` — Port 8018)
+- **Role:** Binary Blob Storage & Presigned Transfer URL Broker.
+- **Datastore:** MinIO / S3 Object Storage + PostgreSQL Envelope Metadata.
+- **Core Responsibilities:**
+  - Hexagonal `StoragePort[T]` protocol isolating tenant binary payloads (`/{tenant_id}/{study_id}/{doc_id}`).
+  - Secure short-lived presigned upload and download URLs for direct browser transfer.
+  - SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
+
+#### 19. Compliance Engine (`packages/compliance` — Port 8019)
+- **Role:** Centralized Regulatory Verification & Qualification.
+- **Datastore:** .NET 10 xUnit v3 + Audit Ledgers.
+- **Core Responsibilities:**
+  - Full automated qualification test execution (IQ/OQ/PQ suites).
+  - 100% GxP Requirements Traceability Matrix (RTM) synchronization.
+  - 21 CFR Part 11 audit trail assertion gates.
+
+---
+
+## 3. Local Developer Runtime Topology
+
+The developer runtime is containerized using Docker Compose to orchestrate relational databases, graph engines, identity providers, and object storage in a lightweight, single-host configuration.
 
 ```mermaid
 flowchart TD
@@ -206,13 +242,17 @@ flowchart TD
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
         econsent[econsent - Electronic Consent Service]
+        fileshare[fileshare - Fileshare & Media Service]
+        fileshare-transcoder[fileshare-transcoder - Media Transcoding Worker]
+        clamav[clamav - Antivirus Scanning Engine]
 
-        %% Databases
+        %% Databases & Object Storage
         postgres[(postgres - Relational Database)]
         postgres-etmf[(postgres-etmf - Relational Database)]
         postgres-ctms[(postgres-ctms - Relational Database)]
         postgres-quality[(postgres-quality - Relational Database)]
         neo4j[(neo4j - Graph Database)]
+        minio[(minio - Object Storage MinIO)]
 
         %% SQLite file boundaries
         sqlite_eisf[(eisf.db - local SQLite)]
@@ -221,6 +261,7 @@ flowchart TD
         sqlite_safety[(safety.db - local SQLite)]
         sqlite_notifications[(notifications.db - local SQLite)]
         sqlite_econsent[(econsent.db - local SQLite)]
+        sqlite_fileshare[(fileshare.db - local SQLite)]
     end
 
     %% Routing Flow
@@ -240,6 +281,7 @@ flowchart TD
     gateway --> safety
     gateway --> notifications
     gateway --> econsent
+    gateway --> fileshare
 
     %% Shared storage connections
     designer --> neo4j
@@ -256,6 +298,13 @@ flowchart TD
     safety --> sqlite_safety
     notifications --> sqlite_notifications
     econsent --> sqlite_econsent
+    fileshare --> sqlite_fileshare
+
+    %% Object Storage & Workers
+    fileshare --> minio
+    fileshare-transcoder --> minio
+    fileshare --> fileshare-transcoder
+    fileshare --> clamav
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications
@@ -263,27 +312,68 @@ flowchart TD
 
 ---
 
-## 3. Data Transformation Flow
+## 4. Digital Data Flow (DDF) Compilation & Execution Pipeline
 
 ```mermaid
 flowchart TD
-    A[Study Designer Authors Protocol] --> B[(Saved to Neo4j Graph - USDM)]
-    B --> C[DDF Event: "Study Published"]
-    C --> D[Transformer: USDM ──► ODM/XForm]
-    D --> E[(Provisioned into PostgreSQL EDC)]
+    A[Protocol Authoring: Designer Neo4j] -->|USDM v3/v4 Graph| B[DDF Ingestion & AST Parser]
+    B --> C[DDF Intermediate Representation - IR]
+    C --> D[XPath Rule Compiler]
+    D --> E[CDISC ODM XML & OpenRosa XForms]
+    E --> F[(PostgreSQL EDC Execution Engine)]
 
-    E --> F[eCOA Instrument Definition Assigned]
-    E --> G[Live Site Data Entry & Audit Log]
-
-    F --> H[Patient Completes ePRO Assessment - PWA]
-
-    G --> I[CDASH Extractor: SDTM Domains]
-    H --> I
-
-    I --> J[Analysis Derivation: ADaM Datasets]
-    J --> K[Serializer: CDISC Dataset-JSON 1.0]
-    K --> L{Validator: Conformance Verification}
-
-    L -->|If Valid| M[Log SUCCESS in BiostatExport]
-    L -->|If Invalid| N[Log FAILED & Raise HTTP 422]
+    F --> G[Dynamic Subject Schema Projection]
+    G --> H[Site CRC / Subject eCRF Entry]
+    H --> I[Real-Time Edit Checks & GxP Audit Log]
+    I --> J[Dataset-JSON Serializer: SDTM & ADaM]
+    J --> K{Validation Sentinel Gate}
+    K -->|Valid| L[Commit Biostatistical Export Snapshot]
+    K -->|Invalid| M[Log Discrepancy Query & Block Export]
 ```
+
+---
+
+## 5. Security Architecture & 21 CFR Part 11 Compliance
+
+Cadence enforces rigorous regulatory controls across all transactions:
+
+1. **Centralized OIDC RBAC**: Keycloak validates JWT tokens, enforcing fine-grained persona permissions (`sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`).
+2. **HMAC-SHA256 Inter-Service Gateway Signatures**: Downstream services reject unauthenticated internal requests lacking valid `X-Gateway-Signature` headers.
+3. **60-Second Signature Step-Up Re-Authentication**: High-stakes mutations (PI batch sign-offs, subject randomization, unblinding) require re-entering password + TOTP to receive a short-lived `sig_token`.
+4. **Monotonic SHA-256 Audit Chaining**: Every mutating transaction records `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic hash digest chained to its predecessor.
+5. **Strict Boolean Filters (E712 / EF Core)**: Prevents SQL emission discrepancies on nullable boolean columns via `.is_(True)` / `.is_(False)` in legacy Python and strongly-typed predicate evaluations in EF Core 10.
+
+---
+
+## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233 / ADR-2234)
+
+Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), Cadence is executing a clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
+
+### A. Architectural Pillars
+1. **Single-Assembly Clean Architecture**: Each microservice is organized into internal namespace layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) avoiding multi-assembly compilation bloat while enforcing strict directional dependencies.
+2. **ASP.NET Core 10 Minimal APIs**: High-performance endpoint groups (`app.MapGroup(...)`) using `IEndpointFilter` for cross-cutting GxP security, HMAC signature verification, and correlation context propagation.
+3. **Entity Framework Core 10 + GxP Interceptor**: PostgreSQL persistence with compiled models, mandatory `.AsNoTracking()` for read queries, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing for immutable 21 CFR Part 11 audit trails.
+4. **Transactional Outbox & Event Spine**: MassTransit with PostgreSQL transactional outbox guaranteeing atomic database state commits and outbound domain events.
+5. **Cross-Service Typed Contracts (`Cadence.Contracts`)**: Strongly-typed DTO records and `IHttpClientFactory` typed clients configured with `Polly` exponential backoff and circuit breaker pipelines.
+6. **Architecture Sentinels (`ArchUnitNET`)**: Automated tests in `tests/Cadence.ArchitectureTests.csproj` asserting domain purity and mandatory `IGxPAuditable` implementation at build time.
+7. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
+8. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
+9. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, `Result<TValue, DomainError>` monads, and `System.Text.Json` source generator contexts.
+10. **Interactive Developer Wizards**: Cross-platform wizards for onboarding (`setup_dotnet_wizard`), scaffolding (`migrate_service_wizard`), and decommissioning legacy Python (`decommission_service_wizard`).
+11. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+
+### B. Microservice Port & Architecture Blueprint
+
+| Service | .NET 10 Host Project | Port | Primary Datastore | Target Migration Phase |
+| :--- | :--- | :--- | :--- | :--- |
+| **API Gateway** | `Cadence.Apps.Gateway` | `8000` | HMAC Router / OIDC | Phase 1 (Tracer Bullet) |
+| **Protocol Designer** | `Cadence.Apps.Designer` | `8001` | Neo4j (USDM v3/v4) | Phase 1 (Tracer Bullet) |
+| **EDC Execution** | `Cadence.Apps.Execution` | `8002` | PostgreSQL (EF Core 10) | Phase 1 (Tracer Bullet) |
+| **eTMF** | `Cadence.Apps.Etmf` | `8003` | PostgreSQL + S3/MinIO | Phase 2 (Operations) |
+| **Interoperability** | `Cadence.Apps.Interop` | `8004` | PostgreSQL (FHIR/ODM) | Phase 3 (Integrations) |
+| **Quality & CAPA** | `Cadence.Apps.Quality` | `8005` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+| **Notifications** | `Cadence.Apps.Notifications` | `8006` | PostgreSQL / SMTP | Phase 3 (Integrations) |
+| **CTMS** | `Cadence.Apps.Ctms` | `8007` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+| **Safety & PV** | `Cadence.Apps.Safety` | `8008` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+
+

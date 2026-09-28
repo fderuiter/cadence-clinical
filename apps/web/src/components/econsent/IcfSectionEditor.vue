@@ -79,9 +79,18 @@
       >
         🏷️ Glossary Term
       </button>
+      <button
+        type="button"
+        class="toolbar-btn readability-btn"
+        title="Harmonize Readability & Medical Jargon"
+        @click="showReadabilityDrawer = true"
+      >
+        📖 Readability Harmonizer
+      </button>
     </div>
 
     <!-- Main Contenteditable Editor -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       ref="editorRef"
       class="editor-canvas"
@@ -146,11 +155,22 @@
         >: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
+
+    <!-- Readability Assistant Split-Screen Drawer -->
+    <ReadabilityDrawer
+      :is-open="showReadabilityDrawer"
+      :text="rawSectionText"
+      :clause-id="section.id"
+      @close="showReadabilityDrawer = false"
+      @apply-substitution="onApplyReadabilitySubstitution"
+      @apply-all="onApplyAllReadability"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import ReadabilityDrawer from "./ReadabilityDrawer.vue";
 
 const props = defineProps({
   section: {
@@ -164,7 +184,68 @@ const emit = defineEmits(["update"]);
 const editorRef = ref(null);
 const localHtml = ref("");
 const showGlossaryModal = ref(false);
+const showReadabilityDrawer = ref(false);
 const selectedText = ref("");
+
+const rawSectionText = computed(() => {
+  const div = document.createElement("div");
+  div.innerHTML = localHtml.value;
+  return div.textContent || div.innerText || "";
+});
+
+const replaceTermInHtml = (html, originalTerm, suggestedTerm) => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  const regex = new RegExp(
+    `\\b${originalTerm.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`,
+    "gi"
+  );
+
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (regex.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.replace(regex, suggestedTerm);
+      }
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      node.nodeName !== "SCRIPT" &&
+      node.nodeName !== "STYLE"
+    ) {
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        walk(child);
+      }
+    }
+  };
+  walk(container);
+  return container.innerHTML;
+};
+
+const onApplyReadabilitySubstitution = ({ substitution }) => {
+  if (!substitution) return;
+  localHtml.value = replaceTermInHtml(
+    localHtml.value,
+    substitution.original_term,
+    substitution.suggested_term
+  );
+  if (editorRef.value) {
+    editorRef.value.innerHTML = localHtml.value;
+  }
+  handleInput();
+};
+
+const onApplyAllReadability = ({ substitutions }) => {
+  if (!substitutions || !substitutions.length) return;
+  let updated = localHtml.value;
+  substitutions.forEach((s) => {
+    updated = replaceTermInHtml(updated, s.original_term, s.suggested_term);
+  });
+  localHtml.value = updated;
+  if (editorRef.value) {
+    editorRef.value.innerHTML = localHtml.value;
+  }
+  handleInput();
+};
+
 const glossaryDefinition = ref("");
 let savedSelection = null;
 

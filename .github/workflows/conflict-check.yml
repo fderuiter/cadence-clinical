@@ -17,7 +17,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Use GITHUB_TOKEN for safe and always-valid checkout
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout trusted base branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
@@ -34,22 +34,22 @@ jobs:
           path: .github/trusted-base
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
 
@@ -92,5 +92,5 @@ jobs:
           if [ -f ".github/trusted-base/scripts/post_pr_comment.py" ]; then
             uv run python .github/trusted-base/scripts/post_pr_comment.py
           else
-            uv run python scripts/post_pr_comment.py
+            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
           fi

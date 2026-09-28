@@ -1,30 +1,60 @@
 ---
 name: prototype
-description: "Build a throwaway prototype to answer a design question. Use when the user wants to sanity-check whether a state model or logic feels right, or explore what a UI should look like."
+description: "Build a rapid prototype to validate a UI design, state machine, or API schema before full implementation. Use when exploring UI layouts in Vue 3 or proving backend data flows."
 license: MIT
 metadata:
-  author: Matt Pocock
-  version: "1.0"
+  author: Cadence Team
+  version: "2.0"
 ---
 
-# Prototype
+# Cadence Rapid Prototyping
 
-A prototype is **throwaway code that answers a question**. The question decides the shape.
+Build throwaway or exploratory prototypes to quickly answer clinical design questions, validate user flows across personas, or test complex state machines using Antigravity visual, scratch, and interactive tools.
 
-## Pick a branch
+## Antigravity Tool Execution Matrix
 
-Identify which question is being answered, using the user's prompt, the surrounding code, or by asking if the user is around:
+| Phase | Antigravity Tool | Invocation Pattern | Objective |
+| :--- | :--- | :--- | :--- |
+| **Visual Wireframing** | `generate_image` | `Prompt="Vue 3 clinical interface mockup for ... with semantic CSS tokens"`, `AspectRatio="16:9"` | Generate high-fidelity visual UI wireframe |
+| **Sandbox Subagent** | `invoke_subagent` | `Subagents=[{"Role": "Prototype Sandboxer", "Workspace": "branch"}]` | Launch isolated prototype exploration in branched workspace |
+| **Scratch Implementation**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/scratch/<proto_file>` | Write isolated, throwaway prototype code |
+| **Prototype Execution**| `run_command` | `CommandLine="uv run python <scratch_script>"`, `WaitMsBeforeAsync=5000` | Execute prototype in ephemeral scratch space |
+| **User Feedback** | `ask_question` | `questions=[{"question": "Evaluate Prototype Approach", ...}]` | Solicit interactive feedback on layout/logic |
+| **Transition Plan** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/prototype_findings.md` | Emit structured findings artifact |
 
-- **"Does this logic / state model feel right?"** → [LOGIC.md](LOGIC.md). Build a single shareable HTML file (free-play buttons plus tabbed guided walkthroughs) that pushes the state machine through cases that are hard to reason about on paper, and that a non-developer can drive.
-- **"What should this look like?"** → [UI.md](UI.md). Generate several radically different UI variations on a single route, switchable via a URL search param and a floating bottom bar.
+---
 
-The two branches produce very different artifacts, so getting this wrong wastes the whole prototype. If the question is genuinely ambiguous and the user isn't reachable, default to whichever branch better matches the surrounding code (a backend module → logic; a page or component → UI) and state the assumption at the top of the prototype.
+## Prototyping Guidelines
 
-## Rules that apply to both
+### 1. Frontend Prototypes (`apps/web`)
+- Use existing Vue 3 components and design tokens from `apps/web/src/style.css` (`var(--primary)`, `var(--surface)`, `var(--border)`).
+- Never use Tailwind utility classes.
+- Ensure persona context switcher compatibility (`apps/web/src/stores/auth.ts`).
+- Generate visual mockups with `generate_image` before writing complex UI templates.
 
-1. **Throwaway from day one, and clearly marked as such.** Locate the prototype code close to where it will actually be used (next to the module or page it's prototyping for) so context is obvious, but name it so a casual reader can see it's a prototype, not production. For throwaway UI routes, obey whatever routing convention the project already uses; don't invent a new top-level structure.
-2. **Trivial to run.** A UI prototype starts from one command in the project's task runner: `pnpm <name>`, `python <path>`, `bun <path>`, etc. A logic demo is a single HTML file the user double-clicks. Either way, no thinking required to start it.
-3. **No persistence by default.** State lives in memory. Persistence is the thing the prototype is _checking_, not something it should depend on. If the question explicitly involves a database, hit a scratch DB or a local file with a clear "PROTOTYPE, wipe me" name.
-4. **Skip the polish.** No tests, no error handling beyond what makes the prototype _runnable_, no abstractions. The point is to learn something fast.
-5. **Surface the state.** After every action (logic) or on every variant switch (UI), print or render the full relevant state so the user can see what changed.
-6. **Capture it when done.** Fold any validated decision into the real code, then capture the prototype itself as a **primary source**: commit it to a throwaway branch, out of main, and leave a context pointer to that branch on the implementation issue. Capture the answer too (the verdict and the question it settled) in the issue or a commit. The main branch keeps only the validated decision.
+### 2. Backend Prototypes & Sandboxing (`apps/`)
+- When exploring risky or complex state mutations, dispatch a subagent with `Workspace: "branch"` to prevent polluting the main working branch.
+- Prototype domain logic using pure in-memory models (`packages.testing.fakes`) before adding database tables or migrations.
+- Save temporary exploratory scripts in `<appDataDir>/brain/<conversation-id>/scratch/`.
+- Test state transitions using ephemeral test cases (`uv run cadence test --fast`).
+
+### 3. Evaluate & Transition via `ask_question`
+- Record prototype findings in an Antigravity walkthrough artifact via `write_to_file`.
+- Solicit interactive feedback using `ask_question`:
+```json
+{
+  "questions": [
+    {
+      "question": "How should we proceed with the evaluated prototype?",
+      "options": [
+        "(Recommended) Graduate prototype into production slice using tdd and implement skills",
+        "Refactor prototype layout based on current feedback before implementing",
+        "Discard prototype as exploratory research and document findings in ADR"
+      ],
+      "is_multi_select": false
+    }
+  ]
+}
+```
+
+

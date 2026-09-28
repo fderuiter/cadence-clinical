@@ -26,22 +26,28 @@
     </div>
 
     <!-- Documents Data Table -->
-    <div class="table-responsive">
-      <table class="documents-table">
+    <div ref="containerRef" class="table-responsive">
+      <table
+        class="documents-table"
+        role="grid"
+        aria-label="Artifact Documents Registry"
+        :aria-rowcount="paginatedDocuments.length"
+        aria-colcount="7"
+      >
         <thead>
           <tr>
-            <th>Document Name</th>
-            <th>Taxonomy</th>
-            <th>Version</th>
-            <th>Status</th>
-            <th>Uploaded By</th>
-            <th>Uploaded At</th>
-            <th class="actions-column">Actions</th>
+            <th scope="col">Document Name</th>
+            <th scope="col">Taxonomy</th>
+            <th scope="col">Version</th>
+            <th scope="col">Status</th>
+            <th scope="col">Uploaded By</th>
+            <th scope="col">Uploaded At</th>
+            <th scope="col" class="actions-column">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="paginatedDocuments.length === 0">
-            <td colspan="7" class="empty-table-cell">
+            <td colspan="7" role="gridcell" class="empty-table-cell">
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
@@ -51,10 +57,10 @@
             class="document-row"
           >
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 0)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 0,
+                'cell-active': isCellActive(rIndex, 0),
               }"
               :data-row="rIndex"
               :data-col="0"
@@ -74,14 +80,14 @@
               >
             </td>
             <td
+              role="gridcell"
               :tabindex="
-                isEditing && activeRowIndex === rIndex && activeColIndex === 1
+                isEditing && isCellActive(rIndex, 1)
                   ? -1
-                  : 0
+                  : getCellTabindex(rIndex, 1)
               "
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 1,
+                'cell-active': isCellActive(rIndex, 1),
               }"
               :data-row="rIndex"
               :data-col="1"
@@ -90,11 +96,10 @@
               @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
             >
               <div
-                v-if="
-                  isEditing && activeRowIndex === rIndex && activeColIndex === 1
-                "
+                v-if="isEditing && isCellActive(rIndex, 1)"
                 class="inline-edit-container"
               >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select
                   ref="inlineSelectRef"
                   v-model="tempTaxonomyCode"
@@ -120,10 +125,10 @@
               </span>
             </td>
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 2)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 2,
+                'cell-active': isCellActive(rIndex, 2),
               }"
               :data-row="rIndex"
               :data-col="2"
@@ -133,10 +138,10 @@
               <span class="version-tag">v{{ doc.version_index }}.0</span>
             </td>
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 3)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 3,
+                'cell-active': isCellActive(rIndex, 3),
               }"
               :data-row="rIndex"
               :data-col="3"
@@ -148,10 +153,10 @@
               </span>
             </td>
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 4)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 4,
+                'cell-active': isCellActive(rIndex, 4),
               }"
               :data-row="rIndex"
               :data-col="4"
@@ -163,10 +168,10 @@
               </div>
             </td>
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 5)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 5,
+                'cell-active': isCellActive(rIndex, 5),
               }"
               :data-row="rIndex"
               :data-col="5"
@@ -177,10 +182,10 @@
               {{ doc.formattedCreatedAt }}
             </td>
             <td
-              :tabindex="0"
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 6)"
               :class="{
-                'cell-active':
-                  activeRowIndex === rIndex && activeColIndex === 6,
+                'cell-active': isCellActive(rIndex, 6),
               }"
               :data-row="rIndex"
               :data-col="6"
@@ -188,16 +193,26 @@
               @click="selectCell(rIndex, 6)"
               @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
             >
-              <button
-                class="btn btn-sm btn-outline-primary"
-                title="View Watermarked PDF Preview"
-                :aria-label="
-                  'Preview secure watermarked document ' + doc.filename
-                "
-                @click="$emit('preview', doc)"
-              >
-                👁️ Preview
-              </button>
+              <div style="display: flex; gap: 4px; justify-content: flex-end">
+                <button
+                  class="btn btn-sm btn-outline-secondary btn-inspect-doc"
+                  title="Inspect 21 CFR Part 11 Metadata"
+                  :aria-label="'Inspect metadata for ' + doc.filename"
+                  @click.stop="$emit('inspect', doc)"
+                >
+                  📋 Inspect
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-primary btn-preview-doc"
+                  title="View Watermarked PDF Preview"
+                  :aria-label="
+                    'Preview secure watermarked document ' + doc.filename
+                  "
+                  @click.stop="$emit('preview', doc)"
+                >
+                  👁️ Preview
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -298,6 +313,7 @@
             @keydown.enter="triggerFileSelect"
             @keydown.space.prevent="triggerFileSelect"
           >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               ref="fileInputRef"
               type="file"
@@ -325,7 +341,9 @@
           <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Target Study ID</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="studyId"
                   type="text"
@@ -334,7 +352,9 @@
                 />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Site ID (Optional)</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="siteId"
                   type="text"
@@ -346,7 +366,9 @@
 
             <div class="form-group-row">
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>DIA TMF Artifact Code</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="artifactCode"
                   type="text"
@@ -355,7 +377,9 @@
                 />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Artifact Type (Label)</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="artifactType"
                   type="text"
@@ -367,9 +391,11 @@
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="required-label">
                 Reason for Change / Upload Justification
               </label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="reasonForChange"
                 rows="3"
@@ -414,6 +440,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
+import { use2DGrid } from "../../composables/use2DGrid";
 
 const props = defineProps({
   documents: {
@@ -422,16 +449,37 @@ const props = defineProps({
   },
 });
 
-defineEmits(["preview"]);
+defineEmits(["preview", "inspect"]);
 
 const etmfStore = useEtmfStore();
 
 // 2D Interactive Grid selection & editing state
-const activeRowIndex = ref(-1);
-const activeColIndex = ref(-1);
-const isEditing = ref(false);
+const containerRef = ref(null);
 const tempTaxonomyCode = ref("");
 const inlineSelectRef = ref(null);
+
+const grid = use2DGrid(() => paginatedDocuments.value.length, 7, {
+  containerRef,
+  initialRow: 0,
+  initialCol: 0,
+  onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
+  onCellAction: (rIndex, cIndex, doc, _event) => {
+    if (cIndex === 1) {
+      startEditing(rIndex, doc);
+    }
+  },
+});
+
+const {
+  activeRowIndex,
+  activeColIndex,
+  isEditing,
+  isCellActive,
+  getCellTabindex,
+  selectCell,
+  handleCellKeyDown,
+  exitEditing,
+} = grid;
 
 const taxonomyOptions = computed(() => {
   const allNodes = Object.values(etmfStore.folderLookup);
@@ -454,27 +502,9 @@ function getZoneAndSectionFromCode(code) {
   return { zone, section };
 }
 
-function selectCell(rIndex, cIndex) {
-  activeRowIndex.value = rIndex;
-  activeColIndex.value = cIndex;
-  focusActiveCell();
-}
-
-async function focusActiveCell() {
-  await nextTick();
-  const activeEl = document.querySelector(
-    `.documents-table td[data-row="${activeRowIndex.value}"][data-col="${activeColIndex.value}"]`
-  );
-  if (activeEl && typeof activeEl.focus === "function") {
-    activeEl.focus();
-  }
-}
-
 async function startEditing(rIndex, doc) {
-  activeColIndex.value = 1;
-  activeRowIndex.value = rIndex;
+  grid.startEditing(rIndex, 1);
   tempTaxonomyCode.value = doc.artifact_code;
-  isEditing.value = true;
   await nextTick();
   if (inlineSelectRef.value) {
     const el = Array.isArray(inlineSelectRef.value)
@@ -489,8 +519,7 @@ async function startEditing(rIndex, doc) {
 function cancelEditing() {
   setTimeout(() => {
     if (isEditing.value) {
-      isEditing.value = false;
-      focusActiveCell();
+      exitEditing();
     }
   }, 150);
 }
@@ -525,8 +554,7 @@ async function commitTaxonomy(doc) {
   } catch (err) {
     console.error("Failed to tag/classify document:", err);
   } finally {
-    isEditing.value = false;
-    focusActiveCell();
+    exitEditing();
   }
 }
 
@@ -578,59 +606,6 @@ function copyActiveCellValue(doc) {
       console.error("Fallback copy failed:", err);
     }
     document.body.removeChild(textarea);
-  }
-}
-
-function handleCellKeyDown(event, rIndex, cIndex, doc) {
-  if (
-    isEditing.value &&
-    activeRowIndex.value === rIndex &&
-    activeColIndex.value === 1
-  ) {
-    return;
-  }
-
-  const maxRows = paginatedDocuments.value.length;
-  const maxCols = 7;
-
-  let handled = false;
-
-  if (
-    (event.ctrlKey || event.metaKey) &&
-    (event.key === "c" || event.key === "C")
-  ) {
-    handled = true;
-    copyActiveCellValue(doc);
-  } else if (event.key === "ArrowUp") {
-    if (activeRowIndex.value > 0) {
-      activeRowIndex.value--;
-      handled = true;
-    }
-  } else if (event.key === "ArrowDown") {
-    if (activeRowIndex.value < maxRows - 1) {
-      activeRowIndex.value++;
-      handled = true;
-    }
-  } else if (event.key === "ArrowLeft") {
-    if (activeColIndex.value > 0) {
-      activeColIndex.value--;
-      handled = true;
-    }
-  } else if (event.key === "ArrowRight") {
-    if (activeColIndex.value < maxCols - 1) {
-      activeColIndex.value++;
-      handled = true;
-    }
-  } else if (event.key === "Enter") {
-    if (cIndex === 1) {
-      handled = true;
-      startEditing(rIndex, doc);
-    }
-  }
-
-  if (handled) {
-    event.preventDefault();
-    focusActiveCell();
   }
 }
 

@@ -1,4 +1,4 @@
-// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY.
+// This file is auto-generated from USDM models and OpenAPI specs. DO NOT EDIT DIRECTLY.
 import { z } from "zod";
 
 export const CodeSchema = z.object({
@@ -39,7 +39,7 @@ export const BiomedicalConceptPropertySchema = z.object({
   mandatory: z.boolean().default(false),
   range: z.string().nullable().optional(),
   options: z.array(z.string()).default([]),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()),
   gridSpan: z.number().int().default(12),
   unit: z.string().nullable().optional(),
 });
@@ -71,7 +71,7 @@ export const ActivitySchema = z.object({
   biomedicalConcepts: z.array(BiomedicalConceptSchema).default([]),
   assignedVisitNames: z.array(z.string()).default([]),
   assignedEncounterIds: z.array(z.string()).default([]),
-  definedProcedures: z.array(z.record(z.any())).default([]),
+  definedProcedures: z.array(z.record(z.string(), z.any())).default([]),
 });
 export type Activity = z.infer<typeof ActivitySchema>;
 
@@ -148,7 +148,7 @@ export type USDMStudy = z.infer<typeof USDMStudySchema>;
 
 export * from "./graph-validator.js";
 
-export const EPROAnswersSchema = z.record(z.any()).superRefine((answers, ctx) => {
+export const EPROAnswersSchema = z.record(z.string(), z.any()).superRefine((answers, ctx) => {
   if (answers == null || typeof answers !== "object") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

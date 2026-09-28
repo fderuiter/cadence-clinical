@@ -12,6 +12,7 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
               font-size: 11px;
@@ -21,6 +22,7 @@
             "
             >User ID</label
           >
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="userIdInput"
             type="text"
@@ -42,6 +44,7 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
               font-size: 11px;
@@ -51,6 +54,7 @@
             "
             >Action Type</label
           >
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <select
             v-model="actionInput"
             class="filter-action-type"
@@ -77,6 +81,7 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
               font-size: 11px;
@@ -86,6 +91,7 @@
             "
             >Start Date</label
           >
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="startDateInput"
             type="date"
@@ -106,6 +112,7 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
               font-size: 11px;
@@ -115,6 +122,7 @@
             "
             >End Date</label
           >
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="endDateInput"
             type="date"

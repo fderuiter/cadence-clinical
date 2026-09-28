@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="codingStore.impactAnalysis.isOpen"
     class="drawer-overlay"
@@ -80,7 +82,7 @@
           v-if="codingStore.impactAnalysis.isLoading"
           class="analysis-loading-state"
         >
-          <div class="spinner"></div>
+          <div class="spinner" />
           <h4>Running Up-Versioning Delta Engine...</h4>
           <p>
             Scanning all active coded assignments against target dictionary
@@ -153,29 +155,29 @@
                 class="delta-seg seg-unchanged"
                 :style="{ width: unchangedPct + '%' }"
                 :title="`Unchanged: ${metrics.unchanged} (${unchangedPct}%)`"
-              ></div>
+              />
               <div
                 class="delta-seg seg-reclassified"
                 :style="{ width: reclassifiedPct + '%' }"
                 :title="`Reclassified: ${metrics.reclassified} (${reclassifiedPct}%)`"
-              ></div>
+              />
               <div
                 class="delta-seg seg-deprecated"
                 :style="{ width: deprecatedPct + '%' }"
                 :title="`Deprecated: ${metrics.deprecated} (${deprecatedPct}%)`"
-              ></div>
+              />
             </div>
             <div class="delta-legend">
               <div class="legend-item">
-                <span class="legend-dot dot-unchanged"></span>
+                <span class="legend-dot dot-unchanged" />
                 <span>Unchanged ({{ unchangedPct }}%)</span>
               </div>
               <div class="legend-item">
-                <span class="legend-dot dot-reclassified"></span>
+                <span class="legend-dot dot-reclassified" />
                 <span>Reclassified ({{ reclassifiedPct }}%)</span>
               </div>
               <div class="legend-item">
-                <span class="legend-dot dot-deprecated"></span>
+                <span class="legend-dot dot-deprecated" />
                 <span>Deprecated ({{ deprecatedPct }}%)</span>
               </div>
             </div>

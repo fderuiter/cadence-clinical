@@ -41,6 +41,29 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (
+              id.includes("vue") ||
+              id.includes("vue-router") ||
+              id.includes("pinia")
+            ) {
+              return "vendor-vue";
+            }
+            if (id.includes("hls.js")) {
+              return "vendor-media";
+            }
+            if (id.includes("keycloak-js")) {
+              return "vendor-auth";
+            }
+            return "vendor";
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
   },
   test: {
     environment: "jsdom",

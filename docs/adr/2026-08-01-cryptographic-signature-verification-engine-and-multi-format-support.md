@@ -20,12 +20,26 @@ To satisfy FDA 21 CFR Part 11 and clinical compliance requirements (PRD-SYS-001)
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Build an integrated multi-format Cryptographic Signature Verification Engine in `packages/security/crypto_verifier.py` with support for RSA, ECDSA, and HMAC, XML/JSON parsing, and canonicalization.
-2. **Option B:** Restrict the platform to simple symmetric HMAC signatures, requiring external services to perform asymmetric public-key certificate verification.
+### Option 1: **Option A (Selected):** Build an integrated multi-format Cryptographic Signature Verification Engine in `packages/security/crypto_verifier.py` with support for RSA, ECDSA, and HMAC, XML/JSON parsing, and canonicalization.
+
+- **Overview:** **Option A (Selected):** Build an integrated multi-format Cryptographic Signature Verification Engine in `packages/security/crypto_verifier.py` with support for RSA, ECDSA, and HMAC, XML/JSON parsing, and canonicalization.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B:** Restrict the platform to simple symmetric HMAC signatures, requiring external services to perform asymmetric public-key certificate verification.
+
+- **Overview:** **Option B:** Restrict the platform to simple symmetric HMAC signatures, requiring external services to perform asymmetric public-key certificate verification.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option: Option A** because it natively integrates asymmetric and symmetric verification within the security package, satisfying PRD-SYS-001. It allows direct, offline, and high-performance verification of clinical documents, audit trails, and batch signatures across multiple formats (JSON, XML, PEM, Hex) while ensuring proper GxP-compliant signature isolation and payload canonicalization.
+**- **Chosen Option:** Option A** because it natively integrates asymmetric and symmetric verification within the security package, satisfying PRD-SYS-001. It allows direct, offline, and high-performance verification of clinical documents, audit trails, and batch signatures across multiple formats (JSON, XML, PEM, Hex) while ensuring proper GxP-compliant signature isolation and payload canonicalization.
 
 ## 5. Consequences & Trade-offs
 

@@ -25,19 +25,19 @@ This decision implements requirements under Trace-8.
 ### Option 1: Client-side Validation Only
 
 - **Overview:** Enforce state transitions and stratification factor locking in UI code or api views.
-- **Pros:**
+- ***Pros:***
   - ✅ Simplifies database schema and model logic.
-- **Cons:**
+- ***Cons:***
   - ❌ Susceptible to direct API abuse or scripting database updates bypass.
   - ❌ Does not guarantee database-level GxP compliance.
 
 ### Option 2: Database-level Immutability Guards & Central State Machine (Selected)
 
 - **Overview:** Build pure-Python transition guards on the SQLAlchemy model level with custom validators. Enforce a strict state machine (`SubjectState`) and automated `@validates` hooks in the `ClinicalSubject` model.
-- **Pros:**
+- ***Pros:***
   - ✅ Guaranteed database-level compliance and immutability.
   - ✅ Automatic triggers and model validation catch direct mutations securely.
-- **Cons:**
+- ***Cons:***
   - ❌ Slightly increases SQL model logic complexity.
 
 ## 4. Decision Outcome

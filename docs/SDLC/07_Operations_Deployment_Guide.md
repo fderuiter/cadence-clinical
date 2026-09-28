@@ -156,7 +156,7 @@ Under **IEC 62304 Section 8.1.1** (Software configuration management) and **8.2*
 
 ### Sign-off Checklist Criteria
 
-1. **Traceability Matrix Approved (QA-VAL-01):** Every feature requirement, bug fix, and architectural shift must be traceably mapped to corresponding tests. View the active, automatically generated **[Requirements Traceability Matrix](Requirements_Traceability_Matrix.md)**.
+1. **Traceability Matrix Approved (QA-PRD-VAL-001):** Every feature requirement, bug fix, and architectural shift must be traceably mapped to corresponding tests. View the active, automatically generated **[Requirements Traceability Matrix](Requirements_Traceability_Matrix.md)**.
 2. **Zero Known Critical Vulnerabilities:** Security scan must report 0 CVEs (Critical/High) in production container layers.
 3. **90% Unit Test & Integration Coverage:** Code coverage in python apps (`gateway`, `designer`, `execution`) must not drop below 80% (Cadence enforces 80% minimum, target is 90% for clinical calculations). See the latest **[Qualification Execution Report](IQ_OQ_PQ_Execution_Report.md)** for detailed test outcomes.
 4. **Sign-off Protocol:**

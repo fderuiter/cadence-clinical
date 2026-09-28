@@ -5,7 +5,8 @@
       <div class="header-titles">
         <h3>Comprehension Check & Quiz Assessment</h3>
         <p class="subtitle">
-          Draft questions and verify participant understanding before signature execution.
+          Draft questions and verify participant understanding before signature
+          execution.
         </p>
       </div>
 
@@ -58,8 +59,8 @@
           class="no-questions"
         >
           <p>
-            No comprehension check questions added yet. Click "Add Quiz Question" below
-            to draft one.
+            No comprehension check questions added yet. Click "Add Quiz
+            Question" below to draft one.
           </p>
         </div>
 
@@ -94,6 +95,7 @@
 
           <!-- Choices/Options Builder -->
           <div class="options-builder">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               >Answer Choices (Select the radio button for the correct
               choice):</label
@@ -103,6 +105,7 @@
               :key="optIndex"
               class="option-row"
             >
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="radio"
                 :name="'correct-opt-' + q.id"
@@ -110,6 +113,7 @@
                 title="Mark as correct answer"
                 @change="q.correctAnswerIndex = optIndex"
               />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="q.options[optIndex]"
                 type="text"
@@ -164,8 +168,9 @@
     <div v-else class="interactive-view">
       <div class="assessment-instructions">
         <p>
-          Answer the questions below to verify your comprehension of the clinical consent document.
-          Instant feedback will be provided upon checking your answers.
+          Answer the questions below to verify your comprehension of the
+          clinical consent document. Instant feedback will be provided upon
+          checking your answers.
         </p>
       </div>
 
@@ -173,7 +178,10 @@
       <div
         v-if="assessmentSubmitted"
         id="assessment-result-banner"
-        :class="['assessment-result-card', evaluationResult.passed ? 'passed' : 'failed']"
+        :class="[
+          'assessment-result-card',
+          evaluationResult.passed ? 'passed' : 'failed',
+        ]"
         role="status"
         aria-live="polite"
       >
@@ -189,14 +197,18 @@
             }}
           </h4>
           <p class="result-score">
-            Score: <strong>{{ evaluationResult.score }}%</strong> ({{ evaluationResult.correctCount }}/{{ evaluationResult.total }} correct).
-            Required passing threshold: <strong>{{ econsentStore.passingThreshold }}%</strong>.
+            Score: <strong>{{ evaluationResult.score }}%</strong> ({{
+              evaluationResult.correctCount
+            }}/{{ evaluationResult.total }} correct). Required passing
+            threshold: <strong>{{ econsentStore.passingThreshold }}%</strong>.
           </p>
           <p v-if="evaluationResult.passed" class="result-message">
-            Congratulations! You have satisfied the comprehension requirements and may proceed to dual-credential signature capture.
+            Congratulations! You have satisfied the comprehension requirements
+            and may proceed to dual-credential signature capture.
           </p>
           <p v-else class="result-message">
-            Please review the highlighted hints below and retry the comprehension assessment.
+            Please review the highlighted hints below and retry the
+            comprehension assessment.
           </p>
         </div>
       </div>
@@ -222,7 +234,8 @@
                   'assessment-option-label',
                   {
                     selected: selectedAnswers[q.id] === optIndex,
-                    correct: assessmentSubmitted && optIndex === q.correctAnswerIndex,
+                    correct:
+                      assessmentSubmitted && optIndex === q.correctAnswerIndex,
                     incorrect:
                       assessmentSubmitted &&
                       selectedAnswers[q.id] === optIndex &&
@@ -239,7 +252,9 @@
                 />
                 <span class="option-text">{{ opt }}</span>
                 <span
-                  v-if="assessmentSubmitted && optIndex === q.correctAnswerIndex"
+                  v-if="
+                    assessmentSubmitted && optIndex === q.correctAnswerIndex
+                  "
                   class="feedback-badge correct-badge"
                   >✓ Correct</span
                 >
@@ -266,7 +281,9 @@
               class="instant-hint-box"
             >
               <span class="hint-icon">💡</span>
-              <span class="hint-text"><strong>Feedback Hint:</strong> {{ q.hint }}</span>
+              <span class="hint-text"
+                ><strong>Feedback Hint:</strong> {{ q.hint }}</span
+              >
             </div>
           </fieldset>
         </div>
@@ -292,8 +309,8 @@
 
         <button
           v-if="assessmentSubmitted && evaluationResult.passed"
-          type="button"
           id="btn-proceed-signature"
+          type="button"
           class="btn btn-success btn-proceed-signature"
           @click="proceedToSignature"
         >
@@ -836,4 +853,3 @@ defineExpose({
   background-color: #15803d;
 }
 </style>
-

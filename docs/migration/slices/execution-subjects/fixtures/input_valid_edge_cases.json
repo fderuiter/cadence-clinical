@@ -1,0 +1,190 @@
+{
+  "$schema_note": "Golden-master fixture: valid-but-boundary inputs for the execution-subjects slice. These are inputs the legacy system accepts without error, but whose handling depends on one of the dynamic-Python-trap or field-merge/precedence rules documented in 01_spec.md §2.2 Rule 9 and §3. Pair each entry with the same scenario_id in output_expected_nominal.json.",
+  "scenarios": [
+    {
+      "scenario_id": "EDGE-001",
+      "spec_ref": "01_spec.md §3 (`if not site_id:` trap)",
+      "description": "Subject creation with site_id as an explicit empty string, not null/omitted. check_site_compliance_for_enrollment's `if not site_id: return True` treats \"\" identically to None, bypassing the site-compliance gate entirely.",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects",
+      "body": {
+        "subject_id": "SUBJ-EDGE-001",
+        "study_id": "STUDY-001",
+        "site_id": "",
+        "demographics": null
+      }
+    },
+    {
+      "scenario_id": "EDGE-002",
+      "spec_ref": "01_spec.md §2.2 Rule 9 (demographics dual-type acceptance)",
+      "description": "enroll_subject called with demographics already supplied as a pre-encrypted ciphertext string rather than a plaintext dict; the string branch stores it unchanged (no double-encryption).",
+      "kind": "service",
+      "service": "SubjectLifecycleService",
+      "method": "enroll_subject",
+      "args": {
+        "study_id": "STUDY-002",
+        "site_id": "SITE-101",
+        "subject_id": "SUBJ-EDGE-002",
+        "demographics": "gAAAAABh...pre-encrypted-fernet-ciphertext-placeholder...==",
+        "user_id": "crc.user",
+        "reason": "Migrated from legacy paper record"
+      },
+      "expect_no_reencryption": true
+    },
+    {
+      "scenario_id": "EDGE-003",
+      "spec_ref": "01_spec.md §2.2 Rule 9 (consent field-merge precedence: protocol_version)",
+      "description": "Re-submitting consent for an existing (subject_id, study_id, version_index) with protocol_version omitted (None) must NOT null out the previously-stored protocol_version.",
+      "kind": "service",
+      "service": "SubjectLifecycleService",
+      "method": "record_consent",
+      "args": {
+        "subject_id": "SUBJ-EDGE-003",
+        "study_id": "STUDY-003",
+        "site_id": "SITE-101",
+        "version_tag": "v1.1",
+        "version_index": 1,
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": false,
+        "protocol_version": null,
+        "user_id": "crc.user",
+        "reason": "Correcting version_tag typo, same protocol version"
+      },
+      "preconditions": {
+        "existing_consent": {
+          "subject_id": "SUBJ-EDGE-003",
+          "study_id": "STUDY-003",
+          "version_index": 1,
+          "version_tag": "v1.0",
+          "protocol_version": "2024-Amendment-3",
+          "icf_signed_date": "2026-01-10T00:00:00Z"
+        }
+      }
+    },
+    {
+      "scenario_id": "EDGE-004",
+      "spec_ref": "01_spec.md §2.2 Rule 9 (same-state no-op)",
+      "description": "PATCH .../state re-submitting the subject's current (terminal) state WITHDRAWN -> WITHDRAWN succeeds silently rather than raising InvalidStateTransitionError, because guard_subject_transition treats curr == tgt as an immediate no-op checked before the terminal-state rule.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-EDGE-004/state",
+      "headers": {
+        "X-Change-Reason": "Idempotent re-submission of withdrawal status"
+      },
+      "body": { "status": "WITHDRAWN" },
+      "preconditions": {
+        "subject": { "subject_id": "SUBJ-EDGE-004", "status": "WITHDRAWN" }
+      }
+    },
+    {
+      "scenario_id": "EDGE-005",
+      "spec_ref": "01_spec.md §2.2 Rule 9 (consent field-merge precedence: icf_signed_date)",
+      "description": "Re-submitting consent for an existing row that already has an icf_signed_date, with the new payload omitting icf_signed_date, must preserve the existing date rather than overwrite it with 'now'.",
+      "kind": "service",
+      "service": "SubjectLifecycleService",
+      "method": "record_consent",
+      "args": {
+        "subject_id": "SUBJ-EDGE-005",
+        "study_id": "STUDY-005",
+        "site_id": "SITE-101",
+        "version_tag": "v1.0",
+        "version_index": 1,
+        "icf_signed": true,
+        "icf_signed_date": null,
+        "requires_reconsent": false,
+        "is_paper_override": false,
+        "user_id": "crc.user",
+        "reason": "Correcting is_paper_override flag only"
+      },
+      "preconditions": {
+        "existing_consent": {
+          "subject_id": "SUBJ-EDGE-005",
+          "study_id": "STUDY-005",
+          "version_index": 1,
+          "icf_signed_date": "2026-02-01T09:30:00Z"
+        }
+      }
+    },
+    {
+      "scenario_id": "EDGE-006-A",
+      "spec_ref": "01_spec.md §2.2 Rule 7 (age calculation, exact-boundary date)",
+      "description": "calculate_age where observation_date equals birthdate exactly -> age is exactly 0.0, not None and not negative.",
+      "kind": "service",
+      "service": "demographics",
+      "method": "calculate_age",
+      "args": { "birthdate": "2000-06-15", "observation_date": "2000-06-15" }
+    },
+    {
+      "scenario_id": "EDGE-006-B",
+      "spec_ref": "01_spec.md §2.2 Rule 7 (age calculation, leap-day birthdate)",
+      "description": "calculate_age across a leap-day birthdate, verifying the /365.25 approximation (not calendar-accurate Period math) is what parity requires.",
+      "kind": "service",
+      "service": "demographics",
+      "method": "calculate_age",
+      "args": { "birthdate": "2000-02-29", "observation_date": "2024-02-29" }
+    },
+    {
+      "scenario_id": "EDGE-006-C",
+      "spec_ref": "01_spec.md §2.2 Rule 7 (_parse_date_string fallback split)",
+      "description": "calculate_age with a birthdate string in 'YYYY-MM-DD HH:MM:SS' form (not valid ISO-8601 fromisoformat input without a 'T') -> _parse_date_string's except-and-split fallback extracts just the date portion instead of returning None.",
+      "kind": "service",
+      "service": "demographics",
+      "method": "calculate_age",
+      "args": {
+        "birthdate": "1990-05-15 00:00:00",
+        "observation_date": "2026-05-15"
+      }
+    },
+    {
+      "scenario_id": "EDGE-007",
+      "spec_ref": "01_spec.md §2.2 Rule 7 (normalize_gender, preserve_custom=True)",
+      "description": "normalize_gender with an unmapped custom value and preserve_custom=True returns the trimmed/upper-cased input verbatim instead of defaulting to \"U\".",
+      "kind": "service",
+      "service": "demographics",
+      "method": "normalize_gender",
+      "args": { "gender_str": "  non-binary  ", "preserve_custom": true }
+    },
+    {
+      "scenario_id": "EDGE-008",
+      "spec_ref": "01_spec.md §2.2 Rule 9 (dual lookup by internal id or domain code)",
+      "description": "advance_subject_state called with the subject's internal UUID primary key (not its domain subject_id code) as the identifier -> resolves via get_by_id on the first lookup attempt.",
+      "kind": "service",
+      "service": "SubjectLifecycleService",
+      "method": "advance_subject_state",
+      "args": {
+        "subject_id": "<internal-uuid-of-SUBJ-EDGE-008>",
+        "target_state": "ENROLLED",
+        "user_id": "pi.user",
+        "reason": "Eligibility confirmed"
+      },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-EDGE-008",
+          "status": "SCREENING",
+          "site_id": null
+        }
+      }
+    },
+    {
+      "scenario_id": "EDGE-010",
+      "spec_ref": "01_spec.md §2.2 Rule 9 addendum (SubjectResponse under-population)",
+      "description": "A successful state-update PATCH to ENROLLED returns a SubjectResponse whose `status` field is the literal default \"SCREENING\" and whose `active_protocol_version` is the literal default \"1.0.0\", regardless of the subject's real post-transition values, because update_subject_state_endpoint's response constructor omits those fields. This is a legacy quirk being captured verbatim for parity, not an expected fixture typo.",
+      "kind": "http",
+      "method": "PATCH",
+      "route": "/api/v1/execution/subjects/SUBJ-EDGE-010/state",
+      "headers": { "X-Change-Reason": "Eligibility confirmed" },
+      "body": { "status": "ENROLLED" },
+      "preconditions": {
+        "subject": {
+          "subject_id": "SUBJ-EDGE-010",
+          "study_id": "STUDY-001",
+          "site_id": null,
+          "status": "SCREENING",
+          "active_protocol_version": "2.1.0"
+        }
+      }
+    }
+  ]
+}

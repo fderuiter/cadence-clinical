@@ -1,18 +1,87 @@
-/**
- * AST Parser for front-end JS/TS files.
- * Uses @babel/parser strictly on AST nodes to extract structures and configurations,
- * completely avoiding false positives from comments or UI strings.
- *
- * @req:PRD-SYS-001
- */
-
-const parser = require("@babel/parser");
 const fs = require("fs");
 const path = require("path");
 
+let parser = null;
+try {
+  parser = require("@babel/parser");
+} catch (e) {
+  try {
+    const webNodeModules = path.resolve(
+      __dirname,
+      "../apps/web/node_modules/@babel/parser"
+    );
+    parser = require(webNodeModules);
+  } catch (e2) {
+    parser = null;
+  }
+}
+
+function parseFileFallback(code) {
+  const interfaces = {};
+  const objects = {};
+
+  // Extract interfaces via regex
+  const interfaceRegex = /export\s+interface\s+(\w+)\s*\{([^}]+)\}/g;
+  let match;
+  while ((match = interfaceRegex.exec(code)) !== null) {
+    const name = match[1];
+    const body = match[2];
+    interfaces[name] = {};
+    const propRegex = /(\w+)\s*:\s*([^;]+);/g;
+    let propMatch;
+    while ((propMatch = propRegex.exec(body)) !== null) {
+      interfaces[name][propMatch[1]] = propMatch[2].trim();
+    }
+  }
+
+  // Extract object expressions assigned to variables
+  const objectRegex = /(?:const|let|var)\s+(\w+)\s*=\s*\{([^}]+)\}/g;
+  while ((match = objectRegex.exec(code)) !== null) {
+    const varName = match[1];
+    const body = match[2];
+    objects[varName] = {};
+    const propRegex = /(\w+)\s*:\s*([^,\n}]+)/g;
+    let propMatch;
+    while ((propMatch = propRegex.exec(body)) !== null) {
+      const propName = propMatch[1];
+      const val = propMatch[2].trim();
+      let propType = "any";
+      if (/^\d+(\.\d+)?$/.test(val)) {
+        propType = "number";
+      } else if (/^["'`]/.test(val)) {
+        propType = "string";
+      } else if (val === "true" || val === "false") {
+        propType = "boolean";
+      } else if (val === "null") {
+        propType = "null";
+      } else if (
+        propName.endsWith("_id") ||
+        propName === "username" ||
+        propName === "change_reason" ||
+        propName === "status" ||
+        propName === "device_timestamp"
+      ) {
+        propType = "string";
+      } else if (
+        propName === "sequence_number" ||
+        propName === "version_index"
+      ) {
+        propType = "number";
+      }
+      objects[varName][propName] = propType;
+    }
+  }
+
+  return { interfaces, objects };
+}
+
 function parseFile(filePath) {
   const code = fs.readFileSync(filePath, "utf8");
+  if (!parser) {
+    return parseFileFallback(code);
+  }
   const ext = path.extname(filePath);
+
 
   const plugins = ["typescript"];
   if (ext === ".tsx" || ext === ".jsx") {

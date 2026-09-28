@@ -26,18 +26,18 @@ This decision implements requirements under Trace-8.
 ### Option 1: Disable CI Git Diff Guardrails
 
 - **Overview:** Remove strict git diff assertions in `.github/workflows/ci.yml`.
-- **Pros:**
+- ***Pros:***
   - ✅ Eliminates pipeline failures.
-- **Cons:**
+- ***Cons:***
   - ❌ Violates regulatory compliance by allowing uncommitted/untracked documentation updates to bypass audit trails.
 
 ### Option 2: Rectify Signature Logic & Standardize Deterministic Reporting
 
 - **Overview:** Clean up incomplete signature fallbacks in `packages/security/signing.py` and enforce deterministic sorting in documentation generators.
-- **Pros:**
+- ***Pros:***
   - ✅ Restores fully compliant signature validation fallback.
   - ✅ Eliminates non-deterministic report generation.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires careful regression validation of signature verify scenarios.
 
 ## 4. Decision Outcome

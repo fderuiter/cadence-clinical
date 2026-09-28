@@ -202,4 +202,60 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     expect(wrapper.text()).toContain("Automated CDASH eCRF Synthesis");
     expect(wrapper.text()).toContain("Vital Signs eCRF");
   });
+
+  it("renders human escalation alert card when job transitions to PENDING_REVIEW", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    wrapper.vm.currentStep = 2;
+    wrapper.vm.triggerEscalation({
+      current_stage: "SOA_EXTRACTION",
+      error_message: "Validation failed at stage gate 'SOA_EXTRACTION' after 2 automated self-healing attempts.",
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".escalation-alert-card").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Escalation Required");
+    expect(wrapper.text()).toContain("PENDING_REVIEW");
+    expect(wrapper.text()).toContain("SOA_EXTRACTION");
+    expect(wrapper.find(".input-signer-id").exists()).toBe(true);
+    expect(wrapper.find(".btn-submit-correction").exists()).toBe(true);
+  });
+
+  it("requires Part 11 Electronic Signature before submitting stage correction", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    wrapper.vm.currentStep = 2;
+    wrapper.vm.triggerEscalation({ current_stage: "SOA_EXTRACTION" });
+    await wrapper.vm.$nextTick();
+
+    // Attempt submission without signature username
+    wrapper.vm.signatureUsername = "";
+    await wrapper.find(".btn-submit-correction").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Part 11 Electronic Signature Username is required.");
+
+    // Fill in signature username and reason
+    wrapper.vm.signatureUsername = "qa_lead_01";
+    wrapper.vm.signatureReason = "Corrected missing protocol metadata for Part 11 compliance";
+    await wrapper.find(".btn-submit-correction").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.vm.isPendingReview).toBe(false);
+    expect(wrapper.vm.dagJobStatus).toBe("COMPLETED");
+  });
 });

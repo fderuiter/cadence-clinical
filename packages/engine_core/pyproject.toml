@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-engine-core"
+version = "0.1.0"
+description = "Universal Rules, Expression, and FSM Lifecycle Core Engines"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.6.0",
+    "packages-ddf",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "packages/engine_core"

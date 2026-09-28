@@ -36,8 +36,12 @@
             N = {{ arm.target_sample_size }}
           </span>
         </div>
-        <h5 class="arm-name">{{ arm.name }}</h5>
-        <p v-if="arm.description" class="arm-desc">{{ arm.description }}</p>
+        <h5 class="arm-name">
+          {{ arm.name }}
+        </h5>
+        <p v-if="arm.description" class="arm-desc">
+          {{ arm.description }}
+        </p>
 
         <!-- Epoch Timeline Sequence for this Arm -->
         <div class="epoch-timeline-track">
@@ -48,8 +52,12 @@
             :class="`epoch-${ep.epoch_type.toLowerCase()}`"
           >
             <div class="epoch-block-index">Epoch {{ ep.sequence_index }}</div>
-            <div class="epoch-block-name">{{ ep.name }}</div>
-            <div class="epoch-block-type">{{ ep.epoch_type }}</div>
+            <div class="epoch-block-name">
+              {{ ep.name }}
+            </div>
+            <div class="epoch-block-type">
+              {{ ep.epoch_type }}
+            </div>
           </div>
         </div>
       </div>
@@ -68,8 +76,12 @@
               {{ ep.sequence_index }}
             </div>
             <div class="step-info">
-              <div class="step-name">{{ ep.name }}</div>
-              <div class="step-type">{{ ep.epoch_type }}</div>
+              <div class="step-name">
+                {{ ep.name }}
+              </div>
+              <div class="step-type">
+                {{ ep.epoch_type }}
+              </div>
             </div>
           </div>
           <div v-if="idx < sortedEpochs.length - 1" class="sequence-arrow">

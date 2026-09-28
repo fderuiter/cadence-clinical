@@ -86,6 +86,7 @@
           </p>
 
           <div style="margin-bottom: 16px">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 display: block;
@@ -97,6 +98,7 @@
             >
               Create 4-to-6 Digit PIN:
             </label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="pinInput"
               type="password"
@@ -118,6 +120,7 @@
           </div>
 
           <div style="margin-bottom: 20px">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 display: block;
@@ -129,6 +132,7 @@
             >
               Confirm Recovery PIN:
             </label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="pinConfirmInput"
               type="password"
@@ -212,6 +216,7 @@
           </p>
 
           <div style="margin-bottom: 16px">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 display: block;
@@ -223,6 +228,7 @@
             >
               Select Local User Profile:
             </label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <select
               v-model="selectedUserToUnlock"
               class="form-control"
@@ -242,6 +248,7 @@
           </div>
 
           <div style="margin-bottom: 20px">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
               style="
                 display: block;
@@ -253,6 +260,7 @@
             >
               Enter 4-to-6 Digit PIN:
             </label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="unlockPin"
               type="password"

@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import functools
 import inspect
 import json
@@ -10,6 +11,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, event, func
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -40,6 +42,18 @@ class ComplianceError(PermissionError):
 
 class AuditJustificationError(ValueError):
     """Raised when an audited record is created, modified, or deleted without a valid justification."""
+
+    pass
+
+
+class AuditImmutabilityError(PermissionError, ValueError):
+    """Raised when an attempt is made to update or delete an existing immutable audit record."""
+
+    pass
+
+
+class AuditChainIntegrityError(ValueError):
+    """Raised when cryptographic SHA-256 HMAC audit chain verification detects tampering."""
 
     pass
 
@@ -105,12 +119,67 @@ def is_form_locked(form_id: str) -> bool:
 def receive_before_flush(session: Session, flush_context, instances):
     """
     Standard GxP pre-flush listener that intercepts session flushes to:
-    1. Reject modifications if trial is frozen/locked.
-    2. Reject modifications if specific site/visit/subject/form locks are active.
-    3. Reject creations or updates/deletions of audited/clinical data lacking valid justifications.
+    1. Reject modifications or deletions of historic audit log records (immutability).
+    2. Reject modifications if trial is frozen/locked.
+    3. Reject modifications if specific site/visit/subject/form locks are active.
+    4. Reject creations or updates/deletions of audited/clinical data lacking valid justifications.
     """
-    if not session.is_modified:
+    if not session.is_modified and not session.deleted:
         return
+
+    # 0. Immutability Guard (Criterion 3)
+    def _is_audit_trail_record(obj) -> bool:
+        classname = obj.__class__.__name__
+        tablename = str(getattr(obj, "__tablename__", ""))
+        return (
+            "AuditLog" in classname
+            or "AuditLedger" in classname
+            or "AuditRecord" in classname
+            or "AuditTrail" in classname
+            or tablename.endswith("audit_logs")
+            or tablename.endswith("_audit_logs")
+            or tablename
+            in {
+                "audit_logs",
+                "audit_ledger_seals",
+                "audit_trail",
+                "ticket_audit_logs",
+                "safety_audit_logs",
+                "org_audit_logs",
+                "notification_audit_logs",
+                "notifications_audit_logs",
+                "knowledge_article_audit_logs",
+                "tmf_audit_logs",
+                "interop_audit_logs",
+                "ctms_audit_logs",
+                "quality_audit_logs",
+                "isf_audit_logs",
+                "consent_audit_logs",
+                "payment_audit_logs",
+                "inspection_ledger_entries",
+                "audit_schema.audit_logs",
+                "audit_schema.audit_ledger_seals",
+            }
+        )
+
+    for obj in session.deleted:
+        if _is_audit_trail_record(obj):
+            classname = obj.__class__.__name__
+            raise AuditImmutabilityError(
+                f"Deletions from {classname} are strictly forbidden: Deletion of audit log record ({classname}) is prohibited by 21 CFR Part 11 immutability rules."
+            )
+
+    for obj in session.dirty:
+        if obj in session.new:
+            continue
+        if _is_audit_trail_record(obj):
+            classname = obj.__class__.__name__
+            state = sa_inspect(obj)
+            has_changes = any(attr.history.has_changes() for attr in state.attrs)
+            if has_changes:
+                raise AuditImmutabilityError(
+                    f"Updates to {classname} are strictly forbidden: Modification of existing audit log record ({classname}) is prohibited by 21 CFR Part 11 immutability rules."
+                )
 
     # Check if there are any non-excluded modifications
     non_excluded_objs = []
@@ -121,7 +190,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "audit_logs", "audit_ledger_seals", "data_locks", "integration_outbox", "safety_audit_logs", "ticket_audit_logs",
             "org_audit_logs", "audit_schema.audit_logs", "audit_schema.audit_ledger_seals", "notifications",
             "notification_records", "notification_audit_logs", "notification_deliveries", "notifications_audit_logs",
-            "tmf_documents", "tmf_audit_logs", "tmf_seals", "tmf_expected_documents", "tmf_document_qc_transitions",
+            "knowledge_article_audit_logs", "tmf_documents", "tmf_audit_logs", "tmf_seals", "tmf_expected_documents", "tmf_document_qc_transitions",
             "tmf_document_expiration_alert_states", "epro_submissions", "epro_defeated_submissions",
             "epro_quarantined_submissions", "interop_messages", "interop_audit_logs", "instruments",
             "subject_assignments", "subject_notifications", "ctms_studies", "ctms_audit_logs",
@@ -291,6 +360,7 @@ class RelationalDatabaseManager:
                 "pool_size": 10,
                 "max_overflow": 20,
                 "pool_timeout": 30,
+                "pool_recycle": 1800,
                 "pool_pre_ping": True,
             }
             # Merge with kwargs, letting kwargs override
@@ -359,11 +429,6 @@ class DatabaseSessionDependency:
                                 ),
                                 {"reason": reason},
                             )
-                        await session.execute(
-                            text(
-                                "SELECT set_config('cadence.app_writing', 'true', true);"
-                            )
-                        )
                 except Exception:
                     pass
 
@@ -502,11 +567,6 @@ def create_transactional_decorator(
                                         ),
                                         {"reason": reason},
                                     )
-                                await session.execute(
-                                    text(
-                                        "SELECT set_config('cadence.app_writing', 'true', true);"
-                                    )
-                                )
                         except Exception:
                             pass
 
@@ -550,6 +610,67 @@ class IntegrationOutboxMixin:
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ServiceDatabaseAdapter:
+    """
+    Standardized service database adapter factory.
+    Encapsulates RelationalDatabaseManager, ContextVar session management,
+    transactional decorator, and FastAPI route dependency.
+    """
+
+    def __init__(
+        self,
+        service_name: str,
+        context_var_name: str | None = None,
+    ) -> None:
+        self.service_name = service_name
+        self.db_manager = RelationalDatabaseManager(service_name=service_name)
+
+        var_name = context_var_name or "current_session"
+        self.current_session: contextvars.ContextVar[AsyncSession | None] = (
+            contextvars.ContextVar(var_name, default=None)
+        )
+        self.transactional = create_transactional_decorator(
+            self.db_manager, self.current_session
+        )
+        self.get_db_session = DatabaseSessionDependency(self.db_manager)
+
+    def get_session(self) -> AsyncSession:
+        """Gets the current active database session in this context."""
+        session = self.current_session.get()
+        if session is None:
+            raise RuntimeError(
+                "No database session found in current context. Are you using @transactional?"
+            )
+        return session
+
+    def get_lifespan(
+        self,
+        database_url: str,
+        base_metadata: Any | None = None,
+        startup_hooks: list | None = None,
+        shutdown_hooks: list | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        return get_relational_db_lifespan(
+            db_manager=self.db_manager,
+            database_url=database_url,
+            base_metadata=base_metadata,
+            startup_hooks=startup_hooks,
+            shutdown_hooks=shutdown_hooks,
+            **kwargs,
+        )
+
+
+def create_service_db_adapter(
+    service_name: str,
+    context_var_name: str | None = None,
+) -> ServiceDatabaseAdapter:
+    """Factory function to create a standardized ServiceDatabaseAdapter instance."""
+    return ServiceDatabaseAdapter(
+        service_name=service_name, context_var_name=context_var_name
+    )
 
 
 # Expose new Graph Persistence capabilities while keeping imports resilient

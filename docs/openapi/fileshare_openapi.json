@@ -1,0 +1,4573 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - Fileshare & Media Service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/fileshare/files/upload/presigned-url": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Upload Url",
+        "description": "Allocate draft file record and generate presigned PUT or multipart upload URLs.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "get_upload_url_api_v1_fileshare_files_upload_presigned_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/upload-url": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Upload Url",
+        "description": "Allocate draft file record and generate presigned PUT or multipart upload URLs.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "get_upload_url_api_v1_fileshare_files_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/upload-complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_fileshare_files__file_id__upload_complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/complete-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_fileshare_files__file_id__complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/abort-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Abort File Upload",
+        "description": "Abort multipart upload session and mark file record deleted.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "abort_file_upload_api_v1_fileshare_files__file_id__abort_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/stream-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Stream Url",
+        "description": "Issue short-lived presigned HLS master manifest stream URL for video playback.\n\nReturns HTTP 200 with presigned URL when transcoding is READY,\nHTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,\nHTTP 409 Conflict when transcoding has FAILED,\nand HTTP 400 Bad Request when transcoding was NOT_REQUIRED.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_stream_url_api_v1_fileshare_files__file_id__stream_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS master manifest presigned URL is ready for streaming.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUrlResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Video transcoding is pending or in progress."
+          },
+          "400": {
+            "description": "Transcoding is not required for non-video file."
+          },
+          "409": {
+            "description": "Video transcoding failed."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/download-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Download Url",
+        "description": "Retrieve short-lived presigned GET download URL with permission and watermark verification.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "get_download_url_api_v1_fileshare_files__file_id__download_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/preview-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Preview Url",
+        "description": "Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).",
+        "operationId": "get_preview_url_api_v1_fileshare_files__file_id__preview_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Record",
+        "description": "Retrieve file record metadata.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_file_record_api_v1_fileshare_files__file_id__get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete File Record",
+        "description": "Soft delete a file record.\n\nGated on FileRecord.is_on_hold being False; returns 409 if file is on hold.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "delete_file_record_api_v1_fileshare_files__file_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FileDeleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/hold": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Place File On Hold",
+        "description": "Place a file under retention/legal hold preventing deletion or archival.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "place_file_on_hold_api_v1_fileshare_files__file_id__hold_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Remove File From Hold",
+        "description": "Remove retention/legal hold from a file record.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "remove_file_from_hold_api_v1_fileshare_files__file_id__hold_delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FileHoldClearRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/audit-logs": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Audit Logs",
+        "description": "Retrieve immutable Part 11 audit log entries for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "get_file_audit_logs_api_v1_fileshare_files__file_id__audit_logs_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileAuditLogResponse"
+                  },
+                  "title": "Response Get File Audit Logs Api V1 Fileshare Files  File Id  Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/activity": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Activity Feed",
+        "description": "Retrieve paginated per-document activity feed audit log entries for inspection readiness.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "get_file_activity_feed_api_v1_fileshare_files__file_id__activity_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityFeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/approve": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Approve Document Endpoint",
+        "description": "Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "approve_document_endpoint_api_v1_fileshare_files__file_id__approve_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/reject": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Reject Document Endpoint",
+        "description": "Reject a document for approval.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "reject_document_endpoint_api_v1_fileshare_files__file_id__reject_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRejectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/rescind-approval": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Rescind Approval Endpoint",
+        "description": "Rescind a previous document approval. Requires super_admin.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "rescind_approval_endpoint_api_v1_fileshare_files__file_id__rescind_approval_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRescindApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/upload-revision": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Upload Revision Endpoint",
+        "description": "Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "upload_revision_endpoint_api_v1_fileshare_files__file_id__upload_revision_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Files",
+        "description": "List active file records for an optional study, site, and search query.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "list_files_api_v1_fileshare_files_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileRecordResponse"
+                  },
+                  "title": "Response List Files Api V1 Fileshare Files Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/grants": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Share Grants",
+        "description": "Retrieve active internal share grants for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "list_share_grants_api_v1_fileshare_files__file_id__grants_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShareGrantResponse"
+                  },
+                  "title": "Response List Share Grants Api V1 Fileshare Files  File Id  Grants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Share Grant",
+        "description": "Delegate file permissions via an internal share grant.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "create_share_grant_api_v1_fileshare_files__file_id__grants_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareGrantCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/guest-links": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Guest Links",
+        "description": "Retrieve active guest links for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "list_guest_links_api_v1_fileshare_files__file_id__guest_links_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuestLinkResponse"
+                  },
+                  "title": "Response List Guest Links Api V1 Fileshare Files  File Id  Guest Links Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Guest Link",
+        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "create_guest_link_api_v1_fileshare_files__file_id__guest_links_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestLinkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/grants/{grant_id}": {
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete Share Grant",
+        "description": "Revoke an internal share grant delegation.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "delete_share_grant_api_v1_fileshare_files__file_id__grants__grant_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Revoking share grant delegation",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/guest-links/{guest_link_id}": {
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Revoke Guest Link",
+        "description": "Revoke an active external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "revoke_guest_link_api_v1_fileshare_files__file_id__guest_links__guest_link_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "guest_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Guest Link Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Revoking external guest link",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/guest/{token}": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Guest File Download",
+        "description": "Resolve an external guest link token and issue presigned GET URL.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_guest_file_download_api_v1_fileshare_files_guest__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/upload/presigned-url": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Upload Url",
+        "description": "Allocate draft file record and generate presigned PUT or multipart upload URLs.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "get_upload_url_api_v1_files_upload_presigned_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/upload-url": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Upload Url",
+        "description": "Allocate draft file record and generate presigned PUT or multipart upload URLs.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "get_upload_url_api_v1_files_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/upload-complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_files__file_id__upload_complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/complete-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_files__file_id__complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/abort-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Abort File Upload",
+        "description": "Abort multipart upload session and mark file record deleted.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "abort_file_upload_api_v1_files__file_id__abort_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/stream-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Stream Url",
+        "description": "Issue short-lived presigned HLS master manifest stream URL for video playback.\n\nReturns HTTP 200 with presigned URL when transcoding is READY,\nHTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,\nHTTP 409 Conflict when transcoding has FAILED,\nand HTTP 400 Bad Request when transcoding was NOT_REQUIRED.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_stream_url_api_v1_files__file_id__stream_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS master manifest presigned URL is ready for streaming.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUrlResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Video transcoding is pending or in progress."
+          },
+          "400": {
+            "description": "Transcoding is not required for non-video file."
+          },
+          "409": {
+            "description": "Video transcoding failed."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/download-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Download Url",
+        "description": "Retrieve short-lived presigned GET download URL with permission and watermark verification.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "get_download_url_api_v1_files__file_id__download_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/preview-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Preview Url",
+        "description": "Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).",
+        "operationId": "get_preview_url_api_v1_files__file_id__preview_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Record",
+        "description": "Retrieve file record metadata.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_file_record_api_v1_files__file_id__get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete File Record",
+        "description": "Soft delete a file record.\n\nGated on FileRecord.is_on_hold being False; returns 409 if file is on hold.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "delete_file_record_api_v1_files__file_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FileDeleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/hold": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Place File On Hold",
+        "description": "Place a file under retention/legal hold preventing deletion or archival.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "place_file_on_hold_api_v1_files__file_id__hold_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Remove File From Hold",
+        "description": "Remove retention/legal hold from a file record.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "remove_file_from_hold_api_v1_files__file_id__hold_delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FileHoldClearRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/audit-logs": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Audit Logs",
+        "description": "Retrieve immutable Part 11 audit log entries for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "get_file_audit_logs_api_v1_files__file_id__audit_logs_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileAuditLogResponse"
+                  },
+                  "title": "Response Get File Audit Logs Api V1 Files  File Id  Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/activity": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Activity Feed",
+        "description": "Retrieve paginated per-document activity feed audit log entries for inspection readiness.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "get_file_activity_feed_api_v1_files__file_id__activity_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityFeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/approve": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Approve Document Endpoint",
+        "description": "Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "approve_document_endpoint_api_v1_files__file_id__approve_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/reject": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Reject Document Endpoint",
+        "description": "Reject a document for approval.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "reject_document_endpoint_api_v1_files__file_id__reject_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRejectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/rescind-approval": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Rescind Approval Endpoint",
+        "description": "Rescind a previous document approval. Requires super_admin.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "rescind_approval_endpoint_api_v1_files__file_id__rescind_approval_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRescindApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/upload-revision": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Upload Revision Endpoint",
+        "description": "Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "upload_revision_endpoint_api_v1_files__file_id__upload_revision_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Files",
+        "description": "List active file records for an optional study, site, and search query.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "list_files_api_v1_files_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileRecordResponse"
+                  },
+                  "title": "Response List Files Api V1 Files Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/grants": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Share Grants",
+        "description": "Retrieve active internal share grants for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "list_share_grants_api_v1_files__file_id__grants_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShareGrantResponse"
+                  },
+                  "title": "Response List Share Grants Api V1 Files  File Id  Grants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Share Grant",
+        "description": "Delegate file permissions via an internal share grant.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "create_share_grant_api_v1_files__file_id__grants_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareGrantCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/guest-links": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Guest Links",
+        "description": "Retrieve active guest links for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "list_guest_links_api_v1_files__file_id__guest_links_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuestLinkResponse"
+                  },
+                  "title": "Response List Guest Links Api V1 Files  File Id  Guest Links Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Guest Link",
+        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "create_guest_link_api_v1_files__file_id__guest_links_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestLinkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/grants/{grant_id}": {
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete Share Grant",
+        "description": "Revoke an internal share grant delegation.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "delete_share_grant_api_v1_files__file_id__grants__grant_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Revoking share grant delegation",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/guest-links/{guest_link_id}": {
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Revoke Guest Link",
+        "description": "Revoke an active external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "revoke_guest_link_api_v1_files__file_id__guest_links__guest_link_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "guest_link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Guest Link Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Revoking external guest link",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/guest/{token}": {
+      "get": {
+        "tags": [
+          "Fileshare Guest Access"
+        ],
+        "summary": "Get External Guest File Download",
+        "description": "Public resolution endpoint for external guest access tokens.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_external_guest_file_download_api_v1_files_guest__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/audit/playback": {
+      "post": {
+        "tags": [
+          "Fileshare Audit"
+        ],
+        "summary": "Record Playback Checkpoint",
+        "description": "Record a viewer session video playback checkpoint audit event.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "record_playback_checkpoint_api_v1_fileshare_audit_playback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackAuditCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackAuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/audit/playback": {
+      "post": {
+        "tags": [
+          "Fileshare Audit"
+        ],
+        "summary": "Record Playback Checkpoint",
+        "description": "Record a viewer session video playback checkpoint audit event.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "record_playback_checkpoint_api_v1_files_audit_playback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackAuditCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackAuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/guest/{token}": {
+      "get": {
+        "tags": [
+          "Fileshare Guest Access"
+        ],
+        "summary": "Get External Guest File Download",
+        "description": "Public resolution endpoint for external guest access tokens.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_external_guest_file_download_api_v1_fileshare_guest__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivityFeedEntryResponse": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "actor_user_id": {
+            "type": "string",
+            "title": "Actor User Id"
+          },
+          "actor_display_name": {
+            "type": "string",
+            "title": "Actor Display Name"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "actor_user_id",
+          "actor_display_name",
+          "timestamp"
+        ],
+        "title": "ActivityFeedEntryResponse",
+        "description": "Response schema for a single per-document activity feed event."
+      },
+      "ActivityFeedResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityFeedEntryResponse"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ActivityFeedResponse",
+        "description": "Paginated response schema for per-document activity feed."
+      },
+      "ApprovalStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_APPROVAL",
+          "APPROVED",
+          "REJECTED",
+          "APPROVAL_RESCINDED"
+        ],
+        "title": "ApprovalStatus",
+        "description": "Lifecycle status for document approval and 21 CFR Part 11 electronic signatures."
+      },
+      "ConversionStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUIRED",
+          "PENDING",
+          "READY",
+          "FAILED"
+        ],
+        "title": "ConversionStatus",
+        "description": "Lifecycle status of document format conversion (Office to PDF)."
+      },
+      "FileApproveRequest": {
+        "properties": {
+          "signing_reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Signing Reason"
+          },
+          "credential": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Credential"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signing_reason",
+          "credential"
+        ],
+        "title": "FileApproveRequest",
+        "description": "Request payload to initiate electronic signature document approval with re-authentication."
+      },
+      "FileAuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "action",
+          "user_id",
+          "timestamp",
+          "reason_for_change"
+        ],
+        "title": "FileAuditLogResponse",
+        "description": "Response schema for file Part 11 audit trail entries."
+      },
+      "FileDeleteRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Deleting file record"
+          }
+        },
+        "type": "object",
+        "title": "FileDeleteRequest",
+        "description": "Request payload to delete a file record."
+      },
+      "FileDownloadUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 3600
+          },
+          "is_watermarked": {
+            "type": "boolean",
+            "title": "Is Watermarked",
+            "default": false
+          },
+          "access_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Count"
+          },
+          "is_rendition": {
+            "type": "boolean",
+            "title": "Is Rendition",
+            "default": false
+          },
+          "rendition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendition Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "filename",
+          "mime_type",
+          "download_url"
+        ],
+        "title": "FileDownloadUrlResponse",
+        "description": "Response containing short-lived presigned GET download URL and watermark policy."
+      },
+      "FileHoldClearRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileHoldClearRequest",
+        "description": "Request payload to remove retention hold from a file."
+      },
+      "FileHoldRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileHoldRequest",
+        "description": "Request payload to place a file on retention hold."
+      },
+      "FileRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "title": "Uploaded By"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploaded At"
+          },
+          "is_on_hold": {
+            "type": "boolean",
+            "title": "Is On Hold"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FileStatus",
+            "default": "PENDING_SCAN"
+          },
+          "scan_status": {
+            "$ref": "#/components/schemas/ScanStatus",
+            "default": "PENDING"
+          },
+          "scan_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Engine"
+          },
+          "scan_completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Completed At"
+          },
+          "scan_threat_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Threat Name"
+          },
+          "transcode_status": {
+            "$ref": "#/components/schemas/TranscodeStatus",
+            "default": "NOT_REQUIRED"
+          },
+          "hls_manifest_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hls Manifest Key"
+          },
+          "transcode_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcode Error"
+          },
+          "pdf_rendition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Rendition Key"
+          },
+          "conversion_status": {
+            "$ref": "#/components/schemas/ConversionStatus",
+            "default": "NOT_REQUIRED"
+          },
+          "conversion_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversion Error"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/ApprovalStatus",
+            "default": "PENDING_APPROVAL"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "object_key",
+          "checksum_sha256",
+          "version_index",
+          "uploaded_by",
+          "uploaded_at",
+          "is_on_hold",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "FileRecordResponse",
+        "description": "Response schema representing file record metadata."
+      },
+      "FileRejectRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileRejectRequest",
+        "description": "Request payload to reject a document for approval."
+      },
+      "FileRescindApprovalRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileRescindApprovalRequest",
+        "description": "Request payload to rescind a previous document approval."
+      },
+      "FileStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_SCAN",
+          "READY",
+          "PENDING_TRANSCODE",
+          "QUARANTINED"
+        ],
+        "title": "FileStatus",
+        "description": "Lifecycle availability and readiness status of a file record."
+      },
+      "FileUploadUrlRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Size Bytes"
+          },
+          "is_multipart": {
+            "type": "boolean",
+            "title": "Is Multipart",
+            "default": false
+          },
+          "parts_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts Count",
+            "default": 1
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Initial file upload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "filename",
+          "mime_type",
+          "size_bytes"
+        ],
+        "title": "FileUploadUrlRequest",
+        "description": "Request payload to initiate a single-part or multipart upload session."
+      },
+      "FileUploadUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
+          "upload_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Url"
+          },
+          "upload_urls": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Urls"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 3600
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "required_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Required Headers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "object_key"
+        ],
+        "title": "FileUploadUrlResponse",
+        "description": "Response containing presigned target URL(s) for uploading."
+      },
+      "GuestLinkCreateRequest": {
+        "properties": {
+          "expires_in_hours": {
+            "type": "integer",
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Expires In Hours",
+            "default": 24
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "GuestLinkCreateRequest",
+        "description": "Request payload to generate an external guest link."
+      },
+      "GuestLinkResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "guest_url": {
+            "type": "string",
+            "title": "Guest Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "access_count": {
+            "type": "integer",
+            "title": "Access Count"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "guest_url",
+          "expires_at",
+          "created_by",
+          "access_count",
+          "is_valid"
+        ],
+        "title": "GuestLinkResponse",
+        "description": "Response schema for created guest links."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PermissionLevel": {
+        "type": "string",
+        "enum": [
+          "view",
+          "comment",
+          "download",
+          "edit",
+          "upload_revision",
+          "reshare",
+          "approve",
+          "admin",
+          "expire_revoke"
+        ],
+        "title": "PermissionLevel",
+        "description": "Granular permission levels for file sharing."
+      },
+      "PlaybackAuditCreateRequest": {
+        "properties": {
+          "file_record_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "File Record Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/PlaybackEventType"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PlaybackEventSource",
+            "default": "internal"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "guest_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Token"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Video playback checkpoint audit event"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_record_id",
+          "event",
+          "session_id"
+        ],
+        "title": "PlaybackAuditCreateRequest",
+        "description": "Request payload to log a viewer playback audit checkpoint event."
+      },
+      "PlaybackAuditResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/PlaybackEventType"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PlaybackEventSource"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "event",
+          "source",
+          "session_id",
+          "user_id",
+          "timestamp",
+          "created_at",
+          "reason_for_change"
+        ],
+        "title": "PlaybackAuditResponse",
+        "description": "Response schema for logged video playback audit checkpoint events."
+      },
+      "PlaybackEventSource": {
+        "type": "string",
+        "enum": [
+          "internal",
+          "guest_link"
+        ],
+        "title": "PlaybackEventSource",
+        "description": "Origin source of video playback session."
+      },
+      "PlaybackEventType": {
+        "type": "string",
+        "enum": [
+          "PLAY_START",
+          "PLAY_25",
+          "PLAY_50",
+          "PLAY_75",
+          "PLAY_END"
+        ],
+        "title": "PlaybackEventType",
+        "description": "Types of viewer session video playback audit checkpoint events."
+      },
+      "ScanStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CLEAN",
+          "INFECTED",
+          "SCAN_ERROR"
+        ],
+        "title": "ScanStatus",
+        "description": "Lifecycle status of file malware/virus scanning."
+      },
+      "ShareGrantCreateRequest": {
+        "properties": {
+          "granted_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted To User Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ShareScope",
+            "default": "individual"
+          },
+          "permission_level": {
+            "$ref": "#/components/schemas/PermissionLevel",
+            "default": "view"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "ShareGrantCreateRequest",
+        "description": "Request payload to create a new internal share grant."
+      },
+      "ShareGrantResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "granted_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted To User Id"
+          },
+          "granted_by_user_id": {
+            "type": "string",
+            "title": "Granted By User Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ShareScope"
+          },
+          "permission_level": {
+            "$ref": "#/components/schemas/PermissionLevel"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "granted_to_user_id",
+          "granted_by_user_id",
+          "scope",
+          "permission_level",
+          "expires_at",
+          "revoked_at",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ShareGrantResponse",
+        "description": "Response schema for share grant delegations."
+      },
+      "ShareScope": {
+        "type": "string",
+        "enum": [
+          "study",
+          "site",
+          "individual",
+          "role",
+          "folder"
+        ],
+        "title": "ShareScope",
+        "description": "Scope of access granted by a share grant."
+      },
+      "StreamUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 300
+          },
+          "transcode_status": {
+            "$ref": "#/components/schemas/TranscodeStatus"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "transcode_status"
+        ],
+        "title": "StreamUrlResponse",
+        "description": "Response schema containing presigned HLS manifest stream URL or transcoding status."
+      },
+      "TranscodeStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUIRED",
+          "PENDING",
+          "IN_PROGRESS",
+          "READY",
+          "FAILED"
+        ],
+        "title": "TranscodeStatus",
+        "description": "Lifecycle status of HLS/DASH video transcoding."
+      },
+      "UploadCompleteRequest": {
+        "properties": {
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
+          "parts": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parts"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Completed file upload and virus scan"
+          }
+        },
+        "type": "object",
+        "title": "UploadCompleteRequest",
+        "description": "Request payload to finalize a multipart or singlepart upload."
+      },
+      "UploadRevisionRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Size Bytes"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          },
+          "is_multipart": {
+            "type": "boolean",
+            "title": "Is Multipart",
+            "default": false
+          },
+          "parts_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts Count",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "reason_for_change"
+        ],
+        "title": "UploadRevisionRequest",
+        "description": "Request payload to initiate a new revision upload for a file."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

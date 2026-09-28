@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-The clinical workflows in the clinical trial execution service `apps/execution/main.py` grew over time into a massive monolithic structure. This monolithic design made maintenance extremely difficult, hindered developer velocity, and increased risk of merge conflicts during parallel feature development. To resolve this, we separated five major domain-specific workflows (Subject Randomization, Emergency Unblinding, Clinical Queries, Medical Dictionary Ingestion, and SDTM/ADaM exports) into isolated presentation sub-routers and router proxies under `apps/execution/presentation/routers/` and `apps/execution/routers/`.
+The clinical workflows in the clinical trial execution service `apps/execution/main.py` grew over time into a massive monolithic structure. This monolithic design made maintenance extremely difficult, hindered developer velocity, and increased risk of merge conflicts during parallel feature development. To resolve this, we separated five major domain-specific workflows (Subject Randomization, Emergency Unblinding, Clinical Queries, Medical Dictionary Ingestion, and SDTM/ADaM exports) into isolated presentation sub-routers under `apps/execution/presentation/routers/`.
 
 This decision implements and traces requirements under Trace-1, Trace-2, PRD-QRY-001, and PRD-EDC-001.
 
@@ -24,20 +24,20 @@ This decision implements and traces requirements under Trace-1, Trace-2, PRD-QRY
 ### Option 1: Maintain the Monolithic Structure in main.py
 
 - **Overview:** Keep all clinical workflows integrated inside `apps/execution/main.py`.
-- **Pros:**
+- ***Pros:***
   - ✅ No structural architectural changes needed.
   - ✅ Avoids triggering ADR requirement gates for schema/sub-router additions.
-- **Cons:**
+- ***Cons:***
   - ❌ Extremely high file size and cognitive load for developers.
   - ❌ Prone to severe git merge conflicts and regression risks.
 
 ### Option 2: Extract Modular Domain-Specific Sub-routers and Proxies
 
-- **Overview:** Move workflows to dedicated sub-routers under `apps/execution/presentation/routers/` and expose them via proxies in `apps/execution/routers/` registered in alphabetical order in `main.py`.
-- **Pros:**
+- **Overview:** Move workflows to dedicated sub-routers under `apps/execution/presentation/routers/` registered in alphabetical order in `main.py`.
+- ***Pros:***
   - ✅ Restores high code modularity and clean architectural boundaries.
   - ✅ Simplifies unit testing and localized static audit.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires creating several new router/schema files, necessitating an Architecture Decision Record.
 
 ## 4. Decision Outcome

@@ -24,17 +24,29 @@ To achieve enterprise-grade maintainability, zero-downtime microservice decoupli
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Unified Typer Developer CLI + Hexagonal Kernel Primitives + Dynamic Sentinels**
-   - Implements `packages/cli` exposing `cadence` command with subcommand suite (`doctor`, `dev`, `test`, `check`, `fix`, `db`, `scaffold`, `gxp`).
+### Option 1: **Option A (Selected): Unified Typer Developer CLI + Hexagonal Kernel Primitives + Dynamic Sentinels**
+
+- **Overview:** - Implements `packages/cli` exposing `cadence` command with subcommand suite (`doctor`, `dev`, `test`, `check`, `fix`, `db`, `scaffold`, `gxp`).
    - Enhances `packages/hexagonal` with domain primitives (`BaseEntity`, `AggregateRoot`, `DomainEvent`, `RepositoryPort`, `UseCasePort`, `ExternalServiceClientPort`).
    - Upgrades `scripts/verify_contracts.py` to dynamically discover and validate all port and adapter contracts with MyPy.
    - Decouples cross-app test imports and eliminates legacy import exemption lists.
-2. **Option B: Fragmented Shell Scripts and Ad-Hoc Makefiles**
-   - Keeps fragmented Python/Bash scripts in `scripts/`. Lacks unified CLI interface, structured JSON output for AI agents, and centralized database snapshot tooling.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
+### Option 2: **Option B: Fragmented Shell Scripts and Ad-Hoc Makefiles**
+
+- **Overview:** - Keeps fragmented Python/Bash scripts in `scripts/`. Lacks unified CLI interface, structured JSON output for AI agents, and centralized database snapshot tooling.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-**Chosen option: Option A.**
+**- **Chosen Option:** Option A.**
 
 ### Key Architectural Standards Established:
 
@@ -57,15 +69,15 @@ To achieve enterprise-grade maintainability, zero-downtime microservice decoupli
 ## 6. Implementation & Verification
 
 - **Packages Created / Updated**:
-  - [`packages/cli/`](file:///Users/fred/Code/cadence-clinical/packages/cli/) (`cadence` CLI tool)
-  - [`packages/hexagonal/`](file:///Users/fred/Code/cadence-clinical/packages/hexagonal/) (Hexagonal primitives & ports)
-  - [`packages/ui/`](file:///Users/fred/Code/cadence-clinical/packages/ui/) (Shared Enterprise UI components)
+  - `packages/cli/` (`cadence` CLI tool)
+  - `packages/hexagonal/` (Hexagonal primitives & ports)
+  - `packages/ui/` (Shared Enterprise UI components)
 - **Scripts & Sentinels**:
-  - [`scripts/verify_contracts.py`](file:///Users/fred/Code/cadence-clinical/scripts/verify_contracts.py) (Dynamic contract sentinel)
-  - [`scripts/validate_imports.py`](file:///Users/fred/Code/cadence-clinical/scripts/validate_imports.py) (Cross-service boundary validator)
+  - `scripts/verify_contracts.py` (Dynamic contract sentinel)
+  - `scripts/validate_imports.py` (Cross-service boundary validator)
 - **Documentation & Catalog**:
-  - [`docs/cli.md`](file:///Users/fred/Code/cadence-clinical/docs/cli.md) (Developer CLI manual)
-  - [`docs/components/`](file:///Users/fred/Code/cadence-clinical/docs/components/) (UI component catalog)
+  - `docs/cli.md` (Developer CLI manual)
+  - `docs/components/` (UI component catalog)
 - **Verification Tests**:
-  - [`packages/cli/tests/test_cadence_cli.py`](file:///Users/fred/Code/cadence-clinical/packages/cli/tests/test_cadence_cli.py)
-  - [`packages/hexagonal/tests/test_hexagonal_kernel.py`](file:///Users/fred/Code/cadence-clinical/packages/hexagonal/tests/test_hexagonal_kernel.py)
+  - `packages/cli/src/Program.cs`
+  - `packages/hexagonal/tests/test_hexagonal_kernel.py`

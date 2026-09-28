@@ -15,6 +15,9 @@ export default [
       "**/.pytest_cache/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "scripts/**",
+      "docs/.vitepress/**",
+      "**/mockServiceWorker.js",
     ],
   },
   js.configs.recommended,
@@ -32,6 +35,27 @@ export default [
     },
   },
   {
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        sourceType: "module",
+        ecmaVersion: 2022,
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
@@ -43,10 +67,17 @@ export default [
       ],
       "no-undef": "off",
       "vue/multi-word-component-names": "off",
-      "vuejs-accessibility/label-has-for": "warn",
-      "vuejs-accessibility/click-events-have-key-events": "warn",
-      "vuejs-accessibility/no-static-element-interactions": "warn",
-      "vuejs-accessibility/form-control-has-label": "warn",
+      "vuejs-accessibility/label-has-for": [
+        "error",
+        {
+          required: {
+            some: ["nesting", "id"],
+          },
+        },
+      ],
+      "vuejs-accessibility/click-events-have-key-events": "error",
+      "vuejs-accessibility/no-static-element-interactions": "error",
+      "vuejs-accessibility/form-control-has-label": "error",
     },
     files: [
       "apps/**/*.js",
@@ -98,6 +129,20 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    files: [
+      "**/tests/**",
+      "tests/**",
+      "**/*.test.*",
+      "**/*.spec.*",
+    ],
+    rules: {
+      "vue/one-component-per-file": "off",
+      "vue/require-prop-types": "off",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 ];

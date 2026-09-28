@@ -26,7 +26,7 @@ def is_path_signature_gated(path_lower: str) -> bool:
     """
     if "capture-consent" in path_lower:
         return True
-    if "econsent" in path_lower:
+    if "econsent" in path_lower or "fileshare" in path_lower or "/files/" in path_lower:
         return False
 
     for pattern in SIGNATURE_GATED_PATTERNS:

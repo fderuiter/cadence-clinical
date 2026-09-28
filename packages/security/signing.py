@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 from typing import Any
 
 from cryptography import x509
@@ -408,11 +407,17 @@ class InboundEmailReplayCache:
         return False
 
 
-INBOUND_EMAIL_HMAC_SECRET = os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip()
-if not INBOUND_EMAIL_HMAC_SECRET:
-    raise RuntimeError(
-        "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
-    )
+def get_inbound_email_hmac_secret() -> str:
+    """Retrieve the inbound email HMAC secret from settings, failing if unset."""
+    from packages.config import get_common_settings
+
+    secret = (get_common_settings().inbound_email_hmac_secret or "").strip()
+    if not secret:
+        raise RuntimeError(
+            "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
+        )
+    return secret
+
 
 inbound_email_replay_cache = InboundEmailReplayCache()
 
@@ -426,9 +431,7 @@ def verify_inbound_email_signature(
     """Verifies that the inbound email HMAC signature is correct, fresh, and not replayed."""
     import time
 
-    secret = (
-        os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip() or INBOUND_EMAIL_HMAC_SECRET
-    )
+    secret = get_inbound_email_hmac_secret()
 
     # 1. Timestamp Freshness Check (300-second drift window)
     try:
@@ -454,3 +457,106 @@ def verify_inbound_email_signature(
     ).hexdigest()
 
     return hmac.compare_digest(expected_sig, signature)
+
+
+def generate_greenlight_token(
+    site_id: str,
+    study_id: str,
+    country_code: str,
+    certified_by: str,
+    expires_in_seconds: int = 86400 * 365,
+    secret: bytes | None = None,
+    is_overridden: bool = False,
+) -> str:
+    """Generates an HMAC-SHA256 signed cryptographic Site Greenlight Activation Token.
+
+    Compliant with PRD-SSU-003, ADR-2202, ICH GCP E6(R2) Section 8, and 21 CFR Part 11.
+    """
+    import time
+
+    if secret is None:
+        from packages.config import get_common_settings
+
+        raw_secret = get_common_settings().gateway_secret
+        secret = (
+            raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
+        )
+
+    now = int(time.time())
+    payload = {
+        "site_id": site_id,
+        "study_id": study_id,
+        "country_code": country_code.upper(),
+        "certified_by": certified_by,
+        "token_type": "SITE_GREENLIGHT_ACTIVATION",
+        "token_version": "1",
+        "is_overridden": is_overridden,
+        "issued_at": now,
+        "expires_at": now + expires_in_seconds,
+    }
+    serialized = canonical_serialize(payload)
+    b64_payload = base64.urlsafe_b64encode(serialized).decode("utf-8").rstrip("=")
+    sig = hmac.new(secret, b64_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{b64_payload}.{sig}"
+
+
+def verify_greenlight_token(
+    token: str,
+    site_id: str | None = None,
+    study_id: str | None = None,
+    secret: bytes | None = None,
+) -> dict[str, Any] | None:
+    """Verifies HMAC-SHA256 signature, expiry, and site/study binding of a Greenlight Activation Token.
+
+    Returns the decoded token payload dictionary if valid, or None if invalid/expired/tampered.
+    """
+    import time
+
+    if not token or "." not in token:
+        return None
+
+    if secret is None:
+        from packages.config import get_common_settings
+
+        raw_secret = get_common_settings().gateway_secret
+        secret = (
+            raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
+        )
+
+    try:
+        parts = token.split(".")
+        if len(parts) != 2:
+            return None
+        b64_payload, signature = parts[0], parts[1]
+
+        # Verify signature
+        expected_sig = hmac.new(
+            secret, b64_payload.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected_sig, signature):
+            return None
+
+        # Decode payload (pad base64url string if needed)
+        padding_needed = len(b64_payload) % 4
+        if padding_needed:
+            b64_payload += "=" * (4 - padding_needed)
+        payload_bytes = base64.urlsafe_b64decode(b64_payload.encode("utf-8"))
+        payload = json.loads(payload_bytes.decode("utf-8"))
+
+        if payload.get("token_type") != "SITE_GREENLIGHT_ACTIVATION":
+            return None
+
+        if site_id and payload.get("site_id") != site_id:
+            return None
+
+        if study_id and payload.get("study_id") != study_id:
+            return None
+
+        # Expiry check
+        expires_at = payload.get("expires_at")
+        if expires_at and expires_at < time.time():
+            return None
+
+        return payload
+    except Exception:
+        return None

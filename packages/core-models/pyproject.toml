@@ -1,0 +1,19 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-core-models"
+version = "0.1.0"
+description = "Core clinical models package"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]

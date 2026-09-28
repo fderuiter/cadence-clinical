@@ -1,0 +1,85 @@
+<Project>
+  <!-- Cadence.UnitTests.csproj and Cadence.ArchitectureTests.csproj both live directly in tests/;
+       without distinct intermediate/output paths they collide on obj/project.assets.json and bin/,
+       which produces a nondeterministic race in solution-wide builds. BaseIntermediateOutputPath
+       must be set before the Sdk.props import, so the implicit Sdk="..." shorthand can't be used
+       here (see https://go.microsoft.com/fwlink/?linkid=869650). -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/ArchitectureTests/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/ArchitectureTests/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.ArchitectureTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MIG-SUBJ-023: this project's own default compile glob (tests/**/*.cs, since it lives directly in
+         tests/ alongside Cadence.UnitTests.csproj) would otherwise also try to compile
+         SubjectEndpointsRoutingTests.cs here. That file needs Microsoft.AspNetCore.Mvc.Testing (not
+         referenced by this project) and WebApplicationFactory(Program), which is ambiguous in this specific
+         project's compilation since it references both Cadence.Apps.Execution and Cadence.Apps.Designer,
+         each with their own top-level-statement Program class; no prior file in tests/ referenced Program
+         at all, so this ambiguity never previously surfaced. Excluding it here leaves it compiled into
+         Cadence.UnitTests.csproj only, where Cadence.Apps.Execution is the sole Program-bearing reference. -->
+    <Compile Remove="Execution/Endpoints/SubjectEndpointsRoutingTests.cs" />
+    <!-- MIG-SUBJ-024: same ambiguous-Program-reference collision SubjectEndpointsRoutingTests.cs already
+         hit (see the remark above). This file also hosts WebApplicationFactory<Program> (both the
+         independent-host routing tests and the real-composition-root startup smoke tests), and this project
+         references both Cadence.Apps.Execution and Cadence.Apps.Designer. -->
+    <Compile Remove="Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs" />
+    <!-- MIG-SUBJ-025: same ambiguous-Program-reference collision as the two exclusions above.
+         ExecutionApiFactory (WebApplicationFactory<Program>) boots the real Program composition root for
+         golden-master use, so it hits the identical Cadence.Apps.Execution-vs-Cadence.Apps.Designer
+         Program ambiguity in this project. -->
+    <Compile Remove="Execution/ExecutionApiFactory.cs" />
+    <!-- MIG-SUBJ-025: GoldenMasterFixtureLoaderTests.cs's DB/audit-assertion tests exercise ExecutionApiFactory
+         directly (to prove GoldenMasterAssert.DbStateMatches/AuditLogContains work against a real,
+         DI-resolved ExecutionDbContext, not just an ad-hoc one), so it transitively hits the same ambiguity
+         as ExecutionApiFactory.cs itself. Left compiled into Cadence.UnitTests.csproj only. -->
+    <Compile Remove="Execution/GoldenMaster/GoldenMasterFixtureLoaderTests.cs" />
+    <!-- MIG-SUBJ-026: same ambiguous-Program-reference collision as the three exclusions above.
+         SubjectGoldenMasterTests.cs uses ExecutionApiFactory (WebApplicationFactory<Program>) directly to
+         replay the golden-master fixtures, hitting the identical Cadence.Apps.Execution-vs-
+         Cadence.Apps.Designer Program ambiguity. Left compiled into Cadence.UnitTests.csproj only. -->
+    <Compile Remove="Execution/GoldenMaster/SubjectGoldenMasterTests.cs" />
+    <!-- MIG-SUBJ-028: Integration tests use Testcontainers.PostgreSql, which is not referenced by this project.
+         Keep compiled into Cadence.UnitTests.csproj only. -->
+    <Compile Remove="Execution/Integration/**" />
+    <Compile Remove="Audit/GxPAuditTrailGenerationTests.cs" />
+    <Compile Remove="Packages/**" />
+    <Compile Remove="E2E/**" />
+    <Compile Remove="Validation/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
+    <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
+    <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnit" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

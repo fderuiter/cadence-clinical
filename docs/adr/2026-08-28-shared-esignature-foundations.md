@@ -23,21 +23,22 @@ We need a unified, core-level, service-agnostic model representing a signature m
 
 ### Option 1: Ad-hoc Signature Models per Service
 
-- **Pros:** Simple to implement initially.
-- **Cons:** Leads to fragmentation, inconsistent schemas across service boundaries, and lacks standardized validation or cryptographic primitives.
+- ***Pros:*** Simple to implement initially.
+- ***Cons:*** Leads to fragmentation, inconsistent schemas across service boundaries, and lacks standardized validation or cryptographic primitives.
 
 ### Option 2: Unified, Lightweight Signature Manifestation and Cryptographic Primitives (Selected)
 
-- **Pros:**
+- ***Pros:***
   - ✅ Single, canonical `SignatureManifestation` model in `packages/core-models/` that satisfies all §11.50 requirements.
   - ✅ Robust, centralized asymmetric signing and verification routines utilizing `cryptography`.
   - ✅ Context-propagating context variables `current_signature_manifestation` seamlessly integrated into the `audit_context` stack.
-- **Cons:**
+- ***Cons:***
   - ❌ Requires mapping of existing legacy fields to ensure backwards compatibility.
 
 ## 4. Decision Outcome
 
-We adopted **Option 2**. We populated the core models and packages as follows:
+- **Chosen Option:** Option 1
+- **Justification:** We adopted **Option 2**. We populated the core models and packages as follows:
 
 - **`packages/core-models/signature.py`:** Added `SigningReasonCode` and `ApprovalStatus` enums. Updated `SignatureManifestation` to carry the §11.50 fields (`signer_username`, `signer_full_name`, `signing_timestamp_utc`, `signing_reason_code`, `signing_reason_text`, `network_ip_address`, `device_user_agent`, `signature_hash_sha256`) while maintaining legacy backward-compatible fields via a bidirectional pre-validator.
 - **`packages/security/signing.py`:** Extended with `serialize_manifestation_canonically`, `compute_manifestation_hash`, `sign_manifestation`, and `verify_manifestation` helpers, integrating server private key and certificate PEM loading (with transient development key generation fallbacks).

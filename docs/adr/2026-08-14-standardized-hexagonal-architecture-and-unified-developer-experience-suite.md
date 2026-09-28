@@ -30,20 +30,32 @@ System Requirement: **PRD-SYS-001** (Unified Clinical Architecture & System Main
 
 ## 3. Options Considered
 
-1. **Option A (Selected): Unified Interactive DX Suite & Centralized Test Infrastructure:**
-   - Enhance the Cadence CLI with an interactive Rich TUI cockpit, live log filtering, and hot-restart capabilities.
+### Option 1: **Option A (Selected): Unified Interactive DX Suite & Centralized Test Infrastructure:**
+
+- **Overview:** - Enhance the Cadence CLI with an interactive Rich TUI cockpit, live log filtering, and hot-restart capabilities.
    - Implement an intelligent file-system test watcher with sub-second feedback.
    - Establish `packages/testing` as the centralized testing toolkit providing domain entity factories, in-memory repository fakes, and mock security contexts.
    - Enforce progressive hexagonal decomposition across microservice entrypoints.
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
 
-2. **Option B: Headless CLI & Ad-hoc Service Fixtures:**
-   - Retain disparate subprocess commands and decentralized fixtures without a unified TUI or shared test package.
+### Option 2: **Option B: Headless CLI & Ad-hoc Service Fixtures:**
+
+- **Overview:** - Retain disparate subprocess commands and decentralized fixtures without a unified TUI or shared test package.
 
 ---
+- ***Pros:***
+  - ✅ Satisfies architectural requirements
+- ***Cons:***
+  - ❌ Requires implementation and maintenance overhead
+
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**.
+- **Chosen Option:** **Option A**.
+- **Justification:** Selected as primary architectural approach.
 
 This decision establishes:
 

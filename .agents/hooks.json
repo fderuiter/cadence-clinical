@@ -1,0 +1,43 @@
+{
+  "gxp-guardrails": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ../scripts/hooks/pre_tool_guardrail.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ../scripts/hooks/post_write_check.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python ../scripts/hooks/pre_invocation_reminder.py",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python ../scripts/hooks/stop_sentinel.py",
+        "timeout": 30
+      }
+    ]
+  }
+}
