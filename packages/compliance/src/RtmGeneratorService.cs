@@ -86,13 +86,18 @@ public static class RtmGeneratorService
             ? DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture)
             : StableTimestamp;
 
-        // 4. Generate RTM Markdown
-        string rtmOut = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
-        GenerateRtmMarkdown(allRequirements, testMappings, testResults, rtmOut, timestamp, draft);
+        // Validate-only runs must be side-effect free: the checked-in GxP documents are only ever
+        // regenerated through the sync tooling, never as a by-product of a validation pass.
+        if (!validateOnly)
+        {
+            // 4. Generate RTM Markdown
+            string rtmOut = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
+            GenerateRtmMarkdown(allRequirements, testMappings, testResults, rtmOut, timestamp, draft);
 
-        // 5. Generate Qualification Report
-        string qualOut = Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md");
-        GenerateQualificationReport(allRequirements, testResults, qualOut, timestamp, draft);
+            // 5. Generate Qualification Report
+            string qualOut = Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md");
+            GenerateQualificationReport(allRequirements, testResults, qualOut, timestamp, draft);
+        }
 
         if (validateOnly)
         {
