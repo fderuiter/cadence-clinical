@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Compliance;
@@ -181,5 +183,27 @@ public class PortedPackagesUnitTests
     {
         int exitCode = RtmGeneratorService.GenerateRtm(outputDir: "docs/SDLC", reportPath: "report_dotnet.trx", draft: true, validateOnly: true);
         exitCode.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Validates that a validate-only RTM pass is side-effect free: the checked-in GxP documents under
+    /// docs/SDLC are only regenerated through the sync tooling, never as a by-product of a test run.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public void Compliance_RtmGeneratorService_ValidateOnly_DoesNotModifyCheckedInSdlcDocuments()
+    {
+        string sdlcDir = Path.Combine(OpenApiToolingService.FindRepoRoot(), "docs", "SDLC");
+        string[] documents =
+        [
+            Path.Combine(sdlcDir, "Requirements_Traceability_Matrix.md"),
+            Path.Combine(sdlcDir, "IQ_OQ_PQ_Execution_Report.md"),
+        ];
+        var before = documents.Select(File.ReadAllText).ToArray();
+
+        RtmGeneratorService.GenerateRtm(outputDir: "docs/SDLC", reportPath: "report_dotnet.trx", draft: true, validateOnly: true);
+
+        documents.Select(File.ReadAllText).Should().Equal(before);
     }
 }
