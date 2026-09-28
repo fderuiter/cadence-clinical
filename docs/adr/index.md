@@ -11,6 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-09-28: Topological Tier-Based .NET 10 Migration and Legacy Python Decommissioning](2026-09-28-topological-tier-based-dotnet-10-migration-and-python-decommissioning.md)
 - [2026-09-25: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime](2026-09-25-decommission-legacy-python-services-and-default-dotnet10-runtime.md)
 - [2026-09-03: Universal Decimal Financial Precision Dynamic OpenAPI Gateway Discovery and Tier 2 Quality Realignment](2026-09-03-universal-decimal-financial-precision-dynamic-openapi-gateway-discovery-and-tier-2-quality-realignment.md)
 

@@ -1,1 +1,0 @@
-"""Execution adapters package."""

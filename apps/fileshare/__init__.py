@@ -1,1 +1,0 @@
-"""FileShare service package."""
