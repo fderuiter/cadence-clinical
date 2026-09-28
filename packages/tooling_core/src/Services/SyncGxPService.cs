@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
+using Cadence.Compliance;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class SyncGxPService
@@ -54,7 +56,7 @@ public static class SyncGxPService
         Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
         Console.WriteLine("============================================================");
 
-        int rtmRes = RtmGeneratorService.GenerateRtm(validate: dryRun, draft: draft, trxReport: "report_dotnet.trx", repoRoot: repoRoot);
+        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: "report_dotnet.trx", repoRoot: repoRoot);
         if (rtmRes != 0) return rtmRes;
 
         // Step 3: Stage

@@ -47,9 +47,10 @@ public static class RtmGeneratorService
         string reportPath = "report_dotnet.trx",
         bool draft = false,
         bool validateOnly = false,
-        bool dynamicTimestamp = false)
+        bool dynamicTimestamp = false,
+        string? repoRoot = null)
     {
-        string repoRoot = FindRepoRoot();
+        repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
         Directory.CreateDirectory(outputDir);
 
