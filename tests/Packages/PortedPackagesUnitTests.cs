@@ -206,4 +206,27 @@ public class PortedPackagesUnitTests
 
         documents.Select(File.ReadAllText).Should().Equal(before);
     }
+
+    /// <summary>
+    /// Validates that exactly one RTM/qualification report generator exists, so the checked-in GxP documents
+    /// have a single, deterministic source regardless of the entry point (CLI, gxp sync, or tests).
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public void Compliance_RtmGeneratorService_IsTheOnlyRtmGeneratorInToolingAssemblies()
+    {
+        var assemblies = new[]
+        {
+            typeof(RtmGeneratorService).Assembly,
+            typeof(OpenApiToolingService).Assembly,
+        }.Distinct();
+
+        var generators = assemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.Name == nameof(RtmGeneratorService))
+            .ToList();
+
+        generators.Should().ContainSingle().Which.Assembly.Should().BeSameAs(typeof(RtmGeneratorService).Assembly);
+    }
 }

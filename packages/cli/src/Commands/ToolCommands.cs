@@ -1,5 +1,6 @@
 using System.ComponentModel;
 
+using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console.Cli;
@@ -220,7 +221,7 @@ public class GenerateRtmCommand : Command<GenerateRtmCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        return RtmGeneratorService.GenerateRtm(validate: settings.ValidateOnly, draft: settings.Draft);
+        return RtmGeneratorService.GenerateRtm(draft: settings.Draft, validateOnly: settings.ValidateOnly);
     }
 }
 
