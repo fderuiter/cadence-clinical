@@ -107,10 +107,10 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         DomainCode domain,
         TestCode testCode,
         string testName,
+        DateTime observationDate,
         double? value = null,
         string? valueString = null,
         string? unit = null,
-        DateTime? observationDate = null,
         SiteCode? siteId = null,
         string? visitId = null,
         string? pageId = null,
@@ -130,6 +130,13 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
             return ObservationErrors.InvalidValue("Test name cannot be empty or whitespace.");
         }
 
+        // Valid time is when the observation was made, supplied by the caller. It is never defaulted to the
+        // time the server records it (#4769, kernel §4.1).
+        if (observationDate == default)
+        {
+            return ObservationErrors.ObservationDateRequired();
+        }
+
         var observation = new ClinicalObservation
         {
             Id = ObservationId.New(),
@@ -141,7 +148,7 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
             Value = value,
             ValueString = valueString,
             Unit = unit,
-            ObservationDate = observationDate ?? DateTime.UtcNow,
+            ObservationDate = observationDate.Kind == DateTimeKind.Local ? observationDate.ToUniversalTime() : observationDate,
             SiteId = siteId,
             VisitId = visitId,
             PageId = pageId,

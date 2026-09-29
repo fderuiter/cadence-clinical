@@ -9,7 +9,6 @@ using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -31,11 +30,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 public sealed class FormSubmissionStateTests
 {
     private static readonly AuthenticatedCaller PrincipalInvestigator = new("pi-user-01", ["PRINCIPAL_INVESTIGATOR"]);
-
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
 
     private sealed class FakeAuditContextAccessor(string userId = "pi_investigator_01", string reason = "PI approval") : ICurrentAuditContextAccessor
     {
@@ -65,7 +59,7 @@ public sealed class FormSubmissionStateTests
             siteId: new SiteCode("SITE-01"),
             visitId: "VISIT-01",
             protocolVersion: "1.0.0",
-            initialPayload: "{\"vssbp\": 120}");
+            initialPayload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}");
 
         result.IsSuccess.Should().BeTrue();
         var form = result.Value!;
@@ -87,11 +81,11 @@ public sealed class FormSubmissionStateTests
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
             formId: new FormId("FORM-VS"),
-            initialPayload: "{\"vssbp\": 120}").Value!;
+            initialPayload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}").Value!;
 
-        var updateResult = form.UpdatePayload("{\"vssbp\": 125}", "Corrected entry");
+        var updateResult = form.UpdatePayload("{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}", "Corrected entry");
         updateResult.IsSuccess.Should().BeTrue();
-        form.Payload.Should().Be("{\"vssbp\": 125}");
+        form.Payload.Should().Be("{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}");
         form.ReasonForChange.Should().Be("Corrected entry");
     }
 
@@ -104,7 +98,7 @@ public sealed class FormSubmissionStateTests
     [GxPRequirement("PRD-SYS-002")]
     public void CompleteAndApprove_LocksFormInReadOnlyState()
     {
-        var payload = "{\"vssbp\": 120, \"vsdpb\": 80}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120, \"vsdpb\": 80}";
         var form = FormSubmission.Initialize(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -138,7 +132,7 @@ public sealed class FormSubmissionStateTests
     [GxPRequirement("PRD-SYS-002")]
     public void UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError()
     {
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -153,7 +147,7 @@ public sealed class FormSubmissionStateTests
             SignedAt: DateTime.UtcNow,
             PayloadHash: ComputeHash(payload)));
 
-        var updateResult = form.UpdatePayload("{\"vssbp\": 130}", "Post-lock edit attempt");
+        var updateResult = form.UpdatePayload("{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}", "Post-lock edit attempt");
         updateResult.IsFailure.Should().BeTrue();
         updateResult.Error!.Code.Should().Be("FORM_LOCKED");
     }
@@ -167,7 +161,7 @@ public sealed class FormSubmissionStateTests
     [GxPRequirement("PRD-SYS-053")]
     public void UnlockForm_WithReason_RevertsToDraftAndUnlocks()
     {
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -189,7 +183,7 @@ public sealed class FormSubmissionStateTests
         form.ReasonForChange.Should().Be("Lab result correction required by DM query");
 
         // Can now be updated again
-        var reEditResult = form.UpdatePayload("{\"vssbp\": 122}", "Updated after unlock");
+        var reEditResult = form.UpdatePayload("{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 122}", "Updated after unlock");
         reEditResult.IsSuccess.Should().BeTrue();
     }
 
@@ -205,17 +199,15 @@ public sealed class FormSubmissionStateTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor();
 
         var service = new FormSubmissionApplicationService(
             formRepo,
             obsRepo,
             ucum,
-            clock,
             audit);
 
-        var payload = "{\"vssbp\": 120, \"vsdpb\": 80}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120, \"vsdpb\": 80}";
         var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
             StudyId: "STUDY-001",
             SubjectId: "SUBJ-001",
@@ -265,7 +257,7 @@ public sealed class FormSubmissionStateTests
     [GxPRequirement("PRD-SYS-002")]
     public void ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError()
     {
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -297,17 +289,15 @@ public sealed class FormSubmissionStateTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor();
 
         var service = new FormSubmissionApplicationService(
             formRepo,
             obsRepo,
             ucum,
-            clock,
             audit);
 
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
             StudyId: "STUDY-001",
             SubjectId: "SUBJ-001",

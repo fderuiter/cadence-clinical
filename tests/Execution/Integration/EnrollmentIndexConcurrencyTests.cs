@@ -138,7 +138,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()), clock);
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
-            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1));
+            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1, DateTimeOffset.UtcNow));
             consumeContext.CancellationToken.Returns(TestContext.Current.CancellationToken);
 
             await consumer.Consume(consumeContext);
