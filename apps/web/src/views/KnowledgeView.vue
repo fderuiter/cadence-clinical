@@ -1132,17 +1132,23 @@ import {
   DEFAULT_MOCK_ARTICLES,
 } from "../api/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useToastStore } from "../stores/toasts.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 export default {
   name: "KnowledgeView",
   setup() {
     const authStore = useAuthStore();
+    const toastStore = useToastStore();
 
-    // Data State
-    const categories = ref([...DEFAULT_CATEGORIES]);
-    const articles = ref([...DEFAULT_MOCK_ARTICLES]);
+    // Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
+    const demoBuild = isDemoBuild();
+    const categories = ref(demoBuild ? [...DEFAULT_CATEGORIES] : []);
+    const articles = ref(demoBuild ? [...DEFAULT_MOCK_ARTICLES] : []);
     const selectedCategoryId = ref(null);
-    const selectedArticle = ref(DEFAULT_MOCK_ARTICLES[0] || null);
+    const selectedArticle = ref(
+      demoBuild ? DEFAULT_MOCK_ARTICLES[0] || null : null
+    );
     const searchQuery = ref("");
     const selectedTag = ref(null);
     const activeStatusFilter = ref("ALL");
@@ -1458,7 +1464,7 @@ export default {
         );
         versionsList.value = Array.isArray(list) ? list : [];
       } catch (err) {
-        console.warn("Failed to load versions:", err);
+        toastStore.apiError("Could not load version history", err);
         versionsList.value = [];
       } finally {
         versionsLoading.value = false;
@@ -1475,7 +1481,7 @@ export default {
         );
         auditLogList.value = Array.isArray(list) ? list : [];
       } catch (err) {
-        console.warn("Failed to load audit log:", err);
+        toastStore.apiError("Could not load audit trail", err);
         auditLogList.value = [];
       } finally {
         auditLoading.value = false;
@@ -1548,7 +1554,7 @@ export default {
         selectedArticle.value = created;
         isCreateArticleModalOpen.value = false;
       } catch (err) {
-        console.warn("Failed to create article:", err);
+        toastStore.apiError("Could not create article", err);
       }
     }
 
@@ -1595,7 +1601,7 @@ export default {
         selectedArticle.value = updated;
         isEditDraftModalOpen.value = false;
       } catch (err) {
-        console.warn("Failed to save draft:", err);
+        toastStore.apiError("Could not save draft", err);
       }
     }
 
@@ -1701,7 +1707,7 @@ export default {
 
         isReasonModalOpen.value = false;
       } catch (err) {
-        console.warn("Action execution failed:", err);
+        toastStore.apiError("Could not update article status", err);
       }
     }
 
@@ -1734,7 +1740,7 @@ export default {
         categories.value.push(created);
         isCreateCategoryModalOpen.value = false;
       } catch (err) {
-        console.warn("Failed to create category:", err);
+        toastStore.apiError("Could not create category", err);
       }
     }
 
@@ -1745,14 +1751,14 @@ export default {
           knowledgeService.listCategories(),
           knowledgeService.listArticles(),
         ]);
-        if (Array.isArray(cats) && cats.length > 0) categories.value = cats;
-        if (Array.isArray(arts) && arts.length > 0) articles.value = arts;
+        if (Array.isArray(cats)) categories.value = cats;
+        if (Array.isArray(arts)) articles.value = arts;
 
         if (displayArticles.value.length > 0 && !selectedArticle.value) {
           selectedArticle.value = displayArticles.value[0];
         }
       } catch (err) {
-        console.warn("Using fallback local knowledge repository:", err);
+        toastStore.apiError("Could not load the knowledge base", err);
       }
     }
 

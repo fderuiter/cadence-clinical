@@ -21,7 +21,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// redaction matrix (blinded vs. unblinded caller), the single-lookup-by-domain-code-only contract (raise
 /// site #13's not-found, deliberately not the shared dual-lookup helper), and the full-population contract
 /// (the response reflects the aggregate's real current state).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceDetailTests
 {
@@ -101,7 +100,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_GivenSubjectNotFound_ReturnsNotFoundError()
     {
         var harness = new Harness();
@@ -114,7 +112,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_ResolvesSubjectByDomainCode_NotSurrogateId()
     {
         // Deliberately not the dual-lookup helper -- every fixture route for this endpoint passes a domain
@@ -133,7 +130,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_IsFullyPopulated_ReflectingTheAggregatesRealCurrentState_LikeEveryOtherSubjectResponse()
     {
         var siteCode = new SiteCode("SITE-042");
@@ -153,7 +149,6 @@ public class SubjectApplicationServiceDetailTests
     // -- RTSM blinding redaction matrix ----------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_GivenBlindedCallerTrue_RedactsAllThreeRtsmFieldsToNull()
     {
         var harness = new Harness();
@@ -170,7 +165,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_GivenBlindedCallerFalse_ReturnsTheRealTreatmentGroup_NotRedacted()
     {
         // The meaningful half of the redaction matrix: prove the filter actually branches on
@@ -187,7 +181,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_GivenBlindedCallerTrue_RedactsAnActuallyPopulatedTreatmentGroup_NotJustAnAlreadyNullOne()
     {
         // Belt-and-braces: same populated subject as the "false" case above, asserting the *same* real
@@ -207,7 +200,6 @@ public class SubjectApplicationServiceDetailTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetDetailAsync_RandomizationSeedAndInvestigationalProductId_AreAlwaysNull_RegardlessOfBlinding()
     {
         // ClinicalSubject exposes no data source for either field yet (the randomization slice that would

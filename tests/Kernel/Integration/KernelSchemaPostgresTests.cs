@@ -32,10 +32,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// <summary>
     /// Validates that the kernel migrations apply cleanly, leave nothing pending, and create every table plus the
     /// migrations history inside the <c>kernel</c> schema (ADR-2247).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelMigrations_ApplyToPostgres_CreatingEveryTableInKernelSchema")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task KernelMigrationsApplyToPostgresCreatingEveryTableInKernelSchema()
     {
         fixture.SkipIfUnavailable();
@@ -55,10 +53,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// <summary>
     /// Validates that every bitemporal table the kernel maps carries the K-TIME-2 exclusion constraint and the K-TIME-1
     /// append-only triggers, so a migration that forgets <c>CreateBitemporalGuards</c> fails here.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelBitemporalTables_AllCarryExclusionConstraint_AndAppendOnlyTriggers")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task KernelBitemporalTablesAllCarryExclusionConstraintAndAppendOnlyTriggers()
     {
         fixture.SkipIfUnavailable();
@@ -79,10 +75,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// <summary>
     /// Validates that a tenant → organization → site → study → study-site graph round-trips strongly-typed IDs and
     /// foreign keys through PostgreSQL.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelIdentityGraph_Persists_WithTypedIdsAndForeignKeys")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task KernelIdentityGraphPersistsWithTypedIdsAndForeignKeys()
     {
         fixture.SkipIfUnavailable();
@@ -102,10 +96,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     /// <summary>
     /// Validates the K-TX-2 write guard: a kernel context refuses <c>SaveChanges</c> outside the command pipeline, so
     /// no code path can change kernel state without provenance, an event and an audit link.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_SaveOutsidePipeline_IsRefused")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task KernelDbContextSaveOutsidePipelineIsRefused()
     {
         fixture.SkipIfUnavailable();
@@ -119,10 +111,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
 
     /// <summary>
     /// Validates that the database, not only the model, enforces tenant-code uniqueness and study-site foreign keys.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelConstraints_RejectDuplicateTenantCode_AndDanglingStudySite")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task KernelConstraintsRejectDuplicateTenantCodeAndDanglingStudySite()
     {
         fixture.SkipIfUnavailable();

@@ -16,9 +16,7 @@ namespace Cadence.UnitTests.Execution.Security;
 /// Coverage for `MIG-SUBJ-015`'s <see cref="AesGcmDemographicsEncryptionService"/>: round-trip
 /// fidelity, tamper detection across all three ciphertext segments (nonce/body/tag), malformed
 /// input, non-object payloads, wrong-key decryption, and the no-PII-in-exception-message contract.
-/// @req:PRD-SUB-001
 /// </summary>
-[GxPRequirement("PRD-SUB-001")]
 public class AesGcmDemographicsEncryptionServiceTests
 {
     private static AesGcmDemographicsEncryptionService CreateService(byte[]? key = null)
@@ -50,7 +48,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void EncryptThenDecrypt_RoundTripsExactly()
     {
         var service = CreateService();
@@ -69,7 +66,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_TamperedNonce_ThrowsDecryptionFailed()
     {
         var service = CreateService();
@@ -83,7 +79,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_TamperedCiphertextBody_ThrowsDecryptionFailed()
     {
         var service = CreateService();
@@ -98,7 +93,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_TamperedTag_ThrowsDecryptionFailed()
     {
         var service = CreateService();
@@ -114,7 +108,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_MalformedBase64_ThrowsDecryptionFailedWrappingFormatException()
     {
         var service = CreateService();
@@ -126,7 +119,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_ValidJsonButNotAnObject_ThrowsWithSpecificMessage()
     {
         byte[] key = RandomNumberGenerator.GetBytes(32);
@@ -140,7 +132,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_WithDifferentKey_ThrowsDecryptionFailed()
     {
         var encryptingService = CreateService();
@@ -154,7 +145,6 @@ public class AesGcmDemographicsEncryptionServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Decrypt_OnFailure_ExceptionMessageDoesNotLeakPlaintextOrCiphertext()
     {
         var service = CreateService();

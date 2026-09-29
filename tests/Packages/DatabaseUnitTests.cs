@@ -29,7 +29,6 @@ public class TestDbContext : DbContext
 public class DatabaseUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_RegistersDbContextWithDefaultConnectionString()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
@@ -44,7 +43,6 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_UsesConfiguredConnectionString()
     {
         var builder = WebApplication.CreateBuilder();
@@ -60,7 +58,6 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_ThrowsOnNullBuilder()
     {
         WebApplicationBuilder nullBuilder = null!;
@@ -69,7 +66,6 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_OutsideDevelopmentWithoutConnectionString_FailsFast()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
@@ -81,7 +77,6 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_RegistersReadinessHealthCheck()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
@@ -95,7 +90,6 @@ public class DatabaseUnitTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("Host=named", "Host=legacy", "Host=named")]
     [InlineData(null, "Host=legacy", "Host=legacy")]
     public void ResolvePostgresConnectionString_PrefersNamedConnectionStringOverLegacyKey(
@@ -117,7 +111,6 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ResolvePostgresConnectionString_InDevelopment_FallsBackToLocalDatabase()
     {
         var configuration = new ConfigurationBuilder().Build();

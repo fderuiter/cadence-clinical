@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Http;
-using System.Text.Json;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -14,14 +15,15 @@ namespace Cadence.E2ETests.E2E;
 /// <summary>
 /// E2E integration test suite for Subject REST endpoints.
 /// Verifies subject creation, retrieval, and state transitions over black-box HTTP.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
 {
+    private readonly ExecutionE2EFactory _factory;
     private readonly HttpClient _client;
 
     public SubjectE2ETests(ExecutionE2EFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateSignedClient();
     }
 
@@ -36,21 +38,21 @@ public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
     }
 
     [Fact]
-    public async Task CreateSubject_WithValidPayload_Returns201Created()
+    public async Task CreateSubject_WithValidPayload_Returns201AndIsRetrievable()
     {
         // Arrange
-        var requestPayload = new
-        {
-            study_id = "STUDY-E2E-001",
-            site_id = "SITE-101",
-            subject_number = "SUBJ-E2E-999"
-        };
-        var content = new StringContent(JsonSerializer.Serialize(requestPayload), System.Text.Encoding.UTF8, "application/json");
+        _factory.SkipUnlessPostgres();
+        var request = new SubjectCreateRequest("SUBJ-E2E-999", "STUDY-E2E-001", "SITE-101", null, null);
+        var ct = TestContext.Current.CancellationToken;
 
         // Act
-        var response = await _client.PostAsync("/api/v1/execution/subjects", content, TestContext.Current.CancellationToken);
+        var created = await _client.PostAsJsonAsync("/api/v1/execution/subjects", request, ExecutionE2EFactory.JsonOptions, ct);
+        var fetched = await _client.GetAsync("/api/v1/execution/subjects/SUBJ-E2E-999", ct);
 
         // Assert
-        response.StatusCode.Should().Match(s => s == HttpStatusCode.Created || s == HttpStatusCode.BadRequest || s == HttpStatusCode.InternalServerError);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(ct));
+        created.Headers.Location!.ToString().Should().Be("/api/v1/execution/subjects/SUBJ-E2E-999");
+        fetched.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await fetched.Content.ReadAsStringAsync(ct)).Should().Contain("SUBJ-E2E-999").And.Contain("STUDY-E2E-001");
     }
 }

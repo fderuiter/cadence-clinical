@@ -12,12 +12,10 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// Boundary and validation coverage for the strongly-typed IDs and value objects introduced by
 /// `MIG-SUBJ-001`: two `Guid`-backed surrogate keys and three validated string wrapper types.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ValueObjectTests
 {
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectId_New_ProducesUniqueValues()
     {
         var first = SubjectId.New();
@@ -27,7 +25,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectId_ToString_ReturnsGuidValue()
     {
         var guid = Guid.NewGuid();
@@ -37,7 +34,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentId_New_ProducesUniqueValues()
     {
         var first = SubjectConsentId.New();
@@ -49,7 +45,6 @@ public class ValueObjectTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCode_WhitespaceOrEmpty_Throws(string value)
     {
         var act = () => new SubjectCode(value);
@@ -58,7 +53,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCode_ExceedsMaxLength_Throws()
     {
         var tooLong = new string('a', 256);
@@ -69,7 +63,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCode_AtMaxLength_IsAccepted()
     {
         var atLimit = new string('a', 255);
@@ -80,7 +73,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCode_ToString_ReturnsValue()
     {
         var code = new SubjectCode("SUBJ-001");
@@ -91,7 +83,6 @@ public class ValueObjectTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [GxPRequirement("PRD-SUB-001")]
     public void StudyCode_WhitespaceOrEmpty_Throws(string value)
     {
         var act = () => new StudyCode(value);
@@ -100,7 +91,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void StudyCode_ExceedsMaxLength_Throws()
     {
         var tooLong = new string('a', 256);
@@ -111,7 +101,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void StudyCode_AtMaxLength_IsAccepted()
     {
         var atLimit = new string('a', 255);
@@ -124,7 +113,6 @@ public class ValueObjectTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [GxPRequirement("PRD-SUB-001")]
     public void SiteCode_WhitespaceOrEmpty_Throws(string value)
     {
         var act = () => new SiteCode(value);
@@ -133,7 +121,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SiteCode_ValidValue_IsAccepted()
     {
         var code = new SiteCode("SITE-042");
@@ -142,7 +129,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SiteCode_AsNullableParameter_MayBeAbsent()
     {
         SiteCode? siteCode = null;
@@ -151,7 +137,6 @@ public class ValueObjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCode_Equality_IsValueBased()
     {
         var a = new SubjectCode("SUBJ-001");

@@ -29,11 +29,9 @@ public class ClockTests
 
     /// <summary>
     /// Validates that the production clock reports the current instant in UTC (offset zero).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "SystemClock_ReturnsCurrentUtcInstant")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void SystemClockReturnsCurrentUtcInstant()
     {
         // Arrange
@@ -51,11 +49,9 @@ public class ClockTests
 
     /// <summary>
     /// Validates that the fake clock is frozen until moved, so audit timestamps can be asserted exactly.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "FakeClock_IsFrozen_UntilAdvanced")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void FakeClockIsFrozenUntilAdvanced()
     {
         // Arrange
@@ -76,11 +72,9 @@ public class ClockTests
 
     /// <summary>
     /// Validates that the fake clock defaults to a fixed instant and normalises set values to UTC.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "FakeClock_Set_NormalisesToUtc")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void FakeClockSetNormalisesToUtc()
     {
         // Arrange
@@ -100,11 +94,9 @@ public class ClockTests
 
     /// <summary>
     /// Validates that the fake clock refuses to move backwards through <see cref="FakeClock.Advance"/>.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "FakeClock_Advance_RejectsNegativeDelta")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void FakeClockAdvanceRejectsNegativeDelta()
     {
         // Arrange
@@ -121,11 +113,9 @@ public class ClockTests
     /// <summary>
     /// Validates that <c>BannedSymbols.txt</c> bans all four wall-clock properties with doc-comment IDs
     /// that resolve to real members, and that the kernel build opts into the banned-API analyzer.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "BannedSymbols_BanWallClock_AndKernelIsWired")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void BannedSymbolsBanWallClockAndKernelIsWired()
     {
         // Arrange

@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { fileshareService } from "../api/fileshare";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth";
+import { useToastStore } from "./toasts.js";
 
 /**
  * Standard DIA TMF Reference Model Zones & Sections template
@@ -320,9 +322,81 @@ export const SEED_FILES = [
   },
 ];
 
+/** Sample share grants shown only in a demo build. */
+function demoGrants() {
+  return {
+    "file-cad-001": [
+      {
+        id: "grant-001",
+        file_record_id: "file-cad-001",
+        granted_to_user_id: "cra_fderuiter",
+        granted_by_user_id: "sponsor_designer_01",
+        scope: "individual",
+        permission_level: "download",
+        expires_at: "2026-12-31T23:59:59Z",
+        revoked_at: null,
+        is_active: true,
+        created_at: "2026-08-10T14:35:00Z",
+        created_by: "sponsor_designer_01",
+        reason_for_change: "Lead CRA monitoring assignment delegation",
+      },
+      {
+        id: "grant-002",
+        file_record_id: "file-cad-001",
+        granted_to_user_id: "auditor_user_01",
+        granted_by_user_id: "sponsor_admin",
+        scope: "role",
+        permission_level: "view",
+        expires_at: "2026-09-30T23:59:59Z",
+        revoked_at: null,
+        is_active: true,
+        created_at: "2026-08-10T15:00:00Z",
+        created_by: "sponsor_admin",
+        reason_for_change: "Regulatory compliance audit inspection window",
+      },
+    ],
+    "file-cad-003": [
+      {
+        id: "grant-003",
+        file_record_id: "file-cad-003",
+        granted_to_user_id: "crc_user_101",
+        granted_by_user_id: "cra_fderuiter",
+        scope: "individual",
+        permission_level: "view",
+        expires_at: null,
+        revoked_at: null,
+        is_active: true,
+        created_at: "2026-08-12T17:00:00Z",
+        created_by: "cra_fderuiter",
+        reason_for_change: "Site CRC protocol training access",
+      },
+    ],
+  };
+}
+
+/** Sample guest links shown only in a demo build. */
+function demoGuestLinks() {
+  return {
+    "file-cad-001": [
+      {
+        id: "guest-link-001",
+        file_record_id: "file-cad-001",
+        guest_url: "https://cadence.example.com/share/gxt_sec_8923a1f8c",
+        expires_at: "2026-09-10T14:32:00Z",
+        created_by: "sponsor_designer_01",
+        access_count: 2,
+        is_valid: true,
+        created_at: "2026-08-10T14:40:00Z",
+        reason_for_change: "External central IRB reviewer access link",
+      },
+    ],
+  };
+}
+
 export const useFileshareStore = defineStore("fileshare", {
   state: () => ({
-    files: [...SEED_FILES],
+    // Sample records exist only in a demo build; every other build starts empty and shows what the server returns (#4523).
+    files: isDemoBuild() ? [...SEED_FILES] : [],
     isLoading: false,
     error: null,
     activeFilters: {
@@ -335,69 +409,8 @@ export const useFileshareStore = defineStore("fileshare", {
     },
     selectedFileIds: [],
     activeFileForModal: null,
-    activeGrants: {
-      "file-cad-001": [
-        {
-          id: "grant-001",
-          file_record_id: "file-cad-001",
-          granted_to_user_id: "cra_fderuiter",
-          granted_by_user_id: "sponsor_designer_01",
-          scope: "individual",
-          permission_level: "download",
-          expires_at: "2026-12-31T23:59:59Z",
-          revoked_at: null,
-          is_active: true,
-          created_at: "2026-08-10T14:35:00Z",
-          created_by: "sponsor_designer_01",
-          reason_for_change: "Lead CRA monitoring assignment delegation",
-        },
-        {
-          id: "grant-002",
-          file_record_id: "file-cad-001",
-          granted_to_user_id: "auditor_user_01",
-          granted_by_user_id: "sponsor_admin",
-          scope: "role",
-          permission_level: "view",
-          expires_at: "2026-09-30T23:59:59Z",
-          revoked_at: null,
-          is_active: true,
-          created_at: "2026-08-10T15:00:00Z",
-          created_by: "sponsor_admin",
-          reason_for_change: "Regulatory compliance audit inspection window",
-        },
-      ],
-      "file-cad-003": [
-        {
-          id: "grant-003",
-          file_record_id: "file-cad-003",
-          granted_to_user_id: "crc_user_101",
-          granted_by_user_id: "cra_fderuiter",
-          scope: "individual",
-          permission_level: "view",
-          expires_at: null,
-          revoked_at: null,
-          is_active: true,
-          created_at: "2026-08-12T17:00:00Z",
-          created_by: "cra_fderuiter",
-          reason_for_change: "Site CRC protocol training access",
-        },
-      ],
-    },
-    activeGuestLinks: {
-      "file-cad-001": [
-        {
-          id: "guest-link-001",
-          file_record_id: "file-cad-001",
-          guest_url: "https://cadence.example.com/share/gxt_sec_8923a1f8c",
-          expires_at: "2026-09-10T14:32:00Z",
-          created_by: "sponsor_designer_01",
-          access_count: 2,
-          is_valid: true,
-          created_at: "2026-08-10T14:40:00Z",
-          reason_for_change: "External central IRB reviewer access link",
-        },
-      ],
-    },
+    activeGrants: isDemoBuild() ? demoGrants() : {},
+    activeGuestLinks: isDemoBuild() ? demoGuestLinks() : {},
   }),
 
   getters: {
@@ -525,7 +538,8 @@ export const useFileshareStore = defineStore("fileshare", {
 
   actions: {
     /**
-     * Fetch file records from the microservice backend or retain seed fallback
+     * Fetch file records from the microservice backend. On failure the current list is left as it was and the
+     * error is reported; an empty response means there are no files (#4523).
      */
     async fetchFiles(params = {}) {
       this.isLoading = true;
@@ -539,29 +553,25 @@ export const useFileshareStore = defineStore("fileshare", {
           page_size: params.page_size || 50,
         });
 
-        if (Array.isArray(response) && response.length > 0) {
-          // Merge API responses with any local UI metadata
-          this.files = response.map((remote) => {
-            const existing = this.files.find((f) => f.id === remote.id);
-            return {
-              ...remote,
-              status: remote.is_on_hold ? "ON_HOLD" : "ACTIVE",
-              zone_code: existing?.zone_code || "01",
-              section_code: existing?.section_code || "01.01",
-              folder_code: existing?.folder_code || "01.01.01",
-              grant_count:
-                this.activeGrants[remote.id]?.length ||
-                existing?.grant_count ||
-                0,
-            };
-          });
-        }
+        const records = Array.isArray(response) ? response : [];
+        // Merge API responses with any local UI metadata
+        this.files = records.map((remote) => {
+          const existing = this.files.find((f) => f.id === remote.id);
+          return {
+            ...remote,
+            status: remote.is_on_hold ? "ON_HOLD" : "ACTIVE",
+            zone_code: existing?.zone_code || "01",
+            section_code: existing?.section_code || "01.01",
+            folder_code: existing?.folder_code || "01.01.01",
+            grant_count:
+              this.activeGrants[remote.id]?.length ||
+              existing?.grant_count ||
+              0,
+          };
+        });
       } catch (err) {
-        // Fallback gracefully to offline seed state for tests/mock environments
-        console.warn(
-          "Fileshare API query failed, preserving local cached seed state:",
-          err
-        );
+        this.error = err;
+        useToastStore().apiError("Could not load documents", err);
       } finally {
         this.isLoading = false;
       }
@@ -573,19 +583,14 @@ export const useFileshareStore = defineStore("fileshare", {
     async fetchGrants(fileId) {
       try {
         const response = await fileshareService.listShareGrants(fileId);
-        if (Array.isArray(response)) {
-          this.activeGrants[fileId] = response;
-        }
+        this.activeGrants[fileId] = Array.isArray(response) ? response : [];
       } catch (err) {
-        console.warn(
-          `Failed to fetch remote grants for ${fileId}, using local cache:`,
-          err
-        );
+        useToastStore().apiError("Could not load share grants", err);
       }
     },
 
     /**
-     * Delegate internal share grant
+     * Delegate internal share grant. Throws (after reporting) when the backend rejects it.
      */
     async addGrant(fileId, payload) {
       this.error = null;
@@ -593,25 +598,9 @@ export const useFileshareStore = defineStore("fileshare", {
       try {
         newGrant = await fileshareService.createShareGrant(fileId, payload);
       } catch (err) {
-        console.warn(
-          "Backend share grant API failed, creating mock local grant:",
-          err
-        );
-        const authStore = useAuthStore();
-        newGrant = {
-          id: `grant-${Date.now()}`,
-          file_record_id: fileId,
-          granted_to_user_id: payload.granted_to_user_id || "all",
-          granted_by_user_id: authStore.identity?.username || "demo-user",
-          scope: payload.scope || "individual",
-          permission_level: payload.permission_level || "view",
-          expires_at: payload.expires_at || null,
-          revoked_at: null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          created_by: authStore.identity?.username || "demo-user",
-          reason_for_change: payload.reason_for_change,
-        };
+        this.error = err;
+        useToastStore().apiError("Could not create share grant", err);
+        throw err;
       }
 
       if (newGrant) {
@@ -630,7 +619,7 @@ export const useFileshareStore = defineStore("fileshare", {
     },
 
     /**
-     * Revoke an active share grant
+     * Revoke an active share grant. Returns false (after reporting) when the backend rejects it.
      */
     async revokeGrant(fileId, grantId, reason) {
       try {
@@ -638,10 +627,8 @@ export const useFileshareStore = defineStore("fileshare", {
           reason_for_change: reason,
         });
       } catch (err) {
-        console.warn(
-          "Backend revoke grant API failed, updating local state:",
-          err
-        );
+        useToastStore().apiError("Could not revoke share grant", err);
+        return false;
       }
 
       if (this.activeGrants[fileId]) {
@@ -653,32 +640,19 @@ export const useFileshareStore = defineStore("fileshare", {
           file.grant_count = this.activeGrants[fileId].length;
         }
       }
+      return true;
     },
 
     /**
-     * Create external guest link
+     * Create external guest link. Throws (after reporting) when the backend rejects it.
      */
     async generateGuestLink(fileId, payload) {
       let newLink;
       try {
         newLink = await fileshareService.createGuestLink(fileId, payload);
       } catch (err) {
-        console.warn("Backend guest link API failed, creating mock link:", err);
-        const authStore = useAuthStore();
-        const rawToken = `gxt_${Math.random().toString(36).substring(2, 12)}`;
-        newLink = {
-          id: `guest-${Date.now()}`,
-          file_record_id: fileId,
-          guest_url: fileshareService.getGuestShareUrl(rawToken),
-          expires_at: new Date(
-            Date.now() + (payload.expires_in_hours || 24) * 3600 * 1000
-          ).toISOString(),
-          created_by: authStore.identity?.username || "demo-user",
-          access_count: 0,
-          is_valid: true,
-          created_at: new Date().toISOString(),
-          reason_for_change: payload.reason_for_change,
-        };
+        useToastStore().apiError("Could not create guest link", err);
+        throw err;
       }
 
       if (newLink) {
@@ -691,7 +665,7 @@ export const useFileshareStore = defineStore("fileshare", {
     },
 
     /**
-     * Revoke external guest link
+     * Revoke external guest link. Returns false (after reporting) when the backend rejects it.
      */
     async revokeGuestLink(fileId, guestLinkId, reason) {
       try {
@@ -699,10 +673,8 @@ export const useFileshareStore = defineStore("fileshare", {
           reason_for_change: reason,
         });
       } catch (err) {
-        console.warn(
-          "Backend revoke guest link API failed, updating local state:",
-          err
-        );
+        useToastStore().apiError("Could not revoke guest link", err);
+        return false;
       }
 
       if (this.activeGuestLinks[fileId]) {
@@ -710,10 +682,11 @@ export const useFileshareStore = defineStore("fileshare", {
           (l) => l.id !== guestLinkId
         );
       }
+      return true;
     },
 
     /**
-     * Set retention/legal hold on a file record
+     * Set retention/legal hold on a file record. Returns false (after reporting) when the backend rejects it.
      */
     async setHold(fileId, reason, holdReason = null) {
       try {
@@ -722,7 +695,8 @@ export const useFileshareStore = defineStore("fileshare", {
           hold_reason: holdReason || reason,
         });
       } catch (err) {
-        console.warn("Backend set hold API failed, updating local state:", err);
+        useToastStore().apiError("Could not set retention hold", err);
+        return false;
       }
       const file = this.files.find((f) => f.id === fileId);
       if (file) {
@@ -730,10 +704,11 @@ export const useFileshareStore = defineStore("fileshare", {
         file.hold_reason = holdReason || reason;
         file.status = "ON_HOLD";
       }
+      return true;
     },
 
     /**
-     * Clear retention/legal hold from a file record
+     * Clear retention/legal hold from a file record. Returns false (after reporting) when the backend rejects it.
      */
     async clearHold(fileId, reason) {
       try {
@@ -741,10 +716,8 @@ export const useFileshareStore = defineStore("fileshare", {
           reason_for_change: reason,
         });
       } catch (err) {
-        console.warn(
-          "Backend clear hold API failed, updating local state:",
-          err
-        );
+        useToastStore().apiError("Could not clear retention hold", err);
+        return false;
       }
       const file = this.files.find((f) => f.id === fileId);
       if (file) {
@@ -752,10 +725,11 @@ export const useFileshareStore = defineStore("fileshare", {
         file.hold_reason = null;
         file.status = "ACTIVE";
       }
+      return true;
     },
 
     /**
-     * Delete a file record (gated on hold)
+     * Delete a file record (gated on hold). Returns false (after reporting) when the backend rejects it.
      */
     async deleteFile(fileId, reason) {
       const file = this.files.find((f) => f.id === fileId);
@@ -767,13 +741,12 @@ export const useFileshareStore = defineStore("fileshare", {
           reason_for_change: reason,
         });
       } catch (err) {
-        console.warn(
-          "Backend delete file API failed, updating local state:",
-          err
-        );
+        useToastStore().apiError("Could not delete document", err);
+        return false;
       }
       this.files = this.files.filter((f) => f.id !== fileId);
       this.selectedFileIds = this.selectedFileIds.filter((id) => id !== fileId);
+      return true;
     },
 
     /**
@@ -821,73 +794,12 @@ export const useFileshareStore = defineStore("fileshare", {
     },
 
     /**
-     * Fetch chronological, filterable activity feed for a file record
+     * Fetch chronological, filterable activity feed for a file record. Errors propagate to the caller: an audit
+     * trail is never synthesised locally (#4523).
      */
     async fetchActivityFeed(fileId, params = {}) {
-      try {
-        const res = await fileshareService.getActivityFeed(fileId, params);
-        return res.data || res;
-      } catch (err) {
-        console.warn(
-          "Backend fetch activity feed failed, returning mock feed:",
-          err
-        );
-        const mockFile = this.files.find((f) => f.id === fileId);
-        const entries = [
-          {
-            event_type: "FILE_UPLOADED",
-            actor_user_id: mockFile?.uploaded_by || "sponsor_designer_01",
-            actor_display_name: mockFile?.uploaded_by || "Sponsor Designer",
-            timestamp: mockFile?.uploaded_at || "2026-08-10T14:32:00Z",
-            detail: {
-              filename: mockFile?.filename || "document.pdf",
-              size_bytes: mockFile?.size_bytes || 1024,
-            },
-          },
-          {
-            event_type: "SCAN_COMPLETE",
-            actor_user_id: "system_user",
-            actor_display_name: "System Automated Process",
-            timestamp: mockFile?.uploaded_at || "2026-08-10T14:32:05Z",
-            detail: { scan_engine: "clamav", status: "CLEAN" },
-          },
-        ];
-        if (mockFile?.approval_status === "APPROVED") {
-          entries.unshift({
-            event_type: "DOCUMENT_APPROVED",
-            actor_user_id: mockFile?.approved_by || "pi_user_01",
-            actor_display_name:
-              mockFile?.approved_by || "Principal Investigator",
-            timestamp: mockFile?.approved_at || "2026-08-11T09:15:00Z",
-            detail: {
-              outcome: "APPROVED",
-              signature_manifestation: mockFile?.signature_manifestation,
-            },
-          });
-        }
-        if (mockFile?.is_on_hold) {
-          entries.unshift({
-            event_type: "HOLD_SET",
-            actor_user_id: "super_admin_01",
-            actor_display_name: "Super Admin",
-            timestamp: "2026-08-12T10:00:00Z",
-            detail: { hold_reason: mockFile?.hold_reason || "Audit freeze" },
-          });
-        }
-        let filtered = entries;
-        if (params.event_type) {
-          filtered = filtered.filter(
-            (e) =>
-              e.event_type.toUpperCase() === params.event_type.toUpperCase()
-          );
-        }
-        return {
-          entries: filtered,
-          total: filtered.length,
-          page: params.page || 1,
-          page_size: params.page_size || 50,
-        };
-      }
+      const res = await fileshareService.getActivityFeed(fileId, params);
+      return res.data || res;
     },
   },
 });

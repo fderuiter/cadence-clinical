@@ -90,9 +90,14 @@ description.
   ([AGENTS.md pattern 7](AGENTS.md#7-test-infrastructure-packagestesting)).
 - A test that verifies a requirement carries both an `@req:<ID>` tag in its XML doc comment and a
   `[GxPRequirement("<ID>")]` attribute ([AGENTS.md pattern 6](AGENTS.md#6-requirement-traceability-in-tests-21-cfr-part-11)).
+  Tags on a class do not count, the ID must exist in the PRD or SRS, and a requirement is qualified only
+  when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md#linking-a-test-to-a-requirement)).
 - After adding or changing such tests, run `pnpm cadence gxp sync`. It runs the tests and regenerates
   `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`.
-  `pnpm cadence gxp validate` checks without regenerating. Never edit those two files by hand.
+  `pnpm cadence gxp validate` checks without regenerating. Never edit those two files by hand. Set
+  `CADENCE_TEST_POSTGRES` first so database tests produce results instead of skips.
+- [docs/TESTING.md](docs/TESTING.md) covers running the suites, the PostgreSQL opt-ins and each
+  `Cadence.Testing` helper.
 - Never skip, disable or fake a test to get green.
 
 ## 5. Documentation is part of the change

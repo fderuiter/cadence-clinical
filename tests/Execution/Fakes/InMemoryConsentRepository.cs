@@ -19,7 +19,6 @@ namespace Cadence.UnitTests.Execution.Fakes;
 /// so mutating it (e.g. via <c>MergeResubmission</c>) simulates EF Core's tracked-entity behavior without
 /// any extra bookkeeping. Reused by `MIG-SUBJ-021` (<c>EConsentCompletedConsumer</c>'s idempotent
 /// consent-cache backfill) and `MIG-SUBJ-026` (golden-master fixture replay).
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class InMemoryConsentRepository : IConsentRepository
 {

@@ -16,7 +16,6 @@ namespace Cadence.UnitTests.Econsent;
 public class EconsentScoreDecimalPrecisionTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ComprehensionResult_ScoreProperty_IsDecimalType()
     {
         var property = typeof(ComprehensionResult).GetProperty(nameof(ComprehensionResult.Score));
@@ -25,7 +24,6 @@ public class EconsentScoreDecimalPrecisionTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void EconsentDbContext_ComprehensionResultScore_HasPrecision5Scale2()
     {
         var options = new DbContextOptionsBuilder<EconsentDbContext>()
@@ -46,7 +44,6 @@ public class EconsentScoreDecimalPrecisionTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ComprehensionResult_ExactBoundaryCheck_DivergesFromFloatingPointDrift()
     {
         // Near threshold boundary: 80.00% pass threshold
@@ -75,7 +72,6 @@ public class EconsentScoreDecimalPrecisionTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void EconsentDbContext_Persistence_PreservesDecimalPrecisionWithoutTruncation()
     {
         var options = new DbContextOptionsBuilder<EconsentDbContext>()

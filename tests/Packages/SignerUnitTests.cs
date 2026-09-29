@@ -35,11 +35,9 @@ public class CanonicalSignerTests
     /// Known-answer vector produced by <c>canonicalSerialize</c> + HMAC-SHA256 in <c>packages/ui/signing.js</c>
     /// (Node): HTML-sensitive characters, non-ASCII text and control characters must serialize and sign
     /// identically in .NET and JavaScript.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void CanonicalSerialize_MatchesTheJavaScriptSignerForHtmlSensitiveAndNonAsciiText()
     {
         var payload = new JsonObject

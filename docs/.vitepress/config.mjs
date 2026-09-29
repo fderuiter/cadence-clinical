@@ -190,6 +190,7 @@ export default withMermaid(
             },
             { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
             { text: "Database and Migrations", link: "/OPERATIONAL_DATABASE" },
+            { text: "Testing and Requirement Qualification", link: "/TESTING" },
             { text: "CI and Quality Gates", link: "/CI" },
             { text: "Developer CLI (`cadence`)", link: "/cli" },
             { text: "Agent & Contributor Rules", link: "/AGENTS" },

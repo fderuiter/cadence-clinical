@@ -27,7 +27,6 @@ namespace Cadence.UnitTests.Kernel.Integration;
 /// and authorizer, and drops the database afterwards.
 /// Without it, tests call <see cref="SkipIfUnavailable"/> and report as skipped rather than passing against a
 /// stand-in. Once opted in, any startup failure is rethrown.
-/// @req:PRD-SYS-053
 /// </summary>
 public class KernelPostgresFixture : IAsyncLifetime
 {

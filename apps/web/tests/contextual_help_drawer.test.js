@@ -68,6 +68,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
   };
 
   beforeEach(() => {
+    // Uses the demo personas and roles (demo builds only, #4523).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     authStore = useAuthStore();
@@ -355,8 +357,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       await searchInputEl.setValue("safety");
       // The search is debounced by 250 ms; wait for it rather than sleeping a
       // fixed time, which fails when the suite runs under load.
-      await vi.waitFor(() =>
-        expect(wrapper.text()).toContain("Search Results (1)")
+      await vi.waitFor(
+        () => expect(wrapper.text()).toContain("Search Results (1)"),
+        { timeout: 2000 }
       );
       expect(wrapper.text()).toContain("SOP-SAF-301: Adverse Events");
 

@@ -4,7 +4,7 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 ## Layout
 
-- `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and starts the MSW mock worker in dev and demo builds.
+- `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and, in a demo build only, seeds the offline demo identity and the MSW mock worker.
 - `src/api/`: the `apiClient.js` fetch wrapper and per-service clients (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and others).
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
 - `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI.
@@ -16,7 +16,11 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 - The client signs in through Keycloak (Authorization Code with PKCE). Defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. The realm is in `docker/cadence-realm.json`.
 - `apiClient.js` sends the Keycloak access token as `Authorization: Bearer <token>` to `VITE_API_BASE_URL` (default `http://localhost:8000`), and `X-Change-Reason` on mutations when the caller supplies one.
-- The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)). When Keycloak is unreachable the auth store falls back to a demo identity with no token, and its `/api/v1/auth/demo-session` call has no gateway route, so demo mode cannot reach the API. Only MSW-mocked requests work in that mode. Sign in through Keycloak to use the real services.
+- The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)). When Keycloak is unreachable the app opens the login page and sign-in reports the problem; it does not fall back to a demo identity.
+
+## Demo mode and API failures
+
+Demo mode is opt-in at build time: `pnpm --filter web dev --mode demo`, `pnpm --filter web build:demo`, or `VITE_DEMO_MODE=true` (`src/utils/demoMode.js`). Only a demo build signs in with the offline demo identity, starts the MSW mock API and loads sample data. Every other build talks to the gateway. A failed API call shows an error alert (`useToastStore().apiError(title, err)` from `src/stores/toasts.js`) and leaves the screen as it was; never substitute sample data or report success when a call fails. Tests opt into a demo build with `vi.stubEnv("VITE_DEMO_MODE", "true")`.
 
 ## Screen availability
 

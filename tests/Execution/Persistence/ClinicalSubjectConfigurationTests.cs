@@ -32,7 +32,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// names as sufficient for unique-index enforcement and raw-SQL corruption. Full Postgres-specific
 /// behavior (e.g. `jsonb` operators) is exercised by MIG-SUBJ-028's Testcontainers integration tests, not
 /// here.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ClinicalSubjectConfigurationTests
 {
@@ -68,7 +67,6 @@ public class ClinicalSubjectConfigurationTests
     // ---- Configuration shape (metadata) ----------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsClinicalSubjectToClinicalSubjectsTable()
     {
         using var connection = OpenSqliteConnection();
@@ -79,7 +77,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_HasUniqueIndexOnSubjectCode()
     {
         using var connection = OpenSqliteConnection();
@@ -91,7 +88,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex()
     {
         using var connection = OpenSqliteConnection();
@@ -105,7 +101,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsStratFactorsBackingFieldToJsonbColumn()
     {
         using var connection = OpenSqliteConnection();
@@ -119,7 +114,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsShadowVersionPropertyAsConcurrencyToken()
     {
         using var connection = OpenSqliteConnection();
@@ -134,7 +128,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsStatusWithMaxLength32()
     {
         using var connection = OpenSqliteConnection();
@@ -146,7 +139,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsEncryptedDemographicsWithUnboundedMaxLength()
     {
         using var connection = OpenSqliteConnection();
@@ -160,7 +152,6 @@ public class ClinicalSubjectConfigurationTests
     // ---- Round-trip persistence -------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ClinicalSubjects_GivenPersistedSubjectWithSiteCode_RoundTripsCoreFieldsExactly()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -195,7 +186,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ClinicalSubjects_GivenPersistedSubjectWithNullSiteCode_RoundTripsNullExactly()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -220,7 +210,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ClinicalSubjects_GivenStratFactorsWithNestedObjectsAndArrays_RoundTripsWithoutDataLoss()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -258,8 +247,6 @@ public class ClinicalSubjectConfigurationTests
     // ---- GxP audit interceptor wiring (MIG-SUBJ-007 regression) -----------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields()
     {
         await using var context = CreateInMemoryContext(
@@ -279,7 +266,6 @@ public class ClinicalSubjectConfigurationTests
     // ---- Relational-provider behaviors (SQLite) ----------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenTwoSubjectsWithSameStudyCodeAndEnrollmentIndex_FailsOnUniqueIndex()
     {
         using var connection = OpenSqliteConnection();
@@ -305,7 +291,6 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ClinicalSubjects_GivenCorruptedStatusValueInStorage_ThrowsInvalidOperationExceptionOnMaterialization()
     {
         using var connection = OpenSqliteConnection();

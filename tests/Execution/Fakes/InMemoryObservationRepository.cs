@@ -12,8 +12,6 @@ namespace Cadence.UnitTests.Execution.Fakes;
 
 /// <summary>
 /// In-memory fake implementation of <see cref="IObservationRepository"/> for isolated unit tests.
-/// @req:PRD-SYS-001
-/// @req:SRS-EDC-001
 /// </summary>
 public sealed class InMemoryObservationRepository : IObservationRepository
 {

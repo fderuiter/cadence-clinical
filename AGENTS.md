@@ -167,7 +167,7 @@ public async Task EnrollSubject_WritesAuditEntryWithCaller()
 
 ### 7. Test infrastructure (`packages/testing`)
 
-Use the shared helpers instead of ad-hoc fakes:
+Use the shared helpers instead of ad-hoc fakes ([docs/TESTING.md](docs/TESTING.md) describes each one):
 
 - `Cadence.Testing.InMemoryRepository<T>` for application-service tests without a database.
 - `Cadence.Testing.Security.TestSecurityContext` (`CreateHmacHeaders`, `CreatePrincipal`,

@@ -19,7 +19,6 @@ namespace Cadence.UnitTests.Execution.Fakes;
 /// <c>SiteComplianceApplicationService</c> tests preconfigure rows. See
 /// <see cref="InMemorySubjectRepository"/>'s doc comment for why this lives under
 /// <c>tests/Execution/Fakes</c> rather than <c>packages/testing/src</c>.
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
 {

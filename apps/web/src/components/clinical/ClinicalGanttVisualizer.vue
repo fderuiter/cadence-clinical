@@ -636,8 +636,10 @@
 <script setup>
 import { ref, computed, reactive } from "vue";
 import { useClinicalStore } from "../../stores/clinical";
+import { useToastStore } from "../../stores/toasts.js";
 
 const store = useClinicalStore();
+const toasts = useToastStore();
 
 // UI Dimensions
 const timelineWidth = 960;
@@ -963,7 +965,7 @@ async function saveTiming() {
       justification
     );
 
-    // Fallback/Local sandbox replication for immediate reactive local state sync
+    // Mirror the saved change locally for immediate reactive state sync
     const idx = store.currentUsdm.encounters.findIndex(
       (e) => e.encounter_id === visitId
     );
@@ -977,22 +979,8 @@ async function saveTiming() {
     }
     closeModal();
   } catch (err) {
-    console.warn(
-      "API save encountered offline state, replicating locally:",
-      err
-    );
-    // Local offline synchronization fallback
-    const idx = store.currentUsdm.encounters.findIndex(
-      (e) => e.encounter_id === visitId
-    );
-    if (idx !== -1) {
-      store.currentUsdm.encounters[idx] = {
-        ...store.currentUsdm.encounters[idx],
-        ...updatedProperties,
-      };
-      store.currentUsdm = { ...store.currentUsdm };
-    }
-    closeModal();
+    // The visit window was not saved (#4523): keep the modal open with the user's edits and report it.
+    toasts.apiError("Visit window update failed", err);
   }
 }
 

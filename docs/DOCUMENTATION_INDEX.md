@@ -50,6 +50,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Local development environment](LOCAL_DEV_ENVIRONMENT.md) | Current | Prerequisites, build, run (compose, Aspire, single service), ports |
 | [Environment variables](ENVIRONMENT_VARIABLES.md) | Current | Every setting the code reads, required or optional |
 | [Database layout and migrations](OPERATIONAL_DATABASE.md) | Current | One `cadence` database with a schema per service; migrations at startup or as a job |
+| [Testing and requirement qualification](TESTING.md) | Current | Running the .NET and Vitest suites, PostgreSQL opt-ins, `Cadence.Testing` helpers, requirement tagging and when a requirement counts as qualified |
 | [CI and quality gates](CI.md) | Current | Workflows, CI jobs, the 21 quality gates, the pre-commit hook and a failure runbook |
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |

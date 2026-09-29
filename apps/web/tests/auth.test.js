@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { useSignatureStore } from "../src/stores/signatures";
@@ -16,24 +16,52 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     }
   });
 
-  describe("Fallback Offline / Demo Mode Behavior", () => {
-    it("should initialize in demo mode with fallback identity and normalized roles", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  describe("Demo mode is opt-in (#4523)", () => {
+    it("starts outside demo mode, with no identity or roles, unless the build is a demo build", () => {
       const authStore = useAuthStore();
 
       expect(authStore.isAuthenticated).toBe(false);
-      expect(authStore.isDemoMode).toBe(true);
+      expect(authStore.isDemoMode).toBe(false);
       expect(authStore.token).toBeNull();
+      expect(authStore.identity).toBeNull();
+      expect(authStore.normalizedRoles).toEqual([]);
+    });
 
-      // Check fallback identity details
+    it("ignores a stored demo flag outside a demo build", () => {
+      window.sessionStorage.setItem(
+        "cadence_auth",
+        JSON.stringify({ isAuthenticated: false, isDemoMode: true })
+      );
+
+      expect(useAuthStore().isDemoMode).toBe(false);
+    });
+
+    it("refuses offline sign-in outside a demo build", async () => {
+      const authStore = useAuthStore();
+
+      await expect(authStore.login()).rejects.toThrow(
+        "Sign-in is unavailable: the identity provider could not be reached."
+      );
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.isDemoMode).toBe(false);
+    });
+
+    it("starts in demo mode with the demo identity and roles in a demo build", () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+
+      expect(authStore.isDemoMode).toBe(true);
       expect(authStore.identity).toEqual({
         username: "fderuiter",
-        email: "fderuiter@example.com",
+        email: "fderuiter@example.com", // deid-ignore
         firstName: "Frans",
         lastName: "de Ruiter",
         id: "fderuiter-id-12345",
       });
-
-      // Check fallback normalized roles
       expect(authStore.normalizedRoles).toEqual([
         "sponsor_admin",
         "sponsor_designer",
@@ -46,7 +74,8 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       ]);
     });
 
-    it("allows mockup login and logout when keycloak is not initialized", async () => {
+    it("allows offline login and logout in a demo build", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       const authStore = useAuthStore();
 
       await authStore.login();
@@ -187,52 +216,12 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     });
   });
 
-  describe("Production Lockdown Constraints", () => {
-    it("should refuse to login with offline mock in production environments", async () => {
-      const authStore = useAuthStore();
-
-      // Stub production environment
-      const originalProd = import.meta.env.PROD;
-      const originalMode = import.meta.env.MODE;
-      import.meta.env.PROD = true;
-      import.meta.env.MODE = "production";
-
-      authStore.isDemoMode = true;
-
-      await expect(authStore.login()).rejects.toThrow(
-        "Offline login fallback is disabled in production environments."
-      );
-
-      // Clean up
-      import.meta.env.PROD = originalProd;
-      import.meta.env.MODE = originalMode;
-    });
-
-    it("should refuse to logout with offline mock in production environments", async () => {
-      const authStore = useAuthStore();
-
-      // Stub production environment
-      const originalProd = import.meta.env.PROD;
-      const originalMode = import.meta.env.MODE;
-      import.meta.env.PROD = true;
-      import.meta.env.MODE = "production";
-
-      authStore.isDemoMode = true;
-
-      await expect(authStore.logout()).rejects.toThrow(
-        "Offline logout fallback is disabled in production environments."
-      );
-
-      // Clean up
-      import.meta.env.PROD = originalProd;
-      import.meta.env.MODE = originalMode;
-    });
-  });
-
   describe("Stores Demo Mode Local Simulation tests", () => {
     let authStore;
 
     beforeEach(() => {
+      // These local simulations exist only in a demo build (#4523).
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       authStore = useAuthStore();
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.clear();
@@ -430,13 +419,8 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
       const authStore = useAuthStore();
 
-      // Stub demo environment with PROD = true
-      const originalProd = import.meta.env.PROD;
-      const originalMode = import.meta.env.MODE;
-      import.meta.env.PROD = true;
-      import.meta.env.MODE = "demo";
-
-      authStore.isDemoMode = true;
+      vi.stubEnv("PROD", true);
+      vi.stubEnv("MODE", "demo");
 
       // This should succeed because of the check excluding MODE === "demo" from isProduction
       await authStore.login();
@@ -445,14 +429,15 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       await authStore.logout();
       expect(authStore.isAuthenticated).toBe(false);
-
-      // Clean up
-      import.meta.env.PROD = originalProd;
-      import.meta.env.MODE = originalMode;
     });
   });
 
   describe("Session-Bound Persona Serialization & Reload Recovery", () => {
+    // Persona presets are a demo-build feature.
+    beforeEach(() => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+    });
+
     it("includes currentPersona in cadence_auth JSON payload in session storage on persona switch", async () => {
       const authStore = useAuthStore();
       await authStore.login();

@@ -13,10 +13,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 1214
-- **Passed:** 1208 🟢
+- **Automated Test Methods Reported:** 734
+- **Passed:** 734 🟢
 - **Failed/Errors:** 0 🔴
-- **Overall Operational Pass Rate:** 99.51%
+- **Skipped:** 0 ⚪
+- **Overall Operational Pass Rate (of executed):** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -24,1226 +25,148 @@ The Installation Qualification verifies that the software execution environment 
 
 ## 3. Operational Qualification (OQ)
 
-| Test Case Name | Classname / Suite | Target Req | Status | Duration |
-| :--- | :--- | :--- | :--- | :--- |
-| `ActivateSite_EndToEnd_NonCompliantSite_Returns400WithExactBlockedActivationDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSite_GivenNonCompliantSiteResult_Returns400WithExactBlockedActivationDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSite_GivenValidRequest_Returns200WithExactSuccessEnvelopeNamingTheSite` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ActivateSiteAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddAsync_ThenSaveChangesAsync_PersistsANewRowRetrievableByGetAsync` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddAsync_ThenSaveChangesAsync_ThenExistsAsync_GivenMatchingSubjectStudyAndVersionIndex_ReturnsTrue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceDbContext_ExecutesOptionsActionWithServiceProvider` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceDbContext_RegistersDbContextInServiceCollection` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceLogging_ConfiguresJsonConsoleOptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadencePostgresDbContext_OutsideDevelopmentWithoutConnectionString_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadencePostgresDbContext_RegistersDbContextWithDefaultConnectionString` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadencePostgresDbContext_RegistersReadinessHealthCheck` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadencePostgresDbContext_ThrowsOnNullBuilder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadencePostgresDbContext_UsesConfiguredConnectionString` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceTelemetry_RegistersOpenTelemetryServices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceWebDefaults_AllowsCustomProblemDetailsConfiguration` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceWebDefaults_RegistersLoggingTelemetryOpenApiAndProblemDetails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AddCadenceWebDefaults_WithOtlpEndpoint_RegistersProvidersNamedAfterService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenNoComplianceRowAtAll_TargetingEnrolled_IsTreatedAsNonCompliant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenNonCompliantSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesBlockedAudit` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenNoSiteId_TargetingEnrolled_IsBlockedRatherThanAutoCompliant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceStateAsync_TargetingStateOtherThanEnrolled_NeverConsultsComplianceGate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvanceSubjectStateAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvisoryLockSql_ForStudy_DerivesItsLockKeyFromTheStudyCodeNotAGlobalConstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AdvisoryLockSql_ForStudy_UsesTheSameParameterizedSqlTemplateRegardlessOfStudyCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AllDIRegistrationsAddedByThisTicket_ResolveSuccessfullyFromARealRequestScope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AllFactoryMethods_ProduceDistinctCodes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AllMonetaryAndRatePropertiesInPaymentEntities_UseDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApiRequest_SignedWithWrongSecret_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApiRequest_WithoutGatewaySignature_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApiRequest_WithRolesAddedAfterSigning_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApiRequest_WithStaleSignature_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApiRequest_WithValidSignature_IsAuthenticated` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplicationService_Close_ValidatesCraOrDmRole` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplicationService_CloseReopenCancel_WithoutRole_AreDenied` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenNoExistingRowAndNullMissingArtifacts_CreatesRowWithEmptyMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenNullSiteIdWithNoExistingRow_SucceedsAsNoOpSinceAggregateCannotRepresentASitelessRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyKnownCodeStatus_NoCodeExtensionPresent_LeavesStatusUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyKnownCodeStatus_SubjectNotFoundCode_ForcesStatusTo404` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyKnownCodeStatus_UnrecognizedCodeExtension_LeavesStatusUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyWebhookUpdate_AlwaysOverwrites_NeverMergesWithPriorContents` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyWebhookUpdate_CalledTwiceInSequence_IncrementsVersionByOneEachCallWithNoRejection` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyWebhookUpdate_EmptyMissingDocuments_FullyClearsPriorNonEmptyList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveForm_AsSignedInvestigator_RecordsCallerAsSigner` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveForm_NamingAnotherSigner_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveForm_WithInvestigatorRoleOnlyInBody_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AuditDigestEngine_GeneratesMerkleChain_AndVerifiesIntegrity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AuditLogContains_GivenAMatchingEntry_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AuditLogContains_GivenNoMatchingEntry_ThrowsWithScenarioIdAndRecordedEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `AuditorPersona_RestrictedToReadOnlyAccess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BankerRounding_ToEven_DivergesFromFloatingPointBoundaryErrors` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BannedSymbolsBanWallClockAndKernelIsWired` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BatchEvaluation_ConcurrentExecution_ThreadSafeAndDeterministic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BatchEvaluation_MultiObservationContext_DetectsDiscrepanciesAcrossVisits` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BitemporalQueryExtensionsAsOfPointInTimeStateReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BitemporalTemporalPeriodDualClockReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BlockedActivation_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BlockedEnrollment_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenLiteralExpectedValue_ComparesDirectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenMismatchedArrayLength_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenNestedObjectAndArrayFields_RecursesCorrectlyAndIgnoresExtraActualFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenOpaqueNonNullSentinelAndNonNullActual_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenOpaqueNonNullSentinelAndNullActual_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenOpaqueSentinelAndNonNullActual_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenOpaqueSentinelAndNullActual_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenUnchangedSentinelAndDivergingPostState_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenUnchangedSentinelAndMatchingPreState_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BodyMatches_GivenUnchangedSentinelWithNoPreStateSupplied_ThrowsExplainingWhy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.ComprehensionResult_ExactBoundaryCheck_DivergesFromFloatingPointDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.ComprehensionResult_ScoreProperty_IsDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.EconsentDbContext_ComprehensionResultScore_HasPrecision5Scale2` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.EconsentDbContext_Persistence_PreservesDecimalPrecisionWithoutTruncation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNoExistingRowAndNullMissingArtifacts_CreatesRowWithEmptyMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNullSiteIdWithNoExistingRow_SucceedsAsNoOpSinceAggregateCannotRepresentASitelessRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.GetComplianceStatusAsync_GivenExistingRow_ReturnsItsCurrentState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.GetComplianceStatusAsync_GivenNoExistingRow_ReturnsIncompleteWithEmptyMissingDocumentsAndNoException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.GetComplianceStatusAsync_MethodSignature_HasNoFailureReturnPath` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceCacheTests.ApplyWebhookUpdate_AlwaysOverwrites_NeverMergesWithPriorContents` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceCacheTests.ApplyWebhookUpdate_CalledTwiceInSequence_IncrementsVersionByOneEachCallWithNoRejection` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceCacheTests.ApplyWebhookUpdate_EmptyMissingDocuments_FullyClearsPriorNonEmptyList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceCacheTests.Create_InitialState_HasVersionOneAndSuppliedMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceCacheTests.MissingDocuments_CastToMutableListAndMutated_DoesNotAffectAggregateState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenEmptyOrWhitespaceOnlySubjectIdOrStudyId_DropsSilentlyWithoutCreatingAnythingOrThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenNoExistingSubject_AssignsTheEnrollmentIndexViaTheSingleSharedRepositoryMethod` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenNoExistingSubject_CreatesScreeningSubjectAtIndexZeroWithAuditEntryAndConsentCacheRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenSaveChangesThrowsADbUpdateException_PropagatesToMassTransitsFaultPipelineRatherThanBeingSwallowed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenSubjectAlreadyExistsWithNoMatchingConsentRow_BackfillsConsentWithoutRecreatingSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenTheSameEventDeliveredTwice_ResultsInExactlyOneClinicalSubjectNotTwo` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_ArithmeticExpressions_EvaluatesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_Comparisons_EvaluatesInequalities` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_IndexedRepeat_ResolvesNestedArrayReference` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_KleeneLogic_EvaluatesThreeValuedTruthTables` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_MixedTypeComparisons_HandlesIntDoubleAndNullSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_RecursionDepthLimit_ProtectsAgainstStackOverflow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_RelativePathResolution_ResolvesBareAndSubjectPrefixedPaths` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateBatchRules_FlagsSystolicLowerThanDiastolicPhysiologyViolation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.BatchEditCheckTests.BatchEvaluation_ConcurrentExecution_ThreadSafeAndDeterministic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.EditChecks.BatchEditCheckTests.BatchEvaluation_MultiObservationContext_DetectsDiscrepanciesAcrossVisits` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderAbsent_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderPresentAndPopulated_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderPresentButWhitespaceOnly_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_SignedWithWrongSecret_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithoutGatewaySignature_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithRolesAddedAfterSigning_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithStaleSignature_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithValidSignature_IsAuthenticated` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApproveForm_AsSignedInvestigator_RecordsCallerAsSigner` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApproveForm_NamingAnotherSigner_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApproveForm_WithInvestigatorRoleOnlyInBody_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.CloseQuery_AsSignedCallerWithoutCraOrDmRole_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.CloseQuery_AsSignedCra_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.Healthz_WithoutCredentials_IsAnonymous` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.HostStartup_WithoutGatewaySecret_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.ActivateSite_EndToEnd_NonCompliantSite_Returns400WithExactBlockedActivationDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.AllDIRegistrationsAddedByThisTicket_ResolveSuccessfullyFromARealRequestScope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.ComplianceStatus_EndToEnd_NoCacheRowExists_Returns200WithFalseAndEmptyDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.CreateClient_BootingTheRealProgramCompositionRoot_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.EtmfWebhook_EndToEnd_NewMilestone_Returns200WithExactSuccessEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ExecutionProgramStartupTests.Healthz_GivenTheFullyWiredCompositionRoot_StillReturnsTheUnchangedPreExistingResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.CloseQuery_Handler_WithCraRole_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.CloseQuery_Handler_WithUnauthorizedRole_ReturnsForbiddenProblemResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.CreateFormSubmission_Handler_ReturnsCreatedResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.CreateObservation_Handler_ReturnsCreatedResultWithLocation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.CreateQuery_Handler_ReturnsCreatedResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests.VerifyObservationSdv_Handler_ReturnsOkWithVerifiedState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.ActivateSite_GivenNonCompliantSiteResult_Returns400WithExactBlockedActivationDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.ActivateSite_GivenValidRequest_Returns200WithExactSuccessEnvelopeNamingTheSite` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.ActivateSiteAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.ApplyEtmfWebhookAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.EtmfWebhook_GivenInvalidPayload_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.EtmfWebhook_GivenValidPayload_Returns200WithExactSuccessEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.GetComplianceStatus_GivenNoCacheRowResult_StillReturns200NeverAProblemResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.GetComplianceStatus_GivenNoMilestoneQueryParam_DefaultsToSiteActivation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.GetComplianceStatus_GivenStudyIdAndMilestoneQueryParams_ThreadsBothThroughAsSnakeCaseKeys` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SiteComplianceEndpointsRoutingTests.GetSiteComplianceStatusAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.AdvanceSubjectStateAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.CreateSubject_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.CreateSubject_GivenValidRequest_Returns201WithLocationHeaderPointingAtCanonicalRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.CreateSubjectAsync_GivenPreCancelledToken_ThrowsOperationCanceledExceptionRatherThanCompleting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.DeleteSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.DeleteSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.DeleteSubjectDemographics_GivenValidRequestAndHeader_Returns200` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.DeleteSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.GetSubjectDetail_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.GetSubjectDetail_GivenValidRequest_Returns200WithDetailBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.GetSubjectDetailAsync_GivenCallerWithBlindedRoleClaim_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.GetSubjectDetailAsync_GivenCallerWithoutBlindedRoleClaim_ResolvesIsBlindedCallerFalse_AndDoesNotRedact` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.GetSubjectDetailAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsent_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsent_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsent_GivenValidRequest_Returns200WithConsentResponseBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsentAlias_GivenInvalidRequest_AlsoShortCircuitsWith400_MatchingTheCanonicalRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsentAlias_GivenValidRequest_BehavesIdenticallyToTheCanonicalConsentRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsentAlias_IsExcludedFromGeneratedOpenApiDocument_WhileCanonicalRouteIsIncluded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.RecordSubjectConsentAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectDemographics_GivenValidRequestAndHeader_Returns200` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectState_GivenInvalidBody_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectState_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectState_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectState_GivenValidRequestAndHeader_Returns200AndThreadsTheHeaderValueThrough` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.SubjectEndpointsRoutingTests.UpdateSubjectState_GivenWhitespaceOnlyChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_InvalidRequestArgumentNotAtIndexZero_StillShortCircuitsWith400` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_InvalidSubjectConsentRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_InvalidSubjectCreateRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_NoArgumentOfRequestType_ThrowsInvalidOperationException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_RequestArgumentNotAtIndexZero_StillLocatesAndValidatesIt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_ValidSubjectConsentRequest_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Endpoints.ValidationFilterTests.InvokeAsync_ValidSubjectCreateRequest_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionGoldenMasterTests.NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.InitializeForm_CreatesFormInDraftState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.UpdatePayload_InDraftState_UpdatesPayloadSuccessfully` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests.UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenLiteralExpectedValue_ComparesDirectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenMismatchedArrayLength_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenNestedObjectAndArrayFields_RecursesCorrectlyAndIgnoresExtraActualFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenOpaqueNonNullSentinelAndNonNullActual_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenOpaqueNonNullSentinelAndNullActual_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenOpaqueSentinelAndNonNullActual_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenOpaqueSentinelAndNullActual_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenUnchangedSentinelAndDivergingPostState_Fails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenUnchangedSentinelAndMatchingPreState_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertBodyMatchesTests.BodyMatches_GivenUnchangedSentinelWithNoPreStateSupplied_ThrowsExplainingWhy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertDbAndAuditTests.AuditLogContains_GivenAMatchingEntry_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertDbAndAuditTests.AuditLogContains_GivenNoMatchingEntry_ThrowsWithScenarioIdAndRecordedEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertDbAndAuditTests.DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterAssertDbAndAuditTests.DbStateMatches_GivenAssertionThatHolds_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenAMismatchedFixturePair_ThrowsRatherThanSilentlyOmittingTheOrphanedScenario` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenAnInputEntryWithNoCounterpart_DoesNotSilentlyDropIt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenOutputEntriesWithNoInputCounterpart_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenTheRealEdgeCasePair_ReturnsAllElevenScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenTheRealNominalFixturePair_ReturnsAllNineteenScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_GivenTheRealValidationErrorPair_ReturnsAllTwentyOneScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.GoldenMasterFixtureLoaderTests.LoadScenarios_PreservesInputFileOrderForMultiStepScenarios` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests.EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests.ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests.NominalScenario_MatchesGoldenMaster` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationGoldenMasterTests.LabRangeEvaluation_GoldenMasterVectors_MatchExpectedIndicators` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationGoldenMasterTests.SdvVerification_StateTransitions_MaintainStrictPart11Audit` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationGoldenMasterTests.UcumNormalization_GoldenMasterVectors_MatchExpectedOutputs` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.CreateObservation_WithValidParameters_InitializesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.FlagSdv_WithReason_ResetsSdvVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.LabRangeService_EvaluatesNormalAndOutOfRangeValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.OutlierDetection_IdentifiesStatisticalOutliers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.UcumNormalization_ConvertsUnitsCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.VerifySdv_WhenAlreadyVerified_ReturnsError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Observations.ObservationUnitTests.VerifySdv_WhenUnverified_TransitionsToVerified` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.ClinicalSubjects_GivenCorruptedStatusValueInStorage_ThrowsInvalidOperationExceptionOnMaterialization` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.ClinicalSubjects_GivenPersistedSubjectWithNullSiteCode_RoundTripsNullExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.ClinicalSubjects_GivenPersistedSubjectWithSiteCode_RoundTripsCoreFieldsExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.ClinicalSubjects_GivenStratFactorsWithNestedObjectsAndArrays_RoundTripsWithoutDataLoss` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_HasUniqueIndexOnSubjectCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_MapsClinicalSubjectToClinicalSubjectsTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_MapsEncryptedDemographicsWithUnboundedMaxLength` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_MapsShadowVersionPropertyAsConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_MapsStatusWithMaxLength32` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.Configure_MapsStratFactorsBackingFieldToJsonbColumn` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ClinicalSubjectConfigurationTests.SaveChangesAsync_GivenTwoSubjectsWithSameStudyCodeAndEnrollmentIndex_FailsOnUniqueIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.ClinicalSubjectAndSubjectConsentShadowVersionProperties_AreConfiguredAsPlainConcurrencyTokensNotRowVersions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.SaveChangesAsync_GivenTwoContextsLoadTheSameRowAndTheFirstSavesFirst_TheSecondsStaleSaveThrowsDbUpdateConcurrencyException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.SavingChangesAsync_GivenAModifiedEntity_IncrementsShadowVersionByExactlyOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.SavingChangesAsync_GivenNewlyAddedEntity_LeavesShadowVersionAtItsDefaultStartingValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.SavingChangesAsync_GivenTwoDomainMutationsBeforeOneSaveChangesAsync_IncrementsShadowVersionOnlyOnce` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConcurrencyTokenIncrementInterceptorTests.SavingChangesAsync_NeverIncrementsSiteComplianceCacheVersionDomainCounter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.AddAsync_ThenSaveChangesAsync_ThenExistsAsync_GivenMatchingSubjectStudyAndVersionIndex_ReturnsTrue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.ExistsAsync_GivenNoMatchingConsent_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.ExistsAsync_GivenSameSubjectAndStudyButDifferentVersionIndex_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.GetAsync_GivenMatchingRow_ReturnsTheTrackedEntity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.GetAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ConsentRepositoryTests.GetOtherRequiringReconsentAsync_ReturnsOnlyOtherRowsForTheSameSubjectRequiringReconsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_DoesNotItselfCallSaveChanges_EntryOnlyVisibleAfterCallerSaves` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenCallsWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenDifferentTableNames_ChainsEachIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenFirstEntryForATableName_PersistsWithEmptyPredecessorHashAndVersionIndexOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenGxPAuditInterceptorAlsoRegistered_BothAuditTrailsCoexistIndependentlyInOneSaveChangesCall` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenNoOldOrNewValues_ChangesJsonIsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenOldAndNewValues_SerializesBothIntoChangesJson` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests.WriteAsync_GivenTwoCallsForSameTableNameAcrossSeparateSaves_ChainsSecondPredecessorHashToFirstBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests.SaveChangesAsync_GivenARowDeletedOutFromUnderTheRetryingWriter_ExhaustsRetriesAndStillThrowsDbUpdateConcurrencyException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests.SaveChangesAsync_GivenAStaleWriteThatAnotherWriterAlreadyCommitted_ResolvesTheConflictAndPersistsThisCallersChange` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests.SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests.SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests.SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests.SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_IgnoresComputedMissingDocumentsPropertyItself` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsMissingDocumentsBackingFieldToNativeTextArrayColumn` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsShadowVersionPropertyAsTheActualConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsSiteComplianceCacheToSiteComplianceCachesTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsVersionAsPlainIntThatIsNotAConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.SiteComplianceCaches_GivenEmptyMissingDocuments_RoundTripsAsEmptyArray` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.SiteComplianceCaches_GivenMissingDocuments_RoundTripsAsNativeArrayInOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.SiteComplianceCaches_GivenVersionIncrementedTwiceBeforeOneSaveChangesAsync_PersistsFinalValueNotIntermediate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.AddAsync_ThenSaveChangesAsync_PersistsANewRowRetrievableByGetAsync` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.GetAsync_GivenMatchingStudySiteAndMilestone_ReturnsTheRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.GetAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.GetAsync_GivenNullSiteCode_ReturnsNullEvenWhenARowExistsForTheStudyAndMilestone` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.GetAsync_GivenRowForADifferentMilestone_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SiteComplianceRepositoryTests.GetAsync_ReturnsATrackedEntity_MutatingItAndCallingSaveChangesPersistsTheUpdate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectConsentConfigurationTests.Configure_MapsShadowVersionPropertyAsConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectConsentConfigurationTests.Configure_MapsSubjectConsentToSubjectConsentsTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectConsentConfigurationTests.Configure_ProtocolVersionIsMappedAsComplexProperty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectConsentConfigurationTests.SubjectConsents_GivenPersistedConsent_RoundTripsProtocolVersionExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectConsentConfigurationTests.SubjectConsents_GivenResubmissionMergeBeforeSave_PersistsUpdatedProtocolVersion` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.AdvisoryLockSql_ForStudy_DerivesItsLockKeyFromTheStudyCodeNotAGlobalConstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.AdvisoryLockSql_ForStudy_UsesTheSameParameterizedSqlTemplateRegardlessOfStudyCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.EnrollNextIndexAsync_CalledTwiceSequentiallyOnSameRepository_ProducesDistinctSequentialIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.EnrollNextIndexAsync_GivenEmptyStudy_ReturnsZero` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.EnrollNextIndexAsync_GivenNParallelCallersForSameStudy_YieldsDistinctSequentialIndicesWithNoDuplicatesOrGaps` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.EnrollNextIndexAsync_GivenStudyWithSubjectsAtIndicesZeroOneTwo_ReturnsThree` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.EnrollNextIndexAsync_ThenAddAsyncThenSaveChangesAsync_PersistsSubjectAtComputedIndexAndCommitsTransaction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByCodeAsync_GivenAValidSurrogateIdStringThatIsNotAKnownCode_DoesNotFallBackToIdLookup` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByCodeAsync_GivenMatchingSubjectCode_ReturnsTheSubjectTracked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByCodeAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenAStringThatIsOnlyValidAsACodeNotAGuid_DoesNotFallBackToCodeLookup` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenMalformedIdString_ReturnsNullWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenMatchingSurrogateId_ReturnsTheSubjectTracked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_Close_ValidatesCraOrDmRole` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_CloseReopenCancel_WithoutRole_AreDenied` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.CancelQuery_FromOpen_SucceedsWithReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.QueryLifecycle_FullTransitionSequence_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.RaiseQuery_CreatesQueryInOpenState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_MalformedBase64_ThrowsDecryptionFailedWrappingFormatException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_OnFailure_ExceptionMessageDoesNotLeakPlaintextOrCiphertext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_TamperedCiphertextBody_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_TamperedNonce_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_TamperedTag_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_ValidJsonButNotAnObject_ThrowsWithSpecificMessage` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.Decrypt_WithDifferentKey_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.AesGcmDemographicsEncryptionServiceTests.EncryptThenDecrypt_RoundTripsExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenHeaderPresent_ReturnsActualHeaderValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenNullBirthDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenNullObservationDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenOneDaySpan_ReturnsExactFixedDivisorValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenTwentyYearSpan_ReturnsExactComputedValueNotApproximation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenBirthDateFailingBothParseAttempts_ReturnsNullAgeWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenDateWithTrailingGarbageAfterWhitespace_FallsBackToLeadingDateToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenDecryptFailure_ReturnsDefaultShapeAndDoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenDictionaryShapeWithEncryptedDemographicsKey_DecryptsAndDerivesResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenEmptyCiphertextString_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenGenderKeyAbsent_FallsBackToSexKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenIso8601BirthDateWithTAndZOffset_ParsesDateComponentCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenNoBirthDateKeyPresent_ReturnsNullAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenNullSubject_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenObjectShapeWithEncryptedDemographicsProperty_DecryptsAndDerivesResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenObjectShapeWithNullEncryptedDemographicsProperty_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenPreserveCustomTrue_ForwardsFlagToNormalizeGender` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.GetSafeDemographics_GivenRawCiphertextStringShape_DecryptsAndDerivesGenderAndAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.NormalizeGender_GivenMappedInput_ReturnsExpectedCodeRegardlessOfPreserveCustom` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.NormalizeGender_GivenNullInput_ReturnsU` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.NormalizeGender_GivenUnmappedInputWithPreserveCustomFalse_ReturnsU` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.NormalizeGender_GivenUnmappedInputWithPreserveCustomTrue_ReturnsTrimmedUppercasedVerbatim` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.ClearDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Create_TwoSubjects_ProduceDistinctIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.IsPostRandomization_ForLockedStates_ReturnsTrue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.IsPostRandomization_ForUnlockedStates_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.TransitionTo_SameState_NoOpSucceedsViaGuard` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Unblind_OnScreeningSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.UpdateDemographics_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.UpdateDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.UpdateStratFactors_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests.Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ApplyKnownCodeStatus_NoCodeExtensionPresent_LeavesStatusUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ApplyKnownCodeStatus_SubjectNotFoundCode_ForcesStatusTo404` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ApplyKnownCodeStatus_UnrecognizedCodeExtension_LeavesStatusUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.GetStatusCode_HypotheticalConflictTypedCodeOtherThanLockedFactorMutation_MapsToDefault409` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ToProblemResult_LockedFactorMutation_Returns422NotTheConflictDefaultOf409` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests.ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.EtmfCompletenessWebhookPayloadValidator_BlankStudyId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.EtmfCompletenessWebhookPayloadValidator_EmptyMilestone_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.EtmfCompletenessWebhookPayloadValidator_NullSiteIdAndMissingArtifacts_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.EtmfCompletenessWebhookPayloadValidator_ValidPayload_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SiteActivationRequest_ValueEquality_ComparesByStudyId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectConsentRequestValidator_EmptyProtocolVersionStudyId_FailsWithSingleError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectConsentRequestValidator_EmptyProtocolVersionVersionTag_FailsWithSingleError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectConsentRequestValidator_NullProtocolVersion_FailsWithSingleErrorWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectConsentRequestValidator_ValidRequest_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_EmptyStudyId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_EmptySubjectId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_FullyPopulatedRequest_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_SiteIdExceedsMaxLength_FailsMaximumLength` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_SiteIdNullEmptyOrPopulated_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectCreateRequestValidator_SubjectIdAndStudyIdLengthBoundary_MatchesExpectedValidity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectDemographicsUpdateRequest_AllFieldsOmitted_ConstructsWithNulls` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectDemographicsUpdateRequest_PopulatedStratFactors_RoundTrips` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectStateUpdateRequest_EmptyStatusWithPopulatedState_ValidatorPassesButTargetPrefersEmptyStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectStateUpdateRequest_StatusEnrolledStateNull_ValidatesAndTargetResolvesToStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectStateUpdateRequest_StatusNullStateEnrolled_ValidatesAndTargetResolvesToState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectStateUpdateRequestValidator_BothBlankOrWhitespace_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.RequestValidatorTests.SubjectStateUpdateRequestValidator_BothNull_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_CascadeClearance_DoesNotTouchADifferentSubjectsConsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenExistingRowForSameVersionIndex_MergesIntoExistingRowRatherThanCreatingNew` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenIncomingNeitherSignedNorPaperOverride_DoesNotCascadeClearOtherRows` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenIncomingRequiresReconsentTrue_DoesNotCascadeClearOtherRows` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenNewConsent_WritesRecordConsentAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenNewConsentSignedWithoutRequiringReconsent_CascadesClearanceToOtherRowsForSameSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenNoExistingRow_CreatesNewConsentNotAMerge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceConsentTests.RecordConsentAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenEachEnrollment_WritesEnrollSubjectAuditEntryForThatSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenEmptyStudy_EnrollsSequentialSubjectsWithZeroBasedIndexAndScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenExplicitlyEmptySiteId_ThrowsRatherThanTreatingItAsAbsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenNoDemographics_EncryptedDemographicsIsNullAndEncryptionIsNeverInvoked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenPopulatedDemographics_PersistsEncryptedCiphertextNeverRawPlaintext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceCreateTests.CreateAsync_GivenSiteId_ReturnsFromAggregateWithSiteIdPopulated` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenPostRandomizationSubject_FailsWithSoftDeleteBlocked_DistinctFromLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubject_ChangedDemographicsWithDecryptableExistingCiphertext_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubject_StratFactorsUpdateFailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubjectWithBothFieldsSupplied_StratFactorsFailureShortCircuitsBeforeDemographicsIsTouched` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubjectWithCorruptedExistingCiphertext_ThrowsDecryptionFailure_NotLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPreRandomizationSubject_DemographicsUpdateSucceeds_ReEncryptsAndAudits` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPreRandomizationSubject_StratFactorsUpdateSucceedsAndPersists` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPreRandomizationSubjectWithCorruptedExistingCiphertext_SucceedsWithoutEverDecrypting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_ReturnsTheSubjectsRealState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_GivenBlindedCallerFalse_ReturnsTheRealTreatmentGroup_NotRedacted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_GivenBlindedCallerTrue_RedactsAllThreeRtsmFieldsToNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_GivenBlindedCallerTrue_RedactsAnActuallyPopulatedTreatmentGroup_NotJustAnAlreadyNullOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_GivenSubjectNotFound_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_IsFullyPopulated_ReflectingTheAggregatesRealCurrentState_LikeEveryOtherSubjectResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_RandomizationSeedAndInvestigationalProductId_AreAlwaysNull_RegardlessOfBlinding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDetailTests.GetDetailAsync_ResolvesSubjectByDomainCode_NotSurrogateId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenNoComplianceRowAtAll_TargetingEnrolled_IsTreatedAsNonCompliant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenNonCompliantSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesBlockedAudit` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenNoSiteId_TargetingEnrolled_IsBlockedRatherThanAutoCompliant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.AdvanceStateAsync_TargetingStateOtherThanEnrolled_NeverConsultsComplianceGate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_GivenEligibleAtNonCompliantSite_FailsIdenticallyToAdvanceStateAsync` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_GivenNoEvaluatorConfigured_ThrowsRatherThanGuessingAVerdict` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_GivenSubjectNotFound_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_ResolvesSubjectByDomainCode_NotSurrogateId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests.EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.ClearReconsentRequirement_SetsRequiresReconsentFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.Create_IcfSignedDateOmitted_DefaultsToClockUtcNow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.Create_IcfSignedDateSupplied_UsesSuppliedValueNotClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IcfSigned_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IcfSignedDateNull_ExistingDatePreserved` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IcfSignedDateSupplied_ReplacesExistingDate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IncomingProtocolVersionNull_StoredProtocolVersionUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IncomingProtocolVersionSupplied_ReplacesStoredProtocolVersion` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_IsPaperOverride_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_RequiresReconsent_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectConsentTests.MergeResubmission_VersionTag_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.AllFactoryMethods_ProduceDistinctCodes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.BlockedActivation_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.BlockedEnrollment_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.InvalidStateTransition_ReturnsFixedCodeAndFreeTextMessage` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.LockedFactorMutation_ReturnsFixedCodeAndConflictType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.NotFound_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.ReconsentRequired_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectErrorsTests.SoftDeleteBlocked_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.ComplianceStatusResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.FromAggregate_EnrolledSubjectWithSite_ReflectsAggregatesActualState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.FromAggregate_ForEnrolledSubjectWithSite_ReportsTheRealStatusAndSite` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.FromAggregate_ScreeningSubject_ReportsScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.OperationEnvelopeResponse_SerializesWithSpecFieldNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.SubjectConsentResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.SubjectDetailResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectResponseTests.SubjectResponse_SerializesWithSpecSnakeCasePropertyNamesAndPlainScalarValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests.ToCode_RoundTripsThroughTryParse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests.TryParse_NormalizesCasingWhitespaceAndSpaces` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests.TryParse_UnmappedOrEmptyInput_ReturnsFalseWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests.Guard_FullTransitionMatrix_MatchesSpecGraph` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests.Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests.Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests.Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests.Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SiteCode_AsNullableParameter_MayBeAbsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SiteCode_ValidValue_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SiteCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.StudyCode_AtMaxLength_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.StudyCode_ExceedsMaxLength_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.StudyCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectCode_AtMaxLength_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectCode_Equality_IsValueBased` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectCode_ExceedsMaxLength_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectCode_ToString_ReturnsValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectConsentId_New_ProducesUniqueValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_New_ProducesUniqueValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.ValueObjectTests.SubjectId_ToString_ReturnsGuidValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Gateway.GatewayAuthenticationTests.Healthz_WithoutToken_IsAnonymous` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Gateway.GatewayAuthenticationTests.HostStartup_WithoutOidcAuthority_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Gateway.GatewayAuthenticationTests.ProxiedRoute_WithoutToken_Returns401AndIsNotForwarded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Gateway.GatewayAuthenticationTests.ProxiedRoute_WithTokenFromUntrustedKey_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Gateway.GatewayAuthenticationTests.ProxiedRoute_WithValidToken_ForwardsSignedIdentityFromTokenOnly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.BitemporalTests.BitemporalQueryExtensionsAsOfPointInTimeStateReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodCreateBoundedEnforcesBoundaryConstraints` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodCreateCurrentSetsOpenEndedUpperBounds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodOverlapsDetectsIntervalCollisions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodSupersedeClosesRecordedInterval` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ClockTests.BannedSymbolsBanWallClockAndKernelIsWired` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ClockTests.FakeClockAdvanceRejectsNegativeDelta` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ClockTests.FakeClockIsFrozenUntilAdvanced` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ClockTests.FakeClockSetNormalisesToUtc` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ClockTests.SystemClockReturnsCurrentUtcInstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelEfCoreConfigurationTests.EfCoreConfigureKernelEntityIdsPersistsAndQueriesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.BitemporalTemporalPeriodDualClockReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersEmptyAndDefaultStatesAreConsistent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersJsonSerializationRoundtrips` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersMustGenerateValidUuidV7` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersParseAndTryParseRoundtripCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersTypeConverterConvertsCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.KernelIdentifierTests.KernelDomainEntitiesImplementIGxPAuditable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionApprovalEnforcesPermanentImmutability` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionCreateInitializesInDraftStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionDraftWorkflowAllowsUpdatesAndSubmission` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionForkAmendmentSupersedesPriorAndCreatesNewDraft` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Ecdsa_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Ecdsa_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_SignsWithPasswordProtectedKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Sign_ThrowsForUnparseablePrivateKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsEcdsaSignatureAgainstAnRsaKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsGarbageKeyMaterialInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsSignatureFromADifferentKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsTamperedData` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.AddCadenceDbContext_ExecutesOptionsActionWithServiceProvider` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.AddCadenceDbContext_RegistersDbContextInServiceCollection` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.GetCompiledModel_ReturnsNull_WhenNoCompiledModelExists` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.AuditDigestEngine_GeneratesMerkleChain_AndVerifiesIntegrity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.AuditorPersona_RestrictedToReadOnlyAccess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.DependencyInjection_RegistersCadenceSecurityServices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.FieldMasker_ObfuscatesBlindedFields_AndUnmasksRtsmRoles` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.HmacSigner_GeneratesAndVerifiesGatewaySignatures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.PermissionMatrix_EvaluatesResourceActionPermissions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.RoleNormalization_MapsAliasesToCanonicalNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.SiteAccessEvaluator_EnforcesFailClosedSiteScopedLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.StudyAccessEvaluator_RestrictsStudyScopedUsers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.CanonicalSerialize_IsIndependentOfInputKeyOrderAndInputShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.CanonicalSerialize_SortsKeysRecursivelyAndKeepsArrayOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.GenerateCanonicalSignature_MatchesTheUiPackageForAsciiPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.GenerateCanonicalSignature_RejectsBlankSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_AcceptsOwnSignatureInEitherHexCase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsBlankOrMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsBlankSecretInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsTamperedPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsWrongSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.ESignatureVerifier_DetectsTamperedMarkdownBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.GxPSigner_SignGxpMarkdown_GeneratesValidSignature_NotDummy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.PhiRedactorService_RedactsConfiguredTermsAndAutoDetectedPhi` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.Pkcs7Signer_ComputeDetachedSignature_ReturnsValidPkcs7CmsDer` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.Pkcs7Signer_GeneratesValidSignature_PassesESignatureVerifier` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ComplianceUnitTests.ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_All23ServiceOptions_InstantiateWithDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_CommonOptions_HasDefaultValuesMatchingPython` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.Config_Options_BindsFromConfigurationDictionary` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests.ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.AddCadencePostgresDbContext_OutsideDevelopmentWithoutConnectionString_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.AddCadencePostgresDbContext_RegistersDbContextWithDefaultConnectionString` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.AddCadencePostgresDbContext_RegistersReadinessHealthCheck` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.AddCadencePostgresDbContext_ThrowsOnNullBuilder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.AddCadencePostgresDbContext_UsesConfiguredConnectionString` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.ResolvePostgresConnectionString_InDevelopment_FallsBackToLocalDatabase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DatabaseUnitTests.ResolvePostgresConnectionString_PrefersNamedConnectionStringOverLegacyKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DdfCompilerTests.UsdmCompilerCompileFromProtocolVersionSucceeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DdfCompilerTests.UsdmCompilerCompileUsdmGeneratesCompleteArtifacts` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DdfCompilerTests.UsdmCompilerCompileWithAccessibilityValidationProducesReport` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidAirGapVault_DeidentifiesAndRehydratesTextStructuredDataAndChatMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidAirGapVault_IDisposable_PurgesInMemoryMappings` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidTransforms_AppliesMaskPseudonymizeDateShiftAndAgeCap` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidTransforms_ScrubErrorMessage_StripsIdentifiersAndQuotedValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidTransforms_ShiftDateString_PreservesFormats` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DeidTransforms_SubjectDateShift_And_CapAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DeidEngineUnitTests.RedactionManifest_BuildsAndVerifiesSymmetricAndAsymmetricSignatures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_Allocate_AssignsArmWithChecksum` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BlockRandomizationEngine_GeneratesCanonicalStratumKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.DomainEngineUnitTests.RuleEvaluator_EvaluatesAstAndJsonLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.LoggerMessageGeneratorTests.EConsentConsumerLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.LoggerMessageGeneratorTests.LoggerMessages_WhenLevelDisabled_ShortCircuitWithoutLogging` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.LoggerMessageGeneratorTests.SubjectEndpointsLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.LoggerMessageGeneratorTests.TelemetryLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_RtmGeneratorService_IsTheOnlyRtmGeneratorInToolingAssemblies` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_RtmGeneratorService_SyncsInProcessWithoutPython` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Compliance_RtmGeneratorService_ValidateOnly_DoesNotModifyCheckedInSdlcDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Deid_DeidDetector_DetectsAndRedactsEmail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.PortedPackagesUnitTests.ToolingCore_OpenApiToolingService_ValidatesDriftInProcess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.RuleChecksumTests.ComputeChecksum_MatchesOriginalPayloadLayout` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.RuleChecksumTests.ComputeChecksum_WhenConditionDiffers_ProducesDifferentChecksum` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceLogging_ConfiguresJsonConsoleOptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceTelemetry_RegistersOpenTelemetryServices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceWebDefaults_AllowsCustomProblemDetailsConfiguration` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceWebDefaults_RegistersLoggingTelemetryOpenApiAndProblemDetails` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.AddCadenceWebDefaults_WithOtlpEndpoint_RegistersProvidersNamedAfterService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.ExtensionMethods_ThrowOnNullArguments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.MapCadenceApiDocumentation_RoutesConfiguredInDevelopment` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.MapCadenceHealthAndStatusEndpoints_ReturnsExpectedPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceWebDefaults_MapsLivenessAndReadinessProbes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TemplateCatalogTests.Catalog_OnlyResolvesTemplatesEmbeddedInItsOwnAssembly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TemplateCatalogTests.CtmsLetterEndpoint_RejectsAnythingOutsideItsAllowList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TemplateCatalogTests.CtmsLetterEndpoint_RendersAnAllowedLetter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TemplateCatalogTests.Renderer_RejectsKeysOutsideTheCatalog` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Packages.TemplateCatalogTests.SameKeyInTwoModules_RendersEachModulesOwnTemplate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.AllMonetaryAndRatePropertiesInPaymentEntities_UseDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.BankerRounding_ToEven_DivergesFromFloatingPointBoundaryErrors` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.CalculatePayable_UsesFixedPointDecimalArithmetic_AndBankersRounding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.ParticipantWallet_StipendLedgerAccumulation_MatchesExactDecimal` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.PaymentConfigurations_ExplicitlyConfiguresNumeric18_4ForFinancialProperties` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.SplitPayeeAllocation_CalculatesShares_UsingDecimalArithmetic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.SecurityAndDomainTests.AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.SecurityAndDomainTests.HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.SecurityAndDomainTests.InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.SecurityAndDomainTests.ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CalculateAge_GivenNullBirthDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CalculateAge_GivenNullObservationDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CalculateAge_GivenOneDaySpan_ReturnsExactFixedDivisorValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CalculateAge_GivenTwentyYearSpan_ReturnsExactComputedValueNotApproximation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CalculatePayable_UsesFixedPointDecimalArithmetic_AndBankersRounding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CancelQuery_FromOpen_SucceedsWithReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CanonicalSerialize_IsIndependentOfInputKeyOrderAndInputShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CanonicalSerialize_SortsKeysRecursivelyAndKeepsArrayOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Catalog_OnlyResolvesTemplatesEmbeddedInItsOwnAssembly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ChangeReason_GivenHeaderPresent_ReturnsActualHeaderValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClearDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClearReconsentRequirement_SetsRequiresReconsentFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalSubjectAndSubjectConsentShadowVersionProperties_AreConfiguredAsPlainConcurrencyTokensNotRowVersions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalSubjects_GivenCorruptedStatusValueInStorage_ThrowsInvalidOperationExceptionOnMaterialization` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalSubjects_GivenPersistedSubjectWithNullSiteCode_RoundTripsNullExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalSubjects_GivenPersistedSubjectWithSiteCode_RoundTripsCoreFieldsExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ClinicalSubjects_GivenStratFactorsWithNestedObjectsAndArrays_RoundTripsWithoutDataLoss` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CloseQuery_AsSignedCallerWithoutCraOrDmRole_Returns403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CloseQuery_AsSignedCra_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CloseQuery_Handler_WithCraRole_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CloseQuery_Handler_WithUnauthorizedRole_ReturnsForbiddenProblemResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Compliance_AuditChainVerifier_ValidatesIntactChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Compliance_AuditDigestCalculator_ComputesExpectedHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Compliance_RtmGeneratorService_IsTheOnlyRtmGeneratorInToolingAssemblies` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Compliance_RtmGeneratorService_SyncsInProcessWithoutPython` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Compliance_RtmGeneratorService_ValidateOnly_DoesNotModifyCheckedInSdlcDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComplianceStatus_EndToEnd_NoCacheRowExists_Returns200WithFalseAndEmptyDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComplianceStatusResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComprehensionResult_ExactBoundaryCheck_DivergesFromFloatingPointDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComprehensionResult_ScoreProperty_IsDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComputeChecksum_MatchesOriginalPayloadLayout` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ComputeChecksum_WhenConditionDiffers_ProducesDifferentChecksum` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Config_All23ServiceOptions_InstantiateWithDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Config_CommonOptions_HasDefaultValuesMatchingPython` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Config_Options_BindsFromConfigurationDictionary` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_HasUniqueIndexOnSubjectCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_IgnoresComputedMissingDocumentsPropertyItself` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsClinicalSubjectToClinicalSubjectsTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsEncryptedDemographicsWithUnboundedMaxLength` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsMissingDocumentsBackingFieldToNativeTextArrayColumn` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsShadowVersionPropertyAsConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsShadowVersionPropertyAsTheActualConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsSiteComplianceCacheToSiteComplianceCachesTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsStatusWithMaxLength32` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsStratFactorsBackingFieldToJsonbColumn` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsSubjectConsentToSubjectConsentsTable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_MapsVersionAsPlainIntThatIsNotAConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Configure_ProtocolVersionIsMappedAsComplexProperty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenEmptyOrWhitespaceOnlySubjectIdOrStudyId_DropsSilentlyWithoutCreatingAnythingOrThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenNoExistingSubject_AssignsTheEnrollmentIndexViaTheSingleSharedRepositoryMethod` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenNoExistingSubject_CreatesScreeningSubjectAtIndexZeroWithAuditEntryAndConsentCacheRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenSaveChangesThrowsADbUpdateException_PropagatesToMassTransitsFaultPipelineRatherThanBeingSwallowed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenSubjectAlreadyExistsWithNoMatchingConsentRow_BackfillsConsentWithoutRecreatingSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Consume_GivenTheSameEventDeliveredTwice_ResultsInExactlyOneClinicalSubjectNotTwo` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_IcfSignedDateOmitted_DefaultsToClockUtcNow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_IcfSignedDateSupplied_UsesSuppliedValueNotClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_InitialState_HasVersionOneAndSuppliedMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_TwoSubjects_ProduceDistinctIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenEachEnrollment_WritesEnrollSubjectAuditEntryForThatSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenEmptyStudy_EnrollsSequentialSubjectsWithZeroBasedIndexAndScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenExplicitlyEmptySiteId_ThrowsRatherThanTreatingItAsAbsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenNoDemographics_EncryptedDemographicsIsNullAndEncryptionIsNeverInvoked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenPopulatedDemographics_PersistsEncryptedCiphertextNeverRawPlaintext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_GivenSiteId_ReturnsFromAggregateWithSiteIdPopulated` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateClient_BootingTheRealProgramCompositionRoot_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateFormSubmission_Handler_ReturnsCreatedResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateObservation_Handler_ReturnsCreatedResultWithLocation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateObservation_WithValidParameters_InitializesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateQuery_Handler_ReturnsCreatedResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateSubject_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateSubject_GivenValidRequest_Returns201WithLocationHeaderPointingAtCanonicalRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateSubjectAsync_GivenPreCancelledToken_ThrowsOperationCanceledExceptionRatherThanCompleting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CtmsLetterEndpoint_RejectsAnythingOutsideItsAllowList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CtmsLetterEndpoint_RendersAnAllowedLetter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DbStateMatches_GivenAssertionThatHolds_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_MalformedBase64_ThrowsDecryptionFailedWrappingFormatException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_OnFailure_ExceptionMessageDoesNotLeakPlaintextOrCiphertext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_TamperedCiphertextBody_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_TamperedNonce_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_TamperedTag_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_ValidJsonButNotAnObject_ThrowsWithSpecificMessage` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Decrypt_WithDifferentKey_ThrowsDecryptionFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Deid_DeidDetector_DetectsAndRedactsEmail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidAirGapVault_DeidentifiesAndRehydratesTextStructuredDataAndChatMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidAirGapVault_IDisposable_PurgesInMemoryMappings` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidTransforms_AppliesMaskPseudonymizeDateShiftAndAgeCap` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidTransforms_ScrubErrorMessage_StripsIdentifiersAndQuotedValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidTransforms_ShiftDateString_PreservesFormats` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeidTransforms_SubjectDateShift_And_CapAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_GivenPostRandomizationSubject_FailsWithSoftDeleteBlocked_DistinctFromLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteSubjectDemographics_GivenValidRequestAndHeader_Returns200` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DependencyInjection_RegistersCadenceSecurityServices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Ecdsa_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Ecdsa_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EConsentConsumerLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EconsentDbContext_ComprehensionResultScore_HasPrecision5Scale2` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EconsentDbContext_Persistence_PreservesDecimalPrecisionWithoutTruncation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EfCoreConfigureKernelEntityIdsPersistsAndQueriesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EncryptThenDecrypt_RoundTripsExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EnrollNextIndexAsync_CalledTwiceSequentiallyOnSameRepository_ProducesDistinctSequentialIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EnrollNextIndexAsync_GivenEmptyStudy_ReturnsZero` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EnrollNextIndexAsync_GivenNParallelCallersForSameStudy_YieldsDistinctSequentialIndicesWithNoDuplicatesOrGaps` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EnrollNextIndexAsync_GivenStudyWithSubjectsAtIndicesZeroOneTwo_ReturnsThree` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EnrollNextIndexAsync_ThenAddAsyncThenSaveChangesAsync_PersistsSubjectAtComputedIndexAndCommitsTransaction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ESignatureVerifier_DetectsTamperedMarkdownBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfCompletenessWebhookPayloadValidator_BlankStudyId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfCompletenessWebhookPayloadValidator_EmptyMilestone_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfCompletenessWebhookPayloadValidator_NullSiteIdAndMissingArtifacts_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfCompletenessWebhookPayloadValidator_ValidPayload_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfWebhook_EndToEnd_NewMilestone_Returns200WithExactSuccessEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfWebhook_GivenInvalidPayload_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EtmfWebhook_GivenValidPayload_Returns200WithExactSuccessEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_GivenEligibleAtNonCompliantSite_FailsIdenticallyToAdvanceStateAsync` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_GivenNoEvaluatorConfigured_ThrowsRatherThanGuessingAVerdict` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_GivenSubjectNotFound_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_ResolvesSubjectByDomainCode_NotSurrogateId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_ArithmeticExpressions_EvaluatesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_Comparisons_EvaluatesInequalities` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_IndexedRepeat_ResolvesNestedArrayReference` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_KleeneLogic_EvaluatesThreeValuedTruthTables` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_MixedTypeComparisons_HandlesIntDoubleAndNullSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_RecursionDepthLimit_ProtectsAgainstStackOverflow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateAst_RelativePathResolution_ResolvesBareAndSubjectPrefixedPaths` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateBatchRules_FlagsSystolicLowerThanDiastolicPhysiologyViolation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ExistsAsync_GivenNoMatchingConsent_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ExistsAsync_GivenSameSubjectAndStudyButDifferentVersionIndex_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ExtensionMethods_ThrowOnNullArguments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FakeClockAdvanceRejectsNegativeDelta` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FakeClockIsFrozenUntilAdvanced` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FakeClockSetNormalisesToUtc` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FieldMasker_ObfuscatesBlindedFields_AndUnmasksRtsmRoles` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FlagSdv_WithReason_ResetsSdvVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FromAggregate_EnrolledSubjectWithSite_ReflectsAggregatesActualState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FromAggregate_ForEnrolledSubjectWithSite_ReportsTheRealStatusAndSite` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `FromAggregate_ScreeningSubject_ReportsScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GenerateCanonicalSignature_MatchesTheUiPackageForAsciiPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GenerateCanonicalSignature_RejectsBlankSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_GivenMatchingRow_ReturnsTheTrackedEntity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_GivenMatchingStudySiteAndMilestone_ReturnsTheRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_GivenNullSiteCode_ReturnsNullEvenWhenARowExistsForTheStudyAndMilestone` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_GivenRowForADifferentMilestone_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetAsync_ReturnsATrackedEntity_MutatingItAndCallingSaveChangesPersistsTheUpdate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByCodeAsync_GivenAValidSurrogateIdStringThatIsNotAKnownCode_DoesNotFallBackToIdLookup` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByCodeAsync_GivenMatchingSubjectCode_ReturnsTheSubjectTracked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByCodeAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByIdAsync_GivenAStringThatIsOnlyValidAsACodeNotAGuid_DoesNotFallBackToCodeLookup` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByIdAsync_GivenMalformedIdString_ReturnsNullWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByIdAsync_GivenMatchingSurrogateId_ReturnsTheSubjectTracked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetByIdAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetCompiledModel_ReturnsNull_WhenNoCompiledModelExists` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatus_GivenNoCacheRowResult_StillReturns200NeverAProblemResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatus_GivenNoMilestoneQueryParam_DefaultsToSiteActivation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatus_GivenStudyIdAndMilestoneQueryParams_ThreadsBothThroughAsSnakeCaseKeys` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatusAsync_GivenExistingRow_ReturnsItsCurrentState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatusAsync_GivenNoExistingRow_ReturnsIncompleteWithEmptyMissingDocumentsAndNoException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetComplianceStatusAsync_MethodSignature_HasNoFailureReturnPath` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_GivenBlindedCallerFalse_ReturnsTheRealTreatmentGroup_NotRedacted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_GivenBlindedCallerTrue_RedactsAllThreeRtsmFieldsToNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_GivenBlindedCallerTrue_RedactsAnActuallyPopulatedTreatmentGroup_NotJustAnAlreadyNullOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_GivenSubjectNotFound_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_IsFullyPopulated_ReflectingTheAggregatesRealCurrentState_LikeEveryOtherSubjectResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_RandomizationSeedAndInvestigationalProductId_AreAlwaysNull_RegardlessOfBlinding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetDetailAsync_ResolvesSubjectByDomainCode_NotSurrogateId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetOtherRequiringReconsentAsync_ReturnsOnlyOtherRowsForTheSameSubjectRequiringReconsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenBirthDateFailingBothParseAttempts_ReturnsNullAgeWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenDateWithTrailingGarbageAfterWhitespace_FallsBackToLeadingDateToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenDecryptFailure_ReturnsDefaultShapeAndDoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenDictionaryShapeWithEncryptedDemographicsKey_DecryptsAndDerivesResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenEmptyCiphertextString_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenGenderKeyAbsent_FallsBackToSexKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenIso8601BirthDateWithTAndZOffset_ParsesDateComponentCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenNoBirthDateKeyPresent_ReturnsNullAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenNullSubject_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenObjectShapeWithEncryptedDemographicsProperty_DecryptsAndDerivesResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenObjectShapeWithNullEncryptedDemographicsProperty_ReturnsDefaultShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenPreserveCustomTrue_ForwardsFlagToNormalizeGender` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSafeDemographics_GivenRawCiphertextStringShape_DecryptsAndDerivesGenderAndAge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSiteComplianceStatusAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetStatusCode_HypotheticalConflictTypedCodeOtherThanLockedFactorMutation_MapsToDefault409` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSubjectDetail_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSubjectDetail_GivenValidRequest_Returns200WithDetailBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSubjectDetailAsync_GivenCallerWithBlindedRoleClaim_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSubjectDetailAsync_GivenCallerWithoutBlindedRoleClaim_ResolvesIsBlindedCallerFalse_AndDoesNotRedact` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GetSubjectDetailAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Guard_FullTransitionMatrix_MatchesSpecGraph` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `GxPSigner_SignGxpMarkdown_GeneratesValidSignature_NotDummy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Healthz_GivenTheFullyWiredCompositionRoot_StillReturnsTheUnchangedPreExistingResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Healthz_WithoutCredentials_IsAnonymous` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Healthz_WithoutToken_IsAnonymous` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Hexagonal_DomainPrimitives_And_ExceptionMapper_Work` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `HmacSigner_GeneratesAndVerifiesGatewaySignatures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `HostStartup_WithoutGatewaySecret_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `HostStartup_WithoutOidcAuthority_FailsFast` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IdentifiersEmptyAndDefaultStatesAreConsistent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IdentifiersJsonSerializationRoundtrips` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IdentifiersMustGenerateValidUuidV7` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IdentifiersParseAndTryParseRoundtripCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IdentifiersTypeConverterConvertsCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InitializeForm_CreatesFormInDraftState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvalidStateTransition_ReturnsFixedCodeAndFreeTextMessage` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_HeaderAbsent_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_HeaderPresentAndPopulated_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_HeaderPresentButWhitespaceOnly_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_InvalidRequestArgumentNotAtIndexZero_StillShortCircuitsWith400` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_InvalidSubjectConsentRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_InvalidSubjectCreateRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_NoArgumentOfRequestType_ThrowsInvalidOperationException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_RequestArgumentNotAtIndexZero_StillLocatesAndValidatesIt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_ValidSubjectConsentRequest_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `InvokeAsync_ValidSubjectCreateRequest_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IsPostRandomization_ForLockedStates_ReturnsTrue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `IsPostRandomization_ForUnlockedStates_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `KernelDomainEntitiesImplementIGxPAuditable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LabRangeEvaluation_GoldenMasterVectors_MatchExpectedIndicators` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LabRangeService_EvaluatesNormalAndOutOfRangeValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenAMismatchedFixturePair_ThrowsRatherThanSilentlyOmittingTheOrphanedScenario` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenAnInputEntryWithNoCounterpart_DoesNotSilentlyDropIt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenOutputEntriesWithNoInputCounterpart_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenTheRealEdgeCasePair_ReturnsAllElevenScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenTheRealNominalFixturePair_ReturnsAllNineteenScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_GivenTheRealValidationErrorPair_ReturnsAllTwentyOneScenarioIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoadScenarios_PreservesInputFileOrderForMultiStepScenarios` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LockedFactorMutation_ReturnsFixedCodeAndConflictType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `LoggerMessages_WhenLevelDisabled_ShortCircuitWithoutLogging` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MapCadenceApiDocumentation_RoutesConfiguredInDevelopment` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MapCadenceHealthAndStatusEndpoints_ReturnsExpectedPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IcfSigned_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IcfSignedDateNull_ExistingDatePreserved` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IcfSignedDateSupplied_ReplacesExistingDate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IncomingProtocolVersionNull_StoredProtocolVersionUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IncomingProtocolVersionSupplied_ReplacesStoredProtocolVersion` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_IsPaperOverride_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_RequiresReconsent_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MergeResubmission_VersionTag_AlwaysReplacedUnconditionally` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `MissingDocuments_CastToMutableListAndMutated_DoesNotAffectAggregateState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NominalScenario_MatchesGoldenMaster` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NormalizeGender_GivenMappedInput_ReturnsExpectedCodeRegardlessOfPreserveCustom` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NormalizeGender_GivenNullInput_ReturnsU` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NormalizeGender_GivenUnmappedInputWithPreserveCustomFalse_ReturnsU` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NormalizeGender_GivenUnmappedInputWithPreserveCustomTrue_ReturnsTrimmedUppercasedVerbatim` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `NotFound_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `OperationEnvelopeResponse_SerializesWithSpecFieldNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `OutlierDetection_IdentifiesStatisticalOutliers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ParticipantWallet_StipendLedgerAccumulation_MatchesExactDecimal` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `PaymentConfigurations_ExplicitlyConfiguresNumeric18_4ForFinancialProperties` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `PermissionMatrix_EvaluatesResourceActionPermissions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `PhiRedactorService_RedactsConfiguredTermsAndAutoDetectedPhi` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Pkcs7Signer_ComputeDetachedSignature_ReturnsValidPkcs7CmsDer` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Pkcs7Signer_GeneratesValidSignature_PassesESignatureVerifier` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolVersionApprovalEnforcesPermanentImmutability` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolVersionCreateInitializesInDraftStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolVersionDraftWorkflowAllowsUpdatesAndSubmission` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProtocolVersionForkAmendmentSupersedesPriorAndCreatesNewDraft` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProxiedRoute_WithoutToken_Returns401AndIsNotForwarded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProxiedRoute_WithTokenFromUntrustedKey_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ProxiedRoute_WithValidToken_ForwardsSignedIdentityFromTokenOnly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `QueryLifecycle_FullTransitionSequence_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RaiseQuery_CreatesQueryInOpenState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ReconsentRequired_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_CascadeClearance_DoesNotTouchADifferentSubjectsConsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenExistingRowForSameVersionIndex_MergesIntoExistingRowRatherThanCreatingNew` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenIncomingNeitherSignedNorPaperOverride_DoesNotCascadeClearOtherRows` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenIncomingRequiresReconsentTrue_DoesNotCascadeClearOtherRows` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenNewConsent_WritesRecordConsentAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenNewConsentSignedWithoutRequiringReconsent_CascadesClearanceToOtherRowsForSameSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenNoExistingRow_CreatesNewConsentNotAMerge` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordConsentAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsent_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsent_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsent_GivenValidRequest_Returns200WithConsentResponseBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsentAlias_GivenInvalidRequest_AlsoShortCircuitsWith400_MatchingTheCanonicalRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsentAlias_GivenValidRequest_BehavesIdenticallyToTheCanonicalConsentRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsentAlias_IsExcludedFromGeneratedOpenApiDocument_WhileCanonicalRouteIsIncluded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RecordSubjectConsentAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RedactionManifest_BuildsAndVerifiesSymmetricAndAsymmetricSignatures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Renderer_RejectsKeysOutsideTheCatalog` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ResolvePostgresConnectionString_InDevelopment_FallsBackToLocalDatabase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ResolvePostgresConnectionString_PrefersNamedConnectionStringOverLegacyKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RoleNormalization_MapsAliasesToCanonicalNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RsaPss_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RsaPss_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RsaPss_SignsWithPasswordProtectedKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RuleEvaluator_EvaluatesAstAndJsonLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SameKeyInTwoModules_RendersEachModulesOwnTemplate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenARowDeletedOutFromUnderTheRetryingWriter_ExhaustsRetriesAndStillThrowsDbUpdateConcurrencyException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenAStaleWriteThatAnotherWriterAlreadyCommitted_ResolvesTheConflictAndPersistsThisCallersChange` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenTwoContextsLoadTheSameRowAndTheFirstSavesFirst_TheSecondsStaleSaveThrowsDbUpdateConcurrencyException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SaveChangesAsync_GivenTwoSubjectsWithSameStudyCodeAndEnrollmentIndex_FailsOnUniqueIndex` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SavingChangesAsync_GivenAModifiedEntity_IncrementsShadowVersionByExactlyOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SavingChangesAsync_GivenNewlyAddedEntity_LeavesShadowVersionAtItsDefaultStartingValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SavingChangesAsync_GivenTwoDomainMutationsBeforeOneSaveChangesAsync_IncrementsShadowVersionOnlyOnce` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SavingChangesAsync_NeverIncrementsSiteComplianceCacheVersionDomainCounter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SdvVerification_StateTransitions_MaintainStrictPart11Audit` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Sign_ThrowsForUnparseablePrivateKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteAccessEvaluator_EnforcesFailClosedSiteScopedLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteActivationRequest_ValueEquality_ComparesByStudyId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteCode_AsNullableParameter_MayBeAbsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteCode_ValidValue_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteComplianceCaches_GivenEmptyMissingDocuments_RoundTripsAsEmptyArray` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteComplianceCaches_GivenMissingDocuments_RoundTripsAsNativeArrayInOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteComplianceCaches_GivenVersionIncrementedTwiceBeforeOneSaveChangesAsync_PersistsFinalValueNotIntermediate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SoftDeleteBlocked_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SplitPayeeAllocation_CalculatesShares_UsingDecimalArithmetic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `StudyAccessEvaluator_RestrictsStudyScopedUsers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `StudyCode_AtMaxLength_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `StudyCode_ExceedsMaxLength_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `StudyCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCode_AtMaxLength_IsAccepted` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCode_Equality_IsValueBased` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCode_ExceedsMaxLength_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCode_ToString_ReturnsValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCode_WhitespaceOrEmpty_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentId_New_ProducesUniqueValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentRequestValidator_EmptyProtocolVersionStudyId_FailsWithSingleError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentRequestValidator_EmptyProtocolVersionVersionTag_FailsWithSingleError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentRequestValidator_NullProtocolVersion_FailsWithSingleErrorWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentRequestValidator_ValidRequest_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsentResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsents_GivenPersistedConsent_RoundTripsProtocolVersionExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectConsents_GivenResubmissionMergeBeforeSave_PersistsUpdatedProtocolVersion` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_EmptyStudyId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_EmptySubjectId_FailsNotEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_FullyPopulatedRequest_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_SiteIdExceedsMaxLength_FailsMaximumLength` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_SiteIdNullEmptyOrPopulated_Passes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectCreateRequestValidator_SubjectIdAndStudyIdLengthBoundary_MatchesExpectedValidity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectDemographicsUpdateRequest_AllFieldsOmitted_ConstructsWithNulls` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectDemographicsUpdateRequest_PopulatedStratFactors_RoundTrips` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectDetailResponse_SerializesWithSpecSnakeCasePropertyNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectEndpointsLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectId_New_ProducesUniqueValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectId_ToString_ReturnsGuidValue` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectResponse_SerializesWithSpecSnakeCasePropertyNamesAndPlainScalarValues` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectStateUpdateRequest_EmptyStatusWithPopulatedState_ValidatorPassesButTargetPrefersEmptyStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectStateUpdateRequest_StatusEnrolledStateNull_ValidatesAndTargetResolvesToStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectStateUpdateRequest_StatusNullStateEnrolled_ValidatesAndTargetResolvesToState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectStateUpdateRequestValidator_BothBlankOrWhitespace_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectStateUpdateRequestValidator_BothNull_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SystemClockReturnsCurrentUtcInstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TelemetryLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TemporalPeriodCreateBoundedEnforcesBoundaryConstraints` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TemporalPeriodCreateCurrentSetsOpenEndedUpperBounds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TemporalPeriodOverlapsDetectsIntervalCollisions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TemporalPeriodSupersedeClosesRecordedInterval` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToCode_RoundTripsThroughTryParse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToolingCore_Handlers_ReturnsSuccessfulEnvelope` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToolingCore_OpenApiSpecExporter_GeneratesValidJsonSpecs` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToolingCore_OpenApiToolingService_ValidatesDriftInProcess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToProblemResult_LockedFactorMutation_Returns422NotTheConflictDefaultOf409` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TransitionTo_SameState_NoOpSucceedsViaGuard` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TryParse_NormalizesCasingWhitespaceAndSpaces` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `TryParse_UnmappedOrEmptyInput_ReturnsFalseWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UcumNormalization_ConvertsUnitsCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UcumNormalization_GoldenMasterVectors_MatchExpectedOutputs` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Unblind_OnScreeningSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographics_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPostRandomizationSubject_ChangedDemographicsWithDecryptableExistingCiphertext_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPostRandomizationSubject_StratFactorsUpdateFailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPostRandomizationSubjectWithBothFieldsSupplied_StratFactorsFailureShortCircuitsBeforeDemographicsIsTouched` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPostRandomizationSubjectWithCorruptedExistingCiphertext_ThrowsDecryptionFailure_NotLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPreRandomizationSubject_DemographicsUpdateSucceeds_ReEncryptsAndAudits` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPreRandomizationSubject_StratFactorsUpdateSucceedsAndPersists` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenPreRandomizationSubjectWithCorruptedExistingCiphertext_SucceedsWithoutEverDecrypting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateDemographicsAsync_ReturnsTheSubjectsRealState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdatePayload_InDraftState_UpdatesPayloadSuccessfully` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateStratFactors_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectDemographics_GivenValidRequestAndHeader_Returns200` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectState_GivenInvalidBody_ShortCircuitsWith400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectState_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectState_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectState_GivenValidRequestAndHeader_Returns200AndThreadsTheHeaderValueThrough` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UpdateSubjectState_GivenWhitespaceOnlyChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UsdmCompilerCompileFromProtocolVersionSucceeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UsdmCompilerCompileUsdmGeneratesCompleteArtifacts` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UsdmCompilerCompileWithAccessibilityValidationProducesReport` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UseCadenceWebDefaults_MapsLivenessAndReadinessProbes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Verify_RejectsEcdsaSignatureAgainstAnRsaKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Verify_RejectsGarbageKeyMaterialInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Verify_RejectsMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Verify_RejectsSignatureFromADifferentKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Verify_RejectsTamperedData` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyCanonicalSignature_AcceptsOwnSignatureInEitherHexCase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyCanonicalSignature_RejectsBlankOrMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyCanonicalSignature_RejectsBlankSecretInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyCanonicalSignature_RejectsTamperedPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyCanonicalSignature_RejectsWrongSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifyObservationSdv_Handler_ReturnsOkWithVerifiedState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifySdv_WhenAlreadyVerified_ReturnsError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `VerifySdv_WhenUnverified_TransitionsToVerified` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_DoesNotItselfCallSaveChanges_EntryOnlyVisibleAfterCallerSaves` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenCallsWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenDifferentTableNames_ChainsEachIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenFirstEntryForATableName_PersistsWithEmptyPredecessorHashAndVersionIndexOne` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenGxPAuditInterceptorAlsoRegistered_BothAuditTrailsCoexistIndependentlyInOneSaveChangesCall` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenNoOldOrNewValues_ChangesJsonIsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenOldAndNewValues_SerializesBothIntoChangesJson` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `WriteAsync_GivenTwoCallsForSameTableNameAcrossSeparateSaves_ChainsSecondPredecessorHashToFirstBlockHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+Test methods that declare at least one requirement. Theory cases are merged per method. Durations are left
+out so the report only changes when results change; they are in the TRX files under `TestResults/gxp/`.
+
+| Test Case Name | Class | Target Req | Status |
+| :--- | :--- | :--- | :--- |
+| `AuditTrailEntitiesMustNotBeDependentOfCascadeDelete` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | PRD-SYS-001 | 🟢 PASSED |
+| `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
+| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests.Execution.Forms.FormSubmissionGoldenMasterTests` | SRS-EDC-003 | 🟢 PASSED |
+| `ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
+| `EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
+| `NominalScenario_MatchesGoldenMaster` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.UnitTests.Execution.Integration.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ActionWithNoEntityChange_IsWrittenAsAnActionOnlyEntryOnTheSameChain` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ChangeWithoutARecordedAction_IsStillAudited_WithTheEntityStateAsAction` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SubjectUpdate_WritesOneEntryPerChange_AndTheChainVerifies` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Verifier_DetectsAFork` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Verifier_DetectsATamperedEntry` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Verifier_VerifiesLegacyTableNameChainsAlongsideNewOnes_WithoutRewritingThem` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `WriteAsync_DoesNotItselfSave` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_AfterATransientFailure_RetriesAndWritesEachAuditEntryOnce` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | 🟢 PASSED |
+| `TwoConcurrentFormUpdates_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ClearDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Create_TwoSubjects_ProduceDistinctIds` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `IsPostRandomization_ForLockedStates_ReturnsTrue` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `IsPostRandomization_ForUnlockedStates_ReturnsFalse` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `TransitionTo_SameState_NoOpSucceedsViaGuard` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Unblind_OnScreeningSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `UpdateDemographics_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `UpdateDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `UpdateStratFactors_PreRandomization_Succeeds` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ApplyKnownCodeStatus_NoCodeExtensionPresent_LeavesStatusUnchanged` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ApplyKnownCodeStatus_SubjectNotFoundCode_ForcesStatusTo404` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ApplyKnownCodeStatus_UnrecognizedCodeExtension_LeavesStatusUnchanged` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `GetStatusCode_HypotheticalConflictTypedCodeOtherThanLockedFactorMutation_MapsToDefault409` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ToProblemResult_LockedFactorMutation_Returns422NotTheConflictDefaultOf409` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests` | PRD-SYS-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenNoComplianceRowAtAll_TargetingEnrolled_IsTreatedAsNonCompliant` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenNoSiteId_TargetingEnrolled_IsBlockedRatherThanAutoCompliant` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenNonCompliantSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesBlockedAudit` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `AdvanceStateAsync_TargetingStateOtherThanEnrolled_NeverConsultsComplianceGate` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_GivenEligibleAtNonCompliantSite_FailsIdenticallyToAdvanceStateAsync` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_GivenNoEvaluatorConfigured_ThrowsRatherThanGuessingAVerdict` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_GivenSubjectNotFound_ReturnsNotFoundError` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_ResolvesSubjectByDomainCode_NotSurrogateId` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ToCode_RoundTripsThroughTryParse` | `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests` | PRD-SUB-001 | 🟢 PASSED |
+| `TryParse_NormalizesCasingWhitespaceAndSpaces` | `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests` | PRD-SUB-001 | 🟢 PASSED |
+| `TryParse_UnmappedOrEmptyInput_ReturnsFalseWithoutThrowing` | `Cadence.UnitTests.Execution.Subjects.SubjectStateCodecTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Guard_FullTransitionMatrix_MatchesSpecGraph` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator` | `Cadence.UnitTests.Packages.ComplianceUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
+| `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
+| `ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
+| `ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
+| `ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-TCK-005 | 🟢 PASSED |
+| `ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-TCK-005 | 🟢 PASSED |
+| `UsdmCompilerCompileFromProtocolVersionSucceeds` | `Cadence.UnitTests.Packages.DdfCompilerTests` | PRD-DDF-001 | 🟢 PASSED |
+| `UsdmCompilerCompileUsdmGeneratesCompleteArtifacts` | `Cadence.UnitTests.Packages.DdfCompilerTests` | PRD-DDF-001 | 🟢 PASSED |
+| `UsdmCompilerCompileWithAccessibilityValidationProducesReport` | `Cadence.UnitTests.Packages.DdfCompilerTests` | PRD-DDF-001 | 🟢 PASSED |
+| `DeidAirGapVault_DeidentifiesAndRehydratesTextStructuredDataAndChatMessages` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DeidAirGapVault_IDisposable_PurgesInMemoryMappings` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DeidTransforms_AppliesMaskPseudonymizeDateShiftAndAgeCap` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DeidTransforms_ScrubErrorMessage_StripsIdentifiersAndQuotedValues` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DeidTransforms_ShiftDateString_PreservesFormats` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DeidTransforms_SubjectDateShift_And_CapAge` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
+| `DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-IMG-001 | 🟢 PASSED |
+| `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | PRD-SYS-001 | 🟢 PASSED |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Total Verified Requirements: 226
+Qualified Requirements: 6 of 192
 
 ## 5. Qualification Review & Authorization
 
@@ -1259,30 +182,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 8e1fb05b606bf85fd1b0ede0c7fcac1216bc6d936f6167bf0a5fc9ba48474b0c
+- **Cryptographic Hash (SHA-256):** ade8846bfbafd8ac62c7886d8153de62be148fa36fb998c50f6bbdbd092f1fd4
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAn2gAwIBAgIJAKmbXARkf7hPMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
+MIIDxTCCAn2gAwIBAgIJAKtiy5kPu5XUMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
 AWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgMGgxIjAgBgNV
 BAoTGUNhZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2Ug
 R3hQIFZhbGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVy
-KTAeFw0yNjA5MjgxOTQ4MjFaFw0yNzA5MjkxOTQ4MjFaMGgxIjAgBgNVBAoTGUNh
+KTAeFw0yNjA5MjgyMzQ1MDNaFw0yNzA5MjkyMzQ1MDNaMGgxIjAgBgNVBAoTGUNh
 ZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2UgR3hQIFZh
 bGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVyKTCCASIw
-DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKkJHcfGzAVCdfpgmc3KFGsCJHBW
-8DPBgNEfXLFNFFKoc/pinp6Us1BcvFwyQpzJoCOdjjRUBdJMlfiKkEdLBSaBxla9
-xqZn+XaXyvLFisHZGDXFmuJxfAJACyDC/DSvcYMXlHzjWyizD3TZcMz7XljTo3VY
-AMkuj2UEJeAOZE8jgpOIWNe71CU6lBcn97WVbNxmEIdsXjiVnDiTOONitC7IHEeu
-m1ioSd7yivaJ0I/urFlQZEQpfoPjA+l4//9zLTlbvDnJhdr/pnQJJNPl6SQZcGMP
-AuB66jqDSvjVDbKkY/TnePbmZDMCbUmh/ko7BE+trW6+jNcaItzVbu157g8CAwEA
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1L8sr2gC5QolOcOPXmdkVa61eb
+998hYFSmSRacKnrcNLexYI4ki79J+v3Tv/QGfxFmFnzZNKoX92IOsEHh4uKrNLZs
+y5VyxszcGIBBNbWLWgvQTDIcghFTAIlz/TOM0tIkBo1DuZeakfzALBWfkerHTEnB
+MHPUrgXRI/RT2NXm5CmxM3Lz9k3wOsULBlM0aafSi216U9sOA3kRHNiWkxALhIn2
+j7ZEVd2P/mMywYu4rhySjnCdrow2O1/HPrC2/3Na5ktIDqfpav+We9f1qXf+bVu3
+a1kZT+WhRarcEl/qfTdFCB+LioyzNmb9DxVdNmyYtG/80PFGbIjQGwJwTGECAwEA
 AaMSMBAwDgYDVR0PAQH/BAQDAgbAMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZIAWUD
-BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQCmkCVwHTsc
-hxwwNfuubEOiKYLNnuH+dHWdgvFmeOjpoYD5Ypt9Y0+6qi3HsSr0U9h1TnhhLwuB
-cjpedox+ZAxAUKN7kBOYWKQ2y3ouXtgY5cGme2mgUV3EfvHfa9P2tnRGXnLQVE9h
-WoOfnTojmMzVPC4D6HwfnqMOJ6UQGFdRt+RkBpsmJliDxjRfJv5oNZC2NZuAnWzn
-zapnDMQO5mtTvKKGDTdECsutvX27zdfaROrdfE4KOO5Mtcou1TcEg8KPXRWOF7ES
-7b4U54YpF2BW5sHF5WXoPC3sfSoz6VXw/ta9zcdMq9/SSiXHLJNqm3sxO9mdnZgZ
-B/yGXERWPQKb
+BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQAbgCtarYTM
+6OuYqQqwPoanEJmfiYdLWm7/FtKwX0VZV/otwcSqLRGnv5CfhJY0U+mFhi1/4bM0
+qK37RYT3Y/QtdiD+vw4hwXelbz4i9wQ0wYY9xmF5TZnF+j0sCITq9h95T1tCz9gR
+xmRPWblFqyKy8ikn082Ev6z7a9OGXIEXhcu7zWC/4IHTZFJHlt1e1ADJXeMH1OTc
+QcWOKY+ZBgSawUPZvwJoUhGIE95vthVCk/aepDdMdPzf3qurhuOa+YOFmOXI3P0Z
+vwdpKoP6A4Z7UEGa2AifbYFfGeYLRrqRuI2fk/qEafajzntwaVEZ4aWtXMHwqtkS
+sSKBSCtAhgNf
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-VeltWHOwj506isLeR22UWsTh6TcCWvj1+s+R7GRVf7VQj5jDt98pBBSSuvBQjmKYrlXM2nVCKTfuR/QKkAqeTHb+WkdRDnJdDdp9unKdB3KKlZd2R85GzzjLDOdU6JN8NLLi8LtmXhq79z0l5XnN3EAz/0lpj+n7/0xsGkUfuqCoO8D2GB+al13qUWh6YA5BLZJKgLUjTqpKhm/8sZ+23oT9QuQLSzKms3OtQbOlc4XMPQIoadlvOAIipDYyzc1Z/gCTKkkVdGA9eqT22p1MVKVNYL0eKfllePBBkprRoh6rgRR/uM+yVTZ9S5UqhECozR/UBphQzJgo3X0qERCIRg==
+Jm7KUpk9LMffPQfhIJw9qqmvqVkiDBGGXxMNJXExkOdgYsmn2Hrh/uZfr6y+MiYK9rcj6CHikt3Wgl5cyQWGAOrYzRh+97RcDZCGEKCivopNOv6JBjFbot+TSt2q6+yJ16BpFKcO9sn9Hx/girfkN1y41j4LERz6RNr1YITaZPW/VSzGZtRkDwgvKsuogAZnjJ4E4KPj35ar7Tk6pIB8Wo4wPBEEzjqGaPnNr6aSyEXYR+zLypQzXDpQfVaKRCU525U6MzkMFZqJRvXWQYEmdfp1QN9fZEVPbCI/aliKEcM7yGRx3fSokp58kEeVLOdfLUOy+l2XA0SAzZZaaTvR2w==
 -----END SIGNATURE-----

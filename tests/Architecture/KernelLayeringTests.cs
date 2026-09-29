@@ -36,13 +36,11 @@ public class KernelLayeringTests
 
     /// <summary>
     /// Validates that Kernel.Domain and Kernel.Abstractions reference no EF Core, ASP.NET Core or Npgsql assembly.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory(DisplayName = "Kernel_DomainAndAbstractions_AreFreeOfInfrastructure")]
     [InlineData("Cadence.Kernel.Abstractions")]
     [InlineData("Cadence.Kernel.Domain")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDomainAndAbstractionsAreFreeOfInfrastructure(string assemblyName)
     {
         var assembly = new[] { Abstractions, Domain }.Single(a => a.GetName().Name == assemblyName);
@@ -54,11 +52,9 @@ public class KernelLayeringTests
 
     /// <summary>
     /// Validates that no kernel assembly references the rendering package (rendering is a kernel non-goal, §0.2).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Kernel_Assemblies_DoNotReferenceTemplating")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelAssembliesDoNotReferenceTemplating()
     {
         foreach (var assembly in new[] { Abstractions, Domain, Application, Persistence, Api })
@@ -71,11 +67,9 @@ public class KernelLayeringTests
 
     /// <summary>
     /// Validates the kernel dependency direction: inner layers never reference outer ones.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Kernel_Layers_DependInwardOnly")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelLayersDependInwardOnly()
     {
         References(Abstractions).Should().NotContain(r => r.StartsWith("Cadence.", StringComparison.Ordinal),
