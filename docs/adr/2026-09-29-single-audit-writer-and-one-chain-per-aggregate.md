@@ -47,6 +47,7 @@ A reviewer reading one chain saw either the meaning of a change or its field val
 - Negative: two concurrent saves of the same aggregate type can both read the same chain tip and fork the chain. The verifier reports this rather than hiding it; serializing chain appends belongs with the kernel's per-tenant chain (spec §8.3.3).
 - Negative: the save retry pipeline can replay a save after the interceptor has added its entries. That is part of the concurrency-policy defect (#4766), not changed here.
 - Long term, the kernel `AuditEntry` with a per-tenant chain (#4779) supersedes this per-type chain. The single-writer rule and the microsecond timestamp normalisation carry over to it.
+- The kernel target model is ADR-2449 (kernel command pipeline, per-tenant audit chain); this path migrates onto it.
 
 ## 6. Implementation & Verification
 
