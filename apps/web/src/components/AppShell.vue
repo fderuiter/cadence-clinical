@@ -820,6 +820,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
+import { useNotificationsStore } from "../stores/notifications";
 import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useKnowledgeStore } from "../stores/knowledge";
@@ -827,6 +828,7 @@ import { hasRequiredRole } from "../router";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
+const notificationsStore = useNotificationsStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
 const knowledgeStore = useKnowledgeStore();
@@ -852,6 +854,7 @@ const activePersonaLabel = computed(() => {
 
 function onPersonaSelect() {
   authStore.switchPersona(activePersonaKey.value);
+  notificationsStore.fetchNotifications();
   screenReaderAnnouncement.value = `Switched persona to ${activePersonaLabel.value}. Permissions updated.`;
 }
 
@@ -861,6 +864,7 @@ watch(
     if (newVal && newVal !== activePersonaKey.value) {
       activePersonaKey.value = newVal;
     }
+    notificationsStore.fetchNotifications();
   }
 );
 
