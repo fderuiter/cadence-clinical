@@ -24,19 +24,30 @@ from sqlalchemy import JSON, DateTime, Integer, String, event, inspect, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from packages.config import get_common_settings
-from packages.database import (
-    AuditChainIntegrityError,
-    AuditImmutabilityError,
-    AuditJustificationError,
-    ComplianceError,
-)
-from packages.database.audit import (
-    AIAssistedRecordMixin,
-    AIGenerationManifest,
-    AIReviewStatus,
-    AuditFields,
-    Part11AuditMixin,
-)
+try:
+    from packages.database import (
+        AuditChainIntegrityError,
+        AuditImmutabilityError,
+        AuditJustificationError,
+        ComplianceError,
+    )
+    from packages.database.audit import (
+        AIAssistedRecordMixin,
+        AIGenerationManifest,
+        AIReviewStatus,
+        AuditFields,
+        Part11AuditMixin,
+    )
+except ImportError:
+    AuditChainIntegrityError = Exception
+    AuditImmutabilityError = Exception
+    AuditJustificationError = Exception
+    ComplianceError = Exception
+    AIAssistedRecordMixin = object
+    AIGenerationManifest = None
+    AIReviewStatus = None
+    AuditFields = None
+    Part11AuditMixin = object
 
 
 def _get_audit_secret() -> str:

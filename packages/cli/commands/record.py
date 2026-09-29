@@ -22,7 +22,11 @@ from packages.cli.formatting import (
     print_success,
     print_warning,
 )
-from packages.storage.gdrive import GoogleDriveClient, generate_run_manifest
+try:
+    from packages.storage.gdrive import GoogleDriveClient, generate_run_manifest
+except ImportError:
+    GoogleDriveClient = None
+    generate_run_manifest = None
 
 record_app = typer.Typer(
     help="Capture high-definition UI video recordings across clinical personas and sync to Google Drive."

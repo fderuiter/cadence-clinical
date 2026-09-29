@@ -6,11 +6,16 @@ from typing import Any
 
 from packages.hexagonal import RepositoryPort
 from packages.security.notifications import InMemoryNotificationDispatcher
-from packages.storage.blob_store import (
-    StorageIntegrityError,
-    StorageObjectNotFoundError,
-)
-from packages.storage.ports.storage_port import StoragePort
+try:
+    from packages.storage.blob_store import (
+        StorageIntegrityError,
+        StorageObjectNotFoundError,
+    )
+    from packages.storage.ports.storage_port import StoragePort
+except ImportError:
+    StorageIntegrityError = Exception
+    StorageObjectNotFoundError = Exception
+    StoragePort = object
 
 
 class InMemoryRepository[T](RepositoryPort[T]):

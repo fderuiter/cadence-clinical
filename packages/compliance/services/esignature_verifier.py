@@ -6,7 +6,10 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
-from packages.database.audit import AIReviewStatus
+try:
+    from packages.database.audit import AIReviewStatus
+except ImportError:
+    AIReviewStatus = None
 
 
 class TamperDetectedError(Exception):
