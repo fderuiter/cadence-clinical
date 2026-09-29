@@ -84,9 +84,8 @@ namespace Cadence.UnitTests.Execution.GoldenMaster;
 /// <item><description><c>EDGE-002</c>/<c>EDGE-003</c> -- the legacy's dynamic dict-vs-str demographics
 /// argument and free-standing <c>protocol_version</c> field are, per `03_tickets.md`'s own MIG-SUBJ-018
 /// section, deliberately not exposed on the .NET port's DTO/domain-model contracts.</description></item>
-/// <item><description><c>EDGE-008</c> -- <c>AdvanceStateAsync</c>'s only response constructor is the
-/// already-verified-elsewhere (SCN-003-A/EDGE-010) §2.6 under-population quirk; its <c>status</c> field is
-/// never the true post-transition value regardless of caller.</description></item>
+/// <item><description><c>EDGE-008</c> -- replayed through the service (not HTTP) to prove the dual-lookup
+/// resolves the internal UUID; the response status is covered by SCN-003-A/EDGE-010.</description></item>
 /// <item><description><c>INV-004</c> -- `03_tickets.md`'s MIG-SUBJ-019 section deliberately standardizes
 /// this raise site's message rather than reproducing the legacy's distinct text.</description></item>
 /// <item><description><c>INV-007</c>, <c>INV-016</c>, <c>INV-017</c>, <c>SCN-010-C</c> -- exercise
@@ -390,7 +389,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
                 await ReplayAdvanceStateByInternalIdServiceAsync(scenario);
                 return;
             case "EDGE-010":
-                await ReplayUnderPopulationQuirkWithCompliantSiteAsync(scenario);
+                await ReplayTransitionResponseWithCompliantSiteAsync(scenario);
                 return;
         }
 
@@ -833,20 +832,19 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     }
 
     /// <summary>
-    /// EDGE-010 is "the canonical demonstration of the SubjectResponse-under-population quirk" (its own
-    /// fixture note) -- its narrative focus is §2.6, not Rule 2's site-compliance gate. Its own precondition
+    /// EDGE-010 checks that a successful transition's response reports the subject's real post-transition
+    /// fields (D8, #4771) -- its narrative focus is the response body, not Rule 2's site-compliance gate. Its own precondition
     /// declares <c>site_id: null</c>, but (per <see cref="ReplayNoSiteEnrollmentBlockedContractAsync"/>'s own
     /// remarks -- the same already-merged, already-tested, deliberate design decision) a null-site subject
     /// targeting ENROLLED is unconditionally blocked by this port, which would prevent this scenario from
     /// ever reaching the transition its own fixture exists to demonstrate. Rule 2's null-site behavior is
     /// already, separately, exhaustively covered by SCN-003-A (immediately above) and
     /// <c>SubjectApplicationServiceStateTests</c>' own suite -- re-proving it here a second time would add
-    /// nothing, at the cost of this ticket's own explicit AC ("EDGE-010 specifically must assert the
-    /// hardcoded ... response fields on a post-transition subject") going unmet entirely. This replay
-    /// therefore seeds a compliant site instead of the fixture's literal null, so the transition can actually
-    /// succeed and the quirk this scenario exists to prove can actually be observed.
+    /// nothing, while leaving the post-transition response unchecked. This replay therefore seeds a compliant
+    /// site instead of the fixture's literal null, so the transition can actually succeed and its response
+    /// can be observed.
     /// </summary>
-    private async Task ReplayUnderPopulationQuirkWithCompliantSiteAsync(GoldenMasterScenario scenario)
+    private async Task ReplayTransitionResponseWithCompliantSiteAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using (IServiceScope seedScope = _testApi.Services.CreateScope())
@@ -1016,12 +1014,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     /// exhaustively covered by SCN-003-A/INV-009 and <c>SubjectApplicationServiceStateTests</c>' own suite,
     /// so (mirroring EDGE-010's own identical reasoning) this replay seeds a compliant site instead of the
     /// fixture's literal null, letting the transition actually succeed so the dual-lookup can actually be
-    /// observed. Not asserting the fixture's literal <c>"status": "ENROLLED"</c> even so:
-    /// <see cref="ISubjectApplicationService.AdvanceStateAsync"/>'s only response constructor is
-    /// <c>SubjectResponse.Underpopulated</c> (`02_technical_design.md` §2.6 -- the same already-decided,
-    /// already-verified-elsewhere (SCN-003-A/EDGE-010) hardcoded-"SCREENING" quirk), regardless of whether
-    /// the caller reaches it via HTTP or, as here, a direct service-layer call. Confirmed instead directly
-    /// against the database, where the real transition truthfully lands.
+    /// observed. The transition is confirmed directly against the database, where it lands.
     /// </summary>
     private async Task ReplayAdvanceStateByInternalIdServiceAsync(GoldenMasterScenario scenario)
     {
@@ -1051,7 +1044,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         ClinicalSubject persisted = await db.ClinicalSubjects.AsNoTracking().SingleAsync(s => s.Id == seeded.Id, ct);
         SubjectStateCodec.ToCode(persisted.Status).Should().Be("ENROLLED",
-            "the real transition succeeded -- only the response DTO's own status field is under-populated (§2.6)");
+            "the transition must persist the new status");
     }
 
     // ================================================================================================

@@ -40,23 +40,4 @@ public sealed record SubjectResponse(
     public static SubjectResponse FromAggregate(ClinicalSubject subject) => new(
         subject.Id, subject.SubjectCode, subject.StudyCode, subject.SiteCode, subject.TreatmentGroupCiphertext,
         SubjectStateCodec.ToCode(subject.Status), subject.ActiveProtocolVersion, subject.EncryptedDemographics);
-
-    /// <summary>
-    /// The `02_technical_design.md` §2.6 decision: <c>AdvanceStateAsync</c>, <c>UpdateDemographicsAsync</c>,
-    /// and <c>DeleteDemographicsAsync</c> (MIG-SUBJ-019) call this instead of <see cref="FromAggregate"/>,
-    /// hardcoding <c>Status</c> to <c>"SCREENING"</c> and <c>ActiveProtocolVersion</c> to <c>"1.0.0"</c> —
-    /// the legacy Pydantic model's literal field defaults — regardless of the aggregate's real current
-    /// values, and always nulling out <c>SiteId</c>/<c>TreatmentGroup</c>. This is a deliberate, tracked
-    /// legacy-parity-preservation choice verified byte-for-byte against
-    /// `fixtures/output_expected_nominal.json` (scenario <c>EDGE-010</c> and the <c>SCN-003-A</c> family)
-    /// — <b>not</b> a bug to "fix" by reading the aggregate's true state.
-    /// Tracked hardening item CADENCE-EXEC-SUBJ-001: revisit full population once golden-master parity
-    /// ships (see §2.6/§7). This ID is the grep-able marker for that follow-up (this repository's
-    /// SonarAnalyzer ruleset rejects the literal task-tracking keyword the design doc's own annotation
-    /// style otherwise uses, as a build-breaking diagnostic under `TreatWarningsAsErrors`).
-    /// </summary>
-    public static SubjectResponse Underpopulated(SubjectId id, SubjectCode subjectCode, StudyCode studyCode,
-        string? encryptedDemographics) => new(
-        id, subjectCode, studyCode, SiteId: null, TreatmentGroup: null,
-        Status: "SCREENING", ActiveProtocolVersion: "1.0.0", encryptedDemographics);
 }
