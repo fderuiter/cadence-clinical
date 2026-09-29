@@ -174,6 +174,43 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(knowledgeStore.isEscalating).toBe(false);
       expect(knowledgeStore.escalationPayload).toBeNull();
     });
+
+    it("resets contextual state when invalidateContextualState is called or fetchContextualHelp runs", async () => {
+      knowledgeStore.selectedArticle = {
+        id: "stale-art",
+        title: "Stale Article",
+      };
+      knowledgeStore.searchQuery = "stale query";
+      knowledgeStore.searchResults = [{ id: "stale-art" }];
+      knowledgeStore.isSearching = true;
+      knowledgeStore.isEscalating = true;
+      knowledgeStore.escalationPayload = { title: "Stale Ticket" };
+
+      knowledgeStore.invalidateContextualState();
+
+      expect(knowledgeStore.selectedArticle).toBeNull();
+      expect(knowledgeStore.searchQuery).toBe("");
+      expect(knowledgeStore.searchResults).toEqual([]);
+      expect(knowledgeStore.isSearching).toBe(false);
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.escalationPayload).toBeNull();
+
+      // Verify fetchContextualHelp calls invalidateContextualState
+      knowledgeStore.selectedArticle = {
+        id: "stale-art",
+        title: "Stale Article",
+      };
+      knowledgeStore.isEscalating = true;
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+
+      expect(knowledgeStore.selectedArticle).toBeNull();
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.displayedArticle.id).toBe("art-test-01");
+    });
   });
 
   describe("3. ContextualHelpDrawer.vue Component Rendering & Interactions", () => {
@@ -336,6 +373,50 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       knowledgeStore.openDrawer();
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       expect(knowledgeStore.isOpen).toBe(false);
+    });
+
+    it("clears selectedArticle, search input, and resets displayedArticle when switching personas", async () => {
+      const mockDesignerSop = {
+        primary_article: {
+          id: "art-mdr-01",
+          title:
+            "SOP-MDR-104: Schedule of Activities Matrix & Protocol Authoring",
+        },
+      };
+
+      vi.spyOn(knowledgeService, "resolveContextualHelp")
+        .mockResolvedValueOnce(mockResolvedSop)
+        .mockResolvedValueOnce(mockDesignerSop);
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.selectArticle({
+        id: "art-rel-01",
+        title: "Related Article",
+      });
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      // Open search and type query
+      await wrapper.find(".btn-icon-toggle").trigger("click");
+      const searchInputEl = wrapper.find("#help-search-input");
+      await searchInputEl.setValue("query");
+
+      expect(knowledgeStore.selectedArticle.id).toBe("art-rel-01");
+      expect(knowledgeStore.displayedArticle.id).toBe("art-rel-01");
+
+      // Switch persona
+      authStore.currentPersona = "sponsor_designer";
+      await wrapper.vm.$nextTick();
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(knowledgeStore.selectedArticle).toBeNull();
+      expect(knowledgeStore.displayedArticle.id).toBe("art-mdr-01");
+      expect(wrapper.find("#help-search-input").exists()).toBe(false);
     });
   });
 

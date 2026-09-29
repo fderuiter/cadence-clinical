@@ -5,10 +5,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAPI_DIR = path.resolve(
-  __dirname,
-  "../../../../docs/openapi"
-);
+const OPENAPI_DIR = path.resolve(__dirname, "../../../../docs/openapi");
 const OUTPUT_PATH = path.resolve(__dirname, "usdm.ts");
 
 function translateProperty(prop) {

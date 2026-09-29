@@ -23,7 +23,10 @@ export const auditorService = {
    * Retrieves eTMF audit log events.
    * Supports filtering and paging.
    */
-  getAuditLogs(params: AuditLogParams = {}, options: Record<string, unknown> = {}) {
+  getAuditLogs(
+    params: AuditLogParams = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/etmf/audit-logs", {
         params: {
@@ -47,7 +50,10 @@ export const auditorService = {
   /**
    * Retrieves Quality EQMS audit log events.
    */
-  getQualityAuditLogs(params: AuditLogParams = {}, options: Record<string, unknown> = {}) {
+  getQualityAuditLogs(
+    params: AuditLogParams = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/quality/audit-logs", {
         params: {

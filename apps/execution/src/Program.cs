@@ -243,12 +243,6 @@ builder.Services.AddMassTransit(x =>
 
 var app = builder.Build();
 
-// Global fallback for any exception that escapes an endpoint handler unhandled: writes a generic RFC 9457
-// 500 via the ProblemDetails service registered above. Deliberately generic — this must never special-case
-// down to 400 (that was raise site #19's bug) — only a genuine `DomainError`, routed explicitly through
-// `ToProblemResult()` at its own raise site, ever produces a non-500 problem response.
-app.UseExceptionHandler();
-
 app.UseCadenceWebDefaults();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Execution", engine = "EDC" }))

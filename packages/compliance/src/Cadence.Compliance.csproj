@@ -8,5 +8,11 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core-models\src\Cadence.CoreModels.csproj" />
+    <ProjectReference Include="..\..\deid\src\Cadence.Deid.csproj" />
   </ItemGroup>
 </Project>

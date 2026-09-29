@@ -7,7 +7,36 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 
 using MassTransit;
 
+using Microsoft.Extensions.Logging;
+
 namespace Cadence.Apps.Execution.Infrastructure.Consumers;
+
+public static partial class EConsentCompletedConsumerLoggingExtensions
+{
+    [LoggerMessage(
+        EventId = 2001,
+        Level = LogLevel.Warning,
+        Message = "Dropped malformed consent event: SubjectId='{SubjectId}', StudyId='{StudyId}'")]
+    public static partial void LogMalformedConsentEventDropped(this ILogger logger, string? subjectId, string? studyId);
+
+    [LoggerMessage(
+        EventId = 2002,
+        Level = LogLevel.Information,
+        Message = "Processing consent completed event for Subject '{SubjectId}', Study '{StudyId}'")]
+    public static partial void LogConsentEventProcessing(this ILogger logger, string subjectId, string studyId);
+
+    [LoggerMessage(
+        EventId = 2003,
+        Level = LogLevel.Information,
+        Message = "Auto-enrolled subject '{SubjectId}' for study '{StudyId}' at enrollment index {EnrollmentIndex}")]
+    public static partial void LogSubjectAutoEnrolled(this ILogger logger, string subjectId, string studyId, int enrollmentIndex);
+
+    [LoggerMessage(
+        EventId = 2004,
+        Level = LogLevel.Information,
+        Message = "Backfilled consent record for subject '{SubjectId}', study '{StudyId}', version index {VersionIndex}")]
+    public static partial void LogConsentRecordBackfilled(this ILogger logger, string subjectId, string studyId, int versionIndex);
+}
 
 /// <summary>
 /// MassTransit replacement for the legacy fire-and-forget Redis pub/sub auto-enrollment subscriber
@@ -31,7 +60,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 /// @req:PRD-SUB-001
 /// </summary>
 public sealed class EConsentCompletedConsumer(
-    ISubjectRepository subjects, IConsentRepository consents, IAuditLogWriter auditLog, IClock clock)
+    ISubjectRepository subjects,
+    IConsentRepository consents,
+    IAuditLogWriter auditLog,
+    IClock clock,
+    ILogger<EConsentCompletedConsumer>? logger = null)
     : IConsumer<EConsentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<EConsentCompletedEvent> context)
@@ -43,7 +76,16 @@ public sealed class EConsentCompletedConsumer(
             // (01_spec.md Rule 8). Not a validation failure and not retried: there is no better-formed
             // redelivery of the same malformed payload coming, so treating this as a fault would only ever
             // exhaust MassTransit's retry budget and dead-letter a message the legacy system also discarded.
+            if (logger != null)
+            {
+                logger.LogMalformedConsentEventDropped(msg.SubjectId, msg.StudyId);
+            }
             return;
+        }
+
+        if (logger != null)
+        {
+            logger.LogConsentEventProcessing(msg.SubjectId, msg.StudyId);
         }
 
         var subjectCode = new SubjectCode(msg.SubjectId);
@@ -69,6 +111,11 @@ public sealed class EConsentCompletedConsumer(
             await auditLog.WriteAsync("clinical_subjects", created.Id.ToString(), "INSERT",
                 SystemAuditContextAccessor.SystemUserId, created.ReasonForChange,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
+
+            if (logger != null)
+            {
+                logger.LogSubjectAutoEnrolled(msg.SubjectId, msg.StudyId, nextIndex);
+            }
         }
 
         // Idempotency check #2 (consent-cache backfill) -- INDEPENDENT of check #1 above: this runs even
@@ -86,6 +133,11 @@ public sealed class EConsentCompletedConsumer(
             await auditLog.WriteAsync("subject_consents", consent.Id.ToString(), "INSERT",
                 SystemAuditContextAccessor.SystemUserId, SystemAuditContextAccessor.SystemChangeReason,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
+
+            if (logger != null)
+            {
+                logger.LogConsentRecordBackfilled(msg.SubjectId, msg.StudyId, msg.VersionIndex);
+            }
         }
 
         // One transaction, both writes: ISubjectRepository/IConsentRepository share the same underlying

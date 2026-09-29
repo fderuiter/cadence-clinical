@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace Cadence.Compliance;
@@ -10,7 +11,9 @@ public static class GxPSigner
         string content,
         string? signerId = null,
         string signingReason = "GxP Qualification Execution Sign-Off",
-        string? timestamp = null)
+        string? timestamp = null,
+        RSA? privateKey = null,
+        X509Certificate2? certificate = null)
     {
         signerId ??= Environment.GetEnvironmentVariable("GXP_SIGNER_ID") ?? "cadence-validation-runner";
         timestamp ??= DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
@@ -27,9 +30,17 @@ public static class GxPSigner
             $"- **Meaning / Purpose:** {signingReason}\n" +
             $"- **Cryptographic Hash (SHA-256):** {sha256Hash}\n\n";
 
-        var dummyCertPem = "-----BEGIN CERTIFICATE-----\nMIIC...DUMMY\n-----END CERTIFICATE-----";
-        var dummySig = Convert.ToBase64String(Encoding.UTF8.GetBytes(sha256Hash));
+        if (certificate == null || privateKey == null)
+        {
+            var creds = Pkcs7Signer.GenerateSigningCredentials(signerId);
+            certificate ??= creds.Cert;
+            privateKey ??= creds.Key;
+        }
 
-        return $"{footerText}{dummyCertPem}\n-----BEGIN SIGNATURE-----\n{dummySig}\n-----END SIGNATURE-----\n";
+        var signer = new Pkcs7Signer(certificate, privateKey);
+        var footerBytes = Encoding.UTF8.GetBytes(footerText.TrimEnd());
+        var signedBytes = signer.SignDocument(footerBytes);
+
+        return Encoding.UTF8.GetString(signedBytes);
     }
 }
