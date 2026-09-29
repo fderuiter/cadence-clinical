@@ -25,10 +25,10 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
  │          PROTOCOL & STUDY DESIGN             │ │        CLINICAL OPERATIONS & EXECUTION       │
  ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
  │ • Designer / USDM (Port 8001 : Neo4j)        │ │ • EDC Execution Engine (Port 8002 : Postgres)│
- │ • Knowledge & SOPs (Port 8011 : SQLite/PG)   │ │ • CTMS Operations (Port 8005 : SQLite/PG)    │
- │ • Clinical AI Gateway (Port 8013 : REST)     │ │ • Organization Directory (Port 8008 : SQL)   │
- │ • DDF Compiler Engine (packages/ddf)         │ │ • Clinical Issue Hub (Port 8012 : SQLite/PG) │
- │                                              │ │ • Site Payments & Grants (Port 8014 : SQL)   │
+ │ • Knowledge & SOPs (Port 8011 : Postgres)    │ │ • CTMS Operations (Port 8005 : Postgres)     │
+ │ • Clinical AI Gateway (Port 8013 : REST)     │ │ • Organization Directory (Port 8008 : PG)    │
+ │ • DDF Compiler Engine (packages/ddf)         │ │ • Clinical Issue Hub (Port 8012 : Postgres)  │
+ │                                              │ │ • Site Payments & Grants (Port 8014 : PG)    │
  └─────────────────────────────┬────────────────┘ └───────────────────────────┬──────────────────┘
                                │                                              │
                                ▼                                              ▼
@@ -36,9 +36,9 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
  │    PATIENT ENGAGEMENT & INTEROPERABILITY     │ │        SAFETY, QUALITY & GOVERNANCE          │
  ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
  │ • Subject Portal PWA (Port 5174 : IndexedDB) │ │ • Safety & Pharmacovigilance (Port 8009)     │
- │ • FHIR & eSource Gateway (Port 8007 : SQL)   │ │ • Quality & CAPA Management (Port 8006)      │
- │ • Notifications Dispatcher (Port 8010 : SQL) │ │ • Blinded DICOM Adjudication (Port 8015)     │
- │ • Electronic Consent (Port 8017 : SQLite/PG) │ │ • Electronic Trial Master File (Port 8004)   │
+ │ • FHIR & eSource Gateway (Port 8007 : PG)    │ │ • Quality & CAPA Management (Port 8006)      │
+ │ • Notifications Dispatcher (Port 8010 : PG)  │ │ • Blinded DICOM Adjudication (Port 8015)     │
+ │ • Electronic Consent (Port 8017 : Postgres)  │ │ • Electronic Trial Master File (Port 8004)   │
  │                                              │ │ • Electronic Investigator Files (Port 8016)  │
  │                                              │ │ • FileShare & StoragePort (Port 8018 : MinIO)│
  │                                              │ │ • Compliance Engine (Port 8019 : xUnit/GxP)  │
@@ -58,7 +58,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 2. Knowledge & SOP Service (`apps/knowledge` — Port 8011)
 - **Role:** Clinical SOP Hub & Dynamic Help Drawer Dispatcher.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Contextual SOP delivery mapped to active user persona and frontend route patterns.
   - Hierarchical specificity scoring for clinical guidance lookup.
@@ -89,7 +89,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 5. CTMS Operations Service (`apps/ctms` — Port 8005)
 - **Role:** Clinical Trial Management & Site Operational Governance.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Trial and site milestone tracking, CRA workload balancing, and Monitoring Visit Reports (MVR).
   - 6-Facet Site Greenlight Engine evaluating IRB approvals, CTA contracts, essential regulatory documents, DOA logs, staff training certifications, and investigational product release.
@@ -97,7 +97,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 6. Organization Directory (`apps/org` — Port 8008)
 - **Role:** Multi-Tenant Organization & Site Directory.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Master directory of Sponsor, CRO, and Site organizations and personnel.
   - Principal Investigator Electronic Delegation of Authority (DOA) log with electronic signature step-up tokens.
@@ -105,7 +105,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 7. Clinical Issue Hub (`apps/tickets` — Port 8012)
 - **Role:** Query Discrepancy Escalation & Support SLA Management.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Multi-tier module-based routing across functional clinical queues.
   - Dual-target SLA tracking (acknowledgment SLA vs. clinical resolution SLA) with automated escalation.
@@ -113,7 +113,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 8. Site Payments & Participant Compensation (`apps/payments` — Port 8014)
 - **Role:** Investigator Grant Budgets & Participant Financial Wallet.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Procedure-fee rule engine triggered by eCRF visit completion and CRA Source Data Verification (SDV).
   - Multi-party payee grant split calculations and 10% statutory closeout holdback escrows.
@@ -133,7 +133,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 10. Electronic Consent Service (`apps/econsent` — Port 8017)
 - **Role:** Digital Informed Consent (eConsent) & Re-Consent Engine.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Interactive ICF document compilation with Flesch-Kincaid readability scoring.
   - Dynamic protocol amendment re-consent gating blocking downstream visit data capture upon protocol revisions.
@@ -142,7 +142,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 11. Notifications Dispatcher (`apps/notifications` — Port 8010)
 - **Role:** Multi-Channel Clinical Alert & Compliance Messenger.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Asynchronous dispatch across SMTP Email (Jinja2 templates), SMS, HMAC-signed Outbound Webhooks, and In-App inbox.
   - Mandatory GxP notification policy bypassing user opt-out preferences for safety-critical alerts.
@@ -150,7 +150,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 12. FHIR & eSource Gateway (`apps/interop` — Port 8007)
 - **Role:** EHR Interoperability & Biometric Sensor Streaming.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - SMART on FHIR USCDI clinical data ingestion from hospital EHR systems.
   - Split-screen CRC review drawer with 1-click clinical acceptance into draft eCRFs.
@@ -162,7 +162,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 13. Safety & Pharmacovigilance (`apps/safety` — Port 8009)
 - **Role:** Pharmacovigilance Gateway & Regulatory Safety Transmissions.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - ICH E2B(R3) Individual Case Safety Reports (ICSR) ISO 27953-2 XML compilation.
   - Automated NCI-CTCAE v5.0 laboratory toxicity grading and WHODrug active ingredient hierarchy verification.
@@ -170,7 +170,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 14. Quality & CAPA Management (`apps/quality` — Port 8006)
 - **Role:** Quality Assurance, Centralized Statistical Monitoring & Forensic Auditing.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Protocol deviation management linked to Root Cause Analysis (RCA) and CAPA corrective workflows.
   - Centralized Statistical Monitoring (CSM forensics): Benford's Law Chi-Square/MAD, digit preference, and Mahalanobis distance multivariate outlier detection.
@@ -178,7 +178,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 15. Blinded DICOM Adjudication (`apps/imaging` — Port 8015)
 - **Role:** Clinical Oncology Imaging & RECIST 1.1 Adjudication.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Zero-footprint WebGL Multi-Planar Reconstruction (MPR) axial/sagittal/coronal viewer.
   - Blinded dual-reader RECIST 1.1 / Lugano oncology evaluations.
@@ -186,7 +186,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 16. Electronic Trial Master File (`apps/etmf` — Port 8004)
 - **Role:** Regulatory Document Ingestion & Completeness Repository.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - DIA TMF Reference Model v3.2.0 taxonomy classification across 10 canonical zones.
   - Expected Document Lists (EDLs) and dynamic milestone completeness scoring.
@@ -194,7 +194,7 @@ Cadence is structured as a decoupled, reverse-proxy fronted microservices topolo
 
 #### 17. Electronic Investigator Site Files (`apps/eisf` — Port 8016)
 - **Role:** Site-Scoped Regulatory Binder Repository.
-- **Datastore:** PostgreSQL / SQLite.
+- **Datastore:** PostgreSQL 16+ (EF Core 10).
 - **Core Responsibilities:**
   - Site-isolated regulatory binder management inheriting DIA eISF taxonomy structures.
   - Bidirectional synchronization with Sponsor eTMF artifacts.
@@ -225,89 +225,88 @@ The developer runtime is containerized using Docker Compose to orchestrate relat
 ```mermaid
 flowchart TD
     subgraph Local Developer Host Environment
-        subject-portal[subject-portal - Subjects PWA Portal]
-        front-proxy[front-proxy - NGINX Front Proxy]
-        gateway[gateway - FastAPI API Gateway/Router]
-        gateway-rewrite[gateway-rewrite - NestJS Gateway Rewrite]
-        keycloak[keycloak - Keycloak IAM]
-        designer[designer - MDR/SDR Service]
-        execution[execution - Trial EDC Runtime]
-        org[org - Organization boundaries service]
-        eisf[eisf - Electronic Investigator Site File]
-        etmf[etmf - Electronic Trial Master File]
-        ctms[ctms - Clinical Trial Management System]
-        quality[quality - Quality & CAPA Management]
-        interop[interop - EHR FHIR / ePRO Gateway]
-        tickets[tickets - Ticket tracking service]
-        safety[safety - Clinical safety microservice]
-        notifications[notifications - Notifications & Webhooks Dispatcher]
-        econsent[econsent - Electronic Consent Service]
-        fileshare[fileshare - Fileshare & Media Service]
-        fileshare-transcoder[fileshare-transcoder - Media Transcoding Worker]
-        clamav[clamav - Antivirus Scanning Engine]
+        web[web - Clinical Workspace SPA : Port 5173]
+        subject-portal[subject-portal - Subjects PWA : Port 5174]
+        gateway[gateway - ASP.NET Core 10 / YARP API Gateway : Port 8000]
+        keycloak[keycloak - Keycloak IAM : Port 8080]
 
-        %% Databases & Object Storage
-        postgres[(postgres - Relational Database)]
-        postgres-etmf[(postgres-etmf - Relational Database)]
-        postgres-ctms[(postgres-ctms - Relational Database)]
-        postgres-quality[(postgres-quality - Relational Database)]
-        neo4j[(neo4j - Graph Database)]
-        minio[(minio - Object Storage MinIO)]
+        subgraph Protocol & Design Microservices
+            designer[designer - MDR/SDR Service : Port 8001]
+            knowledge[knowledge - Clinical SOP Engine : Port 8011]
+            ai_gateway[ai_gateway - Clinical AI Gateway : Port 8013]
+        end
 
-        %% SQLite file boundaries
-        sqlite_eisf[(eisf.db - local SQLite)]
-        sqlite_interop[(interop.db - local SQLite)]
-        sqlite_tickets[(tickets.db - local SQLite)]
-        sqlite_safety[(safety.db - local SQLite)]
-        sqlite_notifications[(notifications.db - local SQLite)]
-        sqlite_econsent[(econsent.db - local SQLite)]
-        sqlite_fileshare[(fileshare.db - local SQLite)]
+        subgraph Clinical Operations & Execution Microservices
+            execution[execution - Trial EDC Runtime : Port 8002]
+            ctms[ctms - Clinical Trial Management : Port 8005]
+            org[org - Organization Directory : Port 8008]
+            tickets[tickets - Clinical Issue Hub : Port 8012]
+            payments[payments - Site Payments & Grants : Port 8014]
+        end
+
+        subgraph Patient & Interop Microservices
+            interop[interop - EHR FHIR & eSource : Port 8007]
+            notifications[notifications - Alerts & Webhooks : Port 8010]
+            econsent[econsent - Electronic Consent : Port 8017]
+        end
+
+        subgraph Safety, Quality & Governance Microservices
+            etmf[etmf - Electronic Trial Master File : Port 8004]
+            quality[quality - Quality & CAPA Management : Port 8006]
+            safety[safety - Clinical Safety & E2B : Port 8009]
+            imaging[imaging - Blinded DICOM Viewer : Port 8015]
+            eisf[eisf - Investigator Site Files : Port 8016]
+            fileshare[fileshare - Object Storage Gateway : Port 8018]
+        end
+
+        %% Databases & Storage
+        postgres[(PostgreSQL 16+ - Relational Cluster)]
+        neo4j[(Neo4j 5+ - USDM Graph Database)]
+        minio[(MinIO - Encrypted GxP Object Storage)]
     end
 
-    %% Routing Flow
-    subject-portal -->|HTTP Requests| gateway
-    gateway -->|Keycloak OIDC Auth| keycloak
+    %% Client Ingestion
+    web -->|REST / OIDC Bearer| gateway
+    subject-portal -->|REST / OIDC Bearer| gateway
+    gateway -->|Keycloak OIDC JWT Validation| keycloak
 
-    %% API Routing
+    %% Gateway Routing with HMAC Signatures
     gateway --> designer
+    gateway --> knowledge
+    gateway --> ai_gateway
     gateway --> execution
-    gateway --> org
-    gateway --> eisf
-    gateway --> etmf
     gateway --> ctms
-    gateway --> quality
-    gateway --> interop
+    gateway --> org
     gateway --> tickets
-    gateway --> safety
+    gateway --> payments
+    gateway --> interop
     gateway --> notifications
     gateway --> econsent
+    gateway --> etmf
+    gateway --> quality
+    gateway --> safety
+    gateway --> imaging
+    gateway --> eisf
     gateway --> fileshare
 
-    %% Shared storage connections
+    %% Persistence Connections
     designer --> neo4j
     execution --> postgres
+    ctms --> postgres
     org --> postgres
-    etmf --> postgres-etmf
-    ctms --> postgres-ctms
-    quality --> postgres-quality
-
-    %% Individual SQLite files
-    eisf --> sqlite_eisf
-    interop --> sqlite_interop
-    tickets --> sqlite_tickets
-    safety --> sqlite_safety
-    notifications --> sqlite_notifications
-    econsent --> sqlite_econsent
-    fileshare --> sqlite_fileshare
-
-    %% Object Storage & Workers
+    tickets --> postgres
+    payments --> postgres
+    knowledge --> postgres
+    interop --> postgres
+    notifications --> postgres
+    econsent --> postgres
+    etmf --> postgres
+    quality --> postgres
+    safety --> postgres
+    imaging --> postgres
+    eisf --> postgres
+    fileshare --> postgres
     fileshare --> minio
-    fileshare-transcoder --> minio
-    fileshare --> fileshare-transcoder
-    fileshare --> clamav
-
-    %% Inter-service events
-    etmf -->|Sync Webhooks / Email| notifications
 ```
 
 ---
@@ -341,13 +340,13 @@ Cadence enforces rigorous regulatory controls across all transactions:
 2. **HMAC-SHA256 Inter-Service Gateway Signatures**: Downstream services reject unauthenticated internal requests lacking valid `X-Gateway-Signature` headers.
 3. **60-Second Signature Step-Up Re-Authentication**: High-stakes mutations (PI batch sign-offs, subject randomization, unblinding) require re-entering password + TOTP to receive a short-lived `sig_token`.
 4. **Monotonic SHA-256 Audit Chaining**: Every mutating transaction records `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic hash digest chained to its predecessor.
-5. **Strict Boolean Filters (E712 / EF Core)**: Prevents SQL emission discrepancies on nullable boolean columns via `.is_(True)` / `.is_(False)` in legacy Python and strongly-typed predicate evaluations in EF Core 10.
+5. **Strongly-Typed EF Core 10 Predicates**: EF Core 10 strictly evaluates strongly-typed boolean expressions (`.Where(x => x.IsActive)`) translating to PostgreSQL `IS TRUE`, preventing nullable evaluation and client-side discrepancy traps.
 
 ---
 
 ## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233 / ADR-2234)
 
-Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), Cadence is executing a clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
+Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), Cadence has completed its clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
 
 ### A. Architectural Pillars
 1. **Single-Assembly Clean Architecture**: Each microservice is organized into internal namespace layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) avoiding multi-assembly compilation bloat while enforcing strict directional dependencies.
@@ -359,21 +358,31 @@ Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-stand
 7. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
 8. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
 9. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, `Result<TValue, DomainError>` monads, and `System.Text.Json` source generator contexts.
-10. **Interactive Developer Wizards**: Cross-platform wizards for onboarding (`setup_dotnet_wizard`), scaffolding (`migrate_service_wizard`), and decommissioning legacy Python (`decommission_service_wizard`).
+10. **Interactive Developer Wizards**: Unified Cadence CLI wizards (`dotnet cadence wizard ...`) providing interactive guidance for developer onboarding, microservice scaffolding, and database provisioning.
 11. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
 
 ### B. Microservice Port & Architecture Blueprint
 
-| Service | .NET 10 Host Project | Port | Primary Datastore | Target Migration Phase |
+| Service | .NET 10 Host Project | Port | Primary Datastore | Pre-Release Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **API Gateway** | `Cadence.Apps.Gateway` | `8000` | HMAC Router / OIDC | Phase 1 (Tracer Bullet) |
-| **Protocol Designer** | `Cadence.Apps.Designer` | `8001` | Neo4j (USDM v3/v4) | Phase 1 (Tracer Bullet) |
-| **EDC Execution** | `Cadence.Apps.Execution` | `8002` | PostgreSQL (EF Core 10) | Phase 1 (Tracer Bullet) |
-| **eTMF** | `Cadence.Apps.Etmf` | `8003` | PostgreSQL + S3/MinIO | Phase 2 (Operations) |
-| **Interoperability** | `Cadence.Apps.Interop` | `8004` | PostgreSQL (FHIR/ODM) | Phase 3 (Integrations) |
-| **Quality & CAPA** | `Cadence.Apps.Quality` | `8005` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
-| **Notifications** | `Cadence.Apps.Notifications` | `8006` | PostgreSQL / SMTP | Phase 3 (Integrations) |
-| **CTMS** | `Cadence.Apps.Ctms` | `8007` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
-| **Safety & PV** | `Cadence.Apps.Safety` | `8008` | PostgreSQL (EF Core 10) | Phase 2 (Operations) |
+| **API Gateway** | `Cadence.Apps.Gateway` | `8000` | HMAC Router / OIDC / YARP | **Active (.NET 10)** |
+| **Protocol Designer** | `Cadence.Apps.Designer` | `8001` | Neo4j 5+ (USDM v3/v4) | **Active (.NET 10)** |
+| **EDC Execution Engine** | `Cadence.Apps.Execution` | `8002` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Electronic Trial Master File** | `Cadence.Apps.Etmf` | `8004` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **CTMS Operations** | `Cadence.Apps.Ctms` | `8005` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Quality & CAPA** | `Cadence.Apps.Quality` | `8006` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **FHIR & eSource Gateway** | `Cadence.Apps.Interop` | `8007` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Organization Directory** | `Cadence.Apps.Org` | `8008` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Safety & Pharmacovigilance** | `Cadence.Apps.Safety` | `8009` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Notifications Dispatcher** | `Cadence.Apps.Notifications` | `8010` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Knowledge & SOP Engine** | `Cadence.Apps.Knowledge` | `8011` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Clinical Issue Hub** | `Cadence.Apps.Tickets` | `8012` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Clinical AI Gateway** | `Cadence.Apps.AiGateway` | `8013` | Ephemeral / REST | **Active (.NET 10)** |
+| **Site Payments & Grants** | `Cadence.Apps.Payments` | `8014` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Blinded DICOM Adjudication** | `Cadence.Apps.Imaging` | `8015` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Investigator Site Files** | `Cadence.Apps.Eisf` | `8016` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **Electronic Consent** | `Cadence.Apps.Econsent` | `8017` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
+| **FileShare Storage Gateway** | `Cadence.Apps.Fileshare` | `8018` | MinIO / S3 + PostgreSQL 16+ | **Active (.NET 10)** |
+| **Compliance Test Engine** | `Cadence.Compliance` | `8019` | xUnit v3 / In-Memory GxP | **Active (.NET 10)** |
 
 

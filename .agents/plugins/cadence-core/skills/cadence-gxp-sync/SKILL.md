@@ -15,7 +15,7 @@ Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and tracea
 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
-| **Execution** | `run_command` | `CommandLine="uv run python scripts/sync_gxp.py"`, `WaitMsBeforeAsync=10000` | Launch qualification suite and RTM generator |
+| **Execution** | `run_command` | `CommandLine="dotnet cadence gxp sync"`, `WaitMsBeforeAsync=10000` | Launch qualification suite and RTM generator |
 | **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Monitor long-running test execution asynchronously |
 | **Watchdog Timer** | `schedule` | `DurationSeconds=180`, `TimerCondition=<task-id>` | Bound execution time to prevent hanging workers |
 | **Verification** | `view_file` | `AbsolutePath=".../docs/SDLC/Requirements_Traceability_Matrix.md"` | Verify requirement coverage percentage and outcomes |
@@ -24,14 +24,16 @@ Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and tracea
 ## When to Run
 
 Run this workflow whenever:
-- Test functions are added, renamed, or deleted.
-- `@req:PRD-SYS-xxx` tags in test docstrings are added or modified.
+- Test methods are added, renamed, or deleted in xUnit v3 test suites.
+- `@req:PRD-SYS-xxx` tags in test doc comments or `[GxPRequirement("PRD-SYS-xxx")]` attributes in C# tests are added or modified.
 - Test pass/fail outcomes change.
 - CI fails with: `GxP compliance documentation is out of sync with the current system state!`
 
 ## Execution Protocol
 
-1. **Launch Sync**: Run `uv run python scripts/sync_gxp.py` (or `uv run cadence gxp sync`) via `run_command`.
+1. **Launch Sync**: Run `dotnet cadence gxp sync` via `run_command`.
+   - Executes `dotnet test Cadence.sln` across all test assemblies.
+   - Tooling scans `.cs` test files, parsing TRX reports into a unified Requirements Traceability Matrix.
 2. **Handle Background Task**: If sent to background, inspect progress using `manage_task(Action="status")`. Set a `schedule` watchdog timer if needed.
 3. **Verify Staged Artifacts**:
    - Inspect [`docs/SDLC/Requirements_Traceability_Matrix.md`](../../../../docs/SDLC/Requirements_Traceability_Matrix.md).

@@ -188,12 +188,12 @@ stage "Clinical Datastores" "Probing PostgreSQL (5432) and Neo4j (7687)..."
 if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 5432 2>/dev/null; then
   ok "PostgreSQL running on port 5432."
 else
-  info "PostgreSQL not reachable. Start via: docker compose --profile python up -d postgres"
+  info "PostgreSQL not reachable. Start via: docker compose up -d postgres"
 fi
 if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 7687 2>/dev/null; then
   ok "Neo4j Bolt running on port 7687."
 else
-  info "Neo4j not reachable. Start via: docker compose --profile python up -d neo4j"
+  info "Neo4j not reachable. Start via: docker compose up -d neo4j"
 fi
 
 # --------------------------------------------------------------------------
@@ -202,7 +202,7 @@ fi
 stage "Environment Configuration (.env)" "Ensuring local .env is initialized..."
 if [[ ! -f "$REPO_ROOT/.env" ]] && [[ -f "$REPO_ROOT/.env.example" ]]; then
   cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
-  ok "Initialized .env from template. Fill in secrets with: pnpm cadence setup --dev"
+  ok "Initialized .env from template. Configure secrets for local development."
 else
   ok ".env file is present."
 fi
@@ -211,10 +211,10 @@ fi
 # Stage 6: Final validation
 # --------------------------------------------------------------------------
 stage "Final Validation" "Running 'cadence doctor' across the whole stack..."
-if command -v uv >/dev/null 2>&1; then
+if command -v dotnet >/dev/null 2>&1; then
   dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor || warn_failed "'cadence doctor' reported issues above — review before continuing."
 else
-  info "Skipped 'cadence doctor' (uv not available)."
+  info "Skipped 'cadence doctor' (.NET SDK not available)."
 fi
 
 if [[ "${#FAILED_STAGES[@]}" -eq 0 ]]; then

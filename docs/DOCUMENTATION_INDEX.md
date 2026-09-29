@@ -121,11 +121,11 @@ When working on a new GitHub issue or modifying system functionality, follow thi
 2. **Architecture & Decision Level (`ADR`)**:
    - If the change introduces new dependencies, database model changes, shared package utilities, or gateway routes, create a new ADR using the CLI tool:
      ```bash
-     uv run python scripts/create_adr.py --title "Your Architectural Decision Title" --domain "core-platform" --req "PRD-SYS-001"
+     dotnet cadence scaffold adr "Your Architectural Decision Title"
      ```
 3. **Traceability Level (`RTM`)**:
-   - Write automated pytest or vitest unit/integration tests referencing the requirement ID or feature.
-   - Run the unified synchronization script `uv run python scripts/sync_gxp.py` to refresh the Requirements Traceability Matrix.
+   - Write automated xUnit or Vitest unit/integration tests referencing the requirement ID via `[GxPRequirement("PRD-SYS-xxx")]` and `/// @req:PRD-SYS-XXX`.
+   - Run the unified synchronization command `dotnet cadence gxp sync` to refresh the Requirements Traceability Matrix.
 
 #### Strict Fail-Fast GxP Validation & Draft Mode
 

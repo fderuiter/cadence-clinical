@@ -91,4 +91,4 @@ Once a service is scaffolded, follow the **6-Step Service Transcription SOP** do
 3. **Step 3: Application:** Implement typed application services and FluentValidation in `Application/`.
 4. **Step 4: Endpoints:** Define Minimal API route groups and filters in `Endpoints/`.
 5. **Step 5: Testing:** Author xUnit tests with `[GxPRequirement]` attributes in `tests/`.
-6. **Step 6: GxP Sync:** Run `python scripts/sync_gxp.py` to regenerate the RTM.
+6. **Step 6: GxP Sync:** Run `dotnet cadence gxp sync` to regenerate the RTM.

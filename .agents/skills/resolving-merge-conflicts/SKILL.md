@@ -18,8 +18,8 @@ Systematically resolves merge and rebase conflicts across code, schema models, g
 | **Status Inspection** | `run_command` | `CommandLine="git status --short"` | Identify conflicted files and merge state |
 | **Marker Inspection** | `view_file` | Read conflicted files via `AbsolutePath` | Inspect `<<<<<<<`, `=======`, `>>>>>>>` blocks |
 | **Conflict Resolution**| `replace_file_content` | Target: conflicted source files, surgical edit | Resolve domain logic preserving GxP properties |
-| **GxP Auto-Recovery** | `run_command` | `CommandLine="git checkout --ours docs/SDLC/ && uv run python scripts/sync_gxp.py"` | Cleanly regenerate GxP compliance reports |
-| **Quality Verification**| `run_command` | `CommandLine="uv run cadence fix --all && uv run cadence test --fast"` | Format code and verify fast test suites |
+| **GxP Auto-Recovery** | `run_command` | `CommandLine="git checkout --ours docs/SDLC/ && dotnet cadence gxp sync"` | Cleanly regenerate GxP compliance reports |
+| **Quality Verification**| `run_command` | `CommandLine="dotnet cadence fix --all && dotnet cadence test --fast"` | Format code and verify fast test suites |
 
 ---
 
@@ -38,7 +38,7 @@ git status --short
 1. Accept incoming or current version:
    `git checkout --ours docs/SDLC/`
 2. Re-run automated sync to cleanly regenerate:
-   `uv run python scripts/sync_gxp.py`
+   `dotnet cadence gxp sync`
 
 ### B. Dependency Lockfiles (`uv.lock`, `pnpm-lock.yaml`)
 **Never hand-edit lockfile conflict markers.**
@@ -47,18 +47,18 @@ git status --short
 
 ### C. ADR Index (`docs/adr/index.md`)
 1. Re-sort and re-index using the ADR tooling:
-   `uv run python scripts/create_adr.py --reindex` (or `uv run cadence fix --all`)
+   `dotnet cadence fix --all` (or `dotnet cadence fix --all`)
 
 ### D. Source Code & Database Migrations
 1. Use `view_file` to inspect conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 2. Use `replace_file_content` to resolve domain logic preserving type safety (Pydantic v2) and GxP audit fields.
-3. Verify with `uv run cadence fix --all`.
+3. Verify with `dotnet cadence fix --all`.
 
 ---
 
 ## 3. Verify & Finalize
 1. Run full test suite:
-   `uv run cadence test --fast`
+   `dotnet cadence test --fast`
 2. Complete merge/rebase:
    `git add . && git merge --continue` (or `git rebase --continue`)
 

@@ -113,7 +113,7 @@ fi
 
 # 4. ADR Validation
 printf '\n%s[3/4] Validating ADR Index & Requirements...%s\n' "$YELLOW" "$RESET"
-python "$REPO_ROOT/scripts/validate_adrs.py"
+dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- check adrs
 
 printf '\n%s%s================================================================================%s\n' "$BOLD" "$GREEN" "$RESET"
 printf '%s%s   SCAFFOLDING COMPLETE FOR Cadence.Apps.%s                                       %s\n' "$BOLD" "$GREEN" "$CAP_NAME" "$RESET"

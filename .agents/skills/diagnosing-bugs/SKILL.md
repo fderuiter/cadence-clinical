@@ -16,8 +16,8 @@ A structured diagnosis loop for isolating root causes in multi-service clinical 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
 | **Error Localization** | `grep_search` | `Query="<exception_or_symbol>"`, `SearchPath="apps/"` | Locate error sites, callers, and exception stack traces |
-| **System Diagnostics** | `run_command` | `CommandLine="uv run cadence doctor --auto-fix"`, `WaitMsBeforeAsync=5000` | Verify environment, schemas, and dependencies |
-| **Isolated Repro** | `run_command` | `CommandLine="uv run pytest <test_file> -v -k '<test>'"` | Run targeted minimal reproduction test |
+| **System Diagnostics** | `run_command` | `CommandLine="dotnet cadence doctor --auto-fix"`, `WaitMsBeforeAsync=5000` | Verify environment, schemas, and dependencies |
+| **Isolated Repro** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Run targeted minimal reproduction test |
 | **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Inspect logs and stderr from background test tasks |
 | **Watchdog Timer** | `schedule` | `DurationSeconds=60`, `TimerCondition=<task-id>` | Guard against hanging database locks or workers |
 | **Root-Cause Fix** | `replace_file_content` | Target: source file, single contiguous fix | Apply surgical minimal fix to production code |
@@ -27,10 +27,10 @@ A structured diagnosis loop for isolating root causes in multi-service clinical 
 
 ## 1. Environment & Infrastructure Check
 
-Run Cadence diagnostics to ensure local environments and SQLite/PostgreSQL schemas are intact:
+Run Cadence diagnostics to ensure local environments and PostgreSQL schemas are intact:
 
 ```bash
-uv run cadence doctor --auto-fix
+dotnet cadence doctor --auto-fix
 ```
 
 ---
@@ -42,27 +42,27 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 - Use `grep_search` and `find_by_name` to pinpoint relevant test files.
 - Run the failing test in isolation:
   ```bash
-  uv run pytest apps/<service>/tests/test_failing_case.py -v -k "test_name"
+  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
-- If no test exists, author a failing regression test slice using `packages.testing.factories` and `packages.testing.fakes`.
+- If no test exists, author a failing regression test slice using `Cadence.Testing.Factories` and `Cadence.Testing.Fakes`.
 
 ---
 
 ## 3. Layer-Specific Diagnostic Runbooks
 
 ### A. Execution Backend & PostgreSQL (`apps/execution`)
-- Check SQLAlchemy boolean filter syntax: ensure `.is_(True)` / `.is_(False)` is used instead of `== True`.
-- Check database migrations and schema versioning under `apps/execution/database/`.
-- Verify GxP audit trail triggers (`created_at`, `created_by`, `version_index`).
+- Check EF Core 10 query expressions and ensure `.AsNoTracking()` is used on read queries.
+- Check EF Core migrations under `Infrastructure/Persistence/Migrations/`.
+- Verify GxP audit trail triggers (`CreatedAt`, `CreatedBy`, `VersionIndex`).
 
 ### B. Designer Backend & Neo4j (`apps/designer`)
 - Check Neo4j async session lifecycle and Cypher parameter bindings.
-- Validate USDM Pydantic schemas against CDISC specifications.
+- Validate USDM domain models against CDISC specifications.
 - Verify graph relationship integrity (predecessor links, immutable version branches).
 
 ### C. Gateway & Security (`apps/gateway`)
-- Inspect HMAC signature generation and token header propagation (`packages.security.signing`).
-- Check tenant isolation and persona context headers (`create_test_auth_headers`).
+- Inspect HMAC signature generation and token header propagation (`Cadence.Security.Signing`).
+- Check tenant isolation and persona context headers (`TestSecurityContext.CreateHmacHeaders`).
 
 ### D. Web Frontend (`apps/web`)
 - Verify vanilla CSS tokens in `apps/web/src/style.css` (ensure no unsupported Tailwind utility classes).
@@ -76,15 +76,15 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 1. **Root-Cause Fix (`replace_file_content`)**: Apply the minimal surgical fix to production code (never full overwrite).
 2. **Regression Verification (`run_command`)**:
    ```bash
-   uv run cadence test --fast -k "test_name"
+   dotnet cadence test --fast -k "test_name"
    ```
 3. **Quality Sentinels (`run_command`)**:
    ```bash
-   uv run cadence check --parallel
+   dotnet cadence check --parallel
    ```
 4. **Compliance Sync (`run_command`)**:
    ```bash
-   uv run python scripts/sync_gxp.py
+   dotnet cadence gxp sync
    ```
 5. **Diagnostic Report (`write_to_file`)**: Emit diagnosis report artifact to `<appDataDir>/brain/<conversation-id>/bug_diagnosis.md`.
 

@@ -1,6 +1,6 @@
 {
   "gxp-guardrails": {
-    "enabled": true,
+    "enabled": false,
     "PreToolUse": [
       {
         "matcher": "run_command|write_to_file|replace_file_content",

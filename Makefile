@@ -1,8 +1,8 @@
 # ==============================================================================
 # Cadence Clinical — Developer Convenience Makefile
 #
-# This Makefile wraps canonical uv/pnpm CLI scripts for developers. All core
-# solution convenience targets delegate directly to `uv run cadence` CLI commands.
+# This Makefile wraps canonical .NET / pnpm CLI commands for developers. All core
+# solution convenience targets delegate directly to `dotnet cadence` / Cadence.Cli commands.
 # Run `make help` to see all targets.
 # ==============================================================================
 
@@ -14,7 +14,7 @@ CYAN  := \033[0;36m
 RESET := \033[0m
 BOLD  := \033[1m
 
-CADENCE_CLI := uv run cadence
+CADENCE_CLI := dotnet run --project packages/cli/src/Cadence.Cli.csproj --
 
 ##@ Setup
 
@@ -30,7 +30,7 @@ wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/C
 build: ## Compile the Cadence solution (.NET 10)
 	dotnet build Cadence.sln
 
-doctor: ## Run system diagnostics and auto-heal development environment health (uv run cadence doctor --auto-fix)
+doctor: ## Run system diagnostics and auto-heal development environment health (dotnet cadence doctor --auto-fix)
 	$(CADENCE_CLI) doctor --auto-fix
 
 dev: ## Orchestrate local microservices with live reloading
@@ -53,7 +53,7 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
-check: ## Run all 10 pre-push quality gates concurrently in parallel (uv run cadence check --parallel)
+check: ## Run all 21 pre-push quality gates concurrently in parallel (dotnet cadence check --parallel)
 	$(CADENCE_CLI) check --parallel
 
 verify: ## Full verification — quality gates + all test suites (use before opening a PR)
@@ -64,10 +64,10 @@ test: ## Run backend unit tests with coverage
 
 ##@ GxP Compliance
 
-sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (uv run cadence gxp sync)
+sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (dotnet cadence gxp sync)
 	$(CADENCE_CLI) gxp sync
 
-rtm: ## Validate that checked-in RTM docs are up to date (uv run cadence gxp validate)
+rtm: ## Validate that checked-in RTM docs are up to date (dotnet cadence gxp validate)
 	$(CADENCE_CLI) gxp validate
 
 ##@ Architecture & Documentation
@@ -95,7 +95,7 @@ db-status: ## Display multi-engine database sizes and available snapshots
 regenerate-templates: ## Regenerate DOCX protocol templates programmatically
 	$(CADENCE_CLI) check --parallel
 
-ports: ## Check that all required service ports are free (uv run cadence doctor)
+ports: ## Check that all required service ports are free (dotnet cadence doctor)
 	$(CADENCE_CLI) doctor
 
 ##@ Help

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -100,10 +101,15 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
             }
             else
             {
+                var inMemoryServices = new ServiceCollection()
+                    .AddEntityFrameworkInMemoryDatabase()
+                    .BuildServiceProvider();
+
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_inMemoryDbName);
+                    options.UseInternalServiceProvider(inMemoryServices);
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
@@ -138,19 +144,46 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
 
     private static bool CheckDockerSocketAvailable()
     {
-        var dockerHost = Environment.GetEnvironmentVariable("DOCKER_HOST");
-        if (!string.IsNullOrEmpty(dockerHost))
+        try
         {
-            return true;
-        }
+            var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
+            var dockerHost = Environment.GetEnvironmentVariable("DOCKER_HOST");
+            string? sockPath = null;
 
-        if (File.Exists("/var/run/docker.sock"))
+            if (!string.IsNullOrEmpty(dockerHost))
+            {
+                sockPath = dockerHost.Replace("unix://", string.Empty);
+            }
+            else if (File.Exists("/var/run/docker.sock"))
+            {
+                sockPath = "/var/run/docker.sock";
+            }
+            else if (File.Exists(userSocket))
+            {
+                sockPath = userSocket;
+            }
+
+            if (string.IsNullOrEmpty(sockPath) || !File.Exists(sockPath))
+            {
+                return false;
+            }
+
+            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
+            {
+                ReceiveTimeout = 300,
+                SendTimeout = 300
+            };
+            var endpoint = new UnixDomainSocketEndPoint(sockPath);
+            socket.Connect(endpoint);
+            socket.Send("GET /_ping HTTP/1.0\r\nHost: localhost\r\n\r\n"u8);
+            var buffer = new byte[64];
+            var bytesReceived = socket.Receive(buffer);
+            return bytesReceived > 0 && System.Text.Encoding.ASCII.GetString(buffer, 0, bytesReceived).Contains("OK");
+        }
+        catch
         {
-            return true;
+            return false;
         }
-
-        var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
-        return File.Exists(userSocket);
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

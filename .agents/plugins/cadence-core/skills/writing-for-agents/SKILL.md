@@ -17,7 +17,7 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 | :--- | :--- | :--- | :--- |
 | **Audit Existing Skills**| `view_file` | Read `SKILL.md` via `AbsolutePath` | Check frontmatter, length, and references |
 | **Skill/Rule Authoring**| `replace_file_content` / `write_to_file` | Target: `SKILL.md` or `AGENTS.md`, surgical edit | Apply progressive disclosure and clear constraints |
-| **Markdown Validation**| `run_command` | `CommandLine="uv run python scripts/validate_markdown.py"` | Verify relative links and format compliance |
+| **Markdown Validation**| `run_command` | `CommandLine="dotnet cadence check"` | Verify relative links and format compliance |
 
 ---
 
@@ -39,5 +39,5 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 ## 3. High-Leverage Prompting for Skills
 - State hard constraints and anti-patterns explicitly ("_Avoid_: raw SQL string interpolation, sibling database imports").
 - Provide concrete input/output code examples.
-- Include explicit verification and testing steps (`uv run cadence test --fast`).
+- Include explicit verification and testing steps (`dotnet cadence test --fast`).
 

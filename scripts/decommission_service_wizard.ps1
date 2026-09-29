@@ -128,8 +128,8 @@ if (Test-Path $rootPyproject) {
 }
 
 Write-Host "`nRunning ADR and GxP synchronization..." -ForegroundColor Gray
-& python (Join-Path $repoRoot "scripts\validate_adrs.py")
-& python (Join-Path $repoRoot "scripts\sync_gxp.py")
+& dotnet run --project (Join-Path $repoRoot "packages\cli\src\Cadence.Cli.csproj") -- check adrs
+& dotnet run --project (Join-Path $repoRoot "packages\cli\src\Cadence.Cli.csproj") -- gxp sync
 
 Write-Host "`n================================================================================" -ForegroundColor Cyan
 Write-Host "   DECOMMISSIONING COMPLETE FOR $ServiceName                                    " -ForegroundColor Green

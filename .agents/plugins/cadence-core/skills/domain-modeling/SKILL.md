@@ -19,7 +19,7 @@ Actively build, sharpen, and maintain the project's domain model, ubiquitous lan
 | **Terminology Audit** | `grep_search` | `Query="<term>"`, `SearchPath="apps/"` | Scan codebase for usage of conflicting or legacy terminology |
 | **Glossary Inspection**| `view_file` | `AbsolutePath=".../CONTEXT.md"` | Read current canonical definitions and domain boundaries |
 | **Live Glossary Edit** | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit | Add or update terms under `# Clinical Domain Glossary` |
-| **ADR Scaffolding** | `run_command` | `CommandLine="uv run python scripts/create_adr.py ..."` | Scaffold formal decision record when architectural models change |
+| **ADR Scaffolding** | `run_command` | `CommandLine="dotnet cadence scaffold adr ..."` | Scaffold formal decision record when architectural models change |
 
 ---
 
@@ -45,7 +45,7 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
 5. **Scaffold ADRs for High-Stakes Decisions (MANDATORY TOOL: `run_command`)**:
    When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
    ```bash
-   uv run python scripts/create_adr.py --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
+   dotnet cadence scaffold adr --title "Title" --domain "core-platform" --req "PRD-SYS-xxx"
    ```
 
 

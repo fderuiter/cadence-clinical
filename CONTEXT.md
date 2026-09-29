@@ -24,13 +24,13 @@ A cryptographic integrity invariant governing 21 CFR Part 11 immutable audit tra
 
 A transactional concurrency control pattern implemented via `pg_advisory_xact_lock(hashtext(study_code))` within Entity Framework Core 10 repositories (`SubjectRepository.EnrollNextIndexAsync`). Guarantees strictly monotonic, gap-free sequential subject enrollment index assignment across concurrent HTTP or background pub/sub consumers targeting the same clinical protocol, eliminating race conditions under 21 CFR Part 11 and ICH GCP E6(R2) while allowing independent studies to enroll concurrently without inter-study blocking.
 
-### Dual-Stack GxP Traceability Pipeline
+### Native GxP Traceability Pipeline
 
-A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across heterogeneous test runners during architectural migration. The pipeline inspects both legacy Python tests (pytest docstrings) and modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting combined JUnit and Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`).
+A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`) via `dotnet cadence gxp sync`.
 
 ### Unified Pre-Commit Sentinel Gate
 
-A multi-runtime developer verification gate configured within `.pre-commit-config.yaml` and `.githooks/` that executes before any git commit is created. The gate enforces zero code-style drift via `dotnet format Cadence.sln --verify-no-changes`, validates Architectural Decision Record (ADR) index integrity via `python scripts/validate_adrs.py`, and scans for hardcoded secrets and boundary leaks across all C#, Python, and Vue assets.
+A multi-phase developer verification gate configured within `.pre-commit-config.yaml` and `.githooks/` that executes before any git commit is created. The gate enforces zero code-style drift via `dotnet format Cadence.sln --verify-no-changes`, validates Architectural Decision Record (ADR) index integrity via `dotnet cadence check adrs`, and scans for hardcoded secrets and boundary leaks across all C# and Vue assets via `dotnet cadence check --parallel`.
 
 ### Dotnet Tool Manifest Policy
 

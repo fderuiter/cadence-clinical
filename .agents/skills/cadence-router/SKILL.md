@@ -29,14 +29,14 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 - **[`cadence-adr`](../cadence-adr/SKILL.md)**: Scaffold, author, and auto-index Architecture Decision Records under `docs/adr/`.
 
 ### 2. Development & Testing
-- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `uv run cadence test --fast`, `packages.testing` factories/fakes, and `@req:` docstring tags.
+- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `dotnet cadence test --fast`, `packages.testing` factories/fakes, and `@req:` docstring tags.
 - **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix --all`, `cadence test`, `scripts/sync_gxp.py`).
 - **[`prototype`](../prototype/SKILL.md)**: Rapid exploratory prototyping using `generate_image` and ephemeral scratch directories.
 - **[`diagnosing-bugs`](../diagnosing-bugs/SKILL.md)**: Systematic root-cause debugging using `manage_task` and `schedule` watchdog timers.
 
 ### 3. Review & Compliance
 - **[`code-review`](../code-review/SKILL.md)**: Parallel two-axis review (Standards & GxP vs. Spec Compliance) using `invoke_subagent` and session artifacts.
-- **[`cadence-gxp-sync`](../cadence-gxp-sync/SKILL.md)**: 21 CFR Part 11 Traceability Matrix and verification report synchronization (`uv run python scripts/sync_gxp.py`).
+- **[`cadence-gxp-sync`](../cadence-gxp-sync/SKILL.md)**: 21 CFR Part 11 Traceability Matrix and verification report synchronization (`dotnet cadence gxp sync`).
 - **[`improve-codebase-architecture`](../improve-codebase-architecture/SKILL.md)**: Deep module architectural scanning and visual inspection artifacts.
 
 ### 4. Planning & Alignment

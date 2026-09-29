@@ -31,14 +31,12 @@ if ($dotnet) {
     }
 }
 
-# 2. Validate ADRs
-if (Test-Path "scripts\validate_adrs.py") {
-    Write-Host "  Validating ADR index and requirement tags..." -ForegroundColor Gray
-    & python "scripts\validate_adrs.py"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "::error:: ADR validation failed! Check docs/adr/ and run 'python scripts/validate_adrs.py'." -ForegroundColor Red
-        exit 1
-    }
+# 2. Validate ADRs and quality gates
+Write-Host "  Validating ADR integrity and architecture sentinels..." -ForegroundColor Gray
+& dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check adrs
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "::error:: ADR validation failed! Run 'dotnet cadence check adrs' or 'dotnet cadence fix adrs'." -ForegroundColor Red
+    exit 1
 }
 
 Write-Host "[Pre-Commit] All quality sentinels passed." -ForegroundColor Green

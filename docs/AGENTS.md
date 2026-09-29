@@ -10,7 +10,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 
 ## Technical Stack & Standards (.NET 10 Target Architecture)
 
-The Cadence platform has executed a clean-break architectural migration to **.NET 10 (C# 14 / ASP.NET Core 10)**. Existing Python implementations serve as the authoritative behavioral reference and anti-corruption baseline to be systematically transcribed and phased out.
+The Cadence platform has executed a clean-break architectural migration to **.NET 10 (C# 14 / ASP.NET Core 10)**. All 18 microservices, shared domain packages, and operational tooling are fully native .NET 10 implementations.
 
 | Concern            | Technology                                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
@@ -45,7 +45,7 @@ The Cadence platform has executed a clean-break architectural migration to **.NE
 | Git Pre-Commit Quality Gates        | `.githooks/`                                                                        |
 | Architecture Decision Records       | `docs/adr/`                                                                         |
 | Migration Playbook                  | `docs/MIGRATION_WORKFLOW.md`                                                        |
-| GxP compliance docs                 | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`)               |
+| GxP compliance docs                 | `docs/SDLC/` (never edit manually — always via `dotnet cadence gxp sync`)          |
 
 ---
 
@@ -270,7 +270,7 @@ Developers and agents should leverage the interactive wizard suite for operation
 
 - `dotnet cadence wizard onboarding`: Guided tour for SDK, HTTPS dev certs, datastores, and `.env`.
 - `dotnet cadence wizard migrate <service>`: Scaffolds Single-Assembly Clean Architecture layout and project boilerplate.
-- `dotnet cadence wizard decommission <service>`: Guided 4-step sequence to retire and purge legacy Python code.
+- `dotnet cadence wizard decommission <service>`: Guided sequence to retire and safely archive obsolete services.
 
 ---
 
@@ -281,25 +281,24 @@ Whenever a .NET 10 implementation supersedes a legacy Python architectural patte
 1. Update the legacy ADR status in `docs/adr/` to `* **Status:** Superseded by [ADR-XXXX](path-to-new-adr-placeholder.md)`.
 2. Add the standard `> [!NOTE]` supersession callout at the top.
 3. Annotate the entry in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
-4. Validate with `python scripts/validate_adrs.py`.
+4. Validate with `dotnet cadence check --parallel`.
 5. Update `ARCHITECTURE.md` service status and `CONTEXT.md` domain concepts.
 
 ---
 
-### 13. Pure .NET Projects & uv Workspace Boundaries
+### 13. Solution Organization & Central Package Management
 
-When scaffolding a new .NET project under `packages/<name>` or `apps/<name>` that does not contain a `pyproject.toml`, agents must immediately add the directory path to `[tool.uv.workspace] exclude` in `pyproject.toml`. Without this exclusion, `uv`'s wildcard matching (`packages/*`, `apps/*`) fails during workspace dependency resolution.
+All microservices under `apps/` and packages under `packages/` are enrolled directly into `Cadence.sln`. Dependencies must use Central Package Management (CPM) via `Directory.Packages.props`, and solution-wide build properties via `Directory.Build.props`.
 
 ---
 
-### 14. Pre-Commit Quality Gate Multi-Runtime Invariant
+### 14. Pre-Commit Quality Gate Enforcement
 
-The repository's `.pre-commit-config.yaml` runs both C# and Python quality gates locally before any commit is created:
+The repository quality gates and CI pipelines run native .NET 10 checks before any commit is created:
 
 1. `dotnet format Cadence.sln --verify-no-changes` verifies C# style, namespace ordering, and `.editorconfig` rules.
-2. `python scripts/validate_adrs.py` verifies ADR status and index integrity.
-3. `python scripts/validate_architecture_drift.py` ensures service topology parity.
-   Agents must ensure all code changes satisfy `dotnet format` and ADR validation prior to proposing commits.
+2. `dotnet cadence check --parallel` validates all 21 native quality sentinels including ADR integrity, architecture drift, layer purity, and duplication.
+3. `dotnet cadence fix --all` automatically formats C# code, aligns schemas, and indexes ADR records.
 
 ---
 
@@ -315,7 +314,6 @@ Agents should use the native Cadence CLI tool for development, diagnostics, and 
 | Code Formatting        | `dotnet format`                                               | Verifies and auto-formats C# code against `.editorconfig` rules     |
 | Developer Onboarding   | `dotnet cadence wizard onboarding`                            | Interactive .NET 10 setup, certs, datastores, and environment check |
 | Service Migration      | `dotnet cadence wizard migrate <name>`                        | Interactive scaffolding for Clean Architecture microservices        |
-| Service Decommission   | `dotnet cadence wizard decommission <name>`                   | Interactive retirement and safe purge of legacy Python code         |
 | Manage Migrations      | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Scaffolds EF Core PostgreSQL migrations                             |
 | Multi-Engine Seeding   | `dotnet cadence db seed --tier full`                          | Seeds multi-engine clinical test scenarios across Neo4j and PG      |
 | GxP Sync               | `dotnet cadence gxp sync`                                     | Executes tests, parses TRX/JUnit XML, regenerates RTM docs          |
@@ -329,7 +327,7 @@ The CI `compliance` gate regenerates the Requirements Traceability Matrix (RTM) 
 ### Running GxP Sync
 
 ```bash
-python scripts/sync_gxp.py
+dotnet cadence gxp sync
 ```
 
 This runs test execution, parses `@req:PRD-SYS-XXX` tags and `.trx` / JUnit results, regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and stages them in git.

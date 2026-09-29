@@ -4,8 +4,9 @@
 > _Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into an automated Digital Data Flow (DDF)._
 
 [![CI Status](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml/badge.svg)](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml)
-[![Python Version](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![C# Version](https://img.shields.io/badge/C%23-14-239120.svg)](https://learn.microsoft.com/en-us/dotnet/csharp/)
+[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-10.0-512BD4.svg)](https://learn.microsoft.com/en-us/aspnet/core/)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3.5%2B-4FC08D.svg)](https://vuejs.org/)
 [![CDISC USDM](https://img.shields.io/badge/CDISC-USDM%20v3.0%20%7C%20v4.0-darkblue.svg)](https://www.cdisc.org/standards/data-exchange/usdm)
 [![21 CFR Part 11](https://img.shields.io/badge/Compliance-21%20CFR%20Part%2011%20%7C%20GxP-brightgreen.svg)](docs/SDLC/01_Product_Requirements_Document_PRD.md)
@@ -103,7 +104,7 @@ Cadence utilizes a reverse-proxy fronted, event-driven microservices topology se
                                                                ▼
   ┌─────────────────────────────┐    ┌──────────────────────────────────────────────────────┐
   │     Web Client SPA          │───►│            Unified API Gateway Proxy                 │
-  │    (Vue 3 / Port 5173)      │    │              (FastAPI : Port 8000)                   │
+  │    (Vue 3 / Port 5173)      │    │        (ASP.NET Core 10 / YARP : Port 8000)          │
   └─────────────────────────────┘    └─────────────────────────┬────────────────────────────┘
                                                                │ (HMAC Gateway Signatures + Context Headers)
                                 ┌──────────────────────────────┼──────────────────────────────┐
@@ -159,78 +160,80 @@ sequenceDiagram
 
 ## 📁 Repository Layout & Module Catalog
 
-The Cadence monorepo is organized as a unified workspace managed with `uv` for Python 3.14+ services and `pnpm` for frontend applications and shared UI packages.
+The Cadence monorepo is organized as a unified solution managed with **.NET 10 (`net10.0`)** for all backend microservices, shared domain packages, and developer tooling, and **pnpm** for frontend applications and shared UI packages.
 
 ### Layer 1: Protocol Design, Metadata & Intelligence
 
 | Path                  | Microservice             | Description & Primary Responsibilities                                                                                         | Persistence         | Pre-Release Status |
 | :-------------------- | :----------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :------------------ | :----------------- |
 | **`apps/designer`**   | Study Designer (MDR/SDR) | Graph-based clinical protocol authoring, CDISC USDM v3/v4 representation, SoA matrix builder, and Biomedical Concept library.  | Neo4j 5.0+          | **Supported**      |
-| **`apps/knowledge`**  | Knowledge & SOP Engine   | Contextual SOP delivery, dynamic help drawer routing, role-specific clinical guidance, and controlled document versioning.     | SQLite / PostgreSQL | **Supported**      |
+| **`apps/knowledge`**  | Knowledge & SOP Engine   | Contextual SOP delivery, dynamic help drawer routing, role-specific clinical guidance, and controlled document versioning.     | PostgreSQL 16+      | **Supported**      |
 | **`apps/ai_gateway`** | Clinical AI Gateway      | De-identification air-gap proxy, model routing (Tier 1–3), medical coding embeddings, and Part 11 dual-attribution AI ledgers. | Ephemeral / REST    | **Supported**      |
 
 ### Layer 2: Clinical Execution & Site Operations
 
 | Path                 | Microservice           | Description & Primary Responsibilities                                                                                                | Persistence         | Pre-Release Status |
 | :------------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :------------------ | :----------------- |
-| **`apps/execution`** | EDC Execution Engine   | Downstream EDC runtime, subject state machines, dynamic eCRF schema projection, real-time edit checks, and Dataset-JSON SDTM export.  | PostgreSQL 14+      | **Supported**      |
-| **`apps/ctms`**      | CTMS Operations        | Trial operational tracking, milestone governance, CRA monitoring visit reports, 6-facet site greenlight, and budget matrices.         | PostgreSQL / SQLite | **Supported**      |
-| **`apps/org`**       | Organization Directory | Global directory of Sponsor/CRO organizations, clinical trial sites, staff credentials, and Principal Investigator DOA logs.          | PostgreSQL / SQLite | **Supported**      |
-| **`apps/tickets`**   | Clinical Issue Hub     | Discrepancy escalation, data management queries, dual-target SLA timers, and controlled reopening windows.                            | PostgreSQL / SQLite | **Supported**      |
-| **`apps/payments`**  | Site Payments & Grants | Investigator grant contracts, procedure-fee rule calculations, payee split management, closeout holdbacks, and self-billing invoices. | PostgreSQL / SQLite | **Supported**      |
+| **`apps/execution`** | EDC Execution Engine   | Downstream EDC runtime, subject state machines, dynamic eCRF schema projection, real-time edit checks, and Dataset-JSON SDTM export.  | PostgreSQL 16+      | **Supported**      |
+| **`apps/ctms`**      | CTMS Operations        | Trial operational tracking, milestone governance, CRA monitoring visit reports, 6-facet site greenlight, and budget matrices.         | PostgreSQL 16+      | **Supported**      |
+| **`apps/org`**       | Organization Directory | Global directory of Sponsor/CRO organizations, clinical trial sites, staff credentials, and Principal Investigator DOA logs.          | PostgreSQL 16+      | **Supported**      |
+| **`apps/tickets`**   | Clinical Issue Hub     | Discrepancy escalation, data management queries, dual-target SLA timers, and controlled reopening windows.                            | PostgreSQL 16+      | **Supported**      |
+| **`apps/payments`**  | Site Payments & Grants | Investigator grant contracts, procedure-fee rule calculations, payee split management, closeout holdbacks, and self-billing invoices. | PostgreSQL 16+      | **Supported**      |
 
 ### Layer 3: Patient Engagement & Decentralized Trials
 
 | Path                      | Microservice             | Description & Primary Responsibilities                                                                                                | Persistence            | Pre-Release Status |
 | :------------------------ | :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :--------------------- | :----------------- |
 | **`apps/subject-portal`** | eCOA / ePRO PWA          | Offline-first Progressive Web App for trial participants. Includes IndexedDB local sync queues and electronic diary capture.          | IndexedDB / Client PWA | **Supported**      |
-| **`apps/econsent`**       | Electronic Consent       | Interactive informed consent authoring, dynamic amendment re-consent gating, readability metrics, and digital signature sealing.      | PostgreSQL / SQLite    | **Supported**      |
-| **`apps/notifications`**  | Multi-Channel Dispatcher | Automated patient compliance reminders and high-priority GxP alerts across SMTP Email (Jinja2), SMS, HMAC Webhooks, and In-App inbox. | PostgreSQL / SQLite    | **Supported**      |
-| **`apps/interop`**        | FHIR & eSource Gateway   | SMART on FHIR EHR integration, eSource ingestion drawers, and Open mHealth continuous biometric sensor streaming adapters.            | PostgreSQL / SQLite    | **Supported**      |
+| **`apps/econsent`**       | Electronic Consent       | Interactive informed consent authoring, dynamic amendment re-consent gating, readability metrics, and digital signature sealing.      | PostgreSQL 16+         | **Supported**      |
+| **`apps/notifications`**  | Multi-Channel Dispatcher | Automated patient compliance reminders and high-priority GxP alerts across SMTP Email (Jinja2), SMS, HMAC Webhooks, and In-App inbox. | PostgreSQL 16+         | **Supported**      |
+| **`apps/interop`**        | FHIR & eSource Gateway   | SMART on FHIR EHR integration, eSource ingestion drawers, and Open mHealth continuous biometric sensor streaming adapters.            | PostgreSQL 16+         | **Supported**      |
 
 ### Layer 4: Clinical Safety, Quality & Regulatory Governance
 
 | Path                 | Microservice                 | Description & Primary Responsibilities                                                                                                         | Persistence               | Pre-Release Status |
 | :------------------- | :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------ | :----------------- |
-| **`apps/safety`**    | Safety & Pharmacovigilance   | ICH E2B(R3) ICSR XML compilation, NCI-CTCAE v5.0 lab toxicity grading, WHODrug validation, and B2B AS2 S/MIME regulatory EDI gateway.          | PostgreSQL / SQLite       | **Supported**      |
-| **`apps/quality`**   | Quality & CAPA Engine        | Protocol deviation management, Centralized Statistical Monitoring (CSM forensics / Benford's Law), and 64-bit DCT pHash image fraud detection. | PostgreSQL / SQLite       | **Supported**      |
-| **`apps/imaging`**   | Blinded DICOM Adjudication   | Zero-footprint WebGL Multi-Planar Reconstruction (MPR), blinded dual-reader RECIST 1.1 oncology evaluation, and 20% discordance escalation.    | PostgreSQL / SQLite       | **Supported**      |
-| **`apps/etmf`**      | Electronic Trial Master File | DIA TMF Reference Model v3.2.0 classification, Expected Document Lists (EDLs), completeness indices, and automated QC lifecycle transitions.   | PostgreSQL / SQLite       | **Supported**      |
-| **`apps/eisf`**      | Investigator Site Files      | Site-scoped regulatory binder management, DIA eISF taxonomy inheritance, and PI certification audit manifests.                                 | PostgreSQL / SQLite       | **Supported**      |
-| **`apps/fileshare`** | Object Storage Gateway       | StoragePort abstraction over MinIO/S3, presigned transfer URLs, cryptographic guest links, and 21 CFR Part 11 document envelopes.              | MinIO / S3 & SQL Envelope | **Supported**      |
+| **`apps/safety`**    | Safety & Pharmacovigilance   | ICH E2B(R3) ICSR XML compilation, NCI-CTCAE v5.0 lab toxicity grading, WHODrug validation, and B2B AS2 S/MIME regulatory EDI gateway.          | PostgreSQL 16+            | **Supported**      |
+| **`apps/quality`**   | Quality & CAPA Engine        | Protocol deviation management, Centralized Statistical Monitoring (CSM forensics / Benford's Law), and 64-bit DCT pHash image fraud detection. | PostgreSQL 16+            | **Supported**      |
+| **`apps/imaging`**   | Blinded DICOM Adjudication   | Zero-footprint WebGL Multi-Planar Reconstruction (MPR), blinded dual-reader RECIST 1.1 oncology evaluation, and 20% discordance escalation.    | PostgreSQL 16+            | **Supported**      |
+| **`apps/etmf`**      | Electronic Trial Master File | DIA TMF Reference Model v3.2.0 classification, Expected Document Lists (EDLs), completeness indices, and automated QC lifecycle transitions.   | PostgreSQL 16+            | **Supported**      |
+| **`apps/eisf`**      | Investigator Site Files      | Site-scoped regulatory binder management, DIA eISF taxonomy inheritance, and PI certification audit manifests.                                 | PostgreSQL 16+            | **Supported**      |
+| **`apps/fileshare`** | Object Storage Gateway       | StoragePort abstraction over MinIO/S3, presigned transfer URLs, cryptographic guest links, and 21 CFR Part 11 document envelopes.              | MinIO / S3 & PostgreSQL   | **Supported**      |
 
 ### Layer 5: Frontend Workspaces & Gateway Infrastructure
 
-| Path                  | Component                 | Description & Primary Responsibilities                                                                                                         | Technology           | Pre-Release Status |
-| :-------------------- | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- | :----------------- |
-| **`apps/web`**        | Clinical Workspace SPA    | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite | **Supported**      |
-| **`apps/gateway`**    | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs.     | FastAPI + HTTPX      | **Supported**      |
-| **`packages/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | .NET 10 xUnit v3 + Playwright | **Supported**      |
+| Path                      | Component                 | Description & Primary Responsibilities                                                                                                         | Technology                     | Pre-Release Status |
+| :------------------------ | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------- | :----------------- |
+| **`apps/web`**            | Clinical Workspace SPA    | High-density clinical workspace supporting all 6 personas, full-width SoA grids, Vanilla CSS semantic tokens, and live role context switching. | Vue 3 + Pinia + Vite           | **Supported**      |
+| **`apps/gateway`**        | Central API Gateway Proxy | Unified reverse proxy fronting all microservices, Keycloak OIDC JWT verification, HMAC signature propagation, and aggregated OpenAPI docs.     | ASP.NET Core 10 + YARP + Polly | **Supported**      |
+| **`packages/compliance`** | Compliance Test Suite     | Centralized regulatory compliance validation, IQ/OQ/PQ execution suites, and automated 21 CFR Part 11 audit trail assertions.                  | .NET 10 xUnit v3 + Playwright  | **Supported**      |
 
 ### Layer 6: Shared Core Packages & SDKs
 
-| Path                        | Package Name                  | Description & Purpose                                                                                                           |
-| :-------------------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
-| **`packages/cli`**          | `cadence` CLI                 | Unified developer CLI providing Rich TUI cockpits, auto-healing diagnostics, parallel quality gates, and DB seeding.            |
-| **`packages/ddf`**          | DDF Compiler Engine           | Pure in-memory domain compiler translating USDM graph models into DDF IR, XPath rules, and CDISC ODM XForms.                    |
-| **`packages/security`**     | Cryptography & Security       | HMAC-SHA256 gateway signing (`generate_gateway_signature`), step-up signature verification, and Keycloak JWT helpers.           |
-| **`packages/testing`**      | Centralized Test Harness      | Shared domain entity factories (`SubjectFactory`, `AuditLogFactory`), `InMemoryRepository[T]` fakes, and test auth tokens.      |
-| **`packages/storage`**      | StoragePort & Object Envelope | Decoupled S3/MinIO binary storage adapter with relational GxP metadata envelopes and SHA-256 checksum validation.               |
-| **`packages/database`**     | Database Manager              | SQLAlchemy async engine initialization, connection pooling, pre-boot migrations, and SQLite/PostgreSQL connection abstractions. |
-| **`packages/deid`**         | De-Identification Engine      | High-performance PII/PHI redaction and tokenization engine for clinical narratives, medical notes, and DICOM metadata.          |
-| **`packages/sentinels`**    | Architecture Sentinels        | Extensible sentinel plugin engine checking code duplication, import boundary leaks, ADR schema parity, and ORM boolean safety.  |
-| **`packages/ui`**           | Shared UI & Web Components    | Reusable Vanilla CSS components, dialog modals, accessible SoA grid primitives, and browser cryptographic signing utilities.    |
-| **`packages/usdm-schemas`** | CDISC USDM Schemas            | Versioned Pydantic v2 domain schemas validating CDISC USDM v3.0 and v4.0 study definitions.                                     |
-| **`packages/hexagonal`**    | Hexagonal Architecture SDK    | Core architectural port and adapter primitives, command/query dispatchers, and domain event interfaces.                         |
-| **`packages/core-models`**  | Core Domain Models            | Universal base models, 21 CFR Part 11 GxP audit mixins, and standardized RFC 7807 problem detail representations.               |
+| Path                        | Package Name                  | Description & Purpose                                                                                                             |
+| :-------------------------- | :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+| **`packages/cli`**          | `Cadence.Cli`                 | Unified developer CLI providing Rich TUI cockpits, auto-healing diagnostics, 21 parallel quality gates, and multi-engine seeding. |
+| **`packages/ddf`**          | DDF Compiler Engine           | Pure in-memory domain compiler translating USDM graph models into DDF IR, XPath rules, and CDISC ODM XForms.                      |
+| **`packages/security`**     | Cryptography & Security       | HMAC-SHA256 gateway signing (`HmacSigner`), step-up signature verification, and Keycloak JWT validation.                          |
+| **`packages/testing`**      | Centralized Test Harness      | Shared domain entity factories (`SubjectFactory`, `AuditLogFactory`), `InMemoryRepository<T>` fakes, and test auth context.      |
+| **`packages/storage`**      | StoragePort & Object Envelope | Decoupled S3/MinIO binary storage adapter with relational GxP metadata envelopes and SHA-256 checksum validation.                 |
+| **`packages/database`**     | Database Infrastructure       | EF Core 10 PostgreSQL provider, GxP Audit Interceptor (`ISaveChangesInterceptor`), and connection pooling.                        |
+| **`packages/deid`**         | De-Identification Engine      | High-performance PII/PHI redaction and tokenization engine for clinical narratives, medical notes, and DICOM metadata.            |
+| **`packages/sentinels`**    | Architecture Sentinels        | Sentinel suite checking code duplication, import boundary leaks, ADR schema parity, and Clean Architecture layer purity.         |
+| **`packages/ui`**           | Shared UI & Web Components    | Reusable Vanilla CSS components, dialog modals, accessible SoA grid primitives, and browser cryptographic signing utilities.      |
+| **`packages/engine_core`**  | Shared Domain & Core Ports    | Foundational clinical abstractions, aggregate roots, GxP auditable interfaces, and domain event dispatchers.                      |
+| **`packages/contracts`**    | Cross-Service Contracts       | Strongly-typed service-to-service DTOs, REST API client interfaces, and Polly resilient HTTP client extensions.                   |
+| **`packages/tooling_core`** | Tooling & Compliance Engine   | Operational engine powering GxP sync, ADR validation, code duplication analysis, and multi-engine database seeders.               |
+| **`packages/hexagonal`**    | Hexagonal Architecture SDK    | Core architectural port and adapter primitives, command/query dispatchers, and domain event interfaces.                           |
+| **`packages/core-models`**  | Core Domain Models            | Universal base models, 21 CFR Part 11 GxP audit mixins, and standardized RFC 9457 problem detail representations.                 |
 
 ---
 
 ## 🛠️ Developer Experience & Unified Cadence CLI
 
-Cadence features a first-class developer CLI (`packages/cli`) designed to eliminate script fragmentation and provide an interactive terminal development cockpit.
+Cadence features a first-class developer CLI (`packages/cli`) built with Spectre.Console, designed to eliminate script fragmentation and provide an interactive terminal development cockpit.
 
-Run all commands using `uv run cadence`:
+Run all commands using `dotnet cadence` (or `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`):
 
 ```text
  ┌──────────────────────────────────────────────────────────────────────────────────────────┐
@@ -248,15 +251,15 @@ Run all commands using `uv run cadence`:
 
 | Task                       | Command                               | Description                                                                                                              |
 | :------------------------- | :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------- |
-| **Interactive Dev TUI**    | `uv run cadence dev --tui`            | Launches multi-service Rich interactive cockpit with live streaming logs and hotkey process restarts.                    |
-| **System Diagnostics**     | `uv run cadence doctor --auto-fix`    | Validates host runtimes (Python, Docker, Node), tests database connections, and auto-initializes missing SQLite schemas. |
-| **Parallel Quality Gates** | `uv run cadence check --parallel`     | Concurrently executes all 10 architectural sentinels (linters, import boundaries, ADR validator, duplication scanner).   |
-| **Automated Remediation**  | `uv run cadence fix --all`            | Auto-remediates lint violations, sorts imports alphabetically (I001), formats code, and indexes ADR records.             |
-| **Fast Test Watcher**      | `uv run cadence test --watch`         | Smart AST-aware test watcher that re-runs only the minimal subset of tests affected by changed files.                    |
-| **Sub-Second Fast Tests**  | `uv run cadence test --fast`          | Sub-second unit test runner executing against in-memory repository fakes, bypassing database containers.                 |
-| **Multi-Engine Seeding**   | `uv run cadence db seed --tier full`  | Seeds multi-engine clinical test scenarios across Neo4j, PostgreSQL, SQLite, and MinIO.                                  |
-| **GxP Compliance Sync**    | `uv run cadence gxp sync`             | Executes test suites, regenerates Requirements Traceability Matrix (RTM), and stages GxP documentation.                  |
-| **ADR Scaffolding**        | `uv run cadence scaffold adr "Title"` | Scaffolds a new dated Architecture Decision Record under `docs/adr/` and auto-indexes `docs/adr/index.md`.               |
+| **Interactive Dev TUI**    | `dotnet cadence dev --tui`            | Launches multi-service interactive cockpit with live streaming logs and hotkey process restarts.                         |
+| **System Diagnostics**     | `dotnet cadence doctor --auto-fix`    | Validates host runtimes (.NET 10, Docker, Node), tests database connections, and auto-initializes schemas.               |
+| **Parallel Quality Gates** | `dotnet cadence check --parallel`     | Concurrently executes all 21 architectural sentinels (linters, import boundaries, ADR validator, ArchUnitNET).           |
+| **Automated Remediation**  | `dotnet cadence fix --all`            | Auto-remediates C# code formatting (`dotnet format`), aligns schemas, and indexes ADR records.                           |
+| **Fast Test Watcher**      | `dotnet cadence test --watch`         | Smart test watcher that re-runs only the minimal subset of tests affected by changed files.                              |
+| **Sub-Second Fast Tests**  | `dotnet cadence test --fast`          | Sub-second unit test runner executing against in-memory repository fakes, bypassing database containers.                 |
+| **Multi-Engine Seeding**   | `dotnet cadence db seed --tier full`  | Seeds multi-engine clinical test scenarios across Neo4j, PostgreSQL, and MinIO.                                           |
+| **GxP Compliance Sync**    | `dotnet cadence gxp sync`             | Executes test suites, regenerates Requirements Traceability Matrix (RTM), and stages GxP documentation.                  |
+| **ADR Scaffolding**        | `dotnet cadence scaffold adr "Title"` | Scaffolds a new dated Architecture Decision Record under `docs/adr/` and auto-indexes `docs/adr/index.md`.               |
 
 ---
 
@@ -266,8 +269,8 @@ Follow these steps to spin up the entire Cadence Clinical development environmen
 
 > **Shortcut**: on a brand-new machine, Codespace, or devcontainer, `make wizard`
 > (or `bash scripts/setup_wizard.sh`, Windows: `scripts/setup_wizard.ps1`) runs
-> steps 1–3 below for you — .NET 10 SDK, Node/pnpm, Python/uv, Playwright,
-> pre-commit hooks, `.env`, and a final `cadence doctor` health check — and
+> steps 1–3 below for you — .NET 10 SDK, Node/pnpm, Playwright,
+> pre-commit hooks, `.env`, and a final `dotnet cadence doctor` health check — and
 > adapts to CI/agent sessions automatically. See [CONTRIBUTING.md](CONTRIBUTING.md#1-first-time-setup).
 
 ### 1. Prerequisites
@@ -275,32 +278,31 @@ Follow these steps to spin up the entire Cadence Clinical development environmen
 Ensure your host machine meets the minimum system requirements:
 
 - **Git & Pre-Commit**: `git` installed with hooks enabled.
-- **Python**: Version `3.14+` with [`uv`](https://docs.astral.sh/uv/) package manager.
+- **.NET SDK**: Version `10.0+` (`net10.0`, C# 14).
 - **Node.js & pnpm**: Node.js `v20+` LTS and `pnpm v9+`.
 - **Container Engine**: Docker Desktop or Docker Engine with Docker Compose v2.
-- **System C-Libraries** (for PDF compilation): `pango` and `cairo` (`brew install pango` on macOS / `apt install libpango-1.0-0 libcairo2` on Linux).
 
 ### 2. Launch Containerized Infrastructure
 
 Start the infrastructure dependencies (PostgreSQL, Neo4j, Keycloak, Mailhog, and MinIO) in detached mode:
 
 ```bash
-docker compose --profile python -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 ### 3. Synchronize Dependencies & Run System Doctor
 
-Initialize the unified Python 3.14 virtual environment and install all frontend packages:
+Restore the .NET 10 solution and install all frontend packages:
 
 ```bash
-# Synchronize Python monorepo dependencies and CLI tools
-uv sync --all-extras
+# Restore .NET 10 solution dependencies
+dotnet restore Cadence.sln
 
 # Install frontend dependencies and link monorepo packages
 pnpm install
 
 # Run automated system diagnostics and auto-initialize schemas
-uv run cadence doctor --auto-fix
+dotnet cadence doctor --auto-fix
 ```
 
 ### 4. Seed Multi-Engine Clinical Datasets
@@ -308,7 +310,7 @@ uv run cadence doctor --auto-fix
 Populate the database cluster with realistic CDISC USDM protocols, trial sites, subjects, eCRFs, and audit ledgers:
 
 ```bash
-uv run cadence db seed --tier full
+dotnet cadence db seed --tier full
 ```
 
 ### 5. Launch the Development Environment
@@ -316,8 +318,8 @@ uv run cadence db seed --tier full
 Launch the full interactive terminal cockpit or individual workspaces:
 
 ```bash
-# Option A: Launch the unified interactive Rich TUI cockpit (Recommended)
-uv run cadence dev --tui
+# Option A: Launch the unified interactive cockpit (Recommended)
+dotnet cadence dev --tui
 
 # Option B: Launch web client directly
 pnpm --filter web dev
@@ -360,9 +362,9 @@ Cadence Clinical is engineered from the ground up to satisfy strict global regul
  └──────────────────────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **GxP Audit Trails**: Every mutating transaction captures `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic SHA-256 digest chained to the predecessor record.
-- **Strict Boolean Filter Pattern (E712)**: To prevent silent SQL emission bugs (`col = 1` vs `col IS TRUE`) on nullable columns, all SQLAlchemy queries strictly utilize `.is_(True)` and `.is_(False)`.
-- **Automated GxP Traceability (RTM)**: 100% of test cases link directly to requirements via xUnit `[Trait("Requirement", "PRD-SYS-xxx")]` attributes, `[GxPRequirement("PRD-SYS-xxx")]`, or `/// @req:` doc comments, verified in CI and synchronized via `python scripts/sync_gxp.py`.
+- **GxP Audit Trails**: Every mutating transaction captures `CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex`, and an immutable cryptographic SHA-256 digest chained to the predecessor record via EF Core `SaveChangesInterceptor`.
+- **Entity Framework Core 10 & Clean Architecture**: Clean hexagonal microservices with strict layer boundaries enforced at build time via `ArchUnitNET`. Read queries enforce `.AsNoTracking()` to eliminate memory overhead.
+- **Automated GxP Traceability (RTM)**: 100% of test cases link directly to requirements via xUnit `[GxPRequirement("PRD-SYS-xxx")]` attributes and `/// @req:` doc comments, verified in CI and synchronized via `dotnet cadence gxp sync`.
 
 ---
 
@@ -386,7 +388,7 @@ Our development trajectory is organized into four sequential strategic phases:
 ### 🔄 Phase 1 — Enterprise Multi-Module Suite & CLI (Active / Current Milestone)
 
 - [x] Scaffold and deploy 20+ specialized microservices (CTMS, eTMF, Safety, Quality, Imaging, Payments, Interop).
-- [x] Build unified `cadence` CLI developer experience (Rich TUI cockpit, doctor, DB seeders, quality gates).
+- [x] Build unified `Cadence.Cli` developer experience (Rich TUI cockpit, doctor, DB seeders, quality gates).
 - [x] Implement Centralized Statistical Monitoring (CSM / Benford's Law) and 64-bit DCT pHash image forensics.
 - [x] Implement Blinded Dual-Reader RECIST 1.1 adjudication and 20% SOD discordance triggers.
 - [x] Implement ICH E2B(R3) AS2 EDI gateway with SHA-256 S/MIME encryption and MDN verification.
@@ -413,33 +415,33 @@ Our development trajectory is organized into four sequential strategic phases:
 
 ## ⚙️ CI/CD Quality Gates & Sentinel Enforcement
 
-Continuous Integration is strictly enforced on every branch and Pull Request via GitHub Actions (`.github/workflows/ci.yml`). PRs must pass **all 10 architecture sentinels and quality gates** before merging:
+Continuous Integration is strictly enforced on every branch and Pull Request via GitHub Actions (`.github/workflows/ci.yml`). PRs must pass **all 21 architecture sentinels and quality gates** before merging:
 
-1. **Unit & Integration Test Suite**: Live PostgreSQL and Testcontainers test runs with zero failures and mandatory .NET 10 xUnit v3 run isolation.
-2. **Strict Ruff Linting & Import Ordering**: Zero lint errors and strict alphabetical isort ordering (I001).
-3. **SQLAlchemy Boolean Filter Sentinel**: Enforces `.is_(True)` / `.is_(False)` per GxP safety rules (E712).
-4. **Architectural Boundary Linter**: Verifies zero cross-service database model imports across microservice domains.
-5. **Static Security Analysis (SAST)**: Automated `bandit` vulnerability scanning.
-6. **Credential & Secret Prevention**: Scans against baseline using `detect-secrets`.
-7. **Code Duplication Sentinel**: Zero un-exempted duplicated code blocks exceeding 15 normalized lines (`scripts/detect_duplication.py`).
-8. **ADR Schema & Index Validation**: Verifies all ADRs follow schema standards and are indexed in `docs/adr/index.md`.
-9. **OpenAPI Schema Parity Check**: Asserts gateway aggregated schema matches exported service definitions.
-10. **GxP Traceability Matrix (RTM) Sync**: Verifies 100% test-to-requirement docstring alignment without drift.
+1. **Clean Solution Build**: Zero compiler warnings or errors (`TreatWarningsAsErrors=true`) across all 38 .NET 10 projects.
+2. **Roslyn Analyzers & Code Formatting**: Enforces `.editorconfig`, file-scoped namespaces, and strict using directive ordering (`dotnet format --verify-no-changes`).
+3. **ArchUnitNET Layer Boundary Sentinels**: Verifies Domain has zero dependencies on presentation, database drivers, or external frameworks.
+4. **Zero Cross-Service DB Imports**: Enforces complete database isolation across all 18 microservice persistence layers.
+5. **Unit & Architecture Test Suite**: Over 1,200 unit and architectural tests passing with zero failures.
+6. **E2E Integration Test Suite**: Complete black-box HTTP endpoint verification against Testcontainers PostgreSQL and in-memory fallbacks.
+7. **Static Security Analysis (SAST)**: Security analyzers and secret prevention.
+8. **Code Duplication Sentinel**: Zero un-exempted duplicated code blocks exceeding 15 normalized lines (`dotnet cadence check`).
+9. **ADR Schema & Index Validation**: Verifies all ADRs follow schema standards and are indexed in `docs/adr/index.md`.
+10. **GxP Traceability Matrix (RTM) Sync**: Verifies 100% test-to-requirement docstring alignment without drift (`dotnet cadence gxp sync`).
 
 ### Essential Contributor Commands
 
 ```bash
-# Run all 10 architectural checks in parallel
-uv run cadence check --parallel
+# Run all 21 architectural sentinels in parallel
+dotnet cadence check --parallel
 
-# Automatically fix lints, sort imports, and format code
-uv run cadence fix --all
+# Automatically fix formatting, align schemas, and index ADRs
+dotnet cadence fix --all
 
-# Run backend test suite
-uv run cadence test --fast
+# Run backend unit test suite
+dotnet cadence test --fast
 
 # Regenerate and stage GxP RTM compliance documentation
-uv run cadence gxp sync
+dotnet cadence gxp sync
 ```
 
 ---

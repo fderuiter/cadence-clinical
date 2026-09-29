@@ -244,7 +244,7 @@ if ($adrCheck -eq 'y' -or $adrCheck -eq 'Y') {
 }
 
 Write-Host "Running ADR validation..." -ForegroundColor Gray
-& python (Join-Path $repoRoot "scripts\validate_adrs.py")
+& dotnet run --project (Join-Path $repoRoot "packages\cli\src\Cadence.Cli.csproj") -- check adrs
 
 Write-Host "`n================================================================================" -ForegroundColor Cyan
 Write-Host "   SCAFFOLDING COMPLETE FOR Cadence.Apps.$capName                               " -ForegroundColor Green
@@ -253,6 +253,6 @@ Write-Host "  Next Steps:" -ForegroundColor White
 Write-Host "    1. Implement persistence DbContext in Infrastructure/" -ForegroundColor Cyan
 Write-Host "    2. Implement I$($capName)ApplicationService in Application/" -ForegroundColor Cyan
 Write-Host "    3. Add xUnit tests under tests/ with [GxPRequirement(`"PRD-SYS-053`")]" -ForegroundColor Cyan
-Write-Host "    4. Run 'python scripts/sync_gxp.py' to verify RTM compliance" -ForegroundColor Cyan
+Write-Host "    4. Run 'dotnet cadence gxp sync' to verify RTM compliance" -ForegroundColor Cyan
 Write-Host "--------------------------------------------------------------------------------`n" -ForegroundColor DarkCyan
 

@@ -123,13 +123,8 @@ fi
 
 # Step 6: Verification
 printf '\n%sADR and GxP Compliance Synchronization...%s\n' "$YELLOW" "$RESET"
-PYTHON_BIN=$(command -v python3 || command -v python || echo "python")
-if [ -f "$REPO_ROOT/scripts/validate_adrs.py" ]; then
-  $PYTHON_BIN "$REPO_ROOT/scripts/validate_adrs.py" || true
-fi
-if [ -f "$REPO_ROOT/scripts/sync_gxp.py" ]; then
-  $PYTHON_BIN "$REPO_ROOT/scripts/sync_gxp.py" || true
-fi
+dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- check adrs || true
+dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- gxp sync || true
 
 printf '\n%s================================================================================%s\n' "$BOLD" "$GREEN" "$RESET"
 printf '%s   DECOMMISSIONING COMPLETE FOR %s\n' "$BOLD" "$SERVICE_NAME"

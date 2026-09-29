@@ -118,7 +118,7 @@ if ($pgSuccess -and $pgSocket.Connected) {
     $pgSocket.Close()
 } else {
     Write-Host "  [INFO] PostgreSQL not responding on port 5432." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose --profile python up -d postgres' to launch local database." -ForegroundColor Gray
+    Write-Host "         Run 'docker compose up -d postgres' to launch local database." -ForegroundColor Gray
 }
 
 $neoSocket = New-Object System.Net.Sockets.TcpClient
@@ -129,7 +129,7 @@ if ($neoSuccess -and $neoSocket.Connected) {
     $neoSocket.Close()
 } else {
     Write-Host "  [INFO] Neo4j Bolt not responding on port 7687." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose --profile python up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
+    Write-Host "         Run 'docker compose up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
 }
 
 # ------------------------------------------------------------------------------
@@ -154,7 +154,7 @@ if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
 Invoke-Stage -Number 6 -Total 6 -Title "Solution Compilation & Quality Gate" -Description "Testing solution build and ADR integrity..."
 
 Write-Host "  Executing ADR validation..." -ForegroundColor Gray
-& python (Join-Path $repoRoot "scripts\validate_adrs.py")
+& dotnet run --project (Join-Path $repoRoot "packages\cli\src\Cadence.Cli.csproj") -- check adrs
 
 Write-Host "`n================================================================================" -ForegroundColor Cyan
 Write-Host "   ONBOARDING COMPLETE! Your Cadence .NET 10 environment is ready.              " -ForegroundColor Green
