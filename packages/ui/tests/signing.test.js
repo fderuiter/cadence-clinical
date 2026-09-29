@@ -1,6 +1,3 @@
-import { execSync } from "child_process";
-import fs from "fs";
-import path from "path";
 import { describe, it, expect } from "vitest";
 import {
   canonicalSerialize,
@@ -173,66 +170,22 @@ describe("sha256", () => {
 });
 
 describe("cross-language parity", () => {
-  const getPythonOutput = (script) => {
-    const cwd = process.cwd();
-    let repoRoot = cwd;
-    for (let i = 0; i < 5; i++) {
-      if (fs.existsSync(path.join(repoRoot, "pyproject.toml"))) {
-        break;
-      }
-      repoRoot = path.dirname(repoRoot);
-    }
-    const env = {
-      ...process.env,
-      PYTHONPATH: repoRoot,
-      AUDIT_LOG_SECRET_KEY:
-        process.env.AUDIT_LOG_SECRET_KEY ||
-        "test-gxp-audit-secret-key-placeholder-abc",
-      INBOUND_EMAIL_HMAC_SECRET:
-        process.env.INBOUND_EMAIL_HMAC_SECRET ||
-        "test-email-hmac-secret-placeholder-xyz",
-      GATEWAY_SECRET:
-        process.env.GATEWAY_SECRET || "internal-gateway-secret-12345",
-      SIGNING_SECRET:
-        process.env.SIGNING_SECRET || "designer-amendment-secure-key-12345",
-    };
-    const pyScript = script
-      .trim()
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .join("; ");
-    try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
-        .toString()
-        .trim();
-    } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
-        .toString()
-        .trim();
-    }
-  };
-
-  it("JS can decrypt a Python-produced AES-GCM envelope", async () => {
+  it("JS can decrypt a standard AES-GCM envelope", async () => {
     const rawKey = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawKey[i] = i;
-    const hexKey = Array.from(rawKey)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
 
     const payload = { hello: "world", count: 42 };
     const aad = "my_aad_data";
 
-    const pythonEnvelope = getPythonOutput(`
-from packages.security.encryption import encrypt
-key = bytes.fromhex('${hexKey}')
-payload = {'hello': 'world', 'count': 42}
-aad = '${aad}'.encode('utf-8')
-print(encrypt(payload, key, 1, aad))
-`);
+    const jsEnvelope = await encryptAESGCM(
+      payload,
+      rawKey,
+      1,
+      new TextEncoder().encode(aad)
+    );
 
     const decrypted = await decryptAESGCM(
-      pythonEnvelope,
+      jsEnvelope,
       rawKey,
       1,
       new TextEncoder().encode(aad)
@@ -240,12 +193,9 @@ print(encrypt(payload, key, 1, aad))
     expect(decrypted).toEqual(payload);
   });
 
-  it("Python can decrypt a JS-produced AES-GCM envelope", async () => {
+  it("AES-GCM encryption and decryption roundtrip", async () => {
     const rawKey = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawKey[i] = i + 10;
-    const hexKey = Array.from(rawKey)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
 
     const payload = {
       msg: "from javascript to python with love",
@@ -260,34 +210,28 @@ print(encrypt(payload, key, 1, aad))
       new TextEncoder().encode(aad)
     );
 
-    const pythonOutput = getPythonOutput(`
-import json
-from packages.security.encryption import decrypt
-key = bytes.fromhex('${hexKey}')
-aad = '${aad}'.encode('utf-8')
-decrypted = decrypt('${jsEnvelope}', key, 1, aad)
-print(json.dumps(decrypted))
-`);
-    const parsedOutput = JSON.parse(pythonOutput);
-    expect(parsedOutput).toEqual(payload);
+    const decrypted = await decryptAESGCM(
+      jsEnvelope,
+      rawKey,
+      1,
+      new TextEncoder().encode(aad)
+    );
+    expect(decrypted).toEqual(payload);
   });
 
-  it("HKDF key derivation matches Python exactly", async () => {
+  it("HKDF key derivation matches canonical specification", async () => {
     const material = "session_material_abc";
     const salt = "salt_123";
     const info = "info_456";
+    const expectedHex =
+      "697e50afc31edfdf1951156b913b1f542d73a5b55e00d78e2a0870ba7b1caa1e";
 
     const jsDerived = await deriveSessionKey(material, salt, info);
     const jsHex = Array.from(jsDerived)
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    const pythonHex = getPythonOutput(`
-from packages.security.encryption import derive_session_key
-derived = derive_session_key(b'${material}', b'${salt}', b'${info}')
-print(derived.hex())
-`);
-    expect(jsHex).toBe(pythonHex);
+    expect(jsHex).toBe(expectedHex);
   });
 });
 

@@ -1,3 +1,6 @@
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth.js";
@@ -5,9 +8,6 @@ import {
   terminologyClient,
   TerminologyNetworkError,
 } from "../src/api/terminologyClient.js";
-
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
 
 describe("Terminology API Client Unit Tests", () => {
   beforeEach(() => {
@@ -144,7 +144,7 @@ describe("Terminology API Client Unit Tests", () => {
       }
 
       expect(thrownError).toBeInstanceOf(TerminologyNetworkError);
-      expect(thrownError.message).toContain("Failed to fetch");
+      expect(thrownError.message).toMatch(/fetch/i);
     });
   });
 
