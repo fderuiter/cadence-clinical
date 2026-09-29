@@ -73,6 +73,17 @@
     <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
     <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />
     <ProjectReference Include="..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+    <ProjectReference Include="..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" />
+    <ProjectReference Include="..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
+    <ProjectReference Include="..\apps\eisf\src\Cadence.Apps.Eisf.csproj" />
+    <ProjectReference Include="..\apps\imaging\src\Cadence.Apps.Imaging.csproj" />
+    <ProjectReference Include="..\apps\interop\src\Cadence.Apps.Interop.csproj" />
+    <ProjectReference Include="..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
+    <ProjectReference Include="..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
+    <ProjectReference Include="..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="..\apps\payments\src\Cadence.Apps.Payments.csproj" />
+    <ProjectReference Include="..\apps\safety\src\Cadence.Apps.Safety.csproj" />
+    <ProjectReference Include="..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,8 @@
     <Description>Native .NET 10 developer CLI and diagnostic tool for Cadence Clinical Research Software.</Description>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>cadence</ToolCommandName>
+    <PackageId>Cadence.Cli</PackageId>
+    <Version>10.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

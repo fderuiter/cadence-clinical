@@ -2,46 +2,7 @@ using System;
 
 namespace Cadence.Apps.Org.Domain;
 
-public class Organization
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string Name { get; set; } = string.Empty;
-    public string OrgType { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public int VersionIndex { get; set; } = 1;
-}
 
-public class Site
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string SiteId { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string OrganizationId { get; set; } = string.Empty;
-    public string? StudyId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public int VersionIndex { get; set; } = 1;
-}
-
-public class Personnel
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string? KeycloakUserId { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public string? OrganizationId { get; set; }
-    public string? SiteId { get; set; }
-    public string? StudyId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public int VersionIndex { get; set; } = 1;
-}
 
 public class PersonnelAssignment
 {

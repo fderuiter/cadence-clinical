@@ -9,11 +9,8 @@ var postgres = builder.AddPostgres("postgres")
     .WithDataVolume()
     .WithPgAdmin();
 
-var kernelDb = postgres.AddDatabase("cadence-kernel");
-var executionDb = postgres.AddDatabase("cadence-edc");
-var etmfDb = postgres.AddDatabase("cadence-etmf");
-var ctmsDb = postgres.AddDatabase("cadence-ctms");
-var qualityDb = postgres.AddDatabase("cadence-quality");
+// Clinical Kernel Modular Monolith: single relational database with schema partitioning (ADR-2244, ADR-2247)
+var cadenceDb = postgres.AddDatabase("cadence");
 
 var minio = builder.AddContainer("minio", "minio/minio", "latest")
     .WithHttpEndpoint(port: 9000, targetPort: 9000, name: "api")
@@ -35,25 +32,21 @@ builder.AddProject<Projects.Cadence_Apps_Gateway>("gateway");
 
 builder.AddProject<Projects.Cadence_Apps_Execution>("execution")
     .WithReference(postgres)
-    .WithReference(executionDb)
-    .WithReference(kernelDb);
+    .WithReference(cadenceDb);
 
 builder.AddProject<Projects.Cadence_Apps_Designer>("designer");
 
 builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms")
     .WithReference(postgres)
-    .WithReference(ctmsDb)
-    .WithReference(kernelDb);
+    .WithReference(cadenceDb);
 
 builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf")
     .WithReference(postgres)
-    .WithReference(etmfDb)
-    .WithReference(kernelDb);
+    .WithReference(cadenceDb);
 
 builder.AddProject<Projects.Cadence_Apps_Quality>("quality")
     .WithReference(postgres)
-    .WithReference(qualityDb)
-    .WithReference(kernelDb);
+    .WithReference(cadenceDb);
 
 builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare")
     .WithEnvironment("STORAGE_ENDPOINT_URL", minio.GetEndpoint("api"));

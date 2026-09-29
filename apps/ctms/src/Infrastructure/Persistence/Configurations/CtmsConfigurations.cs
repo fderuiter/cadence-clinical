@@ -272,49 +272,6 @@ public sealed class CtmsSiteMilestoneConfiguration : IEntityTypeConfiguration<Ct
     }
 }
 
-public sealed class CtmsStudyConfiguration : IEntityTypeConfiguration<CtmsStudy>
-{
-    public void Configure(EntityTypeBuilder<CtmsStudy> builder)
-    {
-        builder.ToTable("ctms_studies");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasMaxLength(36);
-        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
-        builder.Property(x => x.VersionIndex).IsRequired();
-
-        builder.HasIndex(x => x.StudyId);
-    }
-}
-
-public sealed class SiteStaffMemberConfiguration : IEntityTypeConfiguration<SiteStaffMember>
-{
-    public void Configure(EntityTypeBuilder<SiteStaffMember> builder)
-    {
-        builder.ToTable("site_staff_members");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.SiteId).IsRequired();
-        builder.Property(x => x.UserId).IsRequired();
-        builder.Property(x => x.FirstName).IsRequired();
-        builder.Property(x => x.LastName).IsRequired();
-        builder.Property(x => x.Email).IsRequired();
-        builder.Property(x => x.PrimaryRole).IsRequired();
-        builder.Property(x => x.GcpCertified).IsRequired();
-        builder.Property(x => x.IsActive).IsRequired();
-        builder.Property(x => x.IsDeleted).IsRequired();
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.CreatedBy).IsRequired();
-        builder.Property(x => x.ReasonForChange).IsRequired();
-        builder.Property(x => x.VersionIndex).IsRequired();
-
-        builder.HasIndex(x => x.SiteId);
-        builder.HasIndex(x => x.UserId).IsUnique();
-    }
-}
 
 public sealed class CtmsBudgetLineItemConfiguration : IEntityTypeConfiguration<CtmsBudgetLineItem>
 {
@@ -384,11 +341,6 @@ public sealed class DoaDelegationRecordConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.CreatedBy).IsRequired();
         builder.Property(x => x.ReasonForChange).IsRequired();
         builder.Property(x => x.VersionIndex).IsRequired();
-
-        builder.HasOne<SiteStaffMember>()
-            .WithMany()
-            .HasPrincipalKey(x => x.UserId)
-            .HasForeignKey(x => x.StaffUserId);
 
         builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.StaffUserId);

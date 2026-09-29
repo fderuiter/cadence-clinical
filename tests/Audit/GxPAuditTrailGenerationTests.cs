@@ -43,22 +43,23 @@ public class GxPAuditTrailGenerationTests
 
         await using var context = new CtmsDbContext(options);
 
-        // Act 1: Add new CTMS study
-        var study = new CtmsStudy
+        // Act 1: Add new CTMS milestone
+        var milestone = new CtmsSiteMilestone
         {
+            SiteId = "SITE-101",
             StudyId = "ST-1001",
-            Name = "Phase III Clinical Trial",
+            MilestoneType = "INITIATION",
             Status = "ACTIVE",
-            ReasonForChange = "Initial study creation"
+            ReasonForChange = "Initial milestone creation"
         };
-        context.CtmsStudies.Add(study);
+        context.CtmsSiteMilestones.Add(milestone);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 1
-        study.CreatedBy.Should().Be(TestUser);
-        study.VersionIndex.Should().Be(1);
+        milestone.CreatedBy.Should().Be(TestUser);
+        milestone.VersionIndex.Should().Be(1);
 
-        var auditEntries1 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).ToListAsync(TestContext.Current.CancellationToken);
+        var auditEntries1 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsSiteMilestone)).ToListAsync(TestContext.Current.CancellationToken);
         auditEntries1.Should().HaveCount(1);
         var firstAudit = auditEntries1[0];
         firstAudit.Action.Should().Be("Added");
@@ -66,15 +67,15 @@ public class GxPAuditTrailGenerationTests
         firstAudit.PredecessorHash.Should().BeEmpty();
         firstAudit.BlockHash.Should().NotBeNullOrEmpty();
 
-        // Act 2: Update CTMS study
-        study.Status = "COMPLETED";
-        study.ReasonForChange = "Study protocol completed";
+        // Act 2: Update CTMS milestone
+        milestone.Status = "COMPLETED";
+        milestone.ReasonForChange = "Site initiation visit completed";
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert 2
-        study.VersionIndex.Should().Be(2);
+        milestone.VersionIndex.Should().Be(2);
 
-        var auditEntries2 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsStudy)).OrderBy(x => x.Timestamp).ToListAsync(TestContext.Current.CancellationToken);
+        var auditEntries2 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsSiteMilestone)).OrderBy(x => x.Timestamp).ToListAsync(TestContext.Current.CancellationToken);
         auditEntries2.Should().HaveCount(2);
         var secondAudit = auditEntries2[auditEntries2.Count - 1];
         secondAudit.Action.Should().Be("Modified");

@@ -4,6 +4,18 @@
 
 An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).
 
+### Clinical Kernel Single-Database Schema Standard
+
+A persistence consolidation standard aligning .NET Aspire AppHost (`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto a single logical PostgreSQL database (`cadence`) with schema-level isolation (`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys, and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11 without distributed transactions.
+
+### Two-Tier Regulatory Traceability Standard
+
+A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `dotnet cadence gxp sync` to pass in strict mode.
+
+### Universal Zero-Tolerance Clean Architecture Sentinel
+
+An architectural boundary enforcement policy in `Cadence.ArchitectureTests` expanding ArchUnitNET rules `K-XS-1` and `K-XS-2` across all 18 platform microservice assemblies. Strictly forbids non-kernel modules from declaring duplicate clinical entity types (`Organization`, `Site`, `Study`, `Participant`, `Personnel`, `Delegation`, `AuditLog`) or string identifier properties (`*StudyId`, `*SiteId`), enforcing canonical projection from `Cadence.Kernel.Domain` UUIDv7 aggregates.
+
 ### PostgreSQL Native Bitemporal Interval Standard
 
 A temporal data integrity standard under 21 CFR Part 11 that models mutable clinical facts (protocol applicability, enrollment state, observations, and delegation grants) across two independent time dimensions: valid time (the period when the fact was true in the physical clinical trial) and recorded time (the transaction period when Cadence recorded the fact). Both intervals are modeled as PostgreSQL `tstzrange` columns (`valid_period`, `recorded_period`) enforced via `btree_gist` exclusion constraints in EF Core 10, preventing overlapping intervals without third-party extensions and enabling deterministic point-in-time state reconstruction via the `@>` range containment operator.

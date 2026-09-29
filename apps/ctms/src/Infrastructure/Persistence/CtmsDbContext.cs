@@ -25,8 +25,6 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     public DbSet<CtmsRecruitmentRecord> CtmsRecruitmentRecords => Set<CtmsRecruitmentRecord>();
     public DbSet<CtmsRegulatoryForm> CtmsRegulatoryForms => Set<CtmsRegulatoryForm>();
     public DbSet<CtmsSiteMilestone> CtmsSiteMilestones => Set<CtmsSiteMilestone>();
-    public DbSet<CtmsStudy> CtmsStudies => Set<CtmsStudy>();
-    public DbSet<SiteStaffMember> SiteStaffMembers => Set<SiteStaffMember>();
     public DbSet<CtmsBudgetLineItem> CtmsBudgetLineItems => Set<CtmsBudgetLineItem>();
     public DbSet<CtmsPaymentMilestone> CtmsPaymentMilestones => Set<CtmsPaymentMilestone>();
     public DbSet<DoaDelegationRecord> DoaDelegationRecords => Set<DoaDelegationRecord>();
@@ -49,8 +47,6 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsRecruitmentRecordConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsRegulatoryFormConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsSiteMilestoneConfiguration());
-        modelBuilder.ApplyConfiguration(new CtmsStudyConfiguration());
-        modelBuilder.ApplyConfiguration(new SiteStaffMemberConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsBudgetLineItemConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsPaymentMilestoneConfiguration());
         modelBuilder.ApplyConfiguration(new DoaDelegationRecordConfiguration());

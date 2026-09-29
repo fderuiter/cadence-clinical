@@ -3,4 +3,8 @@
     <RootNamespace>Cadence.Ddf</RootNamespace>
     <Description>Digital Data Flow (DDF) compilation pipeline and Intermediate Representation (IR) domain models for Cadence.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
+  </ItemGroup>
 </Project>
