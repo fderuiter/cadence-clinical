@@ -142,7 +142,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
 
 - [2023-01-04: ADR 2023-01-04: Keycloak Identity Management](2023-01-04-keycloak-identity-management.md)
-- [2026-07-22: ADR 2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md)
+- [2026-07-22: ADR 2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md) _(Superseded by ADR-2250)_
 - [2026-07-22: ADR 2026-07-22: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md)
 - [2026-07-22: ADR 2026-07-22: Signature Re-Authentication](2026-07-22-signature-re-authentication.md)
 - [2026-07-23: ADR 2026-07-23: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)](2026-07-23-canonical-json-signatures-and-rolling-versioning.md)
@@ -462,3 +462,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
+- [2026-09-29: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)

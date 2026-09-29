@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Text.Json;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
@@ -174,8 +175,8 @@ public static partial class CadenceTelemetryExtensions
 
         if (environment.IsDevelopment())
         {
-            endpoints.MapOpenApi();
-            endpoints.MapScalarApiReference();
+            endpoints.MapOpenApi().AllowAnonymous();
+            endpoints.MapScalarApiReference().AllowAnonymous();
         }
 
         return endpoints;
@@ -230,12 +231,14 @@ public static partial class CadenceTelemetryExtensions
 
         app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = serviceName }))
             .WithName($"{pascalRoutePrefix}HealthCheck")
-            .WithSummary(healthSummary);
+            .WithSummary(healthSummary)
+            .AllowAnonymous();
 
         var api = app.MapGroup($"/api/v1/{routePrefix}");
         api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = serviceName }))
             .WithName($"{pascalRoutePrefix}Status")
-            .WithSummary(statusSummary);
+            .WithSummary(statusSummary)
+            .AllowAnonymous();
 
         return app;
     }

@@ -131,13 +131,13 @@ public class CadenceSecurityUnitTests
     [GxPRequirement("PRD-SYS-053")]
     public async Task AuditorPersona_RestrictedToReadOnlyAccess()
     {
-        var middleware = new GatewayAuthMiddleware();
+        var middleware = new AuditorWriteGuardMiddleware();
+        var auditor = new Principal { UserId = "auditor-01", Roles = ["auditor"] };
 
         // Auditor GET request (Read-only) -> Allowed
         var getContext = new DefaultHttpContext();
         getContext.Request.Method = "GET";
-        getContext.Request.Headers["X-User-Id"] = "auditor-01";
-        getContext.Request.Headers["X-User-Roles"] = "auditor";
+        getContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = auditor;
 
         bool getNextExecuted = false;
         await middleware.InvokeAsync(getContext, ctx =>
@@ -152,8 +152,7 @@ public class CadenceSecurityUnitTests
         // Auditor POST request (Write operation) -> Blocked with 403 Forbidden
         var postContext = new DefaultHttpContext();
         postContext.Request.Method = "POST";
-        postContext.Request.Headers["X-User-Id"] = "auditor-01";
-        postContext.Request.Headers["X-User-Roles"] = "auditor";
+        postContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = auditor;
         postContext.Response.Body = new MemoryStream();
 
         bool postNextExecuted = false;
@@ -337,15 +336,14 @@ public class CadenceSecurityUnitTests
     public void DependencyInjection_RegistersCadenceSecurityServices()
     {
         var services = new ServiceCollection();
-        services.AddCadenceSecurity(opts =>
-        {
-            opts.GatewaySecret = TestSecret;
-            opts.RequireGatewaySignature = true;
-        });
+        services.AddLogging();
+        services.AddCadenceSecurity(opts => opts.GatewaySecret = TestSecret);
 
         var provider = services.BuildServiceProvider();
 
-        provider.GetService<GatewayAuthMiddleware>().Should().NotBeNull();
+        provider.GetService<AuditorWriteGuardMiddleware>().Should().NotBeNull();
+        provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<GatewayAuthenticationOptions>>()
+            .Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret.Should().Be(TestSecret);
         provider.GetService<SigTokenVerifier>().Should().NotBeNull();
         provider.GetService<AuditDigestEngine>().Should().NotBeNull();
         provider.GetService<IAuditLogWriter>().Should().NotBeNull();

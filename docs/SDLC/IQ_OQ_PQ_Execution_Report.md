@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 744
-- **Passed:** 744 🟢
+- **Total Automated Test Cases Run:** 752
+- **Passed:** 752 🟢
 - **Failed/Errors:** 0 🔴
 - **Overall Operational Pass Rate:** 100.00%
 
@@ -50,6 +50,7 @@ The Installation Qualification verifies that the software execution environment 
 | `AggregateRootsMustImplementIGxPAuditableContract` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `AllFactoryMethods_ProduceDistinctCodes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplicationService_Close_ValidatesCraOrDmRole` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ApplicationService_CloseReopenCancel_WithoutRole_AreDenied` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -198,6 +199,9 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests.SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Persistence.MutationRepositoryTrackingTests.ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_IgnoresComputedMissingDocumentsPropertyItself` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsMissingDocumentsBackingFieldToNativeTextArrayColumn` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.SiteComplianceCacheConfigurationTests.Configure_MapsShadowVersionPropertyAsTheActualConcurrencyToken` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -232,6 +236,7 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenMatchingSurrogateId_ReturnsTheSubjectTracked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Persistence.SubjectRepositoryTests.GetByIdAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_Close_ValidatesCraOrDmRole` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_CloseReopenCancel_WithoutRole_AreDenied` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.CancelQuery_FromOpen_SucceedsWithReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Queries.QueryLifecycleTests.QueryLifecycle_FullTransitionSequence_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -456,6 +461,7 @@ The Installation Qualification verifies that the software execution environment 
 | `ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ClearDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ClearReconsentRequirement_SetsRequiresReconsentFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ClinicalSubjectAndSubjectConsentShadowVersionProperties_AreConfiguredAsPlainConcurrencyTokensNotRowVersions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ClinicalSubjects_GivenCorruptedStatusValueInStorage_ThrowsInvalidOperationExceptionOnMaterialization` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ClinicalSubjects_GivenPersistedSubjectWithNullSiteCode_RoundTripsNullExactly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -552,6 +558,7 @@ The Installation Qualification verifies that the software execution environment 
 | `FlagSdv_WithReason_ResetsSdvVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_And_Underpopulated_DivergeOnStatus_ForTheIdenticalAggregate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_EnrolledSubjectWithSite_ReflectsAggregatesActualState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_ScreeningSubject_ReportsScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -634,6 +641,7 @@ The Installation Qualification verifies that the software execution environment 
 | `NormalizeGender_GivenUnmappedInputWithPreserveCustomTrue_ReturnsTrimmedUppercasedVerbatim` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `NotFound_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `OperationEnvelopeResponse_SerializesWithSpecFieldNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `OutlierDetection_IdentifiesStatisticalOutliers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ProductModulesMustNeverReferenceInternalKernelPersistence` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -789,30 +797,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 58deb6b96945e78e94bafa4be0afb028152e8f54b5668b76995483e870c514a9
+- **Cryptographic Hash (SHA-256):** 13347aaafeb603f2fa524cd8da57bedabb5ef778282bfb6017aa53b78481a816
 -----BEGIN CERTIFICATE-----
-MIIDxDCCAnygAwIBAgIIO6ujhG2lEVMwPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+MIIDxDCCAnygAwIBAgIIXWS1eKtQpb4wPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
 ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
 ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
 eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
-MB4XDTI2MDkyODA2MDg0N1oXDTI3MDkyOTA2MDg0N1owaDEiMCAGA1UEChMZQ2Fk
+MB4XDTI2MDkyODE4MzQ0N1oXDTI3MDkyOTE4MzQ0N1owaDEiMCAGA1UEChMZQ2Fk
 ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
 aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
-BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4FoDyM6eEsOtB2H+rT0hyVpxKi99
-jD/yOEkrZVWZDfc5tVabgn8kncHkqLdFnLzLUXRoWsHbyemmVaAipZ06i27jh2pH
-InmXtT7RUBkA0CR0Bog21JORL85E58qZY0zztuBgQNHWo493jlPrW137GXfZS3OW
-/RdPLH91B+5oU4WJJ4CjYVoL+cqJ/MWhhx6IxFM8qdUjoPSCwNkK4+RDIJw6Bcj4
-qvHtWWMPMBLEuGL15VQ3FbwcxQ2P0vUuONFqagHufigGK9HgZbyvw75EGbORqaSc
-6zwxCLAYk/daxNQi2xvqTwgG68Kq5yL71ttHm60fimBIK527rDy2eyODUwIDAQAB
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuZMF77mXu6ZspR03bf0+q6/SUOZI
+SUlQy17VKCK7sL09MkKqss2bVwNjTAZnk894OipYuFVYkgQ6wMhJFtoefXmSBOfy
+53sXzPMsNDrnZ61s+BHPgrUZcyfbAPx62iAwlgSGjEkkJKJ3oMufOmuXP9NGVU1t
+racQiKbEDnwZ8RP7vAp0KuCYJYvwR9NZHVOVWVGXoEwJhnaEvRxcZmmQDonaHbQA
+G4O3ykXdQ/irkkfpznjDa9qtmeTRUjgoF2rguLXZF8yDVL65QSbU1HYHVe4zwWT4
+5G35dIhScIEZmovSD2+cfS/z01gGiyi1p8MuRLf+At8YTn+I6qRdppErLwIDAQAB
 oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
-AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAHE8pF6r15A1
-OSexXENmcy4sRyjqGtnJCZuIWxq69PsppYwb6abRjKWEhUZra2xPoMpY1k43xKT/
-WgVRrWf66io/CNX4wvtWBQkNkVUxK9VshxAkNSlTJ9pXMtlGeA+mjLTD+3Ozkg1X
-czjpVGmf9tCKIzqdhtaz48AD2vbZFioGg3vkkbKhwKKCNbrnINoOv8n3+K2FkupQ
-gVVm9S0nKqcYMl8Tp9ALvcQV+Tpw+tbr5hqmnMHWEQ9Q0F0pBDiFa41TSqyzBnjl
-s/3Iy3numY15RuLJGPgJJcqjDvKVAk+YEiNkKc9RyU5djO05UNlqFEnGHww0/UQG
-6fZDACe1+Lk=
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAA0qWv5pb5EC
+r57UjMeTGXDdxcLEiCJL07VwC11V/2uyQJZMcXtxPDt6sQg49L3+mBrU4mNXKs8v
+T770yoB5E4R4LrPHEPE6zM8R00W9L3FeAIljJxIxJd7zxM7khNe2PGqCDHuItiry
+Awid5YrDktOybSn5ZAV9I8c0EOgyoJacJLXGSuEuEqkEIETdP2+84dEghQGCV9uJ
+vYjwDA1g49Y9QcMEAAuWW/IGDZbZoVUqdzWXK5Lxzf2cLC/8560p1U9WQGYBLX1y
+0mxMk6vC2Trxon8V6GZu45hhdKhUrkRRqHuDzwFCnLjWVOYU+CjsQEdjLTjqlcC3
+yK2bwktX11w=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-oGLOm655jsUStPJuNAlvLU34SRQP8zv+TtiYLdvPU57wIcEVqaZo4dVOQ/8Bbl4Ndx+fdRm07Y6IEWI4Gd8Mo13qgaPyxaG3CUZWc6i3n/aB+kKHTczTHC1LHlZYS/GU7Qx2QubEhStSPDD66oo7neCdwXgsvZCvryc99bGVbPb7Q4gfK9S/lUERnyC0pPIQXBuaPJavIA1SmfPaQEx7lVlLBs/x9U4ZwL6tHMy4LLnN52HkRhPnclg8iS5uji/gGHE22ovMR9sv7EED2+a5livkxbPUtGOykwb6fNwIMlPiUT7n0XVIYB32PFodPYCll0K2ePBpcIMJSeT09dHzAg==
+GCxgvXIaLU5FRFMHk66VWzZfuDgs2jZ/Bh3dq/HSwKlErbgmcPdcVcE+BbKPJLGVsL2ARD3w8/BL2pI/e86ISU9XG99CK8aJenmTnUbrV5cSFNOO+hLjzE0EJug6UAzjiOVZa/gXeeewX0O3qId1obYw2opTiD8VRrcPOzKa+mFVBN84u5ewMR6oqdnMxOyDnjchEmscdUC7ZY76rhkbjj4EnyD7EUWdELSfm6Gjx4fPimUM81zOh1P2QWNldxdPouz3ykNCQoqFr93v4zjafXME4nMmHq0PnXY5e1FYqyLhYkwtDaHcKxDocykHtEUcDoXakBerlFjuCGgm1kVs2g==
 -----END SIGNATURE-----

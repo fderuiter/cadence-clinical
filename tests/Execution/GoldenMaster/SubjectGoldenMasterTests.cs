@@ -23,6 +23,7 @@ using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
+using Cadence.Testing.Security;
 using Cadence.UnitTests.Execution;
 
 using FluentAssertions;
@@ -426,7 +427,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             ? await CaptureSubjectPreStateAsync(scenario.Route!, ct)
             : null;
 
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
         string rawBody = await response.Content.ReadAsStringAsync(ct);
 
@@ -812,7 +813,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         await ApplyPreconditionsAsync(scenario.Input, ct);
 
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
@@ -859,7 +860,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             await db.SaveChangesAsync(ct);
         }
 
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"scenario '{scenario.ScenarioId}' expected the transition to succeed");
 
@@ -922,7 +923,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplaySiteIdEmptyStringAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError,
@@ -1093,7 +1094,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplayHttpErrorScenarioAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be((HttpStatusCode)scenario.ExpectedStatus!.Value,
@@ -1391,7 +1392,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         await ApplyPreconditionsAsync(scenario.Input, ct);
 
-        using HttpClient client = _testApi.CreateClient();
+        using HttpClient client = _testApi.CreateSignedClient();
         HttpResponseMessage response = await scenario.SendAsync(client, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError,

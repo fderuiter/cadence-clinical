@@ -357,6 +357,9 @@ public sealed class ClinicalQueryApplicationService(
         return MapToResponse(query);
     }
 
+    /// <summary>Whether <paramref name="role"/> may close, reopen or cancel a query (CRA or data manager).</summary>
+    public static bool CanManageQueryLifecycle(string role) => IsAuthorizedCraOrDm(role);
+
     private static bool IsAuthorizedCraOrDm(string? role)
     {
         if (string.IsNullOrWhiteSpace(role))

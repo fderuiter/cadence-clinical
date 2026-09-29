@@ -29,6 +29,8 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// </summary>
 public sealed class FormSubmissionStateTests
 {
+    private static readonly AuthenticatedCaller PrincipalInvestigator = new("pi-user-01", ["PRINCIPAL_INVESTIGATOR"]);
+
     private sealed class FakeClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow { get; } = now;
@@ -111,7 +113,7 @@ public sealed class FormSubmissionStateTests
         form.Complete().IsSuccess.Should().BeTrue();
         form.Status.Should().Be(FormSubmissionStatus.Completed);
 
-        var manifest = new SignatureManifest(
+        var manifest = SignatureManifest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
@@ -143,7 +145,7 @@ public sealed class FormSubmissionStateTests
             initialPayload: payload).Value!;
 
         form.Complete();
-        form.Approve(new SignatureManifest(
+        form.Approve(SignatureManifest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
@@ -172,7 +174,7 @@ public sealed class FormSubmissionStateTests
             initialPayload: payload).Value!;
 
         form.Complete();
-        form.Approve(new SignatureManifest(
+        form.Approve(SignatureManifest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
@@ -225,12 +227,13 @@ public sealed class FormSubmissionStateTests
         await service.CompleteAsync(formId, CancellationToken.None);
 
         // Attempt approve with mismatched hash
-        var badApproveResult = await service.ApproveAsync(formId, new FormSubmissionApproveRequest(
+        var badApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: DateTime.UtcNow,
             PayloadHash: "0000000000000000000000000000000000000000000000000000000000000000"),
+            PrincipalInvestigator,
             CancellationToken.None);
 
         badApproveResult.IsFailure.Should().BeTrue();
@@ -238,12 +241,13 @@ public sealed class FormSubmissionStateTests
 
         // Attempt approve with correct hash
         var validHash = ComputeHash(payload);
-        var goodApproveResult = await service.ApproveAsync(formId, new FormSubmissionApproveRequest(
+        var goodApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: DateTime.UtcNow,
             PayloadHash: validHash),
+            PrincipalInvestigator,
             CancellationToken.None);
 
         goodApproveResult.IsSuccess.Should().BeTrue();
@@ -268,7 +272,7 @@ public sealed class FormSubmissionStateTests
             initialPayload: payload).Value!;
 
         form.Complete();
-        var manifest = new SignatureManifest(
+        var manifest = SignatureManifest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "Because I felt like it.",
@@ -313,12 +317,13 @@ public sealed class FormSubmissionStateTests
         await service.CompleteAsync(formId, CancellationToken.None);
 
         // Attempt approve with unauthorized role (e.g., patient, data_entry_clerk)
-        var unauthorizedResult = await service.ApproveAsync(formId, new FormSubmissionApproveRequest(
+        var unauthorizedResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "clerk-01",
             SignerRole: "data_entry_clerk",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: DateTime.UtcNow,
             PayloadHash: ComputeHash(payload)),
+            new AuthenticatedCaller("clerk-01", ["data_entry_clerk"]),
             CancellationToken.None);
 
         unauthorizedResult.IsFailure.Should().BeTrue();
@@ -326,7 +331,7 @@ public sealed class FormSubmissionStateTests
 
         // Attempt approve with null manifest
         var nullManifestRequest = new FormSubmissionApproveRequest("PI approval and sign-off.", null!);
-        var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, CancellationToken.None);
+        var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, PrincipalInvestigator, CancellationToken.None);
         nullManifestResult.IsFailure.Should().BeTrue();
         nullManifestResult.Error!.Code.Should().Be("SIGNATURE_MANIFEST_REQUIRED");
     }

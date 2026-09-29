@@ -6,19 +6,27 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Security.DependencyInjection;
 
 public class CadenceSecurityOptions
 {
+    /// <summary>
+    /// Shared gateway HMAC secret. When left unset it is read from the <c>GATEWAY_SECRET</c> configuration
+    /// key. There is no default: the host fails at startup if neither supplies a secret of at least
+    /// <see cref="GatewayAuthenticationOptions.MinimumSecretLength"/> characters.
+    /// </summary>
     public string? GatewaySecret { get; set; }
     public string? AuditLogSecretKey { get; set; }
-    public bool RequireGatewaySignature { get; set; } = false;
 }
 
 public static class CadenceSecurityServiceCollectionExtensions
 {
+    /// <summary>The configuration key (and environment variable) holding the shared gateway secret.</summary>
+    public const string GatewaySecretConfigurationKey = "GATEWAY_SECRET";
+
     /// <summary>
     /// Registers Cadence security engine services, authentication middleware, authorization policies, and audit components.
     /// @req:PRD-SYS-053
@@ -29,15 +37,20 @@ public static class CadenceSecurityServiceCollectionExtensions
         configure?.Invoke(options);
 
         services.AddHttpContextAccessor();
-
         services.AddSingleton(options);
-        services.AddSingleton(new GatewayAuthOptions
-        {
-            GatewaySecret = options.GatewaySecret,
-            RequireGatewaySignature = options.RequireGatewaySignature
-        });
 
-        services.AddTransient<GatewayAuthMiddleware>();
+        services.AddAuthentication(GatewayAuthenticationHandler.SchemeName)
+            .AddScheme<GatewayAuthenticationOptions, GatewayAuthenticationHandler>(GatewayAuthenticationHandler.SchemeName, null);
+
+        services.AddOptions<GatewayAuthenticationOptions>(GatewayAuthenticationHandler.SchemeName)
+            .Configure<IServiceProvider>((authOptions, sp) =>
+                authOptions.GatewaySecret ??= options.GatewaySecret ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey])
+            .Validate(
+                authOptions => authOptions.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
+                $"{GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
+            .ValidateOnStart();
+
+        services.AddTransient<AuditorWriteGuardMiddleware>();
         services.AddSingleton<ReplayCache>();
         services.AddSingleton<SigTokenVerifier>();
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
@@ -53,6 +66,12 @@ public static class CadenceSecurityServiceCollectionExtensions
 
         services.AddAuthorization(authOptions =>
         {
+            // Every endpoint needs an authenticated caller unless it opts out with AllowAnonymous()
+            // (health and status probes do).
+            authOptions.FallbackPolicy = new AuthorizationPolicyBuilder(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .Build();
+
             authOptions.AddPolicy("RequireStudyScope", policy =>
                 policy.Requirements.Add(new StudyScopeRequirement()));
 
@@ -67,11 +86,14 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Configures Cadence security middleware pipeline (Gateway HMAC authentication &amp; identity resolution).
+    /// Adds gateway-signature authentication, authorization (with the authenticated-caller fallback policy)
+    /// and the auditor write guard to the pipeline.
     /// </summary>
     public static IApplicationBuilder UseCadenceSecurity(this IApplicationBuilder app)
     {
-        return app.UseMiddleware<GatewayAuthMiddleware>();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        return app.UseMiddleware<AuditorWriteGuardMiddleware>();
     }
 
     /// <summary>
