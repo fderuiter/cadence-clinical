@@ -15,7 +15,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// Coverage for `MIG-SUBJ-005`'s `SubjectConsent` aggregate: `Create`'s `IcfSignedDate` defaulting,
 /// `MergeResubmission`'s Rule 9 four-category field-merge precedence (SCN-002's re-submission half,
 /// per `02_technical_design.md` §6.2), and `ClearReconsentRequirement`.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectConsentTests
 {
@@ -44,7 +43,6 @@ public class SubjectConsentTests
             clock ?? new FakeClock(CreateClockNow));
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Create_IcfSignedDateOmitted_DefaultsToClockUtcNow()
     {
         var clock = new FakeClock(CreateClockNow);
@@ -57,7 +55,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Create_IcfSignedDateSupplied_UsesSuppliedValueNotClock()
     {
         var clock = new FakeClock(CreateClockNow);
@@ -70,7 +67,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MergeResubmission_IcfSignedDateNull_ExistingDatePreserved()
     {
         var consent = CreateConsent(icfSignedDate: ExistingDate);
@@ -83,7 +79,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MergeResubmission_IcfSignedDateSupplied_ReplacesExistingDate()
     {
         var consent = CreateConsent(icfSignedDate: ExistingDate);
@@ -96,7 +91,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow()
     {
         // `Create` always defaults IcfSignedDate to clock.UtcNow when omitted, so a null
@@ -121,7 +115,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MergeResubmission_IncomingProtocolVersionNull_StoredProtocolVersionUnchanged()
     {
         var consent = CreateConsent(version: ExistingVersion);
@@ -134,7 +127,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MergeResubmission_IncomingProtocolVersionSupplied_ReplacesStoredProtocolVersion()
     {
         var consent = CreateConsent(version: ExistingVersion);
@@ -147,7 +139,6 @@ public class SubjectConsentTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SUB-001")]
     [InlineData(true, true)]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -164,7 +155,6 @@ public class SubjectConsentTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SUB-001")]
     [InlineData(true, true)]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -181,7 +171,6 @@ public class SubjectConsentTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SUB-001")]
     [InlineData(true, true)]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -198,7 +187,6 @@ public class SubjectConsentTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SUB-001")]
     [InlineData("v1.0", "v1.0")]
     [InlineData("v1.0", "v2.0")]
     public void MergeResubmission_VersionTag_AlwaysReplacedUnconditionally(string existingTag, string incomingTag)
@@ -213,7 +201,6 @@ public class SubjectConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ClearReconsentRequirement_SetsRequiresReconsentFalse()
     {
         var consent = CreateConsent(requiresReconsent: true);

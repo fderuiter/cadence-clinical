@@ -25,11 +25,9 @@ public class ArchitectureSentinelTests
 {
     /// <summary>
     /// Validates Hexagonal and Clean Architecture boundary purity: Cadence.Core.Domain must not reference infrastructure or web assemblies.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "DomainLayer_MustNotReference_InfrastructureOrPresentationAssemblies")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void DomainLayerMustNotReferenceInfrastructureOrPresentationAssemblies()
     {
         // Arrange
@@ -47,11 +45,9 @@ public class ArchitectureSentinelTests
 
     /// <summary>
     /// Validates 21 CFR Part 11 regulatory invariant: All DDD aggregate roots across domain assemblies must implement IGxPAuditable.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AggregateRoots_MustImplement_IGxPAuditableContract")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AggregateRootsMustImplementIGxPAuditableContract()
     {
         // Arrange
@@ -83,38 +79,11 @@ public class ArchitectureSentinelTests
     }
 
     /// <summary>
-    /// Validates that test methods in test projects carry compile-time [GxPRequirement] regulatory tags.
-    /// @req:PRD-SYS-053
-    /// </summary>
-    [Fact(DisplayName = "RegulatedTestSuites_MustFeature_GxPRequirementAttributes")]
-    [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
-    public void RegulatedTestSuitesMustFeatureGxPRequirementAttributes()
-    {
-        // Arrange
-        var testAssembly = typeof(Cadence.UnitTests.SecurityAndDomainTests).Assembly;
-        var testMethods = testAssembly.GetTypes()
-            .SelectMany(t => t.GetMethods())
-            .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Length > 0)
-            .ToList();
-
-        // Assert
-        testMethods.Should().NotBeEmpty();
-        foreach (var method in testMethods)
-        {
-            var hasGxpAttribute = method.GetCustomAttributes(typeof(GxPRequirementAttribute), false).Length > 0;
-            hasGxpAttribute.Should().BeTrue($"Test method '{method.DeclaringType?.Name}.{method.Name}' must declare [GxPRequirement]");
-        }
-    }
-
-    /// <summary>
     /// Validates Clean Architecture boundary purity: Core domain models, value objects, domain rules, and ports
     /// across all C# execution domain namespaces must have zero references to ASP.NET Core or MassTransit.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ExecutionDomainLayer_MustNotReference_AspNetCoreOrMassTransit")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit()
     {
         // Arrange
@@ -203,11 +172,9 @@ public class ArchitectureSentinelTests
     /// Validates K-XS-2 (positive half): every product module references Cadence.Kernel.Abstractions to bind against
     /// canonical clinical truth. The forbidden-redefinition and Kernel.Persistence rules (K-XS-1, K-XS-2, K-MOD-1)
     /// live in tests/Architecture/KernelBoundaryTests.cs, the single source of truth for kernel boundaries.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_XS_2_ProductModules_MustReference_KernelAbstractions")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ProductModulesMustReferenceKernelAbstractions()
     {
         foreach (var assembly in ProductModuleAssemblies)

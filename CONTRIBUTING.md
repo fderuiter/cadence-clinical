@@ -76,43 +76,10 @@ Executes all 10 architecture sentinels and quality gates concurrently, identical
 
 ## Centralized Test Infrastructure (`packages/testing`)
 
-To maintain clean GxP test isolation and high performance, always use `packages/testing` when authoring tests:
-
-### 1. Domain Entity Factories (`packages.testing.factories`)
-
-Generate typed domain model instances with authentic GxP attributes:
-
-- `SubjectFactory.create(...)`
-- `ProtocolDefinitionFactory.create(...)`
-- `ClinicalObservationFactory.create(...)`
-- `QueryDiscrepancyFactory.create(...)`
-- `ConsentRecordFactory.create(...)`
-- `DocumentMetadataFactory.create(...)`
-- `AuditLogFactory.create(...)`
-
-### 2. In-Memory Repository Fakes (`packages.testing.fakes`)
-
-Test domain use-cases without touching live databases:
-
-```python
-from packages.testing.fakes import InMemoryRepository
-
-repo = InMemoryRepository()
-```
-
-### 3. Security & Gateway Auth Mocks (`packages.testing.security`)
-
-Generate authentic HMAC signed gateway headers matching `GatewayAuthMiddleware`:
-
-```python
-from packages.testing.security import create_test_auth_headers
-
-headers = create_test_auth_headers(
-    user_id="crc.user@site101.org",
-    roles=["site_crc"],
-    tenant_id="tenant_default",
-)
-```
+Use the shared helpers in `packages/testing/src` (`Cadence.Testing`) instead of ad-hoc fakes:
+`InMemoryRepository<T>`, `TestSecurityContext` with `CreateSignedClient()` for gateway-signed calls,
+`FakeClock`, the golden-master loader, and `[GxPRequirement]`. [docs/TESTING.md](docs/TESTING.md) describes
+each helper, how to run the suites, and how to point database tests at PostgreSQL.
 
 ---
 
@@ -287,14 +254,17 @@ GxP compliance documentation is out of sync with the current system state!
 
 ```bash
 make sync-gxp
-# Equivalent: pnpm sync-gxp
+# Equivalent: dotnet cadence gxp sync
 ```
 
 This runs three steps automatically:
 
-1. `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"`
-2. `python scripts/generate_rtm.py --report report_dotnet.trx`
-3. `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
+1. `dotnet test Cadence.sln`, writing one TRX file per test project into `TestResults/gxp/`
+2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` from those results
+3. `git add` of both documents (skipped when any test fails)
+
+Set `CADENCE_TEST_POSTGRES` first so the database-backed tests produce results instead of skips (see
+[docs/TESTING.md](docs/TESTING.md#tests-that-need-postgresql)).
 
 Then commit and push:
 
@@ -307,26 +277,28 @@ git push
 
 ```bash
 # Validate-only (no test run, no file changes) — useful for a quick check
-python scripts/sync_gxp.py --dry-run
+dotnet cadence gxp validate
 
 # Full sync AND auto-commit in one step
-python scripts/sync_gxp.py --commit
+dotnet cadence gxp sync --commit
 ```
 
 ### Mapping requirement IDs in tests
 
-For the RTM to track your test, declare the requirement ID using xUnit `[Trait("Requirement", "...")]` attributes, `[GxPRequirement("...")]`, or XML documentation comments:
+Declare the requirement on the test method with `[GxPRequirement("...")]`, `[Trait("Requirement", "...")]`
+or `/// @req:...` in the method's doc comment. Tags on a class do not count, the ID must exist in the PRD or
+SRS, and a requirement is qualified only when a test declaring it ran and passed. The full rules are in
+[docs/TESTING.md](docs/TESTING.md#linking-a-test-to-a-requirement).
 
 ```csharp
+/// <summary>
+/// Stamps CreatedBy and VersionIndex on the first save.
+/// @req:PRD-SYS-001
+/// </summary>
 [Fact]
-[Trait("Requirement", "PRD-SYS-042")]
-[GxPRequirement("PRD-SYS-042")]
-public async Task ValidateSubjectEnrollmentTransition()
+[GxPRequirement("PRD-SYS-001")]
+public async Task SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields()
 {
-    /// <summary>
-    /// Validates subject state machine on enrollment.
-    /// @req:PRD-SYS-042
-    /// </summary>
     ...
 }
 ```
@@ -386,7 +358,7 @@ See [Tier 2](#tier-2--architecture-decisions-adr) above.
 - Tests live in `tests/`.
 - Backend: .NET 10 xUnit v3 (`dotnet test`). Minimum **80%** coverage enforced.
 - Frontend/packages: `vitest`.
-- Reference requirement IDs using xUnit attributes (`[Trait("Requirement", "...")]` or `[GxPRequirement("...")])`) or XML doc comments (`/// @req:...`) for RTM traceability.
+- Reference requirement IDs on the test method for RTM traceability; see [docs/TESTING.md](docs/TESTING.md#linking-a-test-to-a-requirement).
 
 ---
 

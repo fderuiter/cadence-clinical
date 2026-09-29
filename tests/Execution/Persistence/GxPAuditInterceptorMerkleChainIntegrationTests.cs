@@ -42,7 +42,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// materialization pipeline — <c>SubjectConsentConfigurationTests</c>'s own documented reason for the
 /// identical choice.
 /// </para>
-/// @req:PRD-SYS-053
 /// </summary>
 public class GxPAuditInterceptorMerkleChainIntegrationTests
 {
@@ -85,7 +84,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     // ---- ClinicalSubject ---------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash()
     {
         await using var context = CreateInMemoryContext(Guid.NewGuid().ToString());
@@ -114,7 +113,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     // ---- SubjectConsent -----------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash()
     {
         using var connection = OpenSqliteConnection();
@@ -149,7 +148,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     // ---- SiteComplianceCache ------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash()
     {
         await using var context = CreateInMemoryContext(Guid.NewGuid().ToString());
@@ -176,7 +175,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     // ---- Boundary: the three real per-EntityName chains never cross-pollinate ------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently()
     {
         // ClinicalSubject and SiteComplianceCache both tolerate the InMemory provider (unlike SubjectConsent,

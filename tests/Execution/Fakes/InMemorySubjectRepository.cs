@@ -34,7 +34,6 @@ namespace Cadence.UnitTests.Execution.Fakes;
 /// serialization is covered separately by <c>SubjectRepositoryTests</c> and MIG-SUBJ-028's Testcontainers
 /// integration tests.
 /// </para>
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class InMemorySubjectRepository : ISubjectRepository
 {

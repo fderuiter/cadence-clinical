@@ -34,9 +34,7 @@ namespace Cadence.UnitTests.Execution.Consumers;
 /// MassTransit bus (in-memory transport) backed by hand-rolled in-memory fakes for
 /// <see cref="ISubjectRepository"/>/<see cref="IConsentRepository"/>/<see cref="IAuditLogWriter"/>, so
 /// messages travel the genuine consume pipeline rather than calling <c>Consume</c> directly.
-/// @req:PRD-SUB-001
 /// </summary>
-[GxPRequirement("PRD-SUB-001")]
 public class EConsentCompletedConsumerTests
 {
     private static readonly StudyCode StudyA = new("STUDY-ECONSENT-A");
@@ -220,8 +218,6 @@ public class EConsentCompletedConsumerTests
     // ---- Happy path: no existing subject --------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task Consume_GivenNoExistingSubject_CreatesScreeningSubjectAtIndexZeroWithAuditEntryAndConsentCacheRow()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -275,7 +271,6 @@ public class EConsentCompletedConsumerTests
     // ---- Boundary check: shared EnrollNextIndexAsync code path ----------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Consume_GivenNoExistingSubject_AssignsTheEnrollmentIndexViaTheSingleSharedRepositoryMethod()
     {
         // Structural half of the boundary check: ISubjectRepository names exactly one method whose purpose
@@ -315,7 +310,6 @@ public class EConsentCompletedConsumerTests
     [InlineData("   ", "STUDY-MALFORMED")]
     [InlineData("SUBJ-MALFORMED", "")]
     [InlineData("SUBJ-MALFORMED", "   ")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Consume_GivenEmptyOrWhitespaceOnlySubjectIdOrStudyId_DropsSilentlyWithoutCreatingAnythingOrThrowing(
         string subjectId, string studyId)
     {
@@ -352,7 +346,6 @@ public class EConsentCompletedConsumerTests
     // ---- Redelivery idempotency -------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Consume_GivenTheSameEventDeliveredTwice_ResultsInExactlyOneClinicalSubjectNotTwo()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -390,7 +383,6 @@ public class EConsentCompletedConsumerTests
     // ---- Independent consent-cache backfill -------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Consume_GivenSubjectAlreadyExistsWithNoMatchingConsentRow_BackfillsConsentWithoutRecreatingSubject()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -436,7 +428,6 @@ public class EConsentCompletedConsumerTests
     // ---- Error propagation: a real persistence failure must not be swallowed --------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Consume_GivenSaveChangesThrowsADbUpdateException_PropagatesToMassTransitsFaultPipelineRatherThanBeingSwallowed()
     {
         var ct = TestContext.Current.CancellationToken;

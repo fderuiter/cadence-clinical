@@ -25,7 +25,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// but raising distinct error codes for demographics-lock vs. soft-delete), SCN-006's pre-randomization
 /// success path, and the raise site #22 regression test for the corrupted-existing-ciphertext-must-fail-loudly
 /// fix (not the legacy's spurious LOCKED_FACTOR_MUTATION).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceDemographicsTests
 {
@@ -163,7 +162,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- Not-found ----------------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError()
     {
         var harness = new Harness();
@@ -176,7 +174,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError()
     {
         var harness = new Harness();
@@ -189,7 +186,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould()
     {
         var harness = new Harness();
@@ -204,7 +200,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- SCN-004: pre-randomization strat-factors update succeeds ------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPreRandomizationSubject_StratFactorsUpdateSucceedsAndPersists()
     {
         var harness = new Harness();
@@ -223,7 +218,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- SCN-006: pre-randomization demographics update succeeds -------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPreRandomizationSubject_DemographicsUpdateSucceeds_ReEncryptsAndAudits()
     {
         var harness = new Harness();
@@ -244,7 +238,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_ReturnsTheSubjectsRealState()
     {
         var harness = new Harness();
@@ -263,7 +256,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- SCN-004: post-randomization lock matrix ------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPostRandomizationSubject_StratFactorsUpdateFailsWithLockedFactorMutation()
     {
         var harness = new Harness();
@@ -282,7 +274,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPostRandomizationSubject_ChangedDemographicsWithDecryptableExistingCiphertext_FailsWithLockedFactorMutation()
     {
         // INV-011: genuinely changed payload, correctly-decryptable existing ciphertext -> the nominal
@@ -300,7 +291,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPostRandomizationSubjectWithBothFieldsSupplied_StratFactorsFailureShortCircuitsBeforeDemographicsIsTouched()
     {
         var harness = new Harness();
@@ -325,7 +315,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- Raise site #22 regression: corrupted existing ciphertext must fail loudly -------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPostRandomizationSubjectWithCorruptedExistingCiphertext_ThrowsDecryptionFailure_NotLockedFactorMutation()
     {
         // Raise site #22's explicit fix: the legacy silently defaulted a corrupted existing ciphertext to
@@ -347,7 +336,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateDemographicsAsync_GivenPreRandomizationSubjectWithCorruptedExistingCiphertext_SucceedsWithoutEverDecrypting()
     {
         // The existing-ciphertext decrypt-and-discard step is scoped to the post-randomization lock check
@@ -366,7 +354,6 @@ public class SubjectApplicationServiceDemographicsTests
     // -- DeleteDemographicsAsync: SCN-004 boundary check -----------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics()
     {
         var harness = new Harness();
@@ -385,7 +372,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteDemographicsAsync_GivenPostRandomizationSubject_FailsWithSoftDeleteBlocked_DistinctFromLockedFactorMutation()
     {
         var harness = new Harness();
@@ -405,7 +391,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteDemographicsAsync_OnSuccess_WritesNoAuditLogEntry()
     {
         // Unlike AdvanceStateAsync/UpdateDemographicsAsync, no UPDATE_DEMOGRAPHICS-style audit action is
@@ -422,7 +407,6 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould()
     {
         var harness = new Harness();

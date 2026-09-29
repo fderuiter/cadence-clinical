@@ -26,7 +26,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// both from `MIG-SUBJ-009`) to prove genericity per this ticket's Verification requirement, plus a
 /// boundary case proving the bound-argument lookup is position-independent rather than hardcoded to
 /// index 0.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ValidationFilterTests
 {
@@ -60,7 +59,6 @@ public class ValidationFilterTests
     // ---- SubjectCreateRequest (argument at index 0) -----------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_ValidSubjectCreateRequest_InvokesNextAndReturnsItsResultUnchanged()
     {
         var services = BuildServices<SubjectCreateRequest>(new SubjectCreateRequestValidator());
@@ -75,7 +73,6 @@ public class ValidationFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_InvalidSubjectCreateRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext()
     {
         var services = BuildServices<SubjectCreateRequest>(new SubjectCreateRequestValidator());
@@ -95,7 +92,6 @@ public class ValidationFilterTests
     // ---- SubjectConsentRequest (a second, unrelated TRequest shape — proves genericity) ------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_ValidSubjectConsentRequest_InvokesNextAndReturnsItsResultUnchanged()
     {
         var services = BuildServices<SubjectConsentRequest>(new SubjectConsentRequestValidator());
@@ -111,7 +107,6 @@ public class ValidationFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_InvalidSubjectConsentRequest_ShortCircuitsWith400ValidationProblemAndNeverInvokesNext()
     {
         var services = BuildServices<SubjectConsentRequest>(new SubjectConsentRequestValidator());
@@ -129,7 +124,6 @@ public class ValidationFilterTests
     // ---- Boundary check: TRequest argument not at index 0 -------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_RequestArgumentNotAtIndexZero_StillLocatesAndValidatesIt()
     {
         // Boundary AC: the endpoint delegate's TRequest parameter is not always first. Here it sits at
@@ -149,7 +143,6 @@ public class ValidationFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_InvalidRequestArgumentNotAtIndexZero_StillShortCircuitsWith400()
     {
         var services = BuildServices<SubjectConsentRequest>(new SubjectConsentRequestValidator());
@@ -164,7 +157,6 @@ public class ValidationFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task InvokeAsync_NoArgumentOfRequestType_ThrowsInvalidOperationException()
     {
         // Misconfiguration guard: applying ValidationFilter<T> to a route whose delegate never binds a

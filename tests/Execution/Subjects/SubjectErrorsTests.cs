@@ -11,12 +11,10 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// Coverage for `MIG-SUBJ-003`'s `SubjectErrors` domain error factory: fixed `Code` strings,
 /// `ErrorType` shape (including the two `with`-expression overrides), and message text.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectErrorsTests
 {
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void NotFound_ReturnsFixedCodeAndType()
     {
         var error = SubjectErrors.NotFound("SUBJ-001");
@@ -27,7 +25,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void InvalidStateTransition_ReturnsFixedCodeAndFreeTextMessage()
     {
         var error = SubjectErrors.InvalidStateTransition("SCREENING", "RANDOMIZED");
@@ -39,7 +36,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void LockedFactorMutation_ReturnsFixedCodeAndConflictType()
     {
         var error = SubjectErrors.LockedFactorMutation();
@@ -49,7 +45,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SoftDeleteBlocked_ReturnsFixedCodeAndForbiddenType()
     {
         var error = SubjectErrors.SoftDeleteBlocked();
@@ -59,7 +54,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void BlockedEnrollment_ReturnsFixedCodeAndType()
     {
         var siteCode = new SiteCode("SITE-042");
@@ -72,7 +66,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void BlockedActivation_ReturnsFixedCodeAndType()
     {
         var error = SubjectErrors.BlockedActivation("SITE-042");
@@ -83,7 +76,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ReconsentRequired_ReturnsFixedCodeAndForbiddenType()
     {
         var error = SubjectErrors.ReconsentRequired("v2", "SUBJ-001", "VISIT-3");
@@ -94,7 +86,6 @@ public class SubjectErrorsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void AllFactoryMethods_ProduceDistinctCodes()
     {
         var codes = new[]

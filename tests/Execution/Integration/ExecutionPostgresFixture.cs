@@ -27,7 +27,6 @@ namespace Cadence.UnitTests.Execution.Integration;
 /// With neither set, <see cref="ConnectionString"/> is null and tests call <see cref="SkipIfUnavailable"/>
 /// so they report as skipped rather than passing against a stand-in. Once opted in, any startup
 /// failure is rethrown so a broken database never masquerades as a green run.
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class ExecutionPostgresFixture : IAsyncLifetime
 {

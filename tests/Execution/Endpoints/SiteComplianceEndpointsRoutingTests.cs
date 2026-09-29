@@ -71,7 +71,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EtmfWebhook_GivenValidPayload_Returns200WithExactSuccessEnvelope()
     {
         var payload = new EtmfCompletenessWebhookPayload("STUDY-001", "SITE-001", "SITE_ACTIVATION", true, null);
@@ -85,7 +84,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EtmfWebhook_GivenInvalidPayload_ShortCircuitsWith400AndNeverInvokesApplicationService()
     {
         // Neither study_id nor milestone supplied -- fails EtmfCompletenessWebhookPayloadValidator's two
@@ -97,7 +95,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ApplyEtmfWebhookAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSiteComplianceApplicationService();
@@ -115,7 +112,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ActivateSite_GivenValidRequest_Returns200WithExactSuccessEnvelopeNamingTheSite()
     {
         var request = new SiteActivationRequest("STUDY-001");
@@ -130,7 +126,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ActivateSite_GivenNonCompliantSiteResult_Returns400WithExactBlockedActivationDetail()
     {
         // This ticket's AC #5, exercised at the routing layer: SubjectErrors.BlockedActivation's own literal
@@ -149,7 +144,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ActivateSiteAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSiteComplianceApplicationService();
@@ -167,7 +161,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetComplianceStatus_GivenStudyIdAndMilestoneQueryParams_ThreadsBothThroughAsSnakeCaseKeys()
     {
         // Proves the [FromQuery(Name = "study_id"/"milestone")] binding actually resolves the snake_case
@@ -185,7 +178,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetComplianceStatus_GivenNoMilestoneQueryParam_DefaultsToSiteActivation()
     {
         var response = await _client.GetAsync(
@@ -197,7 +189,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetComplianceStatus_GivenNoCacheRowResult_StillReturns200NeverAProblemResponse()
     {
         // AC #6: even a "nothing found" outcome from the application service is always Results.Ok(...) --
@@ -216,7 +207,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSiteComplianceStatusAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSiteComplianceApplicationService();
@@ -387,7 +377,6 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
 /// own diagnostic-level logging for those expected background polling failures is suppressed below purely to
 /// keep test output readable; it has no bearing on any assertion in this class.
 /// </para>
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class ExecutionProgramStartupTests : IDisposable
 {
@@ -396,7 +385,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     public void Dispose() => _factory.Dispose();
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void CreateClient_BootingTheRealProgramCompositionRoot_DoesNotThrow()
     {
         // The literal AC wording: "WebApplicationFactory<Program>().CreateClient() succeeding without
@@ -408,7 +396,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void AllDIRegistrationsAddedByThisTicket_ResolveSuccessfullyFromARealRequestScope()
     {
         // AC #7's own wording: "app.Services.GetRequiredService<T>() for every interface registered in this
@@ -438,7 +425,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Healthz_GivenTheFullyWiredCompositionRoot_StillReturnsTheUnchangedPreExistingResponse()
     {
         // AC #3: this ticket must not regress the pre-existing placeholder route.
@@ -454,7 +440,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EtmfWebhook_EndToEnd_NewMilestone_Returns200WithExactSuccessEnvelope()
     {
         // AC #4, exercised through the REAL ISiteComplianceApplicationService/ISiteComplianceRepository/
@@ -473,7 +458,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ActivateSite_EndToEnd_NonCompliantSite_Returns400WithExactBlockedActivationDetail()
     {
         // AC #5, verbatim: "Given a non-compliant site, when POST .../sites/{siteId}/activate is called,
@@ -494,7 +478,6 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ComplianceStatus_EndToEnd_NoCacheRowExists_Returns200WithFalseAndEmptyDefaults()
     {
         // AC #6, verbatim: "Given any (study, site, milestone) combination with no cache row, when GET

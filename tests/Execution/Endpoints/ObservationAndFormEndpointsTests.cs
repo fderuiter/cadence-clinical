@@ -28,15 +28,7 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 
 /// <summary>
 /// Unit tests for ASP.NET Core 10 Minimal API endpoint handlers governing observations, forms, and discrepancy queries.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-002
-/// @req:PRD-SYS-007
-/// @req:PRD-SYS-042
-/// @req:PRD-SYS-053
-/// @req:SRS-EDC-001
-/// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
-/// @req:SRS-EDC-004
 /// </summary>
 public sealed class ObservationAndFormEndpointsTests
 {
@@ -58,11 +50,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that ObservationEndpoints.CreateObservationAsync returns 201 Created with Location header.
-    /// @req:PRD-SYS-001
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task CreateObservation_Handler_ReturnsCreatedResultWithLocation()
     {
         var repo = new InMemoryObservationRepository();
@@ -95,11 +84,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that ObservationEndpoints.VerifyObservationSdvAsync verifies observation and returns 200 OK.
-    /// @req:PRD-SYS-042
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-042")]
     public async Task VerifyObservationSdv_Handler_ReturnsOkWithVerifiedState()
     {
         var repo = new InMemoryObservationRepository();
@@ -133,11 +119,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that FormEndpoints.CreateFormSubmissionAsync returns 201 Created with Location header.
-    /// @req:PRD-SYS-002
-    /// @req:SRS-EDC-002
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task CreateFormSubmission_Handler_ReturnsCreatedResult()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
@@ -165,11 +148,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that QueryEndpoints.CreateQueryAsync returns 201 Created.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task CreateQuery_Handler_ReturnsCreatedResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
@@ -194,11 +174,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that QueryEndpoints.CloseQueryAsync enforces CRA/DM role authorization.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task CloseQuery_Handler_WithUnauthorizedRole_ReturnsForbiddenProblemResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
@@ -230,11 +207,8 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that QueryEndpoints.CloseQueryAsync succeeds when invoked by authorized CRA caller.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task CloseQuery_Handler_WithCraRole_ReturnsOkResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
@@ -267,11 +241,9 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that FormEndpoints.ApproveFormSubmissionAsync succeeds with valid cryptographic signature.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
@@ -310,11 +282,9 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that FormEndpoints.ApproveFormSubmissionAsync returns 403 Forbidden when signer role is unauthorized.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
@@ -351,11 +321,9 @@ public sealed class ObservationAndFormEndpointsTests
 
     /// <summary>
     /// Validates that FormEndpoints.UnlockFormSubmissionAsync succeeds and reverts form to Draft.
-    /// @req:PRD-SYS-053
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult()
     {
         var formRepo = new InMemoryFormSubmissionRepository();

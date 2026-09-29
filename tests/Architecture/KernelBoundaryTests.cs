@@ -35,11 +35,9 @@ public class KernelBoundaryTests
     /// Validates K-XS-1: no assembly outside Cadence.Kernel.* declares a Study/Site/Participant/Subject/
     /// Observation/Organization/Person/Role/Delegation or *AuditLog type, or a public string *StudyId/*SiteId/
     /// *ParticipantId member, beyond the recorded (shrink-only) baseline.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_XS_1_NonKernelAssemblies_MustNotRedefineKernelConcepts_BeyondBaseline")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KXs1NonKernelAssembliesMustNotRedefineKernelConceptsBeyondBaseline()
     {
         NonKernelAssemblies.Value.Should().NotBeEmpty();
@@ -53,11 +51,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates K-XS-2: no project or assembly outside the kernel references Cadence.Kernel.Persistence,
     /// by csproj reference, compiled assembly reference, or type dependency. Zero tolerance (no baseline).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_XS_2_NoProjectOutsideKernel_MayReference_KernelPersistence")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KXs2NoProjectOutsideKernelMayReferenceKernelPersistence()
     {
         var projects = KernelBoundaryRules.LoadRepositoryProjects(KernelBoundaryBaseline.RepositoryRoot()).ToList();
@@ -82,11 +78,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates K-MOD-1 (initial): entity types in module DbContexts store no string or Guid
     /// *StudyId/*SiteId/*ParticipantId column (kernel ID types only), beyond the shrink-only baseline.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_MOD_1_ModuleDbContexts_MustNotDuplicateKernelIdentity_BeyondBaseline")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KMod1ModuleDbContextsMustNotDuplicateKernelIdentityBeyondBaseline()
     {
         var comparison = KernelBoundaryBaseline.Verify(
@@ -98,11 +92,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates spec §14 scenario 7: a deliberately introduced duplicate Site entity, *AuditLog table and
     /// public string StudyId member are reported by the K-XS-1 rule function, and would fail the ratchet.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_XS_1_Bites_OnSyntheticDuplicateSiteAndStringStudyId")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KXs1BitesOnSyntheticDuplicateSiteAndStringStudyId()
     {
         const string prefix = "K-XS-1|Cadence.ArchitectureTests|Cadence.ArchitectureTests.Architecture.Fixtures.";
@@ -134,11 +126,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates spec §14 scenario 7 for K-MOD-1: a synthetic module DbContext mapping a duplicate Site entity
     /// with string StudyId and Guid SiteId columns (including a shadow column) is reported.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_MOD_1_Bites_OnSyntheticDbContextWithStringAndGuidKernelIds")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KMod1BitesOnSyntheticDbContextWithStringAndGuidKernelIds()
     {
         const string prefix = "K-MOD-1|Cadence.ArchitectureTests|Cadence.ArchitectureTests.Architecture.Fixtures.";
@@ -157,11 +147,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates the K-XS-2 source scan: a synthetic non-kernel csproj referencing Cadence.Kernel.Persistence is
     /// reported, while the kernel's own projects may reference it.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "K_XS_2_Bites_OnSyntheticProjectReferencingKernelPersistence")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KXs2BitesOnSyntheticProjectReferencingKernelPersistence()
     {
         const string offending =
@@ -180,11 +168,9 @@ public class KernelBoundaryTests
     /// <summary>
     /// Validates the ratchet contract: new violations and stale baseline entries are both reported, and the
     /// baseline file is sorted, duplicate-free and well-formed.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelBoundaryBaseline_Ratchet_ReportsNewAndStaleEntries_AndIsSorted")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelBoundaryBaselineRatchetReportsNewAndStaleEntriesAndIsSorted()
     {
         var comparison = KernelBoundaryBaseline.Compare(["K-XS-1|A|X", "K-XS-1|A|Y"], ["K-XS-1|A|Y", "K-XS-1|A|Z"]);

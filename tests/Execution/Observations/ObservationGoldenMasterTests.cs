@@ -15,17 +15,11 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// <summary>
 /// Golden master parity tests verifying clinical observation numerical stability,
 /// unit conversions, lab reference boundaries, and SDV state machine behavior against Python EDC baseline.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-042
-/// @req:PRD-SYS-121
-/// @req:SRS-EDC-001
 /// </summary>
 public sealed class ObservationGoldenMasterTests
 {
     /// <summary>
     /// Validates UCUM canonical normalization across canonical test vectors matching Python baseline.
-    /// @req:PRD-SYS-121
-    /// @req:SRS-EDC-001
     /// </summary>
     [Theory]
     [InlineData(98.6, "[degF]", 37.0, "Cel")]
@@ -34,7 +28,6 @@ public sealed class ObservationGoldenMasterTests
     [InlineData(154.32, "[lb_av]", 70.0, "kg")]
     [InlineData(70.0, "kg", 70.0, "kg")]
     [InlineData(120.0, "mm[Hg]", 120.0, "mm[Hg]")]
-    [GxPRequirement("PRD-SYS-121")]
     public void UcumNormalization_GoldenMasterVectors_MatchExpectedOutputs(
         double inputValue,
         string inputUnit,
@@ -51,8 +44,6 @@ public sealed class ObservationGoldenMasterTests
 
     /// <summary>
     /// Validates lab range classification across demographics vectors matching Python baseline.
-    /// @req:PRD-SYS-121
-    /// @req:SRS-EDC-001
     /// </summary>
     [Theory]
     [InlineData("GLUC", 90.0, 30, "M", false, "NORMAL")]
@@ -64,7 +55,6 @@ public sealed class ObservationGoldenMasterTests
     [InlineData("WBC", 6.5, 25, "M", false, "NORMAL")]
     [InlineData("WBC", 2.0, 25, "M", true, "LOW")]
     [InlineData("WBC", 16.0, 25, "M", true, "HIGH")]
-    [GxPRequirement("PRD-SYS-121")]
     public void LabRangeEvaluation_GoldenMasterVectors_MatchExpectedIndicators(
         string testCode,
         double value,
@@ -82,11 +72,8 @@ public sealed class ObservationGoldenMasterTests
 
     /// <summary>
     /// Validates SDV state transitions and immutable audit properties under golden master scenarios.
-    /// @req:PRD-SYS-042
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-042")]
     public void SdvVerification_StateTransitions_MaintainStrictPart11Audit()
     {
         var obs = ClinicalObservation.Create(

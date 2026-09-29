@@ -24,7 +24,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// eTMF-webhook upsert; their coverage lives in the last two `[Fact]`s below. Uses the InMemory provider (no
 /// <c>ComplexProperty</c>/value-converter combination is involved for this aggregate, so InMemory materializes
 /// it without the limitation `ConsentRepositoryTests` works around).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceRepositoryTests
 {
@@ -36,7 +35,6 @@ public class SiteComplianceRepositoryTests
         new(new DbContextOptionsBuilder<ExecutionDbContext>().UseInMemoryDatabase(databaseName).Options);
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenNoMatchingRow_ReturnsNull()
     {
         string databaseName = System.Guid.NewGuid().ToString();
@@ -49,7 +47,6 @@ public class SiteComplianceRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenMatchingStudySiteAndMilestone_ReturnsTheRow()
     {
         string databaseName = System.Guid.NewGuid().ToString();
@@ -72,7 +69,6 @@ public class SiteComplianceRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenRowForADifferentMilestone_ReturnsNull()
     {
         string databaseName = System.Guid.NewGuid().ToString();
@@ -93,7 +89,6 @@ public class SiteComplianceRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenNullSiteCode_ReturnsNullEvenWhenARowExistsForTheStudyAndMilestone()
     {
         // A ClinicalSubject may legally have no assigned site; SiteComplianceCache.SiteCode never is null.
@@ -117,7 +112,6 @@ public class SiteComplianceRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AddAsync_ThenSaveChangesAsync_PersistsANewRowRetrievableByGetAsync()
     {
         string databaseName = System.Guid.NewGuid().ToString();
@@ -140,7 +134,6 @@ public class SiteComplianceRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_ReturnsATrackedEntity_MutatingItAndCallingSaveChangesPersistsTheUpdate()
     {
         // Regression test for MIG-SUBJ-020's removal of AsNoTracking() from GetAsync: the eTMF-webhook

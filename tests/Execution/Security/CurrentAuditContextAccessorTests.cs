@@ -16,9 +16,7 @@ namespace Cadence.UnitTests.Execution.Security;
 /// present/absent/whitespace-only matrix `HttpCurrentAuditContextAccessor` resolves through its single,
 /// shared fallback path (closing Rule 9's two-idiom split), and `SystemAuditContextAccessor`'s fixed,
 /// non-configurable pubsub identity.
-/// @req:PRD-SYS-053
 /// </summary>
-[GxPRequirement("PRD-SYS-053")]
 public class CurrentAuditContextAccessorTests
 {
     private sealed class FakeHttpContextAccessor(HttpContext? httpContext) : IHttpContextAccessor
@@ -46,7 +44,6 @@ public class CurrentAuditContextAccessorTests
     // ---- HttpCurrentAuditContextAccessor.UserId ----------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenNoHttpContext_ReturnsSystemDefault()
     {
         var accessor = new HttpCurrentAuditContextAccessor(new FakeHttpContextAccessor(null));
@@ -55,7 +52,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenNoSubClaim_ReturnsSystemDefault()
     {
         var accessor = CreateAccessor(subClaim: null);
@@ -64,7 +60,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenEmptySubClaim_ReturnsSystemDefault()
     {
         var accessor = CreateAccessor(subClaim: string.Empty);
@@ -73,7 +68,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenWhitespaceOnlySubClaim_ReturnsSystemDefault()
     {
         var accessor = CreateAccessor(subClaim: "   ");
@@ -82,7 +76,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault()
     {
         var accessor = CreateAccessor(subClaim: "user-42");
@@ -93,7 +86,6 @@ public class CurrentAuditContextAccessorTests
     // ---- HttpCurrentAuditContextAccessor.ChangeReason ----------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault()
     {
         var accessor = new HttpCurrentAuditContextAccessor(new FakeHttpContextAccessor(null));
@@ -102,7 +94,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault()
     {
         var accessor = CreateAccessor(changeReasonHeader: null);
@@ -111,7 +102,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader()
     {
         // Boundary check: an explicitly-empty header ("", present but blank) must resolve to the same
@@ -122,7 +112,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader()
     {
         // Boundary check (AC): whitespace-only, not merely absent, must still resolve to the default —
@@ -133,7 +122,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenHeaderPresent_ReturnsActualHeaderValueNotDefault()
     {
         var accessor = CreateAccessor(changeReasonHeader: "Protocol amendment v2");
@@ -142,7 +130,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults()
     {
         var accessor = CreateAccessor(subClaim: "user-7", changeReasonHeader: "Manual correction");
@@ -154,7 +141,6 @@ public class CurrentAuditContextAccessorTests
     // ---- SystemAuditContextAccessor -----------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SystemAuditContextAccessor_UserId_AlwaysReturnsFixedPubsubIdentity()
     {
         var accessor = new SystemAuditContextAccessor();
@@ -163,7 +149,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SystemAuditContextAccessor_ChangeReason_AlwaysReturnsFixedAutomatedEnrollmentReason()
     {
         var accessor = new SystemAuditContextAccessor();
@@ -172,7 +157,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SystemAuditContextAccessor_ValuesAreCompileTimeConstantsNotConfigurable()
     {
         // FieldInfo.IsLiteral is true only for `const` fields (never `static readonly` or

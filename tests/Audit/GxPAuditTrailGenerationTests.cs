@@ -24,14 +24,13 @@ namespace Cadence.UnitTests.Audit;
 /// <summary>
 /// Automated xUnit test suite verifying GxP 21 CFR Part 11 audit trail generation and SHA-256 Merkle block chaining
 /// across CTMS, eTMF, Quality, and Fileshare microservice DbContexts.
-/// @req:PRD-SYS-053
 /// </summary>
 public class GxPAuditTrailGenerationTests
 {
     private static readonly string TestUser = "compliance.auditor@cadence.clinical";
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -84,7 +83,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -124,7 +123,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -162,7 +161,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange

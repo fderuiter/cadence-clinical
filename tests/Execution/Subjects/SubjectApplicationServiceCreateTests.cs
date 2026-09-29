@@ -25,7 +25,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// correctness for <see cref="Cadence.Apps.Execution.Domain.Ports.ISubjectRepository.EnrollNextIndexAsync"/>
 /// itself is already covered by `SubjectRepositoryTests` (MIG-SUBJ-013); this suite exercises the
 /// application-service orchestration layered on top of it.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceCreateTests
 {
@@ -104,7 +103,6 @@ public class SubjectApplicationServiceCreateTests
         new(subjectId, studyId, siteId, ArmId: null, demographics);
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenEmptyStudy_EnrollsSequentialSubjectsWithZeroBasedIndexAndScreeningStatus()
     {
         var harness = new Harness();
@@ -130,7 +128,6 @@ public class SubjectApplicationServiceCreateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenEachEnrollment_WritesEnrollSubjectAuditEntryForThatSubject()
     {
         var harness = new Harness();
@@ -145,7 +142,6 @@ public class SubjectApplicationServiceCreateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenPopulatedDemographics_PersistsEncryptedCiphertextNeverRawPlaintext()
     {
         var harness = new Harness();
@@ -164,7 +160,6 @@ public class SubjectApplicationServiceCreateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenNoDemographics_EncryptedDemographicsIsNullAndEncryptionIsNeverInvoked()
     {
         var harness = new Harness();
@@ -177,7 +172,6 @@ public class SubjectApplicationServiceCreateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenSiteId_ReturnsFromAggregateWithSiteIdPopulated()
     {
         // The response is built from the persisted aggregate, so the requested site comes back.
@@ -191,7 +185,6 @@ public class SubjectApplicationServiceCreateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_GivenExplicitlyEmptySiteId_ThrowsRatherThanTreatingItAsAbsent()
     {
         // SubjectCreateRequest's own doc comment (MIG-SUBJ-009) resolves the empty-string-as-absent

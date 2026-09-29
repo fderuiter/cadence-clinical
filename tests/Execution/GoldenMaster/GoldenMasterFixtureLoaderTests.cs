@@ -29,12 +29,10 @@ namespace Cadence.UnitTests.Execution.GoldenMaster;
 /// under-running), and the sentinel-matching tests use hand-constructed <see cref="JsonElement"/> fixtures,
 /// independent of the real fixture files (those are exercised separately, for their scenario counts only, in
 /// this class).
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GoldenMasterFixtureLoaderTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenTheRealNominalFixturePair_ReturnsAllNineteenScenarioIds()
     {
         // The ticket text (03_tickets.md AC #3) describes this pair as "17 SCN-* scenario IDs"; the real
@@ -52,7 +50,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenTheRealEdgeCasePair_ReturnsAllElevenScenarioIds()
     {
         // Per the design's file-pairing (02_technical_design.md §6.1), edge cases pair against the SAME
@@ -69,7 +66,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenTheRealValidationErrorPair_ReturnsAllTwentyOneScenarioIds()
     {
         IReadOnlyList<GoldenMasterScenario> scenarios = GoldenMasterFixtureLoader.LoadScenarios(
@@ -87,7 +83,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_PreservesInputFileOrderForMultiStepScenarios()
     {
         // SCN-001-B's enrollment_index assertion (1) is only meaningful if SCN-001-A (which claims index 0)
@@ -104,7 +99,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenAMismatchedFixturePair_ThrowsRatherThanSilentlyOmittingTheOrphanedScenario()
     {
         // Deliberately mismatched, test-only fixture pair (not a change to the real fixtures): the input side
@@ -137,7 +131,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenAnInputEntryWithNoCounterpart_DoesNotSilentlyDropIt()
     {
         // A narrower variant of the fail-fast case above: exactly one orphan, only on the input side, with an
@@ -157,7 +150,6 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoadScenarios_GivenOutputEntriesWithNoInputCounterpart_DoesNotThrow()
     {
         // Locks in the asymmetric behavior GoldenMasterFixtureLoader's own remarks document: an output-only
@@ -198,12 +190,10 @@ public sealed class GoldenMasterFixtureLoaderTests
 /// Sentinel-matching coverage for <see cref="GoldenMasterAssert.BodyMatches"/> against hand-constructed
 /// <see cref="JsonElement"/> fixtures, independent of the real fixture files, per this ticket's own
 /// Verification &amp; Test Requirements.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GoldenMasterAssertBodyMatchesTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenOpaqueSentinelAndNonNullActual_Passes()
     {
         JsonElement expected = ToJsonElement(new { id = "<opaque>" });
@@ -215,7 +205,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenOpaqueSentinelAndNullActual_Fails()
     {
         // Ticket AC: "given an expected-body field value of \"<opaque>\" ... given the actual field is null,
@@ -231,7 +220,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenOpaqueNonNullSentinelAndNullActual_Fails()
     {
         // Boundary check (ticket AC): does plain "<opaque>" ever legitimately allow null in the real fixtures?
@@ -247,7 +235,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenOpaqueNonNullSentinelAndNonNullActual_Passes()
     {
         JsonElement expected = ToJsonElement(new { encrypted_demographics = "<opaque-non-null>" });
@@ -259,7 +246,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenUnchangedSentinelAndMatchingPreState_Passes()
     {
         JsonElement expected = ToJsonElement(new { study_id = "<unchanged>" });
@@ -272,7 +258,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenUnchangedSentinelAndDivergingPostState_Fails()
     {
         JsonElement expected = ToJsonElement(new { study_id = "<unchanged>" });
@@ -285,7 +270,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenUnchangedSentinelWithNoPreStateSupplied_ThrowsExplainingWhy()
     {
         // The design's own wording: "<unchanged> ... requires the harness to have captured a pre-state
@@ -299,7 +283,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenLiteralExpectedValue_ComparesDirectly()
     {
         JsonElement expectedMatching = ToJsonElement(new { status = "SCREENING" });
@@ -314,7 +297,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenNestedObjectAndArrayFields_RecursesCorrectlyAndIgnoresExtraActualFields()
     {
         JsonElement expected = ToJsonElement(new
@@ -338,7 +320,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BodyMatches_GivenMismatchedArrayLength_Fails()
     {
         JsonElement expected = ToJsonElement(new { missing_documents = new[] { "A", "B" } });
@@ -358,7 +339,6 @@ public sealed class GoldenMasterAssertBodyMatchesTests
 /// DI-resolved <see cref="ExecutionDbContext"/> via <see cref="ExecutionApiFactory"/> -- proving both the
 /// generic harness primitives AND this ticket's own <see cref="ExecutionApiFactory"/> Target File actually
 /// work together, not merely that they compile.
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
 {
@@ -367,7 +347,6 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     public void Dispose() => _factory.Dispose();
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail()
     {
         using var client = _factory.CreateSignedClient(); // forces host/DbContext construction, per MIG-SUBJ-024 precedent.
@@ -401,7 +380,6 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DbStateMatches_GivenAssertionThatHolds_DoesNotThrow()
     {
         using var client = _factory.CreateSignedClient();
@@ -434,7 +412,6 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AuditLogContains_GivenNoMatchingEntry_ThrowsWithScenarioIdAndRecordedEntries()
     {
         using var client = _factory.CreateSignedClient();
@@ -469,7 +446,6 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AuditLogContains_GivenAMatchingEntry_DoesNotThrow()
     {
         using var client = _factory.CreateSignedClient();

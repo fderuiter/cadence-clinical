@@ -24,9 +24,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// <c>SaveChangesAsync</c>, which persisted nothing. Each test loads through the repository's tracked
 /// <c>GetForUpdateAsync</c>, mutates, saves, and re-reads through a fresh context to prove the change reached the
 /// database. Uses SQLite for the same reason as <see cref="ConsentRepositoryTests"/>.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-002
-/// @req:PRD-SYS-007
 /// </summary>
 public class MutationRepositoryTrackingTests
 {
@@ -51,7 +48,6 @@ public class MutationRepositoryTrackingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -76,7 +72,6 @@ public class MutationRepositoryTrackingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -100,7 +95,6 @@ public class MutationRepositoryTrackingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task ClinicalQueryRepository_GetForUpdateAsync_ThenAnswer_PersistsResponse()
     {
         var ct = TestContext.Current.CancellationToken;

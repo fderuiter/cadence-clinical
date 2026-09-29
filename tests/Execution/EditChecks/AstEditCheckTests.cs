@@ -17,19 +17,14 @@ namespace Cadence.UnitTests.Execution.EditChecks;
 /// <summary>
 /// Unit test coverage for the AST edit check engine, Kleene 3-valued boolean logic,
 /// arithmetic and comparison operators, inline reference constraints, and cross-visit batch physiology checks.
-/// @req:PRD-SYS-004
 /// @req:SRS-EDC-002
-/// @req:SRS-EDC-005
 /// </summary>
 public sealed class AstEditCheckTests
 {
     /// <summary>
     /// Validates that arithmetic AST nodes evaluate with division-by-zero protection.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_ArithmeticExpressions_EvaluatesCorrectly()
     {
         var engine = new AstEditCheckEngine();
@@ -62,11 +57,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates Kleene 3-valued logic truth table operations.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_KleeneLogic_EvaluatesThreeValuedTruthTables()
     {
         var engine = new AstEditCheckEngine();
@@ -100,11 +92,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates comparison operations across numeric bounds.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_Comparisons_EvaluatesInequalities()
     {
         var engine = new AstEditCheckEngine();
@@ -122,11 +111,9 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that EvaluateInlineConstraints flags values falling outside specified reference range bounds.
-    /// @req:PRD-SYS-004
     /// @req:SRS-EDC-002
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateInlineConstraints_FlagsReferenceRangeViolations()
     {
         var engine = new AstEditCheckEngine();
@@ -152,11 +139,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that batch evaluation detects cross-test physiological impossibilities.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateBatchRules_FlagsSystolicLowerThanDiastolicPhysiologyViolation()
     {
         var engine = new AstEditCheckEngine();
@@ -193,11 +177,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates indexed-repeat functionality on nested relative array references.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_IndexedRepeat_ResolvesNestedArrayReference()
     {
         var engine = new AstEditCheckEngine();
@@ -225,11 +206,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates relative path resolution (../field) via bare context fallback and /clinical_data/subject/ prefix.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_RelativePathResolution_ResolvesBareAndSubjectPrefixedPaths()
     {
         var engine = new AstEditCheckEngine();
@@ -247,11 +225,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that comparisons across mixed numeric types and null values evaluate deterministically.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_MixedTypeComparisons_HandlesIntDoubleAndNullSafely()
     {
         var engine = new AstEditCheckEngine();
@@ -281,11 +256,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that deeply nested ASTs exceeding recursion depth of 64 terminate safely without stack overflow.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_RecursionDepthLimit_ProtectsAgainstStackOverflow()
     {
         var engine = new AstEditCheckEngine();
@@ -309,11 +281,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that fixed-point decimal arithmetic avoids binary floating point representation errors and evaluates exact decimal equality.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift()
     {
         var engine = new AstEditCheckEngine();
@@ -337,11 +306,8 @@ public sealed class AstEditCheckTests
 
     /// <summary>
     /// Validates that values outside decimal range or invalid operations return null safely.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely()
     {
         var engine = new AstEditCheckEngine();

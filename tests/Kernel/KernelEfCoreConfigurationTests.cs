@@ -41,11 +41,9 @@ public class KernelEfCoreConfigurationTests
 {
     /// <summary>
     /// Validates that ConfigureKernelEntityIds correctly maps strongly-typed UUIDv7 value structs to/from database Guid columns.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "EFCore_ConfigureKernelEntityIds_PersistsAndQueriesCorrectly")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task EfCoreConfigureKernelEntityIdsPersistsAndQueriesCorrectly()
     {
         // Arrange

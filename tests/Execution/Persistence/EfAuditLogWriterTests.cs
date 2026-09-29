@@ -19,9 +19,7 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// (never a second context) and Merkle-chains its <see cref="AuditLogEntry"/> rows per `tableName`,
 /// independent of and alongside `GxPAuditInterceptor`'s own per-CLR-type chain (`02_technical_design.md`
 /// §4.4).
-/// @req:PRD-SYS-053
 /// </summary>
-[GxPRequirement("PRD-SYS-053")]
 public class EfAuditLogWriterTests
 {
     private sealed class FakeClock(DateTimeOffset utcNow) : IClock
@@ -41,7 +39,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenFirstEntryForATableName_PersistsWithEmptyPredecessorHashAndVersionIndexOne()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -63,7 +61,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenTwoCallsForSameTableNameAcrossSeparateSaves_ChainsSecondPredecessorHashToFirstBlockHash()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -90,7 +88,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenDifferentTableNames_ChainsEachIndependently()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -113,7 +111,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_DoesNotItselfCallSaveChanges_EntryOnlyVisibleAfterCallerSaves()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -131,7 +129,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenOldAndNewValues_SerializesBothIntoChangesJson()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -149,7 +147,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenNoOldOrNewValues_ChangesJsonIsNull()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -164,8 +162,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenGxPAuditInterceptorAlsoRegistered_BothAuditTrailsCoexistIndependentlyInOneSaveChangesCall()
     {
         // Demonstrates the ticket's central requirement together with §4.4's "alongside, not instead of"
@@ -197,7 +194,7 @@ public class EfAuditLogWriterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task WriteAsync_GivenCallsWithIdenticalTimestamps_ProducesValidMerkleChain()
     {
         string dbName = Guid.NewGuid().ToString();

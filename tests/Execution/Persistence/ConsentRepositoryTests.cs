@@ -24,7 +24,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// `SubjectConsentConfigurationTests`' established precedent (MIG-SUBJ-012) — because EF Core 10.0.11's
 /// InMemory provider throws materializing a <c>ComplexProperty</c> member (<c>ProtocolVersion.StudyCode</c>)
 /// that also carries a value converter, which <see cref="ConsentRepository.ExistsAsync"/>'s query relies on.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ConsentRepositoryTests
 {
@@ -51,7 +50,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ExistsAsync_GivenNoMatchingConsent_ReturnsFalse()
     {
         using var connection = OpenSqliteConnection();
@@ -67,7 +65,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AddAsync_ThenSaveChangesAsync_ThenExistsAsync_GivenMatchingSubjectStudyAndVersionIndex_ReturnsTrue()
     {
         using var connection = OpenSqliteConnection();
@@ -90,7 +87,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ExistsAsync_GivenSameSubjectAndStudyButDifferentVersionIndex_ReturnsFalse()
     {
         using var connection = OpenSqliteConnection();
@@ -112,7 +108,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenNoMatchingRow_ReturnsNull()
     {
         using var connection = OpenSqliteConnection();
@@ -128,7 +123,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetAsync_GivenMatchingRow_ReturnsTheTrackedEntity()
     {
         using var connection = OpenSqliteConnection();
@@ -152,7 +146,6 @@ public class ConsentRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetOtherRequiringReconsentAsync_ReturnsOnlyOtherRowsForTheSameSubjectRequiringReconsent()
     {
         using var connection = OpenSqliteConnection();

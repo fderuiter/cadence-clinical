@@ -22,7 +22,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// the create-vs-merge branch, dual-lookup resolution, and the not-found error path. Uses the in-memory
 /// <c>Cadence.Testing.Fakes</c> repositories — see <see cref="SubjectApplicationServiceCreateTests"/>'s doc
 /// comment for why.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceConsentTests
 {
@@ -99,7 +98,6 @@ public class SubjectApplicationServiceConsentTests
             requiresReconsent, isPaperOverride);
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenNoExistingRow_CreatesNewConsentNotAMerge()
     {
         var harness = new Harness();
@@ -118,7 +116,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenExistingRowForSameVersionIndex_MergesIntoExistingRowRatherThanCreatingNew()
     {
         var harness = new Harness();
@@ -138,7 +135,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenNewConsentSignedWithoutRequiringReconsent_CascadesClearanceToOtherRowsForSameSubject()
     {
         // SCN-002: consent version 1 requires reconsent; recording version 2 (signed, no longer requiring
@@ -162,7 +158,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_CascadeClearance_DoesNotTouchADifferentSubjectsConsent()
     {
         var harness = new Harness();
@@ -183,7 +178,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenIncomingRequiresReconsentTrue_DoesNotCascadeClearOtherRows()
     {
         var harness = new Harness();
@@ -202,7 +196,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenIncomingNeitherSignedNorPaperOverride_DoesNotCascadeClearOtherRows()
     {
         var harness = new Harness();
@@ -222,7 +215,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError()
     {
         var harness = new Harness();
@@ -235,7 +227,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould()
     {
         var harness = new Harness();
@@ -249,7 +240,6 @@ public class SubjectApplicationServiceConsentTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordConsentAsync_GivenNewConsent_WritesRecordConsentAuditEntry()
     {
         var harness = new Harness();

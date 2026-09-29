@@ -33,7 +33,6 @@ namespace Cadence.UnitTests.Execution.Integration;
 /// Validates that advisory-locked PostgreSQL transactions produce race-free,
 /// gap-free, duplicate-free enrollment_index sequences ({0, ..., 19}) under high concurrency.
 /// Skipped unless a PostgreSQL source is configured (see <see cref="ExecutionPostgresFixture"/>).
-/// @req:PRD-SUB-001
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fixture) : IClassFixture<ExecutionPostgresFixture>
@@ -64,11 +63,9 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
 
     /// <summary>
     /// Validates that 20 concurrent CreateAsync calls for the same study assign sequential indices {0, ..., 19} without gaps or duplicates.
-    /// @req:PRD-SUB-001
     /// </summary>
     [Fact(DisplayName = "CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates")]
     [Trait("Category", "Integration")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates()
     {
         // Arrange
@@ -113,11 +110,9 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
 
     /// <summary>
     /// Validates that 20 concurrent EConsentCompletedEvent consumptions for the same study assign sequential indices {0, ..., 19} without gaps or duplicates.
-    /// @req:PRD-SUB-001
     /// </summary>
     [Fact(DisplayName = "EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates")]
     [Trait("Category", "Integration")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates()
     {
         // Arrange
@@ -160,11 +155,9 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
 
     /// <summary>
     /// Validates that concurrent calls split across two independent studies assign independent sequences {0, ..., 9} each.
-    /// @req:PRD-SUB-001
     /// </summary>
     [Fact(DisplayName = "CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices")]
     [Trait("Category", "Integration")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices()
     {
         // Arrange

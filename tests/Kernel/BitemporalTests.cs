@@ -18,11 +18,9 @@ public class BitemporalTests
 {
     /// <summary>
     /// Validates that TemporalPeriod.CreateCurrent correctly initializes open-ended valid and recorded intervals.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TemporalPeriod_CreateCurrent_SetsOpenEndedUpperBounds")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TemporalPeriodCreateCurrentSetsOpenEndedUpperBounds()
     {
         // Arrange
@@ -43,11 +41,9 @@ public class BitemporalTests
 
     /// <summary>
     /// Validates that TemporalPeriod.CreateBounded sets explicit valid intervals and validates boundary constraints.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TemporalPeriod_CreateBounded_EnforcesBoundaryConstraints")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TemporalPeriodCreateBoundedEnforcesBoundaryConstraints()
     {
         // Arrange
@@ -83,11 +79,9 @@ public class BitemporalTests
 
     /// <summary>
     /// Validates that TemporalPeriod.Supersede closes the recorded interval as of the supersede instant.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TemporalPeriod_Supersede_ClosesRecordedInterval")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TemporalPeriodSupersedeClosesRecordedInterval()
     {
         // Arrange
@@ -117,11 +111,9 @@ public class BitemporalTests
 
     /// <summary>
     /// Validates interval overlap detection across both valid time and recorded time dimensions.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TemporalPeriod_Overlaps_DetectsIntervalCollisions")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TemporalPeriodOverlapsDetectsIntervalCollisions()
     {
         // Arrange
@@ -144,11 +136,9 @@ public class BitemporalTests
 
     /// <summary>
     /// Validates 21 CFR Part 11 point-in-time state reconstruction using LINQ AsOf and AsOfCurrent query extensions.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "BitemporalQueryExtensions_AsOf_PointInTime_StateReconstruction")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void BitemporalQueryExtensionsAsOfPointInTimeStateReconstruction()
     {
         // Arrange

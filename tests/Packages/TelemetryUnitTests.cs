@@ -35,7 +35,6 @@ namespace Cadence.UnitTests.Packages;
 public class TelemetryUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task MapCadenceHealthAndStatusEndpoints_ReturnsExpectedPayloads()
     {
         var builder = WebApplication.CreateBuilder();
@@ -75,7 +74,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceLogging_ConfiguresJsonConsoleOptions()
     {
         var builder = WebApplication.CreateBuilder();
@@ -91,7 +89,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceTelemetry_RegistersOpenTelemetryServices()
     {
         var services = new ServiceCollection();
@@ -108,7 +105,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceWebDefaults_RegistersLoggingTelemetryOpenApiAndProblemDetails()
     {
         var builder = WebApplication.CreateBuilder();
@@ -127,7 +123,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceWebDefaults_AllowsCustomProblemDetailsConfiguration()
     {
         var builder = WebApplication.CreateBuilder();
@@ -161,7 +156,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException()
     {
         var builder = WebApplication.CreateBuilder();
@@ -197,7 +191,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive()
     {
         var builder = WebApplication.CreateBuilder();
@@ -242,7 +235,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void MapCadenceApiDocumentation_RoutesConfiguredInDevelopment()
     {
         var builder = WebApplication.CreateBuilder();
@@ -256,7 +248,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ExtensionMethods_ThrowOnNullArguments()
     {
         WebApplicationBuilder nullBuilder = null!;
@@ -284,7 +275,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UseCadenceWebDefaults_MapsLivenessAndReadinessProbes()
     {
         var builder = WebApplication.CreateBuilder();
@@ -308,7 +298,6 @@ public class TelemetryUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceWebDefaults_WithOtlpEndpoint_RegistersProvidersNamedAfterService()
     {
         var builder = WebApplication.CreateBuilder();

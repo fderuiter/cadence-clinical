@@ -25,7 +25,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// <see cref="SiteComplianceRepository"/> is used as the concrete repository under test; the wrapper itself
 /// lives on the shared base class, so this exercises the same code path <see cref="SubjectRepository"/> and
 /// <see cref="ConsentRepository"/> use.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ExecutionRepositoryBaseTests
 {
@@ -47,7 +46,6 @@ public class ExecutionRepositoryBaseTests
             .Options);
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenAStaleWriteThatAnotherWriterAlreadyCommitted_ResolvesTheConflictAndPersistsThisCallersChange()
     {
         using var connection = OpenSqliteConnection();
@@ -87,7 +85,6 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenARowDeletedOutFromUnderTheRetryingWriter_ExhaustsRetriesAndStillThrowsDbUpdateConcurrencyException()
     {
         using var connection = OpenSqliteConnection();

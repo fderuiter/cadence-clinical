@@ -13,8 +13,6 @@ namespace Cadence.UnitTests.Execution.Fakes;
 
 /// <summary>
 /// In-memory fake implementation of <see cref="IClinicalQueryRepository"/> for isolated unit tests.
-/// @req:PRD-SYS-007
-/// @req:SRS-EDC-004
 /// </summary>
 public sealed class InMemoryClinicalQueryRepository : IClinicalQueryRepository
 {

@@ -28,11 +28,9 @@ public class SecurityAndDomainTests
 {
     /// <summary>
     /// Validates deterministic HMAC-SHA256 signature computation and fixed-time verification.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "HmacSigner_GeneratesDeterministicSignature_AndVerifiesCorrectly")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void HmacSignerGeneratesDeterministicSignatureAndVerifiesCorrectly()
     {
         // Arrange
@@ -52,11 +50,9 @@ public class SecurityAndDomainTests
 
     /// <summary>
     /// Validates that in-memory repository fakes capture mutations and monotonically advance GxP version index.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "InMemoryRepository_PersistsEntity_AndIncrementsVersionIndex")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task InMemoryRepositoryPersistsEntityAndIncrementsVersionIndex()
     {
         // Arrange
@@ -80,11 +76,9 @@ public class SecurityAndDomainTests
 
     /// <summary>
     /// Validates that Result monads encapsulate domain validation errors without runtime exception overhead.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ResultMonad_HandlesSuccessAndFailure_WithoutThrowingExceptions")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions()
     {
         // Arrange & Act
@@ -104,11 +98,10 @@ public class SecurityAndDomainTests
 
     /// <summary>
     /// Validates that AuditLogEntry computes deterministic SHA-256 Merkle hashes chained to predecessor blocks.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditLogEntry_ComputesDeterministicMerkleHash_ChainedToPredecessor")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor()
     {
         // Arrange
