@@ -638,7 +638,7 @@ public sealed class SubjectApplicationService(
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct);
             if (gate is not { IsComplete: true })
             {
-                await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "BLOCKED_ENROLLMENT",
+                await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "BLOCKED_ENROLLMENT",
                     auditContext.UserId, changeReason, oldValues: null, newValues: null, ct);
                 return SubjectErrors.BlockedEnrollment(subject.SiteCode);
             }
@@ -648,7 +648,7 @@ public sealed class SubjectApplicationService(
         if (transition.IsFailure) return Result<SubjectResponse>.Failure(transition.Error!);
 
         subject.ReasonForChange = changeReason;
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct);
         await subjects.SaveChangesAsync(ct);
 
@@ -913,7 +913,10 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
 
 - **Rule 5 (`enrollment_index`).** Implemented as a `SELECT ... FOR UPDATE`-equivalent: the `EnrollNextIndexAsync(StudyCode)` repository method runs `SELECT MAX(enrollment_index) FROM clinical_subjects WHERE study_code = @study FOR UPDATE` inside the same transaction as the subsequent `INSERT`, using `Database.BeginTransactionAsync(IsolationLevel.RepeatableRead)` plus an explicit PostgreSQL advisory lock keyed on `hashtext(studyCode)` (`pg_advisory_xact_lock`) to serialize concurrent enrollments for the _same_ study without blocking enrollments across different studies. This single code path is shared by both `SubjectApplicationService.CreateAsync` and `EConsentCompletedConsumer` (§5.2), closing the spec's explicit note that the same race exists independently in both places today.
 - **`SiteComplianceCache.Version`** is the legacy system's own plain integer counter (upsert-increment, no compare-and-swap) — reproduced as a plain `int` column, NOT as an EF `[Timestamp]`/`IsRowVersion()` concurrency token, because the legacy contract is "always overwrite and bump," not "reject a stale write." The entity's own EF row (`_version` shadow property, §4.1) is the _actual_ optimistic-concurrency guard for `SaveChangesAsync`; `SiteComplianceCache.Version` is domain data, not infrastructure.
-- **`DbUpdateConcurrencyException` retry policy.** Registered via `Microsoft.Extensions.Resilience`'s `AddResiliencePipeline`, 3 attempts with exponential backoff (`Polly`, already declared), scoped to `SaveChangesAsync` calls in the repository base class — applies uniformly across this slice's three aggregates.
+- ~~**`DbUpdateConcurrencyException` retry policy.** Registered via `Microsoft.Extensions.Resilience`'s `AddResiliencePipeline`, 3 attempts with exponential backoff (`Polly`, already declared), scoped to `SaveChangesAsync` calls in the repository base class — applies uniformly across this slice's three aggregates.~~
+
+> [!NOTE]
+> **Superseded by #4766 / ADR-2448 (2026-09-29): reject on conflict.** Retrying a `DbUpdateConcurrencyException` with a "client wins" reload silently overwrote the other writer's change. A concurrency conflict is now never retried: `ExecutionRepositoryBase.SaveChangesAsync` rethrows it as `ConcurrencyConflictException`, and `ConcurrencyConflictExceptionHandler` returns 409 Conflict ProblemDetails with `code: CONCURRENCY_CONFLICT`. The Polly pipeline retries only transient database failures (`NpgsqlException.IsTransient`, such as serialization failures, deadlocks and dropped connections), and not inside an explicit transaction such as enrollment, where a failed statement aborts the transaction. `GxPAuditInterceptor` undoes a failed attempt's audit entries so a retried save is audited once.
 
 ### 4.3 JSON columns & Complex Types
 
@@ -956,6 +959,9 @@ For the `EConsentCompletedConsumer` (no `HttpContext`), a second implementation 
 
 > [!NOTE]
 > **Superseded by #4767 / ADR-2257 (2026-09-29).** The `"system"` and `"system-pubsub"` defaults above are gone. `AmbientAuditContextAccessor` implements both `ICurrentAuditContextAccessor` and `IAuditActorScope`. `UserId` is the caller's `sub`, or the `svc:` service account declared with `RunAs`. With neither, it throws `AuditActorUnresolvedException`. The consumer calls `RunAs(ServiceAccounts.EConsentConsumer)` and is recorded as `svc:econsent-consumer`. The eTMF webhook (`ETMF_COMPLIANCE_UPDATE`) and demographics deletion (`DELETE_DEMOGRAPHICS`) now write semantic audit entries.
+
+> [!NOTE]
+> **Item 2 implemented by #4768 / ADR-2446 (2026-09-29).** `GxPAuditInterceptor` is the only audit writer. `IAuditLogWriter.WriteAsync` records a semantic action through `Cadence.Database.AuditActions` instead of writing its own row, and the interceptor puts that action on the changed entity's entry. Chains are keyed by CLR type name (`ClinicalSubject`, `SubjectConsent`, `SiteComplianceCache`), not table name, so the `table_name` values in the golden-master fixtures are CLR names. An action with no changed row (`BLOCKED_ENROLLMENT`, `BLOCKED_ACTIVATION`, `SITE_ACTIVATION`) is written as an action-only entry with version index 0. `AuditLogChainVerifier` verifies each chain. Earlier table-name-keyed entries stay as their own read-only chains.
 
 ---
 
@@ -1017,6 +1023,9 @@ public sealed class AesGcmDemographicsEncryptionService(IOptions<DemographicsEnc
 
 ### 5.2 PubSub Auto-Enrollment → MassTransit transactional outbox (Rule 8 / MIG-06)
 
+> [!NOTE]
+> **Superseded in part by #4769 (2026-09-29).** `EConsentCompletedEvent` now carries `DateTimeOffset? SignedAt`, the time the participant signed. The consumer records it as `IcfSignedDate` instead of `clock.UtcNow`, so a delayed message keeps the true signed time. An event without `SignedAt` is logged and rejected with `ConsentEventRejectedException` before anything is written, and MassTransit moves it to the error queue. The sketch below predates this change.
+
 ```csharp
 namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 
@@ -1046,7 +1055,7 @@ public sealed class EConsentCompletedConsumer(
                 encryptedDemographics: null, stratFactors: null);
             created.ReasonForChange = "Automated consent-completion enrollment";
             await subjects.AddAsync(created, context.CancellationToken);
-            await auditLog.WriteAsync("clinical_subjects", created.Id.ToString(), "INSERT",
+            await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
                 "system-pubsub", created.ReasonForChange, oldValues: null, newValues: null, context.CancellationToken);
         }
 

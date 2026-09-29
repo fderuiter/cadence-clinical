@@ -25788,8 +25788,12 @@ export interface components {
       value_string?: string | null;
       /** Unit */
       unit?: string | null;
-      /** Observation Date */
-      observation_date?: string | null;
+      /**
+       * Observation Date
+       * Format: date-time
+       * @description When the observation was made (valid time). Required; never defaulted to the time it is recorded.
+       */
+      observation_date: string;
       /** Lab Source */
       lab_source?: string | null;
       /** Lab Site Id */

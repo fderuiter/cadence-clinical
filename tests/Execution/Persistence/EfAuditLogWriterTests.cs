@@ -2,7 +2,6 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -14,235 +13,199 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Persistence;
 
 /// <summary>
-/// Coverage for `MIG-SUBJ-017`'s <see cref="EfAuditLogWriter"/>: the explicit, application-initiated
-/// audit-row write path that appends to the caller's own <see cref="ExecutionDbContext"/> `ChangeTracker`
-/// (never a second context) and Merkle-chains its <see cref="AuditLogEntry"/> rows per `tableName`,
-/// independent of and alongside `GxPAuditInterceptor`'s own per-CLR-type chain (`02_technical_design.md`
-/// §4.4).
+/// Coverage for the single audit writer (#4768): <see cref="EfAuditLogWriter"/> only labels the next save, and
+/// <see cref="GxPAuditInterceptor"/> writes exactly one entry per changed entity on one chain per aggregate
+/// type, which <see cref="AuditLogChainVerifier"/> verifies end to end.
+/// @req:PRD-SYS-001
 /// </summary>
+[GxPRequirement("PRD-SYS-001")]
 public class EfAuditLogWriterTests
 {
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; set; } = utcNow;
-    }
+    private const string Actor = "qa.reviewer@site.org";
 
-    private static ExecutionDbContext CreateContext(string databaseName, GxPAuditInterceptor? interceptor = null)
+    private static ExecutionDbContext CreateContext(string databaseName) =>
+        new(new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .AddInterceptors(new GxPAuditInterceptor(() => Actor))
+            .Options);
+
+    private static ClinicalSubject NewSubject(string code) =>
+        ClinicalSubject.Create(new SubjectCode(code), new StudyCode("STUDY-CHAIN"), siteCode: null,
+            enrollmentIndex: 1, encryptedDemographics: "cipher-1", stratFactors: null);
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task SubjectUpdate_WritesOneEntryPerChange_AndTheChainVerifies()
     {
-        var builder = new DbContextOptionsBuilder<ExecutionDbContext>().UseInMemoryDatabase(databaseName);
-        if (interceptor is not null)
+        string db = Guid.NewGuid().ToString();
+        SubjectId id;
+        await using (var context = CreateContext(db))
         {
-            builder.AddInterceptors(interceptor);
+            var writer = new EfAuditLogWriter(context);
+            var subject = NewSubject("SUBJ-ONE");
+            id = subject.Id;
+            context.ClinicalSubjects.Add(subject);
+            await writer.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "ENROLL_SUBJECT", "user-1", "Enrollment", null, null, Ct);
+            await context.SaveChangesAsync(Ct);
         }
 
-        return new ExecutionDbContext(builder.Options);
+        await using (var context = CreateContext(db))
+        {
+            var writer = new EfAuditLogWriter(context);
+            var subject = await context.ClinicalSubjects.SingleAsync(s => s.Id == id, Ct);
+            subject.UpdateDemographics("cipher-2");
+            subject.ReasonForChange = "Correction";
+            await writer.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "UPDATE_DEMOGRAPHICS", "user-1", "Correction", null, null, Ct);
+            await context.SaveChangesAsync(Ct);
+        }
+
+        await using var verify = CreateContext(db);
+        var entries = await verify.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+
+        entries.Should().HaveCount(2, "one entry per change, not one from the writer and another from the interceptor");
+        entries.Should().OnlyContain(e => e.EntityName == nameof(ClinicalSubject) && e.EntityId == id.ToString());
+        entries.Select(e => e.Action).Should().BeEquivalentTo("ENROLL_SUBJECT", "UPDATE_DEMOGRAPHICS");
+        var update = entries.Single(e => e.Action == "UPDATE_DEMOGRAPHICS");
+        update.UserId.Should().Be("user-1");
+        update.ReasonForChange.Should().Be("Correction");
+        update.VersionIndex.Should().Be(2, "the entry carries the entity's own version");
+
+        AuditLogChainVerifier.Verify(entries).Should().ContainSingle()
+            .Which.Should().Be(new AuditLogChainResult(nameof(ClinicalSubject), true, 2, 2, null));
     }
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenFirstEntryForATableName_PersistsWithEmptyPredecessorHashAndVersionIndexOne()
+    public async Task ChangeWithoutARecordedAction_IsStillAudited_WithTheEntityStateAsAction()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
-        var writer = new EfAuditLogWriter(context, new FakeClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        context.ClinicalSubjects.Add(NewSubject("SUBJ-PLAIN"));
 
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "Initial enrollment",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(Ct);
 
-        var entry = await context.AuditLogEntries.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
-        entry.EntityName.Should().Be("clinical_subjects");
-        entry.EntityId.Should().Be("SUBJ-1");
-        entry.Action.Should().Be("ENROLL_SUBJECT");
-        entry.UserId.Should().Be("user-1");
-        entry.ReasonForChange.Should().Be("Initial enrollment");
-        entry.PredecessorHash.Should().BeEmpty();
-        entry.BlockHash.Should().NotBeNullOrEmpty();
-        entry.VersionIndex.Should().Be(1);
+        var entry = await context.AuditLogEntries.AsNoTracking().SingleAsync(Ct);
+        entry.Action.Should().Be("Added");
+        entry.UserId.Should().Be(Actor);
     }
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenTwoCallsForSameTableNameAcrossSeparateSaves_ChainsSecondPredecessorHashToFirstBlockHash()
+    public async Task ActionWithNoEntityChange_IsWrittenAsAnActionOnlyEntryOnTheSameChain()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
-        var clock = new FakeClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-        var writer = new EfAuditLogWriter(context, clock);
-
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "Initial enrollment",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        clock.UtcNow = clock.UtcNow.AddSeconds(1);
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "TRANSITION_ENROLLED", "user-1", "State transition",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var entries = await context.AuditLogEntries.AsNoTracking()
-            .OrderBy(e => e.Timestamp).ToListAsync(TestContext.Current.CancellationToken);
-
-        entries.Should().HaveCount(2);
-        entries[0].PredecessorHash.Should().BeEmpty();
-        entries[1].PredecessorHash.Should().Be(entries[0].BlockHash);
-        entries[1].BlockHash.Should().NotBe(entries[0].BlockHash);
-        entries[1].VersionIndex.Should().Be(2);
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenDifferentTableNames_ChainsEachIndependently()
-    {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
-        var writer = new EfAuditLogWriter(context, new FakeClock(DateTimeOffset.UtcNow));
-
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "reason",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        await writer.WriteAsync("subject_consents", "CONSENT-1", "RECORD_CONSENT", "user-1", "reason",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var consentEntry = await context.AuditLogEntries.AsNoTracking()
-            .SingleAsync(e => e.EntityName == "subject_consents", TestContext.Current.CancellationToken);
-
-        // A second, unrelated tableName's chain starts fresh — it does not chain off "clinical_subjects".
-        consentEntry.PredecessorHash.Should().BeEmpty();
-        consentEntry.VersionIndex.Should().Be(1);
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_DoesNotItselfCallSaveChanges_EntryOnlyVisibleAfterCallerSaves()
-    {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
-        var writer = new EfAuditLogWriter(context, new FakeClock(DateTimeOffset.UtcNow));
-
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "reason",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-
-        context.ChangeTracker.Entries<AuditLogEntry>().Should().ContainSingle(e => e.State == EntityState.Added);
-        (await context.AuditLogEntries.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
-
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        (await context.AuditLogEntries.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenOldAndNewValues_SerializesBothIntoChangesJson()
-    {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
-        var writer = new EfAuditLogWriter(context, new FakeClock(DateTimeOffset.UtcNow));
-        var oldValues = new Dictionary<string, object?> { ["status"] = "Screening" };
-        var newValues = new Dictionary<string, object?> { ["status"] = "Enrolled" };
-
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "TRANSITION_ENROLLED", "user-1", "reason",
-            oldValues, newValues, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var entry = await context.AuditLogEntries.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
-        entry.ChangesJson.Should().NotBeNullOrEmpty();
-        entry.ChangesJson.Should().Contain("Screening").And.Contain("Enrolled");
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenNoOldOrNewValues_ChangesJsonIsNull()
-    {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
-        var writer = new EfAuditLogWriter(context, new FakeClock(DateTimeOffset.UtcNow));
-
-        await writer.WriteAsync("clinical_subjects", "SUBJ-1", "BLOCKED_ENROLLMENT", "user-1", "reason",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var entry = await context.AuditLogEntries.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
-        entry.ChangesJson.Should().BeNull();
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenGxPAuditInterceptorAlsoRegistered_BothAuditTrailsCoexistIndependentlyInOneSaveChangesCall()
-    {
-        // Demonstrates the ticket's central requirement together with §4.4's "alongside, not instead of"
-        // framing: adding a ClinicalSubject (interceptor-audited) and calling this writer (explicitly
-        // audited) in the same unit of work, then a single SaveChangesAsync, commits both mutations and
-        // both independent audit trails atomically, with no collision between their EntityName scopes.
-        await using var context = CreateContext(
-            Guid.NewGuid().ToString(), new GxPAuditInterceptor(() => "qa.reviewer@site.org"));
-        var writer = new EfAuditLogWriter(context, new FakeClock(DateTimeOffset.UtcNow));
-        var subject = ClinicalSubject.Create(
-            new SubjectCode("SUBJ-COEXIST"), new StudyCode("STUDY-COEXIST"), siteCode: null,
-            enrollmentIndex: 1, encryptedDemographics: null, stratFactors: null);
-
+        var writer = new EfAuditLogWriter(context);
+        var subject = NewSubject("SUBJ-BLOCKED");
         context.ClinicalSubjects.Add(subject);
-        await writer.WriteAsync("clinical_subjects", "SUBJ-COEXIST", "ENROLL_SUBJECT", "user-1", "Initial enrollment",
-            oldValues: null, newValues: null, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(Ct);
 
-        var interceptorEntries = await context.AuditLogEntries.AsNoTracking()
-            .Where(e => e.EntityName == nameof(ClinicalSubject)).ToListAsync(TestContext.Current.CancellationToken);
-        var writerEntries = await context.AuditLogEntries.AsNoTracking()
-            .Where(e => e.EntityName == "clinical_subjects").ToListAsync(TestContext.Current.CancellationToken);
+        await writer.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "BLOCKED_ENROLLMENT", "user-2", "Site not activated",
+            oldValues: null, newValues: new Dictionary<string, object?> { ["target"] = "ENROLLED" }, Ct);
+        await context.SaveChangesAsync(Ct);
 
-        interceptorEntries.Should().ContainSingle();
-        interceptorEntries[0].UserId.Should().Be("qa.reviewer@site.org");
-        writerEntries.Should().ContainSingle();
-        writerEntries[0].UserId.Should().Be("user-1");
-        writerEntries[0].Action.Should().Be("ENROLL_SUBJECT");
+        var entries = await context.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+        var blocked = entries.Single(e => e.Action == "BLOCKED_ENROLLMENT");
+        blocked.VersionIndex.Should().Be(0, "no entity version changed");
+        blocked.UserId.Should().Be("user-2");
+        blocked.ChangesJson.Should().Contain("ENROLLED");
+        AuditLogChainVerifier.Verify(entries).Should().OnlyContain(r => r.Valid);
     }
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task WriteAsync_GivenCallsWithIdenticalTimestamps_ProducesValidMerkleChain()
+    public async Task WriteAsync_DoesNotItselfSave()
     {
-        string dbName = Guid.NewGuid().ToString();
-        var fixedClock = new FakeClock(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        await using var context = CreateContext(Guid.NewGuid().ToString());
+        var writer = new EfAuditLogWriter(context);
 
-        await using (var context1 = CreateContext(dbName))
+        await writer.WriteAsync(nameof(ClinicalSubject), "SUBJ-1", "ENROLL_SUBJECT", "user-1", "Enrollment", null, null, Ct);
+
+        (await context.AuditLogEntries.CountAsync(Ct)).Should().Be(0);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public void Verifier_DetectsATamperedEntry()
+    {
+        var chain = BuildChain("ClinicalSubject", 3);
+        var original = chain[1];
+        chain[1] = new AuditLogEntry
         {
-            var writer = new EfAuditLogWriter(context1, fixedClock);
-            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "ENROLL_SUBJECT", "user-1", "Step 1", null, null, TestContext.Current.CancellationToken);
-            await context1.SaveChangesAsync(TestContext.Current.CancellationToken);
+            Id = original.Id,
+            EntityName = original.EntityName,
+            EntityId = original.EntityId,
+            Action = original.Action,
+            Timestamp = original.Timestamp,
+            UserId = "someone-else",
+            ReasonForChange = original.ReasonForChange,
+            VersionIndex = original.VersionIndex,
+            ChangesJson = original.ChangesJson,
+            PredecessorHash = original.PredecessorHash,
+            BlockHash = original.BlockHash,
+        };
+
+        var result = AuditLogChainVerifier.Verify(chain).Single();
+
+        result.Valid.Should().BeFalse();
+        result.VerifiedCount.Should().Be(1);
+        result.Error.Should().Contain("block hash mismatch");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public void Verifier_DetectsAFork()
+    {
+        var chain = BuildChain("ClinicalSubject", 2);
+        chain.Add(Entry("ClinicalSubject", "fork", chain[0].BlockHash));
+
+        var result = AuditLogChainVerifier.Verify(chain).Single();
+
+        result.Valid.Should().BeFalse();
+        result.Error.Should().Contain("forks");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public void Verifier_VerifiesLegacyTableNameChainsAlongsideNewOnes_WithoutRewritingThem()
+    {
+        // Rows written before #4768 by the old explicit writer are keyed by table name ("clinical_subjects").
+        // They stay as their own read-only chain; new entries chain under the aggregate type name.
+        var entries = BuildChain("clinical_subjects", 2).Concat(BuildChain(nameof(ClinicalSubject), 3)).ToList();
+
+        var results = AuditLogChainVerifier.Verify(entries);
+
+        results.Should().HaveCount(2).And.OnlyContain(r => r.Valid);
+    }
+
+    private static List<AuditLogEntry> BuildChain(string entityName, int length)
+    {
+        var chain = new List<AuditLogEntry>();
+        string predecessor = string.Empty;
+        for (int i = 0; i < length; i++)
+        {
+            var entry = Entry(entityName, $"step-{i}", predecessor);
+            chain.Add(entry);
+            predecessor = entry.BlockHash;
         }
 
-        await using (var context2 = CreateContext(dbName))
+        return chain;
+    }
+
+    private static AuditLogEntry Entry(string entityName, string action, string predecessor)
+    {
+        var timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        return new AuditLogEntry
         {
-            var writer = new EfAuditLogWriter(context2, fixedClock);
-            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "TRANSITION_ENROLLED", "user-1", "Step 2", null, null, TestContext.Current.CancellationToken);
-            await context2.SaveChangesAsync(TestContext.Current.CancellationToken);
-        }
-
-        await using (var context3 = CreateContext(dbName))
-        {
-            var writer = new EfAuditLogWriter(context3, fixedClock);
-            await writer.WriteAsync("clinical_subjects", "SUBJ-1", "UPDATE_DEMOGRAPHICS", "user-1", "Step 3", null, null, TestContext.Current.CancellationToken);
-            await context3.SaveChangesAsync(TestContext.Current.CancellationToken);
-        }
-
-        await using var verifyContext = CreateContext(dbName);
-        var entries = await verifyContext.AuditLogEntries.AsNoTracking()
-            .Where(e => e.EntityName == "clinical_subjects")
-            .OrderBy(e => e.VersionIndex)
-            .ToListAsync(TestContext.Current.CancellationToken);
-
-        entries.Should().HaveCount(3);
-        entries[0].PredecessorHash.Should().BeEmpty();
-        entries[1].PredecessorHash.Should().Be(entries[0].BlockHash);
-        entries[2].PredecessorHash.Should().Be(entries[1].BlockHash);
-        entries[1].VersionIndex.Should().Be(2);
-        entries[2].VersionIndex.Should().Be(3);
-
-        for (int i = 0; i < entries.Count; i++)
-        {
-            var e = entries[i];
-            string expectedPredecessor = i == 0 ? string.Empty : entries[i - 1].BlockHash;
-            e.PredecessorHash.Should().Be(expectedPredecessor);
-
-            string computedHash = AuditLogEntry.ComputeBlockHash(
-                e.EntityName, e.EntityId, e.Action, e.Timestamp, e.UserId, e.VersionIndex, e.ChangesJson, e.PredecessorHash);
-            e.BlockHash.Should().Be(computedHash);
-        }
+            EntityName = entityName,
+            EntityId = "SUBJ-1",
+            Action = action,
+            Timestamp = timestamp,
+            UserId = "user-1",
+            VersionIndex = 1,
+            PredecessorHash = predecessor,
+            BlockHash = AuditLogEntry.ComputeBlockHash(entityName, "SUBJ-1", action, timestamp, "user-1", 1, null, predecessor),
+        };
     }
 }

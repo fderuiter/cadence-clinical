@@ -130,6 +130,11 @@ public sealed class ObservationApplicationService(
             ReferenceRangeHigh = labResult.RangeHigh
         };
 
+        if (request.ObservationDate is not { } observationDate)
+        {
+            return ObservationErrors.ObservationDateRequired();
+        }
+
         var creationResult = ClinicalObservation.Create(
             studyId: studyCode,
             subjectId: subjectCode,
@@ -139,7 +144,7 @@ public sealed class ObservationApplicationService(
             value: request.Value,
             valueString: request.ValueString,
             unit: request.Unit,
-            observationDate: request.ObservationDate ?? clock.UtcNow.DateTime,
+            observationDate: observationDate,
             siteId: siteCode,
             visitId: request.VisitId,
             pageId: request.PageId,

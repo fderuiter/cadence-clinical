@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(FileshareDbContext))]
     partial class FileshareDbContextModelSnapshot : ModelSnapshot
     {
@@ -481,7 +482,7 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Fileshare.Domain.FileRecord", null)
                         .WithMany()
                         .HasForeignKey("FileRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -490,7 +491,7 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Fileshare.Domain.FileRecord", null)
                         .WithMany()
                         .HasForeignKey("FileRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -499,7 +500,7 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Fileshare.Domain.FileRecord", null)
                         .WithMany()
                         .HasForeignKey("FileRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -508,9 +509,10 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Fileshare.Domain.FileRecord", null)
                         .WithMany()
                         .HasForeignKey("FileRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
     }
+}

@@ -1,6 +1,6 @@
 #!/bin/bash
 # SessionStart hook: runs the repo's full-stack setup wizard (non-interactive,
-# --minimal) so `dotnet`, `pnpm`, and `uv`/`cadence` commands all work in
+# --minimal) so `dotnet`, `pnpm` and Cadence CLI commands all work in
 # Claude Code on the web sessions. Only runs remotely.
 set -euo pipefail
 

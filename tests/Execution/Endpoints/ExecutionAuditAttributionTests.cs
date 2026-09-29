@@ -95,7 +95,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     {
         var coordinator = Caller("obs-coordinator", "Site Coordinator");
         var monitor = Caller("obs-monitor", "CRA");
-        object observation = new { subject_id = $"SUBJ-{_run}", domain = "VS", test_code = "SYSBP", test_name = "Systolic BP", study_id = Study, value = 120, unit = "mmHg" };
+        object observation = new { subject_id = $"SUBJ-{_run}", domain = "VS", test_code = "SYSBP", test_name = "Systolic BP", study_id = Study, value = 120, unit = "mmHg", observation_date = "2026-01-01T08:00:00Z" };
 
         string verified = await ReadIdAsync(await AuditedAsync(coordinator, c => c.PostAsJsonAsync("/api/v1/execution/observations/", observation, Ct)));
         string flagged = await ReadIdAsync(await AuditedAsync(coordinator, c => c.PostAsJsonAsync("/api/v1/execution/observations/", observation, Ct)));
@@ -111,11 +111,11 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     public async Task FormWrites_AreEachAuditedAgainstTheCaller()
     {
         var investigator = Caller("form-pi", "Site Investigator");
-        const string payload = "{\"vssbp\": 130}";
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}";
 
         string form = await ReadIdAsync(await AuditedAsync(investigator, c => c.PostAsJsonAsync(
             "/api/v1/execution/forms/",
-            new { study_id = Study, subject_id = $"SUBJ-{_run}", form_id = "VS_FORM", payload = "{\"vssbp\": 129}" },
+            new { study_id = Study, subject_id = $"SUBJ-{_run}", form_id = "VS_FORM", payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 129}" },
             Ct)));
         await AuditedAsync(investigator, c => c.PutAsJsonAsync($"/api/v1/execution/forms/{form}", new { payload }, Ct));
         await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));

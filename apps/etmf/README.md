@@ -18,6 +18,7 @@ Conforms strictly to Enterprise Hexagonal standards with clean decoupling:
 
 - **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
 - **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
+- **Audit-Trail Retention:** `TmfDocumentQcTransition` and `TmfDocumentExpirationAlertState` rows reference their `TmfDocument` with `ON DELETE RESTRICT`, so deleting a parent that still has history fails instead of erasing it. Retire or soft-delete regulated records; never hard-delete them ([ADR-2258](../../docs/adr/2026-09-29-restrict-cascade-deletes-onto-audit-trails-and-regulated-children.md)).
 
 ---
 

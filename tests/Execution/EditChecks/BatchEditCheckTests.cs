@@ -35,6 +35,7 @@ public sealed class BatchEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("SYSBP"),
             testName: "Systolic BP",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 120.0,
             visitId: "VISIT-01").Value!;
 
@@ -44,6 +45,7 @@ public sealed class BatchEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("DIABP"),
             testName: "Diastolic BP",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 80.0,
             visitId: "VISIT-01").Value!;
 
@@ -54,6 +56,7 @@ public sealed class BatchEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("SYSBP"),
             testName: "Systolic BP",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 75.0,
             visitId: "VISIT-02").Value!;
 
@@ -63,6 +66,7 @@ public sealed class BatchEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("DIABP"),
             testName: "Diastolic BP",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 95.0,
             visitId: "VISIT-02").Value!;
 
@@ -100,6 +104,7 @@ public sealed class BatchEditCheckTests
                 domain: new DomainCode("VS"),
                 testCode: new TestCode("SYSBP"),
                 testName: "Systolic BP",
+                observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
                 value: sysVal,
                 visitId: "VISIT-01").Value!;
 
@@ -109,6 +114,7 @@ public sealed class BatchEditCheckTests
                 domain: new DomainCode("VS"),
                 testCode: new TestCode("DIABP"),
                 testName: "Diastolic BP",
+                observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
                 value: diaVal,
                 visitId: "VISIT-01").Value!;
 

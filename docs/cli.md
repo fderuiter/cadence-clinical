@@ -67,12 +67,14 @@ Runs the quality gates.
 pnpm cadence check                 # all 21 gates
 pnpm cadence check <gate>          # one gate
 pnpm cadence check <gate> <files>  # one gate, limited to these files
+pnpm cadence check --pre-commit    # what the pre-commit hook runs
 ```
 
-| Argument  | Description                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`  | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens. |
-| `[files]` | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).        |
+| Argument       | Description                                                                                                                                                                                                                             |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                        |
+| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                               |
+| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), and the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services. |
 
 With no gate, all 21 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
 
@@ -250,11 +252,10 @@ Not implemented yet.
 
 Interactive wizards. Each one runs a script in `scripts/` from the repository root: the `.sh` script with `bash`, or the `.ps1` script with PowerShell on Windows. The command returns the script's exit code, or `1` if the script is missing.
 
-| Command                                 | Script                        | Arguments                                   |
-| --------------------------------------- | ----------------------------- | ------------------------------------------- |
-| `cadence wizard onboarding`             | `setup_wizard`                | None                                        |
-| `cadence wizard dotnet`                 | `setup_dotnet_wizard`         | None                                        |
-| `cadence wizard migrate`                | `migrate_service_wizard`      | None. The script prompts for the service.   |
-| `cadence wizard decommission [service]` | `decommission_service_wizard` | Optional service name, passed to the script |
+| Command                     | Script                   | Arguments                                 |
+| --------------------------- | ------------------------ | ----------------------------------------- |
+| `cadence wizard onboarding` | `setup_wizard`           | None                                      |
+| `cadence wizard dotnet`     | `setup_dotnet_wizard`    | None                                      |
+| `cadence wizard migrate`    | `migrate_service_wizard` | None. The script prompts for the service. |
 
 What each wizard does is defined by its script, not by the CLI.

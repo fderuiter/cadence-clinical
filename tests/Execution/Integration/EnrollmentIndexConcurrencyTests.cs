@@ -57,7 +57,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
 
     private sealed class NoOpAuditLogWriter : IAuditLogWriter
     {
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct) =>
             Task.CompletedTask;
     }
@@ -133,7 +133,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()), clock);
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
-            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1));
+            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1, DateTimeOffset.UtcNow));
             consumeContext.CancellationToken.Returns(TestContext.Current.CancellationToken);
 
             await consumer.Consume(consumeContext);

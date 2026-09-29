@@ -2,17 +2,6 @@ using Cadence.Core.Domain;
 
 namespace Cadence.Kernel.Domain.Entities;
 
-public enum OrganizationKind
-{
-    Sponsor,
-    Cro,
-    SiteInstitution,
-    Vendor,
-    Regulator,
-    EthicsCommittee,
-    Lab
-}
-
 /// <summary>
 /// Organization entity operating within a Tenant boundary.
 /// @req:PRD-SYS-053

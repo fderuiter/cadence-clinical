@@ -51,7 +51,7 @@ public sealed class QualityRootCauseAnalysisConfiguration : IEntityTypeConfigura
         builder.HasOne<QualityDeviation>()
             .WithMany()
             .HasForeignKey(x => x.DeviationId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.DeviationId).IsUnique();
         builder.HasIndex(x => x.SiteId);
@@ -81,7 +81,7 @@ public sealed class QualityCapaRecordConfiguration : IEntityTypeConfiguration<Qu
         builder.HasOne<QualityDeviation>()
             .WithMany()
             .HasForeignKey(x => x.DeviationId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<QualityRootCauseAnalysis>()
             .WithMany()

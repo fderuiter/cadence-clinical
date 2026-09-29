@@ -37,40 +37,64 @@ Verify system prerequisites, port availability, and database connections:
 dotnet cadence doctor --auto-fix
 ```
 
-_This command checks .NET runtime, Docker daemon, node/pnpm, and verifies connectivity to PostgreSQL (5432) and Neo4j (7687)._
+_This command checks the .NET runtime, Docker daemon and node/pnpm, and verifies connectivity to PostgreSQL (5432)._
 
 ---
 
-## 2. Monorepo Service Catalog & Port Allocations (8000–8019)
+## 2. Service Catalog & Ports
 
-The Cadence Clinical platform orchestrates **18 specialized .NET 10 microservices**, supporting discrete clinical trial domains:
+Each service's host port is the default the gateway routes to (`apps/gateway/src/Program.cs`), so the gateway
+reaches services started with `dotnet run` on the host and the compose stack alike. Inside compose, every .NET
+service listens on 8080 in its own container. Every service with a database uses the single `cadence` PostgreSQL
+database, in the schema listed ([OPERATIONAL_DATABASE.md](OPERATIONAL_DATABASE.md)).
 
-| Service Name | Port | Sub-directory | Primary Database | Domain & Operational Description |
+| Service | Host port | Directory | Storage | Domain |
 | :--- | :--- | :--- | :--- | :--- |
-| **`gateway`** | `8000` | `apps/gateway/` | Stateless / YARP | Central Reverse Proxy with Keycloak OIDC authentication & HMAC signature injection |
-| **`designer`** | `8001` | `apps/designer/` | Neo4j (`7687`) | MDR/SDR Protocol Designer & CDISC USDM v3/v4 study graph modeling |
-| **`execution`** | `8002` | `apps/execution/` | PostgreSQL (`5432`) | EDC Runtime Engine, dynamic subject eCRFs, real-time edit checks, & Dataset-JSON |
-| **`etmf`** | `8004` | `apps/etmf/` | PostgreSQL (`5432`) | DIA TMF Reference Model v3.2.0 document classification & completeness tracking |
-| **`ctms`** | `8005` | `apps/ctms/` | PostgreSQL (`5432`) | Clinical Trial Management, CRA monitoring visit reports, & 6-facet site greenlight |
-| **`quality`** | `8006` | `apps/quality/` | PostgreSQL (`5432`) | Quality Assurance, CAPA workflows, CSM Benford forensics, & pHash image checks |
-| **`interop`** | `8007` | `apps/interop/` | PostgreSQL (`5432`) | SMART on FHIR USCDI EHR ingestion & Open mHealth biometric streaming |
-| **`org`** | `8008` | `apps/org/` | PostgreSQL (`5432`) | Organization Directory, clinical trial sites, staff credentials, & PI DOA logs |
-| **`safety`** | `8009` | `apps/safety/` | PostgreSQL (`5432`) | ICH E2B(R3) ICSR safety XML compilation, CTCAE grading, & AS2 S/MIME EDI gateway |
-| **`notifications`** | `8010` | `apps/notifications/` | PostgreSQL (`5432`) | Multi-channel GxP alerts (SMTP Email, SMS, Webhooks, In-App inbox) |
-| **`knowledge`** | `8011` | `apps/knowledge/` | PostgreSQL (`5432`) | Clinical SOP hub, contextual help drawer routing, & versioned guidance |
-| **`tickets`** | `8012` | `apps/tickets/` | PostgreSQL (`5432`) | Clinical query escalation, data discrepancy tracking, & dual-target SLA timers |
-| **`ai_gateway`** | `8013` | `apps/ai_gateway/` | Ephemeral / REST | Model tiering (Tier 1–3), PII/PHI de-id air-gap, & 21 CFR Part 11 AI draft ledgers |
-| **`payments`** | `8014` | `apps/payments/` | PostgreSQL (`5432`) | Investigator grant budgets, procedure fees, multi-payee splits, & participant wallet |
-| **`imaging`** | `8015` | `apps/imaging/` | PostgreSQL (`5432`) | Zero-footprint WebGL MPR DICOM viewer & blinded dual-reader RECIST 1.1 adjudication |
-| **`eisf`** | `8016` | `apps/eisf/` | PostgreSQL (`5432`) | Electronic Investigator Site Files (eISF) site binders & PI certification manifests |
-| **`econsent`** | `8017` | `apps/econsent/` | PostgreSQL (`5432`) | Digital Informed Consent, amendment re-consent gating, & cryptographic sealing |
-| **`fileshare`** | `8018` | `apps/fileshare/` | MinIO (`9000`) + PG | StoragePort S3 abstraction, presigned transfer URLs, & Part 11 document envelopes |
-| **`web`** | `5173` | `apps/web/` | Vite SPA Client | Vue 3 Unified Clinical Workspace (Multi-Persona Switcher) |
-| **`subject-portal`** | `5174` | `apps/subject-portal/` | IndexedDB PWA | Offline-First Participant-Facing eCOA/ePRO Progressive Web App |
+| **front proxy** (nginx) | `8000` | `docker/nginx/` | none | Entry point for the web apps; forwards everything to the gateway |
+| **`gateway`** | via `8000` | `apps/gateway/` | none (YARP) | Keycloak OIDC authentication and signed identity headers for downstream services |
+| **`designer`** | `8001` | `apps/designer/` | none | Protocol designer and CDISC USDM authoring |
+| **`execution`** | `8002` | `apps/execution/` | PostgreSQL, schema `edc` | EDC runtime: subjects, eCRFs, edit checks, queries |
+| **`etmf`** | `8003` | `apps/etmf/` | PostgreSQL, `etmf` | TMF Reference Model document classification and completeness |
+| **`interop`** | `8004` | `apps/interop/` | PostgreSQL, `interop` | FHIR and mHealth ingestion |
+| **`quality`** | `8005` | `apps/quality/` | PostgreSQL, `quality` | CAPA workflows and data-integrity checks |
+| **`notifications`** | `8006` | `apps/notifications/` | PostgreSQL, `notifications` | GxP alerts and in-app inbox |
+| **`ctms`** | `8007` | `apps/ctms/` | PostgreSQL, `ctms` | Monitoring visits and site readiness |
+| **`safety`** | `8008` | `apps/safety/` | PostgreSQL, `safety` | ICH E2B(R3) ICSRs and CTCAE grading |
+| **`tickets`** | `8009` | `apps/tickets/` | PostgreSQL, `tickets` | Query escalation and SLA timers |
+| **`eisf`** | `8010` | `apps/eisf/` | PostgreSQL, `eisf` | Investigator site files |
+| **`econsent`** | `8011` | `apps/econsent/` | PostgreSQL, `econsent` | Electronic informed consent and re-consent |
+| **`org`** | `8012` | `apps/org/` | PostgreSQL, `org` | Organizations, sites and staff |
+| **`fileshare`** | `8013` | `apps/fileshare/` | PostgreSQL, `fileshare` | Document transfer envelopes |
+| **`imaging`** | `8014` | `apps/imaging/` | PostgreSQL, `imaging` | DICOM viewing and blinded reads |
+| **`knowledge`** | `8015` | `apps/knowledge/` | PostgreSQL, `knowledge` | SOP hub and contextual guidance |
+| **`payments`** | `8016` | `apps/payments/` | PostgreSQL, `payments` | Investigator grants and participant payments |
+| **`ai_gateway`** | `8017` | `apps/ai_gateway/` | none | Model tiering and PHI de-identification |
+| **Keycloak** | `8080` | `docker/cadence-realm.json` | dev file store | OIDC provider; realm `cadence` is imported on start |
+| **PostgreSQL** | `5432` | | volume `postgres_data` | Database `cadence` |
+| **`web`** | `5173` | `apps/web/` | | Vue 3 clinical workspace (`pnpm --filter web dev`) |
+| **`subject-portal`** | `5174` | `apps/subject-portal/` | IndexedDB | Participant PWA |
 
----
+MinIO (`9000`, `9001`) and ClamAV (`3310`) are defined under the compose profile `storage`; no service reads them yet.
 
-## 3. Primary CLI Workflows (`dotnet cadence`)
+## 3. Running the Stack with Docker Compose
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml ps     # every .NET service should become "healthy"
+```
+
+- **Migrations:** each service applies its own migrations when it starts (`Database__MigrateOnStartup=true`) and
+  reports healthy only once `/healthz/ready` answers, which requires the database.
+- **Health probes:** `http://localhost:<port>/healthz/live` and `/healthz/ready` need no token. Every other endpoint
+  requires one: sign in through the web app, or get a token from Keycloak at
+  `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
+- **Authentication settings:** the gateway validates tokens issued at `http://localhost:8080/realms/cadence`
+  (`OIDC_AUTHORITY`) and fetches Keycloak's keys over the compose network (`OIDC_METADATA_ADDRESS`). All services
+  share the local `GATEWAY_SECRET`. The compose file's secrets are for local use only.
+- **Reset:** `docker compose -f docker/docker-compose.yml down -v` removes the database volume. Do this once if your
+  database predates the schema-per-service layout (ADR-2447).
+
+## 4. Primary CLI Workflows (`dotnet cadence`)
 
 The repository features the native **Cadence CLI** (`dotnet cadence` or `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`) designed to streamline developer orchestration:
 
@@ -113,7 +137,7 @@ dotnet cadence test --fast
 
 ---
 
-## 4. Quality Gates & Sentinels (`dotnet cadence check`)
+## 5. Quality Gates & Sentinels (`dotnet cadence check`)
 
 Before committing changes or opening a pull request, run all 21 architecture sentinels:
 
@@ -131,7 +155,7 @@ dotnet cadence fix --all
 
 ---
 
-## 5. GxP Compliance Synchronization (`dotnet cadence gxp sync`)
+## 6. GxP Compliance Synchronization (`dotnet cadence gxp sync`)
 
 Whenever test classes are added, modified, or requirement tags (`@req:PRD-SYS-XXX` / `[GxPRequirement]`) are updated, run:
 

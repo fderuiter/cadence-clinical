@@ -45,24 +45,15 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
   });
 
   describe("Role-Based Authorization Guards", () => {
-    it("should allow navigation to /mdr if the user has designer role", async () => {
+    it("should route a permitted designer to /unavailable for /mdr, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer
 
       await router.push("/mdr");
-      expect(router.currentRoute.value.path).toBe("/mdr");
-    });
-
-    it("should allow navigation to /mdr if the user has Sponsor Designer role", async () => {
-      const authStore = useAuthStore();
-      authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
-      authStore.rawRoles = ["Sponsor Designer"]; // maps to sponsor_designer
-
-      await router.push("/mdr");
-      expect(router.currentRoute.value.path).toBe("/mdr");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(router.currentRoute.value.query.screen).toBe("mdr");
     });
 
     it("should redirect to /forbidden if the user does not have the required roles", async () => {
@@ -75,14 +66,15 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/forbidden");
     });
 
-    it("should allow TMF Auditor to access /audit view", async () => {
+    it("should route TMF Auditor to /unavailable for /audit, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"]; // maps to auditor & tmf_auditor
 
       await router.push("/audit");
-      expect(router.currentRoute.value.path).toBe("/audit");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(router.currentRoute.value.query.screen).toBe("audit");
     });
 
     it("should allow Site Investigator (CRC) to access /ecrf view", async () => {
@@ -105,24 +97,35 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ctms");
     });
 
-    it("should allow Data Manager to access /rules view", async () => {
+    it("should route Data Manager to /unavailable for /rules, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Data Manager"]; // maps to data_manager
 
       await router.push("/rules");
-      expect(router.currentRoute.value.path).toBe("/rules");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(router.currentRoute.value.query.screen).toBe("rules");
     });
 
-    it("should allow Study Designer to access /rules view", async () => {
+    it("should still show /forbidden, not /unavailable, when the role is missing", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
-      authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer
+      authStore.rawRoles = ["Auditor"];
 
       await router.push("/rules");
-      expect(router.currentRoute.value.path).toBe("/rules");
+      expect(router.currentRoute.value.path).toBe("/forbidden");
+    });
+
+    it("should leave unknown paths alone rather than calling them unavailable", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.isDemoMode = true;
+      authStore.rawRoles = ["CRA"];
+
+      await router.push("/no-such-screen");
+      expect(router.currentRoute.value.name).toBeUndefined();
     });
   });
 
@@ -155,34 +158,35 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ctms");
     });
 
-    it("should dynamically redirect Data Manager to /rules when landing on /", async () => {
+    it("should land Data Manager on /ecrf while /rules has no .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Data Manager"];
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/rules");
+      expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should dynamically redirect TMF Auditor to /audit when landing on /", async () => {
+    it("should land TMF Auditor on /unavailable while no auditor screen has a .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"];
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/audit");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(router.currentRoute.value.query.screen).toBeUndefined();
     });
 
-    it("should dynamically redirect Study Designer to /mdr when landing on /", async () => {
+    it("should land Study Designer on /unavailable while no designer screen has a .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
       authStore.rawRoles = ["Study Designer"];
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/mdr");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
     });
   });
 

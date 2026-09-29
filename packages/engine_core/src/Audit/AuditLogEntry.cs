@@ -24,6 +24,22 @@ public sealed class AuditLogEntry
 
     public AuditLogEntry() { }
 
+    /// <summary>
+    /// The form an audit timestamp is hashed and stored in: UTC, truncated to whole microseconds. PostgreSQL
+    /// keeps only microseconds, so hashing the full 100 ns tick value would make every read-back entry fail
+    /// verification. A timestamp read back without a kind is UTC, since audit timestamps are always written in UTC.
+    /// </summary>
+    public static DateTime NormalizeTimestamp(DateTime timestamp)
+    {
+        DateTime utc = timestamp.Kind switch
+        {
+            DateTimeKind.Local => timestamp.ToUniversalTime(),
+            DateTimeKind.Unspecified => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc),
+            _ => timestamp,
+        };
+        return new DateTime(utc.Ticks - (utc.Ticks % 10), DateTimeKind.Utc);
+    }
+
     public static string ComputeBlockHash(
         string entityName,
         string entityId,

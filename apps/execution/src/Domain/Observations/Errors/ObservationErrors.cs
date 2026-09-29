@@ -23,4 +23,12 @@ public static class ObservationErrors
 
     public static DomainError InvalidValue(string message) =>
         DomainError.Validation("INVALID_OBSERVATION_VALUE", message);
+
+    public static DomainError ObservationDateRequired() =>
+        DomainError.Validation(
+            "OBSERVATION_DATE_REQUIRED",
+            "observation_date is required: the time the observation was made is never defaulted to the time it is recorded.");
+
+    public static DomainError InvalidObservationDate(string value) =>
+        DomainError.Validation("INVALID_OBSERVATION_DATE", $"observation_date '{value}' is not a valid ISO 8601 date-time.");
 }

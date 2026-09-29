@@ -55,7 +55,7 @@ public class MutationRepositoryTrackingTests
         await EnsureSchemaAsync(connection);
 
         var observation = ClinicalObservation.Create(
-            Study, Subject, new DomainCode("VS"), new TestCode("SYSBP"), "Systolic BP", value: 120).Value!;
+            Study, Subject, new DomainCode("VS"), new TestCode("SYSBP"), "Systolic BP", new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc), value: 120).Value!;
         var seedRepository = new ObservationRepository(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
         await seedRepository.AddAsync(observation, ct);
         await seedRepository.SaveChangesAsync(ct);

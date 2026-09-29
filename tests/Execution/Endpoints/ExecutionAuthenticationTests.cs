@@ -147,7 +147,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public async Task ApproveForm_WithInvestigatorRoleOnlyInBody_Returns403()
     {
         var ct = TestContext.Current.CancellationToken;
-        const string payload = "{\"vssbp\": 120}";
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         string formId = await CreateCompletedFormAsync(payload);
         using var cra = factory.CreateSignedClient(Cra);
 
@@ -164,7 +164,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public async Task ApproveForm_NamingAnotherSigner_Returns403()
     {
         var ct = TestContext.Current.CancellationToken;
-        const string payload = "{\"vssbp\": 121}";
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 121}";
         string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 
@@ -181,7 +181,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public async Task ApproveForm_AsSignedInvestigator_RecordsCallerAsSigner()
     {
         var ct = TestContext.Current.CancellationToken;
-        const string payload = "{\"vssbp\": 122}";
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 122}";
         string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 

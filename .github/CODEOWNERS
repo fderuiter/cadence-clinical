@@ -1,45 +1,10 @@
-# Global Fallback Owner
-* @clinical-platform/global-reviewers
+# Code owners for cadence-clinical.
+#
+# The repository has one maintainer, so every path is owned by @fderuiter and
+# every PR requests their review. When more people join, add path rules below
+# the fallback, for example:
+#   /packages/kernel/   @fderuiter @kernel-reviewer
+# Only real GitHub users or teams with write access can own a path; GitHub
+# ignores rules for accounts or teams that don't exist.
 
-# Clinical Domains under apps/
-/apps/ai_gateway/        @clinical-platform/integration-and-routing
-/apps/ctms/              @clinical-platform/clinical-operations
-/apps/designer/          @clinical-platform/integration-and-routing
-/apps/econsent/          @clinical-platform/patient-engagement
-/apps/eisf/              @clinical-platform/document-management
-/apps/etmf/              @clinical-platform/document-management
-/apps/execution/         @clinical-platform/clinical-operations
-/apps/fileshare/         @clinical-platform/document-management
-/apps/gateway/           @clinical-platform/integration-and-routing
-/apps/imaging/           @clinical-platform/clinical-operations
-/apps/interop/           @clinical-platform/integration-and-routing
-/apps/knowledge/         @clinical-platform/document-management
-/apps/notifications/     @clinical-platform/patient-engagement
-/apps/org/               @clinical-platform/clinical-operations
-/apps/payments/          @clinical-platform/clinical-operations
-/apps/quality/           @clinical-platform/document-management
-/apps/safety/            @clinical-platform/compliance-and-safety
-/apps/subject-portal/    @clinical-platform/client-ux
-/apps/tickets/           @clinical-platform/clinical-operations
-/apps/web/               @clinical-platform/client-ux
-
-/packages/cli/             @clinical-platform/integration-and-routing
-/packages/compliance/    @clinical-platform/compliance-and-safety
-/packages/config/        @clinical-platform/integration-and-routing
-/packages/contracts/     @clinical-platform/integration-and-routing
-/packages/core-models/   @clinical-platform/integration-and-routing
-/packages/database/      @clinical-platform/clinical-operations
-/packages/ddf/           @clinical-platform/integration-and-routing
-/packages/deid/          @clinical-platform/security-and-privacy
-/packages/deidentification/ @clinical-platform/security-and-privacy
-/packages/engine_core/   @clinical-platform/integration-and-routing
-/packages/gateway-rewrite/ @clinical-platform/integration-and-routing
-/packages/hexagonal/     @clinical-platform/clinical-operations
-/packages/security/      @clinical-platform/security-and-privacy
-/packages/sentinels/     @clinical-platform/compliance-and-safety
-/packages/storage/       @clinical-platform/document-management
-/packages/telemetry/     @clinical-platform/integration-and-routing
-/packages/testing/       @clinical-platform/compliance-and-safety
-/packages/tooling_core/  @clinical-platform/integration-and-routing
-/packages/ui/            @clinical-platform/client-ux
-/packages/usdm-schemas/  @clinical-platform/integration-and-routing
+* @fderuiter

@@ -39,9 +39,8 @@ public sealed class SiteComplianceApplicationService(
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext) : ISiteComplianceApplicationService
 {
-    // Matches SiteComplianceCacheConfiguration.ToTable("site_compliance_caches") -- the audit chain's
-    // per-tableName scoping key (EfAuditLogWriter) for every audit entry this service writes.
-    private const string SiteComplianceTableName = "site_compliance_caches";
+    // The audit chain key for every entry this service writes: the aggregate's CLR type name (#4768).
+    private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
 
     public async Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct)
@@ -75,7 +74,7 @@ public sealed class SiteComplianceApplicationService(
         {
             // The legacy wrote no audit entry here (01_spec.md §1.1); #4767 closes that gap so every
             // compliance change is attributable to the integration that reported it.
-            await auditLog.WriteAsync(SiteComplianceTableName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
+            await auditLog.WriteAsync(SiteComplianceEntityName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
                 auditContext.UserId, auditContext.ChangeReason, oldValues: null,
                 newValues: new Dictionary<string, object?>
                 {
@@ -101,7 +100,7 @@ public sealed class SiteComplianceApplicationService(
             // result is returned (01_spec.md §1.1, raise site #9). IAuditLogWriter.WriteAsync does not
             // itself call SaveChangesAsync, so the explicit SaveChangesAsync below is what actually commits
             // it; both calls are awaited in order, ahead of the `return`.
-            await auditLog.WriteAsync(SiteComplianceTableName, siteId, "BLOCKED_ACTIVATION",
+            await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "BLOCKED_ACTIVATION",
                 auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct);
             await compliance.SaveChangesAsync(ct);
 
@@ -110,7 +109,7 @@ public sealed class SiteComplianceApplicationService(
 
         // This endpoint does not itself flip SiteComplianceCache.IsComplete -- that only happens via
         // ApplyEtmfWebhookAsync above (01_spec.md §1.1's explicit note). Only the audit trail is written here.
-        await auditLog.WriteAsync(SiteComplianceTableName, siteId, "SITE_ACTIVATION",
+        await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "SITE_ACTIVATION",
             auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct);
         await compliance.SaveChangesAsync(ct);
 

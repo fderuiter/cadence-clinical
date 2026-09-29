@@ -124,6 +124,7 @@ public sealed class AstEditCheckTests
             domain: new DomainCode("LB"),
             testCode: new TestCode("K"),
             testName: "Potassium",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 2.8,
             additionalProperties: new ObservationAdditionalProperties
             {
@@ -151,6 +152,7 @@ public sealed class AstEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("SYSBP"),
             testName: "Systolic Blood Pressure",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 70.0,
             visitId: "VISIT-01").Value!;
 
@@ -160,6 +162,7 @@ public sealed class AstEditCheckTests
             domain: new DomainCode("VS"),
             testCode: new TestCode("DIABP"),
             testName: "Diastolic Blood Pressure",
+            observationDate: new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
             value: 90.0,
             visitId: "VISIT-01").Value!;
 

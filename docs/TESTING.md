@@ -43,9 +43,10 @@ dotnet test Cadence.sln
 
 These tests currently use it:
 
-- `tests/Execution/Integration/` (`ExecutionPostgresFixture`): enrollment index concurrency and migrations.
-- `tests/Kernel/Integration/` (`KernelPostgresFixture`): the kernel schema. This fixture honours only
-  `CADENCE_TEST_POSTGRES`.
+- `tests/Execution/Integration/` (`ExecutionPostgresFixture`): enrollment index concurrency, the audit chain
+  round trip, and migrations.
+- `tests/Kernel/Integration/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
+  pipeline. This fixture honours only `CADENCE_TEST_POSTGRES`.
 - `tests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.

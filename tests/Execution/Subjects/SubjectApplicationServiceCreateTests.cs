@@ -28,16 +28,16 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceCreateTests
 {
-    private sealed record AuditCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class RecordingAuditLogWriter : IAuditLogWriter
     {
         public List<AuditCall> Calls { get; } = new();
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -136,7 +136,7 @@ public class SubjectApplicationServiceCreateTests
         var second = await harness.Service.CreateAsync(CreateRequest("SUBJ-002"), TestContext.Current.CancellationToken);
 
         harness.AuditLog.Calls.Should().HaveCount(2);
-        harness.AuditLog.Calls.Should().OnlyContain(c => c.Action == "ENROLL_SUBJECT" && c.TableName == "clinical_subjects");
+        harness.AuditLog.Calls.Should().OnlyContain(c => c.Action == "ENROLL_SUBJECT" && c.EntityName == "ClinicalSubject");
         harness.AuditLog.Calls[0].RecordId.Should().Be(first.Value!.Id.ToString());
         harness.AuditLog.Calls[1].RecordId.Should().Be(second.Value!.Id.ToString());
     }

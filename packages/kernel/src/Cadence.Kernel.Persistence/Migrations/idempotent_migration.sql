@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -244,6 +244,297 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929191437_InitialKernelIdentity') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260929191437_InitialKernelIdentity', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+        IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
+            CREATE SCHEMA kernel;
+        END IF;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    CREATE EXTENSION IF NOT EXISTS btree_gist;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_bitemporal_append_only() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    BEGIN
+        IF TG_OP IN ('DELETE', 'TRUNCATE') THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% is bitemporal and append-only; % is not allowed',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP USING ERRCODE = 'KT001';
+        END IF;
+        IF (to_jsonb(NEW) - 'recorded_period' - 'version_index') IS DISTINCT FROM (to_jsonb(OLD) - 'recorded_period' - 'version_index') THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% rows are never updated; record a new row and close recorded_period instead',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME USING ERRCODE = 'KT001';
+        END IF;
+        IF NOT upper_inf(OLD.recorded_period)
+            OR upper_inf(NEW.recorded_period)
+            OR isempty(NEW.recorded_period)
+            OR lower(NEW.recorded_period) IS DISTINCT FROM lower(OLD.recorded_period) THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% may only close an open recorded_period at a later instant',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME USING ERRCODE = 'KT001';
+        END IF;
+        RETURN NEW;
+    END;
+    $fn$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260929195617_BitemporalFoundation', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    DROP TABLE kernel.audit_log_entries;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.audit_chain_heads (
+        tenant_id uuid NOT NULL,
+        last_sequence bigint NOT NULL,
+        last_hash character varying(64) NOT NULL,
+        CONSTRAINT "PK_audit_chain_heads" PRIMARY KEY (tenant_id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.audit_entries (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        sequence bigint NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        actor_id character varying(256) NOT NULL,
+        action character varying(64) NOT NULL,
+        aggregate_type character varying(200),
+        aggregate_id character varying(200),
+        aggregate_version bigint,
+        reason_for_change character varying(2000) NOT NULL,
+        activity_id uuid NOT NULL,
+        changes text NOT NULL,
+        predecessor_hash character varying(64) NOT NULL,
+        hash character varying(64) NOT NULL,
+        CONSTRAINT "PK_audit_entries" PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.domain_events (
+        event_id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        type character varying(200) NOT NULL,
+        schema_version integer NOT NULL,
+        occurred_valid timestamp with time zone,
+        recorded timestamp with time zone NOT NULL,
+        actor_id character varying(256) NOT NULL,
+        activity_id uuid NOT NULL,
+        correlation_id uuid NOT NULL,
+        causation_id uuid,
+        payload jsonb NOT NULL,
+        CONSTRAINT "PK_domain_events" PRIMARY KEY (event_id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.idempotency_records (
+        tenant_id uuid NOT NULL,
+        idempotency_key character varying(200) NOT NULL,
+        command_type character varying(200) NOT NULL,
+        request_hash character varying(64) NOT NULL,
+        result_json text NOT NULL,
+        activity_id uuid NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_idempotency_records" PRIMARY KEY (tenant_id, idempotency_key)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.outbox_messages (
+        id uuid NOT NULL,
+        event_id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        type character varying(200) NOT NULL,
+        envelope jsonb NOT NULL,
+        enqueued_at timestamp with time zone NOT NULL,
+        dispatched_at timestamp with time zone,
+        attempts integer NOT NULL,
+        CONSTRAINT "PK_outbox_messages" PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TABLE kernel.provenance_activities (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        command_type character varying(200) NOT NULL,
+        actor_id character varying(256) NOT NULL,
+        actor_kind character varying(32) NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        reason_for_change character varying(2000) NOT NULL,
+        idempotency_key character varying(200) NOT NULL,
+        outcome character varying(32) NOT NULL,
+        aggregate_type character varying(200),
+        aggregate_id character varying(200),
+        correlation_id uuid NOT NULL,
+        causation_id uuid,
+        CONSTRAINT "PK_provenance_activities" PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_audit_entries_activity_id" ON kernel.audit_entries (activity_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE UNIQUE INDEX "IX_audit_entries_tenant_id_sequence" ON kernel.audit_entries (tenant_id, sequence);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_domain_events_activity_id" ON kernel.domain_events (activity_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_domain_events_tenant_id_recorded" ON kernel.domain_events (tenant_id, recorded);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_outbox_messages_enqueued_at" ON kernel.outbox_messages (enqueued_at) WHERE dispatched_at IS NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE UNIQUE INDEX "IX_outbox_messages_event_id" ON kernel.outbox_messages (event_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_provenance_activities_correlation_id" ON kernel.provenance_activities (correlation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE INDEX "IX_provenance_activities_tenant_id_recorded_at" ON kernel.provenance_activities (tenant_id, recorded_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_insert_only() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    BEGIN
+        RAISE EXCEPTION 'K-AUDIT: %.% is insert-only; % is not allowed',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP USING ERRCODE = 'KA001';
+    END;
+    $fn$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TRIGGER "trg_audit_entries_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."audit_entries"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_audit_entries_no_truncate" BEFORE TRUNCATE ON "kernel"."audit_entries"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TRIGGER "trg_domain_events_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."domain_events"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_domain_events_no_truncate" BEFORE TRUNCATE ON "kernel"."domain_events"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TRIGGER "trg_provenance_activities_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."provenance_activities"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_provenance_activities_no_truncate" BEFORE TRUNCATE ON "kernel"."provenance_activities"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    CREATE TRIGGER "trg_idempotency_records_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."idempotency_records"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_idempotency_records_no_truncate" BEFORE TRUNCATE ON "kernel"."idempotency_records"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929223332_CommandPipeline') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260929223332_CommandPipeline', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

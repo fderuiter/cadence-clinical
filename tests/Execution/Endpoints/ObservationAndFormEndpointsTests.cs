@@ -126,16 +126,15 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor();
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, clock, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
         var request = new FormSubmissionCreateRequest(
             StudyId: "STUDY-001",
             SubjectId: "SUBJ-001",
             FormId: "FORM-VS",
-            Payload: "{\"vssbp\": 120}");
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}");
 
         var result = await FormEndpoints.CreateFormSubmissionAsync(request, svc, CancellationToken.None);
 
@@ -249,12 +248,11 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor();
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, clock, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new Apps.Execution.Domain.Subjects.StudyCode("STUDY-001"),
             subjectId: new Apps.Execution.Domain.Subjects.SubjectCode("SUBJ-001"),
@@ -290,12 +288,11 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor();
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, clock, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new Apps.Execution.Domain.Subjects.StudyCode("STUDY-001"),
             subjectId: new Apps.Execution.Domain.Subjects.SubjectCode("SUBJ-001"),
@@ -329,12 +326,11 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
         var audit = new FakeAuditContextAccessor(userId: "dm-01", reason: "Sponsor query correction");
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, clock, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
-        var payload = "{\"vssbp\": 120}";
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
             studyId: new Apps.Execution.Domain.Subjects.StudyCode("STUDY-001"),
             subjectId: new Apps.Execution.Domain.Subjects.SubjectCode("SUBJ-001"),

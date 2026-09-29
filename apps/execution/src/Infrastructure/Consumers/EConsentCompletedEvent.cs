@@ -11,7 +11,15 @@ namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 /// whitespace-only marks the whole event malformed; the consumer drops it silently rather than
 /// throwing or dead-lettering, matching the legacy subscriber's warning-log-only behavior exactly.
 /// Replaces <c>apps/execution/workers/consent_subscriber.py</c>'s untyped Redis message payload with a
-/// strongly-typed record.
+/// strongly-typed record. <see cref="SignedAt"/> is when the participant signed: the consent's valid time.
+/// An event without it is rejected to the error queue rather than recorded with the time it was processed
+/// (#4769).
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record EConsentCompletedEvent(string SubjectId, string StudyId, string? SiteId, string VersionTag, int VersionIndex);
+public sealed record EConsentCompletedEvent(
+    string SubjectId,
+    string StudyId,
+    string? SiteId,
+    string VersionTag,
+    int VersionIndex,
+    DateTimeOffset? SignedAt = null);
