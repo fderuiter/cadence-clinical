@@ -292,7 +292,7 @@ public sealed class CtmsBudgetLineItemConfiguration : IEntityTypeConfiguration<C
         builder.HasOne<CtmsInvestigatorGrant>()
             .WithMany()
             .HasForeignKey(x => x.GrantId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.GrantId);
     }
@@ -318,7 +318,7 @@ public sealed class CtmsPaymentMilestoneConfiguration : IEntityTypeConfiguration
         builder.HasOne<CtmsInvestigatorGrant>()
             .WithMany()
             .HasForeignKey(x => x.GrantId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.GrantId);
     }
@@ -367,7 +367,7 @@ public sealed class CtmsInvestigatorPayableConfiguration : IEntityTypeConfigurat
         builder.HasOne<CtmsInvestigatorGrant>()
             .WithMany()
             .HasForeignKey(x => x.GrantId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<CtmsPaymentMilestone>()
             .WithMany()

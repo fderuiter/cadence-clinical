@@ -297,6 +297,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
+- [2026-09-29: ADR-2258 Restrict Cascade Deletes onto Audit Trails and Regulated Child Records](2026-09-29-restrict-cascade-deletes-onto-audit-trails-and-regulated-children.md)
 
 ### 6. Frontend & Design System
 

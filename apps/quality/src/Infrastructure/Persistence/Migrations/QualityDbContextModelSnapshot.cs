@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Quality.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Quality.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(QualityDbContext))]
     partial class QualityDbContextModelSnapshot : ModelSnapshot
     {
@@ -344,7 +345,7 @@ namespace Cadence.Apps.Quality.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Quality.Domain.QualityDeviation", null)
                         .WithMany()
                         .HasForeignKey("DeviationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis", null)
@@ -358,9 +359,10 @@ namespace Cadence.Apps.Quality.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Quality.Domain.QualityDeviation", null)
                         .WithMany()
                         .HasForeignKey("DeviationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
     }
+}

@@ -16,6 +16,8 @@ using Cadence.Testing;
 
 using FluentAssertions;
 
+using Microsoft.EntityFrameworkCore;
+
 using Xunit;
 
 
@@ -175,6 +177,102 @@ public class ArchitectureSentinelTests
             .Should().NotContain(t => (t.Namespace ?? "").StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) ||
                                       (t.Namespace ?? "").StartsWith("MassTransit", StringComparison.Ordinal),
                 "ClinicalSubject signatures must remain completely pure of web or messaging infrastructure");
+    }
+
+    /// <summary>
+    /// Validates 21 CFR Part 11 § 11.10(e) / ALCOA+ audit-trail durability (#4764): no audit log, transition or
+    /// history entity in any service DbContext may be the dependent side of a cascading delete, because deleting
+    /// the regulated parent would then silently erase its audit trail. Every such relationship must use
+    /// <see cref="DeleteBehavior.Restrict"/> (or another non-cascading behaviour).
+    /// @req:PRD-SYS-001
+    /// </summary>
+    [Fact(DisplayName = "AuditTrailEntities_MustNotBe_DependentOfCascadeDelete")]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    public void AuditTrailEntitiesMustNotBeDependentOfCascadeDelete()
+    {
+        // Arrange
+        string[] auditTrailSuffixes = ["AuditLog", "Transition", "History"];
+        var dbContextTypes = ProductModuleAssemblies
+            .SelectMany(GetLoadableTypes)
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(DbContext).IsAssignableFrom(t))
+            .Distinct()
+            .ToList();
+
+        dbContextTypes.Select(t => t.Name).Should().Contain(
+            ["FileshareDbContext", "EtmfDbContext", "CtmsDbContext", "QualityDbContext"],
+            "the sentinel must inspect every service that persists regulated audit trails");
+
+        var auditTrailForeignKeysInspected = 0;
+        var violations = new List<string>();
+
+        // Act
+        foreach (var contextType in dbContextTypes)
+        {
+            using var context = CreateModelOnlyDbContext(contextType);
+            if (context is null)
+            {
+                continue;
+            }
+
+            foreach (var entityType in context.Model.GetEntityTypes())
+            {
+                var clrName = entityType.ClrType.Name;
+                if (!auditTrailSuffixes.Any(suffix => clrName.EndsWith(suffix, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                foreach (var foreignKey in entityType.GetForeignKeys())
+                {
+                    auditTrailForeignKeysInspected++;
+                    if (foreignKey.DeleteBehavior is DeleteBehavior.Cascade or DeleteBehavior.ClientCascade)
+                    {
+                        violations.Add(
+                            $"{contextType.Name}: {clrName} -> {foreignKey.PrincipalEntityType.ClrType.Name} " +
+                            $"({string.Join(", ", foreignKey.Properties.Select(p => p.Name))}) uses {foreignKey.DeleteBehavior}");
+                    }
+                }
+            }
+        }
+
+        // Assert
+        auditTrailForeignKeysInspected.Should().BeGreaterThan(0,
+            "the sentinel must find audit log / transition / history relationships to inspect");
+        string.Join(Environment.NewLine, violations).Should().BeEmpty(
+            "deleting a regulated parent must never cascade-delete its audit trail (21 CFR 11.10(e), ALCOA+); use DeleteBehavior.Restrict");
+    }
+
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            return ex.Types.OfType<Type>();
+        }
+    }
+
+    /// <summary>
+    /// Builds a service DbContext on the Npgsql provider purely to materialise its EF Core model; no connection is opened.
+    /// Returns null for contexts that do not expose the conventional single <c>DbContextOptions&lt;T&gt;</c> constructor.
+    /// </summary>
+    private static DbContext? CreateModelOnlyDbContext(Type contextType)
+    {
+        var optionsType = typeof(DbContextOptions<>).MakeGenericType(contextType);
+        var constructor = contextType.GetConstructor([optionsType]);
+        if (constructor is null)
+        {
+            return null;
+        }
+
+        var optionsBuilder = (DbContextOptionsBuilder)Activator.CreateInstance(
+            typeof(DbContextOptionsBuilder<>).MakeGenericType(contextType))!;
+        optionsBuilder.UseNpgsql("Host=localhost;Database=cadence_model_only");
+
+        return (DbContext)constructor.Invoke([optionsBuilder.Options]);
     }
 
     private static readonly Assembly[] ProductModuleAssemblies =
