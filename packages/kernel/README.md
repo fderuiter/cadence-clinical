@@ -24,6 +24,27 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/Kern
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
 
+## Bitemporal tables (ADR-2246)
+
+A bitemporal entity implements `IBitemporalEntity` (`TemporalPeriod Period`, made of two half-open `TimeRange`s).
+To persist one:
+
+1. Map it with `builder.HasBitemporalPeriod()` in its `IEntityTypeConfiguration`. This stores `Period.Valid` and
+   `Period.Recorded` as `valid_period` / `recorded_period` `tstzrange` columns.
+2. In the migration that creates the table, call
+   `migrationBuilder.CreateBitemporalGuards(KernelDbContext.Schema, "<table>", "<entity key column>", ...)` after
+   `CreateTable` (and `DropBitemporalGuards` in `Down`). This adds:
+   - **K-TIME-2:** a deferred `EXCLUDE USING gist (tenant_id WITH =, <keys> WITH =, valid_period WITH &&,
+     recorded_period WITH &&)`, so two versions of one fact can never both be true and known at the same instant.
+     Because it is deferred, a correction can close the old row and insert the new one in the same save.
+   - **K-TIME-1:** triggers that reject `DELETE`, `TRUNCATE` and any `UPDATE` other than closing an open
+     `recorded_period` at a later instant (SQLSTATE `KT001`).
+3. Read with `AsOf(validAt, knownAt)` / `AsOfCurrent(now)`. They translate to `valid_period @> @validAt AND
+   recorded_period @> @knownAt`, which the GiST index serves. `TimeRange.Contains`/`Overlaps`/`Start`/`End`/`IsOpen`
+   translate to `@>`, `&&`, `lower`, `upper` and `upper_inf` in any kernel query.
+
+`KernelSchemaPostgresTests` fails if a mapped bitemporal table is missing its guards.
+
 ## Migrations
 
 ```bash

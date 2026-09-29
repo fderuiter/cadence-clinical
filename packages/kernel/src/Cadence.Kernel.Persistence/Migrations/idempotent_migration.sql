@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -244,6 +244,60 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929191437_InitialKernelIdentity') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260929191437_InitialKernelIdentity', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+        IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
+            CREATE SCHEMA kernel;
+        END IF;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    CREATE EXTENSION IF NOT EXISTS btree_gist;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_bitemporal_append_only() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    BEGIN
+        IF TG_OP IN ('DELETE', 'TRUNCATE') THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% is bitemporal and append-only; % is not allowed',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP USING ERRCODE = 'KT001';
+        END IF;
+        IF (to_jsonb(NEW) - 'recorded_period' - 'version_index') IS DISTINCT FROM (to_jsonb(OLD) - 'recorded_period' - 'version_index') THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% rows are never updated; record a new row and close recorded_period instead',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME USING ERRCODE = 'KT001';
+        END IF;
+        IF NOT upper_inf(OLD.recorded_period)
+            OR upper_inf(NEW.recorded_period)
+            OR isempty(NEW.recorded_period)
+            OR lower(NEW.recorded_period) IS DISTINCT FROM lower(OLD.recorded_period) THEN
+            RAISE EXCEPTION 'K-TIME-1: %.% may only close an open recorded_period at a later instant',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME USING ERRCODE = 'KT001';
+        END IF;
+        RETURN NEW;
+    END;
+    $fn$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929195617_BitemporalFoundation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260929195617_BitemporalFoundation', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

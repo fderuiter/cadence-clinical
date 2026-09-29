@@ -12,6 +12,7 @@ public static class BitemporalQueryExtensions
 {
     /// <summary>
     /// Filters an IQueryable sequence of bitemporal entities to those effective as of the specified dual coordinates (validAt, knownAt).
+    /// Against the kernel database this is <c>valid_period @&gt; validAt AND recorded_period @&gt; knownAt</c>.
     /// </summary>
     public static IQueryable<T> AsOf<T>(
         this IQueryable<T> query,
@@ -19,11 +20,7 @@ public static class BitemporalQueryExtensions
         DateTimeOffset knownAt)
         where T : class, IBitemporalEntity
     {
-        return query.Where(e =>
-            e.Period.ValidFrom <= validAt &&
-            (!e.Period.ValidTo.HasValue || e.Period.ValidTo.Value > validAt) &&
-            e.Period.RecordedFrom <= knownAt &&
-            (!e.Period.RecordedTo.HasValue || e.Period.RecordedTo.Value > knownAt));
+        return query.Where(e => e.Period.Valid.Contains(validAt) && e.Period.Recorded.Contains(knownAt));
     }
 
     /// <summary>
@@ -46,9 +43,7 @@ public static class BitemporalQueryExtensions
         DateTimeOffset now)
         where T : class, IBitemporalEntity
     {
-        return query.Where(e =>
-            !e.Period.RecordedTo.HasValue &&
-            (!e.Period.ValidTo.HasValue || e.Period.ValidTo.Value > now));
+        return query.Where(e => e.Period.Recorded.IsOpen && (e.Period.Valid.IsOpen || e.Period.Valid.End > now));
     }
 
     /// <summary>

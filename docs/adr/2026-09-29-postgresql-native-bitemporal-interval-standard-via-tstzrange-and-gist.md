@@ -63,3 +63,13 @@ Standard relational models use simple `created_at` / `updated_at` columns or ove
 - **Verification Plan:**
   - Property-based tests verifying concurrent correction insertions never create overlapping valid intervals.
   - Acceptance tests validating historical observation reconstructions and amendment effectivity as of `(t, known_at)`.
+- **Implementation status (#4773):**
+  - Domain: `TimeRange` is a half-open `[start, end)` UTC interval, and `TemporalPeriod` is `(Valid, Recorded)`. Neither type references Npgsql.
+  - `Cadence.Kernel.Persistence/Bitemporal/`:
+    - `HasBitemporalPeriod()` maps both ranges to `tstzrange` columns.
+    - An EF query translator turns `TimeRange.Contains`/`Overlaps` into `@>`/`&&`, so `AsOf` runs as index-backed range containment.
+    - `CreateBitemporalGuards(...)` adds the K-TIME-2 exclusion constraint and the K-TIME-1 append-only triggers.
+  - The exclusion constraint follows spec §4.1 K-TIME-2 rather than the partial-index example in Option 1. It rejects overlapping `(tenant, entity, valid, recorded)` rectangles, so closed history rows are protected too. It is `DEFERRABLE INITIALLY DEFERRED`, so a correction's close-and-insert pair can be saved in one transaction in either order.
+  - The `BitemporalFoundation` migration enables `btree_gist` and creates `kernel.enforce_bitemporal_append_only()`.
+  - Each bitemporal table adds its guards in the migration that creates it. The first is Observation (#4729).
+  - Verified against PostgreSQL 16 by `tests/Kernel/Integration/BitemporalPostgresTests.cs`, covering overlap rejection, correction plus `AsOf` reconstruction, and append-only enforcement.
