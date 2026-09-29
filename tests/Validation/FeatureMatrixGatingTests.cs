@@ -31,11 +31,8 @@ public class FeatureMatrixGatingTests
 
     /// <summary>
     /// Test that the actual FEATURE_MATRIX.md correctly validates and exists.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "FeatureMatrixValidationSuccess")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestFeatureMatrixValidationSuccess()
     {
@@ -50,11 +47,8 @@ public class FeatureMatrixGatingTests
 
     /// <summary>
     /// Test that missing services in a feature matrix trigger validation failure.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "FeatureMatrixValidationMissingService")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestFeatureMatrixValidationMissingService()
     {
@@ -67,11 +61,8 @@ public class FeatureMatrixGatingTests
 
     /// <summary>
     /// Test that helper/infrastructure services are ignored in feature matrix checks.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "FeatureMatrixValidationIgnoringHelperAndExcludedServices")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestFeatureMatrixValidationIgnoringHelperAndExcludedServices()
     {

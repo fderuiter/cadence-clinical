@@ -32,11 +32,9 @@ public class BitemporalPersistenceTests
     /// <summary>
     /// Validates that <see cref="TimeRange"/> is half-open like <c>tstzrange '[)'</c>: the start is included, the end
     /// is not, an open range contains every later instant, and ranges touching at a bound do not overlap.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TimeRange_IsHalfOpen_LikeTstzrange")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TimeRangeIsHalfOpenLikeTstzrange()
     {
         var closed = new TimeRange(T0, T1);
@@ -60,11 +58,9 @@ public class BitemporalPersistenceTests
     /// <summary>
     /// Validates that ranges are normalised to UTC, so a local-offset instant equals the same UTC instant and is
     /// accepted by Npgsql for <c>timestamptz</c>.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TimeRange_NormalisesToUtc")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TimeRangeNormalisesToUtc()
     {
         var local = new DateTimeOffset(2026, 9, 1, 11, 0, 0, TimeSpan.FromHours(2));
@@ -78,11 +74,9 @@ public class BitemporalPersistenceTests
     /// <summary>
     /// Validates the <c>tstzrange</c> converter: closed ranges map to <c>[start,end)</c> and open ranges to an infinite
     /// upper bound, and both round-trip.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TimeRangeValueConverter_RoundTrips_ClosedAndOpenRanges")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void TimeRangeValueConverterRoundTripsClosedAndOpenRanges()
     {
         var closed = TimeRangeValueConverter.ToProvider(new TimeRange(T0, T1));
@@ -100,11 +94,9 @@ public class BitemporalPersistenceTests
     /// Validates that <c>AsOf</c> runs in the database as index-friendly range containment
     /// (<c>valid_period @&gt; @validAt AND recorded_period @&gt; @knownAt</c>) and that <c>AsOfCurrent</c> uses
     /// <c>upper_inf</c>/<c>upper</c>, rather than evaluating on the client.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AsOf_TranslatesToRangeContainment_InSql")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AsOfTranslatesToRangeContainmentInSql()
     {
         using var context = ProbeDbContext.Create("Host=localhost;Database=translation_only");
@@ -119,11 +111,9 @@ public class BitemporalPersistenceTests
     /// <summary>
     /// Validates the K-TIME-1/K-TIME-2 guard DDL: tenant first in a deferred GiST exclusion, row and truncate triggers,
     /// and refusal of identifiers that are not plain snake_case.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "BitemporalSql_Guards_ExcludeOverlapsPerTenantAndKey_AndRejectUnsafeIdentifiers")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void BitemporalSqlGuardsExcludeOverlapsPerTenantAndKeyAndRejectUnsafeIdentifiers()
     {
         var sql = BitemporalSql.CreateGuards(KernelDbContext.Schema, "observations", "participant_id", "concept_id");
@@ -141,11 +131,9 @@ public class BitemporalPersistenceTests
 
     /// <summary>
     /// Validates that the kernel model enables <c>btree_gist</c>, which the exclusion constraints require.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_EnablesBtreeGist")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextEnablesBtreeGist()
     {
         using var context = new KernelDbContextDesignTimeFactory().CreateDbContext([]);

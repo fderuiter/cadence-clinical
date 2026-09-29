@@ -18,10 +18,8 @@ public class ComplianceUnitTests
 {
     /// <summary>
     /// Validates that Pkcs7Signer generates valid cryptographic signatures verified by ESignatureVerifier.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void Pkcs7Signer_GeneratesValidSignature_PassesESignatureVerifier()
     {
         var (cert, key) = Pkcs7Signer.GenerateSigningCredentials("investigator-01");
@@ -39,10 +37,8 @@ public class ComplianceUnitTests
 
     /// <summary>
     /// Validates that Pkcs7Signer.ComputeDetachedSignature creates a non-empty PKCS7 CMS DER structure.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void Pkcs7Signer_ComputeDetachedSignature_ReturnsValidPkcs7CmsDer()
     {
         var (cert, key) = Pkcs7Signer.GenerateSigningCredentials("investigator-01");
@@ -57,10 +53,8 @@ public class ComplianceUnitTests
 
     /// <summary>
     /// Validates that GxPSigner.SignGxpMarkdown generates real cryptographic PKCS7 detached signatures.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void GxPSigner_SignGxpMarkdown_GeneratesValidSignature_NotDummy()
     {
         var markdownContent = "# Qualification Test Document\n\nAll automated unit tests passed successfully.";
@@ -85,10 +79,8 @@ public class ComplianceUnitTests
 
     /// <summary>
     /// Validates that ESignatureVerifier rejects markdown documents where body text was modified post-signature.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void ESignatureVerifier_DetectsTamperedMarkdownBody()
     {
         var markdownContent = "Original Unmodified Clinical Document";
@@ -142,10 +134,8 @@ public class ComplianceUnitTests
 
     /// <summary>
     /// Validates that PhiRedactorService redacts custom terms and auto-detected PHI like emails and phone numbers.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void PhiRedactorService_RedactsConfiguredTermsAndAutoDetectedPhi()
     {
         var service = new PhiRedactorService();

@@ -20,7 +20,6 @@ namespace Cadence.UnitTests.Packages;
 /// <summary>
 /// #4763: template endpoints render only allow-listed templates from their own module, and parsed
 /// templates are cached per owning assembly.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class TemplateCatalogTests
 {
@@ -42,7 +41,6 @@ public sealed class TemplateCatalogTests
     [InlineData("CONFIRMATION_LETTER")]
     [InlineData("")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CtmsLetterEndpoint_RejectsAnythingOutsideItsAllowList(string templateName)
     {
         var result = await LetterTemplateEndpoints.RenderLetterAsync(templateName, Letter, FluidTemplateRenderer.Instance);
@@ -54,7 +52,6 @@ public sealed class TemplateCatalogTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CtmsLetterEndpoint_RendersAnAllowedLetter()
     {
         var result = await LetterTemplateEndpoints.RenderLetterAsync("confirmation_letter", Letter, FluidTemplateRenderer.Instance);
@@ -67,7 +64,6 @@ public sealed class TemplateCatalogTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task Renderer_RejectsKeysOutsideTheCatalog()
     {
         var act = async () => await FluidTemplateRenderer.Instance.RenderAsync(UsdmCompiler.Templates, "confirmation_letter", Letter);
@@ -77,7 +73,6 @@ public sealed class TemplateCatalogTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void Catalog_OnlyResolvesTemplatesEmbeddedInItsOwnAssembly()
     {
         var act = () => new TemplateCatalog(
@@ -89,7 +84,6 @@ public sealed class TemplateCatalogTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task SameKeyInTwoModules_RendersEachModulesOwnTemplate()
     {
         var ctms = new TemplateCatalog(

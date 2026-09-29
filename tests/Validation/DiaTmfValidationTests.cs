@@ -30,11 +30,8 @@ public class DiaTmfValidationTests
 
     /// <summary>
     /// Verifies catalog cross-version schema and structure integrity.
-    /// @req:PRD-TMF-001
     /// </summary>
     [Fact(DisplayName = "CatalogCrossVersionIntegrity")]
-    [GxPRequirement("PRD-TMF-001")]
-    [Trait("Requirement", "PRD-TMF-001")]
     [Trait("Category", "Validation")]
     public void TestCatalogCrossVersionIntegrity()
     {
@@ -48,14 +45,8 @@ public class DiaTmfValidationTests
 
     /// <summary>
     /// Verifies site-level classification drift prevention.
-    /// @req:PRD-TMF-001
-    /// @req:PRD-TMF-003
     /// </summary>
     [Fact(DisplayName = "SiteLevelClassificationDrift")]
-    [GxPRequirement("PRD-TMF-001")]
-    [GxPRequirement("PRD-TMF-003")]
-    [Trait("Requirement", "PRD-TMF-001")]
-    [Trait("Requirement", "PRD-TMF-003")]
     [Trait("Category", "Validation")]
     public void TestSiteLevelClassificationDrift()
     {
@@ -66,11 +57,8 @@ public class DiaTmfValidationTests
 
     /// <summary>
     /// Verifies mandatory artifact rules for milestone progression.
-    /// @req:PRD-TMF-004
     /// </summary>
     [Fact(DisplayName = "MilestoneMandatoryArtifacts")]
-    [GxPRequirement("PRD-TMF-004")]
-    [Trait("Requirement", "PRD-TMF-004")]
     [Trait("Category", "Validation")]
     public void TestMilestoneMandatoryArtifacts()
     {

@@ -35,7 +35,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// enroll-then-insert transaction *scoping*, not a substitute for MIG-SUBJ-028's own Testcontainers-backed
 /// Postgres integration test (which remains the authoritative proof of the actual `pg_advisory_xact_lock`
 /// cross-study non-blocking behavior against the real target database).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectRepositoryTests
 {
@@ -76,7 +75,6 @@ public class SubjectRepositoryTests
     // ---- EnrollNextIndexAsync: sequential index assignment (single-caller) -------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EnrollNextIndexAsync_GivenEmptyStudy_ReturnsZero()
     {
         string path = await CreateSchemaAsync();
@@ -94,7 +92,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EnrollNextIndexAsync_GivenStudyWithSubjectsAtIndicesZeroOneTwo_ReturnsThree()
     {
         string path = await CreateSchemaAsync();
@@ -124,7 +121,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EnrollNextIndexAsync_ThenAddAsyncThenSaveChangesAsync_PersistsSubjectAtComputedIndexAndCommitsTransaction()
     {
         // Single-caller structural smoke test: the transaction EnrollNextIndexAsync opens and leaves pending
@@ -153,7 +149,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EnrollNextIndexAsync_CalledTwiceSequentiallyOnSameRepository_ProducesDistinctSequentialIndices()
     {
         string path = await CreateSchemaAsync();
@@ -185,7 +180,6 @@ public class SubjectRepositoryTests
     // ---- EnrollNextIndexAsync: genuine parallel concurrency ------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EnrollNextIndexAsync_GivenNParallelCallersForSameStudy_YieldsDistinctSequentialIndicesWithNoDuplicatesOrGaps()
     {
         const int callerCount = 8;
@@ -227,7 +221,6 @@ public class SubjectRepositoryTests
     // ---- Advisory lock key derivation (unit-level -- Postgres itself cannot be exercised here) --------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void AdvisoryLockSql_ForStudy_UsesTheSameParameterizedSqlTemplateRegardlessOfStudyCode()
     {
         var sqlForA = AdvisoryLockSql.ForStudy(StudyA);
@@ -238,7 +231,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void AdvisoryLockSql_ForStudy_DerivesItsLockKeyFromTheStudyCodeNotAGlobalConstant()
     {
         var sqlForA = AdvisoryLockSql.ForStudy(StudyA);
@@ -257,7 +249,6 @@ public class SubjectRepositoryTests
     // ---- GetByIdAsync / GetByCodeAsync: dual-lookup method isolation -----------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByIdAsync_GivenNoMatchingRow_ReturnsNull()
     {
         string path = await CreateSchemaAsync();
@@ -275,7 +266,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByIdAsync_GivenMalformedIdString_ReturnsNullWithoutThrowing()
     {
         string path = await CreateSchemaAsync();
@@ -293,7 +283,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByIdAsync_GivenMatchingSurrogateId_ReturnsTheSubjectTracked()
     {
         string path = await CreateSchemaAsync();
@@ -324,7 +313,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByCodeAsync_GivenNoMatchingRow_ReturnsNull()
     {
         string path = await CreateSchemaAsync();
@@ -342,7 +330,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByCodeAsync_GivenMatchingSubjectCode_ReturnsTheSubjectTracked()
     {
         string path = await CreateSchemaAsync();
@@ -371,7 +358,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByIdAsync_GivenAStringThatIsOnlyValidAsACodeNotAGuid_DoesNotFallBackToCodeLookup()
     {
         // Proves method isolation (the ticket's explicit requirement): GetByIdAsync never internally tries
@@ -398,7 +384,6 @@ public class SubjectRepositoryTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetByCodeAsync_GivenAValidSurrogateIdStringThatIsNotAKnownCode_DoesNotFallBackToIdLookup()
     {
         string path = await CreateSchemaAsync();

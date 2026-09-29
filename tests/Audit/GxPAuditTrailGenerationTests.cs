@@ -24,14 +24,13 @@ namespace Cadence.UnitTests.Audit;
 /// <summary>
 /// Automated xUnit test suite verifying GxP 21 CFR Part 11 audit trail generation and SHA-256 Merkle block chaining
 /// across CTMS, eTMF, Quality, and Fileshare microservice DbContexts.
-/// @req:PRD-SYS-053
 /// </summary>
 public class GxPAuditTrailGenerationTests
 {
     private static readonly string TestUser = "compliance.auditor@cadence.clinical";
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -84,7 +83,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -124,7 +123,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -162,7 +161,7 @@ public class GxPAuditTrailGenerationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries()
     {
         // Arrange
@@ -200,7 +199,7 @@ public class GxPAuditTrailGenerationTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting()
     {
         // #4767: a write whose actor cannot be resolved must fail, never be recorded against a default.
@@ -228,7 +227,6 @@ public class GxPAuditTrailGenerationTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor()
     {
         // Saves with nothing to audit (e.g. outbox bookkeeping in a background scope) must not demand an actor.

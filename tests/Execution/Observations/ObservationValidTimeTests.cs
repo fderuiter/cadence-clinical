@@ -23,7 +23,6 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// <summary>
 /// An observation's valid time is when it was made, supplied by the caller or the form payload. It is never
 /// defaulted to the time the server records it (#4769, kernel §4.1 two clocks).
-/// @req:PRD-SYS-001
 /// @req:SRS-EDC-001
 /// </summary>
 public sealed class ObservationValidTimeTests
@@ -60,7 +59,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
     public void Create_WithoutAValidTime_IsRejected()
     {
         var result = ClinicalObservation.Create(
@@ -73,7 +71,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task CreateObservation_WithoutObservationDate_IsRejectedAndNothingIsStored()
     {
         var repository = new InMemoryObservationRepository();
@@ -87,7 +84,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task CreateObservation_KeepsTheCallersValidTime_NotTheRecordedTime()
     {
         var repository = new InMemoryObservationRepository();
@@ -100,7 +96,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormPayload_WithFieldsButNoObservationDate_IsRejected()
     {
         var observations = new InMemoryObservationRepository();
@@ -117,7 +112,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormPayload_WithAnInvalidObservationDate_IsRejected()
     {
         var result = await FormService(new InMemoryObservationRepository()).CreateAsync(
@@ -131,7 +125,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormPayload_KeyValueFields_TakeThePayloadsObservationDate()
     {
         var observations = new InMemoryObservationRepository();
@@ -149,7 +142,6 @@ public sealed class ObservationValidTimeTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormPayload_StructuredItems_UseTheirOwnDateOverThePayloads()
     {
         var observations = new InMemoryObservationRepository();

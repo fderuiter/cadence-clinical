@@ -72,10 +72,8 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// <summary>
     /// Validates that the kernel migrations install <c>btree_gist</c> and the shared K-TIME-1 trigger function, and that
     /// the guard helper produces what the kernel-wide guard check expects.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "BitemporalFoundation_Migration_InstallsBtreeGist_AndAppendOnlyFunction")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task BitemporalFoundationMigrationInstallsBtreeGistAndAppendOnlyFunction()
     {
         await using var context = NewContext();
@@ -93,10 +91,8 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
 
     /// <summary>
     /// Validates that periods round-trip through <c>tstzrange</c> columns, open upper bounds included.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Bitemporal_Periods_RoundTripThroughTstzrange")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task BitemporalPeriodsRoundTripThroughTstzrange()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -119,10 +115,8 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// <summary>
     /// Validates spec §14 correction semantics: a correction closes the old row and inserts the new one in one save,
     /// and <c>AsOf</c> (range containment in SQL) returns the pre-correction value for an earlier <c>knownAt</c>.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Bitemporal_Correction_ClosesOldRow_AndAsOfReconstructsEachKnownAt")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task BitemporalCorrectionClosesOldRowAndAsOfReconstructsEachKnownAt()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -155,10 +149,8 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// <summary>
     /// Validates K-TIME-2: a second open row for the same tenant and entity key overlapping in valid and recorded time
     /// is rejected by the database, while the same key in another tenant is accepted.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Bitemporal_OverlappingInsert_IsRejectedByExclusionConstraint")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task BitemporalOverlappingInsertIsRejectedByExclusionConstraint()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -180,10 +172,8 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     /// <summary>
     /// Validates K-TIME-1: changing a value, reopening or moving a closed recorded period, and deleting or truncating
     /// are all rejected by the database.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Bitemporal_Rows_AreAppendOnly_ExceptClosingRecordedPeriod")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task BitemporalRowsAreAppendOnlyExceptClosingRecordedPeriod()
     {
         var ct = TestContext.Current.CancellationToken;

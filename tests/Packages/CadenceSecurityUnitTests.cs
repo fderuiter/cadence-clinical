@@ -29,7 +29,6 @@ public class CadenceSecurityUnitTests
     private const string TestSecret = "test-secret-key-32-chars-long-1234567890";
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void RoleNormalization_MapsAliasesToCanonicalNames()
     {
         RoleNormalization.NormalizeRole("site investigator").Should().Be("investigator");
@@ -48,7 +47,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void PermissionMatrix_EvaluatesResourceActionPermissions()
     {
         var principal = new Principal
@@ -72,7 +70,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SiteAccessEvaluator_EnforcesFailClosedSiteScopedLogic()
     {
         // Fail-closed: site-scoped user with no assigned sites is denied
@@ -105,7 +102,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void StudyAccessEvaluator_RestrictsStudyScopedUsers()
     {
         var externalMonitor = new Principal
@@ -128,7 +124,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditorPersona_RestrictedToReadOnlyAccess()
     {
         var middleware = new AuditorWriteGuardMiddleware();
@@ -167,7 +162,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void HmacSigner_GeneratesAndVerifiesGatewaySignatures()
     {
         byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
@@ -214,7 +208,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay()
     {
         byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
@@ -243,7 +236,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AuditDigestEngine_GeneratesMerkleChain_AndVerifiesIntegrity()
     {
         var store = new InMemoryAuditStore();
@@ -280,7 +272,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void FieldMasker_ObfuscatesBlindedFields_AndUnmasksRtsmRoles()
     {
         var payload = new Dictionary<string, object?>
@@ -332,7 +323,6 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void DependencyInjection_RegistersCadenceSecurityServices()
     {
         var services = new ServiceCollection();

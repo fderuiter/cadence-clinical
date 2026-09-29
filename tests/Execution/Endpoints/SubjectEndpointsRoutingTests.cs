@@ -51,7 +51,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// and the blinded-role-claim-to-<c>isBlindedCaller</c> wiring check (a caller-principal concern entirely
 /// internal to the handler body, independent of route/filter registration).
 /// </para>
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class SubjectEndpointsRoutingTests : IDisposable
 {
@@ -73,7 +72,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateSubject_GivenValidRequest_Returns201WithLocationHeaderPointingAtCanonicalRoute()
     {
         _factory.Service.CreateResult = Result<SubjectResponse>.Success(
@@ -90,7 +88,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateSubject_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService()
     {
         // Empty subject_id fails SubjectCreateRequestValidator's NotEmpty() rule -- ValidationFilter<T> must
@@ -107,7 +104,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsent_GivenValidRequest_Returns200WithConsentResponseBody()
     {
         var request = new SubjectConsentRequest(new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true, IcfSignedDate: null);
@@ -122,7 +118,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsent_GivenSubjectNotFound_Returns404WithStandardizedDetail()
     {
         _factory.Service.RecordConsentResult = SubjectErrors.NotFound("SUBJ-404");
@@ -134,7 +129,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsent_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService()
     {
         // Missing protocol_version entirely fails SubjectConsentRequestValidator's NotNull() rule.
@@ -146,7 +140,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsentAlias_GivenValidRequest_BehavesIdenticallyToTheCanonicalConsentRoute()
     {
         var request = new SubjectConsentRequest(new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true, IcfSignedDate: null);
@@ -158,7 +151,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsentAlias_GivenInvalidRequest_AlsoShortCircuitsWith400_MatchingTheCanonicalRoute()
     {
         // The alias applies the same ValidationFilter<SubjectConsentRequest> as /consent (see
@@ -172,7 +164,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsentAlias_IsExcludedFromGeneratedOpenApiDocument_WhileCanonicalRouteIsIncluded()
     {
         var response = await _client.GetAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
@@ -193,7 +184,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UpdateSubjectState_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService()
     {
         var request = new SubjectStateUpdateRequest("ENROLLED", null);
@@ -205,7 +195,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UpdateSubjectState_GivenWhitespaceOnlyChangeReasonHeader_Returns400AndNeverInvokesApplicationService()
     {
         var request = new SubjectStateUpdateRequest("ENROLLED", null);
@@ -217,7 +206,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectState_GivenValidRequestAndHeader_Returns200AndThreadsTheHeaderValueThrough()
     {
         var request = new SubjectStateUpdateRequest("ENROLLED", null);
@@ -231,7 +219,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectState_GivenInvalidBody_ShortCircuitsWith400AndNeverInvokesApplicationService()
     {
         // Neither `status` nor `state` supplied -- fails SubjectStateUpdateRequestValidator's Must() rule.
@@ -245,7 +232,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectState_GivenSubjectNotFound_Returns404WithStandardizedDetail()
     {
         _factory.Service.AdvanceStateResult = SubjectErrors.NotFound("SUBJ-404");
@@ -262,7 +248,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSubjectDetail_GivenValidRequest_Returns200WithDetailBody()
     {
         var response = await _client.GetAsync("/api/v1/execution/subjects/SUBJ-001", TestContext.Current.CancellationToken);
@@ -275,7 +260,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSubjectDetail_GivenSubjectNotFound_Returns404WithStandardizedDetail()
     {
         _factory.Service.GetDetailResult = SubjectErrors.NotFound("SUBJ-404");
@@ -296,7 +280,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     /// registration in <see cref="SubjectEndpointsTestFactory"/> purely to inject one test principal.
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSubjectDetailAsync_GivenCallerWithBlindedRoleClaim_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull()
     {
         var service = new FakeSubjectApplicationService();
@@ -318,7 +301,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSubjectDetailAsync_GivenCallerWithoutBlindedRoleClaim_ResolvesIsBlindedCallerFalse_AndDoesNotRedact()
     {
         // The meaningful half of the matrix above -- proves the wiring actually branches on the claim,
@@ -346,7 +328,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UpdateSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService()
     {
         var request = new SubjectDemographicsUpdateRequest(null, null);
@@ -358,7 +339,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectDemographics_GivenValidRequestAndHeader_Returns200()
     {
         var request = new SubjectDemographicsUpdateRequest(new DemographicsPayload("Jane Doe", "1990-01-01", "F", null), null);
@@ -372,7 +352,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail()
     {
         _factory.Service.UpdateDemographicsResult = SubjectErrors.NotFound("SUBJ-404");
@@ -389,7 +368,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task DeleteSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService()
     {
         // Closes MIG-SUBJ-022's noted "!"-safety gap: this route did not exist before this ticket, so this
@@ -401,7 +379,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteSubjectDemographics_GivenValidRequestAndHeader_Returns200()
     {
         var response = await SendAsync(HttpMethod.Delete, "/api/v1/execution/subjects/SUBJ-001/demographics", // pragma: allowlist secret
@@ -413,7 +390,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail()
     {
         _factory.Service.DeleteDemographicsResult = SubjectErrors.NotFound("SUBJ-404");
@@ -433,7 +409,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task CreateSubjectAsync_GivenPreCancelledToken_ThrowsOperationCanceledExceptionRatherThanCompleting()
     {
         var service = new FakeSubjectApplicationService();
@@ -447,7 +422,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task RecordSubjectConsentAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();
@@ -461,7 +435,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceSubjectStateAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();
@@ -477,7 +450,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetSubjectDetailAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();
@@ -491,7 +463,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task UpdateSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();
@@ -507,7 +478,6 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task DeleteSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -23,30 +23,68 @@ public class TestMappingInfo
 {
     public string File { get; set; } = string.Empty;
     public string TestName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
     public int Line { get; set; }
-}
-
-public class TestCaseInfo
-{
-    public string File { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public List<string> Tags { get; set; } = [];
 }
 
 public class TestResultInfo
 {
-    public string Status { get; set; } = "UNTESTED";
+    public string Status { get; set; } = TestStatus.NotRun;
     public string Message { get; set; } = string.Empty;
     public string Time { get; set; } = "0.0";
 }
 
+/// <summary>Outcome of a test as recorded in the TRX results.</summary>
+public static class TestStatus
+{
+    public const string Passed = "PASSED";
+    public const string Failed = "FAILED";
+    public const string Skipped = "SKIPPED";
+
+    /// <summary>The test exists in source but has no result in any TRX file.</summary>
+    public const string NotRun = "NOT RUN";
+
+    /// <summary>Draft mode: no TRX results were supplied at all.</summary>
+    public const string Unverified = "UNVERIFIED";
+}
+
+/// <summary>Verification state of one requirement.</summary>
+public enum RequirementState
+{
+    /// <summary>At least one mapped test passed and none failed.</summary>
+    Qualified,
+
+    /// <summary>At least one mapped test failed.</summary>
+    Failed,
+
+    /// <summary>Tests are mapped but none of them passed (skipped, not run, or no results in draft mode).</summary>
+    NotVerified,
+
+    /// <summary>No test declares this requirement.</summary>
+    Planned,
+}
+
+/// <summary>
+/// Generates the Requirements Traceability Matrix and the IQ/OQ/PQ execution report from the requirement
+/// documents, the requirement tags on test methods (<see cref="RequirementTagScanner"/>) and TRX results.
+/// A requirement is reported as qualified only when a test that declares it actually ran and passed.
+/// </summary>
 public static class RtmGeneratorService
 {
     public const string StableTimestamp = "2026-07-23 22:38:25 UTC";
 
+    /// <summary>Directories scanned for test methods. Tests only live under <c>tests/</c>.</summary>
+    public static readonly string[] TestSearchDirs = ["tests"];
+
+    /// <summary>
+    /// Where <c>dotnet cadence gxp sync</c> writes one TRX file per test project (gitignored).
+    /// <see cref="GenerateRtm"/> reads every <c>*.trx</c> file under it.
+    /// </summary>
+    public const string DefaultResultsDir = "TestResults/gxp";
+
     public static int GenerateRtm(
         string outputDir = "docs/SDLC",
-        string reportPath = "report_dotnet.trx",
+        string reportPath = DefaultResultsDir,
         bool draft = false,
         bool validateOnly = false,
         bool dynamicTimestamp = false,
@@ -62,7 +100,103 @@ public static class RtmGeneratorService
             draft = true;
         }
 
-        // 1. Parse Requirements
+        // 1. Requirements
+        var allRequirements = LoadRequirements(repoRoot);
+
+        // 2. Tests and the requirements they declare
+        var tests = RequirementTagScanner.ScanDirectories(repoRoot, TestSearchDirs);
+        var testMappings = BuildMappings(tests);
+
+        // Legacy and SRS aliases inherit their parent's tests for display; a tag on an alias never
+        // qualifies the parent requirement.
+        foreach (var alias in allRequirements.Values.Where(r => !string.IsNullOrEmpty(r.ParentPrdId)))
+        {
+            if (!testMappings.ContainsKey(alias.Id) && testMappings.TryGetValue(alias.ParentPrdId!, out var parentTests))
+            {
+                testMappings[alias.Id] = [.. parentTests];
+            }
+        }
+
+        // 3. Results
+        string fullReportPath = Path.IsPathRooted(reportPath) ? reportPath : Path.Combine(repoRoot, reportPath);
+        var testResults = ParseTestResults(repoRoot, fullReportPath);
+        bool hasResults = testResults.Count > 0;
+
+        if (!hasResults && !draft && !validateOnly)
+        {
+            Console.WriteLine($"[RTM ERROR] No test results found at {fullReportPath}. Run `dotnet cadence gxp sync`, or pass --draft for an unverified draft.");
+            return 1;
+        }
+
+        if (!hasResults && draft)
+        {
+            foreach (var test in tests)
+            {
+                testResults[test.FullName] = new TestResultInfo { Status = TestStatus.Unverified, Message = "Missing test report." };
+            }
+        }
+
+        var unknownTags = FindUnknownTags(tests, allRequirements);
+
+        string timestamp = dynamicTimestamp
+            ? DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)
+            : StableTimestamp;
+
+        if (!validateOnly)
+        {
+            string rtmOut = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
+            GenerateRtmMarkdown(allRequirements, testMappings, testResults, unknownTags, rtmOut, timestamp, draft);
+
+            string qualOut = Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md");
+            GenerateQualificationReport(allRequirements, testMappings, tests, testResults, qualOut, timestamp, draft);
+            return 0;
+        }
+
+        // Validate-only runs are side-effect free: the checked-in GxP documents are only ever
+        // regenerated through the sync tooling, never as a by-product of a validation pass.
+        int exitCode = 0;
+
+        if (unknownTags.Count > 0)
+        {
+            Console.WriteLine($"[RTM ERROR] Tests declare requirement IDs that no requirement document defines ({unknownTags.Count}):");
+            foreach (var kv in unknownTags)
+            {
+                Console.WriteLine($"  {kv.Key}: {string.Join(", ", kv.Value.Select(t => $"{t.File}:{t.Line}"))}");
+            }
+
+            exitCode = 1;
+        }
+
+        var failedReqs = allRequirements.Values
+            .Where(r => Classify(r.Id, testMappings, testResults) == RequirementState.Failed)
+            .Select(r => r.Id)
+            .ToList();
+        if (failedReqs.Count > 0)
+        {
+            Console.WriteLine($"[RTM ERROR] Requirements with failing tests ({failedReqs.Count}): {string.Join(", ", failedReqs)}");
+            exitCode = 1;
+        }
+
+        bool strictAll = Environment.GetEnvironmentVariable("RTM_STRICT_ALL") == "true";
+        if (strictAll && !draft)
+        {
+            var unqualified = allRequirements.Values
+                .Where(r => !r.IsLegacyAlias && Classify(r.Id, testMappings, testResults) != RequirementState.Qualified)
+                .Select(r => r.Id)
+                .ToList();
+            if (unqualified.Count > 0)
+            {
+                Console.WriteLine($"[RTM ERROR] Requirements not qualified ({unqualified.Count}): {string.Join(", ", unqualified)}");
+                exitCode = 1;
+            }
+        }
+
+        return exitCode;
+    }
+
+    /// <summary>Loads PRD requirements plus the SRS/Trace aliases that point at them.</summary>
+    public static Dictionary<string, RequirementInfo> LoadRequirements(string repoRoot)
+    {
         var srsReqs = ParseSrs(Path.Combine(repoRoot, "docs"));
         var prdReqs = ParsePrd(Path.Combine(repoRoot, "docs", "SDLC"));
 
@@ -70,98 +204,75 @@ public static class RtmGeneratorService
         foreach (var kv in prdReqs) allRequirements[kv.Key] = kv.Value;
         foreach (var kv in srsReqs)
         {
-            if (!allRequirements.ContainsKey(kv.Key))
-            {
-                allRequirements[kv.Key] = kv.Value;
-            }
+            allRequirements.TryAdd(kv.Key, kv.Value);
         }
 
-        // 2. Scan Tests
-        var (testMappings, testCasesAll) = ScanTests(repoRoot, ["apps", "packages", "tests"]);
+        return allRequirements;
+    }
 
-        // Bridge aliases: if test references ParentPrdId, bridge to alias and vice versa
-        foreach (var req in allRequirements.Values)
+    /// <summary>Requirement IDs declared by tests that no requirement document defines, with the tests declaring them.</summary>
+    public static SortedDictionary<string, List<DiscoveredTest>> FindUnknownTags(
+        IEnumerable<DiscoveredTest> tests,
+        IReadOnlyDictionary<string, RequirementInfo> requirements)
+    {
+        var unknown = new SortedDictionary<string, List<DiscoveredTest>>(StringComparer.Ordinal);
+        foreach (var test in tests)
         {
-            if (!string.IsNullOrEmpty(req.ParentPrdId))
+            foreach (var id in test.RequirementIds.Where(id => !requirements.ContainsKey(id)))
             {
-                if (testMappings.TryGetValue(req.ParentPrdId, out var parentTests))
+                if (!unknown.TryGetValue(id, out var list))
                 {
-                    if (!testMappings.TryGetValue(req.Id, out var aliasTests))
-                    {
-                        testMappings[req.Id] = new List<TestMappingInfo>(parentTests);
-                    }
-                    else
-                    {
-                        foreach (var pt in parentTests)
-                        {
-                            if (!aliasTests.Any(t => t.TestName == pt.TestName))
-                                aliasTests.Add(pt);
-                        }
-                    }
+                    list = [];
+                    unknown[id] = list;
                 }
-                else if (testMappings.TryGetValue(req.Id, out var aliasTests) && !testMappings.ContainsKey(req.ParentPrdId))
+
+                list.Add(test);
+            }
+        }
+
+        return unknown;
+    }
+
+    public static RequirementState Classify(
+        string requirementId,
+        IReadOnlyDictionary<string, List<TestMappingInfo>> mappings,
+        IReadOnlyDictionary<string, TestResultInfo> results)
+    {
+        if (!mappings.TryGetValue(requirementId, out var mapped) || mapped.Count == 0)
+        {
+            return RequirementState.Planned;
+        }
+
+        var statuses = mapped.Select(m => StatusOf(m.FullName, results)).ToList();
+        if (statuses.Contains(TestStatus.Failed)) return RequirementState.Failed;
+        if (statuses.Contains(TestStatus.Passed)) return RequirementState.Qualified;
+        return RequirementState.NotVerified;
+    }
+
+    private static string StatusOf(string fullName, IReadOnlyDictionary<string, TestResultInfo> results) =>
+        results.TryGetValue(fullName, out var res) ? res.Status : TestStatus.NotRun;
+
+    private static Dictionary<string, List<TestMappingInfo>> BuildMappings(IEnumerable<DiscoveredTest> tests)
+    {
+        var mappings = new Dictionary<string, List<TestMappingInfo>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var test in tests)
+        {
+            foreach (var id in test.RequirementIds)
+            {
+                if (!mappings.TryGetValue(id, out var list))
                 {
-                    testMappings[req.ParentPrdId] = new List<TestMappingInfo>(aliasTests);
+                    list = [];
+                    mappings[id] = list;
                 }
-            }
-        }
 
-        // 3. Read Test Results from TRX
-        string fullReportPath = Path.IsPathRooted(reportPath) ? reportPath : Path.Combine(repoRoot, reportPath);
-        var testResults = ParseTestResults(repoRoot, fullReportPath);
-
-        if ((!File.Exists(fullReportPath) || new FileInfo(fullReportPath).Length == 0) && draft)
-        {
-            foreach (var tc in testCasesAll)
-            {
-                testResults[tc.Key] = new TestResultInfo { Status = "UNVERIFIED", Message = "Missing test report." };
-            }
-        }
-
-        string timestamp = dynamicTimestamp
-            ? DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture)
-            : StableTimestamp;
-
-        // Validate-only runs must be side-effect free: the checked-in GxP documents are only ever
-        // regenerated through the sync tooling, never as a by-product of a validation pass.
-        if (!validateOnly)
-        {
-            // 4. Generate RTM Markdown
-            string rtmOut = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
-            GenerateRtmMarkdown(allRequirements, testMappings, testResults, rtmOut, timestamp, draft);
-
-            // 5. Generate Qualification Report
-            string qualOut = Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md");
-            GenerateQualificationReport(allRequirements, testResults, qualOut, timestamp, draft);
-        }
-
-        if (validateOnly)
-        {
-            // Fail if any qualified/mapped test case has failed
-            var failedMappedReqs = allRequirements.Keys
-                .Where(k => testMappings.TryGetValue(k, out var list) && list.Count > 0)
-                .Where(k => testMappings[k].Any(m => testResults.TryGetValue(m.TestName, out var res) && res.Status == "FAILED"))
-                .ToList();
-
-            if (failedMappedReqs.Count > 0)
-            {
-                Console.WriteLine($"[RTM ERROR] Qualified requirements with failing tests ({failedMappedReqs.Count}): {string.Join(", ", failedMappedReqs)}");
-                return 1;
-            }
-
-            bool strictAll = Environment.GetEnvironmentVariable("RTM_STRICT_ALL") == "true";
-            if (strictAll && !draft)
-            {
-                var unmapped = allRequirements.Keys.Where(k => !testMappings.ContainsKey(k) || testMappings[k].Count == 0).ToList();
-                if (unmapped.Count > 0)
+                if (!list.Any(m => m.FullName == test.FullName))
                 {
-                    Console.WriteLine($"[RTM DEBUG] Unmapped requirements ({unmapped.Count}): {string.Join(", ", unmapped)}");
-                    return 1;
+                    list.Add(new TestMappingInfo { File = test.File, TestName = test.MethodName, FullName = test.FullName, Line = test.Line });
                 }
             }
         }
 
-        return 0;
+        return mappings;
     }
 
     public static Dictionary<string, RequirementInfo> ParseSrs(string docsDir)
@@ -172,7 +283,7 @@ public static class RtmGeneratorService
         var listPattern = new Regex(@"[-*]\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)", RegexOptions.Compiled);
         var headingPattern = new Regex(@"#{1,6}\s*Trace[\s-]*(\d+)\s*:\s*(.*)", RegexOptions.Compiled);
         var parentPattern = new Regex(@"Parent PRD:\s*`?(PRD-[A-Z0-9]+-\d+)`?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        var tablePattern = new Regex(@"\|\s*`?(Trace-\d+)`?\s*\|\s*`?(PRD-[A-Z0-9]+-\d+)`?\s*\|\s*([^|]+)\|\s*([^|]+)\|", RegexOptions.Compiled);
+        var tablePattern = new Regex(@"\|\s*`?(Trace-\d+|SRS-[A-Z0-9]+-\d+)`?\s*\|\s*`?(PRD-[A-Z0-9]+-\d+)`?\s*\|\s*([^|]+)\|\s*([^|]+)\|", RegexOptions.Compiled);
 
         var mdFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
         foreach (var file in mdFiles)
@@ -303,270 +414,91 @@ public static class RtmGeneratorService
         return reqs;
     }
 
-    public static (Dictionary<string, List<TestMappingInfo>> Mappings, Dictionary<string, TestCaseInfo> TestCases) ScanTests(
-        string repoRoot, string[] searchDirs)
-    {
-        var mappings = new Dictionary<string, List<TestMappingInfo>>(StringComparer.OrdinalIgnoreCase);
-        var testCases = new Dictionary<string, TestCaseInfo>(StringComparer.OrdinalIgnoreCase);
-
-        var gxpAttrRegex = new Regex(@"\[GxPRequirement\(([^)]+)\)\]", RegexOptions.Compiled);
-        var reqDocRegex = new Regex(@"@req:\s*([A-Za-z0-9_-]+)", RegexOptions.Compiled);
-        var factOrTheoryRegex = new Regex(@"\[\s*(?:Fact|Theory)\b", RegexOptions.Compiled);
-        var methodRegex = new Regex(@"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?|ValueTask(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled);
-
-        foreach (var dirName in searchDirs)
-        {
-            string dirPath = Path.Combine(repoRoot, dirName);
-            if (!Directory.Exists(dirPath)) continue;
-
-            var csFiles = Directory.GetFiles(dirPath, "*.cs", SearchOption.AllDirectories)
-                .Where(f => !f.Contains("obj") && !f.Contains("bin"))
-                .OrderBy(f => f);
-
-            foreach (var file in csFiles)
-            {
-                string relPath = GetRelativePath(file, repoRoot).Replace('\\', '/');
-                string[] lines = File.ReadAllLines(file);
-
-                string namespaceName = "";
-                string className = "";
-                var pendingTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                bool isTestPending = false;
-                string? currentTestKey = null;
-                int currentTestLine = 0;
-                string? currentTestMethodName = null;
-
-                int braceDepth = 0;
-                int classBraceDepth = 0;
-                bool insideClass = false;
-
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    string rawLine = lines[i];
-                    string line = rawLine.Trim();
-
-                    // Track brace depth
-                    int openCount = 0;
-                    int closeCount = 0;
-                    bool inString = false;
-                    for (int c = 0; c < line.Length; c++)
-                    {
-                        if (line[c] == '"' && (c == 0 || line[c - 1] != '\\')) inString = !inString;
-                        if (!inString)
-                        {
-                            if (line[c] == '{') openCount++;
-                            else if (line[c] == '}') closeCount++;
-                        }
-                    }
-
-                    if (line.StartsWith("namespace "))
-                    {
-                        namespaceName = line.Replace("namespace ", "").TrimEnd(';').Trim();
-                    }
-                    else if (line.Contains("class ") || line.Contains("record "))
-                    {
-                        var classMatch = Regex.Match(line, @"(?:class|record)\s+([A-Za-z0-9_]+)");
-                        if (classMatch.Success)
-                        {
-                            className = classMatch.Groups[1].Value;
-                            insideClass = true;
-                            classBraceDepth = braceDepth + (line.Contains('{') ? 1 : 0);
-                        }
-                    }
-
-                    if (factOrTheoryRegex.IsMatch(line))
-                    {
-                        isTestPending = true;
-                    }
-
-                    // Extract GxPRequirement attribute tags
-                    foreach (Match m in gxpAttrRegex.Matches(line).Cast<Match>())
-                    {
-                        string inside = m.Groups[1].Value;
-                        var strMatches = Regex.Matches(inside, @"""([^""]+)""");
-                        foreach (Match sm in strMatches.Cast<Match>())
-                        {
-                            string tag = sm.Groups[1].Value.Trim();
-                            if (braceDepth > classBraceDepth && currentTestKey != null)
-                            {
-                                AddTagToTest(tag, currentTestKey, currentTestMethodName!, relPath, currentTestLine, testCases, mappings);
-                            }
-                            else
-                            {
-                                pendingTags.Add(tag);
-                            }
-                        }
-                    }
-
-                    // Extract @req: docstring tags
-                    foreach (Match m in reqDocRegex.Matches(line).Cast<Match>())
-                    {
-                        string tag = m.Groups[1].Value.Trim();
-                        if (braceDepth > classBraceDepth && currentTestKey != null)
-                        {
-                            AddTagToTest(tag, currentTestKey, currentTestMethodName!, relPath, currentTestLine, testCases, mappings);
-                        }
-                        else
-                        {
-                            pendingTags.Add(tag);
-                        }
-                    }
-
-                    // Check for method declaration
-                    if (insideClass && (braceDepth == classBraceDepth || (braceDepth == classBraceDepth + 1 && openCount > 0)))
-                    {
-                        var mm = methodRegex.Match(rawLine);
-                        if (mm.Success && !line.StartsWith("return ") && !line.StartsWith("new "))
-                        {
-                            string methodName = mm.Groups[1].Value;
-                            string fullClassName = string.IsNullOrEmpty(namespaceName) ? className : $"{namespaceName}.{className}";
-                            string key = $"{fullClassName}.{methodName}";
-
-                            if (isTestPending)
-                            {
-                                var tagsList = pendingTags.OrderBy(t => t).ToList();
-                                testCases[key] = new TestCaseInfo { File = relPath, Name = methodName, Tags = tagsList };
-
-                                foreach (var tag in tagsList)
-                                {
-                                    if (!mappings.TryGetValue(tag, out var list))
-                                    {
-                                        list = [];
-                                        mappings[tag] = list;
-                                    }
-                                    list.Add(new TestMappingInfo { File = relPath, TestName = methodName, Line = i + 1 });
-                                }
-
-                                currentTestKey = key;
-                                currentTestLine = i + 1;
-                                currentTestMethodName = methodName;
-                                pendingTags.Clear();
-                                isTestPending = false;
-                            }
-                            else
-                            {
-                                pendingTags.Clear();
-                                currentTestKey = null;
-                            }
-                        }
-                    }
-
-                    // Update brace depth for next line
-                    braceDepth += openCount - closeCount;
-                    if (braceDepth <= classBraceDepth)
-                    {
-                        currentTestKey = null;
-                    }
-                }
-            }
-        }
-
-        return (mappings, testCases);
-    }
-
-    private static void AddTagToTest(
-        string tag,
-        string testKey,
-        string testMethodName,
-        string relPath,
-        int testLine,
-        Dictionary<string, TestCaseInfo> testCases,
-        Dictionary<string, List<TestMappingInfo>> mappings)
-    {
-        if (testCases.TryGetValue(testKey, out var tc) && !tc.Tags.Contains(tag))
-        {
-            tc.Tags.Add(tag);
-        }
-        if (!mappings.TryGetValue(tag, out var list))
-        {
-            list = [];
-            mappings[tag] = list;
-        }
-        if (!list.Any(t => t.File == relPath && t.TestName == testMethodName))
-        {
-            list.Add(new TestMappingInfo { File = relPath, TestName = testMethodName, Line = testLine });
-        }
-    }
-
+    /// <summary>
+    /// Reads TRX results keyed by <c>Namespace.Class.Method</c>. <paramref name="reportPath"/> may be a TRX
+    /// file or a directory of TRX files (one per test project). Theory cases and duplicate runs of the same
+    /// method are merged: any failure wins, then any pass, otherwise the method counts as skipped.
+    /// </summary>
     public static Dictionary<string, TestResultInfo> ParseTestResults(string repoRoot, string reportPath)
     {
-        var results = new Dictionary<string, TestResultInfo>(StringComparer.OrdinalIgnoreCase);
+        var results = new Dictionary<string, TestResultInfo>(StringComparer.Ordinal);
 
         var trxFiles = new List<string>();
-        if (File.Exists(reportPath)) trxFiles.Add(reportPath);
-
-        string searchDir = Path.Combine(repoRoot, "tests");
-        if (Directory.Exists(searchDir))
+        if (File.Exists(reportPath))
         {
-            trxFiles.AddRange(Directory.GetFiles(searchDir, "*.trx", SearchOption.AllDirectories));
+            trxFiles.Add(reportPath);
+        }
+        else if (Directory.Exists(reportPath))
+        {
+            trxFiles.AddRange(Directory.GetFiles(reportPath, "*.trx", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal));
         }
 
-        foreach (var trxFile in trxFiles.Distinct())
+        XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
+        foreach (var trxFile in trxFiles)
         {
+            XDocument doc;
             try
             {
-                var doc = XDocument.Load(trxFile);
-                XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
+                doc = XDocument.Load(trxFile);
+            }
+            catch (System.Xml.XmlException ex)
+            {
+                Console.WriteLine($"[RTM WARNING] Skipping unreadable TRX file {trxFile}: {ex.Message}");
+                continue;
+            }
 
-                var unitTests = doc.Descendants(ns + "UnitTest").ToList();
-                var testDefs = new Dictionary<string, (string ClassName, string MethodName)>();
-
-                foreach (var ut in unitTests)
+            var testDefs = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var ut in doc.Descendants(ns + "UnitTest"))
+            {
+                string id = ut.Attribute("id")?.Value ?? "";
+                var method = ut.Element(ns + "TestMethod");
+                if (method != null && !string.IsNullOrEmpty(id))
                 {
-                    string id = ut.Attribute("id")?.Value ?? "";
-                    var method = ut.Element(ns + "TestMethod");
-                    if (method != null && !string.IsNullOrEmpty(id))
-                    {
-                        testDefs[id] = (method.Attribute("className")?.Value ?? "", method.Attribute("name")?.Value ?? "");
-                    }
-                }
-
-                var resultsElems = doc.Descendants(ns + "UnitTestResult");
-                foreach (var r in resultsElems)
-                {
-                    string testId = r.Attribute("testId")?.Value ?? "";
-                    string testName = r.Attribute("testName")?.Value ?? "";
-                    string outcome = r.Attribute("outcome")?.Value ?? "Passed";
-                    string duration = r.Attribute("duration")?.Value ?? "0.0";
-
-                    string className = "";
-                    string methodName = testName;
-
-                    if (!string.IsNullOrEmpty(testId) && testDefs.TryGetValue(testId, out var def))
-                    {
-                        className = def.ClassName;
-                        methodName = def.MethodName;
-                    }
-
-                    string status = "SKIPPED";
-                    if (outcome.Equals("Passed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        status = "PASSED";
-                    }
-                    else if (outcome.Equals("Failed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        status = "FAILED";
-                    }
-
-                    var resObj = new TestResultInfo { Status = status, Time = duration };
-                    string fullKey = $"{className}.{methodName}";
-                    results[fullKey] = resObj;
-                    results[methodName] = resObj;
+                    testDefs[id] = $"{method.Attribute("className")?.Value}.{method.Attribute("name")?.Value}";
                 }
             }
-            catch
+
+            foreach (var r in doc.Descendants(ns + "UnitTestResult"))
             {
-                // Continue scanning fallback files
+                string testId = r.Attribute("testId")?.Value ?? "";
+                if (!testDefs.TryGetValue(testId, out var fullName)) continue;
+
+                string status = (r.Attribute("outcome")?.Value ?? "").ToUpperInvariant() switch
+                {
+                    "PASSED" => TestStatus.Passed,
+                    "FAILED" or "ERROR" or "TIMEOUT" or "ABORTED" => TestStatus.Failed,
+                    _ => TestStatus.Skipped,
+                };
+
+                results[fullName] = Merge(results.GetValueOrDefault(fullName), status, r.Attribute("duration")?.Value ?? "0.0");
             }
         }
 
         return results;
     }
 
+    private static TestResultInfo Merge(TestResultInfo? existing, string status, string duration)
+    {
+        if (existing is null) return new TestResultInfo { Status = status, Time = duration };
+        if (existing.Status == TestStatus.Failed || status == TestStatus.Failed) return new TestResultInfo { Status = TestStatus.Failed, Time = duration };
+        if (existing.Status == TestStatus.Passed || status == TestStatus.Passed) return new TestResultInfo { Status = TestStatus.Passed, Time = existing.Time };
+        return existing;
+    }
+
+    private static string Emoji(string status) => status switch
+    {
+        TestStatus.Passed => "🟢",
+        TestStatus.Failed => "🔴",
+        TestStatus.Skipped => "⚪ (SKIPPED)",
+        TestStatus.Unverified => "⚪ (UNVERIFIED)",
+        _ => "⚪ (NOT RUN)",
+    };
+
     private static void GenerateRtmMarkdown(
         Dictionary<string, RequirementInfo> reqs,
         Dictionary<string, List<TestMappingInfo>> mappings,
         Dictionary<string, TestResultInfo> results,
+        SortedDictionary<string, List<DiscoveredTest>> unknownTags,
         string outputPath,
         string timestamp,
         bool draft)
@@ -581,106 +513,94 @@ public static class RtmGeneratorService
         sb.AppendLine("# Requirements Traceability Matrix (RTM)\n");
         sb.AppendLine($"*Generated on:* {timestamp}");
         sb.AppendLine("*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n");
+        sb.AppendLine("> Generated by `dotnet cadence gxp sync`. Do not edit by hand. A requirement is **Qualified** only when a test that");
+        sb.AppendLine("> declares it on the test method ran and passed, and no test declaring it failed. See `docs/TESTING.md`.\n");
 
-        var canonicalReqs = reqs.Values.Where(r => !r.IsLegacyAlias).OrderBy(r => r.Id).ToList();
-        var legacyAliases = reqs.Values.Where(r => r.IsLegacyAlias).OrderBy(r => r.Id).ToList();
+        var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        var aliases = reqs.Values.Where(r => r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        var byState = canonical.ToLookup(r => Classify(r.Id, mappings, results));
 
-        var qualifiedReqs = canonicalReqs.Where(r => mappings.TryGetValue(r.Id, out var list) && list.Count > 0).ToList();
-        var plannedReqs = canonicalReqs.Where(r => !mappings.TryGetValue(r.Id, out var list) || list.Count == 0).ToList();
-
-        int totalCanonical = canonicalReqs.Count;
-        int totalQualified = qualifiedReqs.Count;
-        int totalPlanned = plannedReqs.Count;
-        double qualifiedPct = totalCanonical > 0 ? (totalQualified * 100.0 / totalCanonical) : 0;
+        int total = canonical.Count;
+        int qualified = byState[RequirementState.Qualified].Count();
 
         sb.AppendLine("## 1. Traceability Summary\n");
-        sb.AppendLine($"- **Total Documented Requirements (PRD):** {totalCanonical}");
-        sb.AppendLine($"- **Qualified Requirements (Verified in Current Milestone):** {totalQualified}");
-        sb.AppendLine($"- **Planned Requirements (Sprint 2/3 Roadmap):** {totalPlanned}");
-        sb.AppendLine($"- **Legacy Traceability Aliases (Trace-1..34):** {legacyAliases.Count}");
-        sb.AppendLine($"- **Current Milestone Traceability Verification:** {qualifiedPct:F1}%\n");
+        sb.AppendLine($"- **Total Documented Requirements (PRD):** {total}");
+        sb.AppendLine($"- **Qualified (mapped tests passed):** {qualified}");
+        sb.AppendLine($"- **Failed (a mapped test failed):** {byState[RequirementState.Failed].Count()}");
+        sb.AppendLine($"- **Not Verified (mapped tests skipped or not run):** {byState[RequirementState.NotVerified].Count()}");
+        sb.AppendLine($"- **Planned (no mapped tests):** {byState[RequirementState.Planned].Count()}");
+        sb.AppendLine($"- **Traceability Aliases (Trace and SRS IDs):** {aliases.Count}");
+        sb.AppendLine($"- **Unknown Requirement IDs Declared by Tests:** {unknownTags.Count}");
+        sb.AppendLine($"- **Qualified Coverage:** {(total > 0 ? qualified * 100.0 / total : 0):F1}%\n");
 
-        sb.AppendLine("## 2. Qualified Requirements (Verified)\n");
+        sb.AppendLine("## 2. Requirements with Mapped Tests\n");
         sb.AppendLine("| Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |");
         sb.AppendLine("| :--- | :--- | :--- | :--- | :--- |");
 
-        foreach (var req in qualifiedReqs)
+        foreach (var req in canonical.Where(r => mappings.ContainsKey(r.Id) && mappings[r.Id].Count > 0))
         {
-            var mappedTests = mappings[req.Id];
-            var links = new List<string>();
-            bool allPassed = true;
-            bool unverified = false;
-
-            foreach (var m in mappedTests)
+            var links = mappings[req.Id]
+                .OrderBy(m => m.File, StringComparer.Ordinal)
+                .ThenBy(m => m.Line)
+                .Select(m => $"`{m.TestName}` ({m.File}) {Emoji(StatusOf(m.FullName, results))}");
+            string statusStr = Classify(req.Id, mappings, results) switch
             {
-                string status = "PASSED";
-                if (results.TryGetValue(m.TestName, out var res))
-                {
-                    status = res.Status;
-                }
-
-                if (status != "PASSED") allPassed = false;
-                if (status == "UNVERIFIED") unverified = true;
-
-                string emoji = "🔴";
-                if (status == "PASSED")
-                {
-                    emoji = "🟢";
-                }
-                else if (unverified)
-                {
-                    emoji = "⚪ (UNVERIFIED)";
-                }
-
-                links.Add($"`{m.TestName}` ({m.File}) {emoji}");
-            }
-
-            string testStr = string.Join("<br>", links);
-            string statusStr;
-            if (allPassed)
-            {
-                statusStr = "✅ **Passed**";
-            }
-            else if (unverified)
-            {
-                statusStr = "⚠️ **Unverified**";
-            }
-            else
-            {
-                statusStr = "❌ **Failed**";
-            }
-            string sourceDoc = req.Source.Contains("SRS") ? "SRS" : "PRD";
-            sb.AppendLine($"| {req.Id} | {sourceDoc} | **{req.Title}** | {testStr} | {statusStr} |");
+                RequirementState.Qualified => "✅ **Qualified**",
+                RequirementState.Failed => "❌ **Failed**",
+                _ => draft ? "⚠️ **Unverified**" : "⚠️ **Not Verified**",
+            };
+            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {string.Join("<br>", links)} | {statusStr} |");
         }
 
-        sb.AppendLine("\n## 3. Planned Requirements (Sprint 2/3 Roadmap)\n");
+        sb.AppendLine("\n## 3. Planned Requirements (No Mapped Tests)\n");
         sb.AppendLine("| Requirement ID | Source Document | Title / Description | Scheduled Milestone |");
         sb.AppendLine("| :--- | :--- | :--- | :--- |");
 
-        foreach (var req in plannedReqs)
+        foreach (var req in byState[RequirementState.Planned])
         {
-            string sourceDoc = req.Source.Contains("SRS") ? "SRS" : "PRD";
-            sb.AppendLine($"| {req.Id} | {sourceDoc} | **{req.Title}** | Sprint Roadmap |");
+            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | Sprint Roadmap |");
         }
 
-        sb.AppendLine("\n## 4. Legacy Traceability Aliases (Trace-1 through Trace-34)\n");
-        sb.AppendLine("| Legacy Trace ID | Canonical Parent PRD | Requirement Summary | Status |");
+        sb.AppendLine("\n## 4. Traceability Aliases (Trace and SRS IDs)\n");
+        sb.AppendLine("Aliases report their canonical parent's state. A test tagged only with an alias does not qualify the parent.\n");
+        sb.AppendLine("| Alias ID | Canonical Parent PRD | Requirement Summary | Status |");
         sb.AppendLine("| :--- | :--- | :--- | :--- |");
 
-        foreach (var alias in legacyAliases)
+        foreach (var alias in aliases)
         {
             string parent = alias.ParentPrdId ?? "N/A";
-            bool isParentQualified = !string.IsNullOrEmpty(alias.ParentPrdId) && mappings.ContainsKey(alias.ParentPrdId);
-            string status = isParentQualified ? "✅ **Verified via Parent**" : "📋 **Scheduled via Parent**";
+            string status = !string.IsNullOrEmpty(alias.ParentPrdId) && Classify(alias.ParentPrdId, mappings, results) == RequirementState.Qualified
+                ? "✅ **Verified via Parent**"
+                : "📋 **Scheduled via Parent**";
             sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {status} |");
+        }
+
+        sb.AppendLine("\n## 5. Unknown Requirement IDs Declared by Tests\n");
+        if (unknownTags.Count == 0)
+        {
+            sb.AppendLine("None. Every requirement ID declared by a test is defined in the PRD or SRS.");
+        }
+        else
+        {
+            sb.AppendLine("These IDs are declared by tests but defined in no requirement document, so they trace to nothing.\n");
+            sb.AppendLine("| Declared ID | Tests |");
+            sb.AppendLine("| :--- | :--- |");
+            foreach (var kv in unknownTags)
+            {
+                sb.AppendLine($"| `{kv.Key}` | {string.Join("<br>", kv.Value.Select(t => $"`{t.MethodName}` ({t.File})"))} |");
+            }
         }
 
         string signedContent = GxPSigner.SignGxpMarkdown(sb.ToString(), timestamp: timestamp);
         File.WriteAllText(outputPath, signedContent);
     }
 
+    private static string SourceDoc(RequirementInfo req) => req.Source.Contains("SRS", StringComparison.Ordinal) ? "SRS" : "PRD";
+
     private static void GenerateQualificationReport(
         Dictionary<string, RequirementInfo> reqs,
+        Dictionary<string, List<TestMappingInfo>> mappings,
+        IReadOnlyList<DiscoveredTest> tests,
         Dictionary<string, TestResultInfo> results,
         string outputPath,
         string timestamp,
@@ -701,29 +621,39 @@ public static class RtmGeneratorService
         sb.AppendLine("This report documents the Installation Qualification (IQ) and Operational Qualification (OQ) for the Cadence Clinical platform.\n");
 
         int totalRun = results.Count;
-        int passedRun = results.Values.Count(r => r.Status == "PASSED");
-        int failedRun = results.Values.Count(r => r.Status == "FAILED");
+        int passedRun = results.Values.Count(r => r.Status == TestStatus.Passed);
+        int failedRun = results.Values.Count(r => r.Status == TestStatus.Failed);
+        int skippedRun = results.Values.Count(r => r.Status == TestStatus.Skipped);
+        int executed = passedRun + failedRun;
 
         sb.AppendLine("### Validation Result Summary\n");
-        sb.AppendLine($"- **Total Automated Test Cases Run:** {totalRun}");
+        sb.AppendLine($"- **Automated Test Methods Reported:** {totalRun}");
         sb.AppendLine($"- **Passed:** {passedRun} 🟢");
         sb.AppendLine($"- **Failed/Errors:** {failedRun} 🔴");
-        sb.AppendLine($"- **Overall Operational Pass Rate:** {(totalRun > 0 ? (passedRun * 100.0 / totalRun) : 100.0):F2}%\n");
+        sb.AppendLine($"- **Skipped:** {skippedRun} ⚪");
+        sb.AppendLine($"- **Overall Operational Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
 
         sb.AppendLine("## 2. Installation Qualification (IQ)\n");
         sb.AppendLine("The Installation Qualification verifies that the software execution environment and static quality checks are fully compliant.\n");
 
         sb.AppendLine("## 3. Operational Qualification (OQ)\n");
-        sb.AppendLine("| Test Case Name | Classname / Suite | Target Req | Status | Duration |");
-        sb.AppendLine("| :--- | :--- | :--- | :--- | :--- |");
+        sb.AppendLine("Test methods that declare at least one requirement. Theory cases are merged per method. Durations are left");
+        sb.AppendLine("out so the report only changes when results change; they are in the TRX files under `TestResults/gxp/`.\n");
+        sb.AppendLine("| Test Case Name | Class | Target Req | Status |");
+        sb.AppendLine("| :--- | :--- | :--- | :--- |");
 
-        foreach (var kv in results.OrderBy(k => k.Key))
+        foreach (var test in tests.Where(t => t.RequirementIds.Count > 0).OrderBy(t => t.FullName, StringComparer.Ordinal))
         {
-            sb.AppendLine($"| `{kv.Key}` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |");
+            var res = results.GetValueOrDefault(test.FullName) ?? new TestResultInfo();
+            string className = test.FullName[..test.FullName.LastIndexOf('.')];
+            sb.AppendLine($"| `{test.MethodName}` | `{className}` | {string.Join(", ", test.RequirementIds)} | {Emoji(res.Status)} {res.Status} |");
         }
 
+        var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).ToList();
+        int qualified = canonical.Count(r => Classify(r.Id, mappings, results) == RequirementState.Qualified);
+
         sb.AppendLine("\n## 4. Performance Qualification (PQ) & Scenario Validation\n");
-        sb.AppendLine($"Total Verified Requirements: {reqs.Count}\n");
+        sb.AppendLine($"Qualified Requirements: {qualified} of {canonical.Count}\n");
 
         sb.AppendLine("## 5. Qualification Review & Authorization\n");
         sb.AppendLine("```");

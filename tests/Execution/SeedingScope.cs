@@ -9,7 +9,6 @@ namespace Cadence.UnitTests.Execution;
 /// <summary>
 /// Test seeding runs outside any request, so it has no caller to attribute writes to. These scopes declare a
 /// named test service account, the same way production background work must.
-/// @req:PRD-SYS-053
 /// </summary>
 public static class SeedingScope
 {

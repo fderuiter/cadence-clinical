@@ -16,11 +16,9 @@ public class ProtocolVersionTests
 {
     /// <summary>
     /// Validates ProtocolVersion initialization in Draft state with immutable identity and audit fields.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProtocolVersion_Create_InitializesInDraftStatus")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ProtocolVersionCreateInitializesInDraftStatus()
     {
         // Arrange
@@ -57,11 +55,9 @@ public class ProtocolVersionTests
 
     /// <summary>
     /// Validates draft payload updates and transition to InReview status.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProtocolVersion_DraftWorkflow_AllowsUpdatesAndSubmission")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ProtocolVersionDraftWorkflowAllowsUpdatesAndSubmission()
     {
         // Arrange
@@ -91,11 +87,9 @@ public class ProtocolVersionTests
 
     /// <summary>
     /// Validates formal approval and enforces strict 21 CFR Part 11 immutability on approved versions.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProtocolVersion_Approval_EnforcesPermanentImmutability")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ProtocolVersionApprovalEnforcesPermanentImmutability()
     {
         // Arrange
@@ -124,11 +118,9 @@ public class ProtocolVersionTests
 
     /// <summary>
     /// Validates forking an approved protocol into a new amendment draft version with bitemporal supersession.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProtocolVersion_ForkAmendment_SupersedesPriorAndCreatesNewDraft")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ProtocolVersionForkAmendmentSupersedesPriorAndCreatesNewDraft()
     {
         // Arrange

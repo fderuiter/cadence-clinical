@@ -25,7 +25,7 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// Drives every mutating execution route through the real composition root as a signed caller and checks that
 /// each successful write leaves an audit entry naming that caller, in the same save. Nothing may be recorded
 /// against an anonymous "system" actor (#4767, 21 CFR 11.10(e)).
-/// @req:PRD-SYS-053
+/// @req:PRD-SYS-001
 /// </summary>
 public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
 {
@@ -36,7 +36,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SubjectWrites_AreEachAuditedAgainstTheCaller()
     {
         var coordinator = Caller("coordinator", "Site Coordinator");
@@ -69,7 +69,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SiteComplianceWrites_AreEachAuditedAgainstTheCaller()
     {
         var etmf = Caller("etmf-integration", "Integration");
@@ -90,7 +90,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ObservationWrites_AreEachAuditedAgainstTheCaller()
     {
         var coordinator = Caller("obs-coordinator", "Site Coordinator");
@@ -107,7 +107,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task FormWrites_AreEachAuditedAgainstTheCaller()
     {
         var investigator = Caller("form-pi", "Site Investigator");
@@ -142,7 +142,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task QueryWrites_AreEachAuditedAgainstTheCaller()
     {
         var monitor = Caller("query-cra", "CRA");

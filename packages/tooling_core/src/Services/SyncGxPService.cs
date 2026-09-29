@@ -31,19 +31,32 @@ public static class SyncGxPService
         Console.WriteLine("STEP 1 / 3 — Running test suite");
         Console.WriteLine("============================================================");
 
+        string resultsDir = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+        int testExitCode = 0;
+
         if (!dryRun && !draft)
         {
-            var psi = new ProcessStartInfo("dotnet", "test Cadence.sln --no-restore --configuration Release --results-directory . --logger trx;LogFileName=report_dotnet.trx")
+            // Every test project writes its own TRX file into a clean directory. A fixed LogFileName
+            // would make each project overwrite the previous one, leaving only the last project's results.
+            if (Directory.Exists(resultsDir)) Directory.Delete(resultsDir, recursive: true);
+            Directory.CreateDirectory(resultsDir);
+
+            var psi = new ProcessStartInfo("dotnet")
             {
                 WorkingDirectory = repoRoot,
                 UseShellExecute = false
             };
+            foreach (var arg in new[] { "test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resultsDir, "--logger", "trx;LogFilePrefix=gxp" })
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
             using var proc = Process.Start(psi);
             proc?.WaitForExit();
-            if (proc != null && proc.ExitCode != 0 && !draft)
+            testExitCode = proc?.ExitCode ?? 1;
+            if (testExitCode != 0)
             {
-                Console.WriteLine("\n[ERROR] Test suite execution failed.");
-                return proc.ExitCode;
+                Console.WriteLine("\n[ERROR] Test suite execution failed. The RTM is still regenerated so the failures are visible, but nothing is staged.");
             }
         }
         else
@@ -56,7 +69,8 @@ public static class SyncGxPService
         Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
         Console.WriteLine("============================================================");
 
-        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: "report_dotnet.trx", repoRoot: repoRoot);
+        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: resultsDir, repoRoot: repoRoot);
+        if (testExitCode != 0) return testExitCode;
         if (rtmRes != 0) return rtmRes;
 
         // Step 3: Stage

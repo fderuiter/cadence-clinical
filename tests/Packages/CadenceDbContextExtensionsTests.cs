@@ -35,7 +35,6 @@ public class TestEntity
 public class CadenceDbContextExtensionsTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void GetCompiledModel_ReturnsNull_WhenNoCompiledModelExists()
     {
         var model = CadenceDbContextExtensions.GetCompiledModel<ExtensionsTestDbContext>();
@@ -43,7 +42,6 @@ public class CadenceDbContextExtensionsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceDbContext_RegistersDbContextInServiceCollection()
     {
         var services = new ServiceCollection();
@@ -57,7 +55,6 @@ public class CadenceDbContextExtensionsTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadenceDbContext_ExecutesOptionsActionWithServiceProvider()
     {
         var services = new ServiceCollection();

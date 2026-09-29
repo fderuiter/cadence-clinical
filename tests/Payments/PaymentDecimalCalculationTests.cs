@@ -16,7 +16,6 @@ namespace Cadence.UnitTests.Payments;
 public class PaymentDecimalCalculationTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AllMonetaryAndRatePropertiesInPaymentEntities_UseDecimalType()
     {
         // 1. BudgetContract
@@ -88,7 +87,6 @@ public class PaymentDecimalCalculationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void PaymentConfigurations_ExplicitlyConfiguresNumeric18_4ForFinancialProperties()
     {
         var options = new DbContextOptionsBuilder<PaymentsDbContext>()
@@ -172,7 +170,6 @@ public class PaymentDecimalCalculationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void CalculatePayable_UsesFixedPointDecimalArithmetic_AndBankersRounding()
     {
         // Scenario: Investigator Payout Calculation
@@ -212,7 +209,6 @@ public class PaymentDecimalCalculationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void BankerRounding_ToEven_DivergesFromFloatingPointBoundaryErrors()
     {
         // 2.675 when calculated with banker's rounding to 2 decimal places rounds to 2.68
@@ -227,7 +223,6 @@ public class PaymentDecimalCalculationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ParticipantWallet_StipendLedgerAccumulation_MatchesExactDecimal()
     {
         var wallet = new ParticipantWallet
@@ -255,7 +250,6 @@ public class PaymentDecimalCalculationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SplitPayeeAllocation_CalculatesShares_UsingDecimalArithmetic()
     {
         var grossAmount = 1000.00m;

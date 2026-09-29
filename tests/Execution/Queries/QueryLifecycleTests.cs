@@ -20,9 +20,6 @@ namespace Cadence.UnitTests.Execution.Queries;
 /// <summary>
 /// Unit test coverage for clinical discrepancy query 6-state lifecycle (Candidate, Open, Answered, Closed, Reopened, Cancelled),
 /// duplicate active coordinate detection, and CRA/DM role validation.
-/// @req:PRD-SYS-007
-/// @req:PRD-SYS-053
-/// @req:SRS-EDC-004
 /// </summary>
 public sealed class QueryLifecycleTests
 {
@@ -39,11 +36,8 @@ public sealed class QueryLifecycleTests
 
     /// <summary>
     /// Validates that raising a clinical discrepancy query initializes it in Open status.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public void RaiseQuery_CreatesQueryInOpenState()
     {
         var result = ClinicalQuery.Raise(
@@ -63,11 +57,8 @@ public sealed class QueryLifecycleTests
 
     /// <summary>
     /// Validates complete 6-state query lifecycle: Open -> Answered -> Closed -> Reopened -> Answered -> Closed.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public void QueryLifecycle_FullTransitionSequence_Succeeds()
     {
         var query = ClinicalQuery.Raise(
@@ -108,11 +99,8 @@ public sealed class QueryLifecycleTests
 
     /// <summary>
     /// Validates that an open query raised in error can be cancelled with a mandatory reason.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public void CancelQuery_FromOpen_SucceedsWithReason()
     {
         var query = ClinicalQuery.Raise(
@@ -133,11 +121,8 @@ public sealed class QueryLifecycleTests
 
     /// <summary>
     /// Validates that the application service detects existing active queries on the same target field coordinates.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates()
     {
         var repo = new InMemoryClinicalQueryRepository();
@@ -165,11 +150,8 @@ public sealed class QueryLifecycleTests
 
     /// <summary>
     /// Validates that closing a clinical query requires CRA or Data Manager role authorization.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task ApplicationService_Close_ValidatesCraOrDmRole()
     {
         var repo = new InMemoryClinicalQueryRepository();
@@ -244,12 +226,9 @@ public sealed class QueryLifecycleTests
     }
     /// <summary>
     /// Validates that a caller with no role is denied close, reopen and cancel rather than treated as authorized.
-    /// @req:PRD-SYS-007
-    /// @req:SRS-EDC-004
     /// </summary>
     [Theory]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-007")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]

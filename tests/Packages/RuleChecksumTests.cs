@@ -39,10 +39,8 @@ public class RuleChecksumTests
     /// <summary>
     /// Validates that a rule's integrity checksum covers its condition, so any change to the
     /// rule logic produces a different checksum.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ComputeChecksum_WhenConditionDiffers_ProducesDifferentChecksum()
     {
         var greaterThan = CreateRule(">");
@@ -57,10 +55,8 @@ public class RuleChecksumTests
     /// <summary>
     /// Validates that checksums stay identical to those computed before the payload moved to
     /// JsonObject, so previously stored rule checksums still verify.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ComputeChecksum_MatchesOriginalPayloadLayout()
     {
         var rule = CreateRule(">");

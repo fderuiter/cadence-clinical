@@ -21,7 +21,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// <summary>
 /// A lost optimistic-concurrency race reaches the caller as 409 Conflict with the stable code
 /// <c>CONCURRENCY_CONFLICT</c>, never as a 500 or a silent overwrite (#4766).
-/// @req:PRD-SUB-001
 /// </summary>
 public sealed class ConcurrencyConflictExceptionHandlerTests
 {
@@ -37,7 +36,6 @@ public sealed class ConcurrencyConflictExceptionHandlerTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ConcurrencyConflict_IsWrittenAs409WithTheStableCode()
     {
         var (handler, context) = Create();
@@ -54,7 +52,6 @@ public sealed class ConcurrencyConflictExceptionHandlerTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task OtherExceptions_AreLeftToTheDefaultHandler()
     {
         var (handler, context) = Create();

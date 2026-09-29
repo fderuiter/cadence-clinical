@@ -23,7 +23,6 @@ namespace Cadence.UnitTests.Gateway;
 /// Boots the real gateway and every service it routes to, and checks the gateway's route table against the
 /// endpoints each service actually maps: every gateway route must lead to at least one mapped endpoint (no
 /// route to nowhere), and every <c>/api/v1</c> endpoint a service maps must be reachable through the gateway.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GatewayRouteCoverageTests
 {
@@ -52,7 +51,6 @@ public sealed class GatewayRouteCoverageTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task EveryRoute_LeadsToMappedEndpoints_AndEveryServiceApiIsRouted()
     {
         var routes = await GatewayRoutesAsync();

@@ -19,13 +19,13 @@ namespace Cadence.UnitTests.Execution.Integration;
 /// Audit entries written through <see cref="GxPAuditInterceptor"/> must still verify after a round trip through
 /// PostgreSQL, which stores timestamps to the microsecond (#4768). Skipped unless a PostgreSQL source is
 /// configured (see <see cref="ExecutionPostgresFixture"/>).
-/// @req:PRD-SYS-053
+/// @req:PRD-SYS-001
 /// </summary>
 public sealed class AuditChainPostgresRoundTripTests(ExecutionPostgresFixture fixture) : IClassFixture<ExecutionPostgresFixture>
 {
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ChainWrittenToPostgres_VerifiesWhenReadBack()
     {
         fixture.SkipIfUnavailable();

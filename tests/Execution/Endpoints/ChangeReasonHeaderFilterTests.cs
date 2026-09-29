@@ -20,7 +20,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// `02_technical_design.md` §3.3 (route registration itself is `MIG-SUBJ-023`'s job — no hosted route
 /// exists yet). Exercises the filter directly via `DefaultEndpointFilterInvocationContext`, the
 /// documented way to unit test an `IEndpointFilter` without a `WebApplicationFactory`.
-/// @req:PRD-SYS-053
 /// </summary>
 public class ChangeReasonHeaderFilterTests
 {
@@ -50,7 +49,6 @@ public class ChangeReasonHeaderFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task InvokeAsync_HeaderAbsent_ShortCircuitsWith400AndNeverInvokesNext()
     {
         var context = CreateContext(headerValue: null);
@@ -67,7 +65,6 @@ public class ChangeReasonHeaderFilterTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task InvokeAsync_HeaderPresentButWhitespaceOnly_ShortCircuitsWith400AndNeverInvokesNext(string headerValue)
     {
         // "" (present but empty) must be rejected identically to an absent header — 01_spec.md §3's
@@ -84,7 +81,6 @@ public class ChangeReasonHeaderFilterTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task InvokeAsync_HeaderPresentAndPopulated_InvokesNextAndReturnsItsResultUnchanged()
     {
         // AC error condition: "the two filters are independent and composable on the same route" — a

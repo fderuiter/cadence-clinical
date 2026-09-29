@@ -21,10 +21,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// <summary>
 /// Unit test coverage for eCRF form submission lifecycle states, 21 CFR Part 11 electronic signature approval,
 /// SHA-256 payload integrity validation, immutable read-only locking, and audited unlock workflows.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
-/// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>
 public sealed class FormSubmissionStateTests
@@ -45,11 +41,8 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that initializing a form submission places it in Draft state with editable properties.
-    /// @req:PRD-SYS-001
-    /// @req:SRS-EDC-002
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void InitializeForm_CreatesFormInDraftState()
     {
         var result = FormSubmission.Initialize(
@@ -70,11 +63,8 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that form payload can be updated while in Draft status.
-    /// @req:PRD-SYS-002
-    /// @req:SRS-EDC-002
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public void UpdatePayload_InDraftState_UpdatesPayloadSuccessfully()
     {
         var form = FormSubmission.Initialize(
@@ -91,11 +81,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that completing and approving a form locks it as read-only and captures the signature manifest.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public void CompleteAndApprove_LocksFormInReadOnlyState()
     {
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120, \"vsdpb\": 80}";
@@ -125,11 +113,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that modifying an approved form is strictly rejected under 21 CFR Part 11 integrity rules.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public void UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError()
     {
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
@@ -154,11 +140,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that unlocking an approved form requires an explicit reason and reverts state to Draft.
-    /// @req:PRD-SYS-053
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UnlockForm_WithReason_RevertsToDraftAndUnlocks()
     {
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
@@ -189,11 +173,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that the application service strictly enforces SHA-256 payload verification before signing.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormApplicationService_Approve_ValidatesSha256PayloadHash()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
@@ -250,11 +232,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that approving an eCRF form submission with an unapproved signing reason is strictly rejected.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public void ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError()
     {
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
@@ -279,11 +259,9 @@ public sealed class FormSubmissionStateTests
 
     /// <summary>
     /// Validates that attempting to sign an eCRF with an unauthorized role or null manifest is rejected.
-    /// @req:PRD-SYS-002
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError()
     {
         var formRepo = new InMemoryFormSubmissionRepository();

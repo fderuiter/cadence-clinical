@@ -24,7 +24,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// <c>WHERE</c> clause), not InMemory, per this ticket's own "SQLite for relational-behavior tests"
 /// instruction. `SiteComplianceCache` is used as the concrete aggregate under test (a simple, easily-mutable
 /// entity with no complex-type/value-converter interactions to control for).
-/// @req:PRD-SUB-001
 /// </summary>
 public class ConcurrencyTokenIncrementInterceptorTests
 {
@@ -49,7 +48,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
         (long)context.Entry(cache).Property("_version").CurrentValue!;
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SavingChangesAsync_GivenNewlyAddedEntity_LeavesShadowVersionAtItsDefaultStartingValue()
     {
         using var connection = OpenSqliteConnection();
@@ -64,7 +62,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SavingChangesAsync_GivenAModifiedEntity_IncrementsShadowVersionByExactlyOne()
     {
         using var connection = OpenSqliteConnection();
@@ -86,7 +83,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SavingChangesAsync_GivenTwoDomainMutationsBeforeOneSaveChangesAsync_IncrementsShadowVersionOnlyOnce()
     {
         // Mirrors MIG-SUBJ-012's own "two ApplyWebhookUpdate calls, one SaveChangesAsync" boundary check: the
@@ -112,7 +108,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SavingChangesAsync_NeverIncrementsSiteComplianceCacheVersionDomainCounter()
     {
         // SiteComplianceCache.Version is domain data (IsConcurrencyToken(false), MIG-SUBJ-012) -- this
@@ -142,7 +137,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ClinicalSubjectAndSubjectConsentShadowVersionProperties_AreConfiguredAsPlainConcurrencyTokensNotRowVersions()
     {
         // Ensures the reconfiguration this ticket made to all three aggregates' shadow `_version` columns
@@ -174,7 +168,6 @@ public class ConcurrencyTokenIncrementInterceptorTests
     // ---- Baseline: proves the fix creates a genuine, detectable conflict (no retry involved) -----------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenTwoContextsLoadTheSameRowAndTheFirstSavesFirst_TheSecondsStaleSaveThrowsDbUpdateConcurrencyException()
     {
         using var connection = OpenSqliteConnection();

@@ -19,14 +19,12 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// `status`/`state` alternative-name pair, and the `SiteId` empty-string trap. Full fixture-replay
 /// verification against `input_invalid_validation_errors.json` happens in `MIG-SUBJ-026`; this file only
 /// unit-tests the DTO/validator shapes in isolation.
-/// @req:PRD-SUB-001
 /// </summary>
 public class RequestValidatorTests
 {
     // ---- SubjectCreateRequestValidator ------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_FullyPopulatedRequest_Passes()
     {
         var request = new SubjectCreateRequest(
@@ -42,7 +40,6 @@ public class RequestValidatorTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("SITE-001")]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_SiteIdNullEmptyOrPopulated_Passes(string? siteId)
     {
         // SiteId is legitimately optional (01_spec.md §3 truthiness-trap table): neither "absent" (null)
@@ -56,7 +53,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_SiteIdExceedsMaxLength_FailsMaximumLength()
     {
         var request = new SubjectCreateRequest("SUBJ-001", "STUDY-001", new string('a', 256), null, null);
@@ -68,7 +64,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_EmptySubjectId_FailsNotEmpty()
     {
         var request = new SubjectCreateRequest("", "STUDY-001", null, null, null);
@@ -80,7 +75,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_EmptyStudyId_FailsNotEmpty()
     {
         var request = new SubjectCreateRequest("SUBJ-001", "", null, null, null);
@@ -94,7 +88,6 @@ public class RequestValidatorTests
     [Theory]
     [InlineData(255, true)]
     [InlineData(256, false)]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectCreateRequestValidator_SubjectIdAndStudyIdLengthBoundary_MatchesExpectedValidity(
         int length, bool expectedValid)
     {
@@ -109,7 +102,6 @@ public class RequestValidatorTests
     // ---- SubjectConsentRequestValidator ------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentRequestValidator_ValidRequest_Passes()
     {
         var request = new SubjectConsentRequest(
@@ -122,7 +114,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentRequestValidator_NullProtocolVersion_FailsWithSingleErrorWithoutThrowing()
     {
         // null! exercises the NotNull() guard against a caller that bypasses compile-time nullability
@@ -142,7 +133,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentRequestValidator_EmptyProtocolVersionStudyId_FailsWithSingleError()
     {
         var request = new SubjectConsentRequest(
@@ -155,7 +145,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentRequestValidator_EmptyProtocolVersionVersionTag_FailsWithSingleError()
     {
         var request = new SubjectConsentRequest(
@@ -170,7 +159,6 @@ public class RequestValidatorTests
     // ---- SubjectStateUpdateRequest / SubjectStateUpdateRequestValidator ----------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectStateUpdateRequestValidator_BothNull_FailsWithMissingTargetStateErrorCode()
     {
         var request = new SubjectStateUpdateRequest(null, null);
@@ -186,7 +174,6 @@ public class RequestValidatorTests
     [InlineData("   ", null)]
     [InlineData(null, "   ")]
     [InlineData("  ", "  ")]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectStateUpdateRequestValidator_BothBlankOrWhitespace_FailsWithMissingTargetStateErrorCode(
         string? status, string? state)
     {
@@ -202,7 +189,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectStateUpdateRequest_StatusNullStateEnrolled_ValidatesAndTargetResolvesToState()
     {
         var request = new SubjectStateUpdateRequest(null, "ENROLLED");
@@ -214,7 +200,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectStateUpdateRequest_StatusEnrolledStateNull_ValidatesAndTargetResolvesToStatus()
     {
         var request = new SubjectStateUpdateRequest("ENROLLED", null);
@@ -226,7 +211,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectStateUpdateRequest_EmptyStatusWithPopulatedState_ValidatorPassesButTargetPrefersEmptyStatus()
     {
         // Documents a deliberate asymmetry between the validator (per 02_technical_design.md §2.7, checks
@@ -248,7 +232,6 @@ public class RequestValidatorTests
     // ---- EtmfCompletenessWebhookPayloadValidator ---------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void EtmfCompletenessWebhookPayloadValidator_ValidPayload_Passes()
     {
         var payload = new EtmfCompletenessWebhookPayload(
@@ -260,7 +243,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void EtmfCompletenessWebhookPayloadValidator_NullSiteIdAndMissingArtifacts_Passes()
     {
         var payload = new EtmfCompletenessWebhookPayload(
@@ -274,7 +256,6 @@ public class RequestValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [GxPRequirement("PRD-SUB-001")]
     public void EtmfCompletenessWebhookPayloadValidator_BlankStudyId_FailsNotEmpty(string studyId)
     {
         // FluentValidation's NotEmpty() treats whitespace-only strings as empty, so both "" and "   "
@@ -288,7 +269,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void EtmfCompletenessWebhookPayloadValidator_EmptyMilestone_FailsNotEmpty()
     {
         var payload = new EtmfCompletenessWebhookPayload("STUDY-001", null, "", true, null);
@@ -302,7 +282,6 @@ public class RequestValidatorTests
     // ---- SiteActivationRequest / SubjectDemographicsUpdateRequest (no dedicated validator) ---------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SiteActivationRequest_ValueEquality_ComparesByStudyId()
     {
         // No dedicated validator (02_technical_design.md §2.7): StudyId is its only field, and ASP.NET
@@ -314,7 +293,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectDemographicsUpdateRequest_AllFieldsOmitted_ConstructsWithNulls()
     {
         var request = new SubjectDemographicsUpdateRequest(null, null);
@@ -324,7 +302,6 @@ public class RequestValidatorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectDemographicsUpdateRequest_PopulatedStratFactors_RoundTrips()
     {
         var stratFactors = new Dictionary<string, object?> { ["site"] = "A", ["age_band"] = null };

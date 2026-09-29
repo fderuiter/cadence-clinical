@@ -23,10 +23,6 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// <summary>
 /// Unit test coverage for clinical observation domain invariants, UCUM unit normalization,
 /// age/sex lab reference ranges, outlier detection, and SDV verification workflows.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-042
-/// @req:PRD-SYS-121
-/// @req:SRS-EDC-001
 /// </summary>
 public sealed class ObservationUnitTests
 {
@@ -43,11 +39,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that creating a clinical observation sets initial properties, version index, and SDV unverified status.
-    /// @req:PRD-SYS-001
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void CreateObservation_WithValidParameters_InitializesCorrectly()
     {
         var studyId = new StudyCode("STUDY-101");
@@ -84,11 +77,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that verifying SDV records verifier identity, timestamp, and advances audit state.
-    /// @req:PRD-SYS-042
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-042")]
     public void VerifySdv_WhenUnverified_TransitionsToVerified()
     {
         var obs = ClinicalObservation.Create(
@@ -111,11 +101,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that attempting to re-verify an already verified observation returns a validation error.
-    /// @req:PRD-SYS-042
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-042")]
     public void VerifySdv_WhenAlreadyVerified_ReturnsError()
     {
         var obs = ClinicalObservation.Create(
@@ -136,11 +123,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that flagging an observation for SDV discrepancy resets verified status and records reason.
-    /// @req:PRD-SYS-042
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-042")]
     public void FlagSdv_WithReason_ResetsSdvVerification()
     {
         var obs = ClinicalObservation.Create(
@@ -164,11 +148,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that UCUM canonical normalization converts temperatures and weights accurately.
-    /// @req:PRD-SYS-121
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-121")]
     public void UcumNormalization_ConvertsUnitsCorrectly()
     {
         var ucum = new UcumNormalizationService();
@@ -193,11 +174,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that LabRangeService determines whether lab values fall within age/sex-adjusted normal ranges.
-    /// @req:PRD-SYS-121
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-121")]
     public void LabRangeService_EvaluatesNormalAndOutOfRangeValues()
     {
         var labRange = new LabRangeService();
@@ -220,11 +198,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that OutlierDetectionService flags statistical outliers using the 3.5 IQR threshold.
-    /// @req:PRD-SYS-001
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void OutlierDetection_IdentifiesStatisticalOutliers()
     {
         var outlierService = new OutlierDetectionService();
@@ -246,12 +221,8 @@ public sealed class ObservationUnitTests
 
     /// <summary>
     /// Validates that ObservationApplicationService normalizes units and stores observation in repository.
-    /// @req:PRD-SYS-001
-    /// @req:PRD-SYS-121
-    /// @req:SRS-EDC-001
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public async Task ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation()
     {
         var repo = new InMemoryObservationRepository();

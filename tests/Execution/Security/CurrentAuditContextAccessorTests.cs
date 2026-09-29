@@ -17,9 +17,8 @@ namespace Cadence.UnitTests.Execution.Security;
 /// Coverage for <see cref="AmbientAuditContextAccessor"/>: the caller's <c>sub</c> claim is the actor, a
 /// declared <see cref="ServiceAccount"/> overrides it, and with neither the actor is unresolved and reading
 /// it throws instead of defaulting to <c>"system"</c> (#4767). The change reason keeps its default.
-/// @req:PRD-SYS-053
+/// @req:PRD-SYS-001
 /// </summary>
-[GxPRequirement("PRD-SYS-053")]
 public class CurrentAuditContextAccessorTests
 {
     private sealed class FakeHttpContextAccessor(HttpContext? httpContext) : IHttpContextAccessor
@@ -47,7 +46,7 @@ public class CurrentAuditContextAccessorTests
     // ---- AmbientAuditContextAccessor.UserId ----------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void UserId_GivenNoHttpContext_Throws()
     {
         var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
@@ -56,7 +55,7 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void UserId_GivenNoSubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: null);
@@ -65,7 +64,7 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void UserId_GivenEmptySubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: string.Empty);
@@ -74,7 +73,7 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void UserId_GivenWhitespaceOnlySubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: "   ");
@@ -83,7 +82,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault()
     {
         var accessor = CreateAccessor(subClaim: "user-42");
@@ -94,7 +92,6 @@ public class CurrentAuditContextAccessorTests
     // ---- AmbientAuditContextAccessor.ChangeReason ----------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault()
     {
         var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
@@ -103,7 +100,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault()
     {
         var accessor = CreateAccessor(changeReasonHeader: null);
@@ -112,7 +108,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader()
     {
         // Boundary check: an explicitly-empty header ("", present but blank) must resolve to the same
@@ -123,7 +118,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader()
     {
         // Boundary check (AC): whitespace-only, not merely absent, must still resolve to the default —
@@ -134,7 +128,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void ChangeReason_GivenHeaderPresent_ReturnsActualHeaderValueNotDefault()
     {
         var accessor = CreateAccessor(changeReasonHeader: "Protocol amendment v2");
@@ -143,7 +136,6 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults()
     {
         var accessor = CreateAccessor(subClaim: "user-7", changeReasonHeader: "Manual correction");
@@ -155,7 +147,7 @@ public class CurrentAuditContextAccessorTests
     // ---- Service accounts ---------------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void RunAs_WithNoHttpContext_AttributesToTheServiceAccount()
     {
         var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
@@ -167,7 +159,7 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void RunAs_OverridesTheAmbientCaller()
     {
         var accessor = CreateAccessor(subClaim: "user-7", changeReasonHeader: "Manual correction");
@@ -178,7 +170,7 @@ public class CurrentAuditContextAccessorTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     [InlineData("system")]
     [InlineData("svc:")]
     [InlineData("")]
