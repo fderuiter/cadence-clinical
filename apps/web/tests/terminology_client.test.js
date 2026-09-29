@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth.js";
 import {
   terminologyClient,
   TerminologyNetworkError,
 } from "../src/api/terminologyClient.js";
-
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
 
 describe("Terminology API Client Unit Tests", () => {
   beforeEach(() => {
@@ -47,10 +51,12 @@ describe("Terminology API Client Unit Tests", () => {
         system: "NCI_Thesaurus",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResult), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "C12345",
@@ -60,16 +66,22 @@ describe("Terminology API Client Unit Tests", () => {
       expect(result).toEqual(mockResult);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      const [url, options] = mockFetch.mock.calls[0];
+      const [callArg, options] = mockFetch.mock.calls[0];
+      const url = typeof callArg === "string" ? callArg : callArg.url;
+      const getHeader = (name) =>
+        typeof callArg === "string"
+          ? options?.headers?.[name]
+          : callArg.headers.get(name);
+
       expect(url).toBe(
         "http://localhost:8000/api/v1/terminology/validate/C12345"
       );
-      expect(options.headers["Authorization"]).toBe(
+      expect(getHeader("Authorization")).toBe(
         "Bearer mock-keycloak-jwt-token"
       );
-      expect(options.headers["X-Change-Reason"]).toBeUndefined();
-      expect(options.headers["X-User-Id"]).toBeUndefined();
-      expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
+      expect(getHeader("X-Change-Reason")).toBe("Testing signed client");
+      expect(getHeader("X-User-Id")).toBeNull();
+      expect(getHeader("X-Gateway-Signature")).toBeNull();
     });
 
     it("should handle invalid/malformed codes by returning the INVALID state", async () => {
@@ -79,10 +91,12 @@ describe("Terminology API Client Unit Tests", () => {
         error_message: "Concept code not found",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResult), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "NOT_A_CODE",
@@ -100,10 +114,12 @@ describe("Terminology API Client Unit Tests", () => {
         error_message: "Upstream service timeout",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResult), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "C12345",
@@ -115,11 +131,13 @@ describe("Terminology API Client Unit Tests", () => {
     });
 
     it("should throw TerminologyNetworkError when gateway returns a 502/503/500 error", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 502,
-        statusText: "Bad Gateway",
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(null, {
+          status: 502,
+          statusText: "Bad Gateway",
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       let thrownError = null;
       try {
@@ -163,10 +181,12 @@ describe("Terminology API Client Unit Tests", () => {
         total_count: 1,
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResult), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.searchTerminology("Pain", {
         ...authOptions,
@@ -177,7 +197,8 @@ describe("Terminology API Client Unit Tests", () => {
       expect(result).toEqual(mockResult);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      const [url] = mockFetch.mock.calls[0];
+      const [callArg] = mockFetch.mock.calls[0];
+      const url = typeof callArg === "string" ? callArg : callArg.url;
       const parsedUrl = new URL(url);
       expect(parsedUrl.origin + parsedUrl.pathname).toBe(
         "http://localhost:8000/api/v1/terminology/search"
@@ -203,10 +224,12 @@ describe("Terminology API Client Unit Tests", () => {
         concepts: [],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockReport,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockReport), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.getStudyTerminologyValidation(
         "STUDY-001",
@@ -214,8 +237,9 @@ describe("Terminology API Client Unit Tests", () => {
       );
 
       expect(result).toEqual(mockReport);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe(
+      const [callArg1] = mockFetch.mock.calls[0];
+      const url1 = typeof callArg1 === "string" ? callArg1 : callArg1.url;
+      expect(url1).toBe(
         "http://localhost:8000/api/v1/studies/STUDY-001/terminology-validation"
       );
     });
@@ -236,10 +260,12 @@ describe("Terminology API Client Unit Tests", () => {
         concepts: [],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockReport,
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockReport), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
       const result = await terminologyClient.getStudyCtValidation(
         "STUDY-001",
@@ -247,8 +273,9 @@ describe("Terminology API Client Unit Tests", () => {
       );
 
       expect(result).toEqual(mockReport);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe(
+      const [callArg2] = mockFetch.mock.calls[0];
+      const url2 = typeof callArg2 === "string" ? callArg2 : callArg2.url;
+      expect(url2).toBe(
         "http://localhost:8000/api/v1/studies/STUDY-001/ct-validation"
       );
     });

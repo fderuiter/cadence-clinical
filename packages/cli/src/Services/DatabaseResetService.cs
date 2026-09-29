@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 using Neo4j.Driver;
@@ -463,21 +464,20 @@ public static class DatabaseResetService
         var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{password}"));
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
 
-        var statements = new List<object>
+        var statementsArray = new JsonArray
         {
-            new { statement = "MATCH (n) DETACH DELETE n" }
+            (JsonNode)new JsonObject { ["statement"] = "MATCH (n) DETACH DELETE n" }
         };
-
         foreach (var item in MockStudies)
         {
             var parts = item.Split('|');
-            statements.Add(new { statement = $"MERGE (s:Study {{id: '{parts[0]}'}})" });
-            statements.Add(new { statement = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sp:StudyProperties {{title: '{parts[1]}', desc: '{parts[2]}'}}), (s)-[:HAS_PROPERTIES]->(sp)" });
-            statements.Add(new { statement = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sv:StudyVersion {{id: '{parts[3]}', version_tag: '1.0', status: 'DRAFT', version_index: 1}}), (s)-[:HAS_VERSION]->(sv)" });
+            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MERGE (s:Study {{id: '{parts[0]}'}})" });
+            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sp:StudyProperties {{title: '{parts[1]}', desc: '{parts[2]}'}}), (s)-[:HAS_PROPERTIES]->(sp)" });
+            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sv:StudyVersion {{id: '{parts[3]}', version_tag: '1.0', status: 'DRAFT', version_index: 1}}), (s)-[:HAS_VERSION]->(sv)" });
         }
 
-        var payload = new { statements };
-        string json = JsonSerializer.Serialize(payload);
+        var payload = new JsonObject { ["statements"] = statementsArray };
+        string json = payload.ToJsonString();
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var resp = await client.PostAsync(endpoint, content);

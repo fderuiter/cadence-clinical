@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.venv
+**/coverage
+**/tmp
+.next
+.nuxt

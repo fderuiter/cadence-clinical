@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Cadence.Core.Domain.Rules;
@@ -49,19 +50,18 @@ public class RuleDefinition
     {
         if (string.IsNullOrEmpty(Sha256Checksum))
         {
-            var payload = new
+            var payload = new JsonObject
             {
-                rule_id = RuleId,
-                study_id = StudyId,
-                rule_type = RuleType,
-                condition = Condition,
-                action = Action,
-                target_field = TargetField,
-                target_form = TargetForm,
-                query_message = QueryMessage,
-                version_index = VersionIndex
+                ["rule_id"] = RuleId,
+                ["study_id"] = StudyId,
+                ["rule_type"] = RuleType,
+                ["action"] = Action,
+                ["target_field"] = TargetField,
+                ["target_form"] = TargetForm,
+                ["query_message"] = QueryMessage,
+                ["version_index"] = VersionIndex
             };
-            string raw = JsonSerializer.Serialize(payload);
+            string raw = payload.ToJsonString();
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
             Sha256Checksum = Convert.ToHexString(hash).ToLowerInvariant();
         }
