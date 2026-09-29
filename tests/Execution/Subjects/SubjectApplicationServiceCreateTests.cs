@@ -19,8 +19,7 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// `MIG-SUBJ-018` coverage for <see cref="SubjectApplicationService.CreateAsync"/>: SCN-001's sequential
 /// enrollment-index/audit-trail assertions, the demographics-encryption-on-write assertion, the
-/// <c>FromAggregate</c> (not <c>Underpopulated</c>) response-shape distinction this is the one call site for
-/// (§2.6), and <see cref="SubjectCreateRequest"/>'s documented empty-string-<see cref="SiteCode"/> boundary.
+/// <c>FromAggregate</c> response shape, and <see cref="SubjectCreateRequest"/>'s documented empty-string-<see cref="SiteCode"/> boundary.
 /// Uses the in-memory <c>Cadence.Testing.Fakes</c> repositories rather than EF Core/SQLite — persistence
 /// correctness for <see cref="Cadence.Apps.Execution.Domain.Ports.ISubjectRepository.EnrollNextIndexAsync"/>
 /// itself is already covered by `SubjectRepositoryTests` (MIG-SUBJ-013); this suite exercises the
@@ -178,12 +177,9 @@ public class SubjectApplicationServiceCreateTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task CreateAsync_GivenSiteId_ReturnsFromAggregateWithSiteIdPopulated_NotUnderpopulated()
+    public async Task CreateAsync_GivenSiteId_ReturnsFromAggregateWithSiteIdPopulated()
     {
-        // CreateAsync is documented as the one call site in this slice that returns
-        // SubjectResponse.FromAggregate rather than Underpopulated (02_technical_design.md §2.6) --
-        // Underpopulated would hardcode SiteId to null regardless of input, so a populated SiteId here
-        // proves the real factory was used.
+        // The response is built from the persisted aggregate, so the requested site comes back.
         var harness = new Harness();
 
         var result = await harness.Service.CreateAsync(

@@ -463,6 +463,9 @@ public sealed class SiteComplianceCache : AggregateRoot<Guid>
 
 ### 2.6 Response DTOs — the `SubjectResponse` under-population decision
 
+> [!NOTE]
+> **Superseded by #4771 (D8, 2026-09-29).** The parity-preservation decision below was reversed in the hardening pass it anticipated: every write path now returns `SubjectResponse.FromAggregate(subject)`, `Underpopulated` was removed, and the golden-master fixtures (`SCN-003-A`, `SCN-005-D`, `EDGE-004`, `EDGE-010`) now assert the subject's real status, protocol version and site. The text below is kept as the historical record.
+
 ```csharp
 namespace Cadence.Apps.Execution.Application.Subjects;
 
