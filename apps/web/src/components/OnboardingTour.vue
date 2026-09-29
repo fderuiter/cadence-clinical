@@ -420,6 +420,17 @@ watch(
   }
 );
 
+watch(
+  () => authStore.currentPersona,
+  (newPersona) => {
+    if (newPersona) {
+      onboardingStore.loadPersonaState(newPersona);
+      updatePosition();
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   window.addEventListener("resize", updatePosition);
   updatePosition();

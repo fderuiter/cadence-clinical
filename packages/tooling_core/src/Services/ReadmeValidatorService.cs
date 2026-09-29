@@ -20,19 +20,35 @@ public static class ReadmeValidatorService
 
             foreach (var subDir in Directory.GetDirectories(fullDir))
             {
+                string name = Path.GetFileName(subDir);
+                if (name.StartsWith('.') || name == "__pycache__" || name == "bin" || name == "obj" || name == "node_modules" || name == ".venv")
+                {
+                    continue;
+                }
+
                 string readmePath = Path.Combine(subDir, "README.md");
+                string relPath = Path.GetRelativePath(repoRoot, subDir);
+
                 if (!File.Exists(readmePath))
                 {
-                    string relPath = Path.GetRelativePath(repoRoot, subDir);
                     Console.WriteLine($"[MISSING README] Directory '{relPath}' lacks a README.md file.");
                     missing++;
+                }
+                else
+                {
+                    string content = File.ReadAllText(readmePath);
+                    if (string.IsNullOrWhiteSpace(content) || !content.Contains("# "))
+                    {
+                        Console.WriteLine($"[INVALID README] README.md in '{relPath}' is empty or lacks title header ('# ')");
+                        missing++;
+                    }
                 }
             }
         }
 
         if (missing > 0)
         {
-            Console.WriteLine($"\n[ERROR] Found {missing} directories missing README.md files.");
+            Console.WriteLine($"\n[ERROR] Found {missing} directories missing or with invalid README.md files.");
             return 1;
         }
 

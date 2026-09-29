@@ -9,7 +9,9 @@ using Cadence.Apps.Execution.Endpoints.Filters;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Execution.Endpoints;
 
@@ -44,8 +46,50 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// subject-scoped route handlers, lines 180–773).
 /// @req:PRD-SUB-001
 /// </summary>
-public static class SubjectEndpoints
+public static partial class SubjectEndpoints
 {
+    [LoggerMessage(
+        EventId = 3001,
+        Level = LogLevel.Information,
+        Message = "Creating subject '{SubjectId}' for study '{StudyId}'")]
+    public static partial void LogCreatingSubject(this ILogger logger, string subjectId, string studyId);
+
+    [LoggerMessage(
+        EventId = 3002,
+        Level = LogLevel.Information,
+        Message = "Successfully created subject '{SubjectId}' for study '{StudyId}'")]
+    public static partial void LogCreatedSubject(this ILogger logger, string subjectId, string studyId);
+
+    [LoggerMessage(
+        EventId = 3003,
+        Level = LogLevel.Information,
+        Message = "Recording consent for subject '{SubjectId}', study '{StudyId}', version '{VersionTag}'")]
+    public static partial void LogRecordingConsent(this ILogger logger, string subjectId, string? studyId, string? versionTag);
+
+    [LoggerMessage(
+        EventId = 3004,
+        Level = LogLevel.Information,
+        Message = "Advancing state for subject '{SubjectId}' to '{TargetState}' with reason '{ChangeReason}'")]
+    public static partial void LogAdvancingSubjectState(this ILogger logger, string subjectId, string? targetState, string changeReason);
+
+    [LoggerMessage(
+        EventId = 3005,
+        Level = LogLevel.Debug,
+        Message = "Fetching detail for subject '{SubjectId}' (isBlindedCaller: {IsBlindedCaller})")]
+    public static partial void LogFetchingSubjectDetail(this ILogger logger, string subjectId, bool isBlindedCaller);
+
+    [LoggerMessage(
+        EventId = 3006,
+        Level = LogLevel.Information,
+        Message = "Updating demographics for subject '{SubjectId}' with reason '{ChangeReason}'")]
+    public static partial void LogUpdatingSubjectDemographics(this ILogger logger, string subjectId, string changeReason);
+
+    [LoggerMessage(
+        EventId = 3007,
+        Level = LogLevel.Information,
+        Message = "Deleting demographics for subject '{SubjectId}' with reason '{ChangeReason}'")]
+    public static partial void LogDeletingSubjectDemographics(this ILogger logger, string subjectId, string changeReason);
+
     public static IEndpointRouteBuilder MapSubjectEndpoints(this IEndpointRouteBuilder app)
     {
         // `.WithOpenApi()` from the design doc's own §3.3 sample is deliberately not reproduced here: it is
@@ -122,9 +166,20 @@ public static class SubjectEndpoints
     /// code (<see cref="SubjectResponse.SubjectId_"/>), per `02_technical_design.md` §3.3.
     /// </summary>
     public static async Task<IResult> CreateSubjectAsync(
-        SubjectCreateRequest request, ISubjectApplicationService svc, CancellationToken ct)
+        SubjectCreateRequest request, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        if (logger != null)
+        {
+            logger.LogCreatingSubject(request.SubjectId, request.StudyId);
+        }
+
         var result = await svc.CreateAsync(request, ct).ConfigureAwait(false);
+
+        if (logger != null && result.IsSuccess && result.Value is { } response)
+        {
+            logger.LogCreatedSubject(response.SubjectId_.Value, response.StudyId.Value);
+        }
+
         return result.Match(
             onSuccess: r => Results.Created($"/api/v1/execution/subjects/{r.SubjectId_}", r),
             onFailure: e => e.ToProblemResult());
@@ -136,8 +191,13 @@ public static class SubjectEndpoints
     /// <see cref="MapSubjectEndpoints"/>'s own remarks).
     /// </summary>
     public static async Task<IResult> RecordSubjectConsentAsync(
-        string subjectId, SubjectConsentRequest request, ISubjectApplicationService svc, CancellationToken ct)
+        string subjectId, SubjectConsentRequest request, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        if (logger != null)
+        {
+            logger.LogRecordingConsent(subjectId, request.ProtocolVersion?.StudyId, request.ProtocolVersion?.VersionTag);
+        }
+
         var result = await svc.RecordConsentAsync(subjectId, request, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
@@ -152,10 +212,15 @@ public static class SubjectEndpoints
     /// `02_technical_design.md` §3.3's own reference implementation for this route verbatim.
     /// </summary>
     public static async Task<IResult> AdvanceSubjectStateAsync(
-        string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+        string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
         string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
+
+        if (logger != null)
+        {
+            logger.LogAdvancingSubjectState(subjectId, request.Target, changeReason);
+        }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
@@ -179,9 +244,14 @@ public static class SubjectEndpoints
     /// </para>
     /// </summary>
     public static async Task<IResult> GetSubjectDetailAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
         bool isBlindedCaller = http.User.IsInRole(BlindedRoleClaimStandIn);
+
+        if (logger != null)
+        {
+            logger.LogFetchingSubjectDetail(subjectId, isBlindedCaller);
+        }
 
         var result = await svc.GetDetailAsync(subjectId, isBlindedCaller, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
@@ -195,9 +265,14 @@ public static class SubjectEndpoints
     /// `02_technical_design.md` §3.3's reference implementation for this exact route.
     /// </summary>
     public static async Task<IResult> UpdateSubjectDemographicsAsync(
-        string subjectId, SubjectDemographicsUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+        string subjectId, SubjectDemographicsUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
         string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()!;
+
+        if (logger != null)
+        {
+            logger.LogUpdatingSubjectDemographics(subjectId, changeReason);
+        }
 
         var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
@@ -210,9 +285,14 @@ public static class SubjectEndpoints
     /// exact same justification as <see cref="UpdateSubjectDemographicsAsync"/>'s.
     /// </summary>
     public static async Task<IResult> DeleteSubjectDemographicsAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
+        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
         string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()!;
+
+        if (logger != null)
+        {
+            logger.LogDeletingSubjectDemographics(subjectId, changeReason);
+        }
 
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
