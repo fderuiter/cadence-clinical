@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Core.Domain.Audit;
+using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
 

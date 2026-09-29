@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;

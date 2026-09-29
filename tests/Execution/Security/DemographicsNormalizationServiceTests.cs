@@ -1,5 +1,6 @@
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;

@@ -1,7 +1,7 @@
 using System;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Domain.Subjects;
 
