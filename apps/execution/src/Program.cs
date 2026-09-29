@@ -15,6 +15,7 @@ using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Apps.Execution.Infrastructure.OpenApi;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
@@ -29,6 +30,7 @@ using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,6 +46,8 @@ builder.Services.AddCadenceSecurity();
 // §2.6). ExecutionJsonSerialization.Configure is itself idempotent, so this stays additive/safe even if
 // another slice's own ConfigureHttpJsonOptions call also runs it on the same options instance.
 builder.Services.ConfigureHttpJsonOptions(options => ExecutionJsonSerialization.Configure(options.SerializerOptions));
+// Describe the value objects and statuses those converters write, so the OpenAPI document matches the wire.
+builder.Services.ConfigureAll<OpenApiOptions>(options => options.AddSchemaTransformer<ExecutionWireTypesOpenApiTransformer>());
 
 // MIG-SUBJ-013 (`02_technical_design.md` §4.2): the shared DbUpdateConcurrencyException retry pipeline
 // every ExecutionRepositoryBase-derived repository's SaveChangesAsync wraps around

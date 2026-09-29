@@ -1941,7 +1941,14 @@
           }
         }
       },
-      "Execution_FormSubmissionStatus": {},
+      "Execution_FormSubmissionStatus": {
+        "enum": [
+          "DRAFT",
+          "COMPLETED",
+          "APPROVED"
+        ],
+        "type": "string"
+      },
       "Execution_FormUnlockRequest": {
         "required": [
           "reason"
@@ -2520,7 +2527,20 @@
           }
         }
       },
-      "Execution_QueryStatus": {},
+      "Execution_QueryStatus": {
+        "enum": [
+          "NONE",
+          "CANDIDATE",
+          "DRAFT_AI",
+          "OPEN",
+          "ANSWERED",
+          "RESOLVED",
+          "CLOSED",
+          "REOPENED",
+          "CANCELLED"
+        ],
+        "type": "string"
+      },
       "Execution_SignatureManifest": {
         "required": [
           "signer_id",
@@ -2571,10 +2591,18 @@
           }
         }
       },
-      "Execution_SiteCode": {},
-      "Execution_StudyCode": {},
-      "Execution_SubjectCode": {},
-      "Execution_SubjectConsentId": {},
+      "Execution_SiteCode": {
+        "type": "string"
+      },
+      "Execution_StudyCode": {
+        "type": "string"
+      },
+      "Execution_SubjectCode": {
+        "type": "string"
+      },
+      "Execution_SubjectConsentId": {
+        "type": "string"
+      },
       "Execution_SubjectConsentRequest": {
         "required": [
           "protocol_version",
@@ -2783,7 +2811,9 @@
           }
         }
       },
-      "Execution_SubjectId": {},
+      "Execution_SubjectId": {
+        "type": "string"
+      },
       "Execution_SubjectResponse": {
         "required": [
           "id",

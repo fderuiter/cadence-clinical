@@ -67,5 +67,6 @@ The missing endpoints are tracked by module, not one issue per Python path:
 ## Moving a screen onto the real API
 
 1. Make sure every endpoint the screen needs is in `docs/openapi/*.json` and routed by the gateway. If one is missing, add it to the module's issue rather than stubbing it or adding a mock fallback.
+   Check that its request and response schemas are complete too. A type with a custom JSON converter (a value object or a status) comes out as an empty schema unless the service describes it; Execution does this in `apps/execution/src/Infrastructure/OpenApi/ExecutionWireTypesOpenApiTransformer.cs`, so its IDs and codes are strings and its statuses are string enums.
 2. Call it through the typed client generated from those specs, and delete the screen's Python-era client functions and their types.
 3. Add the route name to `AVAILABLE_SCREENS` and update this page and #4829.
