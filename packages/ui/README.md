@@ -9,6 +9,7 @@ Shared domain and infrastructure component `ui` within the Cadence Clinical rese
 ## Architectural Boundaries
 
 The `ui` package operates as a modular shared library within the Cadence Clinical ecosystem:
+
 - **Code-Adjacent Domain:** Located strictly within `packages/ui/`.
 - **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
 - **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
@@ -20,6 +21,7 @@ The `ui` package operates as a modular shared library within the Cadence Clinica
 Exports shared utilities, domain interfaces, and models for `ui`.
 
 #### Exposed CLI Commands
+
 - `build`: `node apps/web/src/types/generate-types.js && vite build`
 - `test`: `vitest run --testTimeout=30000`
 - `lint`: `eslint .`
@@ -30,6 +32,7 @@ Exports shared utilities, domain interfaces, and models for `ui`.
 ## Dependencies
 
 This package relies on the following standard dependencies:
+
 - `@vitejs/plugin-vue`
 - `axe-core`
 - `pinia`

@@ -496,7 +496,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         currentPersona: "invalid_hacked_persona_role",
         rawRoles: ["SomeRole"],
       };
-      window.sessionStorage.setItem("cadence_auth", JSON.stringify(corruptedAuth));
+      window.sessionStorage.setItem(
+        "cadence_auth",
+        JSON.stringify(corruptedAuth)
+      );
 
       const newPinia = createPinia();
       setActivePinia(newPinia);
@@ -527,7 +530,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         currentPersona: "site_crc",
         isDemoMode: true,
       };
-      window.sessionStorage.setItem("cadence_auth", JSON.stringify(savedAuthWithoutRoles));
+      window.sessionStorage.setItem(
+        "cadence_auth",
+        JSON.stringify(savedAuthWithoutRoles)
+      );
 
       const newPinia = createPinia();
       setActivePinia(newPinia);
@@ -535,7 +541,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       expect(restoredStore.currentPersona).toBe("site_crc");
       expect(restoredStore.rawRoles).toEqual(["Site Investigator", "CRC"]);
-      expect(restoredStore.normalizedRoles).toEqual(["site_investigator", "crc"]);
+      expect(restoredStore.normalizedRoles).toEqual([
+        "site_investigator",
+        "crc",
+      ]);
     });
   });
 });

@@ -77,7 +77,11 @@ export const statisticalComputingService = {
   /**
    * Revokes an active database lock authorization token.
    */
-  revokeLockToken(tokenId: string, reason = "Revocation", options: Record<string, unknown> = {}) {
+  revokeLockToken(
+    tokenId: string,
+    reason = "Revocation",
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/sce/lock-tokens/{token_id}/revoke", {
         params: {
@@ -151,12 +155,19 @@ export const statisticalComputingService = {
   /**
    * Retrieves artifact content and preview.
    */
-  getArtifact(runId: string, artifactId: string, options: Record<string, unknown> = {}) {
+  getArtifact(
+    runId: string,
+    artifactId: string,
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}", {
-        params: { path: { run_id: runId, artifact_id: artifactId } },
-        ...options,
-      })
+      openApiClient.GET(
+        "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}",
+        {
+          params: { path: { run_id: runId, artifact_id: artifactId } },
+          ...options,
+        }
+      )
     );
   },
 };
