@@ -31,11 +31,11 @@ if ($dotnet) {
     }
 }
 
-# 2. Validate ADRs and quality gates
-Write-Host "  Validating ADR integrity and architecture sentinels..." -ForegroundColor Gray
-& dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check adrs
+# 2. Run the quality gates (same as .githooks/pre-commit)
+Write-Host "  Running the Cadence quality gates..." -ForegroundColor Gray
+& dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "::error:: ADR validation failed! Run 'dotnet cadence check adrs' or 'dotnet cadence fix adrs'." -ForegroundColor Red
+    Write-Host "::error:: A quality gate failed. Run 'pnpm cadence check <gate>' for the failing gate." -ForegroundColor Red
     exit 1
 }
 

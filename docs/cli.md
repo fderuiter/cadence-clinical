@@ -67,12 +67,14 @@ Runs the quality gates.
 pnpm cadence check                 # all 21 gates
 pnpm cadence check <gate>          # one gate
 pnpm cadence check <gate> <files>  # one gate, limited to these files
+pnpm cadence check --pre-commit    # what the pre-commit hook runs
 ```
 
-| Argument  | Description                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`  | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens. |
-| `[files]` | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).        |
+| Argument       | Description                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                       |
+| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                              |
+| `--pre-commit` | Quick variants for the pre-commit hook: the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services. |
 
 With no gate, all 21 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
 
