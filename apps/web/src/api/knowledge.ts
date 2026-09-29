@@ -78,7 +78,10 @@ export const DEFAULT_CATEGORIES = [
 /**
  * Default fallback clinical SOPs for offline sandbox demo mode.
  */
-export const DEFAULT_CONTEXTUAL_SOPS: Record<string, Record<string, unknown>> = {
+export const DEFAULT_CONTEXTUAL_SOPS: Record<
+  string,
+  Record<string, unknown>
+> = {
   "/ecrf": {
     matched_mapping: {
       id: "map-ecrf-01",
@@ -162,6 +165,89 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
     section_anchor: "#schedule-of-activities-matrix-authoring",
     related_articles: [],
   },
+  "/ctms": {
+    matched_mapping: {
+      id: "map-ctms-01",
+      route_pattern: "/ctms/*",
+      persona: "cra_monitor",
+      article_id: "art-ctms-sop",
+      section_anchor: "#site-monitoring-and-sdv",
+      priority: 10,
+      is_active: true,
+    },
+    primary_article: {
+      id: "art-ctms-sop",
+      title: "SOP-CTMS-302: Site Monitoring Visits & Source Data Verification",
+      slug: "sop-ctms-302-site-monitoring",
+      status: "PUBLISHED",
+      version_index: 1,
+      version_label: "1.0",
+      tags: ["ctms", "monitoring", "sdv", "cra"],
+      category_id: "cat-site-monitoring",
+      category_name: "Site Monitoring & CTMS",
+      author_user_id: "cra_monitor",
+      last_edited_by: "cra_monitor",
+      approved_by: "qa_director",
+      created_at: "2026-01-20T09:00:00Z",
+      updated_at: "2026-06-01T11:15:00Z",
+      body_markdown: "## Site Monitoring & SDV Procedures",
+      body_html: "<h2>Site Monitoring & SDV Procedures</h2>",
+    },
+    primary_version: {
+      id: "ver-ctms-302",
+      version_index: 1,
+      version_label: "1.0",
+      status_at_snapshot: "PUBLISHED",
+      is_locked: true,
+      created_by: "cra_monitor",
+      reason_for_change: "Initial release",
+      created_at: "2026-06-01T11:15:00Z",
+    },
+    section_anchor: "#site-monitoring-and-sdv",
+    related_articles: [],
+  },
+  "/audit": {
+    matched_mapping: {
+      id: "map-audit-01",
+      route_pattern: "/audit/*",
+      persona: "auditor",
+      article_id: "art-audit-sop",
+      section_anchor: "#gxp-audit-trail-inspection",
+      priority: 10,
+      is_active: true,
+    },
+    primary_article: {
+      id: "art-audit-sop",
+      title:
+        "SOP-AUD-401: 21 CFR Part 11 Audit Trail & Qualification Inspection",
+      slug: "sop-aud-401-audit-trail-inspection",
+      status: "PUBLISHED",
+      version_index: 1,
+      version_label: "1.0",
+      tags: ["audit", "part11", "gxp", "compliance"],
+      category_id: "cat-regulatory-compliance",
+      category_name: "Regulatory & Quality Compliance",
+      author_user_id: "qa_director",
+      last_edited_by: "qa_director",
+      approved_by: "qa_director",
+      created_at: "2026-01-20T09:00:00Z",
+      updated_at: "2026-06-01T11:15:00Z",
+      body_markdown: "## Audit Trail Inspection Guidelines",
+      body_html: "<h2>Audit Trail Inspection Guidelines</h2>",
+    },
+    primary_version: {
+      id: "ver-aud-401",
+      version_index: 1,
+      version_label: "1.0",
+      status_at_snapshot: "PUBLISHED",
+      is_locked: true,
+      created_by: "qa_director",
+      reason_for_change: "Initial release",
+      created_at: "2026-06-01T11:15:00Z",
+    },
+    section_anchor: "#gxp-audit-trail-inspection",
+    related_articles: [],
+  },
 };
 
 export const DEFAULT_MOCK_ARTICLES = [
@@ -203,7 +289,10 @@ export function getFallbackContextualHelp(route?: string, _persona?: string) {
 }
 
 export const knowledgeService = {
-  async resolveContextualHelp({ route, persona }: { route?: string; persona?: string } = {}) {
+  async resolveContextualHelp({
+    route,
+    persona,
+  }: { route?: string; persona?: string } = {}) {
     try {
       const response = (await unwrapResponse(
         openApiClient.GET("/api/v1/knowledge/contextual-help", {
@@ -233,7 +322,8 @@ export const knowledgeService = {
       );
     } catch {
       const found = memoryArticles.find(
-        (a: Record<string, unknown>) => a.id === articleId || a.slug === articleId
+        (a: Record<string, unknown>) =>
+          a.id === articleId || a.slug === articleId
       );
       if (found) {
         return JSON.parse(JSON.stringify(found));
@@ -248,7 +338,16 @@ export const knowledgeService = {
         openApiClient.GET("/api/v1/knowledge/articles", {
           params: {
             query: {
-              status_filter: (params.status ?? undefined) as unknown as "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED" | "SUPERSEDED" | null | undefined,
+              status_filter: (params.status ?? undefined) as unknown as
+                | "DRAFT"
+                | "IN_REVIEW"
+                | "APPROVED"
+                | "PUBLISHED"
+                | "ARCHIVED"
+                | "REJECTED"
+                | "SUPERSEDED"
+                | null
+                | undefined,
               category_id: params.categoryId,
             },
           },
@@ -259,10 +358,14 @@ export const knowledgeService = {
     } catch {
       let filtered = [...memoryArticles];
       if (params.status && params.status !== "ALL") {
-        filtered = filtered.filter((a: Record<string, unknown>) => a.status === params.status);
+        filtered = filtered.filter(
+          (a: Record<string, unknown>) => a.status === params.status
+        );
       }
       if (params.categoryId) {
-        filtered = filtered.filter((a: Record<string, unknown>) => a.category_id === params.categoryId);
+        filtered = filtered.filter(
+          (a: Record<string, unknown>) => a.category_id === params.categoryId
+        );
       }
       return JSON.parse(JSON.stringify(filtered));
     }
@@ -277,7 +380,9 @@ export const knowledgeService = {
       return memoryCategories;
     } catch {
       return JSON.parse(
-        JSON.stringify(memoryCategories.filter((c: Record<string, unknown>) => !c.is_deleted))
+        JSON.stringify(
+          memoryCategories.filter((c: Record<string, unknown>) => !c.is_deleted)
+        )
       );
     }
   },
@@ -318,7 +423,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const idx = memoryCategories.findIndex((c: Record<string, unknown>) => c.id === categoryId);
+      const idx = memoryCategories.findIndex(
+        (c: Record<string, unknown>) => c.id === categoryId
+      );
       if (idx !== -1) {
         memoryCategories[idx].is_deleted = true;
       }
@@ -367,7 +474,10 @@ export const knowledgeService = {
     }
   },
 
-  async updateArticleDraft(articleId: string, payload: Record<string, unknown>) {
+  async updateArticleDraft(
+    articleId: string,
+    payload: Record<string, unknown>
+  ) {
     try {
       return await unwrapResponse(
         openApiClient.PUT("/api/v1/knowledge/articles/{article_id}", {
@@ -376,13 +486,17 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       if (payload.title) art.title = payload.title;
       if (payload.slug) art.slug = payload.slug;
       if (payload.category_id) {
         art.category_id = payload.category_id;
-        const cat = memoryCategories.find((c: Record<string, unknown>) => c.id === payload.category_id);
+        const cat = memoryCategories.find(
+          (c: Record<string, unknown>) => c.id === payload.category_id
+        );
         if (cat) art.category_name = cat.name;
       }
       if (payload.tags) art.tags = payload.tags;
@@ -396,16 +510,24 @@ export const knowledgeService = {
     }
   },
 
-  async submitArticleReview(articleId: string, payload: Record<string, unknown> = {}) {
+  async submitArticleReview(
+    articleId: string,
+    payload: Record<string, unknown> = {}
+  ) {
     try {
       return await unwrapResponse(
-        openApiClient.POST("/api/v1/knowledge/articles/{article_id}/submit-review", {
-          params: { path: { article_id: articleId } },
-          body: payload as never,
-        })
+        openApiClient.POST(
+          "/api/v1/knowledge/articles/{article_id}/submit-review",
+          {
+            params: { path: { article_id: articleId } },
+            body: payload as never,
+          }
+        )
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       art.status = "IN_REVIEW";
       art.updated_at = new Date().toISOString();
@@ -413,7 +535,10 @@ export const knowledgeService = {
     }
   },
 
-  async approveArticle(articleId: string, payload: Record<string, unknown> = {}) {
+  async approveArticle(
+    articleId: string,
+    payload: Record<string, unknown> = {}
+  ) {
     try {
       return await unwrapResponse(
         openApiClient.POST("/api/v1/knowledge/articles/{article_id}/approve", {
@@ -422,7 +547,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       art.status = "APPROVED";
       art.approved_by = "current_reviewer";
@@ -431,7 +558,10 @@ export const knowledgeService = {
     }
   },
 
-  async rejectArticle(articleId: string, payload: Record<string, unknown> = {}) {
+  async rejectArticle(
+    articleId: string,
+    payload: Record<string, unknown> = {}
+  ) {
     try {
       return await unwrapResponse(
         openApiClient.POST("/api/v1/knowledge/articles/{article_id}/reject", {
@@ -440,7 +570,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       art.status = "REJECTED";
       art.updated_at = new Date().toISOString();
@@ -448,7 +580,10 @@ export const knowledgeService = {
     }
   },
 
-  async publishArticle(articleId: string, payload: Record<string, unknown> = {}) {
+  async publishArticle(
+    articleId: string,
+    payload: Record<string, unknown> = {}
+  ) {
     try {
       return await unwrapResponse(
         openApiClient.POST("/api/v1/knowledge/articles/{article_id}/publish", {
@@ -457,7 +592,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       art.status = "PUBLISHED";
       if (payload.version_label) art.version_label = payload.version_label;
@@ -466,16 +603,24 @@ export const knowledgeService = {
     }
   },
 
-  async transitionArticle(articleId: string, payload: { target_status: string }) {
+  async transitionArticle(
+    articleId: string,
+    payload: { target_status: string }
+  ) {
     try {
       return await unwrapResponse(
-        openApiClient.POST("/api/v1/knowledge/articles/{article_id}/transition", {
-          params: { path: { article_id: articleId } },
-          body: payload as never,
-        })
+        openApiClient.POST(
+          "/api/v1/knowledge/articles/{article_id}/transition",
+          {
+            params: { path: { article_id: articleId } },
+            body: payload as never,
+          }
+        )
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) throw new Error("Article not found");
       art.status = payload.target_status;
       art.updated_at = new Date().toISOString();
@@ -491,7 +636,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) return [];
       const cached = memoryVersions.get(articleId);
       if (cached) return cached;
@@ -521,7 +668,9 @@ export const knowledgeService = {
         })
       );
     } catch {
-      const art = memoryArticles.find((a: Record<string, unknown>) => a.id === articleId);
+      const art = memoryArticles.find(
+        (a: Record<string, unknown>) => a.id === articleId
+      );
       if (!art) return [];
       const cached = memoryAuditLogs.get(articleId);
       if (cached) return cached;
@@ -557,7 +706,9 @@ export const knowledgeService = {
         : typeof art.tags === "string"
           ? (art.tags as string).toLowerCase().includes(q)
           : false;
-      const matchCategory = (art.category_name as string)?.toLowerCase().includes(q);
+      const matchCategory = (art.category_name as string)
+        ?.toLowerCase()
+        .includes(q);
       return matchTitle || matchBody || matchTags || matchCategory;
     });
   },
