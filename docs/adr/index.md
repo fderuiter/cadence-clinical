@@ -268,6 +268,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 5. Compliance, Audit & Governance
 
+- [2026-09-29: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md)
 - [2026-08-28: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md)
 - [2026-08-28: Specialized Science Safety Submissions CSM Forensics and AI Air Gap](2026-08-28-specialized-science-safety-submissions-csm-forensics-and-ai-air-gap.md)
 - [2026-08-23: Autonomous Cross-Domain Quality Surveillance Runner Architecture](2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md)
