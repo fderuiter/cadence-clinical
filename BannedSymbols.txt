@@ -1,0 +1,4 @@
+P:System.DateTime.Now;Take time from Cadence.Kernel.Time.IClock (K-TIME-3)
+P:System.DateTime.UtcNow;Take time from Cadence.Kernel.Time.IClock (K-TIME-3)
+P:System.DateTimeOffset.Now;Take time from Cadence.Kernel.Time.IClock (K-TIME-3)
+P:System.DateTimeOffset.UtcNow;Take time from Cadence.Kernel.Time.IClock (K-TIME-3)

@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -21,7 +22,7 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <see cref="SubjectApplicationService.EvaluateAndTransitionScreeningAsync"/>: SCN-003's state-machine
 /// integration through the service (not just <see cref="SubjectTransitionGraph"/> in isolation), SCN-005's
 /// Rule 2 site-compliance gate on both the blocked and unblocked paths — asserted identically through both
-/// entry points — and the §2.6 under-population assertion for a successful transition response.
+/// entry points — and that a successful transition's response reports the real post-transition status (D8, #4771).
 /// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceStateTests
@@ -216,13 +217,13 @@ public class SubjectApplicationServiceStateTests
         call.ChangeReason.Should().Be("Failed eligibility");
     }
 
-    // -- §2.6 under-population --------------------------------------------------------------------
+    // -- Transition response (D8) -----------------------------------------------------------------
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseStatusIsHardcodedScreening_NotTheRealValue()
+    public async Task AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled()
     {
-        // The §2.6 quirk: assert this explicitly as correct behavior for this handler, not a bug to fix.
+        // D8 (#4771): the response reports the real post-transition status.
         var harness = new Harness();
         var siteCode = new SiteCode("SITE-COMPLIANT");
         harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
@@ -234,7 +235,7 @@ public class SubjectApplicationServiceStateTests
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Status.Should().Be("SCREENING", "Underpopulated hardcodes Status regardless of the real post-transition value");
+        result.Value!.Status.Should().Be("ENROLLED");
         var persisted = await harness.Subjects.GetByCodeAsync("SUBJ-001", TestContext.Current.CancellationToken);
         persisted!.Status.Should().Be(SubjectState.Enrolled, "the DB row must genuinely reflect the real transition");
     }

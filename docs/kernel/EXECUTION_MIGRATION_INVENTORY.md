@@ -71,7 +71,7 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 | File | Type(s) | Disposition | Target / change | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | `Application/Abstractions/IAuditLogWriter.cs` | `IAuditLogWriter` | REPLACE | Kernel command pipeline writes AuditEntry + ProvenanceActivity + outbox in one tx (§8.1, K-TX-2, K-PROV-1). Kernel: missing. | Explicit per-call-site audit writes are optional and were forgotten in places (D4). The pipeline makes audit non-optional. |
-| `Application/Abstractions/IClock.cs` | `IClock` | MIGRATE→KERNEL | `Cadence.Kernel.Abstractions` clock port, or BCL `TimeProvider` (K-TIME-3). Kernel: missing. | Domain types import it from Application (`Domain/Subjects/ClinicalSubject.cs:4`, `SubjectConsent.cs:3`), which is a layer inversion. |
+| `Application/Abstractions/IClock.cs` | `IClock` | MIGRATE→KERNEL | `Cadence.Kernel.Abstractions` clock port, or BCL `TimeProvider` (K-TIME-3). Kernel: exists (`Cadence.Kernel.Time.IClock`, #4784; execution now uses it). | Domain types import it from Application (`Domain/Subjects/ClinicalSubject.cs:4`, `SubjectConsent.cs:3`), which is a layer inversion. |
 | `Application/Abstractions/ICurrentAuditContextAccessor.cs` | `ICurrentAuditContextAccessor` | REPLACE | Kernel `Actor` (§6) and a reason-for-change field on each command (§8.1, §8.3.4). Kernel: missing. | Ambient string user id and reason. D5. |
 | `Application/Abstractions/IDemographicsEncryptionService.cs` | `IDemographicsEncryptionService` | MIGRATE→KERNEL | IdentityVault port (§5.1, K006). Kernel: missing. | Subsumes `ClinicalSubject.EncryptedDemographics`. |
 | `Application/Abstractions/IDemographicsNormalizationService.cs` | `IDemographicsNormalizationService` | REPLACE | Sex and birth date become kernel Observations revealed via the `identity.reveal` capability. Age becomes a derived Observation (K-PROV-2). | No production consumer: only DI (`Program.cs:114`) and tests. `ObservationApplicationService.cs:115` passes `sex: null, ageYears: null` to the range evaluator. |
@@ -300,7 +300,7 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 | `Infrastructure/Security/DemographicsNormalizationService.cs` | `DemographicsNormalizationService` | REPLACE | See `IDemographicsNormalizationService`. | No production consumer. |
 | `Infrastructure/Security/HttpCurrentAuditContextAccessor.cs` | `HttpCurrentAuditContextAccessor` | REPLACE | Kernel Actor resolution from the authenticated principal (§6). Fails closed when there is no principal. | D5. |
 | `Infrastructure/Security/SystemAuditContextAccessor.cs` | `SystemAuditContextAccessor` | REPLACE | Kernel `ServiceAccount` Actor (§6). | Hard-coded `"system-pubsub"`. |
-| `Infrastructure/SystemClock.cs` | `SystemClock` | MIGRATE→KERNEL | Kernel clock implementation, or `TimeProvider.System`. | |
+| `Infrastructure/SystemClock.cs` | `SystemClock` | MIGRATE→KERNEL | Kernel clock implementation, or `TimeProvider.System`. Kernel: exists (`Cadence.Kernel.Time.SystemClock`, #4784; execution file deleted). | |
 | `Program.cs` | top-level statements, `Program` | REMAIN EDC-SPECIFIC | EDC module composition. Register kernel modules. Use one DB connection (ADR-2247). Remove replaced services and the MassTransit in-memory bus. | The outbox is configured (231-242) but nothing is published; see §3, item 6. |
 
 ---

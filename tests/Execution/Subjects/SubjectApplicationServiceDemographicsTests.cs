@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -244,7 +245,7 @@ public class SubjectApplicationServiceDemographicsTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task UpdateDemographicsAsync_ReturnsUnderpopulatedResponse_NotFromAggregate()
+    public async Task UpdateDemographicsAsync_ReturnsTheSubjectsRealState()
     {
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-004");
@@ -366,7 +367,7 @@ public class SubjectApplicationServiceDemographicsTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsUnderpopulatedWithClearedDemographics()
+    public async Task DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics()
     {
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", encryptedDemographics: "some-cipher");

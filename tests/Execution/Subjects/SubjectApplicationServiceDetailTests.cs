@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -19,7 +20,7 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// `MIG-SUBJ-019` coverage for <see cref="SubjectApplicationService.GetDetailAsync"/>: the RTSM-blinding
 /// redaction matrix (blinded vs. unblinded caller), the single-lookup-by-domain-code-only contract (raise
 /// site #13's not-found, deliberately not the shared dual-lookup helper), and the full-population contract
-/// (unlike <see cref="SubjectResponse.Underpopulated"/>, this response has no under-population quirk).
+/// (the response reflects the aggregate's real current state).
 /// @req:PRD-SUB-001
 /// </summary>
 public class SubjectApplicationServiceDetailTests
@@ -133,7 +134,7 @@ public class SubjectApplicationServiceDetailTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task GetDetailAsync_IsFullyPopulated_ReflectingTheAggregatesRealCurrentState_UnlikeSubjectResponseUnderpopulated()
+    public async Task GetDetailAsync_IsFullyPopulated_ReflectingTheAggregatesRealCurrentState_LikeEveryOtherSubjectResponse()
     {
         var siteCode = new SiteCode("SITE-042");
         var harness = new Harness();
@@ -145,7 +146,7 @@ public class SubjectApplicationServiceDetailTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.SubjectId.Should().Be(subject.SubjectCode);
         result.Value.StudyId.Should().Be(subject.StudyCode);
-        result.Value.Status.Should().Be("ENROLLED", "unlike SubjectResponse.Underpopulated, this response reflects the real current status");
+        result.Value.Status.Should().Be("ENROLLED", "responses reflect the real current status");
         result.Value.SiteId.Should().Be(siteCode);
     }
 

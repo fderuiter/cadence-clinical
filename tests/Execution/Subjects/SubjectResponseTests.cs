@@ -16,12 +16,8 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Subjects;
 
 /// <summary>
-/// MIG-SUBJ-008 coverage: <see cref="SubjectResponse.FromAggregate"/>'s full population versus
-/// <see cref="SubjectResponse.Underpopulated"/>'s deliberate §2.6 quirk — byte-for-byte legacy parity
-/// with `fixtures/output_expected_nominal.json`'s <c>EDGE-010</c> and <c>SCN-003-A</c> family. The
-/// hardcoded-default behavior asserted below is a tracked parity decision, not a bug to "fix"; full
-/// HTTP-level fixture replay is MIG-SUBJ-026's concern, this suite only exercises the DTO construction
-/// logic in isolation. Also covers the shared snake_case wire-naming (`01_spec.md` §1.2) for all five
+/// MIG-SUBJ-008 coverage: <see cref="SubjectResponse.FromAggregate"/> populates every field from the
+/// aggregate's real current state (the legacy hard-coded SCREENING quirk was removed for #4771, D8). Also covers the shared snake_case wire-naming (`01_spec.md` §1.2) for all five
 /// response records this ticket introduces.
 /// @req:PRD-SUB-001
 /// </summary>
@@ -83,82 +79,20 @@ public class SubjectResponseTests
         response.SiteId.Should().BeNull();
     }
 
-    // -- Underpopulated: the deliberate §2.6 quirk -----------------------------------------------
-
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public void Underpopulated_ForEnrolledSubjectWithSite_HardcodesScreeningDefaultsRegardlessOfRealState()
+    public void FromAggregate_ForEnrolledSubjectWithSite_ReportsTheRealStatusAndSite()
     {
-        // This is the documented quirk (02_technical_design.md §2.6 / 01_spec.md §2.2 Rule 9), verified
-        // byte-for-byte against fixtures/output_expected_nominal.json's EDGE-010 and SCN-003-A: the
-        // subject really is ENROLLED with a real site, but Underpopulated is a pure function of
-        // (id, subjectCode, studyCode, encryptedDemographics) alone — it structurally cannot see, and
-        // must not reflect, the aggregate's actual Status/SiteCode/TreatmentGroup. Do not "fix" this
-        // assertion to expect ENROLLED — that would misrepresent the legacy behavior this port must
-        // reproduce.
+        // D8 (#4771): responses after a transition used to hard-code SCREENING. They now always map the
+        // aggregate's actual state.
         var subject = CreateEnrolledSubjectWithSiteAndDemographics();
 
-        var response = SubjectResponse.Underpopulated(
-            subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+        var response = SubjectResponse.FromAggregate(subject);
 
-        response.Status.Should().Be("SCREENING");
-        response.ActiveProtocolVersion.Should().Be("1.0.0");
-        response.SiteId.Should().BeNull("Underpopulated always nulls SiteId even though this subject's real SiteCode is non-null");
-        response.TreatmentGroup.Should().BeNull();
-        response.Id.Should().Be(subject.Id);
-        response.SubjectId_.Should().Be(subject.SubjectCode);
-        response.StudyId.Should().Be(subject.StudyCode);
+        response.Status.Should().Be("ENROLLED");
+        response.SiteId.Should().Be(subject.SiteCode);
+        response.ActiveProtocolVersion.Should().Be(subject.ActiveProtocolVersion);
         response.EncryptedDemographics.Should().Be(subject.EncryptedDemographics);
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SUB-001")]
-    public void FromAggregate_And_Underpopulated_DivergeOnStatus_ForTheIdenticalAggregate()
-    {
-        // The core §2.6 divergence the golden-master harness (MIG-SUBJ-026) grades against: the same
-        // ENROLLED aggregate produces two different response bodies depending purely on which factory
-        // the caller invokes, exactly mirroring EDGE-010's db_assertions.status ("ENROLLED") versus
-        // response body.status ("SCREENING") split.
-        var subject = CreateEnrolledSubjectWithSiteAndDemographics();
-
-        var full = SubjectResponse.FromAggregate(subject);
-        var underpopulated = SubjectResponse.Underpopulated(
-            subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
-
-        full.Status.Should().Be("ENROLLED");
-        underpopulated.Status.Should().Be("SCREENING");
-        full.Status.Should().NotBe(underpopulated.Status);
-
-        // ActiveProtocolVersion is the fixture's other named divergent field (EDGE-010: DB row "2.1.0"
-        // vs. response body "1.0.0"). ClinicalSubject (MIG-SUBJ-004) does not yet expose any public way
-        // to move a subject off its "1.0.0" construction default — that capability belongs to a later,
-        // out-of-slice ticket — so both factories agree on this value for every aggregate reachable
-        // through today's public API. Underpopulated's independence from the aggregate's real
-        // ActiveProtocolVersion is instead proven structurally (see the theory below): its signature
-        // never accepts a ClinicalSubject, or an ActiveProtocolVersion, as input at all, so it cannot
-        // read one no matter what a future caller's aggregate state is.
-        full.ActiveProtocolVersion.Should().Be(subject.ActiveProtocolVersion);
-        underpopulated.ActiveProtocolVersion.Should().Be("1.0.0");
-    }
-
-    public static IEnumerable<object?[]> UnderpopulatedInputVariations()
-    {
-        yield return new object?[] { new SubjectCode("SUBJ-A"), new StudyCode("STUDY-A"), "cipher-a" };
-        yield return new object?[] { new SubjectCode("SUBJ-B"), new StudyCode("STUDY-B"), null };
-    }
-
-    [Theory]
-    [MemberData(nameof(UnderpopulatedInputVariations))]
-    [GxPRequirement("PRD-SUB-001")]
-    public void Underpopulated_AlwaysHardcodesStatusAndActiveProtocolVersion_RegardlessOfInputs(
-        SubjectCode subjectCode, StudyCode studyCode, string? encryptedDemographics)
-    {
-        var response = SubjectResponse.Underpopulated(SubjectId.New(), subjectCode, studyCode, encryptedDemographics);
-
-        response.Status.Should().Be("SCREENING");
-        response.ActiveProtocolVersion.Should().Be("1.0.0");
-        response.SiteId.Should().BeNull();
-        response.TreatmentGroup.Should().BeNull();
     }
 
     // -- Wire shape: snake_case JSON property names (01_spec.md §1.2) ---------------------------
@@ -167,9 +101,10 @@ public class SubjectResponseTests
     [GxPRequirement("PRD-SUB-001")]
     public void SubjectResponse_SerializesWithSpecSnakeCasePropertyNamesAndPlainScalarValues()
     {
-        var response = SubjectResponse.Underpopulated(
+        var response = new SubjectResponse(
             new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
-            new SubjectCode("SUBJ-EDGE-010"), new StudyCode("STUDY-001"), encryptedDemographics: null);
+            new SubjectCode("SUBJ-EDGE-010"), new StudyCode("STUDY-001"), SiteId: null, TreatmentGroup: null,
+            Status: "SCREENING", ActiveProtocolVersion: "1.0.0", EncryptedDemographics: null);
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(response, WireOptions));
         var root = document.RootElement;

@@ -4,7 +4,7 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
 /// Wire shape for consent read/record endpoints (`01_spec.md` §1.2's <c>SubjectConsentResponse</c>
-/// field list). Full population, no under-population quirk — mirrors the <see cref="SubjectConsent"/>
+/// field list). Mirrors the <see cref="SubjectConsent"/>
 /// aggregate's fields one-for-one.
 /// Legacy Python source being replaced: `apps/execution/presentation/dtos.py`'s
 /// <c>SubjectConsentResponse</c> Pydantic model.

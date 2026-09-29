@@ -79,13 +79,13 @@
         "subject_id": "SUBJ-NOSITE",
         "study_id": "STUDY-001",
         "encrypted_demographics": null,
-        "status": "SCREENING",
+        "status": "ENROLLED",
         "active_protocol_version": "1.0.0",
         "site_id": null,
         "treatment_group": null
       },
       "db_assertions": { "status": "ENROLLED" },
-      "note": "Rule 9 SubjectResponse-under-population quirk: the response body's `status`/`active_protocol_version` are the Pydantic model's hardcoded defaults, NOT the subject's real post-transition values. The DB row genuinely is ENROLLED; the response body is not evidence of that. Do not 'fix' this fixture to show status=ENROLLED — that would misrepresent legacy behavior."
+      "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
     },
     {
       "scenario_id": "SCN-004-A",
@@ -101,7 +101,7 @@
         "treatment_group": null
       },
       "db_assertions": { "strat_factors": { "site": "B" } },
-      "note": "Same SubjectResponse-under-population quirk as SCN-003-A; status='SCREENING' here happens to also be the subject's true status, which is a coincidence of this scenario, not evidence the endpoint populated it correctly."
+      "note": "The subject is still SCREENING, so the response status is its real state (see SCN-003-A for D8, #4771)."
     },
     {
       "scenario_id": "SCN-005-A",
@@ -150,13 +150,13 @@
         "subject_id": "SUBJ-GATED",
         "study_id": "STUDY-GATED",
         "encrypted_demographics": null,
-        "status": "SCREENING",
+        "status": "ENROLLED",
         "active_protocol_version": "1.0.0",
-        "site_id": null,
+        "site_id": "SITE-COMPLIANT-01",
         "treatment_group": null
       },
       "db_assertions": { "status": "ENROLLED" },
-      "note": "Same SubjectResponse-under-population quirk — the DB row is genuinely ENROLLED; the response body's status field is not."
+      "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
     },
     {
       "scenario_id": "SCN-006-A",
@@ -312,13 +312,13 @@
         "subject_id": "SUBJ-EDGE-004",
         "study_id": "<unchanged>",
         "encrypted_demographics": "<unchanged>",
-        "status": "SCREENING",
+        "status": "WITHDRAWN",
         "active_protocol_version": "1.0.0",
         "site_id": null,
         "treatment_group": null
       },
       "db_assertions": { "status": "WITHDRAWN" },
-      "note": "Succeeds (no InvalidStateTransitionError) per the same-state no-op rule; SubjectResponse-under-population quirk applies here too, so the body's status='SCREENING' default is not evidence of the real (unchanged) WITHDRAWN state."
+      "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
     },
     {
       "scenario_id": "EDGE-005",
@@ -365,16 +365,16 @@
         "subject_id": "SUBJ-EDGE-010",
         "study_id": "STUDY-001",
         "encrypted_demographics": null,
-        "status": "SCREENING",
-        "active_protocol_version": "1.0.0",
-        "site_id": null,
+        "status": "ENROLLED",
+        "active_protocol_version": "2.1.0",
+        "site_id": "SITE-EDGE-010-COMPLIANT",
         "treatment_group": null
       },
       "db_assertions": {
         "status": "ENROLLED",
         "active_protocol_version": "2.1.0"
       },
-      "note": "The canonical demonstration of the SubjectResponse-under-population quirk: the DB row's real active_protocol_version (2.1.0, set by the precondition) is silently replaced by the literal default \"1.0.0\" in the response body. A .NET port that fully populates its response DTO will disagree with this fixture unless the quirk is deliberately preserved — see 01_spec.md §2.2 Rule 9's addendum for the explicit decision this fixture is flagging, not silently resolving."
+      "note": "Since #4771 (D8) the response maps the subject's real state, so the body matches the DB row. The legacy Python response hard-coded SCREENING/1.0.0 and a null site here."
     }
   ]
 }

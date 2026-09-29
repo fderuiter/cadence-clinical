@@ -70,6 +70,7 @@
 
   <ItemGroup>
     <Compile Remove="ArchitectureSentinelTests.cs" />
+    <Compile Remove="Architecture/**" />
     <Compile Remove="E2E/**" />
     <Compile Remove="Validation/**" />
   </ItemGroup>

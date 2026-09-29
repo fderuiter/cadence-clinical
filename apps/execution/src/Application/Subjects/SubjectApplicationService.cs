@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
 
@@ -71,8 +72,7 @@ public sealed class SubjectApplicationService(
     /// <see cref="ISubjectRepository.EnrollNextIndexAsync"/> (MIG-SUBJ-013) rather than a second
     /// index-assignment query, encrypts a supplied <see cref="DemographicsPayload"/> before it ever
     /// reaches the aggregate, writes an <c>ENROLL_SUBJECT</c> audit entry, and returns
-    /// <see cref="SubjectResponse.FromAggregate"/> — the <b>one</b> call site in this slice that uses
-    /// <c>FromAggregate</c> rather than <c>Underpopulated</c> (§2.6). <see cref="SubjectCreateRequest.SiteId"/>
+    /// <see cref="SubjectResponse.FromAggregate"/>. <see cref="SubjectCreateRequest.SiteId"/>
     /// is passed to <see cref="SiteCode"/>'s constructor unconditionally whenever it is non-null (never
     /// pre-filtered on length): per <see cref="SubjectCreateRequest"/>'s own doc comment, an explicitly-empty
     /// site id is valid at the DTO's own shape rules and the empty-string-as-absent ambiguity is deliberately
@@ -182,8 +182,8 @@ public sealed class SubjectApplicationService(
     /// <see cref="SubjectStateUpdateRequest.Target"/> maps to the same <c>INVALID_STATE_TRANSITION</c> code a
     /// well-formed-but-forbidden transition would (closing raise site #6 onto #4/#5's family, per Rule 9 —
     /// callers cannot distinguish a typo'd state name from a legal-but-forbidden one from the response alone).
-    /// The Rule 2 site-compliance gate, the actual transition, the audit write, and the §2.6 under-populated
-    /// response are then all delegated to <see cref="TransitionSubjectAsync"/> — see that method's own doc
+    /// The Rule 2 site-compliance gate, the actual transition, the audit write, and the response
+    /// (built from the aggregate, D8) are then all delegated to <see cref="TransitionSubjectAsync"/> — see that method's own doc
     /// comment for why it is shared with <see cref="EvaluateAndTransitionScreeningAsync"/>.
     /// </summary>
     public async Task<Result<SubjectResponse>> AdvanceStateAsync(
@@ -274,7 +274,7 @@ public sealed class SubjectApplicationService(
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+        return SubjectResponse.FromAggregate(subject);
     }
 
     /// <summary>
@@ -307,7 +307,7 @@ public sealed class SubjectApplicationService(
         subject.ReasonForChange = changeReason;
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+        return SubjectResponse.FromAggregate(subject);
     }
 
     /// <summary>
@@ -382,7 +382,7 @@ public sealed class SubjectApplicationService(
     /// <summary>
     /// Rule 2 sovereign-site-activation gate (enforced only when <paramref name="target"/> is
     /// <see cref="SubjectState.Enrolled"/>) + <see cref="ClinicalSubject.TransitionTo"/> + the semantic
-    /// <c>TRANSITION_&lt;STATE&gt;</c> audit write + the §2.6 under-populated response — shared by
+    /// <c>TRANSITION_&lt;STATE&gt;</c> audit write + the response built from the aggregate — shared by
     /// <see cref="AdvanceStateAsync"/> and <see cref="EvaluateAndTransitionScreeningAsync"/> so a subject
     /// targeting <see cref="SubjectState.Enrolled"/> at a non-compliant site is blocked, and a
     /// <c>BLOCKED_ENROLLMENT</c> audit entry written for that blocked attempt itself (not only for successes,
@@ -431,7 +431,7 @@ public sealed class SubjectApplicationService(
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return SubjectResponse.Underpopulated(subject.Id, subject.SubjectCode, subject.StudyCode, subject.EncryptedDemographics);
+        return SubjectResponse.FromAggregate(subject);
     }
 
     /// <summary>
