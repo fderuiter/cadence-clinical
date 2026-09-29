@@ -3,7 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Cadence.Kernel.Domain.ValueConversion;
+namespace Cadence.Kernel.Persistence;
 
 /// <summary>
 /// EF Core ValueComparer providing change-tracking and snapshot comparisons for strongly-typed UUIDv7 identifiers.

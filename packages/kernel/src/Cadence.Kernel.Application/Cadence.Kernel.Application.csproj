@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.Kernel.Application</RootNamespace>
+    <AssemblyName>Cadence.Kernel.Application</AssemblyName>
+    <Description>Clinical Kernel command pipeline, authorization and policy evaluation (spec §5.1, §9.3).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

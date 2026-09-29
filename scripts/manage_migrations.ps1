@@ -48,9 +48,16 @@ if ($Service.ToLowerInvariant() -eq "all") {
 
 foreach ($svc in $targetServices) {
     $capName = Capitalize-Name $svc
-    $serviceDir = Join-Path $repoRoot "apps\$svc"
-    $projectPath = Join-Path $serviceDir "src\Cadence.Apps.$capName.csproj"
+    $projectDir = Join-Path $repoRoot "apps\$svc\src"
+    $projectPath = Join-Path $projectDir "Cadence.Apps.$capName.csproj"
     $migrationsDir = "Infrastructure\Persistence\Migrations"
+
+    # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
+    if ($svc -eq "kernel") {
+        $projectDir = Join-Path $repoRoot "packages\kernel\src\Cadence.Kernel.Persistence"
+        $projectPath = Join-Path $projectDir "Cadence.Kernel.Persistence.csproj"
+        $migrationsDir = "Migrations"
+    }
 
     if (-not (Test-Path $projectPath)) {
         Write-Host "Error: Project not found at $projectPath" -ForegroundColor Red
@@ -73,14 +80,14 @@ foreach ($svc in $targetServices) {
         }
 
         "script" {
-            $outFile = Join-Path $serviceDir "src\Infrastructure\Persistence\Migrations\idempotent_migration.sql"
+            $outFile = Join-Path $projectDir "$migrationsDir\idempotent_migration.sql"
             Write-Host "Generating idempotent SQL migration script..." -ForegroundColor Yellow
             Invoke-Checked { & dotnet ef migrations script --idempotent --project $projectPath --output $outFile }
             Write-Host "[SUCCESS] SQL Script written to $outFile" -ForegroundColor Green
         }
 
         "bundle" {
-            $outFile = Join-Path $serviceDir "src\Infrastructure\Persistence\migration_bundle"
+            $outFile = Join-Path $projectDir "migration_bundle"
             Write-Host "Generating self-contained executable migration bundle..." -ForegroundColor Yellow
             Invoke-Checked { & dotnet ef migrations bundle --project $projectPath --output $outFile --force }
             Write-Host "[SUCCESS] Migration bundle created at $outFile" -ForegroundColor Green
