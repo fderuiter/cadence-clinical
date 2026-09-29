@@ -284,10 +284,10 @@ Ensure your host machine meets the minimum system requirements:
 
 ### 2. Launch Containerized Infrastructure
 
-Start the infrastructure dependencies (PostgreSQL, Neo4j, Keycloak, Mailhog, and MinIO) in detached mode:
+Start PostgreSQL, Keycloak, the gateway and every service in detached mode. Each service applies its own migrations on start; ports and settings are in [docs/LOCAL_DEV_ENVIRONMENT.md](docs/LOCAL_DEV_ENVIRONMENT.md#3-running-the-stack-with-docker-compose):
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d --build
 ```
 
 ### 3. Synchronize Dependencies & Run System Doctor
