@@ -1,5 +1,4 @@
 import { openApiClient, unwrapResponse } from "./client";
-import type { paths } from "./types";
 
 export interface NotificationFilterOptions {
   category?: "ALERTS" | "SYSTEM" | "ACTION_ITEMS" | null;
@@ -15,7 +14,10 @@ export const notificationsService = {
   /**
    * Retrieves notifications matching filters.
    */
-  getNotifications(options: NotificationFilterOptions = {}, restOptions: Record<string, unknown> = {}) {
+  getNotifications(
+    options: NotificationFilterOptions = {},
+    restOptions: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/notifications", {
         params: {

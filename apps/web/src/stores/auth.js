@@ -131,26 +131,31 @@ export const useAuthStore = defineStore("auth", {
     let restoredPersona = "super_admin";
     let hasSavedPersona = false;
     if (saved && typeof saved.currentPersona === "string") {
-      const preset = PERSONA_PRESETS.find((p) => p.key === saved.currentPersona);
+      const preset = PERSONA_PRESETS.find(
+        (p) => p.key === saved.currentPersona
+      );
       if (preset) {
         restoredPersona = saved.currentPersona;
         hasSavedPersona = true;
       }
     }
 
-    const matchedPreset = PERSONA_PRESETS.find((p) => p.key === restoredPersona);
-    const defaultRoles = hasSavedPersona && matchedPreset
-      ? [...matchedPreset.roles]
-      : [
-          "Sponsor Admin",
-          "Sponsor Designer",
-          "Data Manager",
-          "Site Investigator",
-          "CRC",
-          "CRA",
-          "Monitor",
-          "Auditor",
-        ];
+    const matchedPreset = PERSONA_PRESETS.find(
+      (p) => p.key === restoredPersona
+    );
+    const defaultRoles =
+      hasSavedPersona && matchedPreset
+        ? [...matchedPreset.roles]
+        : [
+            "Sponsor Admin",
+            "Sponsor Designer",
+            "Data Manager",
+            "Site Investigator",
+            "CRC",
+            "CRA",
+            "Monitor",
+            "Auditor",
+          ];
 
     const restoredRoles =
       saved && Array.isArray(saved.rawRoles) && saved.rawRoles.length > 0

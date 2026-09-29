@@ -21,7 +21,10 @@ export const fileshareService = {
   /**
    * List files across studies or filtered by study/site/query with pagination.
    */
-  listFiles(params: ListFilesParams = {}, options: Record<string, unknown> = {}) {
+  listFiles(
+    params: ListFilesParams = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/fileshare/files", {
         params: {
@@ -81,8 +84,14 @@ export const fileshareService = {
   /**
    * Create an internal share grant delegation.
    */
-  createShareGrant(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Delegating internal file access";
+  createShareGrant(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Delegating internal file access";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/grants", {
         params: { path: { file_id: fileId } },
@@ -96,16 +105,24 @@ export const fileshareService = {
   /**
    * Revoke an internal share grant.
    */
-  deleteShareGrant(fileId: string, grantId: string, options: { reason_for_change?: string } = {}) {
-    const reason = options.reason_for_change || "Revoking share grant delegation";
+  deleteShareGrant(
+    fileId: string,
+    grantId: string,
+    options: { reason_for_change?: string } = {}
+  ) {
+    const reason =
+      options.reason_for_change || "Revoking share grant delegation";
     return unwrapResponse(
-      openApiClient.DELETE("/api/v1/fileshare/files/{file_id}/grants/{grant_id}", {
-        params: {
-          path: { file_id: fileId, grant_id: grantId },
-          query: { reason_for_change: reason },
-        },
-        headers: { "X-Change-Reason": reason },
-      })
+      openApiClient.DELETE(
+        "/api/v1/fileshare/files/{file_id}/grants/{grant_id}",
+        {
+          params: {
+            path: { file_id: fileId, grant_id: grantId },
+            query: { reason_for_change: reason },
+          },
+          headers: { "X-Change-Reason": reason },
+        }
+      )
     );
   },
 
@@ -124,8 +141,14 @@ export const fileshareService = {
   /**
    * Create an external time-bounded guest link.
    */
-  createGuestLink(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Generating external guest link";
+  createGuestLink(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Generating external guest link";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/guest-links", {
         params: { path: { file_id: fileId } },
@@ -139,16 +162,23 @@ export const fileshareService = {
   /**
    * Revoke an external guest link.
    */
-  revokeGuestLink(fileId: string, guestLinkId: string, options: { reason_for_change?: string } = {}) {
+  revokeGuestLink(
+    fileId: string,
+    guestLinkId: string,
+    options: { reason_for_change?: string } = {}
+  ) {
     const reason = options.reason_for_change || "Revoking external guest link";
     return unwrapResponse(
-      openApiClient.DELETE("/api/v1/fileshare/files/{file_id}/guest-links/{guest_link_id}", {
-        params: {
-          path: { file_id: fileId, guest_link_id: guestLinkId },
-          query: { reason_for_change: reason },
-        },
-        headers: { "X-Change-Reason": reason },
-      })
+      openApiClient.DELETE(
+        "/api/v1/fileshare/files/{file_id}/guest-links/{guest_link_id}",
+        {
+          params: {
+            path: { file_id: fileId, guest_link_id: guestLinkId },
+            query: { reason_for_change: reason },
+          },
+          headers: { "X-Change-Reason": reason },
+        }
+      )
     );
   },
 
@@ -175,8 +205,14 @@ export const fileshareService = {
   /**
    * Place a file under retention/legal hold.
    */
-  setHold(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Placing file on retention hold";
+  setHold(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Placing file on retention hold";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/hold", {
         params: { path: { file_id: fileId } },
@@ -247,7 +283,9 @@ export const fileshareService = {
    * Record video playback checkpoint audit telemetry event.
    */
   recordPlaybackAudit(payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Video playback checkpoint audit event";
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Video playback checkpoint audit event";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/audit/playback", {
         body: payload as paths["/api/v1/fileshare/audit/playback"]["post"]["requestBody"]["content"]["application/json"],
@@ -260,8 +298,14 @@ export const fileshareService = {
   /**
    * Formally approve a document with electronic signature and re-authentication.
    */
-  approveFile(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.signing_reason || "Electronic signature document approval";
+  approveFile(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.signing_reason ||
+      "Electronic signature document approval";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/approve", {
         params: { path: { file_id: fileId } },
@@ -275,8 +319,14 @@ export const fileshareService = {
   /**
    * Reject a document for approval.
    */
-  rejectFile(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Reject document for approval";
+  rejectFile(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Reject document for approval";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/reject", {
         params: { path: { file_id: fileId } },
@@ -290,8 +340,14 @@ export const fileshareService = {
   /**
    * Rescind a previous document approval.
    */
-  rescindApproval(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Rescinding document approval";
+  rescindApproval(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Rescinding document approval";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/rescind-approval", {
         params: { path: { file_id: fileId } },
@@ -305,8 +361,14 @@ export const fileshareService = {
   /**
    * Initiate upload of a new version/revision for a file record.
    */
-  uploadRevision(fileId: string, payload: unknown, options: Record<string, unknown> = {}) {
-    const reason = (payload as Record<string, string>)?.reason_for_change || "Uploading document revision";
+  uploadRevision(
+    fileId: string,
+    payload: unknown,
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      (payload as Record<string, string>)?.reason_for_change ||
+      "Uploading document revision";
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/upload-revision", {
         params: { path: { file_id: fileId } },
@@ -320,7 +382,11 @@ export const fileshareService = {
   /**
    * Retrieve chronological, filterable activity feed for a file record.
    */
-  getActivityFeed(fileId: string, params: ActivityFeedParams = {}, options: Record<string, unknown> = {}) {
+  getActivityFeed(
+    fileId: string,
+    params: ActivityFeedParams = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/fileshare/files/{file_id}/activity", {
         params: {

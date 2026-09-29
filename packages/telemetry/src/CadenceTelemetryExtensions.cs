@@ -76,12 +76,22 @@ public static partial class CadenceTelemetryExtensions
         return services;
     }
 
-    public static WebApplicationBuilder AddCadenceWebDefaults(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddCadenceWebDefaults(
+        this WebApplicationBuilder builder,
+        Action<ProblemDetailsOptions>? configureProblemDetails = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.AddCadenceLogging();
         builder.Services.AddCadenceTelemetry();
+        if (configureProblemDetails != null)
+        {
+            builder.Services.AddProblemDetails(configureProblemDetails);
+        }
+        else
+        {
+            builder.Services.AddProblemDetails();
+        }
         builder.Services.AddOpenApi();
 
         return builder;
@@ -128,6 +138,7 @@ public static partial class CadenceTelemetryExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
+        app.UseExceptionHandler();
         app.UseCadenceTraceparent();
         app.MapCadenceApiDocumentation(app.Environment);
 

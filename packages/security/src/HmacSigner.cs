@@ -1,4 +1,5 @@
 using System;
+
 using Cadence.Security.Authentication;
 
 namespace Cadence.Security;
