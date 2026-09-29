@@ -247,38 +247,6 @@ public class VerifyGxPSignaturesCommand : Command
     }
 }
 
-public class SyncGithubProjectCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return SyncGithubProjectService.SyncGithubProject();
-    }
-}
-
-public class SyncRulesetCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return SyncRulesetService.SyncRuleset();
-    }
-}
-
-public class PostPrCommentCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return PostPrCommentService.PostPrComment();
-    }
-}
-
-public class RemoveJulesLabelsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return RemoveJulesLabelsService.RemoveJulesLabels();
-    }
-}
-
 public class CleanTestDbsCommand : Command
 {
     public override int Execute(CommandContext context)

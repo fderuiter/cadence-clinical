@@ -33,9 +33,7 @@
     "build:demo": "pnpm --filter web build:demo",
     "docs:dev": "vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
-    "build:docs": "node scripts/build-docs.js",
-    "project:sync": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-github-project",
-    "labels:clean-jules": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- remove-jules-labels"
+    "build:docs": "node scripts/build-docs.js"
   },
   "repository": {
     "type": "git",

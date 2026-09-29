@@ -6,11 +6,10 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 
 | Workflow                  | Runs on                                       | What it does                                                                                                          |
 | ------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `ci.yml`                  | Pull requests and pushes to `main`            | Style and lint, security audit, .NET tests, frontend tests, GxP compliance report check, PR comment                   |
+| `ci.yml`                  | Pull requests and pushes to `main`            | Style and lint, security audit, .NET tests, frontend tests, GxP compliance report check                               |
 | `conflict-check.yml`      | Pull requests (opened, synchronize, reopened) | Fails when the PR conflicts with `main`                                                                               |
 | `production-pipeline.yml` | Called by `ci.yml` on pushes to `main`        | Vulnerability audit, regenerates the RTM and IQ/OQ/PQ report, uploads them with SHA-256 checksums as release evidence |
 | `deploy-docs.yml`         | Called by `ci.yml` on pushes to `main`        | Builds and publishes the VitePress docs site                                                                          |
-| `project-automation.yml`  | Issues and PRs (opened, closed, reopened)     | Syncs the GitHub project board                                                                                        |
 
 ### `ci.yml` jobs
 
@@ -20,7 +19,7 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
 5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
 
-Only on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline, the branch ruleset sync and the docs deploy. They are kept off pull requests to save Actions minutes.
+Only on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
 ## Quality gates
 

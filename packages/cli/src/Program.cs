@@ -64,10 +64,6 @@ public static class Program
             config.AddCommand<GenerateRtmCommand>("generate-rtm");
             config.AddCommand<ComplianceUtilityCommand>("compliance-utility");
             config.AddCommand<VerifyGxPSignaturesCommand>("verify-gxp-signatures");
-            config.AddCommand<SyncGithubProjectCommand>("sync-github-project");
-            config.AddCommand<SyncRulesetCommand>("sync-ruleset");
-            config.AddCommand<PostPrCommentCommand>("post-pr-comment");
-            config.AddCommand<RemoveJulesLabelsCommand>("remove-jules-labels");
             config.AddCommand<CleanTestDbsCommand>("clean-test-dbs");
             config.AddCommand<CheckPortsCommand>("check-ports");
             config.AddCommand<RunGatingPipelineCommand>("run-gating-pipeline");
@@ -79,7 +75,7 @@ public static class Program
                 gxp.AddCommand<GxPValidateCommand>("validate")
                     .WithDescription("Validates RTM compliance matrix against design requirements");
                 gxp.AddCommand<VerifyGxPSignaturesCommand>("verify")
-                    .WithDescription("Verify electronic signatures and document integrity of signed GxP reports");
+                    .WithDescription("Not implemented yet: verifies electronic signatures on signed GxP reports");
             });
 
             config.AddBranch("db", db =>
