@@ -36,7 +36,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           STATUS="UNKNOWN"
-          for i in {1..6}; do
+          for _ in {1..6}; do
             STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
             if [ "$STATUS" != "UNKNOWN" ]; then
               break
@@ -45,7 +45,7 @@ jobs:
             sleep 10
           done
           echo "Final mergeable status: $STATUS"
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
       - name: Fail on merge conflict
         env:
