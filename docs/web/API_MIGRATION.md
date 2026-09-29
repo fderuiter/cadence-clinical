@@ -1,6 +1,6 @@
 # Moving the web app onto the .NET API
 
-The web app (`apps/web`) was written against the Python services. Most of its API calls target endpoints that no .NET service serves, so most screens fail against the real backend. This page lists what works, what doesn't, and how a screen moves over.
+The web app (`apps/web`) was written against the Python services. Most of its API calls target endpoints that no .NET service serves, so most screens fail against the real backend. This page lists what works, what doesn't, and how a screen moves over. The plan is epic #4833.
 
 ## Current state (2026-09-29)
 
