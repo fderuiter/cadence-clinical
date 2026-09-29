@@ -5,6 +5,13 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
 import { useAuthStore } from "../../src/stores/auth";
 
+// These tests cover screens that are hidden until their .NET backend exists
+// (#4829), so they treat every screen as available.
+vi.mock("../../src/router/availability", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isScreenAvailable: () => true,
+}));
+
 // Create mock views
 const DummyView = { template: "<div>Dummy</div>" };
 
