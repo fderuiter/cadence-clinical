@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 

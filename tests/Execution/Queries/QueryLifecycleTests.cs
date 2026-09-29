@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 

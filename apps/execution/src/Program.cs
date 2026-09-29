@@ -19,6 +19,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -111,7 +112,8 @@ builder.Services.Configure<DemographicsEncryptionOptions>(builder.Configuration.
 // `02_technical_design.md` §2's DI-lifetime table ("stateless, holds [at most] configured key material").
 // DemographicsNormalizationService itself depends on IDemographicsEncryptionService + IClock, both already
 // Singleton, so this is not a captive-dependency risk.
-builder.Services.AddSingleton<IClock, SystemClock>();
+// IClock/SystemClock are the shared kernel ones (Cadence.Kernel.Time, #4784 K-TIME-3).
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddSingleton<IDemographicsEncryptionService, AesGcmDemographicsEncryptionService>();
 builder.Services.AddSingleton<IDemographicsNormalizationService, DemographicsNormalizationService>();
 builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();

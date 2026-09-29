@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Queries;
 

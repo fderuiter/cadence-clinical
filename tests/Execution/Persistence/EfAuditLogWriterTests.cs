@@ -1,8 +1,8 @@
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;

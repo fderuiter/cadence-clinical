@@ -1,0 +1,14 @@
+<Project>
+  <!-- Inherit the solution-wide build properties and analyzers. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- #4784 K-TIME-3: kernel code takes time only from Cadence.Kernel.Time.IClock. RS0030 (banned API)
+       fails the build because TreatWarningsAsErrors is on solution-wide. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.txt" Link="BannedSymbols.txt" />
+  </ItemGroup>
+</Project>
