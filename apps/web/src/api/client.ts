@@ -3,7 +3,10 @@ import type { paths } from "./types";
 import { useAuthStore } from "../stores/auth";
 
 export const getBaseUrl = (): string => {
-  return (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || "http://localhost:8000";
+  return (
+    (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env
+      ?.VITE_API_BASE_URL || "http://localhost:8000"
+  );
 };
 
 export class ApiError extends Error {
@@ -37,7 +40,8 @@ const authMiddleware: Middleware = {
       // Pinia store not active or initialized
     }
 
-    const changeReason = (options as Record<string, unknown>)?.changeReason as string | undefined;
+    const changeReason = (options as Record<string, unknown>)?.changeReason as
+      string | undefined;
     if (changeReason && !request.headers.has("X-Change-Reason")) {
       request.headers.set("X-Change-Reason", changeReason);
     }
@@ -81,4 +85,3 @@ export async function unwrapResponse<T>(
 }
 
 export default openApiClient;
-
