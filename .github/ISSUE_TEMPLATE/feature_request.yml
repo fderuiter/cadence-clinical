@@ -1,60 +1,69 @@
-name: Feature Request / Scope Update
-description: Propose a new feature, clinical module enhancement, or requirement change.
-title: "[FEAT]: "
-labels: ["enhancement", "needs-triage"]
+name: Feature or task
+description: New behavior or a scoped piece of work. Most work belongs under one of the epics.
+labels: ["type: feature", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for contributing to Cadence Clinical! Please fill out the template below to ensure full alignment with our system requirements and architectural traceability.
+        Work is tracked under the epics: kernel #4719, security and GxP defects #4759, hygiene #4760 and web app onto the .NET API #4833. Add this issue as a sub-issue of the right one.
+        A new domain concept follows docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md. It belongs in the kernel if it's needed to explain the provenance, authority, meaning or lifecycle of clinical evidence across products.
 
   - type: dropdown
-    id: domain
+    id: area
     attributes:
-      label: Functional Domain
-      description: Select the system domain affected by this feature.
+      label: Area
       options:
-        - "Core Platform & Execution Engine"
-        - "API Gateway, Security & Identity"
-        - "Clinical Data Interoperability & Standards"
-        - "Clinical Operations & Business Modules"
-        - "Compliance, Audit & Governance"
-        - "Frontend & Design System"
-        - "DevOps, Tooling & CI/CD"
+        - "Kernel (packages/kernel)"
+        - "Execution / EDC (apps/execution)"
+        - "Gateway, security and identity"
+        - "Web app and Clinical Canvas (apps/web, packages/ui)"
+        - "Other module (apps/*)"
+        - "Standards, validation and submission (CDISC, rules)"
+        - "CLI, quality gates, CI and developer setup"
+        - "Documentation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The user need or gap, in the words of the people who have it (site user, CRA, data manager, sponsor, inspector).
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Where the gap shows, with `file:line` references at a commit, and the files you expect to change.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable outcomes. Regulated behavior needs a test tagged with its requirement (`[GxPRequirement("PRD-SYS-xxx")]`).
+      value: |
+        - [ ]
+        - [ ] Tests added in `tests/` (xUnit) or next to the frontend package (Vitest).
+        - [ ] Docs affected by the change are updated in the same PR.
     validations:
       required: true
 
   - type: input
-    id: requirement_id
+    id: refs
     attributes:
-      label: Target Requirement ID (PRD / SRS)
-      description: Specify the traced Requirement ID (e.g., PRD-SYS-001, PRD-EDC-005, Trace-3) or state "NEW".
-      placeholder: "e.g. PRD-SYS-001"
+      label: Spec/ADR refs
+      description: Kernel spec rules (for example K-TIME-4), ADRs and requirement IDs. If this needs a new ADR, create it with `pnpm cadence scaffold adr "<title>"`.
     validations:
-      required: true
+      required: false
 
   - type: textarea
-    id: problem_statement
+    id: depends
     attributes:
-      label: Problem Statement & Clinical Context
-      description: Describe the clinical workflow, user need, or problem being solved.
+      label: Depends on
+      description: Issues or PRs that must land first, one per line (`- #123`).
     validations:
-      required: true
-
-  - type: textarea
-    id: proposed_solution
-    attributes:
-      label: Proposed Solution & Scope Changes
-      description: Explain the technical approach and changes required across apps, packages, or docs.
-    validations:
-      required: true
-
-  - type: checkboxes
-    id: doc_alignment
-    attributes:
-      label: Documentation & Compliance Checklist
-      options:
-        - label: "I acknowledge that architectural changes require scaffolding an ADR via `pnpm adr:new`."
-          required: true
-        - label: "I will update the PRD/SRS document if system scope or contracts are altered."
-          required: true
+      required: false

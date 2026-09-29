@@ -25,7 +25,7 @@ cd "$REPO_ROOT"
 # ------------------------------------------------------------------------------
 # 1. Environment & SDK Verification
 # ------------------------------------------------------------------------------
-printf "%b[1/6] Verifying .NET 10 Toolchain Environment...%b\n" "$YELLOW" "$RESET"
+printf "%b[1/5] Verifying .NET 10 Toolchain Environment...%b\n" "$YELLOW" "$RESET"
 
 if ! command -v dotnet >/dev/null 2>&1; then
     printf "%b[ERROR] .NET SDK is not installed or not on PATH.%b\n" "$RED" "$RESET"
@@ -38,7 +38,7 @@ printf "  %b• Active .NET SDK Version:%b %s\n" "$CYAN" "$RESET" "$DOTNET_VERSI
 # ------------------------------------------------------------------------------
 # 2. Verify Central Build Configuration (Directory.Build.props & Packages.props)
 # ------------------------------------------------------------------------------
-printf "\n%b[2/6] Validating Central Package Management (CPM) and Global Properties...%b\n" "$YELLOW" "$RESET"
+printf "\n%b[2/5] Validating Central Package Management (CPM) and Global Properties...%b\n" "$YELLOW" "$RESET"
 
 if [ ! -f "Directory.Build.props" ]; then
     printf "  Creating Directory.Build.props...\n"
@@ -78,7 +78,7 @@ printf "  %b[SUCCESS] Global props and CPM configurations verified.%b\n" "$GREEN
 # ------------------------------------------------------------------------------
 # 3. Scaffold Single-Assembly Clean Architecture Microservices
 # ------------------------------------------------------------------------------
-printf "\n%b[3/6] Scaffolding Microservice Layers (Domain, Application, Infrastructure, Endpoints)...%b\n" "$YELLOW" "$RESET"
+printf "\n%b[3/5] Scaffolding Microservice Layers (Domain, Application, Infrastructure, Endpoints)...%b\n" "$YELLOW" "$RESET"
 
 SERVICES=(
     "execution"
@@ -144,7 +144,7 @@ printf "  %b[SUCCESS] All 18 microservice project skeletons scaffolded.%b\n" "$G
 # ------------------------------------------------------------------------------
 # 4. Bind Projects to Root Cadence.sln
 # ------------------------------------------------------------------------------
-printf "\n%b[4/6] Synchronizing Solution Hierarchy (Cadence.sln)...%b\n" "$YELLOW" "$RESET"
+printf "\n%b[4/5] Synchronizing Solution Hierarchy (Cadence.sln)...%b\n" "$YELLOW" "$RESET"
 
 if [ ! -f "Cadence.sln" ]; then
     dotnet new sln -n Cadence
@@ -180,27 +180,9 @@ dotnet sln Cadence.sln add tests/Cadence.ArchitectureTests.csproj --solution-fol
 printf "  %b[SUCCESS] Solution hierarchy synchronized.%b\n" "$GREEN" "$RESET"
 
 # ------------------------------------------------------------------------------
-# 5. Ensure Python uv Workspace Exclusions
+# 5. Verify Solution Build & Diagnostic Gate
 # ------------------------------------------------------------------------------
-printf "\n%b[5/6] Verifying pyproject.toml uv workspace exclusion boundaries...%b\n" "$YELLOW" "$RESET"
-# Pure .NET projects without pyproject.toml must be excluded from uv workspace
-python3 - << 'PY'
-import sys
-
-try:
-    with open("pyproject.toml", "r") as f:
-        content = f.read()
-
-    if "[tool.uv.workspace]" in content:
-        print("  • pyproject.toml workspace settings verified.")
-except Exception as e:
-    print(f"  • Warning verifying pyproject.toml: {e}")
-PY
-
-# ------------------------------------------------------------------------------
-# 6. Verify Solution Build & Diagnostic Gate
-# ------------------------------------------------------------------------------
-printf "\n%b[6/6] Verifying Solution Compilation & Roslyn Analyzer Diagnostics...%b\n" "$YELLOW" "$RESET"
+printf "\n%b[5/5] Verifying Solution Compilation & Roslyn Analyzer Diagnostics...%b\n" "$YELLOW" "$RESET"
 dotnet build Cadence.sln --no-incremental
 
 printf "\n%b================================================================================%b\n" "$GREEN$BOLD" "$RESET"
