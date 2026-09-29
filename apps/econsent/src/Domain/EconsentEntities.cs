@@ -80,7 +80,7 @@ public class ComprehensionResult
     public string ThresholdPolicyJson { get; set; } = "{}";
     public string SubmittedAnswersJson { get; set; } = "{}";
     public bool Passed { get; set; }
-    public double Score { get; set; }
+    public decimal Score { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;

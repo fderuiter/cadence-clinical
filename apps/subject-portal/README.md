@@ -9,6 +9,7 @@ Patient/Subject-facing eCOA Portal
 ## Architectural Boundaries
 
 Implements clinical domain services and application workflows within `apps/subject-portal/`.
+
 - **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
 - **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
 
@@ -17,6 +18,7 @@ Implements clinical domain services and application workflows within `apps/subje
 ## Public APIs / Exports
 
 Service routes and contract interfaces:
+
 - `HTTP` endpoints under `/api/v1/subject-portal`
 
 ---
@@ -24,6 +26,7 @@ Service routes and contract interfaces:
 ## Dependencies
 
 This microservice includes the following module dependencies:
+
 - `@axe-core/playwright`
 - `@playwright/test`
 - `@vitejs/plugin-vue`

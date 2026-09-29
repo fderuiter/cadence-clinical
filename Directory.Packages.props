@@ -48,6 +48,7 @@
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.6.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.6.0" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.1" />
 
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />

@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Markdown;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class MarkdownValidatorService
@@ -9,7 +11,9 @@ public static class MarkdownValidatorService
     public static int ValidateMarkdown(string[]? files = null, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
-        Console.WriteLine("Validating Markdown documentation formatting...");
+        Console.WriteLine("Validating Markdown documentation formatting and workspace links...");
+
+        string docsDir = Path.Combine(repoRoot, "docs");
 
         string[] excludedDirs = [
             $"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}",
@@ -22,12 +26,33 @@ public static class MarkdownValidatorService
             $"{Path.DirectorySeparatorChar}.tmp{Path.DirectorySeparatorChar}"
         ];
 
-        var mdFiles = files != null && files.Length > 0
-            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists)
-            : Directory.EnumerateFiles(repoRoot, "*.md", SearchOption.AllDirectories)
-                .Where(f => !excludedDirs.Any(d => f.Contains(d)));
+        string[] mdFiles;
+        if (files != null && files.Length > 0)
+        {
+            mdFiles = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToArray();
+        }
+        else if (Directory.Exists(docsDir))
+        {
+            mdFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
+        }
+        else
+        {
+            mdFiles = Directory.EnumerateFiles(repoRoot, "*.md", SearchOption.AllDirectories)
+                .Where(f => !excludedDirs.Any(d => f.Contains(d)))
+                .ToArray();
+        }
 
-        int issues = 0;
+        int issuesCount = 0;
+
+        // Rule 1: Workspace Link Validation via MarkdownParser
+        var linkIssues = MarkdownParser.ValidateWorkspaceLinks(repoRoot, mdFiles);
+        foreach (var issue in linkIssues)
+        {
+            Console.WriteLine($"[MARKDOWN LINK] {issue.Message}");
+            issuesCount++;
+        }
+
+        // Rule 2: Heading space validation
         foreach (var file in mdFiles)
         {
             string[] lines;
@@ -52,18 +77,18 @@ public static class MarkdownValidatorService
                 {
                     string relPath = Path.GetRelativePath(repoRoot, file);
                     Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Heading missing space after '#': '{lines[i]}'");
-                    issues++;
+                    issuesCount++;
                 }
             }
         }
 
-        if (issues > 0)
+        if (issuesCount > 0)
         {
-            Console.WriteLine($"\n[ERROR] Found {issues} markdown formatting issues.");
+            Console.WriteLine($"\n[ERROR] Found {issuesCount} markdown issues.");
             return 1;
         }
 
-        Console.WriteLine("✔ Markdown files validated cleanly.");
+        Console.WriteLine("✔ Markdown files and workspace links validated cleanly.");
         return 0;
     }
 

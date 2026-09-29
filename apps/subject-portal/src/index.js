@@ -194,6 +194,14 @@ const state = reactive({
   isSyncDrawerOpen: false,
   syncStatusText: "Online. All submissions synchronized.",
   autoSyncSuspended: false,
+  syncRetryInfo: {
+    attempt: 0,
+    maxRetries: 5,
+    nextRetryDelay: 0,
+    nextRetryTimestamp: null,
+    sequenceNumber: null,
+    isRetrying: false,
+  },
   pinSetup: {
     isOpen: false,
     pin: "",
@@ -1844,6 +1852,88 @@ async function submitReconsentSignature() {
   }
 }
 
+function resetSyncRetryInfo() {
+  if (state.__syncRetryTimer) {
+    clearTimeout(state.__syncRetryTimer);
+    state.__syncRetryTimer = null;
+  }
+  state.syncRetryInfo = {
+    attempt: 0,
+    maxRetries: 5,
+    nextRetryDelay: 0,
+    nextRetryTimestamp: null,
+    sequenceNumber: null,
+    isRetrying: false,
+  };
+}
+
+function emitSyncLifecycleEvent(eventType, detail = {}) {
+  const payload = {
+    attempt: detail.attempt ?? state.syncRetryInfo.attempt,
+    maxRetries: detail.maxRetries ?? state.syncRetryInfo.maxRetries ?? 5,
+    nextRetryDelay: detail.nextRetryDelay ?? 0,
+    nextRetryTimestamp: detail.nextRetryTimestamp ?? null,
+    sequenceNumber: detail.sequenceNumber ?? null,
+    queuedCount: detail.queuedCount ?? 0,
+    syncedCount: detail.syncedCount ?? 0,
+    error: detail.error ?? null,
+    timestamp: new Date().toISOString(),
+    ...detail,
+  };
+
+  if (eventType === "sync:attempt") {
+    state.syncRetryInfo.attempt = payload.attempt;
+    state.syncRetryInfo.maxRetries = payload.maxRetries;
+    state.syncRetryInfo.nextRetryDelay = payload.nextRetryDelay;
+    state.syncRetryInfo.nextRetryTimestamp = payload.nextRetryTimestamp;
+    state.syncRetryInfo.sequenceNumber = payload.sequenceNumber;
+    state.syncRetryInfo.isRetrying = true;
+
+    const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries}`;
+    state.syncStatusText = statusMsg;
+    const statusTextEl =
+      typeof document !== "undefined"
+        ? document.getElementById("sync-queue-status-text")
+        : null;
+    if (statusTextEl) {
+      statusTextEl.textContent = statusMsg;
+    }
+  } else if (eventType === "sync:retry-scheduled") {
+    state.syncRetryInfo.attempt = payload.attempt;
+    state.syncRetryInfo.maxRetries = payload.maxRetries;
+    state.syncRetryInfo.nextRetryDelay = payload.nextRetryDelay;
+    state.syncRetryInfo.nextRetryTimestamp = payload.nextRetryTimestamp;
+    state.syncRetryInfo.sequenceNumber = payload.sequenceNumber;
+    state.syncRetryInfo.isRetrying = true;
+
+    const delaySec = Math.max(1, Math.ceil(payload.nextRetryDelay / 1000));
+    const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries} (Next retry in ${delaySec}s)`;
+    state.syncStatusText = statusMsg;
+    const statusTextEl =
+      typeof document !== "undefined"
+        ? document.getElementById("sync-queue-status-text")
+        : null;
+    if (statusTextEl) {
+      statusTextEl.textContent = statusMsg;
+    }
+  } else if (eventType === "sync:success") {
+    resetSyncRetryInfo();
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    typeof window.dispatchEvent === "function"
+  ) {
+    try {
+      window.dispatchEvent(new CustomEvent(eventType, { detail: payload }));
+    } catch (e) {
+      console.warn(`Failed to dispatch ${eventType} event:`, e);
+    }
+  }
+
+  return payload;
+}
+
 function checkOnline() {
   if (typeof window !== "undefined" && window.__MOCK_TEST_ENV__) {
     return !state.session.isOfflineMode;
@@ -1876,7 +1966,30 @@ async function renderSyncQueueList() {
       if (item.status === "QUEUED") {
         badgeClass = "pending";
         statusLabel = "QUEUED";
-        statusDesc = "Waiting for network connection...";
+        if (
+          state.syncRetryInfo &&
+          state.syncRetryInfo.isRetrying &&
+          (state.syncRetryInfo.sequenceNumber === null ||
+            state.syncRetryInfo.sequenceNumber === undefined ||
+            state.syncRetryInfo.sequenceNumber === item.sequence_number)
+        ) {
+          if (
+            state.syncRetryInfo.nextRetryDelay > 0 &&
+            state.syncRetryInfo.nextRetryTimestamp
+          ) {
+            const delaySec = Math.max(
+              1,
+              Math.ceil(
+                (state.syncRetryInfo.nextRetryTimestamp - Date.now()) / 1000
+              )
+            );
+            statusDesc = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${delaySec}s)`;
+          } else {
+            statusDesc = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries}`;
+          }
+        } else {
+          statusDesc = "Waiting for network connection...";
+        }
       } else if (
         item.status === "CREATED" ||
         item.status === "UPDATED_CLIENT_WINS"
@@ -1942,7 +2055,7 @@ async function refreshSubmissionsState() {
   }
 }
 
-async function syncOfflineQueue(isManual = false) {
+async function syncOfflineQueue(isManual = false, options = {}) {
   const statusTextEl = document.getElementById("sync-queue-status-text");
   const queued = await getQueuedSubmissions();
   const online = checkOnline();
@@ -1971,6 +2084,7 @@ async function syncOfflineQueue(isManual = false) {
       statusTextEl.textContent = txt;
     }
     state.syncStatusText = txt;
+    emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
     await renderSyncQueueList();
     await refreshSubmissionsState();
     return;
@@ -2000,16 +2114,28 @@ async function syncOfflineQueue(isManual = false) {
       statusTextEl.textContent = txtComplete;
     }
     state.syncStatusText = txtComplete;
+    emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
     await renderSyncQueueList();
     await refreshSubmissionsState();
     return;
   }
 
-  const txtSyncing = `Online. Syncing ${validSubmissions.length} submission(s)...`;
-  if (statusTextEl) {
-    statusTextEl.textContent = txtSyncing;
-  }
-  state.syncStatusText = txtSyncing;
+  const seqNumber = validSubmissions[0]?.sequence_number ?? null;
+  const maxRetries = options.maxRetries || 5;
+  const currentAttempt =
+    options.attempt ||
+    (state.syncRetryInfo.isRetrying ? state.syncRetryInfo.attempt + 1 : 1);
+  const baseDelay = options.retryDelay || 1000;
+
+  emitSyncLifecycleEvent("sync:attempt", {
+    attempt: currentAttempt,
+    maxRetries,
+    sequenceNumber: seqNumber,
+    queuedCount: validSubmissions.length,
+  });
+
+  await renderSyncQueueList();
+  await refreshSubmissionsState();
 
   const payload = {
     submissions: validSubmissions.map((item) => ({
@@ -2120,13 +2246,47 @@ async function syncOfflineQueue(isManual = false) {
       statusTextEl.textContent = txtComplete;
     }
     state.syncStatusText = txtComplete;
+
+    emitSyncLifecycleEvent("sync:success", {
+      syncedCount: validSubmissions.length,
+      sequenceNumber: seqNumber,
+      queuedCount: 0,
+    });
   } catch (err) {
     console.error("Sync failed:", err);
-    const txtFailed = `Sync failed. ${queued.length} submission(s) still queued.`;
-    if (statusTextEl) {
-      statusTextEl.textContent = txtFailed;
+    const nextDelay = baseDelay * Math.pow(2, currentAttempt - 1);
+    const nextTimestamp = Date.now() + nextDelay;
+
+    if (currentAttempt < maxRetries && !options.noRetry) {
+      emitSyncLifecycleEvent("sync:retry-scheduled", {
+        attempt: currentAttempt,
+        maxRetries,
+        nextRetryDelay: nextDelay,
+        nextRetryTimestamp: nextTimestamp,
+        sequenceNumber: seqNumber,
+        queuedCount: validSubmissions.length,
+        error: err.message,
+      });
+
+      if (options.autoRetry) {
+        if (state.__syncRetryTimer) {
+          clearTimeout(state.__syncRetryTimer);
+        }
+        state.__syncRetryTimer = setTimeout(() => {
+          syncOfflineQueue(isManual, {
+            ...options,
+            attempt: currentAttempt + 1,
+          });
+        }, nextDelay);
+      }
+    } else {
+      state.syncRetryInfo.isRetrying = false;
+      const txtFailed = `Sync failed. ${queued.length} submission(s) still queued.`;
+      if (statusTextEl) {
+        statusTextEl.textContent = txtFailed;
+      }
+      state.syncStatusText = txtFailed;
     }
-    state.syncStatusText = txtFailed;
   }
 
   await renderSyncQueueList();
@@ -2980,6 +3140,8 @@ export {
   closeReconsentModal,
   checkPendingReconsent,
   submitReconsentSignature,
+  emitSyncLifecycleEvent,
+  resetSyncRetryInfo,
 };
 
 function createClinicalInput(

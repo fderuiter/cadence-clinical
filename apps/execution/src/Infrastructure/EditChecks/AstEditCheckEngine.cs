@@ -31,7 +31,7 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
             switch (je.ValueKind)
             {
                 case JsonValueKind.Number:
-                    return je.GetDouble();
+                    return je.TryGetDecimal(out var dec) ? dec : je.GetDouble();
                 case JsonValueKind.String:
                     return je.GetString();
                 case JsonValueKind.True:
@@ -137,16 +137,27 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
             if (op is "+" or "-" or "*" or "/")
             {
                 if (left is null || right is null) return null;
-                if (!TryToDouble(left, out double l) || !TryToDouble(right, out double r)) return null;
+                if (!TryToDecimal(left, out decimal l) || !TryToDecimal(right, out decimal r)) return null;
 
-                return op switch
+                try
                 {
-                    "+" => l + r,
-                    "-" => l - r,
-                    "*" => l * r,
-                    "/" => Math.Abs(r) < 1e-9 ? null : l / r,
-                    _ => null
-                };
+                    return op switch
+                    {
+                        "+" => l + r,
+                        "-" => l - r,
+                        "*" => l * r,
+                        "/" => r == 0m ? null : l / r,
+                        _ => null
+                    };
+                }
+                catch (OverflowException)
+                {
+                    return null;
+                }
+                catch (DivideByZeroException)
+                {
+                    return null;
+                }
             }
 
             // Comparison: ==, !=, <, <=, >, >=
@@ -172,12 +183,12 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                     };
                 }
 
-                if (TryToDouble(left, out double lNum) && TryToDouble(right, out double rNum))
+                if (TryToDecimal(left, out decimal lNum) && TryToDecimal(right, out decimal rNum))
                 {
                     return op switch
                     {
-                        "==" => Math.Abs(lNum - rNum) < 1e-9,
-                        "!=" => Math.Abs(lNum - rNum) >= 1e-9,
+                        "==" => lNum == rNum,
+                        "!=" => lNum != rNum,
                         "<" => lNum < rNum,
                         "<=" => lNum <= rNum,
                         ">" => lNum > rNum,
@@ -244,12 +255,12 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                 string repeatGroup = ExtractPathOrField(repeatGroupNode);
 
                 var indexVal = EvaluateAstCore(indexNode, context, depth + 1);
-                if (indexVal is null || !TryToDouble(indexVal, out double idxDbl))
+                if (indexVal is null || !TryToDecimal(indexVal, out decimal idxDec))
                 {
                     return null;
                 }
 
-                int targetIndex = (int)idxDbl;
+                int targetIndex = (int)idxDec;
                 string fieldName = targetPath.Split('/')[^1];
                 string indexedPath = $"{repeatGroup}[{targetIndex}]/{fieldName}";
 
@@ -369,7 +380,7 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                 return prop.ValueKind switch
                 {
                     JsonValueKind.String => prop.GetString(),
-                    JsonValueKind.Number => prop.GetDouble(),
+                    JsonValueKind.Number => prop.TryGetDecimal(out var dec) ? dec : prop.GetDouble(),
                     JsonValueKind.True => true,
                     JsonValueKind.False => false,
                     JsonValueKind.Null => null,
@@ -413,26 +424,34 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
         return Array.Empty<object>();
     }
 
-    private static bool TryToDouble(object value, out double result)
+    private static bool TryToDecimal(object value, out decimal result)
     {
-        if (value is double d) { result = d; return true; }
-        if (value is float f) { result = f; return true; }
+        if (value is decimal dec) { result = dec; return true; }
         if (value is int i) { result = i; return true; }
         if (value is long l) { result = l; return true; }
-        if (value is decimal dec) { result = (double)dec; return true; }
+        if (value is double d)
+        {
+            if (double.IsNaN(d) || double.IsInfinity(d)) { result = 0m; return false; }
+            try { result = Convert.ToDecimal(d); return true; } catch { result = 0m; return false; }
+        }
+        if (value is float f)
+        {
+            if (float.IsNaN(f) || float.IsInfinity(f)) { result = 0m; return false; }
+            try { result = Convert.ToDecimal(f); return true; } catch { result = 0m; return false; }
+        }
 
         if (value is JsonElement je && je.ValueKind == JsonValueKind.Number)
         {
-            return je.TryGetDouble(out result);
+            return je.TryGetDecimal(out result);
         }
 
-        if (value is string s && double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsed))
+        if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsed))
         {
             result = parsed;
             return true;
         }
 
-        result = 0;
+        result = 0m;
         return false;
     }
 
