@@ -83,7 +83,7 @@ body:
           required: true
         - label: "Unit & integration tests written/updated in `tests/` (`dotnet test Cadence.sln`)."
           required: true
-        - label: "Code formatted and quality gates pass (`dotnet format Cadence.sln --verify-no-changes`, `dotnet cadence check`)."
+        - label: "Code formatted and quality gates pass (`dotnet format Cadence.sln --verify-no-changes`, `pnpm cadence check`)."
           required: true
         - label: "GxP audit fields preserved/updated (`created_by`, `reason_for_change`, versioning) if models modified."
           required: true
