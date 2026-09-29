@@ -203,11 +203,15 @@ public static partial class CadenceTelemetryExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        endpoints.MapHealthChecks("/healthz/live", new HealthCheckOptions { Predicate = _ => false });
+        // Orchestrators probe without credentials, so the probes opt out of the services' authenticate-by-default
+        // fallback policy. They return only Healthy/Unhealthy.
+        endpoints.MapHealthChecks("/healthz/live", new HealthCheckOptions { Predicate = _ => false })
+            .AllowAnonymous();
         endpoints.MapHealthChecks("/healthz/ready", new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains(ReadinessTag)
-        });
+        })
+            .AllowAnonymous();
 
         return endpoints;
     }

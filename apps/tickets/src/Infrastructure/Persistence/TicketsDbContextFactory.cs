@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Database;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -11,8 +13,11 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence;
 /// </summary>
 public sealed class TicketsDbContextFactory : IDesignTimeDbContextFactory<TicketsDbContext>
 {
+    /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
+    public const string Schema = "tickets";
+
     private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
 
     public TicketsDbContext CreateDbContext(string[] args)
     {
@@ -20,7 +25,8 @@ public sealed class TicketsDbContextFactory : IDesignTimeDbContextFactory<Ticket
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var optionsBuilder = new DbContextOptionsBuilder<TicketsDbContext>().UseNpgsql(connectionString);
+        var optionsBuilder = new DbContextOptionsBuilder<TicketsDbContext>()
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
 
         return new TicketsDbContext(optionsBuilder.Options);
     }

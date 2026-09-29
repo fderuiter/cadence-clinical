@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(CtmsDbContext))]
     partial class CtmsDbContextModelSnapshot : ModelSnapshot
     {
@@ -864,50 +865,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
                     b.ToTable("ctms_site_milestones", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsStudy", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("VersionIndex")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StudyId");
-
-                    b.ToTable("ctms_studies", (string)null);
-                });
-
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.DoaDelegationRecord", b =>
                 {
                     b.Property<string>("Id")
@@ -970,71 +927,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
                     b.HasIndex("TaskCode");
 
                     b.ToTable("doa_delegation_records", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.SiteStaffMember", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("GcpCertified")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("LicenseNumber")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PrimaryRole")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<long>("VersionIndex")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SiteId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("site_staff_members", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
@@ -1125,16 +1017,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
-
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.DoaDelegationRecord", b =>
-                {
-                    b.HasOne("Cadence.Apps.Ctms.Domain.SiteStaffMember", null)
-                        .WithMany()
-                        .HasForeignKey("StaffUserId")
-                        .HasPrincipalKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
 #pragma warning restore 612, 618
         }
     }
+}

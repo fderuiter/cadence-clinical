@@ -23,6 +23,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-Checked([scriptblock]$Command) {
+    # $ErrorActionPreference does not trap native exit codes; fail the script instead of printing [SUCCESS].
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: '$Command' exited with code $LASTEXITCODE" -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+}
+
 function Capitalize-Name([string]$name) {
     return (Get-Culture).TextInfo.ToTitleCase($name.ToLowerInvariant())
 }
@@ -59,39 +68,39 @@ foreach ($svc in $targetServices) {
                 exit 1
             }
             Write-Host "Generating migration '$MigrationName'..." -ForegroundColor Yellow
-            & dotnet ef migrations add $MigrationName --project $projectPath --output-dir $migrationsDir
+            Invoke-Checked { & dotnet ef migrations add $MigrationName --project $projectPath --output-dir $migrationsDir }
             Write-Host "[SUCCESS] Migration created in $migrationsDir" -ForegroundColor Green
         }
 
         "script" {
             $outFile = Join-Path $serviceDir "src\Infrastructure\Persistence\Migrations\idempotent_migration.sql"
             Write-Host "Generating idempotent SQL migration script..." -ForegroundColor Yellow
-            & dotnet ef migrations script --idempotent --project $projectPath --output $outFile
+            Invoke-Checked { & dotnet ef migrations script --idempotent --project $projectPath --output $outFile }
             Write-Host "[SUCCESS] SQL Script written to $outFile" -ForegroundColor Green
         }
 
         "bundle" {
             $outFile = Join-Path $serviceDir "src\Infrastructure\Persistence\migration_bundle"
             Write-Host "Generating self-contained executable migration bundle..." -ForegroundColor Yellow
-            & dotnet ef migrations bundle --project $projectPath --output $outFile --force
+            Invoke-Checked { & dotnet ef migrations bundle --project $projectPath --output $outFile --force }
             Write-Host "[SUCCESS] Migration bundle created at $outFile" -ForegroundColor Green
         }
 
         "apply" {
             Write-Host "Applying pending migrations to target PostgreSQL database..." -ForegroundColor Yellow
-            & dotnet ef database update --project $projectPath
+            Invoke-Checked { & dotnet ef database update --project $projectPath }
             Write-Host "[SUCCESS] Database update complete." -ForegroundColor Green
         }
 
         "seed" {
             Write-Host "Executing C# DbContext seeders for target service..." -ForegroundColor Yellow
-            & dotnet run --project $projectPath --no-build -- --seed
+            Invoke-Checked { & dotnet run --project $projectPath --no-build -- --seed }
             Write-Host "[SUCCESS] Seeding complete." -ForegroundColor Green
         }
 
         "list" {
             Write-Host "Listing applied and pending migrations..." -ForegroundColor Yellow
-            & dotnet ef migrations list --project $projectPath
+            Invoke-Checked { & dotnet ef migrations list --project $projectPath }
         }
     }
 }

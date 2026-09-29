@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Database;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -33,8 +35,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// </summary>
 public sealed class ExecutionDbContextFactory : IDesignTimeDbContextFactory<ExecutionDbContext>
 {
+    /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
+    public const string Schema = "edc";
+
     private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
 
     public ExecutionDbContext CreateDbContext(string[] args)
     {
@@ -42,7 +47,8 @@ public sealed class ExecutionDbContextFactory : IDesignTimeDbContextFactory<Exec
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>().UseNpgsql(connectionString);
+        var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
 
         return new ExecutionDbContext(optionsBuilder.Options);
     }

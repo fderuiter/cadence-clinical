@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -6,9 +7,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using Npgsql;
+
 namespace Cadence.Database;
 
-public static class CadenceDatabaseExtensions
+public static partial class CadenceDatabaseExtensions
 {
     /// <summary>Connection string name used when a caller does not pass one (matches the Aspire AppHost's database resource).</summary>
     public const string DefaultConnectionName = "cadence";
@@ -19,29 +22,39 @@ public static class CadenceDatabaseExtensions
     /// <summary>Health check tag for dependencies that must be reachable before a service takes traffic.</summary>
     public const string ReadinessTag = "ready";
 
+    /// <summary>The single shared database every module uses (ADR-2247); each module owns one schema in it.</summary>
+    public const string DefaultDatabaseName = "cadence";
+
+    [GeneratedRegex("^[a-z][a-z0-9_]{0,62}$")]
+    private static partial Regex SchemaNameRegex();
+
     /// <summary>
     /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries and a
-    /// readiness health check. The connection string is resolved by <see cref="ResolvePostgresConnectionString"/>.
+    /// readiness health check, and applies migrations when <see cref="CadenceMigrationOptions"/> asks for it.
+    /// The connection string is resolved by <see cref="ResolvePostgresConnectionString"/>.
     /// </summary>
+    /// <param name="builder">The web application builder.</param>
+    /// <param name="schema">The module's PostgreSQL schema; defaults to the context name without "DbContext", lower-cased.</param>
+    /// <param name="connectionName">The <c>ConnectionStrings</c> entry to read.</param>
     public static WebApplicationBuilder AddCadencePostgresDbContext<TDbContext>(
         this WebApplicationBuilder builder,
-        string defaultDatabaseName = "cadence_edc",
+        string? schema = null,
         string connectionName = DefaultConnectionName)
         where TDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        string connectionString = ResolvePostgresConnectionString(
-            builder.Configuration,
-            builder.Environment,
-            defaultDatabaseName,
-            connectionName);
+        string connectionString = WithModuleSchema(
+            ResolvePostgresConnectionString(builder.Configuration, builder.Environment, DefaultDatabaseName, connectionName),
+            schema ?? ModuleSchemaFor<TDbContext>());
 
         builder.Services.AddCadenceDbContext<TDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<TDbContext>(name: typeof(TDbContext).Name, tags: [ReadinessTag]);
+
+        builder.Services.AddCadenceMigrations<TDbContext>(builder.Configuration);
 
         return builder;
     }
@@ -55,7 +68,7 @@ public static class CadenceDatabaseExtensions
     public static string ResolvePostgresConnectionString(
         IConfiguration configuration,
         IHostEnvironment environment,
-        string defaultDatabaseName = "cadence_edc",
+        string defaultDatabaseName = DefaultDatabaseName,
         string connectionName = DefaultConnectionName)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -79,5 +92,37 @@ public static class CadenceDatabaseExtensions
         throw new InvalidOperationException(
             $"No PostgreSQL connection string configured for '{environment.ApplicationName}'. " +
             $"Set ConnectionStrings__{connectionName} or {LegacyConnectionStringKey}.");
+    }
+
+    /// <summary>
+    /// Scopes a connection to one module's schema by setting the Npgsql search path to <c>{schema},public</c>.
+    /// Unqualified tables, including the migrations history table, are created and resolved in the module's
+    /// schema, so modules sharing one database cannot collide on table names (ADR-2247). <c>public</c> stays on
+    /// the path only so extension types and functions installed there still resolve.
+    /// </summary>
+    public static string WithModuleSchema(string connectionString, string schema)
+    {
+        ArgumentNullException.ThrowIfNull(connectionString);
+        ArgumentNullException.ThrowIfNull(schema);
+
+        if (!SchemaNameRegex().IsMatch(schema))
+        {
+            throw new ArgumentException($"'{schema}' is not a valid module schema name (lower-case letters, digits, underscore).", nameof(schema));
+        }
+
+        return new NpgsqlConnectionStringBuilder(connectionString) { SearchPath = $"{schema},public" }.ConnectionString;
+    }
+
+    /// <summary>The default module schema for a context: <c>CtmsDbContext</c> becomes <c>ctms</c>.</summary>
+    public static string ModuleSchemaFor<TDbContext>()
+        where TDbContext : DbContext
+    {
+        string name = typeof(TDbContext).Name;
+        if (name.EndsWith("DbContext", StringComparison.Ordinal))
+        {
+            name = name[..^"DbContext".Length];
+        }
+
+        return name.ToLowerInvariant();
     }
 }
