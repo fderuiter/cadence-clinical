@@ -319,7 +319,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc # pragma: allowlist secret
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
+      - ConnectionStrings__cadence=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -349,7 +349,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - BRAND_NAME=Cadence Clinical Research Software
       - CTMS_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-ctms:5432/cadence_ctms # pragma: allowlist secret
-      - ConnectionStrings__DefaultConnection=Host=postgres-ctms;Port=5432;Database=cadence_ctms;Username=cadence;Password=cadence_password # pragma: allowlist secret
+      - ConnectionStrings__cadence=Host=postgres-ctms;Port=5432;Database=cadence_ctms;Username=cadence;Password=cadence_password # pragma: allowlist secret
     depends_on:
       postgres-ctms:
         condition: service_healthy
@@ -379,7 +379,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - BRAND_NAME=Cadence Clinical Research Software
       - ETMF_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-etmf:5432/cadence_etmf # pragma: allowlist secret
-      - ConnectionStrings__DefaultConnection=Host=postgres-etmf;Port=5432;Database=cadence_etmf;Username=cadence;Password=cadence_password # pragma: allowlist secret
+      - ConnectionStrings__cadence=Host=postgres-etmf;Port=5432;Database=cadence_etmf;Username=cadence;Password=cadence_password # pragma: allowlist secret
       - INBOUND_EMAIL_HMAC_SECRET=dev-secret-inbound-email-hmac-secure-placeholder # pragma: allowlist secret
       - INBOUND_EMAIL_MAX_SIZE_BYTES=10485760
       - NOTIFICATIONS_URL=http://notifications:8006
@@ -412,7 +412,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - BRAND_NAME=Cadence Clinical Research Software
       - QUALITY_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-quality:5432/cadence_quality # pragma: allowlist secret
-      - ConnectionStrings__DefaultConnection=Host=postgres-quality;Port=5432;Database=cadence_quality;Username=cadence;Password=cadence_password # pragma: allowlist secret
+      - ConnectionStrings__cadence=Host=postgres-quality;Port=5432;Database=cadence_quality;Username=cadence;Password=cadence_password # pragma: allowlist secret
     depends_on:
       postgres-quality:
         condition: service_healthy
@@ -442,7 +442,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - BRAND_NAME=Cadence Clinical Research Software
       - ORG_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc # pragma: allowlist secret
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
+      - ConnectionStrings__cadence=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
     depends_on:
       postgres:
         condition: service_healthy
