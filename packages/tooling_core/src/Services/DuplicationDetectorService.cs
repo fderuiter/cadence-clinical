@@ -165,7 +165,7 @@ public static class DuplicationDetectorService
                 ["loc2"] = new JsonObject { ["file"] = d.Loc2.File, ["start"] = d.Loc2.Start, ["end"] = d.Loc2.End },
                 ["preview"] = d.Loc1.Preview
             };
-            dupsArray.Add(item);
+            dupsArray.Add((JsonNode)item);
         }
         var summaryObj = new JsonObject
         {
@@ -175,8 +175,12 @@ public static class DuplicationDetectorService
         try
         {
             string summaryPath = Path.Combine(repoRoot, "duplication_summary.json");
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(summaryPath, summaryObj.ToJsonString(options) + "\n");
+            using var stream = File.Create(summaryPath);
+            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+            {
+                summaryObj.WriteTo(writer);
+            }
+            stream.WriteByte((byte)'\n');
         }
         catch (Exception ex)
         {

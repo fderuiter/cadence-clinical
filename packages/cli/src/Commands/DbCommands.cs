@@ -31,8 +31,8 @@ public class DbStatusCommand : Command
 {
     public override int Execute(CommandContext context)
     {
-        AnsiConsole.MarkupLine("[cyan]Checking database connectivity...[/]");
-        return 0;
+        AnsiConsole.MarkupLine("[red]'db status' is not implemented yet. Use 'cadence doctor' to check datastore connectivity.[/]");
+        return 1;
     }
 }
 
@@ -40,7 +40,7 @@ public class DbSeedCommand : Command
 {
     public override int Execute(CommandContext context)
     {
-        AnsiConsole.MarkupLine("[cyan]Seeding multi-engine database schemas...[/]");
-        return 0;
+        AnsiConsole.MarkupLine("[red]'db seed' is not implemented yet; no data was seeded.[/]");
+        return 1;
     }
 }
