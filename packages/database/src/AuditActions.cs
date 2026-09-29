@@ -45,6 +45,21 @@ public static class AuditActions
         }
     }
 
+    /// <summary>Puts back actions from a failed save, ahead of any recorded since, so a retry uses them.</summary>
+    internal static void Restore(DbContext context, IReadOnlyList<AuditAction> actions)
+    {
+        if (actions.Count == 0)
+        {
+            return;
+        }
+
+        List<AuditAction> pending = Pending.GetOrCreateValue(context);
+        lock (pending)
+        {
+            pending.InsertRange(0, actions);
+        }
+    }
+
     internal static bool HasPending(DbContext context) =>
         Pending.TryGetValue(context, out List<AuditAction>? actions) && actions.Count > 0;
 

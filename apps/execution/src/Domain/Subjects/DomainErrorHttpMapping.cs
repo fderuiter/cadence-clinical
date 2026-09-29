@@ -55,6 +55,7 @@ public static class DomainErrorHttpMapping
         ["UNAUTHORIZED_QUERY_ROLE"] = StatusCodes.Status403Forbidden,
         ["UNAUTHORIZED_SIGNER_ROLE"] = StatusCodes.Status403Forbidden,
         ["TRIAL_LOCKED"] = StatusCodes.Status423Locked,
+        ["CONCURRENCY_CONFLICT"] = StatusCodes.Status409Conflict,
     };
 
     /// <summary>

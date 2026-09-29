@@ -21,6 +21,20 @@ Service routes and contract interfaces:
 
 ---
 
+## Errors and Concurrency
+
+- Domain errors come back as RFC 7807 ProblemDetails with a `code` extension. `DomainErrorHttpMapping` sets the status.
+- Writes use optimistic concurrency: each aggregate row carries a `_version` token. When another writer changed or
+  deleted the row after it was read, the save is rejected rather than retried over their change.
+  `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with `code: CONCURRENCY_CONFLICT`, and nothing
+  from the rejected save is written or audited. Clients re-read and re-apply (ADR-2448).
+- Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by the
+  Polly pipeline in `SaveChangesResiliencePipelineFactory`, and never inside an explicit transaction.
+- Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446), attributed to the caller or a
+  named `svc:` service account (ADR-2257).
+
+---
+
 ## Dependencies
 
 Interacts with core platform capabilities and shared libraries in `packages/`.
@@ -29,8 +43,9 @@ Interacts with core platform capabilities and shared libraries in `packages/`.
 
 ## Local Development & Testing
 
-Run microservice unit and integration tests:
+Run the execution unit tests (set `CADENCE_TEST_POSTGRES` to a PostgreSQL connection string to include the
+PostgreSQL integration tests):
 
 ```bash
-uv run pytest apps/execution/tests
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"
 ```
