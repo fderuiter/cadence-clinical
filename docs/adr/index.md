@@ -461,6 +461,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: ADR-2253 Identity Vault and Layered Participant Identity (K006)](2026-09-29-identity-vault-and-layered-participant-identity.md)
 - [2026-09-29: ADR-2254 Rules as Versioned Data and a Unified Rules Engine (K008)](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md)
 - [2026-09-29: ADR-2255 Kernel Lineage Graph and Scientific Traceability (K009)](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md)
+- [2026-09-29: ADR-2449 Kernel Command Pipeline, Transactional Write Set and Per-Tenant Audit Chain (K010)](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md)
 
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)

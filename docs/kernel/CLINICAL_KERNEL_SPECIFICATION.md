@@ -266,6 +266,10 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
 - **K-TX-5** No kernel write without a resolved Actor. System work runs as a named `ServiceAccount`;
   anonymous or `"system"` fallbacks are rejected (resolves G14).
 
+Implemented by `KernelCommandPipeline` and `KernelCommandTransaction` (ADR-2449): one PostgreSQL transaction per
+command; `KernelDbContext` refuses `SaveChanges` outside it. How to add a command:
+[`packages/kernel/README.md`](../../packages/kernel/README.md#command-pipeline-adr-2449).
+
 ### 5.2 Events
 
 `Envelope{ event_id, type, schema_version, tenant, occurred_valid, recorded, actor, activity_id,
@@ -293,6 +297,10 @@ correlation_id, causation_id, payload }`.
 4. **Reason for change** on every mutating command, stored on the audit entry and any superseding row.
 5. **Reconstructability**: for any `(valid_at, known_at)` the kernel re-derives state from tables;
    time-travel tests assert this per bitemporal aggregate.
+
+Items 1-3 are implemented for the kernel by ADR-2449: the `enforce_insert_only` trigger (SQLSTATE `KA001`) guards
+`audit_entries`, `domain_events`, `provenance_activities` and `idempotency_records`; `audit_chain_heads` serialises
+each tenant's chain; `KernelAuditChainVerifier` re-derives it. Root sealing and the scheduled verifier follow in #4779.
 
 ### 5.4 Error-code registry (resolves G13)
 
@@ -938,6 +946,7 @@ kernel, is merged into another, or is retired.
 | K007 | Neo4j for designer | Dropped for v1 | ADR-2245 |
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
 | K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
+| K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
 
 ---
 

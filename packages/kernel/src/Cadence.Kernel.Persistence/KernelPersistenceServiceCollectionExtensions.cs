@@ -1,10 +1,11 @@
 using System;
 
-using Cadence.Database;
-using Cadence.Kernel.Time;
+using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Persistence.Commands;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cadence.Kernel.Persistence;
 
@@ -15,33 +16,27 @@ namespace Cadence.Kernel.Persistence;
 public static class KernelPersistenceServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the kernel <see cref="DbContext"/> against PostgreSQL with the GxP audit interceptor, taking
-    /// time from <see cref="IClock"/> (K-TIME-3).
+    /// Registers the kernel <see cref="DbContext"/> against PostgreSQL and the unit of work the command pipeline
+    /// commits through (<see cref="IKernelUnitOfWorkFactory"/>). Each command gets its own context and transaction;
+    /// audit fields, provenance, events and the audit chain are written by that transaction, not by an interceptor.
     /// </summary>
+    /// <remarks>
+    /// No automatic retry strategy is configured: a command's transaction is not safely re-runnable by EF Core. Callers
+    /// retry the whole command with the same idempotency key instead (K-TX-3).
+    /// </remarks>
     /// <param name="services">The service collection.</param>
     /// <param name="connectionString">The <c>cadence</c> database connection string.</param>
-    /// <param name="currentActor">
-    /// Resolves the acting user for audit fields. Interim: the command pipeline (#4779) replaces this with the
-    /// resolved kernel Actor and rejects writes without one (K-TX-5).
-    /// </param>
-    public static IServiceCollection AddKernelPersistence(
-        this IServiceCollection services,
-        string connectionString,
-        Func<IServiceProvider, string> currentActor)
+    public static IServiceCollection AddKernelPersistence(this IServiceCollection services, string connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        ArgumentNullException.ThrowIfNull(currentActor);
 
-        services.AddDbContext<KernelDbContext>((sp, options) =>
-        {
-            var clock = sp.GetService<IClock>() ?? SystemClock.Instance;
-            options
-                .UseNpgsql(connectionString, npgsql => npgsql
-                    .MigrationsHistoryTable("__ef_migrations_history", KernelDbContext.Schema)
-                    .EnableRetryOnFailure())
-                .AddInterceptors(new GxPAuditInterceptor(() => currentActor(sp), () => clock.UtcNow.UtcDateTime));
-        });
+        services.AddDbContextFactory<KernelDbContext>(options => options.UseNpgsql(
+            connectionString,
+            npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", KernelDbContext.Schema)));
+        services.TryAddSingleton<KernelUnitOfWorkFactory>();
+        services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
+        services.TryAddSingleton<KernelAuditChainVerifier>();
 
         return services;
     }
