@@ -146,9 +146,11 @@ if [[ "$MINIMAL" == "1" ]]; then
   info "Skipped Playwright browser download (--minimal)."
 else
   if command -v pnpm >/dev/null 2>&1; then
-    pnpm --filter web exec playwright install chromium 2>/dev/null \
-      && ok "Playwright Chromium browser installed for web E2E testing." \
-      || info "Playwright browser install skipped (can be installed later via 'pnpm --filter web exec playwright install')."
+    if pnpm --filter web exec playwright install chromium 2>/dev/null; then
+      ok "Playwright Chromium browser installed for web E2E testing."
+    else
+      info "Playwright browser install skipped (can be installed later via 'pnpm --filter web exec playwright install')."
+    fi
   fi
 fi
 

@@ -11,9 +11,9 @@ SERVICE_NAME="${1:-}"
 # Formatting
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
   BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
-  BLUE=$(tput setaf 4); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); RED=$(tput setaf 1); CYAN=$(tput setaf 6)
+  GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); RED=$(tput setaf 1)
 else
-  BOLD=""; DIM=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""; RED=""; CYAN=""
+  BOLD=""; DIM=""; RESET=""; GREEN=""; YELLOW=""; RED=""
 fi
 
 _clear() {
@@ -29,7 +29,7 @@ printf '%s  Process: Decommissioning Legacy Python Implementations ("Clearing Ou
 printf '%s  Regulatory Standard: 21 CFR Part 11 / Change Control (PRD-SYS-053)%s\n\n' "$DIM" "$RESET"
 
 if [ -z "$SERVICE_NAME" ]; then
-  read -p "Enter service name to decommission (e.g. 'execution', or 'all'): " SERVICE_NAME || true
+  read -r -p "Enter service name to decommission (e.g. 'execution', or 'all'): " SERVICE_NAME || true
 fi
 
 if [ -z "$SERVICE_NAME" ]; then
@@ -96,7 +96,7 @@ decommission_single_service() {
   # Step 5: Regenerate Lockfile (uv.lock)
   printf '%s[5/5] Regenerating Lockfile (uv.lock)...%s\n' "$YELLOW" "$RESET"
   if [ -f "$REPO_ROOT/pyproject.toml" ] && command -v uv >/dev/null 2>&1; then
-    (cd "$REPO_ROOT" && uv lock 2>/dev/null || true)
+    (cd "$REPO_ROOT" && { uv lock 2>/dev/null || true; })
     printf '  %s[SUCCESS] Regenerated uv.lock (pruned unused dependencies).%s\n' "$GREEN" "$RESET"
   fi
 }
@@ -126,6 +126,6 @@ printf '\n%sADR and GxP Compliance Synchronization...%s\n' "$YELLOW" "$RESET"
 dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- check adrs || true
 dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- gxp sync || true
 
-printf '\n%s================================================================================%s\n' "$BOLD" "$GREEN" "$RESET"
+printf '\n%s%s================================================================================%s\n' "$BOLD" "$GREEN" "$RESET"
 printf '%s   DECOMMISSIONING COMPLETE FOR %s\n' "$BOLD" "$SERVICE_NAME"
-printf '%s================================================================================%s\n\n' "$BOLD" "$GREEN" "$RESET"
+printf '%s%s================================================================================%s\n\n' "$BOLD" "$GREEN" "$RESET"

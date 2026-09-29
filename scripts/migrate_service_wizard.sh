@@ -11,9 +11,9 @@ SERVICE_NAME="${1:-}"
 # Formatting
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
   BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
-  BLUE=$(tput setaf 4); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6)
+  GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6)
 else
-  BOLD=""; DIM=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""; CYAN=""
+  BOLD=""; DIM=""; RESET=""; GREEN=""; YELLOW=""; CYAN=""
 fi
 
 _clear() {
@@ -41,7 +41,7 @@ if [ -z "$SERVICE_NAME" ]; then
   echo "  [9] notifications  (Clinical Notification Dispatch)"
   echo "  [10] econsent      (Electronic Consent Pipeline)"
   echo ""
-  read -p "Enter service name or number [1-10]: " SELECTION || true
+  read -r -p "Enter service name or number [1-10]: " SELECTION || true
   case "$SELECTION" in
     1) SERVICE_NAME="execution" ;;
     2) SERVICE_NAME="designer" ;;
