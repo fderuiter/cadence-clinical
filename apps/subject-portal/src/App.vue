@@ -24,6 +24,7 @@
           :class="{
             'has-queued': queuedSubmissionsCount > 0,
             'sync-failed': isSyncFailed,
+            'sync-retrying': state.syncRetryInfo?.isRetrying,
           }"
           aria-label="Toggle sync status drawer"
           @click="toggleSyncDrawer"
@@ -37,7 +38,13 @@
           >
             {{ queuedSubmissionsCount }}
           </span>
-          <span class="sync-btn-label">Sync Status</span>
+          <span class="sync-btn-label">
+            {{
+              state.syncRetryInfo?.isRetrying
+                ? `Retrying (${state.syncRetryInfo.attempt}/${state.syncRetryInfo.maxRetries})`
+                : "Sync Status"
+            }}
+          </span>
         </button>
       </div>
     </header>
@@ -1566,6 +1573,27 @@ function getStatusLabel(item) {
 
 function getStatusDescription(item) {
   if (item.status === "QUEUED") {
+    if (
+      state.syncRetryInfo &&
+      state.syncRetryInfo.isRetrying &&
+      (state.syncRetryInfo.sequenceNumber === null ||
+        state.syncRetryInfo.sequenceNumber === undefined ||
+        state.syncRetryInfo.sequenceNumber === item.sequence_number)
+    ) {
+      if (
+        state.syncRetryInfo.nextRetryDelay > 0 &&
+        state.syncRetryInfo.nextRetryTimestamp
+      ) {
+        const delaySec = Math.max(
+          1,
+          Math.ceil(
+            (state.syncRetryInfo.nextRetryTimestamp - Date.now()) / 1000
+          )
+        );
+        return `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${delaySec}s)`;
+      }
+      return `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries}`;
+    }
     return "Waiting for network connection...";
   } else if (
     item.status === "CREATED" ||
