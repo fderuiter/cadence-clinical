@@ -2394,6 +2394,45 @@
     },
     {
       "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1966,
+        "end": 1980
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1576,
+        "end": 1590
+      },
+      "preview": "        if (\n          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1967,
+        "end": 1981
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1577,
+        "end": 1591
+      },
+      "preview": "          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1968,
+        "end": 1982
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1578,
+        "end": 1592
+      },
+      "preview": "          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n            state.syncRetryInfo.sequenceNumber === undefined ||\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/subject-portal/src/mocks/handlers.js",
         "start": 6,
         "end": 22

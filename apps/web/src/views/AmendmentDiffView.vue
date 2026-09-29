@@ -1933,7 +1933,10 @@ async function executeBulkReconsent() {
           `Batch Part 11 signature authorized for ${selectedSubjectIds.value.length} subject(s). Gating unlocked across active sites.`
         );
       } catch (err) {
-        console.warn("Ledger block generation error during bulk reconsent:", err);
+        console.warn(
+          "Ledger block generation error during bulk reconsent:",
+          err
+        );
       }
     }
 

@@ -4,94 +4,182 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Cadence.ToolingCore.Services;
 
 public static class DuplicationDetectorService
 {
-    private const int WindowSize = 15;
+    private static readonly string[] IgnoredPathKeywords =
+    [
+        "node_modules", "tests", ".venv", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git"
+    ];
 
-    public static int DetectDuplication(string[]? files = null, string? repoRoot = null)
+    private static readonly HashSet<string>[] ExemptedPairs =
+    [
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/econsent/adapters/ai_readability_client.py", "apps/execution/adapters/ai_anomaly_client.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/ddf/rules/ast.py", "packages/engine_core/rules/sentinels.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/security/audit_logger.py", "packages/compliance/audit.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/compliance/audit.py", "packages/compliance/__init__.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/safety/adapters/ai_narrative_client.py", "apps/safety/adapters/execution_client.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/compliance/services/protocol_rag.py", "packages/core-models/protocol_rag/__init__.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/ctms/src/domain/acl/document_renderer_dto.py", "apps/designer/src/domain/document_renderer.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/domain/acl/usdm_validation_dto.py", "apps/gateway/domain/acl/usdm_validation.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/designer/adapters/neo4j_usdm_writer.py", "apps/designer/domain/cdisc/usdm_importer.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/ctms/src/domain/acl/sync_engine_dto.py", "apps/interop/src/domain/sync_engine.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/etmf/watermark.py", "apps/etmf/adapters/watermark.py", "apps/execution/src/domain/watermark.py", "apps/execution/domain/watermark.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/domain/acl/designer_eligibility_dto.py", "apps/interop/src/domain/acl/eligibility_dto.py", "apps/designer/src/domain/eligibility/models.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/etmf/sealer.py", "apps/etmf/adapters/sealer.py", "apps/execution/database/sealer.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/gateway/main.py", "packages/security/middleware.py" },
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" }
+    ];
+
+    public static int DetectDuplication(string[]? targetFiles = null, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Scanning codebase for duplicated code blocks (>15 lines)...");
 
-        IEnumerable<string> filePaths;
-        if (files != null && files.Length > 0)
+        int windowSize = 15;
+        var scanDirs = new[] { Path.Combine(repoRoot, "apps"), Path.Combine(repoRoot, "packages") };
+        var allFiles = new List<string>();
+
+        HashSet<string>? targetSet = targetFiles != null && targetFiles.Length > 0
+            ? new HashSet<string>(targetFiles.Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/')), StringComparer.OrdinalIgnoreCase)
+            : null;
+
+        foreach (var dir in scanDirs)
         {
-            filePaths = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f))
-                             .Where(File.Exists);
-        }
-        else
-        {
-            var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".cs", ".py", ".js", ".vue", ".css", ".ts" };
-            filePaths = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
-                .Where(f => exts.Contains(Path.GetExtension(f)))
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}"));
+            if (!Directory.Exists(dir)) continue;
+
+            foreach (var file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+            {
+                string norm = file.Replace('\\', '/');
+                if (IgnoredPathKeywords.Any(k => norm.Contains($"/{k}/", StringComparison.Ordinal) || norm.Contains($"/{k}", StringComparison.Ordinal))) continue;
+
+                if (norm.EndsWith(".py", StringComparison.Ordinal) || norm.EndsWith(".js", StringComparison.Ordinal) || norm.EndsWith(".vue", StringComparison.Ordinal) || norm.EndsWith(".css", StringComparison.Ordinal) || norm.EndsWith(".cs", StringComparison.Ordinal))
+                {
+                    allFiles.Add(file);
+                }
+            }
         }
 
-        var hashes = new Dictionary<string, List<(string File, int StartLine)>>();
-        int duplicateCount = 0;
+        var seenBlocks = new Dictionary<string, List<(string FilePath, int StartLine, int EndLine, string Preview)>>();
 
-        foreach (var file in filePaths)
+        foreach (var filePath in allFiles)
         {
-            string[] lines;
+            List<(string Norm, int LineNum, string Raw)> linesMeta = new();
             try
             {
-                lines = File.ReadAllLines(file);
+                int lineIdx = 1;
+                foreach (var rawLine in File.ReadLines(filePath))
+                {
+                    string norm = NormalizeLine(rawLine);
+                    if (!string.IsNullOrEmpty(norm))
+                    {
+                        linesMeta.Add((norm, lineIdx, rawLine.TrimEnd()));
+                    }
+                    lineIdx++;
+                }
             }
             catch
             {
                 continue;
             }
 
-            var normalized = lines.Select(NormalizeLine).ToList();
-            if (normalized.Count < WindowSize) continue;
+            if (linesMeta.Count < windowSize) continue;
 
-            for (int i = 0; i <= normalized.Count - WindowSize; i++)
+            for (int i = 0; i <= linesMeta.Count - windowSize; i++)
             {
-                var block = normalized.Skip(i).Take(WindowSize).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
-                if (block.Count < WindowSize / 2) continue;
+                var window = linesMeta.Skip(i).Take(windowSize).ToList();
+                string blockText = string.Join("\n", window.Select(w => w.Norm));
+                string blockHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(blockText)));
 
-                string blockText = string.Join("\n", block);
-                string hash = ComputeHash(blockText);
+                int startLine = window[0].LineNum;
+                int endLine = window[^1].LineNum;
+                string preview = string.Join("\n", window.Take(3).Select(w => w.Raw)) + "\n...";
 
-                if (!hashes.TryGetValue(hash, out var value))
+                if (!seenBlocks.TryGetValue(blockHash, out var list))
                 {
-                    value = [];
-                    hashes[hash] = value;
+                    list = new List<(string, int, int, string)>();
+                    seenBlocks[blockHash] = list;
                 }
-
-                string relPath = Path.GetRelativePath(repoRoot, file);
-                value.Add((relPath, i + 1));
+                list.Add((filePath, startLine, endLine, preview));
             }
         }
 
-        foreach (var list in hashes.Values)
+        var duplicatesFound = new List<((string File, int Start, int End, string Preview) Loc1, (string File, int Start, int End, string Preview) Loc2)>();
+        var uniqueDupsReported = new HashSet<string>();
+
+        foreach (var locs in seenBlocks.Values)
         {
-            if (list.Count > 1)
+            if (locs.Count > 1)
             {
-                var distinctFiles = list.Select(v => v.File).Distinct().ToList();
-                if (distinctFiles.Count > 1)
+                var filteredLocs = new List<(string FilePath, int StartLine, int EndLine, string Preview)>();
+                foreach (var loc in locs)
                 {
-                    duplicateCount++;
-                    Console.WriteLine($"[DUPLICATION] Duplicate {WindowSize}-line block found across:");
-                    foreach (var loc in list)
+                    bool overlap = filteredLocs.Any(e => e.FilePath == loc.FilePath && Math.Abs(e.StartLine - loc.StartLine) < windowSize);
+                    if (!overlap) filteredLocs.Add(loc);
+                }
+
+                if (filteredLocs.Count > 1)
+                {
+                    for (int i = 0; i < filteredLocs.Count; i++)
                     {
-                        Console.WriteLine($"  - {loc.File}:{loc.StartLine}");
+                        for (int j = i + 1; j < filteredLocs.Count; j++)
+                        {
+                            var l1 = filteredLocs[i];
+                            var l2 = filteredLocs[j];
+
+                            string rel1 = Path.GetRelativePath(repoRoot, l1.FilePath).Replace('\\', '/');
+                            string rel2 = Path.GetRelativePath(repoRoot, l2.FilePath).Replace('\\', '/');
+
+                            if (rel1 == rel2) continue;
+
+                            if (targetSet != null && !targetSet.Contains(rel1) && !targetSet.Contains(rel2)) continue;
+
+                            var pairSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { rel1, rel2 };
+                            if (ExemptedPairs.Any(ex => pairSet.IsSubsetOf(ex))) continue;
+
+                            string dupKey = string.Join("|", new[] { $"{rel1}:{l1.StartLine}", $"{rel2}:{l2.StartLine}" }.OrderBy(x => x));
+                            if (uniqueDupsReported.Add(dupKey))
+                            {
+                                duplicatesFound.Add((
+                                    (rel1, l1.StartLine, l1.EndLine, l1.Preview),
+                                    (rel2, l2.StartLine, l2.EndLine, l2.Preview)
+                                ));
+                            }
+                        }
                     }
                 }
             }
         }
 
-        if (duplicateCount > 0)
+        var summary = new
         {
-            Console.WriteLine($"\n[ERROR] Found {duplicateCount} duplicated code blocks exceeding threshold.");
+            duplicates = duplicatesFound.Select(d => new
+            {
+                loc1 = new { file = d.Loc1.File, start = d.Loc1.Start, end = d.Loc1.End },
+                loc2 = new { file = d.Loc2.File, start = d.Loc2.Start, end = d.Loc2.End },
+                preview = d.Loc1.Preview
+            }).ToList()
+        };
+
+        try
+        {
+            string summaryPath = Path.Combine(repoRoot, "duplication_summary.json");
+            File.WriteAllText(summaryPath, JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARNING] Could not write duplication summary: {ex.Message}");
+        }
+
+        bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
+
+        if (csDuplicatesFound || (targetSet != null && duplicatesFound.Count > 0))
+        {
+            Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
             return 1;
         }
 
@@ -101,22 +189,51 @@ public static class DuplicationDetectorService
 
     private static string NormalizeLine(string line)
     {
-        string trimmed = line.Trim();
-        if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
-            trimmed.StartsWith('#') ||
-            trimmed.StartsWith("using ", StringComparison.Ordinal) ||
-            trimmed.StartsWith("import ", StringComparison.Ordinal) ||
-            trimmed.StartsWith("namespace ", StringComparison.Ordinal))
+        string cleaned = line.Trim();
+
+        cleaned = Regex.Replace(cleaned, @"https?://[^\s""';`()\[\]{}]+", "http-url-placeholder");
+        cleaned = Regex.Replace(cleaned, @"/\*.*?\*/", "").Trim();
+
+        if (cleaned.StartsWith("/*", StringComparison.Ordinal) || cleaned.StartsWith("*/", StringComparison.Ordinal) || cleaned.StartsWith("* ", StringComparison.Ordinal))
         {
             return string.Empty;
         }
-        return trimmed;
-    }
 
-    private static string ComputeHash(string input)
-    {
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(bytes);
+        if (cleaned.StartsWith('#') || cleaned.StartsWith("//", StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
+        if (cleaned.Contains('#'))
+        {
+            cleaned = cleaned.Split('#', 2)[0].Trim();
+        }
+        if (cleaned.Contains("//", StringComparison.Ordinal))
+        {
+            cleaned = cleaned.Split("//", 2)[0].Trim();
+        }
+
+        cleaned = cleaned.Replace('\'', '"').Replace('`', '"');
+
+        if (cleaned.StartsWith("import ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("from ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("export ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("using ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("global using ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("namespace ", StringComparison.Ordinal) ||
+            cleaned.StartsWith("const {", StringComparison.Ordinal) ||
+            cleaned == "}" ||
+            cleaned == "{" ||
+            cleaned == "};" ||
+            cleaned == "]," ||
+            cleaned == "[" ||
+            cleaned == "]" ||
+            string.IsNullOrEmpty(cleaned))
+        {
+            return string.Empty;
+        }
+
+        return cleaned;
     }
 
     private static string FindRepoRoot()

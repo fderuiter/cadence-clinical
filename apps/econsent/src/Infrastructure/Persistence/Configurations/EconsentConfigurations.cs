@@ -99,6 +99,7 @@ public class ComprehensionResultConfiguration : IEntityTypeConfiguration<Compreh
         builder.Property(x => x.ExpectedAnswersJson).HasColumnType("jsonb");
         builder.Property(x => x.ThresholdPolicyJson).HasColumnType("jsonb");
         builder.Property(x => x.SubmittedAnswersJson).HasColumnType("jsonb");
+        builder.Property(x => x.Score).HasPrecision(5, 2);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }

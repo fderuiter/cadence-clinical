@@ -48,7 +48,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.events[0].timestamp).toBeDefined();
 
       const savedEvents = JSON.parse(
-        window.localStorage.getItem("onboarding_events")
+        window.localStorage.getItem(`onboarding_${store.currentPersona}_events`)
       );
       expect(savedEvents.length).toBe(1);
       expect(savedEvents[0].type).toBe("test_type");
@@ -86,6 +86,89 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(
         store.events.find((e) => e.type === "tour_disabled")
       ).toBeDefined();
+    });
+
+    it("maintains distinct step progress and event history per persona", () => {
+      const store = useOnboardingStore();
+      const authStore = useAuthStore();
+
+      // Start in super_admin
+      expect(store.currentPersona).toBe("super_admin");
+      store.nextStep("Step 1 for super_admin");
+      store.nextStep("Step 2 for super_admin");
+      expect(store.currentStep).toBe(3);
+      expect(store.events.length).toBe(2);
+
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_current_step")
+      ).toBe("3");
+
+      // Switch to site_crc persona
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.currentStep).toBe(1); // Default initial step for new persona
+      expect(store.events).toEqual([]); // Empty events for new persona
+
+      // Advance site_crc to step 2 and log event
+      store.nextStep("Step 1 for site_crc");
+      expect(store.currentStep).toBe(2);
+      expect(store.events.length).toBe(1);
+
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_current_step")
+      ).toBe("2");
+
+      // Switch back to super_admin
+      authStore.switchPersona("super_admin");
+      store.loadPersonaState("super_admin");
+
+      expect(store.currentPersona).toBe("super_admin");
+      expect(store.currentStep).toBe(3); // Restored step progress
+      expect(store.events.length).toBe(2); // Restored event history
+    });
+
+    it("migrates legacy unscoped localStorage keys to super_admin without errors", () => {
+      // Set legacy unscoped keys in localStorage
+      window.localStorage.setItem("onboarding_current_step", "4");
+      window.localStorage.setItem("onboarding_is_active", "false");
+      window.localStorage.setItem("onboarding_disabled", "false");
+      window.localStorage.setItem(
+        "onboarding_events",
+        JSON.stringify([
+          { id: "ev-legacy-1", type: "legacy_event", target: "Legacy Target" },
+        ])
+      );
+
+      const store = useOnboardingStore();
+      store.loadPersonaState("super_admin");
+
+      expect(store.currentStep).toBe(4);
+      expect(store.isActive).toBe(false);
+      expect(store.events.length).toBe(1);
+      expect(store.events[0].type).toBe("legacy_event");
+
+      // Legacy keys should be removed and migrated to super_admin scoped keys
+      expect(window.localStorage.getItem("onboarding_current_step")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_events")).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_current_step")
+      ).toBe("4");
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_events")
+      ).not.toBeNull();
+    });
+
+    it("gracefully handles invalid JSON in legacy storage during migration", () => {
+      window.localStorage.setItem("onboarding_current_step", "2");
+      window.localStorage.setItem("onboarding_events", "corrupted-json{");
+
+      const store = useOnboardingStore();
+      expect(() => store.loadPersonaState("super_admin")).not.toThrow();
+
+      expect(store.currentStep).toBe(2);
+      expect(store.events).toEqual([]); // Falls back to empty array on parse error
     });
   });
 
@@ -161,6 +244,31 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       await wrapper.find(".btn-tour-disable").trigger("click");
       expect(store.disabled).toBe(true);
       expect(store.isActive).toBe(false);
+    });
+
+    it("automatically reloads persona onboarding state on authStore persona change", async () => {
+      const store = useOnboardingStore();
+      const authStore = useAuthStore();
+      authStore.isDemoMode = false;
+
+      // Set up existing state for site_crc in localStorage
+      window.localStorage.setItem("onboarding_site_crc_current_step", "3");
+      window.localStorage.setItem("onboarding_site_crc_is_active", "true");
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+      });
+
+      expect(store.currentStep).toBe(1);
+
+      // Switch persona to site_crc
+      authStore.switchPersona("site_crc");
+      await wrapper.vm.$nextTick();
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.currentStep).toBe(3);
     });
   });
 

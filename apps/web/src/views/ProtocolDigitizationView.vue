@@ -196,16 +196,24 @@
         </div>
 
         <!-- Human Escalation Card when job is PENDING_REVIEW -->
-        <div v-if="isPendingReview || dagJobStatus === 'PENDING_REVIEW'" class="escalation-alert-card card card-alert">
+        <div
+          v-if="isPendingReview || dagJobStatus === 'PENDING_REVIEW'"
+          class="escalation-alert-card card card-alert"
+        >
           <div class="escalation-header">
             <h4>⚠️ Escalation Required: Automated Schema Recovery Exhausted</h4>
             <span class="badge badge-escalation">PENDING_REVIEW</span>
           </div>
           <p class="escalation-description">
-            Stage gate validation failed at stage <strong>{{ failedStageName }}</strong> after maximum automated recovery retries (2/2).
-            Human review and 21 CFR Part 11 Electronic Signature sign-off are required to proceed.
+            Stage gate validation failed at stage
+            <strong>{{ failedStageName }}</strong> after maximum automated
+            recovery retries (2/2). Human review and 21 CFR Part 11 Electronic
+            Signature sign-off are required to proceed.
           </p>
-          <div v-if="gateErrors.length > 0" class="validation-errors-box alert alert-warning">
+          <div
+            v-if="gateErrors.length > 0"
+            class="validation-errors-box alert alert-warning"
+          >
             <strong>Validation Diagnostic Errors:</strong>
             <ul>
               <li v-for="(err, i) in gateErrors" :key="i">{{ err }}</li>
@@ -215,16 +223,38 @@
           <!-- Editable Schema Fields -->
           <div class="correction-fields-grid">
             <div class="form-group">
-              <label class="form-label">Protocol Identifier</label>
-              <input v-model="correctionProtocolId" type="text" class="form-control input-protocol-id" placeholder="e.g. CDNC-2026-001" />
+              <label class="form-label" for="corr-proto-id"
+                >Protocol Identifier</label
+              >
+              <input
+                id="corr-proto-id"
+                v-model="correctionProtocolId"
+                type="text"
+                class="form-control input-protocol-id"
+                placeholder="e.g. CDNC-2026-001"
+              />
             </div>
             <div class="form-group">
-              <label class="form-label">Study Title</label>
-              <input v-model="correctionTitle" type="text" class="form-control input-study-title" placeholder="Study Title" />
+              <label class="form-label" for="corr-study-title"
+                >Study Title</label
+              >
+              <input
+                id="corr-study-title"
+                v-model="correctionTitle"
+                type="text"
+                class="form-control input-study-title"
+                placeholder="Study Title"
+              />
             </div>
             <div class="form-group">
-              <label class="form-label">Development Phase</label>
-              <select v-model="correctionPhase" class="form-control select-phase">
+              <label class="form-label" for="corr-dev-phase"
+                >Development Phase</label
+              >
+              <select
+                id="corr-dev-phase"
+                v-model="correctionPhase"
+                class="form-control select-phase"
+              >
                 <option value="PHASE_I">Phase I</option>
                 <option value="PHASE_II">Phase II</option>
                 <option value="PHASE_III">Phase III</option>
@@ -232,8 +262,16 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Therapeutic Area</label>
-              <input v-model="correctionTherapeuticArea" type="text" class="form-control input-therapeutic-area" placeholder="e.g. Oncology" />
+              <label class="form-label" for="corr-ther-area"
+                >Therapeutic Area</label
+              >
+              <input
+                id="corr-ther-area"
+                v-model="correctionTherapeuticArea"
+                type="text"
+                class="form-control input-therapeutic-area"
+                placeholder="e.g. Oncology"
+              />
             </div>
           </div>
 
@@ -242,15 +280,34 @@
             <h5>✍️ 21 CFR Part 11 Electronic Signature Verification</h5>
             <div class="esignature-grid">
               <div class="form-group">
-                <label class="form-label">Signer Username / ID *</label>
-                <input v-model="signatureUsername" type="text" class="form-control input-signer-id" placeholder="User ID / Signer ID" />
+                <label class="form-label" for="corr-signer-id"
+                  >Signer Username / ID *</label
+                >
+                <input
+                  id="corr-signer-id"
+                  v-model="signatureUsername"
+                  type="text"
+                  class="form-control input-signer-id"
+                  placeholder="User ID / Signer ID"
+                />
               </div>
               <div class="form-group">
-                <label class="form-label">Change Justification Reason *</label>
-                <input v-model="signatureReason" type="text" class="form-control input-change-reason" placeholder="GxP Reason for manual correction" />
+                <label class="form-label" for="corr-change-reason"
+                  >Change Justification Reason *</label
+                >
+                <input
+                  id="corr-change-reason"
+                  v-model="signatureReason"
+                  type="text"
+                  class="form-control input-change-reason"
+                  placeholder="GxP Reason for manual correction"
+                />
               </div>
             </div>
-            <div v-if="correctionError" class="alert alert-danger correction-error-msg">
+            <div
+              v-if="correctionError"
+              class="alert alert-danger correction-error-msg"
+            >
               {{ correctionError }}
             </div>
             <div class="escalation-actions">
@@ -260,7 +317,9 @@
                 :disabled="isSubmittingCorrection"
                 @click="submitCorrectionAndResume"
               >
-                <span v-if="isSubmittingCorrection">Verifying Signature &amp; Resuming...</span>
+                <span v-if="isSubmittingCorrection"
+                  >Verifying Signature &amp; Resuming...</span
+                >
                 <span v-else>🔐 Submit Correction &amp; Resume Pipeline ➜</span>
               </button>
             </div>
@@ -545,7 +604,7 @@ const dagJobStatus = ref("PENDING");
 const isPendingReview = ref(false);
 const gateErrors = ref([]);
 const failedStageName = ref("SOA_EXTRACTION");
-const recoveryAttempts = ref(2);
+const _recoveryAttempts = ref(2);
 
 // Correction form fields
 const correctionProtocolId = ref("CDNC-2026-001");
@@ -553,8 +612,10 @@ const correctionTitle = ref("Phase II Protocol");
 const correctionPhase = ref("PHASE_II");
 const correctionTherapeuticArea = ref("Oncology");
 const signatureUsername = ref("");
-const signatureReason = ref("Manual correction of extracted protocol schema for Part 11 compliance");
-const signaturePassword = ref("");
+const signatureReason = ref(
+  "Manual correction of extracted protocol schema for Part 11 compliance"
+);
+const _signaturePassword = ref("");
 const isSubmittingCorrection = ref(false);
 const correctionError = ref("");
 
@@ -820,26 +881,32 @@ const startExtraction = () => {
   }, 400);
 };
 
-const triggerEscalation = (jobData = {}) => {
+const _triggerEscalation = (jobData = {}) => {
   dagJobStatus.value = "PENDING_REVIEW";
   isPendingReview.value = true;
   failedStageName.value = jobData.current_stage || "SOA_EXTRACTION";
   gateErrors.value = jobData.error_message
     ? [jobData.error_message]
-    : ["Schema validation gate failure at SOA_EXTRACTION after 2 self-healing retries."];
+    : [
+        "Schema validation gate failure at SOA_EXTRACTION after 2 self-healing retries.",
+      ];
 
   if (rawExtractionData.value) {
-    correctionProtocolId.value = rawExtractionData.value.protocol_id || "CDNC-2026-001";
-    correctionTitle.value = rawExtractionData.value.study_title || "Phase II Protocol";
+    correctionProtocolId.value =
+      rawExtractionData.value.protocol_id || "CDNC-2026-001";
+    correctionTitle.value =
+      rawExtractionData.value.study_title || "Phase II Protocol";
     correctionPhase.value = rawExtractionData.value.phase || "PHASE_II";
-    correctionTherapeuticArea.value = rawExtractionData.value.therapeutic_area || "Oncology";
+    correctionTherapeuticArea.value =
+      rawExtractionData.value.therapeutic_area || "Oncology";
   }
 };
 
 const submitCorrectionAndResume = async () => {
   correctionError.value = "";
   if (!signatureUsername.value || !signatureUsername.value.trim()) {
-    correctionError.value = "Part 11 Electronic Signature Username is required.";
+    correctionError.value =
+      "Part 11 Electronic Signature Username is required.";
     return;
   }
   if (!signatureReason.value || !signatureReason.value.trim()) {
@@ -883,7 +950,8 @@ const submitCorrectionAndResume = async () => {
       rawExtractionData.value.protocol_id = correctionProtocolId.value;
       rawExtractionData.value.study_title = correctionTitle.value;
       rawExtractionData.value.phase = correctionPhase.value;
-      rawExtractionData.value.therapeutic_area = correctionTherapeuticArea.value;
+      rawExtractionData.value.therapeutic_area =
+        correctionTherapeuticArea.value;
     }
 
     isPendingReview.value = false;
@@ -892,7 +960,9 @@ const submitCorrectionAndResume = async () => {
     currentStageIndex.value = extractionStages.length;
   } catch (err) {
     correctionError.value =
-      err?.response?.data?.detail || err?.message || "Failed to submit stage correction.";
+      err?.response?.data?.detail ||
+      err?.message ||
+      "Failed to submit stage correction.";
   } finally {
     isSubmittingCorrection.value = false;
   }

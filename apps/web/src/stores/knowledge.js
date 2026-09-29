@@ -37,16 +37,22 @@ export const useKnowledgeStore = defineStore("knowledge", {
   },
 
   actions: {
+    invalidateContextualState() {
+      this.selectedArticle = null;
+      this.searchQuery = "";
+      this.searchResults = [];
+      this.isSearching = false;
+      this.isEscalating = false;
+      this.escalationPayload = null;
+    },
+
     openDrawer() {
       this.isOpen = true;
     },
 
     closeDrawer() {
       this.isOpen = false;
-      this.searchQuery = "";
-      this.searchResults = [];
-      this.isSearching = false;
-      this.selectedArticle = null;
+      this.invalidateContextualState();
     },
 
     toggleDrawer() {
@@ -72,6 +78,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     },
 
     async fetchContextualHelp(route, persona) {
+      this.invalidateContextualState();
       const authStore = useAuthStore();
       const targetRoute = route || this.currentRoute || "/";
       const targetPersona =

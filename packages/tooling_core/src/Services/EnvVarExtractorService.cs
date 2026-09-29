@@ -65,7 +65,15 @@ public static partial class EnvVarExtractorService
         Console.WriteLine($"Discovered {envVars.Count} distinct environment variable accesses in code.");
 
         string envExamplePath = Path.Combine(repoRoot, ".env.example");
-        if (checkOnly && File.Exists(envExamplePath))
+        string envDocPath = Path.Combine(repoRoot, "docs", "ENVIRONMENT_VARIABLES.md");
+
+        if (!File.Exists(envExamplePath))
+        {
+            Console.WriteLine($"[ERROR] .env.example not found at {envExamplePath}");
+            return 1;
+        }
+
+        if (checkOnly)
         {
             string exampleContent = File.ReadAllText(envExamplePath);
             var missingInExample = envVars.Where(v => !exampleContent.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -78,10 +86,43 @@ public static partial class EnvVarExtractorService
                     Console.WriteLine($"  - {missing}");
                 }
             }
+
+            var exampleVars = ExtractVarsFromEnvFile(envExamplePath);
+            if (File.Exists(envDocPath))
+            {
+                string docText = File.ReadAllText(envDocPath);
+                foreach (var v in exampleVars)
+                {
+                    if (!docText.Contains(v))
+                    {
+                        Console.WriteLine($"[WARNING] Environment variable '{v}' in .env.example missing from docs/ENVIRONMENT_VARIABLES.md");
+                    }
+                }
+            }
         }
 
         Console.WriteLine("✔ Environment variable extraction and verification complete.");
         return 0;
+    }
+
+    private static HashSet<string> ExtractVarsFromEnvFile(string filePath)
+    {
+        var vars = new HashSet<string>();
+        foreach (var line in File.ReadLines(filePath))
+        {
+            string trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
+
+            if (trimmed.Contains('='))
+            {
+                string key = trimmed.Split('=', 2)[0].Trim();
+                if (!string.IsNullOrEmpty(key))
+                {
+                    vars.Add(key);
+                }
+            }
+        }
+        return vars;
     }
 
     private static string FindRepoRoot()

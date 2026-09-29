@@ -1,24 +1,15 @@
-using System;
-
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Kernel.Templating;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
-
-string connectionString = builder.Configuration["POSTGRES_CONNECTION_STRING"]
-    is { Length: > 0 } configuredConnectionString
-        ? configuredConnectionString
-        : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
-
-builder.Services.AddDbContext<SafetyDbContext>(options => options.UseNpgsql(connectionString));
+builder.AddCadencePostgresDbContext<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
 
 FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
@@ -32,16 +23,13 @@ FluidTemplateRenderer.RegisterType<IcsrReport>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
-
-app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Safety" }))
-    .WithName("SafetyHealthCheck")
-    .WithSummary("Clinical Safety & Pharmacovigilance health probe.");
+app.MapCadenceHealthAndStatusEndpoints(
+    "Cadence.Apps.Safety",
+    "safety",
+    "Clinical Safety & Pharmacovigilance health probe.",
+    "Returns Safety operational status.");
 
 var api = app.MapGroup("/api/v1/safety");
-api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = "Cadence.Apps.Safety" }))
-    .WithName("SafetyStatus")
-    .WithSummary("Returns Safety operational status.");
-
 api.MapPost("/icsr/render", async (IcsrReport request, ITemplateRenderer renderer) =>
 {
     string rendered = await renderer.RenderAsync("e2b_r3_icsr.xml.liquid", request, typeof(Program).Assembly);
