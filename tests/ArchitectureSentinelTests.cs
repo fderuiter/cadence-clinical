@@ -219,6 +219,53 @@ public class ArchitectureSentinelTests
         }
     }
 
+    /// <summary>
+    /// #4761: every backend service authenticates callers through the signed gateway identity and requires an
+    /// authenticated caller by default, and the gateway validates OIDC tokens at the edge. A new service that
+    /// skips the wiring fails here instead of shipping anonymous endpoints.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "EveryService_MustEnforceGatewayAuthentication")]
+    [Trait("Category", "Architecture")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void EveryServiceMustEnforceGatewayAuthentication()
+    {
+        var repoRoot = new DirectoryInfo(AppContext.BaseDirectory);
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot.FullName, "Cadence.sln")))
+        {
+            repoRoot = repoRoot.Parent;
+        }
+
+        repoRoot.Should().NotBeNull("the tests run inside the repository");
+
+        var programs = Directory.GetFiles(Path.Combine(repoRoot!.FullName, "apps"), "Program.cs", SearchOption.AllDirectories)
+            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !p.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .ToList();
+
+        programs.Should().NotBeEmpty();
+
+        var violations = new List<string>();
+        foreach (var program in programs)
+        {
+            string service = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(program))!);
+            string source = File.ReadAllText(program);
+
+            if (service == "apphost")
+            {
+                continue;
+            }
+
+            string[] required = service == "gateway"
+                ? ["AddJwtBearer(", "FallbackPolicy", "RequireAuthenticatedUser()", "UseAuthentication()", "UseAuthorization()", "AddSignedIdentityTransform"]
+                : ["AddCadenceSecurity(", "UseCadenceSecurity()"];
+
+            violations.AddRange(required.Where(call => !source.Contains(call, StringComparison.Ordinal)).Select(call => $"{service}: missing {call}"));
+        }
+
+        violations.Should().BeEmpty();
+    }
+
     private static bool HasProjectOrAssemblyReference(Assembly assembly, string targetProjectOrAssemblyName)
     {
         if (assembly.GetReferencedAssemblies().Any(a => string.Equals(a.Name, targetProjectOrAssemblyName, StringComparison.OrdinalIgnoreCase)))
