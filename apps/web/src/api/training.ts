@@ -94,10 +94,13 @@ export const trainingApi = {
    */
   recordProgress(assignmentId: string, payload: unknown) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/training/assignments/{assignment_id}/progress", {
-        params: { path: { assignment_id: assignmentId } },
-        body: payload as paths["/api/v1/training/assignments/{assignment_id}/progress"]["post"]["requestBody"]["content"]["application/json"],
-      })
+      openApiClient.POST(
+        "/api/v1/training/assignments/{assignment_id}/progress",
+        {
+          params: { path: { assignment_id: assignmentId } },
+          body: payload as paths["/api/v1/training/assignments/{assignment_id}/progress"]["post"]["requestBody"]["content"]["application/json"],
+        }
+      )
     );
   },
 
@@ -106,10 +109,13 @@ export const trainingApi = {
    */
   submitQuiz(assignmentId: string, payload: unknown) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/training/assignments/{assignment_id}/submit-quiz", {
-        params: { path: { assignment_id: assignmentId } },
-        body: payload as paths["/api/v1/training/assignments/{assignment_id}/submit-quiz"]["post"]["requestBody"]["content"]["application/json"],
-      })
+      openApiClient.POST(
+        "/api/v1/training/assignments/{assignment_id}/submit-quiz",
+        {
+          params: { path: { assignment_id: assignmentId } },
+          body: payload as paths["/api/v1/training/assignments/{assignment_id}/submit-quiz"]["post"]["requestBody"]["content"]["application/json"],
+        }
+      )
     );
   },
 
@@ -118,10 +124,13 @@ export const trainingApi = {
    */
   signOffTraining(assignmentId: string, payload: unknown) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/training/assignments/{assignment_id}/sign-off", {
-        params: { path: { assignment_id: assignmentId } },
-        body: payload as paths["/api/v1/training/assignments/{assignment_id}/sign-off"]["post"]["requestBody"]["content"]["application/json"],
-      })
+      openApiClient.POST(
+        "/api/v1/training/assignments/{assignment_id}/sign-off",
+        {
+          params: { path: { assignment_id: assignmentId } },
+          body: payload as paths["/api/v1/training/assignments/{assignment_id}/sign-off"]["post"]["requestBody"]["content"]["application/json"],
+        }
+      )
     );
   },
 
@@ -130,9 +139,12 @@ export const trainingApi = {
    */
   getCertificate(assignmentId: string) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/training/assignments/{assignment_id}/certificate", {
-        params: { path: { assignment_id: assignmentId } },
-      })
+      openApiClient.GET(
+        "/api/v1/training/assignments/{assignment_id}/certificate",
+        {
+          params: { path: { assignment_id: assignmentId } },
+        }
+      )
     );
   },
 
@@ -146,7 +158,8 @@ export const trainingApi = {
           query: {
             user_id: params.user_id || "",
             study_id: params.study_id || "",
-            protocol_version: params.protocol_version || params.protocol_version_id || "",
+            protocol_version:
+              params.protocol_version || params.protocol_version_id || "",
             site_id: params.site_id,
             user_role: params.user_role,
           },

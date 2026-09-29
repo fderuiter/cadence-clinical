@@ -2395,8 +2395,8 @@
     {
       "loc1": {
         "file": "apps/subject-portal/src/index.js",
-        "start": 1969,
-        "end": 1983
+        "start": 1966,
+        "end": 1980
       },
       "loc2": {
         "file": "apps/subject-portal/src/App.vue",
@@ -2408,8 +2408,8 @@
     {
       "loc1": {
         "file": "apps/subject-portal/src/index.js",
-        "start": 1970,
-        "end": 1984
+        "start": 1967,
+        "end": 1981
       },
       "loc2": {
         "file": "apps/subject-portal/src/App.vue",
@@ -2421,8 +2421,8 @@
     {
       "loc1": {
         "file": "apps/subject-portal/src/index.js",
-        "start": 1971,
-        "end": 1985
+        "start": 1968,
+        "end": 1982
       },
       "loc2": {
         "file": "apps/subject-portal/src/App.vue",

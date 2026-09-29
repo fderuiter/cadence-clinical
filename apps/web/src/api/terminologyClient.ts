@@ -4,7 +4,11 @@ export class TerminologyNetworkError extends Error {
   status: number | null;
   statusText: string | null;
 
-  constructor(message: string, status: number | null = null, statusText: string | null = null) {
+  constructor(
+    message: string,
+    status: number | null = null,
+    statusText: string | null = null
+  ) {
     super(message);
     this.name = "TerminologyNetworkError";
     this.status = status;
@@ -19,7 +23,10 @@ export interface SearchTerminologyOptions {
 }
 
 export const terminologyClient = {
-  async validateSingleCode(code: string, options: { changeReason?: string } = {}) {
+  async validateSingleCode(
+    code: string,
+    options: { changeReason?: string } = {}
+  ) {
     if (!code || !code.trim()) {
       throw new Error("Concept code cannot be empty or whitespace.");
     }
@@ -34,7 +41,11 @@ export const terminologyClient = {
         })
       );
     } catch (error: unknown) {
-      const err = error as { message?: string; status?: number; statusText?: string };
+      const err = error as {
+        message?: string;
+        status?: number;
+        statusText?: string;
+      };
       throw new TerminologyNetworkError(
         err.message || "Network error occurred",
         err.status ?? null,
@@ -43,7 +54,10 @@ export const terminologyClient = {
     }
   },
 
-  async searchTerminology(term: string, options: SearchTerminologyOptions = {}) {
+  async searchTerminology(
+    term: string,
+    options: SearchTerminologyOptions = {}
+  ) {
     if (!term || !term.trim()) {
       throw new Error("Search term cannot be empty or whitespace.");
     }
@@ -68,7 +82,11 @@ export const terminologyClient = {
         })
       );
     } catch (error: unknown) {
-      const err = error as { message?: string; status?: number; statusText?: string };
+      const err = error as {
+        message?: string;
+        status?: number;
+        statusText?: string;
+      };
       throw new TerminologyNetworkError(
         err.message || "Network error occurred",
         err.status ?? null,
@@ -77,7 +95,10 @@ export const terminologyClient = {
     }
   },
 
-  async getStudyTerminologyValidation(studyId: string, options: { changeReason?: string } = {}) {
+  async getStudyTerminologyValidation(
+    studyId: string,
+    options: { changeReason?: string } = {}
+  ) {
     if (!studyId) {
       throw new Error("Study ID cannot be empty.");
     }
@@ -93,7 +114,11 @@ export const terminologyClient = {
         })
       );
     } catch (error: unknown) {
-      const err = error as { message?: string; status?: number; statusText?: string };
+      const err = error as {
+        message?: string;
+        status?: number;
+        statusText?: string;
+      };
       throw new TerminologyNetworkError(
         err.message || "Network error occurred",
         err.status ?? null,
@@ -102,7 +127,10 @@ export const terminologyClient = {
     }
   },
 
-  async getStudyCtValidation(studyId: string, options: { changeReason?: string } = {}) {
+  async getStudyCtValidation(
+    studyId: string,
+    options: { changeReason?: string } = {}
+  ) {
     if (!studyId) {
       throw new Error("Study ID cannot be empty.");
     }
@@ -117,7 +145,11 @@ export const terminologyClient = {
         })
       );
     } catch (error: unknown) {
-      const err = error as { message?: string; status?: number; statusText?: string };
+      const err = error as {
+        message?: string;
+        status?: number;
+        statusText?: string;
+      };
       throw new TerminologyNetworkError(
         err.message || "Network error occurred",
         err.status ?? null,
