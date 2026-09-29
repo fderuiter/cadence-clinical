@@ -1,11 +1,12 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import * as prettier from "prettier";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OPENAPI_DIR = path.resolve(__dirname, "../../../../docs/openapi");
+const OPENAPI_DIR = path.resolve(__dirname, "../../../../docs/openapi/legacy");
 const OUTPUT_PATH = path.resolve(__dirname, "usdm.ts");
 
 function translateProperty(prop) {
@@ -67,7 +68,7 @@ function translateProperty(prop) {
   return "any";
 }
 
-function generate() {
+async function generate() {
   console.log(`Generating types from ${OPENAPI_DIR} to ${OUTPUT_PATH}...`);
   if (!fs.existsSync(OPENAPI_DIR)) {
     console.error(`Schema directory not found at ${OPENAPI_DIR}`);
@@ -101,7 +102,8 @@ function generate() {
     }
   }
 
-  let output = `// Auto-generated from OpenAPI schema definitions in ${OPENAPI_DIR}\n// Generated on: ${new Date().toISOString()}\n\n`;
+  // No timestamp or absolute path, so regenerating unchanged specs leaves the file unchanged.
+  let output = `// Auto-generated from the OpenAPI schema definitions in docs/openapi/legacy by src/types/generate-types.js. Do not edit.\n\n`;
 
   for (const [schemaName, schema] of Object.entries(allSchemas)) {
     const sanitizedName = schemaName.replace(/[^a-zA-Z0-9_]/g, "_");
@@ -123,12 +125,17 @@ function generate() {
     }
   }
 
-  fs.writeFileSync(OUTPUT_PATH, output, "utf8");
+  const prettierConfig = (await prettier.resolveConfig(OUTPUT_PATH)) ?? {};
+  const formatted = await prettier.format(output, {
+    ...prettierConfig,
+    filepath: OUTPUT_PATH,
+  });
+  fs.writeFileSync(OUTPUT_PATH, formatted, "utf8");
   console.log(
     `Successfully generated ${Object.keys(allSchemas).length} schemas from ${files.length} OpenAPI definitions into ${OUTPUT_PATH}`
   );
 }
 
-generate();
+await generate();
 
 export { translateProperty, generate };

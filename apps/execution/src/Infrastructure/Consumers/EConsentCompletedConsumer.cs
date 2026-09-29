@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Kernel.Time;
 
 using MassTransit;
@@ -64,12 +63,18 @@ public sealed class EConsentCompletedConsumer(
     ISubjectRepository subjects,
     IConsentRepository consents,
     IAuditLogWriter auditLog,
+    IAuditActorScope actorScope,
     IClock clock,
     ILogger<EConsentCompletedConsumer>? logger = null)
     : IConsumer<EConsentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<EConsentCompletedEvent> context)
     {
+        // Attribute every write in this scope, including the GxPAuditInterceptor's own entries, to the
+        // consumer's named service account; there is no anonymous fallback actor (#4767).
+        ServiceAccount account = ServiceAccounts.EConsentConsumer;
+        actorScope.RunAs(account);
+
         var msg = context.Message;
         if (string.IsNullOrWhiteSpace(msg.SubjectId) || string.IsNullOrWhiteSpace(msg.StudyId))
         {
@@ -107,10 +112,10 @@ public sealed class EConsentCompletedConsumer(
             SiteCode? siteCode = msg.SiteId is { Length: > 0 } site ? new SiteCode(site) : null;
             var created = ClinicalSubject.Create(subjectCode, studyCode, siteCode, nextIndex,
                 encryptedDemographics: null, stratFactors: null);
-            created.ReasonForChange = SystemAuditContextAccessor.SystemChangeReason;
+            created.ReasonForChange = account.ChangeReason;
             await subjects.AddAsync(created, context.CancellationToken).ConfigureAwait(false);
             await auditLog.WriteAsync("clinical_subjects", created.Id.ToString(), "INSERT",
-                SystemAuditContextAccessor.SystemUserId, created.ReasonForChange,
+                account.UserId, created.ReasonForChange,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
 
             if (logger != null)
@@ -132,7 +137,7 @@ public sealed class EConsentCompletedConsumer(
                 requiresReconsent: false, isPaperOverride: false, clock);
             await consents.AddAsync(consent, context.CancellationToken).ConfigureAwait(false);
             await auditLog.WriteAsync("subject_consents", consent.Id.ToString(), "INSERT",
-                SystemAuditContextAccessor.SystemUserId, SystemAuditContextAccessor.SystemChangeReason,
+                account.UserId, account.ChangeReason,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
 
             if (logger != null)

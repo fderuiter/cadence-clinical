@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Database;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -11,8 +13,11 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence;
 /// </summary>
 public sealed class InteropDbContextFactory : IDesignTimeDbContextFactory<InteropDbContext>
 {
+    /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
+    public const string Schema = "interop";
+
     private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
 
     public InteropDbContext CreateDbContext(string[] args)
     {
@@ -20,7 +25,8 @@ public sealed class InteropDbContextFactory : IDesignTimeDbContextFactory<Intero
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var optionsBuilder = new DbContextOptionsBuilder<InteropDbContext>().UseNpgsql(connectionString);
+        var optionsBuilder = new DbContextOptionsBuilder<InteropDbContext>()
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
 
         return new InteropDbContext(optionsBuilder.Options);
     }

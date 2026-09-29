@@ -1,0 +1,1712 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - AI Gateway Service",
+    "description": "Centralized AI routing, tier management, structured output extraction, and embeddings.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/ai/generate": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Execute AI text generation or structured extraction",
+        "description": "Generate completion text or structured JSON data conforming to a requested schema.\n\nArgs:\n    payload: GenerationRequestDTO containing prompt/messages, tier, and optional schema.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    GenerationResponseDTO with content, structured data, token usage, and telemetry.\n\nRaises:\n    HTTPException: If payload is missing prompt/messages or inference fails.",
+        "operationId": "generate_completion_api_v1_ai_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/embed": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Generate dense vector embeddings for input texts",
+        "description": "Generate float vector embeddings for input text strings.\n\nArgs:\n    payload: EmbeddingRequestDTO containing batch of text strings and model tier.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    EmbeddingResponseDTO containing generated float vectors and usage metrics.\n\nRaises:\n    HTTPException: If embedding generation encounters an upstream error.",
+        "operationId": "generate_embeddings_api_v1_ai_embed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/tiers": {
+      "get": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Retrieve active configuration and model mapping across execution tiers",
+        "description": "List all available execution tiers and active model configurations.\n\nArgs:\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    List of TierInfoDTO describing active tier mappings and capabilities.",
+        "operationId": "list_tiers_api_v1_ai_tiers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TierInfoDTO"
+                  },
+                  "type": "array",
+                  "title": "Response List Tiers Api V1 Ai Tiers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/rag/protocol-triage": {
+      "post": {
+        "tags": [
+          "Clinical RAG"
+        ],
+        "summary": "Execute grounded Tier 2 protocol RAG triage with citation markers",
+        "description": "Executes grounded clinical RAG answering support inquiries with verbatim citations.\n\nEnforces:\n- Verbatim citation markers: `[Protocol v2.1, Section 7.3, Page 42]`\n- Mathematical faithfulness calculation (85% confidence gate)\n- Fail-closed behavior on missing or unapproved protocol context",
+        "operationId": "triage_protocol_query_api_v1_ai_rag_protocol_triage_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRAGRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRAGResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/reasoning/multi-step": {
+      "post": {
+        "tags": [
+          "Clinical Reasoning"
+        ],
+        "summary": "Execute multi-step clinical reasoning planning loop with grounded citations",
+        "description": "Executes a multi-step clinical reasoning workflow for protocol synthesis and patient data.\n\nEnforces:\n- Multi-step planning loops breaking down trial queries into discrete steps\n- In-flight PHI masking using temporary surrogate tokens for intermediate steps\n- Evaluation of protocol citations and 85% confidence threshold gate (fail-closed)\n- Stateless persistence with caller-managed execution state context\n- Staging generated clinical records into draft state requiring human e-signature\n- Mandatory tenant and audit context validation",
+        "operationId": "execute_multi_step_reasoning_api_v1_ai_reasoning_multi_step_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalReasoningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicalReasoningResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/reasoning/plan": {
+      "post": {
+        "tags": [
+          "Clinical Reasoning"
+        ],
+        "summary": "Initialize or advance a caller-managed multi-step clinical reasoning plan",
+        "description": "Initialize or advance a multi-step clinical reasoning loop statelessly.",
+        "operationId": "plan_clinical_reasoning_api_v1_ai_reasoning_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalReasoningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicalReasoningResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatMessageDTO": {
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageRole"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Role",
+            "description": "Role of the message author.",
+            "default": "user"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Text content of the message."
+          },
+          "tool_calls": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolCallDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Calls",
+            "description": "Optional list of tool calls emitted by assistant."
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Id",
+            "description": "ID of tool call this message responds to (for tool role)."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Optional author or tool name."
+          }
+        },
+        "type": "object",
+        "title": "ChatMessageDTO",
+        "description": "Chat message transfer object."
+      },
+      "ClinicalReasoningRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query",
+            "description": "Complex clinical trial reasoning query."
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Mandatory tenant isolation identifier."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Target study identifier."
+          },
+          "protocol_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Protocol Chunks",
+            "description": "Clinical trial protocol chunks for citation verification."
+          },
+          "patient_records": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Records",
+            "description": "Patient records or clinical context containing sensitive identifiers."
+          },
+          "execution_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionStateContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Caller-managed execution state context for stateless continuation."
+          },
+          "min_citation_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Citation Confidence",
+            "description": "Minimum required citation confidence score (default 0.85).",
+            "default": 0.85
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          },
+          "esignature_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Context",
+            "description": "Electronic signature & audit context passed across execution steps."
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "tenant_id"
+        ],
+        "title": "ClinicalReasoningRequest",
+        "description": "Inbound request for multi-step clinical trial reasoning."
+      },
+      "ClinicalReasoningResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Execution status ('DRAFT_STAGED', 'REJECTED_LOW_CONFIDENCE', 'COMPLETED', 'ERROR')."
+          },
+          "draft_record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftClinicalRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Staged draft clinical record (None if rejected or low confidence)."
+          },
+          "reasoning_chain": {
+            "items": {
+              "$ref": "#/components/schemas/ReasoningStepState"
+            },
+            "type": "array",
+            "title": "Reasoning Chain",
+            "description": "Discrete multi-step planning loop execution history."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Extracted & verified protocol citations."
+          },
+          "overall_faithfulness_score": {
+            "type": "number",
+            "title": "Overall Faithfulness Score",
+            "description": "Overall citation confidence score (0.0 to 1.0)."
+          },
+          "is_citation_verified": {
+            "type": "boolean",
+            "title": "Is Citation Verified",
+            "description": "True if overall faithfulness >= min_citation_confidence."
+          },
+          "phi_masking_applied": {
+            "type": "boolean",
+            "title": "Phi Masking Applied",
+            "description": "True if PHI masking was applied to intermediate steps."
+          },
+          "phi_tokens_masked": {
+            "type": "integer",
+            "title": "Phi Tokens Masked",
+            "description": "Total surrogate PHI tokens masked during execution."
+          },
+          "execution_state": {
+            "$ref": "#/components/schemas/ExecutionStateContext",
+            "description": "Updated caller-managed execution state context."
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used",
+            "description": "AI model used.",
+            "default": "tier-3-frontier-reasoning"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Latency in milliseconds.",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "overall_faithfulness_score",
+          "is_citation_verified",
+          "phi_masking_applied",
+          "phi_tokens_masked",
+          "execution_state"
+        ],
+        "title": "ClinicalReasoningResponse",
+        "description": "Outbound response containing staged draft record, reasoning chain, and telemetry."
+      },
+      "DraftClinicalRecord": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Unique draft record identifier."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Draft clinical record title."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Associated study ID."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Draft state status requiring explicit human review/signature before release.",
+            "default": "DRAFT_STAGED"
+          },
+          "synthesized_guidelines": {
+            "type": "string",
+            "title": "Synthesized Guidelines",
+            "description": "Synthesized clinical guidelines and protocol analysis."
+          },
+          "eligibility_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Eligibility Criteria",
+            "description": "Extracted eligibility criteria."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Grounded verbatim protocol citations."
+          },
+          "requires_esignature": {
+            "type": "boolean",
+            "title": "Requires Esignature",
+            "description": "Mandates explicit human review and e-signature authorization.",
+            "default": true
+          },
+          "created_by_agent": {
+            "type": "string",
+            "title": "Created By Agent",
+            "description": "Agent version identifier.",
+            "default": "HybridClinicalReasoningAgent/v1"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 creation timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "title",
+          "synthesized_guidelines",
+          "created_at"
+        ],
+        "title": "DraftClinicalRecord",
+        "description": "Generated clinical trial record staged in draft state requiring human review."
+      },
+      "EmbeddingRequestDTO": {
+        "properties": {
+          "input_texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Input Texts",
+            "description": "Batch of text strings to embed."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/ModelTier",
+            "description": "Embedding model tier (defaults to Tier 1 local).",
+            "default": "tier_1_local"
+          },
+          "model_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Override",
+            "description": "Optional model override."
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id",
+            "description": "Tenant identifier."
+          },
+          "custom_terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Terms",
+            "description": "Optional custom literal terms or patient names to redact."
+          },
+          "enable_deid": {
+            "type": "boolean",
+            "title": "Enable Deid",
+            "description": "Whether to apply in-flight de-identification air-gap.",
+            "default": true
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_texts"
+        ],
+        "title": "EmbeddingRequestDTO",
+        "description": "Inbound DTO for vector embedding generation."
+      },
+      "EmbeddingResponseDTO": {
+        "properties": {
+          "embeddings": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Embeddings",
+            "description": "List of dense float vectors."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Active embedding model."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/ModelTier",
+            "description": "Resolved model tier."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/TokenUsageDTO",
+            "description": "Token usage metrics."
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Request latency in milliseconds.",
+            "default": 0.0
+          },
+          "deid_applied": {
+            "type": "boolean",
+            "title": "Deid Applied",
+            "description": "Whether in-flight de-identification was applied to input texts.",
+            "default": false
+          },
+          "deid_tokens_count": {
+            "type": "integer",
+            "title": "Deid Tokens Count",
+            "description": "Count of surrogate tokens replaced in input texts.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "embeddings",
+          "model",
+          "tier"
+        ],
+        "title": "EmbeddingResponseDTO",
+        "description": "Outbound DTO containing generated float vector embeddings."
+      },
+      "ExecutionStateContext": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique reasoning session correlation identifier."
+          },
+          "current_step_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Current Step Index",
+            "description": "Index of the active reasoning step.",
+            "default": 0
+          },
+          "total_steps": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Total Steps",
+            "description": "Total planned steps in the reasoning workflow.",
+            "default": 5
+          },
+          "completed_steps": {
+            "items": {
+              "$ref": "#/components/schemas/ReasoningStepState"
+            },
+            "type": "array",
+            "title": "Completed Steps",
+            "description": "List of previously completed reasoning steps."
+          },
+          "patient_context": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Context",
+            "description": "Optional raw or masked patient record context."
+          },
+          "protocol_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Protocol Chunks",
+            "description": "Target clinical protocol context chunks."
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Arbitrary caller-supplied execution metadata."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "ExecutionStateContext",
+        "description": "Caller-managed execution state context enabling stateless microservice persistence."
+      },
+      "FunctionDefinitionDTO": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the function to be called."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Description of function capability for the model."
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters",
+            "description": "JSON Schema for function arguments."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FunctionDefinitionDTO",
+        "description": "Function specification transfer object."
+      },
+      "GenerationRequestDTO": {
+        "properties": {
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt",
+            "description": "Single-turn prompt string."
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatMessageDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages",
+            "description": "Multi-turn conversation history."
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolDefinitionDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools",
+            "description": "List of tool definitions available for model tool selection."
+          },
+          "tool_choice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Choice",
+            "description": "Tool choice configuration (e.g. 'auto', 'required', or explicit selection)."
+          },
+          "tool_responses": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolResponseDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Responses",
+            "description": "List of execution responses for previously requested tool calls."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/ModelTier",
+            "description": "Execution tier (tier_1_local, tier_2_fast, tier_3_frontier).",
+            "default": "tier_2_fast"
+          },
+          "model_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Override",
+            "description": "Explicit model name override."
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "description": "Sampling temperature.",
+            "default": 0.0
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens",
+            "description": "Maximum tokens to generate."
+          },
+          "response_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Schema",
+            "description": "JSON Schema for Pydantic v2 structured outputs."
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id",
+            "description": "Tenant identifier for isolation and auditing."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Study protocol scope identifier."
+          },
+          "custom_terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Terms",
+            "description": "Optional custom literal terms or patient names to redact."
+          },
+          "enable_deid": {
+            "type": "boolean",
+            "title": "Enable Deid",
+            "description": "Whether to apply in-flight de-identification air-gap.",
+            "default": true
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          }
+        },
+        "type": "object",
+        "title": "GenerationRequestDTO",
+        "description": "Inbound DTO for AI text generation and structured completions."
+      },
+      "GenerationResponseDTO": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Generated text or serialized JSON.",
+            "default": ""
+          },
+          "structured_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structured Data",
+            "description": "Structured JSON object if response_schema was requested."
+          },
+          "tool_calls": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolCallDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Calls",
+            "description": "Structured tool call requests emitted by the model."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Active model identifier."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/ModelTier",
+            "description": "Resolved model tier."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/TokenUsageDTO",
+            "description": "Token usage metrics."
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Request latency in milliseconds.",
+            "default": 0.0
+          },
+          "deid_applied": {
+            "type": "boolean",
+            "title": "Deid Applied",
+            "description": "Whether in-flight de-identification was applied.",
+            "default": false
+          },
+          "deid_tokens_count": {
+            "type": "integer",
+            "title": "Deid Tokens Count",
+            "description": "Count of surrogate tokens replaced and re-hydrated.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "tier"
+        ],
+        "title": "GenerationResponseDTO",
+        "description": "Outbound DTO containing completion results and execution telemetry."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MessageRole": {
+        "type": "string",
+        "enum": [
+          "system",
+          "user",
+          "assistant",
+          "tool"
+        ],
+        "title": "MessageRole",
+        "description": "Standard message roles for conversational or structured prompts."
+      },
+      "ModelTier": {
+        "type": "string",
+        "enum": [
+          "tier_1_local",
+          "tier_2_fast",
+          "tier_3_frontier"
+        ],
+        "title": "ModelTier",
+        "description": "Execution tiers for routing AI workloads based on cost and capability."
+      },
+      "ParsedCitation": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Referenced protocol version."
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Referenced section number."
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title",
+            "description": "Resolved section title."
+          },
+          "page_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Number",
+            "description": "Referenced page number."
+          },
+          "citation_marker": {
+            "type": "string",
+            "title": "Citation Marker",
+            "description": "Exact verbatim citation string, e.g., '[Protocol v2.1, Section 7.3, Page 42]'."
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "True if referenced chunk belongs to an approved version."
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified",
+            "description": "True if coordinates match an existing chunk in the Knowledge Hub."
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "page_number",
+          "citation_marker",
+          "is_approved",
+          "is_verified"
+        ],
+        "title": "ParsedCitation",
+        "description": "Structured representation of a parsed citation reference."
+      },
+      "ProtocolRAGContextChunk": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id",
+            "description": "Unique chunk identifier."
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Protocol version (e.g., 'v2.1')."
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Protocol section number (e.g. '7.3')."
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title",
+            "description": "Protocol section title."
+          },
+          "page_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Number",
+            "description": "1-indexed physical page number in source PDF."
+          },
+          "chunk_text": {
+            "type": "string",
+            "title": "Chunk Text",
+            "description": "Raw text of the protocol chunk."
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "Whether this protocol chunk is from an approved version.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "protocol_version",
+          "page_number",
+          "chunk_text"
+        ],
+        "title": "ProtocolRAGContextChunk",
+        "description": "Normalized protocol excerpt chunk passed to RAG generation and verification."
+      },
+      "ProtocolRAGRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query",
+            "description": "Clinical inquiry text from user/ticket."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study identifier."
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Optional target protocol version."
+          },
+          "context_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Context Chunks",
+            "description": "Retrieved protocol chunks from Knowledge Hub."
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Tenant identifier.",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "study_id"
+        ],
+        "title": "ProtocolRAGRequest",
+        "description": "Inbound request to synthesize a citation-grounded response for a clinical inquiry."
+      },
+      "ProtocolRAGResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer",
+            "description": "Generated clinical draft with citation markers."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Extracted citation references."
+          },
+          "faithfulness_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Faithfulness Score",
+            "description": "Mathematical faithfulness score (0.0 - 1.0)."
+          },
+          "is_grounded": {
+            "type": "boolean",
+            "title": "Is Grounded",
+            "description": "True if faithfulness score >= 0.85."
+          },
+          "confidence_tier": {
+            "type": "string",
+            "title": "Confidence Tier",
+            "description": "'HIGH' (>= 0.85) or 'LOW_FAIL_CLOSED' (< 0.85)."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model identifier.",
+            "default": "tier-2-clinical-rag"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Execution latency in milliseconds.",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "faithfulness_score",
+          "is_grounded",
+          "confidence_tier"
+        ],
+        "title": "ProtocolRAGResponse",
+        "description": "Outbound response containing grounded answer, citations, and faithfulness telemetry."
+      },
+      "ReasoningStepState": {
+        "properties": {
+          "step_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Step Index",
+            "description": "0-indexed step number in reasoning loop."
+          },
+          "step_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningStepType"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Step Type",
+            "description": "Category/type of reasoning step."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Human-readable title of step."
+          },
+          "input_summary": {
+            "type": "string",
+            "title": "Input Summary",
+            "description": "Summary of inputs passed into step."
+          },
+          "output_text": {
+            "type": "string",
+            "title": "Output Text",
+            "description": "Output generated during this reasoning step."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Execution status ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED').",
+            "default": "COMPLETED"
+          },
+          "has_phi_masked": {
+            "type": "boolean",
+            "title": "Has Phi Masked",
+            "description": "True if patient identifiers were masked in this step.",
+            "default": false
+          },
+          "masked_tokens_count": {
+            "type": "integer",
+            "title": "Masked Tokens Count",
+            "description": "Count of surrogate tokens replaced during step execution.",
+            "default": 0
+          },
+          "step_citations": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCitation"
+            },
+            "type": "array",
+            "title": "Step Citations",
+            "description": "Protocol citations extracted/verified in this step."
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_index",
+          "step_type",
+          "title",
+          "input_summary",
+          "output_text"
+        ],
+        "title": "ReasoningStepState",
+        "description": "Representation of an individual step in the multi-step planning loop."
+      },
+      "ReasoningStepType": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "extraction",
+          "synthesis",
+          "verification",
+          "draft_staging"
+        ],
+        "title": "ReasoningStepType",
+        "description": "Types of steps in a multi-step clinical reasoning planning loop."
+      },
+      "TierInfoDTO": {
+        "properties": {
+          "tier": {
+            "$ref": "#/components/schemas/ModelTier",
+            "description": "Tier identifier."
+          },
+          "default_model": {
+            "type": "string",
+            "title": "Default Model",
+            "description": "Default model string."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Clinical purpose."
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "Supported capabilities."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier",
+          "default_model",
+          "description"
+        ],
+        "title": "TierInfoDTO",
+        "description": "Outbound DTO describing active model tier configurations."
+      },
+      "TokenUsageDTO": {
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "description": "Input prompt tokens.",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "description": "Generated output tokens.",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "description": "Total tokens consumed.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TokenUsageDTO",
+        "description": "Token consumption accounting transfer object."
+      },
+      "ToolCallDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique tool call invocation identifier."
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Tool type.",
+            "default": "function"
+          },
+          "function": {
+            "$ref": "#/components/schemas/ToolCallFunctionDTO",
+            "description": "Function call payload."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "function"
+        ],
+        "title": "ToolCallDTO",
+        "description": "Structured tool call transfer object."
+      },
+      "ToolCallFunctionDTO": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the requested function."
+          },
+          "arguments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
+            "title": "Arguments",
+            "description": "Raw JSON string or parsed dictionary of arguments."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "arguments"
+        ],
+        "title": "ToolCallFunctionDTO",
+        "description": "Function call details transfer object."
+      },
+      "ToolDefinitionDTO": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Type of tool. Defaults to 'function'.",
+            "default": "function"
+          },
+          "function": {
+            "$ref": "#/components/schemas/FunctionDefinitionDTO",
+            "description": "Function declaration details."
+          }
+        },
+        "type": "object",
+        "required": [
+          "function"
+        ],
+        "title": "ToolDefinitionDTO",
+        "description": "Tool definition transfer object."
+      },
+      "ToolResponseDTO": {
+        "properties": {
+          "tool_call_id": {
+            "type": "string",
+            "title": "Tool Call Id",
+            "description": "Matching ID of the tool call request."
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
+            "title": "Content",
+            "description": "Result content string or structured dictionary from tool execution."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Optional name of the tool executed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool_call_id",
+          "content"
+        ],
+        "title": "ToolResponseDTO",
+        "description": "Structured result transfer object for tool call execution."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

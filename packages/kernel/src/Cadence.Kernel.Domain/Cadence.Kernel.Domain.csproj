@@ -5,13 +5,10 @@
     <AssemblyName>Cadence.Kernel.Domain</AssemblyName>
   </PropertyGroup>
 
+  <!-- Spec §2.4: Domain is pure. No EF Core, ASP.NET Core or Npgsql references (enforced by KernelLayeringTests). -->
   <ItemGroup>
     <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\engine_core\src\Cadence.Core.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
 </Project>

@@ -113,12 +113,12 @@ dotnet cadence test --fast
 
 ---
 
-## 4. Quality Gates & Sentinels (`dotnet cadence check --parallel`)
+## 4. Quality Gates & Sentinels (`dotnet cadence check`)
 
-Before committing changes or opening a pull request, run all 21 architecture sentinels concurrently:
+Before committing changes or opening a pull request, run all 21 architecture sentinels:
 
 ```bash
-dotnet cadence check --parallel
+dotnet cadence check
 ```
 
 ### Automated Remediation (`dotnet cadence fix --all`)

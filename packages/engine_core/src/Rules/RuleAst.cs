@@ -43,7 +43,7 @@ public class RuleDefinition
     [JsonPropertyName("is_active")] public bool IsActive { get; set; } = true;
     [JsonPropertyName("is_deleted")] public bool IsDeleted { get; set; } = false;
     [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    [JsonPropertyName("created_by")] public string CreatedBy { get; set; } = "system";
+    [JsonPropertyName("created_by")] public string CreatedBy { get; set; } = string.Empty;
     [JsonPropertyName("reason_for_change")] public string ReasonForChange { get; set; } = "Initial rule authoring";
 
     public void ComputeChecksum()

@@ -1,0 +1,5815 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - Event-Driven eTMF Module",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/archive/studies/{study_id}/export": {
+      "post": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Initiate Study Archival",
+        "description": "Initiate background ZIP packaging task.\n\nRequirements: PRD-SYS-001",
+        "operationId": "initiate_study_archival_api_v1_archive_studies__study_id__export_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Get Archive Job Status",
+        "description": "Check archive package build status.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_archive_job_status_api_v1_archive_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/download/{job_id}": {
+      "get": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Download Archive Package",
+        "description": "Download the generated study archival ZIP package.\n\nRequirements: PRD-SYS-001",
+        "operationId": "download_archive_package_api_v1_archive_download__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/inspection-readiness": {
+      "get": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Get Study Inspection Readiness",
+        "description": "Calculates and returns a comprehensive inspection readiness assessment for a study.\n\nEvaluates Expected Document List (EDL) completion, zone matrix distribution,\nQC review bottlenecks, Part 11 electronic signature compliance, and expiration risks.",
+        "operationId": "get_study_inspection_readiness_api_v1_etmf_studies__study_id__inspection_readiness_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionReadinessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/ems-export": {
+      "get": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Export Study Tmf Ems",
+        "description": "Exports the eTMF in standard DIA TMF Exchange Mechanism Standard (EMS) format.\n\nGenerates a compliant ZIP package containing `tmf-ems.xml`, `tmf-ems.json`,\n`checksums.sha256`, and all document version assets organized in standard DIA hierarchy.",
+        "operationId": "export_study_tmf_ems_api_v1_etmf_studies__study_id__ems_export_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "study_title",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study title",
+              "title": "Study Title"
+            },
+            "description": "Optional study title"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/audit-logs/verify-chain": {
+      "post": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Verify Audit Ledger Chain",
+        "description": "Cryptographically inspects and verifies the full Merkle block ledger chain for tampering detection.",
+        "operationId": "verify_audit_ledger_chain_api_v1_etmf_audit_logs_verify_chain_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditChainVerificationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/verify-signature": {
+      "post": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Verify Document Signature Endpoint",
+        "description": "Verifies the electronic signature and SHA-256 cryptographic digest integrity on a document.",
+        "operationId": "verify_document_signature_endpoint_api_v1_etmf_documents__document_id__verify_signature_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/analyze": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute end-to-end multimodal document intelligence pipeline",
+        "description": "Run layout parsing, DIA taxonomy classification, metadata extraction, and signature verification.",
+        "operationId": "analyze_document_endpoint_api_v1_etmf_intelligence_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentIntelligenceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/classify": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute multi-signal DIA Reference Model taxonomy classification",
+        "description": "Classify document content against DIA TMF Reference Model v3.2.0.",
+        "operationId": "classify_document_endpoint_api_v1_etmf_intelligence_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Classify Document Endpoint Api V1 Etmf Intelligence Classify Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/extract-metadata": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Extract regulatory and trial metadata from document",
+        "description": "Extract protocol, site, investigator, and date metadata.",
+        "operationId": "extract_metadata_endpoint_api_v1_etmf_intelligence_extract_metadata_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceMetadataRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedRegulatoryMetadata"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/verify-signatures": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Verify regulatory signature completeness",
+        "description": "Analyze signature lines, manifestations, and completeness for an artifact.",
+        "operationId": "verify_signatures_endpoint_api_v1_etmf_intelligence_verify_signatures_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/stage-qc": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Ingest and stage classified artifact into CRA Quality Control queue",
+        "description": "Analyze, ingest, and stage document with TECHNICAL_QC status for CRA review.",
+        "operationId": "stage_classified_artifact_endpoint_api_v1_etmf_intelligence_stage_qc_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageDocumentQCRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Stage Classified Artifact Endpoint Api V1 Etmf Intelligence Stage Qc Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-queue": {
+      "get": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "List pending documents staged in CRA Quality Control queue",
+        "description": "Retrieve staged QC items.",
+        "operationId": "get_qc_queue_endpoint_api_v1_etmf_intelligence_qc_queue_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CRAQCStagingItem"
+                  },
+                  "title": "Response Get Qc Queue Endpoint Api V1 Etmf Intelligence Qc Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-review/{doc_id}": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute CRA Quality Control review decision (Accept, Override, Reject)",
+        "description": "Adjudicate staged document classification with 21 CFR Part 11 audit trail.",
+        "operationId": "cra_qc_review_endpoint_api_v1_etmf_intelligence_qc_review__doc_id__post",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CRAQCReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Get Taxonomy Catalog",
+        "description": "Expose the full static DIA TMF catalog as a browsable tree.",
+        "operationId": "get_taxonomy_catalog_api_v1_etmf_taxonomy_get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional taxonomy version",
+              "title": "Version"
+            },
+            "description": "Optional taxonomy version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/classify": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Suggest Classification",
+        "description": "Provide automatic classification/auto-filing suggestions for a document.",
+        "operationId": "suggest_classification_api_v1_etmf_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy/classify": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Suggest Classification",
+        "description": "Provide automatic classification/auto-filing suggestions for a document.",
+        "operationId": "suggest_classification_api_v1_etmf_taxonomy_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/auto-file": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Auto File Suggestion",
+        "description": "Provide automatic classification/auto-filing suggestions for a document with study scope.",
+        "operationId": "auto_file_suggestion_api_v1_etmf_auto_file_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/ingest": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Ingest Document",
+        "operationId": "ingest_document_api_v1_etmf_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ingest Document Api V1 Etmf Ingest Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/publish": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Ingest Document",
+        "operationId": "ingest_document_events_publish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ingest Document Events Publish Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "List Documents",
+        "operationId": "list_documents_api_v1_etmf_documents_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by TMF Zone",
+              "title": "Zone"
+            },
+            "description": "Filter by TMF Zone"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search document content",
+              "title": "Search"
+            },
+            "description": "Search document content"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "title": "Response List Documents Api V1 Etmf Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "View Document",
+        "operationId": "view_document_api_v1_etmf_documents__document_id__get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/versions": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Document Versions",
+        "operationId": "get_document_versions_api_v1_etmf_documents__document_id__versions_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentVersionsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/download": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Download Document",
+        "operationId": "download_document_api_v1_etmf_documents__document_id__download_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "watermark",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Request watermarked document",
+              "default": false,
+              "title": "Watermark"
+            },
+            "description": "Request watermarked document"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/watermark": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Download Watermarked Document",
+        "operationId": "download_watermarked_document_api_v1_etmf_documents__document_id__watermark_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/audit-logs": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Audit Trail",
+        "operationId": "get_audit_trail_api_v1_etmf_audit_logs_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by user ID",
+              "title": "User Id"
+            },
+            "description": "Filter logs by user ID"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by action",
+              "title": "Action"
+            },
+            "description": "Filter logs by action"
+          },
+          {
+            "name": "document_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs by document ID",
+              "title": "Document Id"
+            },
+            "description": "Filter logs by document ID"
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs starting from this timestamp (inclusive)",
+              "title": "Start Time"
+            },
+            "description": "Filter logs starting from this timestamp (inclusive)"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter logs up to this timestamp (inclusive)",
+              "title": "End Time"
+            },
+            "description": "Filter logs up to this timestamp (inclusive)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 250,
+              "minimum": 1,
+              "description": "Limit the number of audit log records returned",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Limit the number of audit log records returned"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Offset for pagination",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Offset for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedAuditLogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/edl": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "List Expectations",
+        "operationId": "list_expectations_api_v1_etmf_edl_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "The clinical study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical site ID",
+              "title": "Site Id"
+            },
+            "description": "Optional clinical site ID"
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional milestone",
+              "title": "Milestone"
+            },
+            "description": "Optional milestone"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpectedDocumentResponse"
+                  },
+                  "title": "Response List Expectations Api V1 Etmf Edl Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Create Expectation",
+        "operationId": "create_expectation_api_v1_etmf_edl_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedDocumentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpectedDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/edl/{edl_id}": {
+      "put": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Update Expectation",
+        "operationId": "update_expectation_api_v1_etmf_edl__edl_id__put",
+        "parameters": [
+          {
+            "name": "edl_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Edl Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedDocumentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpectedDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/seed-edl": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Seed Edl Endpoint",
+        "description": "Seed Expected Document List (EDL) for a study across DIA TMF zones and milestones.",
+        "operationId": "seed_edl_endpoint_api_v1_etmf_studies__study_id__seed_edl_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SeedEDLRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpectedDocumentResponse"
+                  },
+                  "title": "Response Seed Edl Endpoint Api V1 Etmf Studies  Study Id  Seed Edl Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/completeness": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Check Completeness",
+        "operationId": "check_completeness_api_v1_etmf_completeness_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "The clinical study ID"
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The transition milestone to check",
+              "title": "Milestone"
+            },
+            "description": "The transition milestone to check"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical site ID",
+              "title": "Site Id"
+            },
+            "description": "Optional clinical site ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletenessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/redact": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Redact Document Endpoint",
+        "operationId": "redact_document_endpoint_api_v1_etmf_documents__document_id__redact_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/auto-redact": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Auto Redact Document Endpoint",
+        "operationId": "auto_redact_document_endpoint_api_v1_etmf_documents__document_id__auto_redact_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomatedRedactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomatedRedactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/manual-redact": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Manual Redact Document Endpoint",
+        "operationId": "manual_redact_document_endpoint_api_v1_etmf_documents__document_id__manual_redact_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualRedactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualRedactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/test-exception": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Test Exception Route",
+        "operationId": "test_exception_route_api_v1_etmf_test_exception_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/transition": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Transition Document Status Endpoint",
+        "operationId": "transition_document_status_endpoint_api_v1_etmf_documents__document_id__transition_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Transition Document Status Endpoint Api V1 Etmf Documents  Document Id  Transition Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/expiration": {
+      "put": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Update Document Expiration Endpoint",
+        "operationId": "update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentExpirationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/approve": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Sign Document Endpoint",
+        "operationId": "sign_document_endpoint_api_v1_etmf_documents__document_id__approve_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/sign-off": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Sign Document Endpoint",
+        "operationId": "sign_document_endpoint_api_v1_etmf_documents__document_id__sign_off_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Artifact History",
+        "operationId": "get_artifact_history_api_v1_etmf_studies__study_id__artifacts__artifact_type__history_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "artifact_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "title": "Response Get Artifact History Api V1 Etmf Studies  Study Id  Artifacts  Artifact Type  History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/transitions": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Document Transition History",
+        "operationId": "get_document_transition_history_api_v1_etmf_documents__document_id__transitions_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransitionResponse"
+                  },
+                  "title": "Response Get Document Transition History Api V1 Etmf Documents  Document Id  Transitions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/inbound-email": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Receive Inbound Email",
+        "operationId": "receive_inbound_email_api_v1_etmf_inbound_email_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Receive Inbound Email Api V1 Etmf Inbound Email Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/binder/structure": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Binder Structure",
+        "operationId": "get_binder_structure_api_v1_etmf_studies__study_id__binder_structure_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical study milestone",
+              "title": "Milestone"
+            },
+            "description": "Optional clinical study milestone"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical site ID",
+              "title": "Site Id"
+            },
+            "description": "Optional clinical site ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinderStructureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/binder": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Export Regulatory Binder",
+        "operationId": "export_regulatory_binder_api_v1_etmf_studies__study_id__binder_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "include_history",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include full version history of documents",
+              "default": false,
+              "title": "Include History"
+            },
+            "description": "Include full version history of documents"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/archive": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Bulk Archive Study Documents",
+        "operationId": "bulk_archive_study_documents_api_v1_etmf_studies__study_id__archive_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyArchiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyArchiveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/qc-history": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Get Document Qc History",
+        "operationId": "get_document_qc_history_api_v1_etmf_documents__document_id__qc_history_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransitionResponse"
+                  },
+                  "title": "Response Get Document Qc History Api V1 Etmf Documents  Document Id  Qc History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/locks/trial/lock": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Etmf Lock Trial Endpoint",
+        "operationId": "etmf_lock_trial_endpoint_api_v1_etmf_locks_trial_lock_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Etmf Lock Trial Endpoint Api V1 Etmf Locks Trial Lock Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/locks/trial/unlock": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Etmf Unlock Trial Endpoint",
+        "operationId": "etmf_unlock_trial_endpoint_api_v1_etmf_locks_trial_unlock_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Etmf Unlock Trial Endpoint Api V1 Etmf Locks Trial Unlock Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/outbox": {
+      "get": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Etmf Admin Outbox Endpoint",
+        "operationId": "etmf_admin_outbox_endpoint_api_v1_admin_outbox_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Etmf Admin Outbox Endpoint Api V1 Admin Outbox Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArchiveJobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "title": "Status"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "study_id",
+          "status"
+        ],
+        "title": "ArchiveJobResponse",
+        "description": "Schema representing study archival job details and status.\n\nRequirements: PRD-SYS-001"
+      },
+      "ArtifactDetail": {
+        "properties": {
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_type",
+          "scope",
+          "status"
+        ],
+        "title": "ArtifactDetail"
+      },
+      "AuditChainVerificationResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "total_sealed_blocks": {
+            "type": "integer",
+            "title": "Total Sealed Blocks"
+          },
+          "total_sealed_records": {
+            "type": "integer",
+            "title": "Total Sealed Records"
+          },
+          "latest_block_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Block Hash"
+          },
+          "genesis_block_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Genesis Block Hash"
+          },
+          "unsealed_records_count": {
+            "type": "integer",
+            "title": "Unsealed Records Count"
+          },
+          "tamper_detected": {
+            "type": "boolean",
+            "title": "Tamper Detected"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "total_sealed_blocks",
+          "total_sealed_records",
+          "latest_block_hash",
+          "genesis_block_hash",
+          "unsealed_records_count",
+          "tamper_detected",
+          "details"
+        ],
+        "title": "AuditChainVerificationResponse"
+      },
+      "AuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_role": {
+            "type": "string",
+            "title": "User Role"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "cryptographic_seal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cryptographic Seal"
+          },
+          "old_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value"
+          },
+          "new_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
+          "sha256_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "user_id",
+          "user_role",
+          "action",
+          "document_id",
+          "details"
+        ],
+        "title": "AuditLogResponse"
+      },
+      "AutoFileRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type",
+            "description": "Optional artifact type hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID for scope enforcement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "AutoFileRequest",
+        "description": "Request model for auto-filing/classification suggestion."
+      },
+      "AutoFileResponse": {
+        "properties": {
+          "resolved_zone": {
+            "type": "integer",
+            "title": "Resolved Zone"
+          },
+          "resolved_section": {
+            "type": "string",
+            "title": "Resolved Section"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "match_basis": {
+            "type": "string",
+            "title": "Match Basis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolved_zone",
+          "resolved_section",
+          "artifact_code",
+          "artifact_type",
+          "match_basis"
+        ],
+        "title": "AutoFileResponse",
+        "description": "Response model for auto-filing/classification suggestion."
+      },
+      "AutomatedRedactRequest": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/ComplianceProfile",
+            "description": "The compliance profile governing active detection categories (e.g., HIPAA, GDPR, EU_CTR)",
+            "default": "HIPAA"
+          },
+          "custom_terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Terms",
+            "description": "Optional list of custom/literal terms to scan and redact"
+          },
+          "strategies": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategies",
+            "description": "Optional custom mapping of category to specific strategy (e.g., mask, pseudonymize, date_shift, age_cap)"
+          },
+          "redacted_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redacted Filename",
+            "description": "Optional new filename for the redacted successor document"
+          }
+        },
+        "type": "object",
+        "title": "AutomatedRedactRequest"
+      },
+      "AutomatedRedactResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Outcome status of the automated redaction",
+            "default": "success"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "ID of the newly created redacted document version"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Version index of the new redacted document"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the new redacted document"
+          },
+          "categories_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Categories Counts",
+            "description": "Count of redacted items per category"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Manifest",
+            "description": "The signed manifest and provenance data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "version_index",
+          "filename",
+          "categories_counts",
+          "manifest"
+        ],
+        "title": "AutomatedRedactResponse"
+      },
+      "BinderArtifactNode": {
+        "properties": {
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_code",
+          "artifact_name",
+          "status"
+        ],
+        "title": "BinderArtifactNode"
+      },
+      "BinderSectionNode": {
+        "properties": {
+          "section_code": {
+            "type": "string",
+            "title": "Section Code"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/BinderArtifactNode"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_code",
+          "section_name",
+          "artifacts"
+        ],
+        "title": "BinderSectionNode"
+      },
+      "BinderStructureResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "milestone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestone"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/BinderZoneNode"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "present_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Present Artifacts"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "zones",
+          "present_artifacts",
+          "missing_artifacts"
+        ],
+        "title": "BinderStructureResponse"
+      },
+      "BinderZoneNode": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/BinderSectionNode"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "sections"
+        ],
+        "title": "BinderZoneNode"
+      },
+      "CRAQCReviewRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "title": "Decision",
+            "description": "QC action: ACCEPT, OVERRIDE, or REJECT"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification"
+          },
+          "override_artifact_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Artifact Code",
+            "description": "Target artifact code if decision is OVERRIDE"
+          },
+          "discrepancy_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discrepancy Comment",
+            "description": "Optional discrepancy note or rejection comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "reason_for_change"
+        ],
+        "title": "CRAQCReviewRequest"
+      },
+      "CRAQCStagingItem": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "Staged document identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Current lifecycle status (e.g. TECHNICAL_QC, DRAFT_AI)"
+          },
+          "intelligence_report": {
+            "$ref": "#/components/schemas/DocumentIntelligenceReport",
+            "description": "Associated intelligence report"
+          },
+          "staged_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Staged At",
+            "description": "Timestamp staged"
+          },
+          "staged_by": {
+            "type": "string",
+            "title": "Staged By",
+            "description": "Actor or system that staged the document"
+          },
+          "qc_assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qc Assigned To",
+            "description": "Assigned CRA reviewer"
+          },
+          "discrepancy_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discrepancy Notes",
+            "description": "Automated discrepancies flagged for review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "study_id",
+          "filename",
+          "status",
+          "intelligence_report",
+          "staged_at",
+          "staged_by"
+        ],
+        "title": "CRAQCStagingItem",
+        "description": "Item staged in the CRA Quality Control queue for human review."
+      },
+      "ClassificationConfidenceTier": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "ClassificationConfidenceTier",
+        "description": "Confidence tier based on classification score."
+      },
+      "CompletenessResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "present_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Present Artifacts"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          },
+          "per_artifact_detail": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactDetail"
+            },
+            "type": "array",
+            "title": "Per Artifact Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "milestone",
+          "is_complete",
+          "scope",
+          "present_artifacts",
+          "missing_artifacts",
+          "per_artifact_detail"
+        ],
+        "title": "CompletenessResponse"
+      },
+      "ComplianceProfile": {
+        "type": "string",
+        "enum": [
+          "HIPAA",
+          "GDPR",
+          "EU_CTR"
+        ],
+        "title": "ComplianceProfile",
+        "description": "Compliance profiles that govern which PII/PHI categories are active."
+      },
+      "DocumentExpirationUpdate": {
+        "properties": {
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "title": "DocumentExpirationUpdate"
+      },
+      "DocumentIntelligenceAnalyzeRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Raw text, base64 data, or text stream"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type",
+            "default": "text/plain"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID hint"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID hint"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type or code hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Optional document ID if already in eTMF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "filename"
+        ],
+        "title": "DocumentIntelligenceAnalyzeRequest"
+      },
+      "DocumentIntelligenceClassifyRequest": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Optional document content"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type or code hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "DocumentIntelligenceClassifyRequest"
+      },
+      "DocumentIntelligenceMetadataRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename",
+            "default": "document.txt"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID hint"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "DocumentIntelligenceMetadataRequest"
+      },
+      "DocumentIntelligenceReport": {
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "ID of existing document if already persisted"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Source document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash",
+            "description": "Cryptographic SHA-256 digest of content"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/DocumentModality",
+            "description": "Detected input modality",
+            "default": "TEXT"
+          },
+          "primary_classification": {
+            "$ref": "#/components/schemas/TaxonomyMatchCandidate",
+            "description": "Top-ranked DIA TMF Reference Model classification"
+          },
+          "alternative_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyMatchCandidate"
+            },
+            "type": "array",
+            "title": "Alternative Candidates",
+            "description": "Alternative taxonomy matches"
+          },
+          "confidence_tier": {
+            "$ref": "#/components/schemas/ClassificationConfidenceTier",
+            "description": "Confidence tier of primary classification",
+            "default": "HIGH"
+          },
+          "qc_recommendation": {
+            "$ref": "#/components/schemas/QCRecommendation",
+            "description": "Recommended action for CRA Quality Control routing",
+            "default": "AUTO_CLASSIFY"
+          },
+          "extracted_metadata": {
+            "$ref": "#/components/schemas/ExtractedRegulatoryMetadata",
+            "description": "Extracted regulatory metadata"
+          },
+          "signature_analysis": {
+            "$ref": "#/components/schemas/SignatureAnalysisResult",
+            "description": "Signature completeness analysis"
+          },
+          "ai_generation_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ai Generation Manifest",
+            "description": "21 CFR Part 11 AI provenance metadata (model, prompt hash, confidence)"
+          },
+          "eisf_target_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eisf Target Mapping",
+            "description": "Corresponding eISF folder mapping and synchronization advice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "mime_type",
+          "sha256_hash",
+          "primary_classification"
+        ],
+        "title": "DocumentIntelligenceReport",
+        "description": "Comprehensive intelligence report containing classification, metadata, and signature analysis."
+      },
+      "DocumentIntelligenceSignatureRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code",
+            "description": "DIA artifact code"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename",
+            "default": "document.txt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "artifact_code"
+        ],
+        "title": "DocumentIntelligenceSignatureRequest"
+      },
+      "DocumentModality": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "PDF_BINARY",
+          "SCANNED_IMAGE",
+          "STRUCTURED_FORM"
+        ],
+        "title": "DocumentModality",
+        "description": "Input modality or format of the processed regulatory document."
+      },
+      "DocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "zone": {
+            "type": "integer",
+            "title": "Zone"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "taxonomy_version": {
+            "type": "string",
+            "title": "Taxonomy Version"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status",
+            "default": "PENDING"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation"
+          },
+          "signer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer"
+          },
+          "signing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Timestamp"
+          },
+          "is_redacted": {
+            "type": "boolean",
+            "title": "Is Redacted",
+            "default": false
+          },
+          "redaction_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redaction Source Id"
+          },
+          "redaction_manifest_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redaction Manifest Json"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProtocolVersionRefDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "zone",
+          "section",
+          "artifact_type",
+          "filename",
+          "mime_type",
+          "created_at",
+          "created_by",
+          "version_index",
+          "status",
+          "taxonomy_version",
+          "artifact_code"
+        ],
+        "title": "DocumentResponse"
+      },
+      "DocumentVersionEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "signer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer"
+          },
+          "signing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Timestamp"
+          },
+          "transitions": {
+            "items": {
+              "$ref": "#/components/schemas/TransitionResponse"
+            },
+            "type": "array",
+            "title": "Transitions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_index",
+          "status",
+          "approval_status",
+          "created_at",
+          "created_by",
+          "filename",
+          "artifact_code",
+          "transitions"
+        ],
+        "title": "DocumentVersionEntry"
+      },
+      "DocumentVersionsResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentVersionEntry"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "artifact_code",
+          "versions"
+        ],
+        "title": "DocumentVersionsResponse"
+      },
+      "ExpectedDocumentCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier (null = study-scope)"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone",
+            "description": "Milestone name (e.g. INITIATION, CONDUCT, CLOSEOUT)"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type",
+            "description": "Mandatory artifact type"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone",
+            "description": "Optional DIA TMF Zone"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section",
+            "description": "Optional DIA TMF Section"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Optional metadata rules or notes"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "milestone",
+          "artifact_type",
+          "reason_for_change"
+        ],
+        "title": "ExpectedDocumentCreate"
+      },
+      "ExpectedDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "milestone",
+          "artifact_type",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ExpectedDocumentResponse"
+      },
+      "ExtractedRegulatoryMetadata": {
+        "properties": {
+          "protocol_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Number",
+            "description": "Clinical protocol identifier"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Resolved study identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Resolved site identifier"
+          },
+          "investigator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Name",
+            "description": "Principal Investigator name"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Document issuance or effective date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Document expiration date"
+          },
+          "form_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Identifier",
+            "description": "Official form identifier (e.g. FDA 1572, OMB number)"
+          },
+          "version_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Tag",
+            "description": "Document version string"
+          },
+          "raw_extracted_fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Extracted Fields",
+            "description": "Additional key-value entities extracted"
+          },
+          "phi_pii_detected": {
+            "type": "boolean",
+            "title": "Phi Pii Detected",
+            "description": "Whether sensitive PII/PHI was detected",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExtractedRegulatoryMetadata",
+        "description": "Key clinical trial metadata entities extracted from document content."
+      },
+      "ExtractedSignature": {
+        "properties": {
+          "signer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Name",
+            "description": "Name of the extracted signer"
+          },
+          "signer_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Role",
+            "description": "Role of the signer (e.g. PI, Sponsor, Subject)"
+          },
+          "signature_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Date",
+            "description": "Date stamp associated with the signature"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Detection confidence score",
+            "default": 1.0
+          },
+          "location_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Hint",
+            "description": "Text location or anchor"
+          },
+          "is_digital_signature": {
+            "type": "boolean",
+            "title": "Is Digital Signature",
+            "description": "Whether cryptographic digital signature is present",
+            "default": false
+          },
+          "signature_type": {
+            "type": "string",
+            "title": "Signature Type",
+            "description": "Type of signature: DIGITAL_PKCS7, HMAC_MANIFEST, WET_OR_ELECTRONIC",
+            "default": "WET_OR_ELECTRONIC"
+          }
+        },
+        "type": "object",
+        "title": "ExtractedSignature",
+        "description": "Representation of an extracted signature or signature line."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngestionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key",
+            "description": "Optional idempotency key for deduplication"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type",
+            "description": "Type of artifact (e.g. Approved Protocol, Define-XML)"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Indexed, searchable content of the document"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the document"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone",
+            "description": "Optional expected DIA TMF Zone"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section",
+            "description": "Optional expected DIA TMF Section"
+          },
+          "artifact_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Code",
+            "description": "Optional canonical artifact code"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Optional metadata fields"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProtocolVersionRefDTO"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional shared protocol version reference"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Optional stable correlation key for synchronized documents"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Optional deterministic checksum of the content"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System",
+            "description": "Optional originating source system"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "artifact_type",
+          "filename",
+          "content",
+          "mime_type"
+        ],
+        "title": "IngestionRequest"
+      },
+      "InspectionReadinessResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "overall_readiness_score": {
+            "type": "number",
+            "title": "Overall Readiness Score"
+          },
+          "readiness_rating": {
+            "type": "string",
+            "title": "Readiness Rating"
+          },
+          "total_documents": {
+            "type": "integer",
+            "title": "Total Documents"
+          },
+          "total_expected": {
+            "type": "integer",
+            "title": "Total Expected"
+          },
+          "approved_documents_count": {
+            "type": "integer",
+            "title": "Approved Documents Count"
+          },
+          "pending_qc_count": {
+            "type": "integer",
+            "title": "Pending Qc Count"
+          },
+          "unsigned_documents_count": {
+            "type": "integer",
+            "title": "Unsigned Documents Count"
+          },
+          "expired_documents_count": {
+            "type": "integer",
+            "title": "Expired Documents Count"
+          },
+          "expiring_soon_count": {
+            "type": "integer",
+            "title": "Expiring Soon Count"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneReadinessDetail"
+            },
+            "type": "array",
+            "title": "Milestones"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneReadinessDetail"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "action_items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "generated_at",
+          "overall_readiness_score",
+          "readiness_rating",
+          "total_documents",
+          "total_expected",
+          "approved_documents_count",
+          "pending_qc_count",
+          "unsigned_documents_count",
+          "expired_documents_count",
+          "expiring_soon_count",
+          "milestones",
+          "zones",
+          "action_items"
+        ],
+        "title": "InspectionReadinessResponse"
+      },
+      "ManualRedactRequest": {
+        "properties": {
+          "spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SpanItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spans",
+            "description": "Explicit character spans to redact"
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms",
+            "description": "Literal terms to search and redact"
+          },
+          "redacted_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redacted Filename",
+            "description": "Optional new filename for the redacted successor document"
+          }
+        },
+        "type": "object",
+        "title": "ManualRedactRequest"
+      },
+      "ManualRedactResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Outcome status of the manual redaction",
+            "default": "success"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "ID of the newly created redacted document version"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Version index of the new redacted document"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the new redacted document"
+          },
+          "categories_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Categories Counts",
+            "description": "Count of redacted items per category"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Manifest",
+            "description": "The signed manifest and provenance data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "version_index",
+          "filename",
+          "categories_counts",
+          "manifest"
+        ],
+        "title": "ManualRedactResponse"
+      },
+      "MilestoneReadinessDetail": {
+        "properties": {
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "expected_count": {
+            "type": "integer",
+            "title": "Expected Count"
+          },
+          "present_count": {
+            "type": "integer",
+            "title": "Present Count"
+          },
+          "approved_count": {
+            "type": "integer",
+            "title": "Approved Count"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          },
+          "completeness_percentage": {
+            "type": "number",
+            "title": "Completeness Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "milestone",
+          "is_complete",
+          "expected_count",
+          "present_count",
+          "approved_count",
+          "missing_artifacts",
+          "completeness_percentage"
+        ],
+        "title": "MilestoneReadinessDetail"
+      },
+      "PaginatedAuditLogResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Page"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset",
+          "has_more"
+        ],
+        "title": "PaginatedAuditLogResponse"
+      },
+      "ProtocolVersionRefDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study (e.g. 'STUDY-101')."
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag",
+            "description": "The semantic or alphanumeric version tag representing the protocol version (e.g. '1.0', 'v2.1')."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Chronological, incrementing index of the protocol version (must be >= 1)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProtocolVersionStatusDTO",
+            "description": "Current controlled status of this protocol version."
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "version_index",
+          "status"
+        ],
+        "title": "ProtocolVersionRefDTO",
+        "description": "Pydantic v2 ACL model representing a reference to a specific clinical trial protocol version."
+      },
+      "ProtocolVersionStatusDTO": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "LOCKED",
+          "PUBLISHED",
+          "ARCHIVED",
+          "FROZEN"
+        ],
+        "title": "ProtocolVersionStatusDTO",
+        "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
+      },
+      "QCRecommendation": {
+        "type": "string",
+        "enum": [
+          "AUTO_CLASSIFY",
+          "FLAG_FOR_QC_REVIEW",
+          "MANUAL_RECLASSIFICATION_REQUIRED"
+        ],
+        "title": "QCRecommendation",
+        "description": "Recommended automated action for CRA Quality Control routing."
+      },
+      "RedactRequest": {
+        "properties": {
+          "redacted_content": {
+            "type": "string",
+            "title": "Redacted Content",
+            "description": "The redacted text content"
+          },
+          "redacted_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redacted Filename",
+            "description": "Optional new filename for the redacted document"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Manifest",
+            "description": "The signed redaction manifest and provenance data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "redacted_content",
+          "manifest"
+        ],
+        "title": "RedactRequest"
+      },
+      "SeedEDLRequest": {
+        "properties": {
+          "milestones": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestones",
+            "description": "Optional list of milestones to seed. Defaults to STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason for seeding EDL",
+            "default": "Zero-Click USDM Study Ingestion"
+          }
+        },
+        "type": "object",
+        "title": "SeedEDLRequest"
+      },
+      "SignDocumentRequest": {
+        "properties": {
+          "signing_reason": {
+            "$ref": "#/components/schemas/SigningReason",
+            "description": "Controlled reason for creating this electronic signature in compliance with 21 CFR Part 11"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signing_reason"
+        ],
+        "title": "SignDocumentRequest"
+      },
+      "SignatureAnalysisResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/SignaturePresenceStatus",
+            "description": "Overall signature completeness status",
+            "default": "UNSIGNED"
+          },
+          "extracted_signatures": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedSignature"
+            },
+            "type": "array",
+            "title": "Extracted Signatures",
+            "description": "List of identified signatures"
+          },
+          "missing_required_signatures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Required Signatures",
+            "description": "Roles with missing required signatures"
+          },
+          "signature_blocks_detected": {
+            "type": "integer",
+            "title": "Signature Blocks Detected",
+            "description": "Total number of signature blocks identified",
+            "default": 0
+          },
+          "details": {
+            "type": "string",
+            "title": "Details",
+            "description": "Human-readable summary of signature verification",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "SignatureAnalysisResult",
+        "description": "Aggregate result of document signature completeness analysis."
+      },
+      "SignaturePresenceStatus": {
+        "type": "string",
+        "enum": [
+          "FULLY_SIGNED",
+          "PARTIALLY_SIGNED",
+          "UNSIGNED",
+          "SIGNATURE_NOT_REQUIRED"
+        ],
+        "title": "SignaturePresenceStatus",
+        "description": "Regulatory signature completeness evaluation status."
+      },
+      "SignatureVerificationResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "signer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer"
+          },
+          "signing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Timestamp"
+          },
+          "signing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Reason"
+          },
+          "certificate_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Fingerprint"
+          },
+          "content_hash_matched": {
+            "type": "boolean",
+            "title": "Content Hash Matched"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "version_index",
+          "is_valid",
+          "signer",
+          "signing_timestamp",
+          "signing_reason",
+          "certificate_fingerprint",
+          "content_hash_matched",
+          "details"
+        ],
+        "title": "SignatureVerificationResponse"
+      },
+      "SigningReason": {
+        "type": "string",
+        "enum": [
+          "AUTHOR",
+          "REVIEW",
+          "APPROVAL",
+          "SPONSOR_APPROVAL",
+          "INVESTIGATOR_SIGNATURE",
+          "TECHNICAL_QC",
+          "CLINICAL_QC",
+          "DATA_LOCK",
+          "SYSTEM_SEAL",
+          "PROTOCOL_APPROVAL",
+          "REGULATORY_FORM_SIGNATURE",
+          "TRAINING_ACKNOWLEDGEMENT",
+          "SITE_VISIT_SIGN_OFF",
+          "ADJUDICATION_SIGN_OFF",
+          "ENDPOINT_ADJUDICATION"
+        ],
+        "title": "SigningReason",
+        "description": "Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11."
+      },
+      "SpanItem": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start",
+            "description": "The character start offset in the source text"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End",
+            "description": "The character end offset in the source text"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label",
+            "description": "Optional label or category for the redacted span",
+            "default": "manual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "SpanItem"
+      },
+      "StageDocumentQCRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content or base64 data"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type",
+            "default": "text/plain"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type/code hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification"
+          },
+          "assigned_cra": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Cra",
+            "description": "Optional assigned CRA reviewer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "filename",
+          "study_id",
+          "reason_for_change"
+        ],
+        "title": "StageDocumentQCRequest"
+      },
+      "StudyArchiveItemResult": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "from_status": {
+            "type": "string",
+            "title": "From Status"
+          },
+          "to_status": {
+            "type": "string",
+            "title": "To Status"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "from_status",
+          "to_status",
+          "status"
+        ],
+        "title": "StudyArchiveItemResult"
+      },
+      "StudyArchiveRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason for bulk study archive"
+          },
+          "all_or_nothing": {
+            "type": "boolean",
+            "title": "All Or Nothing",
+            "description": "If True, rolling back the entire operation if any eligible document fails to transition.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "StudyArchiveRequest"
+      },
+      "StudyArchiveResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_processed": {
+            "type": "integer",
+            "title": "Total Processed"
+          },
+          "successful_count": {
+            "type": "integer",
+            "title": "Successful Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "skipped_count": {
+            "type": "integer",
+            "title": "Skipped Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/StudyArchiveItemResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "study_id",
+          "total_processed",
+          "successful_count",
+          "failed_count",
+          "skipped_count",
+          "results"
+        ],
+        "title": "StudyArchiveResponse"
+      },
+      "TaxonomyArtifactNode": {
+        "properties": {
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_code",
+          "artifact_name"
+        ],
+        "title": "TaxonomyArtifactNode",
+        "description": "Representation of an artifact node in the taxonomy structure."
+      },
+      "TaxonomyCatalogResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyZoneNode"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "zones"
+        ],
+        "title": "TaxonomyCatalogResponse",
+        "description": "Top-level taxonomy catalog response representation."
+      },
+      "TaxonomyMatchCandidate": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code",
+            "description": "DIA TMF Zone code (1-11)"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name",
+            "description": "DIA TMF Zone name"
+          },
+          "section_code": {
+            "type": "string",
+            "title": "Section Code",
+            "description": "DIA TMF Section code (e.g. 05.02)"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name",
+            "description": "DIA TMF Section name"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code",
+            "description": "Canonical DIA artifact code (e.g. 05.02.01)"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name",
+            "description": "Canonical artifact name"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Classification confidence score"
+          },
+          "matched_signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Signals",
+            "description": "Evidence signals that triggered this match (e.g. form_omb, layout_anchor, keywords)"
+          },
+          "is_extension": {
+            "type": "boolean",
+            "title": "Is Extension",
+            "description": "Whether artifact is a custom Cadence extension",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "section_code",
+          "section_name",
+          "artifact_code",
+          "artifact_name",
+          "confidence"
+        ],
+        "title": "TaxonomyMatchCandidate",
+        "description": "Ranked taxonomy classification candidate."
+      },
+      "TaxonomySectionNode": {
+        "properties": {
+          "section_code": {
+            "type": "string",
+            "title": "Section Code"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyArtifactNode"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_code",
+          "section_name",
+          "artifacts"
+        ],
+        "title": "TaxonomySectionNode",
+        "description": "Representation of a section node in the taxonomy structure."
+      },
+      "TaxonomyZoneNode": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomySectionNode"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "sections"
+        ],
+        "title": "TaxonomyZoneNode",
+        "description": "Representation of a zone node in the taxonomy structure."
+      },
+      "TransitionRequest": {
+        "properties": {
+          "to_status": {
+            "type": "string",
+            "title": "To Status",
+            "description": "Target status (e.g. TECHNICAL_QC, CLINICAL_QC, APPROVED, ARCHIVED, REJECTED)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "to_status",
+          "reason_for_change"
+        ],
+        "title": "TransitionRequest"
+      },
+      "TransitionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "from_status": {
+            "type": "string",
+            "title": "From Status"
+          },
+          "to_status": {
+            "type": "string",
+            "title": "To Status"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "document_id",
+          "from_status",
+          "to_status",
+          "actor_id",
+          "actor_role",
+          "reason_for_change",
+          "timestamp"
+        ],
+        "title": "TransitionResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZoneReadinessDetail": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "expected_count": {
+            "type": "integer",
+            "title": "Expected Count"
+          },
+          "present_count": {
+            "type": "integer",
+            "title": "Present Count"
+          },
+          "approved_count": {
+            "type": "integer",
+            "title": "Approved Count"
+          },
+          "pending_qc_count": {
+            "type": "integer",
+            "title": "Pending Qc Count"
+          },
+          "rejected_count": {
+            "type": "integer",
+            "title": "Rejected Count"
+          },
+          "missing_count": {
+            "type": "integer",
+            "title": "Missing Count"
+          },
+          "completeness_percentage": {
+            "type": "number",
+            "title": "Completeness Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "expected_count",
+          "present_count",
+          "approved_count",
+          "pending_qc_count",
+          "rejected_count",
+          "missing_count",
+          "completeness_percentage"
+        ],
+        "title": "ZoneReadinessDetail"
+      }
+    }
+  }
+}

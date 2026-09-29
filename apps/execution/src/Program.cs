@@ -85,7 +85,7 @@ builder.Services.AddProblemDetails(options =>
 // one was deliberately left unregistered until this ticket.
 // ================================================================================================
 
-// IHttpContextAccessor backs HttpCurrentAuditContextAccessor below (Application/Abstractions read the
+// IHttpContextAccessor backs AmbientAuditContextAccessor below (Application/Abstractions read the
 // ambient HTTP request's "sub" claim / X-Change-Reason header through it). ASP.NET Core does not register
 // this by default -- omitting this call would make every HTTP-scoped ICurrentAuditContextAccessor
 // resolution above throw at first use, not at startup (IHttpContextAccessor's own constructor has no
@@ -132,16 +132,15 @@ builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 // delegate must be re-resolved per scope -- achieved by using AddDbContext's `(IServiceProvider, ...)`
 // options-action overload, whose `optionsLifetime` defaults to Scoped, so this callback (and therefore the
 // `sp.GetRequiredService<ICurrentAuditContextAccessor>()` capture inside it) genuinely re-runs once per
-// scope rather than once globally -- the ambient scope's own accessor (HttpCurrentAuditContextAccessor
-// inside an HTTP request) is what actually stamps AuditLogEntry.UserId, not a fixed value captured once at
+// scope rather than once globally -- the ambient scope's own accessor (AmbientAuditContextAccessor: the
+// caller inside an HTTP request, the declared service account inside a consumer) is what actually stamps AuditLogEntry.UserId, not a fixed value captured once at
 // startup.
 //
 // The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; only the Development
 // environment falls back to the local docker-compose database, so a misconfigured deployment fails at startup.
-string executionDbConnectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionString(
-    builder.Configuration,
-    builder.Environment,
-    "cadence_edc");
+string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
+    CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment),
+    ExecutionDbContextFactory.Schema);
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
 builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 {
@@ -153,6 +152,7 @@ builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
+builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration);
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
@@ -168,35 +168,13 @@ builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 // SaveChangesAsync call" requirement depends on sharing that exact scoped instance).
 builder.Services.AddScoped<IAuditLogWriter, EfAuditLogWriter>();
 
-// ICurrentAuditContextAccessor -> HttpCurrentAuditContextAccessor (Scoped) is now the one ambient-HTTP-scope
-// registration for this interface: every current caller that resolves it (SubjectApplicationService,
-// SiteComplianceApplicationService) is itself Scoped and only ever constructed inside an HTTP request's own
-// DI scope, so this is the registration that actually reaches production traffic.
-//
-// SystemAuditContextAccessor's fixed "system-pubsub" identity (MIG-SUBJ-017) is registered here too, but
-// deliberately as its own concrete type -- not a second ICurrentAuditContextAccessor override scoped to
-// "just the MassTransit consumer" -- for a reason verified empirically while implementing this ticket, not
-// assumed: MassTransit 8.3.6's container integration (`IConsumerConfigurator<T>`'s full public extension
-// surface, cross-checked against the installed package's own XML docs) exposes no supported way to override
-// a single shared interface registration on a per-consumer-type basis. The one mechanism that looks
-// plausible at a glance -- a factory registration that branches on whether a `MassTransit.ConsumeContext` is
-// resolvable in the current scope -- was built and run against this exact package version and found unsound:
-// MassTransit registers a non-null `ConsumeContext` placeholder (`MassTransit.Context.MissingConsumeContext`)
-// in *every* scope regardless of whether a message is actually being consumed, throwing
-// `ConsumeContextNotAvailableException` only when a member is actually touched -- so a bare
-// `sp.GetService<ConsumeContext>() is not null` check resolves "true" even for an ordinary HTTP request
-// scope, which would have silently handed every HTTP caller the fixed "system-pubsub" identity instead of
-// their own. Short of standing up an entire second bus/container (MassTransit's multi-bus feature) for the
-// sake of one interface, there is no lower-fragility real alternative. `EConsentCompletedConsumer`
-// (MIG-SUBJ-021) already sidesteps this exact question on its own: it reads
-// `SystemAuditContextAccessor.SystemUserId`/`SystemChangeReason` as plain `const` values directly rather
-// than injecting `ICurrentAuditContextAccessor`, so registering the concrete type here (Singleton -- it is
-// immutable, dependency-free, compile-time-constant-backed) is what "SystemAuditContextAccessor registered
-// specifically for the MassTransit consumer" now cashes out to: available for direct constructor injection
-// by concrete type to any future consumer that prefers that over reading the `const` fields straight, without
-// silently reinterpreting the shared HTTP-ambient interface registration underneath any other caller.
-builder.Services.AddScoped<ICurrentAuditContextAccessor, HttpCurrentAuditContextAccessor>();
-builder.Services.AddSingleton<SystemAuditContextAccessor>();
+// One scoped AmbientAuditContextAccessor answers both audit interfaces: it reads the caller's sub claim inside
+// a request, and message consumers use it to declare their service account before writing. Both interfaces
+// must resolve to the same instance, or the GxPAuditInterceptor above would not see that service account.
+// There is no anonymous fallback actor, see issue 4767.
+builder.Services.AddScoped<AmbientAuditContextAccessor>();
+builder.Services.AddScoped<ICurrentAuditContextAccessor>(sp => sp.GetRequiredService<AmbientAuditContextAccessor>());
+builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<AmbientAuditContextAccessor>());
 
 // The two application services (MIG-SUBJ-018/019/020), Scoped -- both take only Scoped/Singleton
 // dependencies above (SubjectApplicationService's own trailing `screeningEligibility` constructor parameter

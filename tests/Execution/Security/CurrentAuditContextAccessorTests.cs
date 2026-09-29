@@ -1,5 +1,7 @@
+using System;
 using System.Security.Claims;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Testing;
 
@@ -12,10 +14,10 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Security;
 
 /// <summary>
-/// Coverage for `MIG-SUBJ-017`'s `ICurrentAuditContextAccessor` implementations: the
-/// present/absent/whitespace-only matrix `HttpCurrentAuditContextAccessor` resolves through its single,
-/// shared fallback path (closing Rule 9's two-idiom split), and `SystemAuditContextAccessor`'s fixed,
-/// non-configurable pubsub identity.
+/// Coverage for <see cref="AmbientAuditContextAccessor"/>: the caller's <c>sub</c> claim is the actor, a
+/// declared <see cref="ServiceAccount"/> overrides it, and with neither the actor is unresolved and reading
+/// it throws instead of defaulting to <c>"system"</c> (#4767). The change reason keeps its default.
+/// @req:PRD-SYS-001
 /// </summary>
 public class CurrentAuditContextAccessorTests
 {
@@ -24,7 +26,7 @@ public class CurrentAuditContextAccessorTests
         public HttpContext? HttpContext { get; set; } = httpContext;
     }
 
-    private static HttpCurrentAuditContextAccessor CreateAccessor(string? subClaim = null, string? changeReasonHeader = null)
+    private static AmbientAuditContextAccessor CreateAccessor(string? subClaim = null, string? changeReasonHeader = null)
     {
         var context = new DefaultHttpContext();
 
@@ -38,41 +40,45 @@ public class CurrentAuditContextAccessorTests
             context.Request.Headers["X-Change-Reason"] = changeReasonHeader;
         }
 
-        return new HttpCurrentAuditContextAccessor(new FakeHttpContextAccessor(context));
+        return new AmbientAuditContextAccessor(new FakeHttpContextAccessor(context));
     }
 
-    // ---- HttpCurrentAuditContextAccessor.UserId ----------------------------------------------------
+    // ---- AmbientAuditContextAccessor.UserId ----------------------------------------------------
 
     [Fact]
-    public void UserId_GivenNoHttpContext_ReturnsSystemDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void UserId_GivenNoHttpContext_Throws()
     {
-        var accessor = new HttpCurrentAuditContextAccessor(new FakeHttpContextAccessor(null));
+        var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
 
-        accessor.UserId.Should().Be("system");
+        FluentActions.Invoking(() => accessor.UserId).Should().Throw<AuditActorUnresolvedException>();
     }
 
     [Fact]
-    public void UserId_GivenNoSubClaim_ReturnsSystemDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void UserId_GivenNoSubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: null);
 
-        accessor.UserId.Should().Be("system");
+        FluentActions.Invoking(() => accessor.UserId).Should().Throw<AuditActorUnresolvedException>();
     }
 
     [Fact]
-    public void UserId_GivenEmptySubClaim_ReturnsSystemDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void UserId_GivenEmptySubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: string.Empty);
 
-        accessor.UserId.Should().Be("system");
+        FluentActions.Invoking(() => accessor.UserId).Should().Throw<AuditActorUnresolvedException>();
     }
 
     [Fact]
-    public void UserId_GivenWhitespaceOnlySubClaim_ReturnsSystemDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void UserId_GivenWhitespaceOnlySubClaim_Throws()
     {
         var accessor = CreateAccessor(subClaim: "   ");
 
-        accessor.UserId.Should().Be("system");
+        FluentActions.Invoking(() => accessor.UserId).Should().Throw<AuditActorUnresolvedException>();
     }
 
     [Fact]
@@ -83,12 +89,12 @@ public class CurrentAuditContextAccessorTests
         accessor.UserId.Should().Be("user-42");
     }
 
-    // ---- HttpCurrentAuditContextAccessor.ChangeReason ----------------------------------------------
+    // ---- AmbientAuditContextAccessor.ChangeReason ----------------------------------------------
 
     [Fact]
     public void ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault()
     {
-        var accessor = new HttpCurrentAuditContextAccessor(new FakeHttpContextAccessor(null));
+        var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
 
         accessor.ChangeReason.Should().Be("system_operation");
     }
@@ -138,32 +144,38 @@ public class CurrentAuditContextAccessorTests
         accessor.ChangeReason.Should().Be("Manual correction");
     }
 
-    // ---- SystemAuditContextAccessor -----------------------------------------------------------------
+    // ---- Service accounts ---------------------------------------------------------------------------
 
     [Fact]
-    public void SystemAuditContextAccessor_UserId_AlwaysReturnsFixedPubsubIdentity()
+    [GxPRequirement("PRD-SYS-001")]
+    public void RunAs_WithNoHttpContext_AttributesToTheServiceAccount()
     {
-        var accessor = new SystemAuditContextAccessor();
+        var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
 
-        accessor.UserId.Should().Be("system-pubsub");
-    }
+        accessor.RunAs(ServiceAccounts.EConsentConsumer);
 
-    [Fact]
-    public void SystemAuditContextAccessor_ChangeReason_AlwaysReturnsFixedAutomatedEnrollmentReason()
-    {
-        var accessor = new SystemAuditContextAccessor();
-
+        accessor.UserId.Should().Be("svc:econsent-consumer");
         accessor.ChangeReason.Should().Be("Automated consent-completion enrollment");
     }
 
     [Fact]
-    public void SystemAuditContextAccessor_ValuesAreCompileTimeConstantsNotConfigurable()
+    [GxPRequirement("PRD-SYS-001")]
+    public void RunAs_OverridesTheAmbientCaller()
     {
-        // FieldInfo.IsLiteral is true only for `const` fields (never `static readonly` or
-        // configuration-sourced values) — matching the legacy subscriber's hardcoded pubsub identity.
-        typeof(SystemAuditContextAccessor).GetField(nameof(SystemAuditContextAccessor.SystemUserId))!
-            .IsLiteral.Should().BeTrue("the pubsub identity must be a hardcoded compile-time constant, never sourced from configuration");
-        typeof(SystemAuditContextAccessor).GetField(nameof(SystemAuditContextAccessor.SystemChangeReason))!
-            .IsLiteral.Should().BeTrue("the pubsub change reason must be a hardcoded compile-time constant, never sourced from configuration");
+        var accessor = CreateAccessor(subClaim: "user-7", changeReasonHeader: "Manual correction");
+
+        accessor.RunAs(ServiceAccounts.EConsentConsumer);
+
+        accessor.UserId.Should().Be("svc:econsent-consumer");
+    }
+
+    [Theory]
+    [GxPRequirement("PRD-SYS-001")]
+    [InlineData("system")]
+    [InlineData("svc:")]
+    [InlineData("")]
+    public void ServiceAccount_WithoutANamedSvcId_IsRejected(string userId)
+    {
+        FluentActions.Invoking(() => new ServiceAccount(userId, "reason")).Should().Throw<ArgumentException>();
     }
 }

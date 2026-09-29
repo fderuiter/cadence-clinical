@@ -119,7 +119,7 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     {
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
-        optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "system"));
+        optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "svc:integration-test"));
         return new ExecutionDbContext(optionsBuilder.Options);
     }
 

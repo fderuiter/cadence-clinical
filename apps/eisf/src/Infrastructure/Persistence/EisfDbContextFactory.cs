@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Database;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -12,8 +14,11 @@ namespace Cadence.Apps.Eisf.Infrastructure.Persistence;
 /// </summary>
 public sealed class EisfDbContextFactory : IDesignTimeDbContextFactory<EisfDbContext>
 {
+    /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
+    public const string Schema = "eisf";
+
     private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
 
     public EisfDbContext CreateDbContext(string[] args)
     {
@@ -21,7 +26,8 @@ public sealed class EisfDbContextFactory : IDesignTimeDbContextFactory<EisfDbCon
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var optionsBuilder = new DbContextOptionsBuilder<EisfDbContext>().UseNpgsql(connectionString);
+        var optionsBuilder = new DbContextOptionsBuilder<EisfDbContext>()
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
 
         return new EisfDbContext(optionsBuilder.Options);
     }

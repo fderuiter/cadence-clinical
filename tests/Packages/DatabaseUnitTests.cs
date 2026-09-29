@@ -49,7 +49,7 @@ public class DatabaseUnitTests
         string customConn = "Host=remotehost;Port=5432;Database=custom_db;Username=user;Password=pass";
         builder.Configuration["POSTGRES_CONNECTION_STRING"] = customConn;
 
-        builder.AddCadencePostgresDbContext<TestDbContext>("custom_fallback");
+        builder.AddCadencePostgresDbContext<TestDbContext>(schema: "custom_schema");
 
         using var app = builder.Build();
         var options = app.Services.GetService<DbContextOptions<TestDbContext>>();

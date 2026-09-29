@@ -1,5 +1,4 @@
-// Auto-generated from OpenAPI schema definitions in /app/cadence-clinical/docs/openapi
-// Generated on: 2026-09-29T07:08:41.847Z
+// Auto-generated from the OpenAPI schema definitions in docs/openapi/legacy by src/types/generate-types.js. Do not edit.
 
 export interface ChatMessageDTO {
   role?: MessageRole | string;

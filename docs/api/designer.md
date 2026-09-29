@@ -1,21 +1,9 @@
-# Study Designer & MDR (USDM)
+# designer API
 
-> **Functional Domain:** `Protocol & Study Design`  
-> **Service Host Port:** `localhost:8001`  
-> **Gateway Proxy Prefix:** `/api/v1/designer`  
-> **Persistence Backend:** `Neo4j Graph Database`  
+Generated from `docs/openapi/designer_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
-## Overview
-
-Clinical study metadata authoring, CDISC USDM v3.0/v4.0 graph modeling, SoA matrix generation, and Biomedical Concept libraries.
-
----
-
-## Endpoints Summary
-
-| Method | Path | Summary | GxP Auth & Signatures |
-| :--- | :--- | :--- | :--- |
-
----
-
-## Granular Endpoint Specifications
+| Method | Path | Operation | Summary |
+| ------ | ---- | --------- | ------- |
+| `POST` | `/api/v1/protocols/compile` | CompileProtocol | Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas. |
+| `GET` | `/api/v1/studies` | ListStudies | Lists active CDISC USDM study protocol definitions. |
+| `GET` | `/healthz` | DesignerHealthCheck | Protocol designer metadata health probe. |

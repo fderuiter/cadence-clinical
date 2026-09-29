@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -37,7 +37,7 @@ build: $(CADENCE_CLI) ## Compile the Cadence solution (.NET 10)
 doctor: $(CADENCE_CLI) ## Run system diagnostics and auto-heal development environment health (dotnet cadence doctor --auto-fix)
 	$(CADENCE_CLI) doctor --auto-fix
 
-dev: $(CADENCE_CLI) ## Orchestrate local microservices with live reloading
+dev: $(CADENCE_CLI) ## Start all local services and datastores via the .NET Aspire AppHost
 	$(CADENCE_CLI) dev
 
 ##@ Code Quality
@@ -57,11 +57,12 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
-check: $(CADENCE_CLI) ## Run all 21 pre-push quality gates concurrently in parallel (dotnet cadence check --parallel)
-	$(CADENCE_CLI) check --parallel
+check: $(CADENCE_CLI) ## Run all 21 quality gates (dotnet cadence check)
+	$(CADENCE_CLI) check
 
 verify: $(CADENCE_CLI) ## Full verification — quality gates + all test suites (use before opening a PR)
-	$(CADENCE_CLI) check --parallel
+	$(CADENCE_CLI) check
+	$(CADENCE_CLI) test
 
 test: $(CADENCE_CLI) ## Run backend unit tests with coverage
 	$(CADENCE_CLI) test
@@ -78,8 +79,9 @@ rtm: $(CADENCE_CLI) ## Validate that checked-in RTM docs are up to date (dotnet 
 
 ##@ Architecture & Documentation
 
-adr: $(CADENCE_CLI) ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
-	$(CADENCE_CLI) scaffold adr
+adr: $(CADENCE_CLI) ## Scaffold a new Architecture Decision Record (make adr TITLE="Use X for Y")
+	@test -n "$(TITLE)" || { echo "Usage: make adr TITLE=\"Use X for Y\""; exit 1; }
+	$(CADENCE_CLI) scaffold adr "$(TITLE)"
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev
@@ -98,11 +100,8 @@ db-seed: $(CADENCE_CLI) ## Populate multi-engine databases with realistic end-to
 db-status: $(CADENCE_CLI) ## Display multi-engine database sizes and available snapshots
 	$(CADENCE_CLI) db status
 
-regenerate-templates: $(CADENCE_CLI) ## Regenerate DOCX protocol templates programmatically
-	$(CADENCE_CLI) check --parallel
-
-ports: $(CADENCE_CLI) ## Check that all required service ports are free (dotnet cadence doctor)
-	$(CADENCE_CLI) doctor
+ports: $(CADENCE_CLI) ## Check that all required service ports are free (cadence check-ports)
+	$(CADENCE_CLI) check-ports
 
 ##@ Help
 

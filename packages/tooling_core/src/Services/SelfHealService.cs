@@ -13,15 +13,16 @@ public static class SelfHealService
         var psi = new ProcessStartInfo("dotnet", "format Cadence.sln") { UseShellExecute = false };
         using var p = Process.Start(psi);
         p?.WaitForExit();
+        bool ok = p is { ExitCode: 0 };
 
         Console.WriteLine("\n  2. Validating ADRs...");
-        AdrValidatorService.ValidateAdrs(checkGitDiff: false);
+        ok &= AdrValidatorService.ValidateAdrs(checkGitDiff: false);
 
         Console.WriteLine("\n  3. Synchronizing OpenAPI Specifications & Documentation...");
-        OpenApiSyncService.SyncOpenApiSpec(validate: false, repoRoot);
-        ApiDocsGeneratorService.GenerateApiDocs(validate: false, repoRoot);
+        ok &= OpenApiSyncService.SyncOpenApiSpec(validate: false, repoRoot) == 0;
+        ok &= ApiDocsGeneratorService.GenerateApiDocs(validate: false, repoRoot) == 0;
 
-        Console.WriteLine("\nSelf-Healing Pipeline Complete.");
-        return 0;
+        Console.WriteLine(ok ? "\nSelf-Healing Pipeline Complete." : "\n[ERROR] Self-Healing Pipeline finished with failures (see above).");
+        return ok ? 0 : 1;
     }
 }

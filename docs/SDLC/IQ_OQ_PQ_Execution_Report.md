@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Automated Test Methods Reported:** 648
-- **Passed:** 648 🟢
+- **Automated Test Methods Reported:** 682
+- **Passed:** 682 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate (of executed):** 100.00%
@@ -34,7 +34,15 @@ out so the report only changes when results change; they are in the TRX files un
 | `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
+| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
@@ -66,6 +74,13 @@ out so the report only changes when results change; they are in the TRX files un
 | `SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
 | `ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
 | `ClearDemographics_PreRandomization_Succeeds` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
@@ -94,6 +109,7 @@ out so the report only changes when results change; they are in the TRX files un
 | `ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
 | `ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
 | `ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` | `Cadence.UnitTests.Execution.Subjects.DomainErrorHttpMappingTests` | PRD-SUB-001 | 🟢 PASSED |
+| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests` | PRD-SYS-001 | 🟢 PASSED |
 | `AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
 | `AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
 | `AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
@@ -158,30 +174,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 0bf04839e8b29fcd6d113d0c2c4123f06a8298ed9852c7d9877184b42c67243c
+- **Cryptographic Hash (SHA-256):** 43d1b0d4487dbb2988a59619f2fc1745dd42d754b3cdd1b99b1f014600975f01
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAn2gAwIBAgIJAKJ7OkqThcsHMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
-AWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgMGgxIjAgBgNV
-BAoTGUNhZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2Ug
-R3hQIFZhbGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVy
-KTAeFw0yNjA5MjgxOTU2MjBaFw0yNzA5MjkxOTU2MjBaMGgxIjAgBgNVBAoTGUNh
-ZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2UgR3hQIFZh
-bGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVyKTCCASIw
-DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMLztgnq+03qANIzzN9hFwuAsMkS
-EXXoqBVqYRElccbtLLm3L56OQdeE1c/4BrJlXN64oAsvrg/Em1VpE800Ld/kVpIf
-VYxFPEh2f9eGLhBxjF7UwRrOxjFGwO0+ayfK3ynpn/YGx46BGroGi0S/wDive/0C
-BDn9XUndjQpq9y+/nlAK238MwqK6odCwyuQOCEGHndgzxe7iros6De0hI8dimuBP
-GiXDBGjbMTf+CoGTXsma1L74IErIaRPPUTx7tKbdU9sN73I1kmIeSplkMcEBTAdf
-Fh3ym9WGFHP6c46pfUU1QwPXWworGHLkc3l168jhES/YvjQ/CrU8JrICFWkCAwEA
-AaMSMBAwDgYDVR0PAQH/BAQDAgbAMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZIAWUD
-BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQAU8ooSipQO
-wNOl+ta9EyKT8xHMEtEmQxKLhisibq0GLZUqFRSPIR7xdWPKVFlSS6bDvjJjfNCp
-fnedwuoZs3AkHqeZaP2wnPmXYzRUMorbJiG6ce3tHl2eJCRMydG+fPejekrTeomz
-Hl3Q87YiSWPLXKKuQdI4+ByU/lY2Z4wZpaVgAioqTNOhoHAMCwAMMTt0aJnvaTiK
-UCF3mWJ5i6P3jmzoDilsUM2K82JAc18rbWm8yrY8bfXWX/HgX6E7+6G2VCousOGU
-41h80YW9qsudDVWXyXD6acAr2FUFGnAraJ74DniMUko6blaEsiGNk2cHyShvtr8Z
-gHsWgA6V/Xsy
+MIIDxDCCAnygAwIBAgIIJsBsk8e+FuEwPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
+ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
+eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
+MB4XDTI2MDkyODIyMTcyNFoXDTI3MDkyOTIyMTcyNFowaDEiMCAGA1UEChMZQ2Fk
+ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
+aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz8dC7urlGKYwccsIIFb6qYi97D33
+lZdxJeST2q/yu/YAMsTFsN3QQ0zPm11ceXf8NcRSNVGkH8NnJ8OwIbOSoV0JSoB1
+oWwRC0sFHnUpCl3Omkao4bXxbpvj7jvHlq9GN+XbELND03Al8t/13jbxl/2uyLOK
+MSweE74hs1tNgrArt96VktaNAqneq4oDFJbUoMROrYcf/6vAHo8lzNKCrX2NXzo4
+kqszViTS4QpQwNx61DZsUk7qMIH+EfHBIoS9G8AXbxgONGt3l6sExi4bQksVXOQ/
+5rxDEVOQcWsNFnyv5YrjQzWpmyc+YfKMr0hTjbLXEG0Z74BEsb+PDWIUFQIDAQAB
+oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAAxSr5PkBkB9
+GlTp+p+gF/hd7dikHRnGrItNxjcEx/kJZ4rtaJVZUI3luZRrQofQTRfaqH9bs5Fk
+w8Gnzhrf8pOF3ZWUOYiX//LvthtB4YZyWecae6yWY/VhcWEw0WN0yIr+UDK5mc6R
+2QryxjuMkGOL0Fq+ZD8suGWLBJtaKl8pujJ5uNFU3g1ReO/pYlMSMIrLnc1c9JlH
+SEwBbaIpMZm2v7m/QuxFqrldaXojR1nwFjD9G/dWjfDtkMKbxCp+8UL7bJk4Xsk3
+b3Gl8so+YhE8mcdGPdMfHcxJRcgeMDnSasC/3h6PUP4BWIZmwPhCIVuTZYqEWXtU
+fTcqyVgpseU=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-RSksxdfiV1aJV5a/RNAikwKNc1sDNjWKDbght1pdAQNYL/zGELUCv7Z/M+M+901GbWZt91qoJE2V7rFYdsylH5a/V8rvn7ePokuTb/ZySTOhTNbKbXd4LQMl5qPzGirLzgBK5g8f+1gujaex+8ELl/LWZ+p2ZY+IEgP2i78aMc+SnYkVencHwkliMzIduOiR7n+sFeXXDKj4f7ztmUk63gas16WenYgOFZs+dRRDCHoEjGkOQT/YVguEx+jkcpjTz52vmK7Up21Uyq5AOgwKMYP/MLqV/2GltQi/qh3qzd+gvvjWJDhMlEyrAMNMuu133OWKNPZGRf9T19yja1q8PQ==
+CT6OCPhJ4jLxGNH15e8KF2loU2WqnyxSpZ47yCu/hX+aasEjhR7uQxuUzCqS+MIbM9N6GIlpg8gLwoZkL3e1tK7pkPWWew1cdXKiJ7hSwo6IxUFt6mytylkSkBzMskr8IytHcfhgCQDXoTVb+XSVE/dT9Fza73PQQLM4wgFK+9El4DaiX2nCWYhLwjmv8efSzzL4jHSBekUT/uQapZtuV8Tev+uPQZtJP90eg0FoCEzBk2C47Ytbp+3gT4lu7knZhc/2TCUeVc1mLc4OB6LeZkjQCgeni3TX+a+/DENYUs9MrLuFMRD3fHtMRcTv05npoXiVcJk6lUeKmoqXropmOA==
 -----END SIGNATURE-----

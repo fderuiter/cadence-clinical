@@ -94,6 +94,7 @@ Guidelines for setting up, building, running, and contributing code to Cadence C
 - **[Contributing Guidelines](../CONTRIBUTING.md)** (`CONTRIBUTING.md`): Workspace development standards, code style, formatting tools, and the Issue-to-Doc Sync Workflow.
 - **[Testing and Requirement Qualification](TESTING.md)** (`TESTING.md`): How to run the .NET and Vitest suites, the PostgreSQL opt-ins for database tests, the shared `Cadence.Testing` helpers, requirement tagging rules, and how the RTM decides whether a requirement is qualified.
 - **[Operations & Deployment Guide](SDLC/07_Operations_Deployment_Guide.md)** (`07_Operations_Deployment_Guide.md`): Production deployment topology, Docker orchestration, monitoring, and database backup protocols.
+- **[Database Layout and Migrations Runbook](OPERATIONAL_DATABASE.md)** (`OPERATIONAL_DATABASE.md`): One `cadence` database with a schema per service, how migrations are applied at startup or as a job, idempotent scripts for DBA review, and troubleshooting.
 - **[Lab Reference Ranges Guide](OPERATIONAL_LAB_RANGES.md)** (`OPERATIONAL_LAB_RANGES.md`): Outlines the technical and regulatory mechanisms used to manage, validate, and update laboratory reference ranges, including multi-dimensional scoring and deterministic tie-breaking.
 - **[Inbound Email Ingestion Guide](OPERATIONAL_INBOUND_EMAIL.md)** (`OPERATIONAL_INBOUND_EMAIL.md`): Details security protocols and configurations for the eTMF inbound-email webhook, including HMAC signature validation and attachment processing.
 

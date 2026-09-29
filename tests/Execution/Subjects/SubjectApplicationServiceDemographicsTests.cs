@@ -391,11 +391,10 @@ public class SubjectApplicationServiceDemographicsTests
     }
 
     [Fact]
-    public async Task DeleteDemographicsAsync_OnSuccess_WritesNoAuditLogEntry()
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry()
     {
-        // Unlike AdvanceStateAsync/UpdateDemographicsAsync, no UPDATE_DEMOGRAPHICS-style audit action is
-        // documented for the delete path (01_spec.md Rule 6's action list omits one, and the legacy
-        // delete_subject_demographics_endpoint has no parallel service-layer method to consolidate onto).
+        // #4767: the legacy delete path wrote no audit entry; every mutation now does.
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", encryptedDemographics: "some-cipher");
 
@@ -403,7 +402,12 @@ public class SubjectApplicationServiceDemographicsTests
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        harness.AuditLog.Calls.Should().BeEmpty();
+        var call = harness.AuditLog.Calls.Should().ContainSingle().Which;
+        call.Action.Should().Be("DELETE_DEMOGRAPHICS");
+        call.TableName.Should().Be("clinical_subjects");
+        call.RecordId.Should().Be(subject.Id.ToString());
+        call.UserId.Should().Be(harness.AuditContext.UserId);
+        call.ChangeReason.Should().Be("reason");
     }
 
     [Fact]

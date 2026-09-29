@@ -27,7 +27,7 @@ tests never fall back to an in-memory stand-in. Without a database they report a
 Two opt-ins are checked in order:
 
 1. `CADENCE_TEST_POSTGRES` is an Npgsql connection string to a server you already run. Each fixture
-   creates a throwaway database on it (`cadence_it_*` or `cadence_e2e_*`) and drops it afterwards.
+   creates a throwaway database on it (`cadence_it_*`, `cadence_kernel_it_*` or `cadence_e2e_*`) and drops it afterwards.
 2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers `postgres:16-alpine` container.
 
 Where Docker is not available, for example in a cloud agent session, a local server works:
@@ -44,6 +44,8 @@ dotnet test Cadence.sln
 These tests currently use it:
 
 - `tests/Execution/Integration/` (`ExecutionPostgresFixture`): enrollment index concurrency and migrations.
+- `tests/Kernel/Integration/` (`KernelPostgresFixture`): the kernel schema. This fixture honours only
+  `CADENCE_TEST_POSTGRES`.
 - `tests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.

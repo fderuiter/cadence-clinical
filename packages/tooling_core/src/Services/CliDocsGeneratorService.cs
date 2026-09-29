@@ -1,10 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Cadence.ToolingCore.Services;
 
-public static class CliDocsGeneratorService
+public static partial class CliDocsGeneratorService
 {
+    [GeneratedRegex(@"Add(?:Command<\w+>|Branch)\(\s*""([^""]+)""")]
+    private static partial Regex CommandRegistrationRegex();
+
     public static int GenerateCliDocs(bool check = false, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -44,6 +50,16 @@ public static class CliDocsGeneratorService
                 }
             }
 
+            string programPath = Path.Combine(repoRoot, "packages", "cli", "src", "Program.cs");
+            if (File.Exists(programPath))
+            {
+                foreach (var command in FindUndocumentedCommands(File.ReadAllText(programPath), content))
+                {
+                    Console.WriteLine($"[ERROR] CLI command '{command}' is registered in Program.cs but not documented in docs/cli.md");
+                    passed = false;
+                }
+            }
+
             if (!passed) return 1;
 
             Console.WriteLine("✔ CLI documentation parity check passed cleanly.");
@@ -52,6 +68,16 @@ public static class CliDocsGeneratorService
 
         Console.WriteLine("✔ CLI documentation generated cleanly.");
         return 0;
+    }
+
+    public static IReadOnlyList<string> FindUndocumentedCommands(string programSource, string docs)
+    {
+        return CommandRegistrationRegex().Matches(programSource)
+            .Select(m => m.Groups[1].Value)
+            .Distinct(StringComparer.Ordinal)
+            .Where(name => !docs.Contains($"`{name}`", StringComparison.Ordinal) &&
+                           !Regex.IsMatch(docs, $@"`cadence(?: [\w-]+)* {Regex.Escape(name)}\b"))
+            .ToList();
     }
 
     private static string FindRepoRoot()

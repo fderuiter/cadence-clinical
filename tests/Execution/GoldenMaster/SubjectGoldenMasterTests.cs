@@ -318,7 +318,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             services.AddScoped<DbContextOptions>(sp => sp.GetRequiredService<DbContextOptions<ExecutionDbContext>>());
         }));
 
-        using (IServiceScope scope = derived.Services.CreateScope())
+        using (IServiceScope scope = derived.Services.CreateSeedingScope())
         {
             scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.EnsureCreated();
         }
@@ -541,16 +541,18 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         string versionTag = payload.GetProperty("version_tag").GetString()!;
         int versionIndex = payload.GetProperty("version_index").GetInt32();
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var subjects = scope.ServiceProvider.GetRequiredService<ISubjectRepository>();
         var consents = scope.ServiceProvider.GetRequiredService<IConsentRepository>();
         var auditLog = scope.ServiceProvider.GetRequiredService<IAuditLogWriter>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        var actorScope = scope.ServiceProvider.GetRequiredService<IAuditActorScope>();
 
         var harnessServices = new ServiceCollection();
         harnessServices.AddSingleton(subjects);
         harnessServices.AddSingleton(consents);
         harnessServices.AddSingleton(auditLog);
+        harnessServices.AddSingleton(actorScope);
         harnessServices.AddSingleton(clock);
         harnessServices.AddMassTransitTestHarness(x => x.AddConsumer<EConsentCompletedConsumer>());
 
@@ -590,14 +592,14 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         var subjectCodeKey = new SubjectCode(subjectId);
         string? precedingCiphertext;
-        using (IServiceScope readScope = _testApi.Services.CreateScope())
+        using (IServiceScope readScope = _testApi.Services.CreateSeedingScope())
         {
             var readDb = readScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             precedingCiphertext = (await readDb.ClinicalSubjects.AsNoTracking()
                 .SingleAsync(s => s.SubjectCode == subjectCodeKey, ct)).EncryptedDemographics;
         }
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var svc = scope.ServiceProvider.GetRequiredService<ISubjectApplicationService>();
         // The fixture's own args.demographics ({"weight": 71.0, "height": 175}) uses free-form legacy dict
         // keys DemographicsPayload's fixed 4-field shape cannot carry; harmless here, since neither the
@@ -625,7 +627,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         JsonElement args = scenario.Input!.Value.GetProperty("args");
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var svc = scope.ServiceProvider.GetRequiredService<ISubjectApplicationService>();
 
         var request = new SubjectConsentRequest(
@@ -750,7 +752,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         JsonElement args = scenario.Input!.Value.GetProperty("args");
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
@@ -772,7 +774,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         JsonElement args = scenario.Input!.Value.GetProperty("args");
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
@@ -825,7 +827,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         JsonElement body = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync(ct));
         body.GetProperty("code").GetString().Should().Be("BLOCKED_ENROLLMENT");
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         ClinicalSubject subject = await db.ClinicalSubjects.AsNoTracking().SingleAsync(s => s.SubjectCode == new SubjectCode("SUBJ-NOSITE"), ct);
         subject.Status.Should().Be(SubjectState.Screening, "a blocked enrollment must never mutate status");
@@ -847,7 +849,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplayTransitionResponseWithCompliantSiteAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using (IServiceScope seedScope = _testApi.Services.CreateScope())
+        using (IServiceScope seedScope = _testApi.Services.CreateSeedingScope())
         {
             var db = seedScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             var encryption = seedScope.ServiceProvider.GetRequiredService<IDemographicsEncryptionService>();
@@ -889,7 +891,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplayVisitsWriteGuardContractAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
 
         SubjectConsent consent = await FindConsentByVersionIndexAsync(db, "SUBJ-PAPER", versionIndex: 1, tracked: false, ct);
@@ -983,7 +985,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         await ApplyPreconditionsAsync(scenario.Input, ct);
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
@@ -1021,7 +1023,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         CancellationToken ct = TestContext.Current.CancellationToken;
         JsonElement args = scenario.Input!.Value.GetProperty("args");
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var encryption = scope.ServiceProvider.GetRequiredService<IDemographicsEncryptionService>();
         JsonElement subjectPrecondition = scenario.Input!.Value.GetProperty("preconditions").GetProperty("subject");
@@ -1177,7 +1179,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             pre.TryGetProperty("eligibility_result", out JsonElement eligibilityResult) &&
             string.Equals(eligibilityResult.GetString(), "eligible=true", StringComparison.Ordinal);
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var subjects = scope.ServiceProvider.GetRequiredService<ISubjectRepository>();
         var consents = scope.ServiceProvider.GetRequiredService<IConsentRepository>();
         var compliance = scope.ServiceProvider.GetRequiredService<ISiteComplianceRepository>();
@@ -1260,7 +1262,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task<JsonElement> CaptureSubjectPreStateAsync(string route, CancellationToken ct)
     {
         var subjectCodeKey = new SubjectCode(ExtractSubjectIdFromRoute(route));
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         ClinicalSubject subject = await db.ClinicalSubjects.AsNoTracking()
             .SingleAsync(s => s.SubjectCode == subjectCodeKey, ct).ConfigureAwait(false);
@@ -1332,7 +1334,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplaySubjectVersionGatingNotFoundPremiseAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var subjects = scope.ServiceProvider.GetRequiredService<ISubjectRepository>();
 
         ClinicalSubject? subject = await subjects.GetByCodeAsync("SUBJ-DOES-NOT-EXIST", ct);
@@ -1489,7 +1491,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             return;
         }
 
-        using IServiceScope scope = _testApi.Services.CreateScope();
+        using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var encryption = scope.ServiceProvider.GetRequiredService<IDemographicsEncryptionService>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();

@@ -1,11 +1,265 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.1",
   "info": {
-    "title": "Cadence Clinical Gateway API",
-    "version": "1.0.0-PROD"
+    "title": "Cadence.Apps.Designer | v1",
+    "version": "1.0.0"
   },
-  "paths": {},
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Protocol designer metadata health probe.",
+        "operationId": "DesignerHealthCheck",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_AnonymousTypeOfstringAndstringAndstringAndstring"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Lists active CDISC USDM study protocol definitions.",
+        "operationId": "ListStudies",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/compile": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.",
+        "operationId": "CompileProtocol",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_CompileProtocolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_DDFCompilationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
-    "schemas": {}
-  }
+    "schemas": {
+      "Designer_AccessibilityReport": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "default": "PASS"
+          },
+          "formHash": {
+            "type": "string",
+            "default": ""
+          },
+          "violations": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "passes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "incomplete": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "inapplicable": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "layoutErrors": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Designer_AnonymousTypeOfstringAndstringAndstringAndstring": {
+        "required": [
+          "status",
+          "service",
+          "primaryDatastore",
+          "compiler"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primaryDatastore": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "compiler": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_CompileProtocolRequest": {
+        "required": [
+          "usdmJson"
+        ],
+        "type": "object",
+        "properties": {
+          "usdmJson": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionTag": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_DDFCompilationResult": {
+        "required": [
+          "studyId",
+          "name",
+          "odmXml",
+          "openRosaXml",
+          "formHash"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "odmXml": {
+            "type": "string"
+          },
+          "openRosaXml": {
+            "type": "string"
+          },
+          "formHash": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          },
+          "accessibilityReport": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Designer_AccessibilityReport"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "default": "COMPLETED"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Cadence.Apps.Designer"
+    }
+  ]
 }
