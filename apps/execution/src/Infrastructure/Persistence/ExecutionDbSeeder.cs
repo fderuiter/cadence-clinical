@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Core.Domain.Audit;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +12,8 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// Native C# DbContext seeder for Execution microservice.
-/// Populates required GxP reference data and initial entities.
+/// Populates required GxP reference data and initial entities. It writes no audit entries: every audit
+/// chain entry must come from the audit writer or interceptor so its hashes verify.
 /// @req:PRD-SUB-001, PRD-SYS-053
 /// </summary>
 public static class ExecutionDbSeeder
@@ -57,27 +57,6 @@ public static class ExecutionDbSeeder
             );
 
             await dbContext.ClinicalSubjects.AddAsync(initialSubject, ct).ConfigureAwait(false);
-        }
-
-        // 3. Seed Initial Genesis Audit Log Entry
-        if (!await dbContext.AuditLogEntries.AnyAsync(ct).ConfigureAwait(false))
-        {
-            var genesisAuditEntry = new AuditLogEntry
-            {
-                Id = Guid.NewGuid(),
-                EntityName = "ExecutionDbContext",
-                EntityId = "GENESIS-001",
-                Action = "SEED",
-                Timestamp = DateTime.UtcNow,
-                UserId = "system",
-                ReasonForChange = "Initial GxP DbContext seeding genesis event",
-                VersionIndex = 1,
-                ChangesJson = "{\"status\": \"SEEDED\"}",
-                PredecessorHash = "GENESIS_HASH_00000000000000000000000000000000000000000000000000000000",
-                BlockHash = "INITIAL_SEED_BLOCK_HASH_CADENCE_EXECUTION_SEED_0000000000000000"
-            };
-
-            await dbContext.AuditLogEntries.AddAsync(genesisAuditEntry, ct).ConfigureAwait(false);
         }
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);

@@ -241,4 +241,37 @@ public sealed class QueryLifecycleTests
         sponsorDmResult.IsSuccess.Should().BeTrue();
         sponsorDmResult.Value!.Status.Should().Be(QueryStatus.Closed);
     }
+    /// <summary>
+    /// Validates that a caller with no role is denied close, reopen and cancel rather than treated as authorized.
+    /// @req:PRD-SYS-007
+    /// @req:SRS-EDC-004
+    /// </summary>
+    [Theory]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-007")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ApplicationService_CloseReopenCancel_WithoutRole_AreDenied(string? role)
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var service = new ClinicalQueryApplicationService(repo, new FakeAuditContextAccessor(), new FakeClock(DateTimeOffset.UtcNow));
+
+        var query = ClinicalQuery.Raise(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-001"),
+            testCode: new TestCode("SYSBP"),
+            explanation: "Review needed.").Value!;
+        query.Answer("Done.", "inv-01");
+        await repo.AddAsync(query, CancellationToken.None);
+
+        var close = await service.CloseAsync(query.Id.ToString(), new QueryCloseRequest("anon"), CancellationToken.None, userRole: role);
+        var reopen = await service.ReopenAsync(query.Id.ToString(), new QueryReopenRequest("Recheck"), CancellationToken.None, userRole: role);
+        var cancel = await service.CancelAsync(query.Id.ToString(), new QueryCancelRequest("Duplicate"), CancellationToken.None, userRole: role);
+
+        close.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
+        reopen.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
+        cancel.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
+        query.Status.Should().Be(QueryStatus.Answered);
+    }
 }

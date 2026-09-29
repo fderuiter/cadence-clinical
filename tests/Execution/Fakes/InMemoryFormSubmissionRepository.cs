@@ -19,6 +19,9 @@ public sealed class InMemoryFormSubmissionRepository : IFormSubmissionRepository
 {
     private readonly ConcurrentDictionary<FormSubmissionId, FormSubmission> _store = new();
 
+    public Task<FormSubmission?> GetForUpdateAsync(FormSubmissionId id, CancellationToken cancellationToken) =>
+        GetByIdAsync(id, cancellationToken);
+
     public Task<FormSubmission?> GetByIdAsync(FormSubmissionId id, CancellationToken cancellationToken)
     {
         _store.TryGetValue(id, out var submission);

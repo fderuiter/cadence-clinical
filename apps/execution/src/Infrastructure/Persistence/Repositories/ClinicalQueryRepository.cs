@@ -38,6 +38,11 @@ public sealed class ClinicalQueryRepository(ExecutionDbContext context, Resilien
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<ClinicalQuery?> GetForUpdateAsync(QueryId id, CancellationToken cancellationToken) =>
+        await Context.ClinicalQueries
+            .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
     public async Task<ClinicalQuery?> GetActiveQueryOnCoordinatesAsync(
         StudyCode studyId,
         SubjectCode subjectId,

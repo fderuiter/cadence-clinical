@@ -29,6 +29,9 @@ public sealed class InMemoryClinicalQueryRepository : IClinicalQueryRepository
 
     private readonly ConcurrentDictionary<QueryId, ClinicalQuery> _store = new();
 
+    public Task<ClinicalQuery?> GetForUpdateAsync(QueryId id, CancellationToken cancellationToken) =>
+        GetByIdAsync(id, cancellationToken);
+
     public Task<ClinicalQuery?> GetByIdAsync(QueryId id, CancellationToken cancellationToken)
     {
         _store.TryGetValue(id, out var query);
