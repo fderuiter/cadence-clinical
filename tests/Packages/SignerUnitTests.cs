@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using Cadence.Security;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -29,6 +30,33 @@ public class CanonicalSignerTests
         ["echo"] = true,
         ["foxtrot"] = 1.5,
     };
+
+    /// <summary>
+    /// Known-answer vector produced by <c>canonicalSerialize</c> + HMAC-SHA256 in <c>packages/ui/signing.js</c>
+    /// (Node): HTML-sensitive characters, non-ASCII text and control characters must serialize and sign
+    /// identically in .NET and JavaScript.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void CanonicalSerialize_MatchesTheJavaScriptSignerForHtmlSensitiveAndNonAsciiText()
+    {
+        var payload = new JsonObject
+        {
+            ["note"] = "a<b & c>d 'quoted' \"dq\"",
+            ["site"] = "Zürich – São Paulo",
+            ["tab"] = "x\ty\nz",
+            ["n"] = 3,
+            ["arr"] = new JsonArray(new JsonObject { ["z"] = 1, ["a"] = "é" }),
+        };
+
+        string json = Encoding.UTF8.GetString(CanonicalSigner.CanonicalSerialize(payload));
+
+        json.Should().Be("{\"arr\":[{\"a\":\"é\",\"z\":1}],\"n\":3,\"note\":\"a<b & c>d 'quoted' \\\"dq\\\"\",\"site\":\"Zürich – São Paulo\",\"tab\":\"x\\ty\\nz\"}");
+        CanonicalSigner.GenerateCanonicalSignature(payload, "kat-secret-for-canonical-json-0001")
+            .Should().Be("e159c3f99891f02afe5fdbc4bf407b89c4c1d511cccf67c904f2ae49cd57dbb4");
+    }
 
     [Fact]
     public void CanonicalSerialize_SortsKeysRecursivelyAndKeepsArrayOrder()
