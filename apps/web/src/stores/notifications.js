@@ -59,12 +59,32 @@ const defaultTemplates = [
   },
 ];
 
+function getStorageKey(authStore) {
+  let store = authStore;
+  if (!store) {
+    try {
+      store = useAuthStore();
+    } catch {
+      // Pinia active store fallback
+    }
+  }
+  const persona = store?.currentPersona || "super_admin";
+  return `demo_notifications_${persona}`;
+}
+
 export const useNotificationsStore = defineStore("notifications", {
   state: () => {
     let savedNotifications = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        const stored = window.localStorage.getItem("demo_notifications");
+        let authStore = null;
+        try {
+          authStore = useAuthStore();
+        } catch {
+          // Store not active yet
+        }
+        const key = getStorageKey(authStore);
+        const stored = window.localStorage.getItem(key);
         if (stored) {
           savedNotifications = JSON.parse(stored);
         }
@@ -97,6 +117,7 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
         const isMocked =
           notificationsService.getNotifications &&
           (notificationsService.getNotifications._isMockFunction ||
@@ -105,15 +126,12 @@ export const useNotificationsStore = defineStore("notifications", {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem("demo_notifications");
+            const stored = window.localStorage.getItem(storageKey);
             if (stored) {
               list = JSON.parse(stored);
             } else {
               list = JSON.parse(JSON.stringify(defaultTemplates));
-              window.localStorage.setItem(
-                "demo_notifications",
-                JSON.stringify(list)
-              );
+              window.localStorage.setItem(storageKey, JSON.stringify(list));
             }
           } else {
             list = JSON.parse(JSON.stringify(defaultTemplates));
@@ -151,6 +169,7 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
         const isMocked =
           notificationsService.acknowledgeNotification &&
           (notificationsService.acknowledgeNotification._isMockFunction ||
@@ -160,7 +179,7 @@ export const useNotificationsStore = defineStore("notifications", {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem("demo_notifications");
+            const stored = window.localStorage.getItem(storageKey);
             if (stored) {
               list = JSON.parse(stored);
             }
@@ -183,10 +202,7 @@ export const useNotificationsStore = defineStore("notifications", {
           list[index] = updated;
 
           if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem(
-              "demo_notifications",
-              JSON.stringify(list)
-            );
+            window.localStorage.setItem(storageKey, JSON.stringify(list));
           }
 
           const activeIndex = this.notifications.findIndex((n) => n.id === id);
@@ -218,6 +234,7 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
         const isMocked =
           notificationsService.resolveNotification &&
           (notificationsService.resolveNotification._isMockFunction ||
@@ -226,7 +243,7 @@ export const useNotificationsStore = defineStore("notifications", {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem("demo_notifications");
+            const stored = window.localStorage.getItem(storageKey);
             if (stored) {
               list = JSON.parse(stored);
             }
@@ -249,10 +266,7 @@ export const useNotificationsStore = defineStore("notifications", {
           list[index] = updated;
 
           if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem(
-              "demo_notifications",
-              JSON.stringify(list)
-            );
+            window.localStorage.setItem(storageKey, JSON.stringify(list));
           }
 
           const activeIndex = this.notifications.findIndex((n) => n.id === id);
@@ -280,7 +294,9 @@ export const useNotificationsStore = defineStore("notifications", {
     },
     resetDemoStorage() {
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.removeItem("demo_notifications");
+        const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
+        window.localStorage.removeItem(storageKey);
       }
       this.notifications = JSON.parse(JSON.stringify(defaultTemplates));
     },
