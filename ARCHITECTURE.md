@@ -180,7 +180,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 | Build | `Directory.Build.props`, `Directory.Packages.props` | `net10.0`, nullable enabled, warnings as errors, Central Package Management |
 | Contracts | `packages/contracts` | Typed cross-service DTOs and HTTP clients |
 | DDF compiler | `packages/ddf` | USDM → DDF intermediate representation → CDISC ODM / XForms |
-| De-identification | `packages/deid` | In-process de-identification and canonical signing (ADR-2258) |
+| De-identification | `packages/deid` | In-process de-identification and canonical signing (ADR-2261) |
 
 ## 7. Migration path
 
