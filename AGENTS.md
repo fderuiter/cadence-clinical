@@ -281,7 +281,7 @@ Whenever a .NET 10 implementation supersedes a legacy Python architectural patte
 1. Update the legacy ADR status in `docs/adr/` to `* **Status:** Superseded by [ADR-XXXX](path-to-new-adr-placeholder.md)`.
 2. Add the standard `> [!NOTE]` supersession callout at the top.
 3. Annotate the entry in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
-4. Validate with `dotnet cadence check --parallel`.
+4. Validate with `dotnet cadence check`.
 5. Update `ARCHITECTURE.md` service status and `CONTEXT.md` domain concepts.
 
 ---
@@ -297,7 +297,7 @@ All microservices under `apps/` and packages under `packages/` are enrolled dire
 The repository quality gates and CI pipelines run native .NET 10 checks before any commit is created:
 
 1. `dotnet format Cadence.sln --verify-no-changes` verifies C# style, namespace ordering, and `.editorconfig` rules.
-2. `dotnet cadence check --parallel` validates all 21 native quality sentinels including ADR integrity, architecture drift, layer purity, and duplication.
+2. `dotnet cadence check` validates all 21 native quality sentinels including ADR integrity, architecture drift, layer purity, and duplication.
 3. `dotnet cadence fix --all` automatically formats C# code, aligns schemas, and indexes ADR records.
 
 ---

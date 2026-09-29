@@ -80,7 +80,7 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
    ```
 3. **Quality Sentinels (`run_command`)**:
    ```bash
-   dotnet cadence check --parallel
+   dotnet cadence check
    ```
 4. **Compliance Sync (`run_command`)**:
    ```bash

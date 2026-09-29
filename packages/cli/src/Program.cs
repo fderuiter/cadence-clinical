@@ -34,7 +34,7 @@ public static class Program
                 .WithDescription("Runs fast unit tests or testcontainer integration suites");
 
             config.AddCommand<DevCommand>("dev")
-                .WithDescription("Launches multi-service developer process orchestrator");
+                .WithDescription("Starts the .NET Aspire AppHost with all local services and datastores");
 
             config.AddCommand<FixCommand>("fix")
                 .WithDescription("Executes self-healing auto-formatting and ADR validation pipeline");

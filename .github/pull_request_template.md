@@ -1,37 +1,36 @@
-# Pull Request Verification
+# Pull Request
 
 ## Description
 
-Please describe the changes introduced by this pull request. Explain the business value, technical approach, and how it aligns with Cadence Clinical design system standards and core utility guidelines.
+What changes, why, and how. Link the issue this closes (for example `Closes #123`).
 
-## Verification & Audit Checklist
+## Checklist
 
-To ensure a unified user experience, prevent UI duplication, and maintain strict cryptographic/utility standards, authors and reviewers must verify compliance against the following checklist before merging.
+### Requirements & Architecture
 
-### 1. Issue Linking & Requirements Sync
+- [ ] **Issue linked:** the body closes or references its issue (`Closes #123`).
+- [ ] **Kernel alignment:** new domain concepts follow `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md`, or the PR says why they don't.
+- [ ] **ADR:** architectural decisions have an ADR (`dotnet cadence scaffold adr`), and `dotnet cadence check adrs` passes.
+- [ ] **Traceability:** tests for regulatory requirements carry `[GxPRequirement("PRD-SYS-xxx")]` and `@req:` tags, and the RTM is regenerated (`dotnet cadence gxp sync`) when they change.
 
-- [ ] **Automated Issue Closing Syntax:** Body contains explicit issue closing link (e.g. `Fixes #123`, `Closes #456`).
-- [ ] **Requirement & ADR Sync:** If this PR introduces scope or architectural changes, the corresponding PRD/SRS requirement (`PRD-SYS-xxx`) has been updated in the issue/code docstrings, and an ADR was scaffolded using `uv run python scripts/create_adr.py`.
-- [ ] **Documentation Portal Build:** Documentation links and VitePress build checks (`node scripts/build-docs.js`) pass without broken links.
+### Code Quality
 
-### 2. Reusable UI Components & Design System Audit
+- [ ] **Formatting:** `dotnet format Cadence.sln --verify-no-changes` passes, and `pnpm format` was run for frontend changes.
+- [ ] **Quality gates:** `dotnet cadence check` passes (the pre-commit hook runs it).
+- [ ] **No suppressions:** no new `NoWarn`, `#pragma warning disable`, skipped tests or `|| true` without a written justification.
+- [ ] **Shared code:** UI components and signing/hashing helpers come from the shared `ui` package and `Cadence.Security.Signing`, not new copies.
 
-- [ ] **No Hardcoded UI Layouts:** I have verified that this change does not introduce custom, hardcoded HTML/CSS or duplicate layout markups (e.g., radio grids, visit matrices) in individual applications.
-- [ ] **Shared UI Components:** All standard clinical inputs, radio grids, visit matrices, and rule editor containers are imported directly from the shared `ui` package.
-- [ ] **Design System Compliance:** The component styling, responsiveness, and accessibility guidelines conform directly to Cadence Clinical standards.
+### Testing
 
-### 3. Core Cryptographic & Utility Functions
+- [ ] `dotnet test Cadence.sln` passes locally.
+- [ ] `pnpm -r test` passes locally for frontend changes.
+- [ ] New behavior has tests (xUnit in `tests/`, Vitest next to the frontend package).
 
-- [ ] **Centralized Utilities:** I have verified that no duplicate/custom helper functions (e.g., SHA-256 hashing, gateway signatures, canonical serialization) have been introduced.
-- [ ] **Shared Utility Imports:** All cryptographic signature and hashing functions are imported from the centralized `ui` package (re-exporting from `signing.js`).
-- [ ] **21 CFR Part 11 Audit Trail Integrity:** Any ledger logging, audit stencils, or signature mechanisms utilize standardized, cryptographically validated block structures.
+### GxP & Security
 
-### 4. Unified Styling & Formatting Verification
+- [ ] Mutating entities keep their audit fields (`CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex`).
+- [ ] No secrets, PHI or real participant data in code, fixtures or logs.
 
-- [ ] **Code Formatting Executed:** I have run the workspace-wide formatter (`pnpm format` / `pnpm -r format` and `uv run ruff format .`) recursively across all directories, including the patient-facing portal (`apps/subject-portal`).
-- [ ] **Formatting Confirmed:** All modified and new files conform to ESLint, Prettier, and Ruff code formatting standards.
+### Documentation
 
-## Quality Assurance & Testing
-
-- [ ] Workspace-wide tests (`pnpm test` and `uv run pytest`) have been executed locally and all logic checks pass successfully.
-- [ ] New unit or integration tests have been added (under `tests/` or package-specific test directories) where applicable.
+- [ ] **Docs updated in this PR:** service/package README, `ARCHITECTURE.md`, `CONTEXT.md`, `docs/ENVIRONMENT_VARIABLES.md` and `.env.example` for new settings, `docs/cli.md` for CLI changes, and an ADR for new decisions (or N/A with the reason).

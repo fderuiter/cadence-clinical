@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -57,11 +57,12 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
-check: $(CADENCE_CLI) ## Run all 21 pre-push quality gates concurrently in parallel (dotnet cadence check --parallel)
-	$(CADENCE_CLI) check --parallel
+check: $(CADENCE_CLI) ## Run all 21 quality gates (dotnet cadence check)
+	$(CADENCE_CLI) check
 
 verify: $(CADENCE_CLI) ## Full verification — quality gates + all test suites (use before opening a PR)
-	$(CADENCE_CLI) check --parallel
+	$(CADENCE_CLI) check
+	$(CADENCE_CLI) test
 
 test: $(CADENCE_CLI) ## Run backend unit tests with coverage
 	$(CADENCE_CLI) test
@@ -97,9 +98,6 @@ db-seed: $(CADENCE_CLI) ## Populate multi-engine databases with realistic end-to
 
 db-status: $(CADENCE_CLI) ## Display multi-engine database sizes and available snapshots
 	$(CADENCE_CLI) db status
-
-regenerate-templates: $(CADENCE_CLI) ## Regenerate DOCX protocol templates programmatically
-	$(CADENCE_CLI) check --parallel
 
 ports: $(CADENCE_CLI) ## Check that all required service ports are free (dotnet cadence doctor)
 	$(CADENCE_CLI) doctor

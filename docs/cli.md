@@ -38,25 +38,12 @@ cadence doctor --json
 
 ### `cadence dev`
 
-Start and orchestrate local microservices with live reloading and interactive TUI.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<services>` | str | Names of services to start (default: start core services) | - |
-| `--host`, `-h` | str | Host interface to bind | `127.0.0.1` |
-| `--reload`, `--no-reload` | boolean | Enable live auto-reloading on file change | `true` |
-| `--service`, `-s` | str | Start a single specific microservice in foreground | - |
-| `--tui`, `-t` | boolean | Launch interactive Rich terminal cockpit UI with live logs and hotkeys | `false` |
+Start the local services, datastores and Aspire dashboard by running the .NET Aspire AppHost (`apps/apphost/src/Cadence.AppHost.csproj`). Requires Docker for the datastore containers. Stop with Ctrl+C.
 
 #### Usage Examples
 
 ```bash
 cadence dev
-cadence dev --service designer
-cadence dev --tui
-cadence dev --host 0.0.0.0 --no-reload
 ```
 
 ### `cadence test`

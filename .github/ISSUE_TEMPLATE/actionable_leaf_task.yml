@@ -81,9 +81,9 @@ body:
       options:
         - label: "Implementation complete across target file paths."
           required: true
-        - label: "Unit & integration tests written/updated in `tests/` (`uv run pytest`)."
+        - label: "Unit & integration tests written/updated in `tests/` (`dotnet test Cadence.sln`)."
           required: true
-        - label: "Code formatted and typed cleanly (`uv run ruff check .`)."
+        - label: "Code formatted and quality gates pass (`dotnet format Cadence.sln --verify-no-changes`, `dotnet cadence check`)."
           required: true
         - label: "GxP audit fields preserved/updated (`created_by`, `reason_for_change`, versioning) if models modified."
           required: true

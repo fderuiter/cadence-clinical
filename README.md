@@ -253,7 +253,7 @@ Run all commands using `dotnet cadence` (or `dotnet run --project packages/cli/s
 | :------------------------- | :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------- |
 | **Interactive Dev TUI**    | `dotnet cadence dev --tui`            | Launches multi-service interactive cockpit with live streaming logs and hotkey process restarts.                         |
 | **System Diagnostics**     | `dotnet cadence doctor --auto-fix`    | Validates host runtimes (.NET 10, Docker, Node), tests database connections, and auto-initializes schemas.               |
-| **Parallel Quality Gates** | `dotnet cadence check --parallel`     | Concurrently executes all 21 architectural sentinels (linters, import boundaries, ADR validator, ArchUnitNET).           |
+| **Quality Gates**          | `dotnet cadence check`                | Executes all 21 architectural sentinels (linters, import boundaries, ADR validator, ArchUnitNET).           |
 | **Automated Remediation**  | `dotnet cadence fix --all`            | Auto-remediates C# code formatting (`dotnet format`), aligns schemas, and indexes ADR records.                           |
 | **Fast Test Watcher**      | `dotnet cadence test --watch`         | Smart test watcher that re-runs only the minimal subset of tests affected by changed files.                              |
 | **Sub-Second Fast Tests**  | `dotnet cadence test --fast`          | Sub-second unit test runner executing against in-memory repository fakes, bypassing database containers.                 |
@@ -415,27 +415,27 @@ Our development trajectory is organized into four sequential strategic phases:
 
 ## ⚙️ CI/CD Quality Gates & Sentinel Enforcement
 
-Continuous Integration is strictly enforced on every branch and Pull Request via GitHub Actions (`.github/workflows/ci.yml`). PRs must pass **all 21 architecture sentinels and quality gates** before merging:
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and every push to `main`. A PR must pass these jobs before merging:
 
-1. **Clean Solution Build**: Zero compiler warnings or errors (`TreatWarningsAsErrors=true`) across all 38 .NET 10 projects.
-2. **Roslyn Analyzers & Code Formatting**: Enforces `.editorconfig`, file-scoped namespaces, and strict using directive ordering (`dotnet format --verify-no-changes`).
-3. **ArchUnitNET Layer Boundary Sentinels**: Verifies Domain has zero dependencies on presentation, database drivers, or external frameworks.
-4. **Zero Cross-Service DB Imports**: Enforces complete database isolation across all 18 microservice persistence layers.
-5. **Unit & Architecture Test Suite**: Over 1,200 unit and architectural tests passing with zero failures.
-6. **E2E Integration Test Suite**: Complete black-box HTTP endpoint verification against Testcontainers PostgreSQL and in-memory fallbacks.
-7. **Static Security Analysis (SAST)**: Security analyzers and secret prevention.
-8. **Code Duplication Sentinel**: Zero un-exempted duplicated code blocks exceeding 15 normalized lines (`dotnet cadence check`).
-9. **ADR Schema & Index Validation**: Verifies all ADRs follow schema standards and are indexed in `docs/adr/index.md`.
-10. **GxP Traceability Matrix (RTM) Sync**: Verifies 100% test-to-requirement docstring alignment without drift (`dotnet cadence gxp sync`).
+1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the 21 Cadence quality gates, architecture tests (ArchUnitNET), ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
+2. **Security and Vulnerability Audit**: static security audit, secret detection, DEID scan and NuGet/npm vulnerability audit.
+3. **.NET 10 C# xUnit Verification**: `dotnet build` with warnings as errors, then `dotnet test Cadence.sln`.
+4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
+5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `dotnet cadence gxp sync` and fails if they differ from the committed files.
+6. **Check for Merge Conflicts** (`conflict-check.yml`): fails when the PR conflicts with `main`.
+
+Pushes to `main` also run the accessibility E2E suite, the container build and Trivy scan, the production pipeline (uploads the generated GxP reports with SHA-256 checksums as release evidence), the branch ruleset sync and the docs deploy.
+
+The pre-commit hook in `.githooks/` runs the same formatting check and quality gates locally. See [CONTRIBUTING.md](CONTRIBUTING.md#ci-failure-runbook) for how to reproduce each failure.
 
 ### Essential Contributor Commands
 
 ```bash
-# Run all 21 architectural sentinels in parallel
-dotnet cadence check --parallel
+# Run all 21 quality gates
+dotnet cadence check
 
-# Automatically fix formatting, align schemas, and index ADRs
-dotnet cadence fix --all
+# Sync OpenAPI specs and API docs, and validate ADRs
+dotnet cadence fix
 
 # Run backend unit test suite
 dotnet cadence test --fast

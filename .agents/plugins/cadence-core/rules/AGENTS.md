@@ -16,5 +16,5 @@ These guidelines are automatically applied when the `cadence-core` plugin is act
 - Mandatory 21 CFR Part 11 traceability: XML doc comments (`/// @req:PRD-SYS-xxx`) and `[GxPRequirement("PRD-SYS-xxx")]` attributes on xUnit tests, synced via `dotnet cadence gxp sync`.
 - Architectural governance and service patterns documented authoritatively in `ARCHITECTURE.md` and `docs/adr/`.
 - All microservices under `apps/` and packages under `packages/` are enrolled in `Cadence.sln` under Central Package Management (`Directory.Packages.props`).
-- Native pre-commit and CI enforcement via `dotnet cadence check --parallel` running all 21 quality sentinels.
+- Native pre-commit and CI enforcement via `dotnet cadence check` running all 21 quality sentinels.
 - Markdown & API Docs formatting: Wrap endpoint paths containing route parameters in code backticks in headings (`### `GET` `/api/v1/resource/{id}``) to prevent VitePress `markdown-it-anchor` custom ID collisions.

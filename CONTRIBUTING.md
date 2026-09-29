@@ -57,20 +57,35 @@ Runs and monitors all 20+ active microservices (`gateway`, `designer`, `executio
 
 Inspects system prerequisites, ports, databases, and environment configuration. Passing `--auto-fix` automatically provisions missing local SQLite schemas (`econsent.db`, `eisf.db`, `interop.db`, `notifications.db`, `safety.db`, `tickets.db`).
 
-### 4. Quality Sentinel Check (`cadence check --parallel`)
+### 4. Quality Sentinel Check (`cadence check`)
 
-Executes all 10 architecture sentinels and quality gates concurrently, identical to the GitHub Actions CI pipeline:
+`dotnet cadence check` runs all 21 quality gates. The pre-commit hook runs it, and CI runs each gate as well. Run one gate with `dotnet cadence check <gate>`; an unknown gate name fails.
 
-1. `path-patterns`: Validates directory patterns & subfolder whitelists
-2. `ruff-lint`: Lints Python code against GxP rules
-3. `ruff-format`: Verifies Python code formatting
-4. `secrets-scan`: Scans for hardcoded credentials
-5. `adr-validation`: Asserts ADR index consistency
-6. `markdown-validation`: Validates links and CLI docs
-7. `security-audit`: Runs Bandit static security analysis
-8. `import-boundaries`: AST validation of microservice isolation boundaries
-9. `architecture-drift`: Prevents documentation drift in system diagrams
-10. `contract-verification`: Verifies Hexagonal port/adapter contracts and MyPy structural type compliance
+| Gate (short name)     | What it checks                                                      |
+| --------------------- | ------------------------------------------------------------------- |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig`                       |
+| `dotnet-format-style` | Roslyn code-style rules                                             |
+| `clean-secrets`       | Normalizes `.secrets.baseline`                                      |
+| `duplication`         | Duplicated code blocks over 15 normalized lines                     |
+| `cli-docs`            | `docs/cli.md` matches the CLI's commands                            |
+| `adrs`                | ADR schema and `docs/adr/index.md` consistency                      |
+| `arch-drift`          | Architecture diagrams match the solution                            |
+| `sanitizer`           | Requirement tag prefixes in tests                                   |
+| `markdown`            | Markdown structure and links                                        |
+| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md` |
+| `readmes`             | Each project has a README                                           |
+| `imports`             | No cross-service persistence references                             |
+| `security`            | Static security audit and secret patterns                           |
+| `deid`                | PHI/PII patterns in source and fixtures                             |
+| `openapi`             | OpenAPI specs are regenerated and staged                            |
+| `api-clients`         | Frontend API clients match the OpenAPI contracts                    |
+| `schema-doc`          | Schema documentation is regenerated and staged                      |
+| `path-patterns`       | Files live in allowed directories                                   |
+| `contracts`           | Hexagonal port/adapter contracts                                    |
+| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`) |
+| `vulnerabilities`     | NuGet and npm dependency vulnerabilities                            |
+
+`dotnet cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
 
 ---
 
@@ -118,18 +133,24 @@ headers = create_test_auth_headers(
 
 ## CI Failure Runbook
 
-Use this table to resolve CI errors without digging through logs:
+CI runs in `.github/workflows/ci.yml`. Every check can be reproduced locally with the command in the last column.
 
-| CI Error Message                                           | Root Cause                                                                               | Fix                                                                                                            |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `I001 Import block is un-sorted or un-formatted`           | New symbol added to an import block without maintaining alphabetical order               | `make fix` — ruff auto-sorts all import blocks                                                                 |
-| `E712 Avoid equality comparisons to True/False`            | Used `column == True` instead of SQLAlchemy `.is_(True)`                                 | See [SQLAlchemy Boolean Filter Pattern](#sqlalchemy-boolean-filter-pattern) below                              |
-| `GxP compliance documentation is out of sync`              | RTM docs not regenerated after test changes                                              | `make sync-gxp` — runs tests → generates RTM → stages docs                                                     |
-| `Found N errors` (ruff, no `[*]`)                          | Manual fix needed; error is not auto-fixable                                             | Check error code in ruff docs, fix manually, then `make fix`                                                   |
-| `Coverage < 80%`                                           | New code paths not covered by tests                                                      | Add tests for the uncovered lines shown in the coverage report                                                 |
-| `Schema validation failed or namespace collision detected` | Prefix mismatch, duplicate model definitions, or naming collision in microservice models | Follow the [Schema Validation Failures](#schema-validation-failures) guidelines to prefix or rename your model |
-| `ADR validation failed`                                    | Architectural change without a matching ADR file                                         | `make adr` to scaffold an ADR, then fill in the rationale                                                      |
-| `Bandit: high severity issue found`                        | Security-sensitive code pattern detected                                                 | Review the flagged line; add `# nosec B...` with justification if intentional                                  |
+| Failing job or step                                            | Usual cause                                                                       | Reproduce and fix locally                                                                       |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Style › Verify .NET C# code formatting                         | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                        |
+| Style › Run frontend style and lint                            | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                |
+| Style › Run Cadence quality sentinels, or a single gate step   | One of the 21 gates failed; the log names it                                      | `dotnet cadence check <gate>`                                                                   |
+| Style › Run architecture tests                                 | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests.csproj`                                            |
+| Style › Run Hadolint or ShellCheck                             | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                  |
+| Style › Verify schema documentation freshness or OpenAPI drift | Generated docs or specs not regenerated                                           | `dotnet cadence fix`, then commit the regenerated files                                         |
+| Style › Run ADR validation                                     | ADR missing, malformed or not indexed                                             | `dotnet cadence scaffold adr`, then `dotnet cadence check adrs`                                 |
+| Security › dependency audit                                    | A vulnerable NuGet or npm package                                                 | `dotnet cadence check vulnerabilities`; upgrade in `Directory.Packages.props` or `package.json` |
+| Frontend Unit Tests                                            | A Vitest failure                                                                  | `pnpm -r test`                                                                                  |
+| .NET 10 C# xUnit Verification                                  | A build warning (warnings are errors) or an xUnit failure                         | `dotnet build Cadence.sln` and `dotnet test Cadence.sln`                                        |
+| GxP Compliance › Assert No Documentation Git Diff              | RTM docs not regenerated after test changes                                       | `dotnet cadence gxp sync`, then commit `docs/SDLC/`                                             |
+| Check for Merge Conflicts                                      | The PR conflicts with `main`                                                      | `git merge origin/main` and resolve                                                             |
+
+Jobs that only run on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline (GxP release evidence), the ruleset sync and the docs deploy.
 
 ---
 
@@ -286,14 +307,14 @@ GxP compliance documentation is out of sync with the current system state!
 ### How to fix it
 
 ```bash
-make sync-gxp
-# Equivalent: pnpm sync-gxp
+dotnet cadence gxp sync
+# Equivalent: make sync-gxp or pnpm sync-gxp
 ```
 
-This runs three steps automatically:
+This runs three steps:
 
-1. `dotnet test Cadence.sln --logger "trx;LogFileName=report_dotnet.trx"`
-2. `python scripts/generate_rtm.py --report report_dotnet.trx`
+1. `dotnet test Cadence.sln --configuration Release --logger "trx;LogFileName=report_dotnet.trx"`
+2. Regenerates the RTM and IQ/OQ/PQ report from the TRX results.
 3. `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
 
 Then commit and push:
@@ -306,11 +327,11 @@ git push
 ### Advanced options
 
 ```bash
-# Validate-only (no test run, no file changes) — useful for a quick check
-python scripts/sync_gxp.py --dry-run
+# Validate only (no test run, no file changes)
+dotnet cadence gxp sync --dry-run
 
-# Full sync AND auto-commit in one step
-python scripts/sync_gxp.py --commit
+# Full sync and auto-commit in one step
+dotnet cadence gxp sync --commit
 ```
 
 ### Mapping requirement IDs in tests
@@ -392,42 +413,23 @@ See [Tier 2](#tier-2--architecture-decisions-adr) above.
 
 ## 7. Pre-commit Hooks Reference
 
-Hooks are installed automatically by `make setup`. They run at two stages:
+`scripts/setup_wizard.sh` points git at `.githooks/` (`git config core.hooksPath .githooks`). The `pre-commit` hook (`pre-commit.ps1` on Windows) runs:
 
-### On `git commit`
+1. `dotnet format Cadence.sln --verify-no-changes`
+2. `dotnet cadence check` (all 21 gates above)
 
-| Hook                      | What it checks              | Auto-fix?                   |
-| ------------------------- | --------------------------- | --------------------------- |
-| `ruff`                    | Python lint (E, F, I rules) | ✅ Yes (`--fix`)            |
-| `ruff-format`             | Python formatting           | ✅ Yes                      |
-| `trailing-whitespace`     | Trailing whitespace         | ✅ Yes                      |
-| `end-of-file-fixer`       | Missing newline at EOF      | ✅ Yes                      |
-| `check-yaml`              | YAML syntax                 | ❌ Manual                   |
-| `validate-adrs`           | ADR index consistency       | ❌ Manual (`make adrs:fix`) |
-| `check-markdown-links`    | Broken doc links            | ❌ Manual                   |
-| `detect-code-duplication` | High code similarity        | ❌ Manual                   |
-| `deid-compliance-scan`    | PII/PHI in source files     | ❌ Manual                   |
-
-### On `git push`
-
-| Hook               | What it checks         | Fix                            |
-| ------------------ | ---------------------- | ------------------------------ |
-| `gxp-rtm-validate` | GxP docs up to date    | `make sync-gxp`                |
-| `bandit`           | Python security issues | Manual (or `# nosec`)          |
-| `detect-secrets`   | Secrets in source      | Remove secret, update baseline |
-
-### Running hooks manually
+There is no pre-push hook. The traceability matrix is checked in CI by the compliance job; run `dotnet cadence gxp sync` before pushing test changes.
 
 ```bash
-# Run all hooks on all files
-uv run pre-commit run --all-files
+# Run the same checks without committing
+dotnet format Cadence.sln --verify-no-changes
+dotnet cadence check
 
-# Run a specific hook
-uv run pre-commit run ruff --all-files
-
-# Skip a single hook for one commit (use sparingly)
-SKIP=gxp-rtm-validate git push
+# Enable the hooks by hand if setup was skipped
+git config core.hooksPath .githooks
 ```
+
+Don't bypass the hook with `--no-verify`; fix the failing gate instead.
 
 ---
 
