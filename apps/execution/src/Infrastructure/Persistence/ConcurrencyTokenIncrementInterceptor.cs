@@ -39,11 +39,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// domain data and is explicitly configured <c>IsConcurrencyToken(false)</c>, see MIG-SUBJ-012 — this sets
 /// that property's current value to <i>one more than its own current original value</i> (not one more than
 /// whatever its current value happens to be). Computing from <c>OriginalValue</c> rather than
-/// <c>CurrentValue</c> makes this idempotent/safe to re-run: if a
-/// <see cref="Repositories.SaveChangesResiliencePipelineFactory"/> retry reloads an entry's original values
-/// from the database between attempts (the documented "client wins" conflict-resolution reload), the next
-/// <c>SavingChangesAsync</c> pass recomputes the token relative to that freshly-reloaded baseline rather than
-/// compounding on top of a value this interceptor already wrote for a failed attempt.
+/// <c>CurrentValue</c> makes this idempotent/safe to re-run: when a save fails transiently and
+/// <see cref="Repositories.SaveChangesResiliencePipelineFactory"/> retries it, the next
+/// <c>SavingChangesAsync</c> pass recomputes the same token rather than compounding on a value this
+/// interceptor already wrote for the failed attempt. A concurrency conflict is never retried (#4766): the
+/// stale write is rejected with 409.
 /// </para>
 ///
 /// <para>

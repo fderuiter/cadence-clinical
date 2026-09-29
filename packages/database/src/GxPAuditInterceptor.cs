@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 
@@ -47,7 +48,8 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
             }
             else if (entry.State == EntityState.Modified && entry.Entity is AggregateRootBase modifiedAgg)
             {
-                modifiedAgg.VersionIndex++;
+                // From the loaded value, not the current one, so a retried save does not count twice.
+                modifiedAgg.VersionIndex = (long)(entry.Property(nameof(IGxPAuditable.VersionIndex)).OriginalValue ?? 0L) + 1;
             }
         }
 
@@ -56,6 +58,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
         // AuditActions label the matching entity's entry; any left over become action-only entries.
         var actions = AuditActions.Drain(context);
         var chain = new AuditChainCursor(context);
+        InFlight.AddOrUpdate(context, new SaveAttempt(actions.ToList(), chain.Added));
 
         // Snapshot to a list before mutating the change tracker (context.Add below).
         var auditableEntries = context.ChangeTracker.Entries<IGxPAuditable>()
@@ -97,6 +100,53 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    public override ValueTask<int> SavedChangesAsync(
+        SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
+    {
+        if (eventData.Context is not null)
+        {
+            InFlight.Remove(eventData.Context);
+        }
+
+        return base.SavedChangesAsync(eventData, result, cancellationToken);
+    }
+
+    /// <summary>
+    /// A failed save leaves its changes pending, and the caller may retry it. Undo this attempt's audit work so
+    /// the retry writes each entry once: detach the entries it added and put its semantic actions back.
+    /// </summary>
+    public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData, CancellationToken cancellationToken = default)
+    {
+        RollBackAttempt(eventData.Context);
+        return base.SaveChangesFailedAsync(eventData, cancellationToken);
+    }
+
+    public override Task SaveChangesCanceledAsync(DbContextEventData eventData, CancellationToken cancellationToken = default)
+    {
+        RollBackAttempt(eventData.Context);
+        return base.SaveChangesCanceledAsync(eventData, cancellationToken);
+    }
+
+    private static readonly ConditionalWeakTable<DbContext, SaveAttempt> InFlight = new();
+
+    private sealed record SaveAttempt(List<AuditAction> Actions, List<AuditLogEntry> AddedEntries);
+
+    private static void RollBackAttempt(DbContext? context)
+    {
+        if (context is null || !InFlight.TryGetValue(context, out SaveAttempt? attempt))
+        {
+            return;
+        }
+
+        InFlight.Remove(context);
+        foreach (AuditLogEntry added in attempt.AddedEntries)
+        {
+            context.Entry(added).State = EntityState.Detached;
+        }
+
+        AuditActions.Restore(context, attempt.Actions);
     }
 
     /// <summary>
@@ -151,6 +201,8 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
     {
         private readonly Dictionary<string, string> _tips = new(StringComparer.Ordinal);
 
+        public List<AuditLogEntry> Added { get; } = [];
+
         public async Task AppendAsync(AuditLogEntryDraft draft, CancellationToken cancellationToken)
         {
             if (!_tips.TryGetValue(draft.EntityName, out string? predecessorHash))
@@ -170,7 +222,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
                 draft.EntityName, draft.EntityId, draft.Action, draft.Timestamp, draft.UserId,
                 draft.VersionIndex, draft.ChangesJson, predecessorHash);
 
-            context.Add(new AuditLogEntry
+            var logEntry = new AuditLogEntry
             {
                 EntityName = draft.EntityName,
                 EntityId = draft.EntityId,
@@ -182,9 +234,11 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
                 ChangesJson = draft.ChangesJson,
                 PredecessorHash = predecessorHash,
                 BlockHash = blockHash,
-            });
+            };
+            context.Add(logEntry);
 
             _tips[draft.EntityName] = blockHash;
+            Added.Add(logEntry);
         }
     }
 
