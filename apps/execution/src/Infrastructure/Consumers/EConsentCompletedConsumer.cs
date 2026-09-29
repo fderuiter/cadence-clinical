@@ -36,7 +36,20 @@ public static partial class EConsentCompletedConsumerLoggingExtensions
         Level = LogLevel.Information,
         Message = "Backfilled consent record for subject '{SubjectId}', study '{StudyId}', version index {VersionIndex}")]
     public static partial void LogConsentRecordBackfilled(this ILogger logger, string subjectId, string studyId, int versionIndex);
+
+    [LoggerMessage(
+        EventId = 2005,
+        Level = LogLevel.Error,
+        Message = "Rejected consent event without a signed time: SubjectId='{SubjectId}', StudyId='{StudyId}'")]
+    public static partial void LogConsentEventMissingSignedAt(this ILogger logger, string subjectId, string studyId);
 }
+
+/// <summary>
+/// Thrown for a consent event that cannot be recorded truthfully, such as one without the time the participant
+/// signed. MassTransit moves the message to the error queue, where it can be corrected and replayed.
+/// @req:PRD-SUB-001
+/// </summary>
+public sealed class ConsentEventRejectedException(string message) : InvalidOperationException(message);
 
 /// <summary>
 /// MassTransit replacement for the legacy fire-and-forget Redis pub/sub auto-enrollment subscriber
@@ -89,6 +102,16 @@ public sealed class EConsentCompletedConsumer(
             return;
         }
 
+        // The consent's valid time is when the participant signed, which only the eConsent event knows. It is
+        // never replaced with the time this consumer happens to run (#4769); without it the message is rejected
+        // to the error queue before anything is written.
+        if (msg.SignedAt is not { } signedAt)
+        {
+            logger?.LogConsentEventMissingSignedAt(msg.SubjectId, msg.StudyId);
+            throw new ConsentEventRejectedException(
+                $"Consent event for subject '{msg.SubjectId}' in study '{msg.StudyId}' has no SignedAt.");
+        }
+
         if (logger != null)
         {
             logger.LogConsentEventProcessing(msg.SubjectId, msg.StudyId);
@@ -133,7 +156,7 @@ public sealed class EConsentCompletedConsumer(
             .ConfigureAwait(false);
         if (!consentExists)
         {
-            var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: clock.UtcNow,
+            var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: signedAt,
                 requiresReconsent: false, isPaperOverride: false, clock);
             await consents.AddAsync(consent, context.CancellationToken).ConfigureAwait(false);
             await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "INSERT",

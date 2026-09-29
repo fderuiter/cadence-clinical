@@ -1020,6 +1020,9 @@ public sealed class AesGcmDemographicsEncryptionService(IOptions<DemographicsEnc
 
 ### 5.2 PubSub Auto-Enrollment → MassTransit transactional outbox (Rule 8 / MIG-06)
 
+> [!NOTE]
+> **Superseded in part by #4769 (2026-09-29).** `EConsentCompletedEvent` now carries `DateTimeOffset? SignedAt`, the time the participant signed. The consumer records it as `IcfSignedDate` instead of `clock.UtcNow`, so a delayed message keeps the true signed time. An event without `SignedAt` is logged and rejected with `ConsentEventRejectedException` before anything is written, and MassTransit moves it to the error queue. The sketch below predates this change.
+
 ```csharp
 namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 

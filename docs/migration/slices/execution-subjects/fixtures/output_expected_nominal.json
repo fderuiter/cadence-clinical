@@ -203,7 +203,7 @@
     {
       "scenario_id": "SCN-009-A",
       "status": "n/a (background handler, not HTTP)",
-      "note": "Since #4767 the consumer runs as the named service account svc:econsent-consumer; the legacy subscriber wrote user_id 'system-pubsub'.",
+      "note": "Since #4767 the consumer runs as the named service account svc:econsent-consumer; the legacy subscriber wrote user_id 'system-pubsub'. Since #4769 icf_signed_date is the event's signed_at, not the time the consumer ran; an event without signed_at is rejected to the error queue.",
       "db_assertions": {
         "clinical_subject": {
           "subject_id": "SUBJ-AUTO-01",
@@ -215,6 +215,7 @@
         "subject_consent": {
           "subject_id": "SUBJ-AUTO-01",
           "icf_signed": true,
+          "icf_signed_date": "2026-01-15T10:30:00+00:00",
           "is_paper_override": false,
           "requires_reconsent": false
         }

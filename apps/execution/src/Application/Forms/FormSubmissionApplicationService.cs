@@ -12,10 +12,10 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Forms.Errors;
 using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
-using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -32,7 +32,6 @@ public sealed class FormSubmissionApplicationService(
     IFormSubmissionRepository formSubmissionRepository,
     IObservationRepository observationRepository,
     IUcumNormalizationService ucumService,
-    IClock clock,
     ICurrentAuditContextAccessor auditContextAccessor) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
@@ -125,7 +124,11 @@ public sealed class FormSubmissionApplicationService(
         // Extract and persist discrete observations from structured payload
         if (!string.IsNullOrWhiteSpace(request.Payload))
         {
-            await ExtractAndPersistObservationsAsync(submission, request.Payload, cancellationToken).ConfigureAwait(false);
+            var persisted = await PersistObservationsAsync(submission, request.Payload, cancellationToken).ConfigureAwait(false);
+            if (persisted.IsFailure)
+            {
+                return persisted.Error!;
+            }
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -185,7 +188,11 @@ public sealed class FormSubmissionApplicationService(
 
         if (!string.IsNullOrWhiteSpace(newPayload))
         {
-            await ExtractAndPersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
+            var persisted = await PersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
+            if (persisted.IsFailure)
+            {
+                return persisted.Error!;
+            }
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -340,17 +347,38 @@ public sealed class FormSubmissionApplicationService(
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private async Task ExtractAndPersistObservationsAsync(
-        FormSubmission submission,
-        string payloadJson,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Builds the discrete observations a payload carries. Each needs a valid time: an item's own
+    /// <c>observation_date</c>, else the payload's top-level <c>observation_date</c>. A payload that yields
+    /// observations without one is rejected rather than stamped with the time it was recorded (#4769).
+    /// Payloads that are not JSON objects yield no observations.
+    /// </summary>
+    private Result<List<ClinicalObservation>> ExtractObservations(FormSubmission submission, string payloadJson)
     {
+        JsonDocument doc;
         try
         {
-            using var doc = JsonDocument.Parse(payloadJson);
-            var root = doc.RootElement;
+            doc = JsonDocument.Parse(payloadJson);
+        }
+        catch (JsonException)
+        {
+            return new List<ClinicalObservation>();
+        }
 
-            if (root.ValueKind != JsonValueKind.Object) return;
+        using (doc)
+        {
+            var root = doc.RootElement;
+            var observations = new List<ClinicalObservation>();
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return observations;
+            }
+
+            var payloadDate = ReadObservationDate(root);
+            if (payloadDate.IsFailure)
+            {
+                return payloadDate.Error!;
+            }
 
             // Check if structured 'observations' array is present
             if (root.TryGetProperty("observations", out var obsArray) && obsArray.ValueKind == JsonValueKind.Array)
@@ -358,6 +386,17 @@ public sealed class FormSubmissionApplicationService(
                 foreach (var item in obsArray.EnumerateArray())
                 {
                     if (item.ValueKind != JsonValueKind.Object) continue;
+
+                    var itemDate = ReadObservationDate(item);
+                    if (itemDate.IsFailure)
+                    {
+                        return itemDate.Error!;
+                    }
+
+                    if ((itemDate.Value ?? payloadDate.Value) is not { } observationDate)
+                    {
+                        return ObservationErrors.ObservationDateRequired();
+                    }
 
                     string domainStr = item.TryGetProperty("domain", out var d) ? d.GetString() ?? "VS" : "VS";
                     string testCodeStr = item.TryGetProperty("test_code", out var tc) ? tc.GetString() ?? "UNKNOWN" : "UNKNOWN";
@@ -372,29 +411,7 @@ public sealed class FormSubmissionApplicationService(
 
                     string? valStr = item.TryGetProperty("value_string", out var vs) ? vs.GetString() : val?.ToString(CultureInfo.InvariantCulture);
 
-                    var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(val, unit);
-
-                    var obsResult = ClinicalObservation.Create(
-                        studyId: submission.StudyId,
-                        subjectId: submission.SubjectId,
-                        domain: new DomainCode(domainStr),
-                        testCode: new TestCode(testCodeStr),
-                        testName: testNameStr,
-                        value: val,
-                        valueString: valStr,
-                        unit: unit,
-                        observationDate: clock.UtcNow.DateTime,
-                        siteId: submission.SiteId,
-                        visitId: submission.VisitId,
-                        protocolVersionTag: submission.ProtocolVersion,
-                        protocolVersionIndex: 1,
-                        normalizedValue: normVal,
-                        normalizedUnit: normUnit);
-
-                    if (obsResult.IsSuccess && obsResult.Value is not null)
-                    {
-                        await observationRepository.AddAsync(obsResult.Value, cancellationToken).ConfigureAwait(false);
-                    }
+                    AddIfValid(observations, submission, new DomainCode(domainStr), new TestCode(testCodeStr), testNameStr, observationDate, val, valStr, unit);
                 }
             }
             else
@@ -405,6 +422,11 @@ public sealed class FormSubmissionApplicationService(
                     string key = prop.Name.ToLowerInvariant().Replace(".", "_").Replace("-", "_");
                     if (FieldMapping.TryGetValue(key, out var mapping))
                     {
+                        if (payloadDate.Value is not { } observationDate)
+                        {
+                            return ObservationErrors.ObservationDateRequired();
+                        }
+
                         double? val = null;
                         if (prop.Value.ValueKind == JsonValueKind.Number)
                         {
@@ -416,38 +438,89 @@ public sealed class FormSubmissionApplicationService(
                             val = parsed;
                         }
 
-                        string? valStr = prop.Value.GetString() ?? val?.ToString(CultureInfo.InvariantCulture);
-                        var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(val, mapping.Unit);
+                        string? valStr = prop.Value.ValueKind == JsonValueKind.String
+                            ? prop.Value.GetString()
+                            : val?.ToString(CultureInfo.InvariantCulture);
 
-                        var obsResult = ClinicalObservation.Create(
-                            studyId: submission.StudyId,
-                            subjectId: submission.SubjectId,
-                            domain: new DomainCode(mapping.Domain),
-                            testCode: new TestCode(mapping.TestCode),
-                            testName: mapping.TestName,
-                            value: val,
-                            valueString: valStr,
-                            unit: mapping.Unit,
-                            observationDate: clock.UtcNow.DateTime,
-                            siteId: submission.SiteId,
-                            visitId: submission.VisitId,
-                            protocolVersionTag: submission.ProtocolVersion,
-                            protocolVersionIndex: 1,
-                            normalizedValue: normVal,
-                            normalizedUnit: normUnit);
-
-                        if (obsResult.IsSuccess && obsResult.Value is not null)
-                        {
-                            await observationRepository.AddAsync(obsResult.Value, cancellationToken).ConfigureAwait(false);
-                        }
+                        AddIfValid(observations, submission, new DomainCode(mapping.Domain), new TestCode(mapping.TestCode), mapping.TestName, observationDate, val, valStr, mapping.Unit);
                     }
                 }
             }
+
+            return observations;
         }
-        catch
+    }
+
+    private void AddIfValid(
+        List<ClinicalObservation> observations,
+        FormSubmission submission,
+        DomainCode domain,
+        TestCode testCode,
+        string testName,
+        DateTime observationDate,
+        double? value,
+        string? valueString,
+        string? unit)
+    {
+        var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(value, unit);
+        var obsResult = ClinicalObservation.Create(
+            studyId: submission.StudyId,
+            subjectId: submission.SubjectId,
+            domain: domain,
+            testCode: testCode,
+            testName: testName,
+            observationDate: observationDate,
+            value: value,
+            valueString: valueString,
+            unit: unit,
+            siteId: submission.SiteId,
+            visitId: submission.VisitId,
+            protocolVersionTag: submission.ProtocolVersion,
+            protocolVersionIndex: 1,
+            normalizedValue: normVal,
+            normalizedUnit: normUnit);
+
+        if (obsResult.IsSuccess && obsResult.Value is not null)
         {
-            // Ignore non-fatal payload parsing errors in observation extraction
+            observations.Add(obsResult.Value);
         }
+    }
+
+    /// <summary>Reads an optional ISO 8601 <c>observation_date</c> property as UTC.</summary>
+    private static Result<DateTime?> ReadObservationDate(JsonElement element)
+    {
+        if (!element.TryGetProperty("observation_date", out var property) || property.ValueKind == JsonValueKind.Null)
+        {
+            return (DateTime?)null;
+        }
+
+        string raw = property.ValueKind == JsonValueKind.String ? property.GetString() ?? string.Empty : property.GetRawText();
+        if (property.ValueKind != JsonValueKind.String
+            || !DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+        {
+            return ObservationErrors.InvalidObservationDate(raw);
+        }
+
+        return (DateTime?)parsed.UtcDateTime;
+    }
+
+    private async Task<Result<bool>> PersistObservationsAsync(
+        FormSubmission submission,
+        string payloadJson,
+        CancellationToken cancellationToken)
+    {
+        var extracted = ExtractObservations(submission, payloadJson);
+        if (extracted.IsFailure)
+        {
+            return extracted.Error!;
+        }
+
+        foreach (var observation in extracted.Value!)
+        {
+            await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
+        }
+
+        return true;
     }
 
     private static FormSubmissionResponse MapToResponse(FormSubmission f) =>

@@ -540,6 +540,9 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
             : null;
         string versionTag = payload.GetProperty("version_tag").GetString()!;
         int versionIndex = payload.GetProperty("version_index").GetInt32();
+        DateTimeOffset? signedAt = payload.TryGetProperty("signed_at", out JsonElement signedAtEl) && signedAtEl.ValueKind == JsonValueKind.String
+            ? DateTimeOffset.Parse(signedAtEl.GetString()!, CultureInfo.InvariantCulture)
+            : null;
 
         using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var subjects = scope.ServiceProvider.GetRequiredService<ISubjectRepository>();
@@ -561,7 +564,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         await harness.Start();
         try
         {
-            await harness.Bus.Publish(new EConsentCompletedEvent(subjectId, studyId, siteId, versionTag, versionIndex), ct);
+            await harness.Bus.Publish(new EConsentCompletedEvent(subjectId, studyId, siteId, versionTag, versionIndex, signedAt), ct);
             (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue(
                 $"scenario '{scenario.ScenarioId}' expects the consumer to complete without faulting");
         }
@@ -1724,6 +1727,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
                         {
                             subject_id = consent.SubjectCode.Value,
                             icf_signed = consent.IcfSigned,
+                            icf_signed_date = consent.IcfSignedDate?.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture),
                             is_paper_override = consent.IsPaperOverride,
                             requires_reconsent = consent.RequiresReconsent,
                         },
