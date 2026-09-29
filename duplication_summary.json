@@ -2,6 +2,45 @@
   "duplicates": [
     {
       "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1969,
+        "end": 1983
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1576,
+        "end": 1590
+      },
+      "preview": "        if (\n          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1970,
+        "end": 1984
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1577,
+        "end": 1591
+      },
+      "preview": "          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1971,
+        "end": 1985
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1578,
+        "end": 1592
+      },
+      "preview": "          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n            state.syncRetryInfo.sequenceNumber === undefined ||\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 9,
         "end": 29
@@ -2615,6 +2654,110 @@
     },
     {
       "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 472,
+        "end": 486
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 73,
+        "end": 87
+      },
+      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 473,
+        "end": 487
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 74,
+        "end": 88
+      },
+      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 508,
+        "end": 522
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 155,
+        "end": 169
+      },
+      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 509,
+        "end": 523
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 156,
+        "end": 170
+      },
+      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 510,
+        "end": 524
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 157,
+        "end": 171
+      },
+      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 511,
+        "end": 525
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 158,
+        "end": 172
+      },
+      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 512,
+        "end": 526
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 159,
+        "end": 173
+      },
+      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 513,
+        "end": 527
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 160,
+        "end": 174
+      },
+      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/web/src/views/CtmsView.vue",
         "start": 3349,
         "end": 3367
@@ -2963,110 +3106,6 @@
         "end": 438
       },
       "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 472,
-        "end": 486
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 73,
-        "end": 87
-      },
-      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 473,
-        "end": 487
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 74,
-        "end": 88
-      },
-      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 508,
-        "end": 522
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 155,
-        "end": 169
-      },
-      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 509,
-        "end": 523
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 156,
-        "end": 170
-      },
-      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 510,
-        "end": 524
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 157,
-        "end": 171
-      },
-      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 511,
-        "end": 525
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 158,
-        "end": 172
-      },
-      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 512,
-        "end": 526
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 159,
-        "end": 173
-      },
-      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 513,
-        "end": 527
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 160,
-        "end": 174
-      },
-      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
     },
     {
       "loc1": {
@@ -3746,188 +3785,6 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1094,
-        "end": 1117
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 446,
-        "end": 470
-      },
-      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1254,
-        "end": 1272
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 566,
-        "end": 584
-      },
-      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1255,
-        "end": 1273
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 567,
-        "end": 585
-      },
-      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 30,
-        "end": 45
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 6,
-        "end": 21
-      },
-      "preview": "    \u003C/div\u003E\n    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 32,
-        "end": 46
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 8,
-        "end": 22
-      },
-      "preview": "    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 33,
-        "end": 47
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 9,
-        "end": 23
-      },
-      "preview": "    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 34,
-        "end": 48
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 10,
-        "end": 24
-      },
-      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 35,
-        "end": 49
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 11,
-        "end": 25
-      },
-      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 36,
-        "end": 50
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 12,
-        "end": 26
-      },
-      "preview": "        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 37,
-        "end": 51
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 13,
-        "end": 27
-      },
-      "preview": "        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 38,
-        "end": 52
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 14,
-        "end": 28
-      },
-      "preview": "        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n        \u003Cstrong\u003EB\u003C/strong\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 49,
-        "end": 63
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 41,
-        "end": 55
-      },
-      "preview": "      \u003C/button\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 50,
-        "end": 64
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 42,
-        "end": 56
-      },
-      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 51,
-        "end": 65
-      },
-      "loc2": {
-        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
-        "start": 43,
-        "end": 57
-      },
-      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
-    },
-    {
-      "loc1": {
         "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
         "start": 297,
         "end": 315
@@ -4084,84 +3941,6 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 210,
-        "end": 226
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 109,
-        "end": 125
-      },
-      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 211,
-        "end": 227
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 110,
-        "end": 126
-      },
-      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 213,
-        "end": 228
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 112,
-        "end": 127
-      },
-      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 756,
-        "end": 776
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1424,
-        "end": 1444
-      },
-      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 759,
-        "end": 777
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1427,
-        "end": 1445
-      },
-      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 760,
-        "end": 778
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1428,
-        "end": 1446
-      },
-      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
-    },
-    {
-      "loc1": {
         "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
         "start": 1482,
         "end": 1501
@@ -4250,6 +4029,266 @@
         "end": 1244
       },
       "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1094,
+        "end": 1117
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 446,
+        "end": 470
+      },
+      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1254,
+        "end": 1272
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 566,
+        "end": 584
+      },
+      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1255,
+        "end": 1273
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 567,
+        "end": 585
+      },
+      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 6,
+        "end": 21
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 30,
+        "end": 45
+      },
+      "preview": "    \u003C/div\u003E\n    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 8,
+        "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 32,
+        "end": 46
+      },
+      "preview": "    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 9,
+        "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 33,
+        "end": 47
+      },
+      "preview": "    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 10,
+        "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 11,
+        "end": 25
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 35,
+        "end": 49
+      },
+      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 12,
+        "end": 26
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 36,
+        "end": 50
+      },
+      "preview": "        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 13,
+        "end": 27
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 37,
+        "end": 51
+      },
+      "preview": "        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 14,
+        "end": 28
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 38,
+        "end": 52
+      },
+      "preview": "        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n        \u003Cstrong\u003EB\u003C/strong\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 49,
+        "end": 63
+      },
+      "preview": "      \u003C/button\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 42,
+        "end": 56
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 50,
+        "end": 64
+      },
+      "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
+        "start": 43,
+        "end": 57
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 51,
+        "end": 65
+      },
+      "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1424,
+        "end": 1444
+      },
+      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1427,
+        "end": 1445
+      },
+      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1428,
+        "end": 1446
+      },
+      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
     },
     {
       "loc1": {
@@ -4526,79 +4565,79 @@
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 39,
-        "end": 53
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 53,
         "end": 67
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 53
       },
       "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 40,
-        "end": 54
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 54,
         "end": 68
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 54
       },
       "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 41,
-        "end": 55
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 55,
         "end": 69
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 55
       },
       "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 43,
-        "end": 57
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 80,
         "end": 94
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 43,
+        "end": 57
       },
       "preview": "  },\n  query: {\n    type: Object,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 44,
-        "end": 58
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 81,
         "end": 95
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 44,
+        "end": 58
       },
       "preview": "  query: {\n    type: Object,\n    default: null,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 45,
-        "end": 59
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 82,
         "end": 96
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 45,
+        "end": 59
       },
       "preview": "    type: Object,\n    default: null,\n  },\n..."
     }
