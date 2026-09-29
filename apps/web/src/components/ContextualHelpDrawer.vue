@@ -423,6 +423,8 @@ watch(
   () => route?.path,
   (newPath) => {
     if (newPath && newPath !== knowledgeStore.currentRoute) {
+      searchInput.value = "";
+      isSearchOpen.value = false;
       knowledgeStore.fetchContextualHelp(newPath, authStore.currentPersona);
     }
   }
@@ -433,6 +435,8 @@ watch(
   () => authStore.currentPersona,
   (newPersona) => {
     if (newPersona && newPersona !== knowledgeStore.activePersona) {
+      searchInput.value = "";
+      isSearchOpen.value = false;
       knowledgeStore.fetchContextualHelp(
         route?.path || knowledgeStore.currentRoute,
         newPersona
