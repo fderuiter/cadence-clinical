@@ -19,6 +19,21 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\apps\execution\src\Cadence.Apps.Execution.csproj" Aliases="execution" />
+    <ProjectReference Include="..\..\..\..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" Aliases="aigateway" />
+    <ProjectReference Include="..\..\..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" Aliases="ctms" />
+    <ProjectReference Include="..\..\..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" Aliases="econsent" />
+    <ProjectReference Include="..\..\..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" Aliases="eisf" />
+    <ProjectReference Include="..\..\..\..\apps\etmf\src\Cadence.Apps.Etmf.csproj" Aliases="etmf" />
+    <ProjectReference Include="..\..\..\..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" Aliases="fileshare" />
+    <ProjectReference Include="..\..\..\..\apps\imaging\src\Cadence.Apps.Imaging.csproj" Aliases="imaging" />
+    <ProjectReference Include="..\..\..\..\apps\interop\src\Cadence.Apps.Interop.csproj" Aliases="interop" />
+    <ProjectReference Include="..\..\..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" Aliases="knowledge" />
+    <ProjectReference Include="..\..\..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" Aliases="notifications" />
+    <ProjectReference Include="..\..\..\..\apps\org\src\Cadence.Apps.Org.csproj" Aliases="org" />
+    <ProjectReference Include="..\..\..\..\apps\payments\src\Cadence.Apps.Payments.csproj" Aliases="payments" />
+    <ProjectReference Include="..\..\..\..\apps\quality\src\Cadence.Apps.Quality.csproj" Aliases="quality" />
+    <ProjectReference Include="..\..\..\..\apps\safety\src\Cadence.Apps.Safety.csproj" Aliases="safety" />
+    <ProjectReference Include="..\..\..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" Aliases="tickets" />
     <ProjectReference Include="..\..\..\..\apps\designer\src\Cadence.Apps.Designer.csproj" Aliases="designer" />
     <ProjectReference Include="..\Cadence.ToolingCore.csproj" />
   </ItemGroup>

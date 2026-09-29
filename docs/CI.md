@@ -25,29 +25,29 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 `pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs it, and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
-| Gate (short name)     | What it checks                                                      |
-| --------------------- | ------------------------------------------------------------------- |
-| `dotnet-format`       | Whitespace formatting against `.editorconfig`                       |
-| `dotnet-format-style` | Roslyn code-style rules                                             |
-| `clean-secrets`       | Normalizes `.secrets.baseline`                                      |
-| `duplication`         | Duplicated code blocks over 15 normalized lines                     |
-| `cli-docs`            | `docs/cli.md` matches the CLI's commands                            |
-| `adrs`                | ADR schema and `docs/adr/index.md` consistency                      |
-| `arch-drift`          | Architecture diagrams match the solution                            |
-| `sanitizer`           | Requirement tag prefixes in tests                                   |
-| `markdown`            | Markdown structure and links                                        |
-| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md` |
-| `readmes`             | Each project has a README                                           |
-| `imports`             | No cross-service persistence references                             |
-| `security`            | Static security audit and secret patterns                           |
-| `deid`                | PHI/PII patterns in source and fixtures                             |
-| `openapi`             | OpenAPI specs are regenerated and staged                            |
-| `api-clients`         | Frontend API clients match the OpenAPI contracts                    |
-| `schema-doc`          | Schema documentation is regenerated and staged                      |
-| `path-patterns`       | Files live in allowed directories                                   |
-| `contracts`           | Hexagonal port/adapter contracts                                    |
-| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`) |
-| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)           |
+| Gate (short name)     | What it checks                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                              |
+| `dotnet-format-style` | Roslyn code-style rules                                                                    |
+| `clean-secrets`       | Normalizes `.secrets.baseline`                                                             |
+| `duplication`         | Duplicated code blocks over 15 normalized lines                                            |
+| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                   |
+| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                             |
+| `arch-drift`          | Architecture diagrams match the solution                                                   |
+| `sanitizer`           | Requirement tag prefixes in tests                                                          |
+| `markdown`            | Markdown structure and links                                                               |
+| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                        |
+| `readmes`             | Each project has a README                                                                  |
+| `imports`             | No cross-service persistence references                                                    |
+| `security`            | Static security audit and secret patterns                                                  |
+| `deid`                | PHI/PII patterns in source and fixtures                                                    |
+| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi` |
+| `api-clients`         | The web API clients typecheck against their generated OpenAPI types                        |
+| `schema-doc`          | Creates the schema documentation files if missing (checks nothing yet)                     |
+| `path-patterns`       | Files live in allowed directories                                                          |
+| `contracts`           | Hexagonal port/adapter contracts                                                           |
+| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                        |
+| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                  |
 
 `pnpm cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
 
@@ -75,17 +75,17 @@ Don't bypass the hook with `--no-verify`; fix the failing gate instead.
 
 CI runs in `.github/workflows/ci.yml`. Every check can be reproduced locally with the command in the last column.
 
-| Failing job or step                                            | Usual cause                                                                       | Reproduce and fix locally                                                                     |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Style › Verify .NET C# code formatting                         | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                      |
-| Style › Run frontend style and lint                            | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                              |
-| Style › Run Cadence quality sentinels, or a single gate step   | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                   |
-| Style › Run architecture tests                                 | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests.csproj`                                          |
-| Style › Run Hadolint or ShellCheck                             | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                |
-| Style › Verify schema documentation freshness or OpenAPI drift | Generated docs or specs not regenerated                                           | `pnpm cadence fix`, then commit the regenerated files                                         |
-| Style › Run ADR validation                                     | ADR missing, malformed or not indexed                                             | `pnpm cadence scaffold adr`, then `pnpm cadence check adrs`                                   |
-| Security › dependency audit                                    | A vulnerable NuGet or npm package                                                 | `pnpm cadence check vulnerabilities`; upgrade in `Directory.Packages.props` or `package.json` |
-| Frontend Unit Tests                                            | A Vitest failure                                                                  | `pnpm -r test`                                                                                |
-| .NET 10 C# xUnit Verification                                  | A build warning (warnings are errors) or an xUnit failure                         | `dotnet build Cadence.sln` and `dotnet test Cadence.sln`                                      |
-| GxP Compliance › Assert No Documentation Git Diff              | RTM docs not regenerated after test changes                                       | `pnpm cadence gxp sync`, then commit `docs/SDLC/`                                             |
-| Check for Merge Conflicts                                      | The PR conflicts with `main`                                                      | `git merge origin/main` and resolve                                                           |
+| Failing job or step                                          | Usual cause                                                                       | Reproduce and fix locally                                                                                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Style › Verify .NET C# code formatting                       | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                                         |
+| Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
+| Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |
+| Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests.csproj`                                                             |
+| Style › Run Hadolint or ShellCheck                           | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                                   |
+| Style › Verify OpenAPI specification drift                   | An endpoint changed without regenerating the specs                                | `pnpm cadence sync-openapi-spec` and `pnpm cadence generate-api-docs`, then commit `docs/openapi` and `docs/api` |
+| Style › Run ADR validation                                   | ADR missing, malformed or not indexed                                             | `pnpm cadence scaffold adr`, then `pnpm cadence check adrs`                                                      |
+| Security › dependency audit                                  | A vulnerable NuGet or npm package                                                 | `pnpm cadence check vulnerabilities`; upgrade in `Directory.Packages.props` or `package.json`                    |
+| Frontend Unit Tests                                          | A Vitest failure                                                                  | `pnpm -r test`                                                                                                   |
+| .NET 10 C# xUnit Verification                                | A build warning (warnings are errors) or an xUnit failure                         | `dotnet build Cadence.sln` and `dotnet test Cadence.sln`                                                         |
+| GxP Compliance › Assert No Documentation Git Diff            | RTM docs not regenerated after test changes                                       | `pnpm cadence gxp sync`, then commit `docs/SDLC/`                                                                |
+| Check for Merge Conflicts                                    | The PR conflicts with `main`                                                      | `git merge origin/main` and resolve                                                                              |
