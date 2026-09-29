@@ -1,5 +1,8 @@
 # Feature & Compatibility Matrix
 
+> [!WARNING]
+> **Status: pre-kernel baseline.** Lists features of the per-service design; many are not implemented in the .NET code. See [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today) for what runs today and the [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md) for the target.
+
 ## 1. Feature Categories & Environment Matrix
 
 This matrix details the distribution of core compliance and tracking features across the primary services in the Cadence Clinical architecture.

@@ -302,7 +302,7 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 - Remove the decommissioned service path from `pyproject.toml` under `[tool.uv.workspace] members`.
 - Remove legacy Python test paths from pytest configurations.
-- Execute `dotnet cadence check` and `python scripts/sync_gxp.py` to confirm clean builds and 100% RTM compliance.
+- Execute `pnpm cadence check` and `pnpm cadence gxp sync` to confirm clean builds and 100% RTM compliance.
 
 ---
 

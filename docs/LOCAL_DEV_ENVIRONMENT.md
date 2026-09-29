@@ -1,142 +1,148 @@
-# Local Sandbox Development Environment Guide
+# Local Development Environment
 
-Welcome to the Cadence Clinical Platform. This guide walks you through the step-by-step local configuration of your developer environment, maps our local containerized microservice cluster, and details our unified validation workflows using the native Cadence CLI (`dotnet cadence`).
+How to set up a workstation, run the platform locally and check your work. For the workflow and pull
+requests see [CONTRIBUTING.md](../CONTRIBUTING.md); for every setting see
+[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md).
 
 ---
 
-## 1. Host System Runtime & Dependency Prerequisites
+## 1. Prerequisites
 
-To prevent local verification and testing failures, a newly onboarded developer machine must meet the following system dependencies. These instructions apply to **macOS**, **Linux**, and **Windows WSL2** environments.
+| Tool | Version | Notes |
+| --- | --- | --- |
+| .NET SDK | 10.0 (pinned in [`global.json`](../global.json)) | `dotnet --version` |
+| Node.js + pnpm | Node 20+, pnpm from `package.json` | Frontend workspace and the `pnpm cadence` shortcut |
+| Docker | Recent Docker Engine or Desktop | Compose stack and Testcontainers |
+| PowerShell (optional) | 7+ | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
 
-### Step 1: Install Git & Package Managers
-
-Ensure Git and Node.js (v20+ LTS) are installed on your host system:
-
-- **macOS:** `brew install git node pnpm`
-- **Linux (Ubuntu/Debian):** `sudo apt update && sudo apt install -y git nodejs npm && npm install -g pnpm`
-- **Windows (WSL2):** `sudo apt update && sudo apt install -y git nodejs npm && npm install -g pnpm`
-
-### Step 2: Install .NET 10 SDK
-
-Cadence Clinical runs natively on **.NET 10 (C# 14 / ASP.NET Core 10)**:
+The fastest way to install and check all of these is the setup wizard:
 
 ```bash
-# Verify .NET 10 SDK
-dotnet --version
-# Output should indicate 10.0.xxx (pinned in global.json)
+make wizard                                  # bash scripts/setup_wizard.sh; Windows: scripts/setup_wizard.ps1
+bash scripts/setup_wizard.sh --dev --minimal # no prompts, no Playwright browser download
+```
 
-# Restore solution dependencies
+It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install`, sets
+`git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
+`cadence doctor`.
+
+## 2. Build and test
+
+```bash
 dotnet restore Cadence.sln
+dotnet build Cadence.sln                          # warnings are errors
+dotnet test tests/Cadence.UnitTests.csproj
+dotnet test tests/Cadence.ArchitectureTests.csproj
+pnpm install
 ```
 
-### Step 3: Run Diagnostic Auto-Healing (`dotnet cadence doctor --auto-fix`)
-
-Verify system prerequisites, port availability, and database connections:
+PostgreSQL integration tests are skipped unless you provide a server:
 
 ```bash
-dotnet cadence doctor --auto-fix
+# an existing server
+CADENCE_TEST_POSTGRES="Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=cadence_test" \
+  dotnet test tests/Cadence.UnitTests.csproj --filter "Category=Integration"
+
+# or a throwaway container
+CADENCE_TEST_DOCKER=1 dotnet test tests/Cadence.UnitTests.csproj --filter "Category=Integration"
 ```
 
-_This command checks .NET runtime, Docker daemon, node/pnpm, and verifies connectivity to PostgreSQL (5432) and Neo4j (7687)._
+## 3. Run the platform
 
----
+Two things are required before any service starts (ADR-2256):
 
-## 2. Monorepo Service Catalog & Port Allocations (8000–8019)
+- `GATEWAY_SECRET`: at least 32 characters, the same value for the gateway and every service.
+- `OIDC_AUTHORITY` for the gateway: the local Keycloak realm, `http://localhost:8080/realms/cadence`.
 
-The Cadence Clinical platform orchestrates **18 specialized .NET 10 microservices**, supporting discrete clinical trial domains:
+Every API request goes through the gateway (port 8000) with a Keycloak access token. Services reject
+direct calls without a valid gateway signature. The web client must sign in; its token-less demo mode
+cannot reach the API.
 
-| Service Name | Port | Sub-directory | Primary Database | Domain & Operational Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **`gateway`** | `8000` | `apps/gateway/` | Stateless / YARP | Central Reverse Proxy with Keycloak OIDC authentication & HMAC signature injection |
-| **`designer`** | `8001` | `apps/designer/` | Neo4j (`7687`) | MDR/SDR Protocol Designer & CDISC USDM v3/v4 study graph modeling |
-| **`execution`** | `8002` | `apps/execution/` | PostgreSQL (`5432`) | EDC Runtime Engine, dynamic subject eCRFs, real-time edit checks, & Dataset-JSON |
-| **`etmf`** | `8004` | `apps/etmf/` | PostgreSQL (`5432`) | DIA TMF Reference Model v3.2.0 document classification & completeness tracking |
-| **`ctms`** | `8005` | `apps/ctms/` | PostgreSQL (`5432`) | Clinical Trial Management, CRA monitoring visit reports, & 6-facet site greenlight |
-| **`quality`** | `8006` | `apps/quality/` | PostgreSQL (`5432`) | Quality Assurance, CAPA workflows, CSM Benford forensics, & pHash image checks |
-| **`interop`** | `8007` | `apps/interop/` | PostgreSQL (`5432`) | SMART on FHIR USCDI EHR ingestion & Open mHealth biometric streaming |
-| **`org`** | `8008` | `apps/org/` | PostgreSQL (`5432`) | Organization Directory, clinical trial sites, staff credentials, & PI DOA logs |
-| **`safety`** | `8009` | `apps/safety/` | PostgreSQL (`5432`) | ICH E2B(R3) ICSR safety XML compilation, CTCAE grading, & AS2 S/MIME EDI gateway |
-| **`notifications`** | `8010` | `apps/notifications/` | PostgreSQL (`5432`) | Multi-channel GxP alerts (SMTP Email, SMS, Webhooks, In-App inbox) |
-| **`knowledge`** | `8011` | `apps/knowledge/` | PostgreSQL (`5432`) | Clinical SOP hub, contextual help drawer routing, & versioned guidance |
-| **`tickets`** | `8012` | `apps/tickets/` | PostgreSQL (`5432`) | Clinical query escalation, data discrepancy tracking, & dual-target SLA timers |
-| **`ai_gateway`** | `8013` | `apps/ai_gateway/` | Ephemeral / REST | Model tiering (Tier 1–3), PII/PHI de-id air-gap, & 21 CFR Part 11 AI draft ledgers |
-| **`payments`** | `8014` | `apps/payments/` | PostgreSQL (`5432`) | Investigator grant budgets, procedure fees, multi-payee splits, & participant wallet |
-| **`imaging`** | `8015` | `apps/imaging/` | PostgreSQL (`5432`) | Zero-footprint WebGL MPR DICOM viewer & blinded dual-reader RECIST 1.1 adjudication |
-| **`eisf`** | `8016` | `apps/eisf/` | PostgreSQL (`5432`) | Electronic Investigator Site Files (eISF) site binders & PI certification manifests |
-| **`econsent`** | `8017` | `apps/econsent/` | PostgreSQL (`5432`) | Digital Informed Consent, amendment re-consent gating, & cryptographic sealing |
-| **`fileshare`** | `8018` | `apps/fileshare/` | MinIO (`9000`) + PG | StoragePort S3 abstraction, presigned transfer URLs, & Part 11 document envelopes |
-| **`web`** | `5173` | `apps/web/` | Vite SPA Client | Vue 3 Unified Clinical Workspace (Multi-Persona Switcher) |
-| **`subject-portal`** | `5174` | `apps/subject-portal/` | IndexedDB PWA | Offline-First Participant-Facing eCOA/ePRO Progressive Web App |
-
----
-
-## 3. Primary CLI Workflows (`dotnet cadence`)
-
-The repository features the native **Cadence CLI** (`dotnet cadence` or `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`) designed to streamline developer orchestration:
-
-### 1. Interactive Dev Cockpit (`dotnet cadence dev --tui`)
-
-Runs and monitors all backend microservices in a terminal cockpit with live health monitoring and hotkey restarts:
+### Option A: Docker Compose (full stack)
 
 ```bash
-dotnet cadence dev --tui
+cp .env.example .env            # set GATEWAY_SECRET
+docker compose -f docker/docker-compose.yml up --build
 ```
 
-- `[r]`: Restart all services
-- `[g]`: Hot-restart Gateway API (`8000`)
-- `[e]`: Hot-restart Execution Engine (`8002`)
-- `[d]`: Hot-restart Designer MDR (`8001`)
-- `[c]`: Hot-restart CTMS (`8005`)
-- `[q]`: Gracefully exit and terminate processes
+This starts PostgreSQL, Keycloak (realm from `docker/cadence-realm.json`), MinIO, ClamAV, the gateway,
+the services and the subject portal. Neo4j is still defined but no .NET code uses it (#4790).
 
-### 2. Multi-Engine Scenario Seeding (`dotnet cadence db seed --tier full`)
-
-Seeds realistic clinical test protocols, randomized subjects, eCRFs, deviations, and TMF documents across Neo4j, PostgreSQL, and MinIO:
+### Option B: .NET Aspire AppHost
 
 ```bash
-dotnet cadence db seed --tier full
+dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
-### 3. Smart Test Runner (`dotnet cadence test`)
+The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak and the gateway,
+execution, designer, ctms, etmf, quality and fileshare services, and sets
+`OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard. Supply `GATEWAY_SECRET` and
+`OIDC_AUTHORITY` in your environment first.
 
-Runs the full xUnit test suite across unit, architecture, and E2E suites:
+### Option C: one service
 
 ```bash
-dotnet cadence test
+export GATEWAY_SECRET="<32+ characters>"
+export ASPNETCORE_ENVIRONMENT=Development      # allows the local database fallback
+dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
+curl http://localhost:<port>/healthz/ready
 ```
 
-For ultra-fast iteration executing against in-memory repository fakes:
+### Web clients
 
 ```bash
-dotnet cadence test --fast
+pnpm --filter web dev                           # http://localhost:5173
+pnpm --filter subject-portal dev                # http://localhost:5174
 ```
 
----
+Set `VITE_API_BASE_URL` and the `VITE_KEYCLOAK_*` variables, or `VITE_ENABLE_MSW=true` to work against
+mocked responses without a backend.
 
-## 4. Quality Gates & Sentinels (`dotnet cadence check --parallel`)
+## 4. Services and ports
 
-Before committing changes or opening a pull request, run all 21 architecture sentinels concurrently:
+| Service | Port | Service | Port |
+| --- | --- | --- | --- |
+| gateway | 8000 | eisf | 8010 |
+| designer | 8001 | econsent | 8011 |
+| execution | 8002 | org | 8012 |
+| etmf | 8003 | fileshare | 8013 |
+| interop | 8004 | imaging | 8014 |
+| quality | 8005 | knowledge | 8015 |
+| notifications | 8006 | payments | 8016 |
+| ctms | 8007 | ai_gateway | 8017 |
+| safety | 8008 | Keycloak | 8080 |
+| tickets | 8009 | web / subject portal | 5173 / 5174 |
+
+What each service does and how mature it is: [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today).
+Check for port clashes with `pnpm cadence check-ports`.
+
+Each service answers `/healthz/live` and `/healthz/ready`.
+
+## 5. Database tasks
+
+| Task | Command |
+| --- | --- |
+| Add a migration | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
+| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>` |
+| Reset local databases | `pnpm cadence db reset` |
+| Seed local databases | `pnpm cadence db seed` |
+| Database status | `pnpm cadence db status` |
+
+## 6. Quality gates and GxP sync
 
 ```bash
-dotnet cadence check --parallel
+dotnet format Cadence.sln --verify-no-changes
+pnpm cadence check               # all pre-commit gates; `pnpm cadence check <gate>` for one
+pnpm cadence fix                 # auto-fix formatting, schemas, ADR index
+pnpm cadence gxp sync            # after changing requirement-tagged tests
 ```
 
-### Automated Remediation (`dotnet cadence fix --all`)
-
-Auto-remediates C# formatting (`dotnet format`), aligns schemas, and indexes ADR records:
+## 7. Documentation site
 
 ```bash
-dotnet cadence fix --all
+pnpm docs:dev                    # VitePress dev server over docs/
+pnpm docs:build                  # full build: gates, generated API/schema docs, RTM draft, static site
 ```
 
----
-
-## 5. GxP Compliance Synchronization (`dotnet cadence gxp sync`)
-
-Whenever test classes are added, modified, or requirement tags (`@req:PRD-SYS-XXX` / `[GxPRequirement]`) are updated, run:
-
-```bash
-dotnet cadence gxp sync
-```
-
-This executes the test suite, generates the updated Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`), and stages the compliance documents for Git commit.
+The build copies the root `README.md`, `ARCHITECTURE.md` and `AGENTS.md` into `docs/` temporarily;
+those copies are not committed.

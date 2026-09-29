@@ -102,8 +102,8 @@ function getApiSidebarGroups() {
       collapsed: false,
       items: [
         { text: "Designer / USDM (8001)", link: "/api/designer" },
-        { text: "Knowledge & SOPs (8011)", link: "/api/knowledge" },
-        { text: "AI Gateway (8013)", link: "/api/ai_gateway" },
+        { text: "Knowledge & SOPs (8015)", link: "/api/knowledge" },
+        { text: "AI Gateway (8017)", link: "/api/ai_gateway" },
       ],
     },
     {
@@ -111,31 +111,31 @@ function getApiSidebarGroups() {
       collapsed: false,
       items: [
         { text: "EDC Execution (8002)", link: "/api/execution" },
-        { text: "CTMS Operations (8005)", link: "/api/ctms" },
-        { text: "Organization Directory (8008)", link: "/api/org" },
-        { text: "Clinical Issue Hub (8012)", link: "/api/tickets" },
-        { text: "Payments & Grants (8014)", link: "/api/payments" },
+        { text: "CTMS Operations (8007)", link: "/api/ctms" },
+        { text: "Organization Directory (8012)", link: "/api/org" },
+        { text: "Clinical Issue Hub (8009)", link: "/api/tickets" },
+        { text: "Payments & Grants (8016)", link: "/api/payments" },
       ],
     },
     {
       text: "Patient & Interoperability",
       collapsed: false,
       items: [
-        { text: "FHIR & eSource Gateway (8007)", link: "/api/interop" },
-        { text: "Notifications Dispatcher (8010)", link: "/api/notifications" },
-        { text: "Electronic Consent (8017)", link: "/api/econsent" },
+        { text: "FHIR & eSource Gateway (8004)", link: "/api/interop" },
+        { text: "Notifications Dispatcher (8006)", link: "/api/notifications" },
+        { text: "Electronic Consent (8011)", link: "/api/econsent" },
       ],
     },
     {
       text: "Safety, Quality & Governance",
       collapsed: false,
       items: [
-        { text: "Safety & Pharmacovigilance (8009)", link: "/api/safety" },
-        { text: "Quality & CAPA (8006)", link: "/api/quality" },
-        { text: "Blinded Imaging Adjudication (8015)", link: "/api/imaging" },
-        { text: "eTMF Document Archive (8004)", link: "/api/etmf" },
-        { text: "eISF Site Binders (8016)", link: "/api/eisf" },
-        { text: "FileShare & StoragePort (8018)", link: "/api/fileshare" },
+        { text: "Safety & Pharmacovigilance (8008)", link: "/api/safety" },
+        { text: "Quality & CAPA (8005)", link: "/api/quality" },
+        { text: "Blinded Imaging Adjudication (8014)", link: "/api/imaging" },
+        { text: "eTMF Document Archive (8003)", link: "/api/etmf" },
+        { text: "eISF Site Binders (8010)", link: "/api/eisf" },
+        { text: "FileShare & StoragePort (8013)", link: "/api/fileshare" },
       ],
     },
     {
@@ -143,7 +143,7 @@ function getApiSidebarGroups() {
       collapsed: false,
       items: [
         { text: "API Gateway Proxy (8000)", link: "/api/gateway" },
-        { text: "Compliance Engine (8019)", link: "/api/compliance" },
+        { text: "Compliance Engine", link: "/api/compliance" },
       ],
     },
   ];
@@ -170,37 +170,75 @@ export default withMermaid(
       nav: [
         { text: "Home", link: "/" },
         { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
+        { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
         { text: "Architecture", link: "/ARCHITECTURE" },
-        { text: ".NET 10 Migration", link: "/migration/index" },
+        { text: "ADRs", link: "/adr/index" },
         { text: "API Reference", link: "/api/index" },
         { text: "CLI Reference", link: "/cli" },
-        { text: "UI Components", link: "/components/index" },
         { text: "Agents", link: "/AGENTS" },
-        { text: "SRS", link: "/SRS" },
       ],
       sidebar: [
         {
           text: "Overview & Guides",
           items: [
             { text: "Welcome & Readme", link: "/" },
-            {
-              text: "Master Documentation Index",
-              link: "/DOCUMENTATION_INDEX",
-            },
+            { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
             { text: "System Architecture", link: "/ARCHITECTURE" },
+            {
+              text: "Local Development Environment",
+              link: "/LOCAL_DEV_ENVIRONMENT",
+            },
+            { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
             { text: "Developer CLI (`cadence`)", link: "/cli" },
-            { text: "AI Agents & Instructions", link: "/AGENTS" },
+            { text: "Agent & Contributor Rules", link: "/AGENTS" },
           ],
         },
         {
-          text: ".NET 10 Modernization & Migration",
+          text: "Clinical Kernel",
+          items: [
+            {
+              text: "Kernel Specification v0.2",
+              link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
+            },
+            {
+              text: "Roadmap (§15)",
+              link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
+            },
+            {
+              text: "Execution Migration Inventory",
+              link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
+            },
+            {
+              text: "Clock Migration Backlog",
+              link: "/kernel/CLOCK_MIGRATION_BACKLOG",
+            },
+          ],
+        },
+        {
+          text: "Python-to-.NET Port (Historical)",
+          collapsed: true,
           items: [
             { text: "Modernization Hub Overview", link: "/migration/index" },
-            { text: "Surface & Data Topology Audit", link: "/migration/SYSTEM_TOPOLOGY_AUDIT" },
-            { text: "Dependency & Parity Catalog", link: "/migration/DEPENDENCY_AND_PARITY_CATALOG" },
-            { text: "Bounded Context Migration Matrix", link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX" },
-            { text: "Solution Scaffold Guide", link: "/migration/SCAFFOLD_GUIDE" },
-            { text: "Migration Workflow Playbook", link: "/MIGRATION_WORKFLOW" },
+            {
+              text: "Surface & Data Topology Audit",
+              link: "/migration/SYSTEM_TOPOLOGY_AUDIT",
+            },
+            {
+              text: "Dependency & Parity Catalog",
+              link: "/migration/DEPENDENCY_AND_PARITY_CATALOG",
+            },
+            {
+              text: "Bounded Context Migration Matrix",
+              link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX",
+            },
+            {
+              text: "Solution Scaffold Guide",
+              link: "/migration/SCAFFOLD_GUIDE",
+            },
+            {
+              text: "Migration Workflow Playbook",
+              link: "/MIGRATION_WORKFLOW",
+            },
           ],
         },
         {
@@ -218,14 +256,10 @@ export default withMermaid(
           ],
         },
         {
-          text: "Core Specifications",
+          text: "Baseline Specifications",
           items: [
             { text: "Data Lifecycle Management", link: "/DATA_LIFECYCLE" },
             { text: "Feature Matrix", link: "/FEATURE_MATRIX" },
-            {
-              text: "Local Development Environment",
-              link: "/LOCAL_DEV_ENVIRONMENT",
-            },
             { text: "System Requirements Specification (SRS)", link: "/SRS" },
           ],
         },

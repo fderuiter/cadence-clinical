@@ -1,5 +1,8 @@
 # .NET 10 Modernization Hub: Phase 0 Architectural Baseline
 
+> [!NOTE]
+> **Status: historical.** The Python-to-.NET 10 port this hub planned is complete. Current work is the kernel roadmap ([spec §15](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)). The documents in this folder are kept for traceability and for porting the remaining Python reference sources (#4789).
+
 **Platform Target:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
 **Governing Architecture Records:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), [ADR-2238](../adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053

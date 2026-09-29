@@ -1,5 +1,94 @@
 # Clinical Domain Glossary
 
+This glossary has two parts:
+
+1. **Kernel vocabulary.** Terms defined by the
+   [kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), which is normative. Use
+   these words, with these meanings, in code, issues and documents.
+2. **Platform and application glossary.** Terms introduced by ADRs and earlier designs. Many describe
+   application capabilities that exist only as scaffolds or in the Python reference, not yet in the
+   .NET code; check the service README before assuming a capability exists. Where a term conflicts with
+   the kernel vocabulary, the kernel vocabulary wins.
+
+## Part 1: Kernel vocabulary
+
+### Two clocks (valid time and recorded time)
+
+Every bitemporal kernel fact has a **valid period** (when it was true in the trial world) and a
+**recorded period** (when Cadence asserted or superseded it), stored as `tstzrange` columns. The
+canonical query is `as_of(valid_at, known_at)`. Bitemporal rows are never updated except to close the
+recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
+
+### ProtocolVersion, Amendment and Effectivity
+
+A **ProtocolVersion** is one immutable version of the executable protocol; an **Amendment** produces a
+new one. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
+StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
+ethics approval (K-TIME-4, K-TIME-5).
+
+### Participant
+
+The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
+RTSM "randomized subject" are views of the same `ParticipantId`. Direct identifiers live only in the
+identity vault (ADR-2253).
+
+### Enrollment
+
+A participant's bitemporal membership of a StudySite, with its state machine:
+`Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, and withdrawal
+from any active state through a dedicated command. `ReconsentRequired` and `Unblinded` are not
+enrollment states.
+
+### Applicability
+
+Which ProtocolVersion governs a participant at a given valid time. Exactly one governs at any instant,
+or data capture is blocked (K-TIME-6). A new version reaches existing participants according to the
+amendment's transition policy, for example only after re-consent.
+
+### ClinicalEvent and OperationalActivity
+
+A **ClinicalEvent** is something that happened with a participant (visit, procedure, dose, AE onset,
+specimen collection), recorded with its location, which need not be a site (K-LOC-1). An
+**OperationalActivity** (monitoring visit, site initiation, audit) is about the site or study and
+belongs to CTMS.
+
+### Observation
+
+A recorded clinical fact: this concept had this value for this participant over this valid period, as
+asserted by this source. Values are immutable; a correction is a new Observation that supersedes the
+old one (K-FACT-1). The concept is a `ConceptRef`, never an SDTM variable.
+
+### Assertion
+
+A statement by an actor with authority about an Observation or another Assertion: verified (SDV),
+reviewed, queried, coded as (MedDRA/WHODrug), eligibility, protocol deviation, causality, arm
+assigned, frozen, locked. Assertions are append-only; statuses such as "verified" are Assertions, not
+columns on the Observation. Queries target an `ObservationId`.
+
+### Source, Artifact and Specimen
+
+A **Source** says where an Observation came from (manual entry, device, lab feed, ingestion batch).
+An **Artifact** is a versioned document or file (approval letter, image, dataset). A **Specimen** links
+a participant, its collection event, chain of custody, consent scope and derived results.
+
+### Attestation
+
+A signed statement by an authenticated actor, including electronic signatures under 21 CFR Part 11.
+Append-only.
+
+### Authority (Actor, Capability, Delegation, Qualification)
+
+Whether an actor may perform an action is computed from evidence (delegation, training, qualification,
+consent, blinding) by the kernel's policy evaluator, not read from role strings (ADR-2251). Denials
+name the missing evidence.
+
+### Tenant
+
+The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL
+row-level security (ADR-2250).
+
+## Part 2: Platform and application glossary
+
 ### Clinical Research OS (Engines and Kernel)
 
 The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation, eConsent, RTSM, Safety and the rest as applications built on them. Founding invariant K-TRUTH-1: no product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the kernel when it explains the provenance, authority, meaning or lifecycle of clinical evidence across more than one application.
@@ -133,6 +222,8 @@ A regulatory data integrity pattern combining application-level Domain Event Dis
 A formal, versioned modification to an approved clinical study protocol. Protocol amendments can introduce changes to study arms, epochs, visit schedules, procedures, dosage cohorts, or safety requirements, and may be designated as requiring subject re-consent.
 
 ### Immutable Graph Branching
+
+> Retired with Neo4j (ADR-2245). ProtocolVersion snapshots in PostgreSQL replace it.
 
 A metadata management pattern where approved and published protocol versions remain permanently immutable in the graph database. New draft amendments fork the metadata hierarchy into an isolated version node linked by predecessor relationships, ensuring ongoing clinical execution is never disrupted.
 

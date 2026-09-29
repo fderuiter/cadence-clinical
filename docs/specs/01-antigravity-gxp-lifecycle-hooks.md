@@ -1,5 +1,8 @@
 # Specification: Antigravity GxP Lifecycle Hooks & AI Coding Guardrails
 
+> [!NOTE]
+> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence.
+
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-053
 - **ADR Reference:** [ADR-2192](../adr/2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
