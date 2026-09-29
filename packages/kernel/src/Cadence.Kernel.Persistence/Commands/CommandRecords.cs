@@ -84,6 +84,27 @@ internal sealed class OutboxMessageRecord
     public DateTimeOffset EnqueuedAt { get; init; }
     public DateTimeOffset? DispatchedAt { get; set; }
     public int Attempts { get; set; }
+
+    /// <summary>Earliest time the relay retries a failed delivery; null until the first failure.</summary>
+    public DateTimeOffset? NextAttemptAt { get; set; }
+
+    /// <summary>The last delivery error, truncated, for operators.</summary>
+    public string? LastError { get; set; }
+}
+
+/// <summary>
+/// A seal over a tenant's audit chain (spec §5.3 "periodic root sealing"): the chain was verified intact up to
+/// <see cref="Sequence"/>, whose hash was <see cref="Hash"/>. A later verification that finds the chain shorter, or a
+/// different hash at a sealed sequence, proves tampering after the seal. Insert-only.
+/// </summary>
+internal sealed class AuditChainSeal
+{
+    public Guid Id { get; init; }
+    public TenantId TenantId { get; init; }
+    public long Sequence { get; init; }
+    public string Hash { get; init; } = string.Empty;
+    public DateTimeOffset SealedAt { get; init; }
+    public string SealedBy { get; init; } = string.Empty;
 }
 
 /// <summary>The stored outcome of a command, keyed by tenant and idempotency key (K-TX-3). Insert-only.</summary>

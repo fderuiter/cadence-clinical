@@ -43,6 +43,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<AuditChainHead> AuditChainHeads => Set<AuditChainHead>();
 
+    public DbSet<AuditChainSeal> AuditChainSeals => Set<AuditChainSeal>();
+
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
@@ -50,8 +52,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
     private int _permittedWriters;
 
     /// <summary>
-    /// Opens a window in which <c>SaveChanges</c> is allowed. Only the command pipeline's transaction (and test
-    /// seeding, through InternalsVisibleTo) opens one: every other write is refused, so no kernel state changes
+    /// Opens a window in which <c>SaveChanges</c> is allowed. Only the command pipeline's transaction, the outbox relay
+    /// (delivery bookkeeping only) and test seeding open one: every other write is refused, so no kernel state changes
     /// without its provenance, event and audit link (K-TX-2).
     /// </summary>
     internal IDisposable PermitPipelineWrites()

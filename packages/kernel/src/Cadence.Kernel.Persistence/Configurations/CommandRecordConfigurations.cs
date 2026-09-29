@@ -78,7 +78,23 @@ internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outb
         builder.HasIndex(x => x.EventId).IsUnique();
         builder.Property(x => x.Type).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Envelope).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.LastError).HasMaxLength(2000);
         builder.HasIndex(x => x.EnqueuedAt).HasFilter("dispatched_at IS NULL");
+
+        // Serves the relay's per-tenant ordering check over undelivered messages.
+        builder.HasIndex(x => new { x.TenantId, x.EnqueuedAt }).HasFilter("dispatched_at IS NULL");
+    }
+}
+
+internal sealed class AuditChainSealConfiguration : IEntityTypeConfiguration<AuditChainSeal>
+{
+    public void Configure(EntityTypeBuilder<AuditChainSeal> builder)
+    {
+        builder.ToTable("audit_chain_seals");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.TenantId, x.Sequence }).IsUnique();
+        builder.Property(x => x.Hash).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.SealedBy).HasMaxLength(256).IsRequired();
     }
 }
 

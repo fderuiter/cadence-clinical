@@ -1,7 +1,11 @@
 using System;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Events;
+using Cadence.Kernel.Persistence.Audit;
+using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Outbox;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +41,29 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelUnitOfWorkFactory>();
         services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
         services.TryAddSingleton<KernelAuditChainVerifier>();
+        services.TryAddSingleton<KernelAuditChainSealer>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Runs the kernel's background jobs in the host: the outbox relay (delivers events to the host's
+    /// <see cref="IKernelEventPublisher"/>) and the hourly verify-and-seal pass over every tenant's audit chain. Call
+    /// after <see cref="AddKernelPersistence"/> in exactly one host per deployment.
+    /// </summary>
+    public static IServiceCollection AddKernelBackgroundJobs(
+        this IServiceCollection services, Action<KernelBackgroundOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var options = new KernelBackgroundOptions();
+        configure?.Invoke(options);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.RelayBatchSize);
+
+        services.AddSingleton(options);
+        services.TryAddSingleton<KernelOutboxRelay>();
+        services.AddHostedService<KernelOutboxRelayService>();
+        services.AddHostedService<KernelAuditSealingService>();
         return services;
     }
 }
