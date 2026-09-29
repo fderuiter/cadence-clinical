@@ -1,5 +1,21 @@
 # Clinical Domain Glossary
 
+### Clinical Kernel Modular Monolith
+
+An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).
+
+### PostgreSQL Native Bitemporal Interval Standard
+
+A temporal data integrity standard under 21 CFR Part 11 that models mutable clinical facts (protocol applicability, enrollment state, observations, and delegation grants) across two independent time dimensions: valid time (the period when the fact was true in the physical clinical trial) and recorded time (the transaction period when Cadence recorded the fact). Both intervals are modeled as PostgreSQL `tstzrange` columns (`valid_period`, `recorded_period`) enforced via `btree_gist` exclusion constraints in EF Core 10, preventing overlapping intervals without third-party extensions and enabling deterministic point-in-time state reconstruction via the `@>` range containment operator.
+
+### Native ProtocolVersion Snapshot Tree
+
+A clinical metadata storage pattern replacing dedicated graph database dependencies (Neo4j) with immutable, versioned hierarchical snapshots stored directly in PostgreSQL under the Clinical Kernel. Each approved protocol amendment is persisted as an immutable snapshot containing USDM study arms, epochs, encounters, activities, and biomedical concepts serialized into strongly-typed C# 14 record hierarchies and indexed JSONB columns. Graph visualizations and semantic diffs are computed on-demand or projected to read-only caches.
+
+### .NET Aspire Developer Orchestration Engine
+
+A centralized cloud-native developer runtime orchestrator (`Cadence.AppHost`) utilizing .NET Aspire to provision containerized infrastructure dependencies (PostgreSQL, MinIO, Keycloak), launch API services, and provide an integrated real-time dashboard for OpenTelemetry traces, structured logs, and metrics during local development.
+
 ### .NET 10 Clean Architecture Port
 
 An enterprise boundary standard in Cadence .NET 10 microservices where domain entities, aggregates, and repository interfaces (Ports) reside in a dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly decoupled from external persistence (Adapters), HTTP presentation, or third-party infrastructure.

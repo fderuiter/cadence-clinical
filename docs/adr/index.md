@@ -444,3 +444,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-29: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md)
 - [2026-08-29: Schedule of Activities Matrix WCAG 2.1 AA 2D Grid Navigation and Background Sync Hardening](2026-08-29-schedule-of-activities-matrix-wcag-21-aa-2d-grid-navigation-and-background-sync-hardening.md)
 - [2026-09-04: Pin `uv` Python Preference to System for Python 3.14](2026-09-04-pin-uv-python-preference-to-system-for-python-314.md)
+
+- [2026-09-29: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md)
+
+- [2026-09-29: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)
+
+- [2026-09-29: PostgreSQL Native Bitemporal Interval Standard via tstzrange and GiST](2026-09-29-postgresql-native-bitemporal-interval-standard-via-tstzrange-and-gist.md)

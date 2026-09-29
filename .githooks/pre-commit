@@ -7,6 +7,12 @@
 
 set -euo pipefail
 
+# Ensure local .NET installation is in PATH
+if [ -d "$HOME/.dotnet" ]; then
+    export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
+    export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+fi
+
 echo "[Pre-Commit] Executing Cadence Quality Sentinels & Policy Gates..."
 
 if command -v dotnet >/dev/null 2>&1; then
