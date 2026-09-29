@@ -4,6 +4,10 @@
 
 The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation, eConsent, RTSM, Safety and the rest as applications built on them. Founding invariant K-TRUTH-1: no product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the kernel when it explains the provenance, authority, meaning or lifecycle of clinical evidence across more than one application.
 
+### Clinical Canvas (Six Verbs)
+
+The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users work inside a study, never inside a named product: navigation follows the lifecycle (Design, Start, Conduct, Data, Analyze, Submit), the study is zoomable from portfolio down to a single observation, and every screen uses one navigator, workspace and inspector layout. Six verbs apply to any object: Search, Trace (backward through lineage), Impact (forward through lineage), Explain (why a state, number or denial holds, from evidence), Simulate (evaluate a change without writing) and Act (an authorised, audited command). Role lenses change emphasis, never access.
+
 ### Concept Registry
 
 The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation.
