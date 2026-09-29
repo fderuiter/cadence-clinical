@@ -18,12 +18,6 @@ using FluentAssertions;
 
 using Xunit;
 
-using static ArchUnitNET.Fluent.ArchRuleDefinition;
-
-using ArchArchitecture = ArchUnitNET.Domain.Architecture;
-using ArchLoader = ArchUnitNET.Loader.ArchLoader;
-using ArchRuleExtensions = ArchUnitNET.xUnit.ArchRuleExtensions;
-using IArchRule = ArchUnitNET.Fluent.IArchRule;
 
 namespace Cadence.ArchitectureTests;
 
@@ -205,64 +199,23 @@ public class ArchitectureSentinelTests
         typeof(Cadence.Apps.Tickets.Program).Assembly
     ];
 
-    private static readonly ArchArchitecture ProductArchitecture = new ArchLoader()
-        .LoadAssemblies(ProductModuleAssemblies)
-        .Build();
-
     /// <summary>
-    /// Validates K-XS-1: Product modules must reference Cadence.Kernel.Abstractions and must not declare
-    /// duplicate Study, Site, or Participant aggregate roots outside the Cadence.Kernel domain.
+    /// Validates K-XS-2 (positive half): every product module references Cadence.Kernel.Abstractions to bind against
+    /// canonical clinical truth. The forbidden-redefinition and Kernel.Persistence rules (K-XS-1, K-XS-2, K-MOD-1)
+    /// live in tests/Architecture/KernelBoundaryTests.cs, the single source of truth for kernel boundaries.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact(DisplayName = "K_XS_1_ProductModules_MustReference_KernelAbstractions_AndNotDeclareDuplicateClinicalAggregates")]
+    [Fact(DisplayName = "K_XS_2_ProductModules_MustReference_KernelAbstractions")]
     [Trait("Category", "Architecture")]
     [GxPRequirement("PRD-SYS-053")]
-    public void ProductModulesMustReferenceKernelAbstractionsAndNotDeclareDuplicateClinicalAggregates()
+    public void ProductModulesMustReferenceKernelAbstractions()
     {
-        // 1. ArchUnitNET Rule: Classes in product modules must not declare duplicate clinical aggregates
-        IArchRule duplicateAggregatesRule = Classes()
-            .Should().NotHaveName("Study")
-            .AndShould().NotHaveName("Site")
-            .AndShould().NotHaveName("Participant")
-            .AndShould().NotHaveName("CtmsStudy")
-            .AndShould().NotHaveName("SiteStaffMember");
-
-        ArchRuleExtensions.Check(duplicateAggregatesRule, ProductArchitecture);
-
-        // 2. Project reference check: Every product module must reference Cadence.Kernel.Abstractions
         foreach (var assembly in ProductModuleAssemblies)
         {
             var hasReference = HasProjectOrAssemblyReference(assembly, "Cadence.Kernel.Abstractions");
 
             hasReference.Should().BeTrue(
-                $"Product module '{assembly.GetName().Name}' must reference Cadence.Kernel.Abstractions to bind against canonical clinical truth (K-XS-1)");
-        }
-    }
-
-    /// <summary>
-    /// Validates K-XS-2: Product modules must reference Cadence.Kernel.Abstractions, never internal kernel persistence assemblies or namespaces.
-    /// @req:PRD-SYS-053
-    /// </summary>
-    [Fact(DisplayName = "K_XS_2_ProductModules_MustNeverReference_InternalKernelPersistence")]
-    [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
-    public void ProductModulesMustNeverReferenceInternalKernelPersistence()
-    {
-        // 1. ArchUnitNET Rule: Product module types must not depend on any Kernel.Persistence types
-        IArchRule kernelPersistenceRule = Types()
-            .Should().NotDependOnAny(
-                Types().That().ResideInNamespaceMatching(".*Kernel\\.Persistence.*")
-            );
-
-        ArchRuleExtensions.Check(kernelPersistenceRule, ProductArchitecture);
-
-        // 2. Assembly reference check: No referenced assembly may contain 'Kernel.Persistence'
-        foreach (var assembly in ProductModuleAssemblies)
-        {
-            var referencedAssemblies = assembly.GetReferencedAssemblies().Select(a => a.Name!).ToList();
-
-            referencedAssemblies.Should().NotContain(name => name.Contains("Kernel.Persistence", StringComparison.OrdinalIgnoreCase),
-                $"Product module '{assembly.GetName().Name}' must never reference internal kernel persistence directly (K-XS-2)");
+                $"Product module '{assembly.GetName().Name}' must reference Cadence.Kernel.Abstractions to bind against canonical clinical truth (K-XS-2)");
         }
     }
 
