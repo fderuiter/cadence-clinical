@@ -170,7 +170,7 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
-        var submission = await formSubmissionRepository.GetByIdAsync(submissionId, cancellationToken).ConfigureAwait(false);
+        var submission = await formSubmissionRepository.GetForUpdateAsync(submissionId, cancellationToken).ConfigureAwait(false);
         if (submission is null)
         {
             return FormErrors.NotFound(id);
@@ -199,7 +199,7 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
-        var submission = await formSubmissionRepository.GetByIdAsync(submissionId, cancellationToken).ConfigureAwait(false);
+        var submission = await formSubmissionRepository.GetForUpdateAsync(submissionId, cancellationToken).ConfigureAwait(false);
         if (submission is null)
         {
             return FormErrors.NotFound(id);
@@ -227,7 +227,7 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
-        var submission = await formSubmissionRepository.GetByIdAsync(submissionId, cancellationToken).ConfigureAwait(false);
+        var submission = await formSubmissionRepository.GetForUpdateAsync(submissionId, cancellationToken).ConfigureAwait(false);
         if (submission is null)
         {
             return FormErrors.NotFound(id);
@@ -296,7 +296,7 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
-        var submission = await formSubmissionRepository.GetByIdAsync(submissionId, cancellationToken).ConfigureAwait(false);
+        var submission = await formSubmissionRepository.GetForUpdateAsync(submissionId, cancellationToken).ConfigureAwait(false);
         if (submission is null)
         {
             return FormErrors.NotFound(id);

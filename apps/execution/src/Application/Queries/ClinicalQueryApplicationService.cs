@@ -231,7 +231,7 @@ public sealed class ClinicalQueryApplicationService(
             return DomainError.Validation("INVALID_QUERY_ID", $"Query ID '{id}' is not a valid GUID.");
         }
 
-        var query = await queryRepository.GetByIdAsync(queryId, cancellationToken);
+        var query = await queryRepository.GetForUpdateAsync(queryId, cancellationToken);
         if (query is null)
         {
             return QueryErrors.NotFound(id);
@@ -261,7 +261,7 @@ public sealed class ClinicalQueryApplicationService(
     {
         if (!IsAuthorizedCraOrDm(userRole))
         {
-            return QueryErrors.UnauthorizedRole(userRole!, "close");
+            return QueryErrors.UnauthorizedRole(userRole ?? string.Empty, "close");
         }
 
         if (!QueryId.TryParse(id, out var queryId))
@@ -269,7 +269,7 @@ public sealed class ClinicalQueryApplicationService(
             return DomainError.Validation("INVALID_QUERY_ID", $"Query ID '{id}' is not a valid GUID.");
         }
 
-        var query = await queryRepository.GetByIdAsync(queryId, cancellationToken);
+        var query = await queryRepository.GetForUpdateAsync(queryId, cancellationToken);
         if (query is null)
         {
             return QueryErrors.NotFound(id);
@@ -299,7 +299,7 @@ public sealed class ClinicalQueryApplicationService(
     {
         if (!IsAuthorizedCraOrDm(userRole))
         {
-            return QueryErrors.UnauthorizedRole(userRole!, "reopen");
+            return QueryErrors.UnauthorizedRole(userRole ?? string.Empty, "reopen");
         }
 
         if (!QueryId.TryParse(id, out var queryId))
@@ -307,7 +307,7 @@ public sealed class ClinicalQueryApplicationService(
             return DomainError.Validation("INVALID_QUERY_ID", $"Query ID '{id}' is not a valid GUID.");
         }
 
-        var query = await queryRepository.GetByIdAsync(queryId, cancellationToken);
+        var query = await queryRepository.GetForUpdateAsync(queryId, cancellationToken);
         if (query is null)
         {
             return QueryErrors.NotFound(id);
@@ -332,7 +332,7 @@ public sealed class ClinicalQueryApplicationService(
     {
         if (!IsAuthorizedCraOrDm(userRole))
         {
-            return QueryErrors.UnauthorizedRole(userRole!, "cancel");
+            return QueryErrors.UnauthorizedRole(userRole ?? string.Empty, "cancel");
         }
 
         if (!QueryId.TryParse(id, out var queryId))
@@ -340,7 +340,7 @@ public sealed class ClinicalQueryApplicationService(
             return DomainError.Validation("INVALID_QUERY_ID", $"Query ID '{id}' is not a valid GUID.");
         }
 
-        var query = await queryRepository.GetByIdAsync(queryId, cancellationToken);
+        var query = await queryRepository.GetForUpdateAsync(queryId, cancellationToken);
         if (query is null)
         {
             return QueryErrors.NotFound(id);
@@ -361,7 +361,7 @@ public sealed class ClinicalQueryApplicationService(
     {
         if (string.IsNullOrWhiteSpace(role))
         {
-            return true;
+            return false;
         }
 
         var normalized = role.Trim().ToLowerInvariant();

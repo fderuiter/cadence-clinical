@@ -28,6 +28,11 @@ public sealed class ObservationRepository(ExecutionDbContext context, Resilience
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<ClinicalObservation?> GetForUpdateAsync(ObservationId id, CancellationToken cancellationToken) =>
+        await Context.ClinicalObservations
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
     public async Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
         StudyCode studyId,
         SubjectCode subjectId,
