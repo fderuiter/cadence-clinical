@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Org.Domain;
 using Cadence.Apps.Org.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -17,7 +18,7 @@ string connectionString = builder.Configuration["POSTGRES_CONNECTION_STRING"]
         ? configuredConnectionString
         : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
 
-builder.Services.AddDbContext<OrgDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddCadenceDbContext<OrgDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
