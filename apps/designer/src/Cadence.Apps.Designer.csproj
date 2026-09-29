@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
   </ItemGroup>
