@@ -77,7 +77,7 @@ public sealed class ShareGrantConfiguration : IEntityTypeConfiguration<ShareGran
         builder.HasOne<FileRecord>()
             .WithMany()
             .HasForeignKey(x => x.FileRecordId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.FileRecordId);
         builder.HasIndex(x => x.GrantedToUserId);
@@ -103,7 +103,7 @@ public sealed class GuestLinkConfiguration : IEntityTypeConfiguration<GuestLink>
         builder.HasOne<FileRecord>()
             .WithMany()
             .HasForeignKey(x => x.FileRecordId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.FileRecordId);
         builder.HasIndex(x => x.TokenHmac).IsUnique();
@@ -129,7 +129,7 @@ public sealed class PlaybackAuditLogConfiguration : IEntityTypeConfiguration<Pla
         builder.HasOne<FileRecord>()
             .WithMany()
             .HasForeignKey(x => x.FileRecordId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.Event);
         builder.HasIndex(x => x.FileRecordId);
@@ -155,7 +155,7 @@ public sealed class FileAuditLogConfiguration : IEntityTypeConfiguration<FileAud
         builder.HasOne<FileRecord>()
             .WithMany()
             .HasForeignKey(x => x.FileRecordId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.Action);
         builder.HasIndex(x => x.FileRecordId);

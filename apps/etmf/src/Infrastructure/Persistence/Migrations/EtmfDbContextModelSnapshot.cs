@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Etmf.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Etmf.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(EtmfDbContext))]
     partial class EtmfDbContextModelSnapshot : ModelSnapshot
     {
@@ -544,7 +545,7 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Etmf.Domain.TmfDocument", null)
                         .WithMany()
                         .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -553,9 +554,10 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence.Migrations;
                     b.HasOne("Cadence.Apps.Etmf.Domain.TmfDocument", null)
                         .WithMany()
                         .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
     }
+}
