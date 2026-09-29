@@ -148,8 +148,6 @@ public static class Program
                     .WithDescription("Interactive .NET 10 onboarding wizard");
                 wizard.AddCommand<WizardMigrateCommand>("migrate")
                     .WithDescription("Interactive microservice transcription wizard");
-                wizard.AddCommand<WizardDecommissionCommand>("decommission")
-                    .WithDescription("Interactive Python decommissioning wizard");
             });
         });
 

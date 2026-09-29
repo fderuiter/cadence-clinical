@@ -252,11 +252,10 @@ Not implemented yet.
 
 Interactive wizards. Each one runs a script in `scripts/` from the repository root: the `.sh` script with `bash`, or the `.ps1` script with PowerShell on Windows. The command returns the script's exit code, or `1` if the script is missing.
 
-| Command                                 | Script                        | Arguments                                   |
-| --------------------------------------- | ----------------------------- | ------------------------------------------- |
-| `cadence wizard onboarding`             | `setup_wizard`                | None                                        |
-| `cadence wizard dotnet`                 | `setup_dotnet_wizard`         | None                                        |
-| `cadence wizard migrate`                | `migrate_service_wizard`      | None. The script prompts for the service.   |
-| `cadence wizard decommission [service]` | `decommission_service_wizard` | Optional service name, passed to the script |
+| Command                     | Script                   | Arguments                                 |
+| --------------------------- | ------------------------ | ----------------------------------------- |
+| `cadence wizard onboarding` | `setup_wizard`           | None                                      |
+| `cadence wizard dotnet`     | `setup_dotnet_wizard`    | None                                      |
+| `cadence wizard migrate`    | `migrate_service_wizard` | None. The script prompts for the service. |
 
 What each wizard does is defined by its script, not by the CLI.
