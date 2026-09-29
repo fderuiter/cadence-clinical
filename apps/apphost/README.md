@@ -20,7 +20,7 @@ Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT` on each project; [packages/telemetry](
 
 ## Configuration gaps
 
-The AppHost does not set `GATEWAY_SECRET` for any service or `OIDC_AUTHORITY` for the gateway, and it does not import the `cadence` Keycloak realm. Every service fails at startup without `GATEWAY_SECRET`, and the gateway fails without `OIDC_AUTHORITY`; supply them before relying on this host. See [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+The AppHost does not set `GATEWAY_SECRET` for any service or `OIDC_AUTHORITY` for the gateway, and it does not import the `cadence` Keycloak realm. Every service fails at startup without `GATEWAY_SECRET`, and the gateway fails without `OIDC_AUTHORITY`; supply them before relying on this host. See [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
 ## Key dependencies
 

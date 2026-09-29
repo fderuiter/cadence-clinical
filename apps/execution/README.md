@@ -26,7 +26,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 
 ## Security
 
-`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity; selected mutating routes (for example form unlock, query reopen/cancel, subject state change) also require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The demographics key is bound from the `DemographicsEncryption` configuration section (`KeyBase64`).
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity; selected mutating routes (for example form unlock, query reopen/cancel, subject state change) also require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The demographics key is bound from the `DemographicsEncryption` configuration section (`KeyBase64`).
 
 ## Persistence
 

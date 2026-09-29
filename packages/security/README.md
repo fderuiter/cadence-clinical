@@ -1,6 +1,6 @@
 # Cadence.Security
 
-Caller authentication and authorization for the services, based on identity headers signed by the API gateway, plus signing utilities, RBAC, field blinding and audit helpers. The trust model is described in [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+Caller authentication and authorization for the services, based on identity headers signed by the API gateway, plus signing utilities, RBAC, field blinding and audit helpers. The trust model is described in [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
 ## Project
 

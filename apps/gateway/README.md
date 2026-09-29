@@ -31,7 +31,7 @@ Defaults are `http://localhost:<port>`. The designer's `/api/v1/protocols` route
 ## Security
 
 - `OIDC_AUTHORITY` (the Keycloak realm URL, for example `http://localhost:8080/realms/cadence`) is required; the host throws at startup without it. Optional: `OIDC_METADATA_ADDRESS` (internal discovery URL), `OIDC_AUDIENCE` (validated when set), `OIDC_REQUIRE_HTTPS_METADATA` (default `true`).
-- `GATEWAY_SECRET` (at least 32 characters) is required at startup and must match the downstream services; see [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+- `GATEWAY_SECRET` (at least 32 characters) is required at startup and must match the downstream services; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 - The gateway uses its own JWT authentication rather than `AddCadenceSecurity()`; it uses `GatewayAuthenticationOptions`, header names and claim types from [packages/security](../../packages/security/README.md).
 
 ## Persistence
