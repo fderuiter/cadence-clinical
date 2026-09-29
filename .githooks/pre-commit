@@ -16,8 +16,12 @@ fi
 echo "[Pre-Commit] Executing Cadence Quality Sentinels & Policy Gates..."
 
 if command -v dotnet >/dev/null 2>&1; then
-    dotnet format Cadence.sln --verify-no-changes
-    dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
+    # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
+    mapfile -t staged_cs < <(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
+    if [ "${#staged_cs[@]}" -gt 0 ]; then
+        dotnet format Cadence.sln --verify-no-changes --include "${staged_cs[@]}"
+    fi
+    dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
 else
     echo "::error:: .NET SDK not found. Please install .NET 10 SDK to run Cadence quality gates."
     exit 1

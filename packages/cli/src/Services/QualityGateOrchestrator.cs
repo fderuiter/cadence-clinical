@@ -12,13 +12,13 @@ namespace Cadence.Cli.Services;
 
 public static class QualityGateOrchestrator
 {
-    public static int RunQualityGates(string? gateName = null, string[]? targetFiles = null)
+    public static int RunQualityGates(string? gateName = null, string[]? targetFiles = null, bool preCommit = false)
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
         if (!string.IsNullOrEmpty(gateName))
         {
-            return RunSingleGate(gateName, targetFiles);
+            return RunSingleGate(gateName, targetFiles, preCommit);
         }
 
         // Run all 21 pre-commit quality gates natively in C# via ToolingCore services
@@ -26,7 +26,11 @@ public static class QualityGateOrchestrator
 
         // 1. Formatting
         AnsiConsole.MarkupLine("1/21 Validating C# Code Formatting (.editorconfig)...");
-        if (RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") != 0)
+        if (preCommit)
+        {
+            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
+        }
+        else if (RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 1 (dotnet-format) failed![/]");
             allPassed = false;
@@ -34,7 +38,11 @@ public static class QualityGateOrchestrator
 
         // 2. Roslyn Style
         AnsiConsole.MarkupLine("\n2/21 Validating Roslyn Analyzer Rules...");
-        if (RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") != 0)
+        if (preCommit)
+        {
+            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
+        }
+        else if (RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 2 (dotnet-format-style) failed![/]");
             allPassed = false;
@@ -138,7 +146,7 @@ public static class QualityGateOrchestrator
 
         // 15. Auto-stage OpenAPI
         AnsiConsole.MarkupLine("\n15/21 Staging & Validating OpenAPI Schemas...");
-        if (PreCommitOpenApiService.ExecutePreCommitOpenApi() != 0)
+        if (PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 15 (auto-stage-openapi) failed![/]");
             allPassed = false;
@@ -207,7 +215,7 @@ public static class QualityGateOrchestrator
         return 0;
     }
 
-    private static int RunSingleGate(string gateName, string[]? targetFiles)
+    private static int RunSingleGate(string gateName, string[]? targetFiles, bool preCommit)
     {
         string normalized = gateName.ToLowerInvariant().Replace("_", "-");
         bool passed = normalized switch
@@ -227,7 +235,7 @@ public static class QualityGateOrchestrator
             "validate-imports" or "imports" => ImportValidatorService.ValidateImports() == 0,
             "audit-security" or "security" => SecurityAuditorService.AuditSecurity(targetFiles) == 0,
             "deid-compliance-scan" or "deid" => Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) == 0,
-            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi() == 0,
+            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit) == 0,
             "validate-api-clients" or "api-clients" => ApiClientValidatorService.ValidateApiClients() == 0,
             "auto-stage-schema-doc" or "schema-doc" => PreCommitSchemaDocService.ExecutePreCommitSchemaDoc() == 0,
             "validate-path-patterns" or "path-patterns" => PathPatternValidatorService.ValidatePathPatterns(targetFiles) == 0,
