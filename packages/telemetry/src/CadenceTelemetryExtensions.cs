@@ -109,4 +109,33 @@ public static class CadenceTelemetryExtensions
 
         return app;
     }
+
+    public static WebApplication MapCadenceHealthAndStatusEndpoints(
+        this WebApplication app,
+        string serviceName,
+        string routePrefix,
+        string healthSummary,
+        string statusSummary)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(serviceName);
+        ArgumentNullException.ThrowIfNull(routePrefix);
+        ArgumentNullException.ThrowIfNull(healthSummary);
+        ArgumentNullException.ThrowIfNull(statusSummary);
+
+        string pascalRoutePrefix = routePrefix.Length > 0
+            ? char.ToUpper(routePrefix[0]) + routePrefix[1..]
+            : routePrefix;
+
+        app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = serviceName }))
+            .WithName($"{pascalRoutePrefix}HealthCheck")
+            .WithSummary(healthSummary);
+
+        var api = app.MapGroup($"/api/v1/{routePrefix}");
+        api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = serviceName }))
+            .WithName($"{pascalRoutePrefix}Status")
+            .WithSummary(statusSummary);
+
+        return app;
+    }
 }
