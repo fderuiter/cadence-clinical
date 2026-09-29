@@ -29,16 +29,16 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceDemographicsTests
 {
-    private sealed record AuditCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class RecordingAuditLogWriter : IAuditLogWriter
     {
         public List<AuditCall> Calls { get; } = new();
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -240,7 +240,7 @@ public class SubjectApplicationServiceDemographicsTests
 
         harness.AuditLog.Calls.Should().ContainSingle();
         harness.AuditLog.Calls[0].Action.Should().Be("UPDATE_DEMOGRAPHICS");
-        harness.AuditLog.Calls[0].TableName.Should().Be("clinical_subjects");
+        harness.AuditLog.Calls[0].EntityName.Should().Be("ClinicalSubject");
     }
 
     [Fact]
@@ -418,7 +418,7 @@ public class SubjectApplicationServiceDemographicsTests
         result.IsSuccess.Should().BeTrue();
         var call = harness.AuditLog.Calls.Should().ContainSingle().Which;
         call.Action.Should().Be("DELETE_DEMOGRAPHICS");
-        call.TableName.Should().Be("clinical_subjects");
+        call.EntityName.Should().Be("ClinicalSubject");
         call.RecordId.Should().Be(subject.Id.ToString());
         call.UserId.Should().Be(harness.AuditContext.UserId);
         call.ChangeReason.Should().Be("reason");

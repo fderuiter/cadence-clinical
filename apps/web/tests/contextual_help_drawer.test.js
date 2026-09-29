@@ -12,6 +12,13 @@ import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
 import AppShell from "../src/components/AppShell.vue";
 import App from "../src/App.vue";
 
+// These tests cover screens that are hidden until their .NET backend exists
+// (#4829), so they treat every screen as available.
+vi.mock("../src/router/availability", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isScreenAvailable: () => true,
+}));
+
 describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () => {
   let pinia;
   let authStore;
@@ -346,10 +353,11 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       // Search query via input
       await searchInputEl.setValue("safety");
-      await new Promise((r) => setTimeout(r, 300));
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.text()).toContain("Search Results (1)");
+      // The search is debounced by 250 ms; wait for it rather than sleeping a
+      // fixed time, which fails when the suite runs under load.
+      await vi.waitFor(() =>
+        expect(wrapper.text()).toContain("Search Results (1)")
+      );
       expect(wrapper.text()).toContain("SOP-SAF-301: Adverse Events");
 
       // Select search result

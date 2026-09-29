@@ -61,12 +61,24 @@ cannot reach the API.
 ### Option A: Docker Compose (full stack)
 
 ```bash
-cp .env.example .env            # set GATEWAY_SECRET
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml ps     # every .NET service should become "healthy"
 ```
 
-This starts PostgreSQL, Keycloak (realm from `docker/cadence-realm.json`), MinIO, ClamAV, the gateway,
-the services and the subject portal. Neo4j is still defined but no .NET code uses it (#4790).
+This starts PostgreSQL (one `cadence` database, a schema per service), Keycloak with the `cadence` realm
+imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, and
+every service. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is
+needed; those values are for local use only.
+
+- **Migrations:** each service applies its own migrations when it starts (`Database__MigrateOnStartup=true`)
+  and reports healthy only once `/healthz/ready` answers, which requires the database
+  ([database runbook](OPERATIONAL_DATABASE.md)).
+- **Tokens:** every endpoint except the health probes needs a Keycloak token. Sign in through the web
+  app, or request one from `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
+- **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only with
+  `--profile storage`; no service reads them yet.
+- **Reset:** `docker compose -f docker/docker-compose.yml down -v` removes the database volume. Do this once
+  if your database predates the schema-per-service layout (ADR-2447).
 
 ### Option B: .NET Aspire AppHost
 
@@ -100,23 +112,28 @@ mocked responses without a backend.
 
 ## 4. Services and ports
 
-| Service | Port | Service | Port |
-| --- | --- | --- | --- |
-| gateway | 8000 | eisf | 8010 |
-| designer | 8001 | econsent | 8011 |
-| execution | 8002 | org | 8012 |
-| etmf | 8003 | fileshare | 8013 |
-| interop | 8004 | imaging | 8014 |
-| quality | 8005 | knowledge | 8015 |
-| notifications | 8006 | payments | 8016 |
-| ctms | 8007 | ai_gateway | 8017 |
-| safety | 8008 | Keycloak | 8080 |
-| tickets | 8009 | web / subject portal | 5173 / 5174 |
+The host ports are the defaults the gateway routes to (`apps/gateway/src/Program.cs`), so the gateway reaches
+services started with `dotnet run` and the compose stack alike. Inside compose, every .NET service listens on
+8080 in its own container.
 
-What each service does and how mature it is: [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today).
-Check for port clashes with `pnpm cadence check-ports`.
+| Service | Host port | Database schema | Service | Host port | Database schema |
+| --- | --- | --- | --- | --- | --- |
+| front proxy (nginx) → gateway | 8000 | none | eisf | 8010 | `eisf` |
+| designer | 8001 | none | econsent | 8011 | `econsent` |
+| execution | 8002 | `edc` | org | 8012 | `org` |
+| etmf | 8003 | `etmf` | fileshare | 8013 | `fileshare` |
+| interop | 8004 | `interop` | imaging | 8014 | `imaging` |
+| quality | 8005 | `quality` | knowledge | 8015 | `knowledge` |
+| notifications | 8006 | `notifications` | payments | 8016 | `payments` |
+| ctms | 8007 | `ctms` | ai_gateway | 8017 | none |
+| safety | 8008 | `safety` | Keycloak | 8080 | (own store) |
+| tickets | 8009 | `tickets` | web / subject portal | 5173 / 5174 | none |
 
-Each service answers `/healthz/live` and `/healthz/ready`.
+PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
+[ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with
+`pnpm cadence check-ports`.
+
+Each service answers `/healthz/live` and `/healthz/ready` without a token.
 
 ## 5. Database tasks
 

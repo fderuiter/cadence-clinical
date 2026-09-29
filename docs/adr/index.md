@@ -12,7 +12,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 Every ADR has exactly one unique number, given on its first line as `# ADR-NNNN: Title` (numbers below 1000 keep their historical three-digit form, such as `ADR-049`). When a number was found to be shared by several files, the oldest file kept it and the later files were renumbered in date order; a renumbered ADR carries an `Also known as: ADR-XXX (former number)` line directly under its heading so older references still resolve. `check adrs` fails on duplicate numbers, a missing `# ADR-` heading, an ADR missing from this index or listed twice, and any link in this index that does not resolve.
 
-Reservation rule: a new ADR takes the next free number after the highest number listed in `docs/adr/index.md` on current `main`. Parallel pull requests may claim numbers at the same time, so re-check `main` before pushing and renumber your ADR if its number has been taken. Numbers claimed by open pull requests stay free here until those ADRs merge, so gaps in the sequence are expected; ADR-2258 to ADR-2260, ADR-2446 and ADR-2448 are reserved for in-flight PRs.
+Reservation rule: a new ADR takes the next free number after the highest number listed in `docs/adr/index.md` on current `main`. Parallel pull requests may claim numbers at the same time, so re-check `main` before pushing and renumber your ADR if its number has been taken. Numbers claimed by open pull requests stay free here until those ADRs merge, so gaps in the sequence are expected; ADR-2259 and ADR-2260 are reserved for in-flight PRs.
 
 ## Clinical Kernel Decisions
 
@@ -44,6 +44,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2253: Identity Vault and Layered Participant Identity (K006)](2026-09-29-identity-vault-and-layered-participant-identity.md) (2026-09-29)
 - [ADR-2254: Rules as Versioned Data, Continuous Standards Conformance and a Unified Rules Engine (K008)](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) (2026-09-29)
 - [ADR-2255: Kernel Lineage Graph and End-to-End Scientific Traceability (K009)](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) (2026-09-29)
+- [ADR-2449: Kernel Command Pipeline, Transactional Write Set and Per-Tenant Audit Chain](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) (2026-09-29)
 
 ### 1. Core Platform & Execution Engine
 
@@ -436,3 +437,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2256: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) (2026-09-29)
 - [ADR-2257: Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md) (2026-09-29)
 - [ADR-2447: Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) (2026-09-29)
+- [ADR-2258: Restrict Cascade Deletes onto Audit Trails and Regulated Child Records](2026-09-29-restrict-cascade-deletes-onto-audit-trails-and-regulated-children.md) (2026-09-29)
+- [ADR-2446: Single Audit Writer and One Chain per Aggregate Type](2026-09-29-single-audit-writer-and-one-chain-per-aggregate.md) (2026-09-29)
+- [ADR-2448: Gateway Routes Verified Against Service Endpoints](2026-09-29-gateway-routes-verified-against-service-endpoints.md) (2026-09-29)
+- [ADR-2450: Reject Concurrency Conflicts, Retry Only Transient Failures](2026-09-29-reject-concurrency-conflicts-retry-only-transient-failures.md) (2026-09-29)

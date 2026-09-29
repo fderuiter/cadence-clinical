@@ -1,62 +1,62 @@
-name: Bug Report
-description: Create a report to help us reproduce and fix a bug or unexpected behavior.
-title: "[BUG]: "
-labels: ["bug", "needs-triage"]
+name: Bug report
+description: Something behaves wrongly. Give the evidence so it can be reproduced and fixed.
+title: "[Bug] "
+labels: ["type: bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for reporting an issue in Cadence Clinical. Please provide detailed information to help reproduce and fix the bug.
+        Never paste secrets, PHI or real participant data. Report security vulnerabilities privately (see SECURITY.md).
 
   - type: dropdown
-    id: domain
+    id: area
     attributes:
-      label: Functional Domain
-      description: Select the system domain affected by this bug.
+      label: Area
       options:
-        - "Core Platform & Execution Engine"
-        - "API Gateway, Security & Identity"
-        - "Clinical Data Interoperability & Standards"
-        - "Clinical Operations & Business Modules"
-        - "Compliance, Audit & Governance"
-        - "Frontend & Design System"
-        - "DevOps, Tooling & CI/CD"
+        - "Kernel (packages/kernel)"
+        - "Execution / EDC (apps/execution)"
+        - "Gateway, security and identity"
+        - "Web app and Clinical Canvas (apps/web, packages/ui)"
+        - "Other module (apps/*)"
+        - "Standards, validation and submission (CDISC, rules)"
+        - "CLI, quality gates, CI and developer setup"
+        - "Documentation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happens, and what should happen instead. Say whether it affects regulated data or the audit trail.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Steps to reproduce, the failing command or test, and `file:line` references at a commit.
+      placeholder: |
+        1. `dotnet test tests/Cadence.UnitTests.csproj --filter ...`
+        2. apps/execution/src/Application/Subjects/SubjectApplicationService.cs:120 @ abc1234
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know it's fixed. Include the regression test that must pass.
+      value: |
+        - [ ] A test reproduces the bug and passes after the fix.
     validations:
       required: true
 
   - type: input
-    id: requirement_id
+    id: refs
     attributes:
-      label: Traced Requirement ID (if known)
-      description: Requirement identifier affected by this bug (e.g. PRD-SYS-001, Trace-1).
-      placeholder: "e.g. PRD-SYS-001"
+      label: Spec/ADR refs
+      description: Kernel spec rules (for example K-AUTH-4), ADRs or requirement IDs (PRD-SYS-xxx) this touches.
     validations:
       required: false
-
-  - type: textarea
-    id: bug_description
-    attributes:
-      label: Bug Description
-      description: Clear and concise description of what the bug is.
-    validations:
-      required: true
-
-  - type: textarea
-    id: reproduction_steps
-    attributes:
-      label: Steps to Reproduce
-      description: Step-by-step instructions to reproduce the behavior.
-      placeholder: |
-        1. Go to '...'
-        2. Click on '....'
-        3. See error
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected_behavior
-    attributes:
-      label: Expected Behavior
-      description: Description of what you expected to happen.
-    validations:
-      required: true

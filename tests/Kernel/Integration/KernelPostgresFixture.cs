@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
 
@@ -17,15 +21,17 @@ namespace Cadence.UnitTests.Kernel.Integration;
 
 /// <summary>
 /// PostgreSQL fixture for the kernel schema. Opt in with <c>CADENCE_TEST_POSTGRES</c> (an Npgsql connection string
-/// to an existing server): the fixture creates a throwaway database, applies the kernel migrations through
-/// <see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/>, and drops the database afterwards.
+/// to an existing server): the fixture creates a throwaway database, applies the kernel migrations, wires the command
+/// pipeline exactly as a host does (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/>
+/// plus <see cref="KernelApplicationServiceCollectionExtensions.AddKernelCommandPipeline"/>) with a settable actor
+/// and authorizer, and drops the database afterwards.
 /// Without it, tests call <see cref="SkipIfUnavailable"/> and report as skipped rather than passing against a
 /// stand-in. Once opted in, any startup failure is rethrown.
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class KernelPostgresFixture : IAsyncLifetime
+public class KernelPostgresFixture : IAsyncLifetime
 {
-    public const string Actor = "kernel-it@cadence.test";
+    public const string ActorId = "kernel-it@cadence.test";
 
     private const string SkipReason = "Kernel PostgreSQL tests need CADENCE_TEST_POSTGRES=<connection string>.";
 
@@ -37,6 +43,12 @@ public sealed class KernelPostgresFixture : IAsyncLifetime
     public string? ConnectionString { get; private set; }
 
     public FakeClock Clock { get; } = new();
+
+    /// <summary>The actor the pipeline resolves; set <see cref="TestCurrentActor.Actor"/> to null to simulate none.</summary>
+    public TestCurrentActor CurrentActor { get; } = new();
+
+    /// <summary>The authorizer the pipeline consults; permits everything unless a test sets a policy.</summary>
+    public TestAuthorizer Authorizer { get; } = new();
 
     public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
 
@@ -61,19 +73,52 @@ public sealed class KernelPostgresFixture : IAsyncLifetime
 
         _services = new ServiceCollection()
             .AddSingleton<IClock>(Clock)
-            .AddKernelPersistence(ConnectionString, _ => Actor)
-            .BuildServiceProvider();
+            .AddSingleton<ICurrentActor>(CurrentActor)
+            .AddSingleton<IAuthorizer>(Authorizer)
+            .AddKernelPersistence(ConnectionString)
+            .AddKernelCommandPipeline()
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 
-        await using var context = CreateContext();
-        await context.Database.MigrateAsync().ConfigureAwait(false);
+        await using (var context = CreateContext())
+        {
+            await context.Database.MigrateAsync().ConfigureAwait(false);
+        }
+
+        await OnMigratedAsync(ConnectionString).ConfigureAwait(false);
     }
 
-    /// <summary>Creates a context wired exactly as the kernel host wires it (audit interceptor, kernel clock).</summary>
-    internal KernelDbContext CreateContext()
+    /// <summary>Runs once after the kernel migrations are applied, for fixtures that add test-only objects.</summary>
+    protected virtual ValueTask OnMigratedAsync(string connectionString) => ValueTask.CompletedTask;
+
+    /// <summary>A command sender resolved from a fresh scope, as a request would get one.</summary>
+    public IKernelCommandSender Sender => Scope().GetRequiredService<IKernelCommandSender>();
+
+    /// <summary>The unit-of-work factory, whose <c>FaultInjector</c> tests use to fail a commit at a given stage.</summary>
+    internal KernelUnitOfWorkFactory UnitOfWork => Scope().GetRequiredService<KernelUnitOfWorkFactory>();
+
+    internal KernelAuditChainVerifier AuditChainVerifier => Scope().GetRequiredService<KernelAuditChainVerifier>();
+
+    /// <summary>Creates a context wired as the kernel host wires it. Reads only: writes go through the pipeline.</summary>
+    internal KernelDbContext CreateContext() =>
+        Scope().GetRequiredService<IDbContextFactory<KernelDbContext>>().CreateDbContext();
+
+    /// <summary>
+    /// Inserts rows directly, bypassing the pipeline, for tests of database constraints that commands would never
+    /// reach. Nothing else in the tests writes this way.
+    /// </summary>
+    internal async Task SeedAsync(params object[] entities)
+    {
+        await using var context = CreateContext();
+        using var writes = context.PermitPipelineWrites();
+        context.AddRange(entities);
+        await context.SaveChangesAsync().ConfigureAwait(false);
+    }
+
+    private IServiceProvider Scope()
     {
         var scope = (_services ?? throw new InvalidOperationException(SkipReason)).CreateScope();
         _scopes.Add(scope);
-        return scope.ServiceProvider.GetRequiredService<KernelDbContext>();
+        return scope.ServiceProvider;
     }
 
     public async ValueTask DisposeAsync()
@@ -97,4 +142,19 @@ public sealed class KernelPostgresFixture : IAsyncLifetime
             await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
     }
+}
+
+/// <summary>An <see cref="ICurrentActor"/> tests can set.</summary>
+public sealed class TestCurrentActor : ICurrentActor
+{
+    public Actor? Actor { get; set; } = Cadence.Kernel.Commands.Actor.Person(KernelPostgresFixture.ActorId);
+}
+
+/// <summary>An <see cref="IAuthorizer"/> that permits everything unless <see cref="Policy"/> is set.</summary>
+public sealed class TestAuthorizer : IAuthorizer
+{
+    public Func<Actor, ICommand, AuthorizationDecision>? Policy { get; set; }
+
+    public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
 }

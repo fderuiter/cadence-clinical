@@ -13,7 +13,7 @@ TypeScript library of NestJS gateway building blocks: JWKS fetch coalescing, ing
 - `PinoLoggerService`, `scrubPii`.
 - `PreProxyGraphValidationInterceptor` (uses `validateUsdmGraph` from [usdm-schemas](../usdm-schemas/README.md)).
 
-The package has no application bootstrap: `src/index.ts` only re-exports modules. `docker/docker-compose.yml` defines a `gateway-rewrite` container that runs `packages/gateway-rewrite/dist/index.js`, and the nginx front proxy routes `/designer` to it, but nothing in that file starts an HTTP server. The gateway the platform uses is the .NET service in [apps/gateway](../../apps/gateway/README.md).
+The package has no application bootstrap: `src/index.ts` only re-exports modules. Nothing starts an HTTP server from it, and neither `docker/docker-compose.yml` nor the nginx front proxy runs or routes to it. The gateway the platform uses is the .NET service in [apps/gateway](../../apps/gateway/README.md).
 
 ## Scripts
 

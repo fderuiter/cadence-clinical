@@ -18,6 +18,12 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 - `apiClient.js` sends the Keycloak access token as `Authorization: Bearer <token>` to `VITE_API_BASE_URL` (default `http://localhost:8000`), and `X-Change-Reason` on mutations when the caller supplies one.
 - The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)). When Keycloak is unreachable the auth store falls back to a demo identity with no token, and its `/api/v1/auth/demo-session` call has no gateway route, so demo mode cannot reach the API. Only MSW-mocked requests work in that mode. Sign in through Keycloak to use the real services.
 
+## Screen availability
+
+Most screens were written against the Python services and call endpoints no .NET service serves. Only the eCRF and CTMS screens have a backend behind them (Execution). Every other screen is hidden from the sidebar and command palette, and its route shows a "not available yet" page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in `src/router/availability.js` lists the visible screens. [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the screen-by-screen inventory and the steps for moving a screen over, and epic #4833 has the plan.
+
+The clients in `src/api/` are still typed against the Python-era specs in `docs/openapi/legacy/`. They are replaced as each screen moves over.
+
 ## Scripts
 
 Run from the repository root with pnpm (the workspace is defined in `pnpm-workspace.yaml`):

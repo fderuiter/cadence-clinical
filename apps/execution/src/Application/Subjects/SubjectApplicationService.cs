@@ -105,7 +105,7 @@ public sealed class SubjectApplicationService(
         subject.ReasonForChange = auditContext.ChangeReason;
 
         await subjects.AddAsync(subject, ct).ConfigureAwait(false);
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "ENROLL_SUBJECT",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "ENROLL_SUBJECT",
             auditContext.UserId, subject.ReasonForChange, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -165,7 +165,7 @@ public sealed class SubjectApplicationService(
             }
         }
 
-        await auditLog.WriteAsync("subject_consents", consent.Id.ToString(), "RECORD_CONSENT",
+        await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "RECORD_CONSENT",
             auditContext.UserId, consent.ReasonForChange, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await consents.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -270,7 +270,7 @@ public sealed class SubjectApplicationService(
         // which replays the router's own strat-factors-only path, has no audit_assertions for exactly this
         // reason). This is the same kind of deliberate, documented consolidation as the dual-lookup fix
         // above, not a hidden behavior change.
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "UPDATE_DEMOGRAPHICS",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "UPDATE_DEMOGRAPHICS",
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -301,7 +301,7 @@ public sealed class SubjectApplicationService(
         }
 
         subject.ReasonForChange = changeReason;
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "DELETE_DEMOGRAPHICS",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "DELETE_DEMOGRAPHICS",
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -408,7 +408,7 @@ public sealed class SubjectApplicationService(
                 // `compliance.SaveChangesAsync(ct)` right after its own audit write, matching this method's
                 // own doc comment's claim that the blocked path is audited "before returning the failure
                 // result" -- this one call site just never actually added the save that claim depends on.
-                await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "BLOCKED_ENROLLMENT",
+                await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "BLOCKED_ENROLLMENT",
                     auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
                 await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
                 return SubjectErrors.BlockedEnrollment(subject.SiteCode);
@@ -425,7 +425,7 @@ public sealed class SubjectApplicationService(
         }
 
         subject.ReasonForChange = changeReason;
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 

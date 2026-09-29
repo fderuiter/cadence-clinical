@@ -42,6 +42,9 @@ public class EConsentCompletedConsumerTests
 {
     private static readonly StudyCode StudyA = new("STUDY-ECONSENT-A");
 
+    /// <summary>When the participant signed. Deliberately days before any test clock's "now".</summary>
+    private static readonly DateTimeOffset SignedAt = new(2026, 1, 2, 9, 15, 0, TimeSpan.Zero);
+
     // ---- Shared in-memory fakes ----------------------------------------------------------------------
 
     /// <summary>
@@ -152,16 +155,16 @@ public class EConsentCompletedConsumerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken) => unitOfWork.SaveChangesAsync();
     }
 
-    private sealed record AuditWriteCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditWriteCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class FakeAuditLogWriter : IAuditLogWriter
     {
         public List<AuditWriteCall> Calls { get; } = [];
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditWriteCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditWriteCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -235,7 +238,7 @@ public class EConsentCompletedConsumerTests
         var harness = provider.GetRequiredService<ITestHarness>();
         try
         {
-            var evt = new EConsentCompletedEvent("SUBJ-AUTO-01", "STUDY-AUTO", null, "v1.0", 1);
+            var evt = new EConsentCompletedEvent("SUBJ-AUTO-01", "STUDY-AUTO", null, "v1.0", 1, SignedAt);
             await harness.Bus.Publish(evt, ct);
 
             (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue();
@@ -254,16 +257,16 @@ public class EConsentCompletedConsumerTests
             consent.IcfSigned.Should().BeTrue();
             consent.IsPaperOverride.Should().BeFalse();
             consent.RequiresReconsent.Should().BeFalse();
-            consent.IcfSignedDate.Should().Be(clock.UtcNow);
+            consent.IcfSignedDate.Should().Be(SignedAt, "the signed time is the event's, not when the consumer ran");
 
             auditWriter.Calls.Should().HaveCount(2);
-            var subjectAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "clinical_subjects").Which;
+            var subjectAudit = auditWriter.Calls.Should().ContainSingle(c => c.EntityName == "ClinicalSubject").Which;
             subjectAudit.Action.Should().Be("INSERT");
             subjectAudit.RecordId.Should().Be(subject.Id.ToString());
             subjectAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
             subjectAudit.ChangeReason.Should().Be(ServiceAccounts.EConsentConsumer.ChangeReason);
 
-            var consentAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "subject_consents").Which;
+            var consentAudit = auditWriter.Calls.Should().ContainSingle(c => c.EntityName == "SubjectConsent").Which;
             consentAudit.Action.Should().Be("INSERT");
             consentAudit.RecordId.Should().Be(consent.Id.ToString());
             consentAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
@@ -297,7 +300,7 @@ public class EConsentCompletedConsumerTests
         var subjectsRepository = (FakeSubjectRepository)provider.GetRequiredService<ISubjectRepository>();
         try
         {
-            await harness.Bus.Publish(new EConsentCompletedEvent("SUBJ-SHARED-PATH", StudyA.Value, null, "v1.0", 1), ct);
+            await harness.Bus.Publish(new EConsentCompletedEvent("SUBJ-SHARED-PATH", StudyA.Value, null, "v1.0", 1, SignedAt), ct);
             (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue();
 
             // Behavioral half: this exact call site actually invoked that single shared method -- not merely
@@ -331,7 +334,7 @@ public class EConsentCompletedConsumerTests
         var subjectsRepository = (FakeSubjectRepository)provider.GetRequiredService<ISubjectRepository>();
         try
         {
-            var evt = new EConsentCompletedEvent(subjectId, studyId, null, "v1.0", 1);
+            var evt = new EConsentCompletedEvent(subjectId, studyId, null, "v1.0", 1, SignedAt);
             await harness.Bus.Publish(evt, ct);
 
             // "Completes normally" (no exception, no fault, no dead-letter): ITestHarness only records a
@@ -367,7 +370,7 @@ public class EConsentCompletedConsumerTests
         var subjectsRepository = (FakeSubjectRepository)provider.GetRequiredService<ISubjectRepository>();
         try
         {
-            var evt = new EConsentCompletedEvent("SUBJ-REDELIVERED", "STUDY-REDELIVERED", null, "v1.0", 1);
+            var evt = new EConsentCompletedEvent("SUBJ-REDELIVERED", "STUDY-REDELIVERED", null, "v1.0", 1, SignedAt);
 
             await harness.Bus.Publish(evt, ct);
             await harness.Bus.Publish(evt, ct);
@@ -409,7 +412,7 @@ public class EConsentCompletedConsumerTests
         var subjectsRepository = (FakeSubjectRepository)provider.GetRequiredService<ISubjectRepository>();
         try
         {
-            var evt = new EConsentCompletedEvent("SUBJ-PRE-EXISTING", StudyA.Value, null, "v2.0", 2);
+            var evt = new EConsentCompletedEvent("SUBJ-PRE-EXISTING", StudyA.Value, null, "v2.0", 2, SignedAt);
             await harness.Bus.Publish(evt, ct);
 
             (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue();
@@ -424,10 +427,10 @@ public class EConsentCompletedConsumerTests
             consent.SubjectCode.Should().Be(existingSubject.SubjectCode);
             consent.ProtocolVersion.VersionIndex.Should().Be(2);
             consent.IcfSigned.Should().BeTrue();
-            consent.IcfSignedDate.Should().Be(clock.UtcNow);
+            consent.IcfSignedDate.Should().Be(SignedAt);
 
             auditWriter.Calls.Should().ContainSingle("only the independent consent backfill is audited -- no subject INSERT audit entry is written")
-                .Which.TableName.Should().Be("subject_consents");
+                .Which.EntityName.Should().Be("SubjectConsent");
         }
         finally
         {
@@ -450,7 +453,7 @@ public class EConsentCompletedConsumerTests
         var harness = provider.GetRequiredService<ITestHarness>();
         try
         {
-            var evt = new EConsentCompletedEvent("SUBJ-FAULT", "STUDY-FAULT", null, "v1.0", 1);
+            var evt = new EConsentCompletedEvent("SUBJ-FAULT", "STUDY-FAULT", null, "v1.0", 1, SignedAt);
             await harness.Bus.Publish(evt, ct);
 
             // A broad try/catch inside Consume swallowing this exception would leave the message showing up
@@ -460,6 +463,58 @@ public class EConsentCompletedConsumerTests
             // both necessary and sufficient to prove the exception propagated rather than being swallowed.
             (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue(
                 "an unhandled persistence failure must propagate out of Consume so MassTransit's own retry/fault handling observes it");
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task Consume_AfterAConsumerDelay_RecordsTheSignedTimeFromTheEventNotTheProcessingTime()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var clock = new FakeClock(SignedAt.AddDays(3));
+
+        await using var provider = await StartHarnessAsync(unitOfWork, new FakeAuditLogWriter(), clock);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            await harness.Bus.Publish(new EConsentCompletedEvent("SUBJ-DELAYED", StudyA.Value, null, "v1.0", 1, SignedAt), ct);
+
+            (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue();
+            unitOfWork.Consents.Should().ContainSingle()
+                .Which.IcfSignedDate.Should().Be(SignedAt).And.NotBe(clock.UtcNow);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task Consume_WithoutASignedTime_FaultsToTheErrorQueueAndWritesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var auditWriter = new FakeAuditLogWriter();
+
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock(DateTimeOffset.UtcNow));
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            await harness.Bus.Publish(new EConsentCompletedEvent("SUBJ-UNSIGNED", StudyA.Value, null, "v1.0", 1), ct);
+
+            (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue(
+                "a consent without its signed time must be rejected, not recorded with the processing time");
+            unitOfWork.Subjects.Should().BeEmpty();
+            unitOfWork.Consents.Should().BeEmpty();
+            auditWriter.Calls.Should().BeEmpty();
         }
         finally
         {

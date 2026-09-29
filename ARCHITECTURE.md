@@ -87,20 +87,20 @@ Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, bu
 
 | Service | Project | Port | Gateway routes (`/api/v1/…`) | Persistence | Maturity |
 | --- | --- | --- | --- | --- | --- |
-| [gateway](apps/gateway/README.md) | `Cadence.Apps.Gateway` | 8000 | all of the below | none | Implemented |
-| [designer](apps/designer/README.md) | `Cadence.Apps.Designer` | 8001 | `studies` | none yet | Scaffold |
-| [execution](apps/execution/README.md) | `Cadence.Apps.Execution` | 8002 | `subjects`, `observations`, `forms`, `queries`, `compliance`, `execution` | `ExecutionDbContext` | Implemented (EDC core) |
-| [etmf](apps/etmf/README.md) | `Cadence.Apps.Etmf` | 8003 | `etmf`, `documents` | `EtmfDbContext` | Scaffold |
+| [gateway](apps/gateway/README.md) | `Cadence.Apps.Gateway` | 8000 (behind the nginx front proxy in compose) | all of the below; each route is tested against the endpoints its service maps ([ADR-2448](docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)) | none | Implemented |
+| [designer](apps/designer/README.md) | `Cadence.Apps.Designer` | 8001 | `studies`, `protocols` | none yet | Scaffold |
+| [execution](apps/execution/README.md) | `Cadence.Apps.Execution` | 8002 | `observations`, `forms`, `queries`, `execution` | `ExecutionDbContext` | Implemented (EDC core) |
+| [etmf](apps/etmf/README.md) | `Cadence.Apps.Etmf` | 8003 | `etmf` | `EtmfDbContext` | Scaffold |
 | [interop](apps/interop/README.md) | `Cadence.Apps.Interop` | 8004 | `interop` | `InteropDbContext` | Scaffold |
 | [quality](apps/quality/README.md) | `Cadence.Apps.Quality` | 8005 | `quality` | `QualityDbContext` | Scaffold |
 | [notifications](apps/notifications/README.md) | `Cadence.Apps.Notifications` | 8006 | `notifications` | `NotificationsDbContext` | Scaffold |
-| [ctms](apps/ctms/README.md) | `Cadence.Apps.Ctms` | 8007 | `ctms`, `sites` | `CtmsDbContext` | Scaffold |
+| [ctms](apps/ctms/README.md) | `Cadence.Apps.Ctms` | 8007 | `ctms` | `CtmsDbContext` | Scaffold |
 | [safety](apps/safety/README.md) | `Cadence.Apps.Safety` | 8008 | `safety` | `SafetyDbContext` | Scaffold |
 | [tickets](apps/tickets/README.md) | `Cadence.Apps.Tickets` | 8009 | `tickets` | `TicketsDbContext` | Scaffold |
 | [eisf](apps/eisf/README.md) | `Cadence.Apps.Eisf` | 8010 | `eisf` | `EisfDbContext` | Scaffold |
 | [econsent](apps/econsent/README.md) | `Cadence.Apps.Econsent` | 8011 | `econsent` | `EconsentDbContext` | Scaffold |
 | [org](apps/org/README.md) | `Cadence.Apps.Org` | 8012 | `org` | `OrgDbContext` | Scaffold |
-| [fileshare](apps/fileshare/README.md) | `Cadence.Apps.Fileshare` | 8013 | `fileshare`, `files` | `FileshareDbContext` + MinIO | Scaffold |
+| [fileshare](apps/fileshare/README.md) | `Cadence.Apps.Fileshare` | 8013 | `fileshare` | `FileshareDbContext` + MinIO | Scaffold |
 | [imaging](apps/imaging/README.md) | `Cadence.Apps.Imaging` | 8014 | `imaging` | `ImagingDbContext` | Scaffold |
 | [knowledge](apps/knowledge/README.md) | `Cadence.Apps.Knowledge` | 8015 | `knowledge` | `KnowledgeDbContext` | Scaffold |
 | [payments](apps/payments/README.md) | `Cadence.Apps.Payments` | 8016 | `payments` | `PaymentsDbContext` | Scaffold |
@@ -118,10 +118,10 @@ Other runtime pieces:
 | Subject portal | `apps/subject-portal` | Participant PWA (port 5174) |
 | Aspire AppHost | `apps/apphost` | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak and a subset of services |
 | Keycloak | `docker/cadence-realm.json` | OIDC identity provider (port 8080), realm `cadence` |
-| PostgreSQL 16 | compose `postgres*` | Relational store for every service |
-| MinIO | compose `minio` | Object storage for fileshare |
-| Neo4j | compose `neo4j` | No longer used by .NET code; removal tracked in #4790 |
-| Other compose services | `docker/docker-compose.yml` | `postgres-etmf`, `postgres-ctms`, `postgres-quality` (per-service databases), `clamav` and `fileshare-transcoder` (upload scanning and conversion), `front-proxy` (nginx) and `gateway-rewrite` (`packages/gateway-rewrite`, Node), `dotnet-dev` (SDK container) |
+| PostgreSQL 16 | compose `postgres` | One `cadence` database with a schema per service (ADR-2447) |
+| MinIO, ClamAV | compose profile `storage` | Object storage and upload scanning; no service reads them yet |
+| Front proxy | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway |
+| Other compose services | `docker/docker-compose.yml` | `dotnet-dev` (SDK container) |
 
 ## 4. Request path and security
 

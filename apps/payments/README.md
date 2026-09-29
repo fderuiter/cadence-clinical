@@ -17,7 +17,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `PaymentsDbContext`.
 - `GET /api/v1/payments/status` (anonymous status payload).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/payments/**` to this service. It is not in `docker/docker-compose.yml`; the gateway's default upstream is `http://localhost:8016` (`PAYMENTS_SERVICE_URL`).
+- The gateway forwards `/api/v1/payments/**` to this service. Compose publishes host port 8016 (container port 8080); the gateway's default upstream is `http://localhost:8016` (`PAYMENTS_SERVICE_URL`).
 
 ## Security
 
@@ -25,7 +25,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 ## Persistence
 
-`AddCadencePostgresDbContext<PaymentsDbContext>()` from [packages/database](../../packages/database/README.md) resolves the connection string from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`. Only the Development environment falls back to a local `cadence_edc` database on `localhost:5432`; other environments fail at startup. It has no service entry in `docker/docker-compose.yml`.
+`AddCadencePostgresDbContext<PaymentsDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `payments` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
 
 ## Key dependencies
 
@@ -41,7 +41,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
-export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/payments/src/Cadence.Apps.Payments.csproj
 ```
 

@@ -10,7 +10,7 @@ using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
-using Cadence.Kernel.Time;
+using Cadence.Database;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -29,8 +29,7 @@ namespace Cadence.UnitTests.Execution.Compliance;
 /// InMemory-backed <see cref="ExecutionDbContext"/> (matching `SiteComplianceRepositoryTests`'/
 /// `SiteComplianceCacheConfigurationTests`' own established convention for this aggregate, and no
 /// mocking-framework usage appears anywhere else in <c>tests/Execution/</c>) plus a hand-rolled
-/// <see cref="FakeAuditLogWriter"/> (matching `EfAuditLogWriterTests`' own <c>FakeClock</c> convention) that
-/// records every call for zero-calls/ordering assertions.
+/// <see cref="FakeAuditLogWriter"/> that records every call for zero-calls/ordering assertions.
 /// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceApplicationServiceTests
@@ -40,18 +39,18 @@ public class SiteComplianceApplicationServiceTests
     private const string Milestone = "SITE_ACTIVATION";
 
     private sealed record AuditCall(
-        string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+        string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class FakeAuditLogWriter : IAuditLogWriter
     {
         public List<AuditCall> Calls { get; } = new();
 
         public Task WriteAsync(
-            string tableName, string recordId, string action, string userId, string changeReason,
+            string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues,
             CancellationToken ct)
         {
-            Calls.Add(new AuditCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -62,13 +61,11 @@ public class SiteComplianceApplicationServiceTests
         public string ChangeReason => "system_operation";
     }
 
-    private sealed class FakeClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    }
-
     private static ExecutionDbContext CreateContext(string databaseName) =>
-        new(new DbContextOptionsBuilder<ExecutionDbContext>().UseInMemoryDatabase(databaseName).Options);
+        new(new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .AddInterceptors(new GxPAuditInterceptor(() => "user-compliance-1"))
+            .Options);
 
     private static SiteComplianceApplicationService CreateService(
         ExecutionDbContext context, FakeAuditLogWriter? auditLog = null) =>
@@ -103,7 +100,7 @@ public class SiteComplianceApplicationServiceTests
 
         var call = auditLog.Calls.Should().ContainSingle().Which;
         call.Action.Should().Be("ETMF_COMPLIANCE_UPDATE");
-        call.TableName.Should().Be("site_compliance_caches");
+        call.EntityName.Should().Be("SiteComplianceCache");
         call.RecordId.Should().Be(row.Id.ToString());
         call.UserId.Should().Be("user-compliance-1");
     }
@@ -211,7 +208,7 @@ public class SiteComplianceApplicationServiceTests
 
         auditLog.Calls.Should().ContainSingle();
         auditLog.Calls[0].Action.Should().Be("BLOCKED_ACTIVATION");
-        auditLog.Calls[0].TableName.Should().Be("site_compliance_caches");
+        auditLog.Calls[0].EntityName.Should().Be("SiteComplianceCache");
         auditLog.Calls[0].RecordId.Should().Be(SiteId);
         auditLog.Calls[0].UserId.Should().Be("user-compliance-1");
     }
@@ -246,7 +243,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller()
     {
         // Strongest form of the "writes the audit entry before returning the failure" acceptance criterion:
-        // IAuditLogWriter.WriteAsync does not itself call SaveChangesAsync, so a real EfAuditLogWriter + a
+        // IAuditLogWriter.WriteAsync only labels the next save (#4768), so a real EfAuditLogWriter + a
         // fresh, independent ExecutionDbContext re-query after ActivateSiteAsync returns proves the entry
         // was actually committed -- not merely staged -- by the time the caller observes the failure result.
         string databaseName = Guid.NewGuid().ToString();
@@ -255,7 +252,7 @@ public class SiteComplianceApplicationServiceTests
         {
             var service = new SiteComplianceApplicationService(
                 new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create()),
-                new EfAuditLogWriter(context, new FakeClock()),
+                new EfAuditLogWriter(context),
                 new FakeAuditContextAccessor());
 
             var result = await service.ActivateSiteAsync(

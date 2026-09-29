@@ -145,7 +145,7 @@ public sealed class TmfDocumentExpirationAlertStateConfiguration : IEntityTypeCo
         builder.HasOne<TmfDocument>()
             .WithMany()
             .HasForeignKey(x => x.DocumentId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.DocumentId, x.WarningWindow }).IsUnique();
         builder.HasIndex(x => x.Dispatched);
@@ -174,7 +174,7 @@ public sealed class TmfDocumentQcTransitionConfiguration : IEntityTypeConfigurat
         builder.HasOne<TmfDocument>()
             .WithMany()
             .HasForeignKey(x => x.DocumentId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.DocumentId, x.TransitionSequence }).IsUnique();
         builder.HasIndex(x => x.DocumentId);

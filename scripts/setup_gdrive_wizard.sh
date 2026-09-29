@@ -24,6 +24,7 @@ fi
 TOTAL_STAGES=0
 
 _STAGE_INDEX=0
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-.env}"
 WRITTEN_ENV=()    # KEYs written to ENV_FILE this run
 WRITTEN_SECRET=() # secret NAMEs set this run
@@ -238,7 +239,7 @@ write_env "GOOGLE_DRIVE_FOLDER_ID" "$GOOGLE_DRIVE_FOLDER_ID"
 stage "Validate & Verify Connection"
 say "Validating credentials and verifying write permissions via the Cadence CLI..."
 
-if uv run cadence record setup-gdrive --credentials-path "$GOOGLE_APPLICATION_CREDENTIALS" --folder-id "$GOOGLE_DRIVE_FOLDER_ID"; then
+if dotnet run --project "$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj" -- record setup-gdrive --credentials-path "$GOOGLE_APPLICATION_CREDENTIALS" --folder-id "$GOOGLE_DRIVE_FOLDER_ID"; then
   printf '\n  %s✓ Google Drive API authentication & folder write verified successfully!%s\n' "$GREEN" "$RESET"
 else
   warn "Validation check returned an issue. Please review the output above."

@@ -15,7 +15,7 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 - `GET /api/v1/studies/`: returns an empty array.
 - `POST /api/v1/protocols/compile`: body `{ usdmJson, studyId?, versionTag? }`; returns the DDF compilation result.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards only `/api/v1/studies/**` here, so `/api/v1/protocols/compile` is reachable only by calling the service directly. Compose publishes port 8001.
+- The gateway forwards `/api/v1/studies/**` and `/api/v1/protocols/**` here. Compose publishes host port 8001 (container port 8080).
 
 ## Security
 
@@ -23,7 +23,7 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 
 ## Persistence
 
-None. The project references `Neo4j.Driver` and `docker/docker-compose.yml` passes `NEO4J_*` variables, but no code opens a Neo4j session.
+None. The project still references `Neo4j.Driver`, but no code opens a Neo4j session, and Neo4j is no longer in `docker/docker-compose.yml` (#4790).
 
 ## Key dependencies
 

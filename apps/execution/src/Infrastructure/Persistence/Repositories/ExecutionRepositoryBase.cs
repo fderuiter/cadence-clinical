@@ -1,8 +1,12 @@
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 using Polly;
@@ -35,26 +39,39 @@ public abstract class ExecutionRepositoryBase(ExecutionDbContext context, Resili
     private protected IDbContextTransaction? PendingTransaction { get; set; }
 
     /// <summary>
-    /// Persists all pending changes on <see cref="Context"/>, retrying up to
-    /// <see cref="SaveChangesResiliencePipelineFactory.MaxRetryAttempts"/> additional times (with the
-    /// "client wins" reload described on <see cref="SaveChangesResiliencePipelineFactory"/>) on a
-    /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/>, then commits any transaction
-    /// left pending by a prior <see cref="ISubjectRepository"/>-style enrollment call. If the save ultimately
-    /// fails (concurrency conflict exhausted, or any other exception), the pending transaction is disposed —
-    /// which rolls it back — rather than left open holding its advisory lock indefinitely.
+    /// Persists all pending changes on <see cref="Context"/>, retrying only transient database failures
+    /// (<see cref="SaveChangesResiliencePipelineFactory.IsTransient"/>), then commits any transaction left pending
+    /// by a prior <see cref="ISubjectRepository"/>-style enrollment call. A save inside an explicit transaction
+    /// gets one attempt, because a failed statement aborts the transaction. A concurrency conflict is never
+    /// retried: it is rethrown as <see cref="ConcurrencyConflictException"/> (409) so the other request's change
+    /// is not overwritten (#4766). If the save fails, the pending transaction is disposed, which rolls it back,
+    /// rather than left open holding its advisory lock.
     /// </summary>
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await saveChangesResilience
-                .ExecuteAsync(ct => new ValueTask<int>(Context.SaveChangesAsync(ct)), cancellationToken)
-                .ConfigureAwait(false);
+            if (PendingTransaction is null && Context.Database.CurrentTransaction is null)
+            {
+                await saveChangesResilience
+                    .ExecuteAsync(ct => new ValueTask<int>(Context.SaveChangesAsync(ct)), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
 
             if (PendingTransaction is { } transaction)
             {
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
+        }
+        catch (DbUpdateConcurrencyException conflict)
+        {
+            throw new ConcurrencyConflictException(
+                conflict.Entries.Select(e => e.Metadata.ClrType.Name).Distinct(StringComparer.Ordinal).ToList(),
+                conflict);
         }
         finally
         {

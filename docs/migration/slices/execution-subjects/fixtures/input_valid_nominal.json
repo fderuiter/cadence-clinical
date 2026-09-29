@@ -270,7 +270,8 @@
         "study_id": "STUDY-AUTO",
         "site_id": "SITE-AUTO-01",
         "version_tag": "1.0",
-        "version_index": 1
+        "version_index": 1,
+        "signed_at": "2026-01-15T10:30:00Z"
       }
     },
     {
@@ -285,7 +286,8 @@
         "study_id": "STUDY-AUTO",
         "site_id": "SITE-AUTO-01",
         "version_tag": "1.0",
-        "version_index": 1
+        "version_index": 1,
+        "signed_at": "2026-01-15T10:30:00Z"
       },
       "preconditions": { "subject_already_exists": true }
     },

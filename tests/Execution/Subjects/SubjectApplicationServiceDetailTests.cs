@@ -36,7 +36,7 @@ public class SubjectApplicationServiceDetailTests
 
     private sealed class NoOpAuditLogWriter : IAuditLogWriter
     {
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct) =>
             Task.CompletedTask;
     }

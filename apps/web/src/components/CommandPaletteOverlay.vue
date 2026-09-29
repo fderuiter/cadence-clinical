@@ -75,6 +75,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { hasRequiredRole } from "../router";
+import { isScreenAvailable } from "../router/availability";
 import { useFocusTrap } from "../composables/useFocusTrap";
 import { useEscapeClose } from "../composables/useEscapeClose";
 
@@ -172,6 +173,9 @@ const allowedDestinations = computed(() => {
     return [];
   }
   return searchableDestinations.filter((dest) => {
+    if (!isScreenAvailable(router.resolve(dest.path).name)) {
+      return false;
+    }
     if (!dest.roles || dest.roles.length === 0) {
       return true;
     }

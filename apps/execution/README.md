@@ -22,7 +22,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 - `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
 - Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/execution/**`, `/api/v1/observations/**`, `/api/v1/forms/**`, `/api/v1/queries/**`, `/api/v1/subjects/**` and `/api/v1/compliance/**` here; the last two have no matching routes. Compose publishes port 8002.
+- The gateway forwards `/api/v1/execution/**`, `/api/v1/observations/**`, `/api/v1/forms/**` and `/api/v1/queries/**` here. Compose publishes port 8002.
 
 ## Security
 
@@ -30,7 +30,19 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 
 ## Persistence
 
-`ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence_edc` on `localhost:5432`. The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
+`ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema in the shared `cadence` database (ADR-2447). The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
+
+## Errors and concurrency
+
+- Domain errors come back as RFC 7807 ProblemDetails with a `code` extension. `DomainErrorHttpMapping` sets the status.
+- Writes use optimistic concurrency: each aggregate row carries a `_version` token. When another writer changed or
+  deleted the row after it was read, the save is rejected rather than retried over their change.
+  `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with `code: CONCURRENCY_CONFLICT`, and nothing
+  from the rejected save is written or audited. Clients re-read and re-apply (ADR-2450).
+- Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by the
+  Polly pipeline in `SaveChangesResiliencePipelineFactory`, and never inside an explicit transaction.
+- Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446), attributed to the caller or a
+  named `svc:` service account (ADR-2257).
 
 ## Key dependencies
 
@@ -47,7 +59,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
-export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 ```
 

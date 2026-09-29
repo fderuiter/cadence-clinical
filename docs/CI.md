@@ -23,7 +23,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 ## Quality gates
 
-`pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs it, and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
+`pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
 | Gate (short name)     | What it checks                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------ |
@@ -55,8 +55,8 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 `scripts/setup_wizard.sh` points git at `.githooks/` (`git config core.hooksPath .githooks`). The `pre-commit` hook (`pre-commit.ps1` on Windows) runs:
 
-1. `dotnet format Cadence.sln --verify-no-changes`
-2. `pnpm cadence check` (all 21 gates above)
+1. `dotnet format Cadence.sln --verify-no-changes --include <staged .cs files>`, skipped when no C# file is staged.
+2. `pnpm cadence check --pre-commit`: all 21 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
 
 There is no pre-push hook. The traceability matrix is checked in CI by the compliance job; run `pnpm cadence gxp sync` before pushing test changes.
 

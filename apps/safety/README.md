@@ -19,7 +19,7 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 - `GET /api/v1/safety/status` (anonymous status payload).
 - `POST /api/v1/safety/icsr/render`: renders an `IcsrReport` through `e2b_r3_icsr.xml.liquid` and returns `application/xml`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/safety/**` to this service. Compose publishes host port 8008 (container port 8000).
+- The gateway forwards `/api/v1/safety/**` to this service. Compose publishes host port 8008 (container port 8080).
 
 ## Security
 
@@ -27,7 +27,7 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 
 ## Persistence
 
-`AddCadencePostgresDbContext<SafetyDbContext>()` from [packages/database](../../packages/database/README.md) resolves the connection string from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`. Only the Development environment falls back to a local `cadence_edc` database on `localhost:5432`; other environments fail at startup. In `docker/docker-compose.yml` this service only receives a legacy `SAFETY_DATABASE_URL` (SQLite URL from the Python era), which the .NET service does not read.
+`AddCadencePostgresDbContext<SafetyDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `safety` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
 
 ## Key dependencies
 
@@ -43,7 +43,7 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
-export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/safety/src/Cadence.Apps.Safety.csproj
 ```
 

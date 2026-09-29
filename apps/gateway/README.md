@@ -1,60 +1,73 @@
-# API gateway
+# Gateway
 
-Single entry point for browser and API clients. It validates the caller's Keycloak (OIDC) bearer token, strips any client-supplied identity headers, and forwards requests to the backend services with YARP, adding identity headers signed with `GATEWAY_SECRET`.
+The single public entry point. A YARP reverse proxy that authenticates every caller and forwards the
+caller's identity to backend services as HMAC-signed headers.
 
-**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) the backend services become application modules over the clinical kernel; the disposition of the scaffold services is tracked in issue #4787.
+## Authentication
 
-## Project
+1. The gateway validates the `Authorization: Bearer` token against the OIDC provider (Keycloak) named by
+   `OIDC_AUTHORITY` (and audience `OIDC_AUDIENCE` when set). Anonymous or invalid tokens get `401`.
+2. It strips every identity header the client sent (`X-User-Id`, `X-User-Roles`, `X-User-Role`,
+   `X-Gateway-Signature`, ...) and the bearer token, then adds its own set built from the token's claims
+   (`sub`, Keycloak realm roles, site/sponsor/tenant scope) plus the client's `X-Change-Reason` and
+   `X-Sig-Token`. The set is signed with `GATEWAY_SECRET` and timestamped
+   (`apps/gateway/src/GatewayIdentityForwarding.cs`).
+3. Each backend service (`AddCadenceSecurity`/`UseCadenceSecurity` in `packages/security`) accepts a
+   request only with a valid signature inside a two-minute window, and requires an authenticated caller on
+   every endpoint except health, status and development API docs. `ArchitectureSentinelTests` fails the
+   build when a service's `Program.cs` skips this wiring.
 
-- Project: `apps/gateway/src/Cadence.Apps.Gateway.csproj` (assembly `Cadence.Apps.Gateway`).
-- `Program.cs`: JWT bearer authentication, fallback authorization policy, YARP routes and clusters.
-- `GatewayIdentityForwarding.cs`: maps Keycloak realm roles to claims and registers the proxy transform that removes client identity headers and the `Authorization` header, then attaches freshly signed `X-User-Id`, `X-User-Roles`, `X-Tenant-Id` and related headers.
+See ADR-2250 (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`).
 
-## HTTP surface
+Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 
-- `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
-- `GET /api/v1/status` (anonymous).
-- Everything else requires a valid bearer token and is proxied by path prefix under `/api/v1/`:
+## Configuration
 
-| Prefixes                                                                                                                  | Upstream (env var, default port)                                        |
-| ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `studies`                                                                                                                 | designer (`DESIGNER_SERVICE_URL`, 8001)                                 |
-| `subjects`, `observations`, `forms`, `queries`, `compliance`, `execution`                                                 | execution (`EXECUTION_SERVICE_URL`, 8002)                               |
-| `etmf`, `documents`                                                                                                       | etmf (`ETMF_SERVICE_URL`, 8003)                                         |
-| `ctms`, `sites`                                                                                                           | ctms (`CTMS_SERVICE_URL`, 8007)                                         |
-| `files`, `fileshare`                                                                                                      | fileshare (`FILESHARE_SERVICE_URL`, 8013)                               |
-| `interop`, `quality`, `notifications`, `safety`, `tickets`, `eisf`, `econsent`, `org`, `imaging`, `knowledge`, `payments` | the service of the same name (`<NAME>_SERVICE_URL`, ports 8004 to 8016) |
-| `ai`                                                                                                                      | ai_gateway (`AI_GATEWAY_SERVICE_URL`, 8017)                             |
+| Setting | Required | Purpose |
+| --- | --- | --- |
+| `GATEWAY_SECRET` | yes (gateway and every service) | Shared HMAC key, at least 32 characters. No default; startup fails without it. |
+| `OIDC_AUTHORITY` | yes | Token issuer, e.g. `https://idp.example.com/realms/cadence`. |
+| `OIDC_AUDIENCE` | no | Expected `aud` claim; validated when set. |
+| `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
+| `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
+| `<SERVICE>_SERVICE_URL` | no | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`. |
 
-Defaults are `http://localhost:<port>`. The designer's `/api/v1/protocols` route has no gateway route. Compose publishes port 8000.
+## Routes
 
-## Security
+Each route forwards a whole path prefix to one service. Service addresses come from `<SERVICE>_SERVICE_URL` and
+default to `http://localhost:<port>` (the ports in [docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)).
 
-- `OIDC_AUTHORITY` (the Keycloak realm URL, for example `http://localhost:8080/realms/cadence`) is required; the host throws at startup without it. Optional: `OIDC_METADATA_ADDRESS` (internal discovery URL), `OIDC_AUDIENCE` (validated when set), `OIDC_REQUIRE_HTTPS_METADATA` (default `true`).
-- `GATEWAY_SECRET` (at least 32 characters) is required at startup and must match the downstream services; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
-- The gateway uses its own JWT authentication rather than `AddCadenceSecurity()`; it uses `GatewayAuthenticationOptions`, header names and claim types from [packages/security](../../packages/security/README.md).
+| Path prefix | Service | Address key |
+| --- | --- | --- |
+| `/api/v1/studies/**` | designer | `DESIGNER_SERVICE_URL` |
+| `/api/v1/protocols/**` | designer | `DESIGNER_SERVICE_URL` |
+| `/api/v1/observations/**` | execution | `EXECUTION_SERVICE_URL` |
+| `/api/v1/forms/**` | execution | `EXECUTION_SERVICE_URL` |
+| `/api/v1/queries/**` | execution | `EXECUTION_SERVICE_URL` |
+| `/api/v1/execution/**` | execution | `EXECUTION_SERVICE_URL` |
+| `/api/v1/etmf/**` | etmf | `ETMF_SERVICE_URL` |
+| `/api/v1/interop/**` | interop | `INTEROP_SERVICE_URL` |
+| `/api/v1/quality/**` | quality | `QUALITY_SERVICE_URL` |
+| `/api/v1/notifications/**` | notifications | `NOTIFICATIONS_SERVICE_URL` |
+| `/api/v1/ctms/**` | ctms | `CTMS_SERVICE_URL` |
+| `/api/v1/safety/**` | safety | `SAFETY_SERVICE_URL` |
+| `/api/v1/tickets/**` | tickets | `TICKETS_SERVICE_URL` |
+| `/api/v1/eisf/**` | eisf | `EISF_SERVICE_URL` |
+| `/api/v1/econsent/**` | econsent | `ECONSENT_SERVICE_URL` |
+| `/api/v1/org/**` | org | `ORG_SERVICE_URL` |
+| `/api/v1/fileshare/**` | fileshare | `FILESHARE_SERVICE_URL` |
+| `/api/v1/imaging/**` | imaging | `IMAGING_SERVICE_URL` |
+| `/api/v1/knowledge/**` | knowledge | `KNOWLEDGE_SERVICE_URL` |
+| `/api/v1/payments/**` | payments | `PAYMENTS_SERVICE_URL` |
+| `/api/v1/ai/**` | ai-gateway | `AI_GATEWAY_SERVICE_URL` |
 
-## Persistence
-
-None.
-
-## Key dependencies
-
-- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.ToolingCore`.
-- Packages: `Yarp.ReverseProxy`, `Microsoft.AspNetCore.Authentication.JwtBearer`, OpenTelemetry, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`.
+`tests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
+prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a
+route in `src/Program.cs` together with the endpoints it serves
+([ADR-2448](../../docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)).
 
 ## Tests
 
-- `tests/Gateway/GatewayAuthenticationTests.cs` runs the real gateway in front of a header-echoing upstream: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Gateway"`.
-- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
-
-## Run locally
-
 ```bash
-export OIDC_AUTHORITY="http://localhost:8080/realms/cadence"
-export OIDC_REQUIRE_HTTPS_METADATA=false
-export GATEWAY_SECRET="<at least 32 characters, same value as the services>"
-dotnet run --project apps/gateway/src/Cadence.Apps.Gateway.csproj
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Gateway"
 ```
-
-Keycloak and the `cadence` realm come from `docker/docker-compose.yml` (`docker/cadence-realm.json`). The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts the gateway but does not set `OIDC_AUTHORITY` or `GATEWAY_SECRET` for it.

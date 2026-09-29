@@ -17,7 +17,7 @@ Quality management scaffold. It holds the deviation, root cause analysis and CAP
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `QualityDbContext`.
 - `GET /api/v1/quality/status` (anonymous status payload).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/quality/**` to this service. Compose publishes host port 8005 (container port 8000).
+- The gateway forwards `/api/v1/quality/**` to this service. Compose publishes host port 8005 (container port 8080).
 
 ## Security
 
@@ -25,7 +25,9 @@ Quality management scaffold. It holds the deviation, root cause analysis and CAP
 
 ## Persistence
 
-`AddCadencePostgresDbContext<QualityDbContext>()` from [packages/database](../../packages/database/README.md) resolves the connection string from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`. Only the Development environment falls back to a local `cadence_edc` database on `localhost:5432`; other environments fail at startup. `docker/docker-compose.yml` sets `ConnectionStrings__cadence` to the `cadence_quality` database on `postgres-quality`.
+`AddCadencePostgresDbContext<QualityDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `quality` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
+
+Regulated history is kept: `QualityRootCauseAnalysis` and `QualityCapaRecord` rows reference their `QualityDeviation` with `ON DELETE RESTRICT`, so deleting a parent that still has history fails instead of erasing it. Retire or soft-delete regulated records; never hard-delete them ([ADR-2258](../../docs/adr/2026-09-29-restrict-cascade-deletes-onto-audit-trails-and-regulated-children.md)).
 
 ## Key dependencies
 
@@ -41,7 +43,7 @@ Quality management scaffold. It holds the deviation, root cause analysis and CAP
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
-export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/quality/src/Cadence.Apps.Quality.csproj
 ```
 

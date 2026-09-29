@@ -2883,7 +2883,8 @@
           "subject_id",
           "domain",
           "test_code",
-          "test_name"
+          "test_name",
+          "observation_date"
         ],
         "type": "object",
         "properties": {
@@ -2898,6 +2899,13 @@
           },
           "test_name": {
             "type": "string"
+          },
+          "observation_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           },
           "study_id": {
             "type": [
@@ -2937,13 +2945,6 @@
               "null",
               "string"
             ]
-          },
-          "observation_date": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
           },
           "lab_source": {
             "type": [

@@ -94,29 +94,20 @@ else {
     }
 }
 
-# 3. Python / uv
-Write-Host "`n[3/6] Python & uv" -ForegroundColor Cyan
-Write-Host "  Syncing the Python toolchain, pre-commit hooks, and (optionally) Playwright..." -ForegroundColor Gray
-if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    Write-Info "uv not found on PATH. Install it: irm https://astral.sh/uv/install.ps1 | iex"
+# 3. Git pre-commit hooks
+Write-Host "`n[3/6] Git Quality Gates" -ForegroundColor Cyan
+Write-Host "  Pointing git at the native .NET pre-commit hooks (.githooks/)..." -ForegroundColor Gray
+& git -C $RepoRoot config core.hooksPath .githooks
+if ($LASTEXITCODE -eq 0) { Write-Ok "Native git pre-commit quality hooks enabled (.githooks/pre-commit.ps1)." }
+else { Write-Failed "Failed to configure .githooks. Run 'git config core.hooksPath .githooks' manually." }
+
+if ($Minimal) {
+    Write-Info "Skipped Playwright browser download (-Minimal). Run 'pnpm --filter web exec playwright install chromium' later if needed."
 }
-else {
-    & uv sync --python 3.14 --all-extras
-    if ($LASTEXITCODE -eq 0) { Write-Ok "uv sync complete." }
-    else { Write-Failed "uv sync failed — see output above. Continuing with remaining stages." }
-
-    & uv run --python 3.14 pre-commit install --install-hooks
-    if ($LASTEXITCODE -eq 0) { Write-Ok "pre-commit hooks installed." }
-    else { Write-Failed "pre-commit hook install failed — see output above." }
-
-    if ($Minimal) {
-        Write-Info "Skipped Playwright browser download (-Minimal). Run 'uv run playwright install chromium' later if needed."
-    }
-    else {
-        & uv run --python 3.14 playwright install chromium
-        if ($LASTEXITCODE -eq 0) { Write-Ok "Playwright Chromium installed." }
-        else { Write-Failed "Playwright browser install failed — see output above." }
-    }
+elseif (Get-Command pnpm -ErrorAction SilentlyContinue) {
+    & pnpm --filter web exec playwright install chromium
+    if ($LASTEXITCODE -eq 0) { Write-Ok "Playwright Chromium installed for web E2E testing." }
+    else { Write-Info "Playwright browser install skipped (install later with 'pnpm --filter web exec playwright install chromium')." }
 }
 
 # 4. Local datastores
@@ -151,14 +142,14 @@ else {
 # 6. Final validation
 Write-Host "`n[6/6] Final Validation" -ForegroundColor Cyan
 Write-Host "  Running 'cadence doctor' across the whole stack..." -ForegroundColor Gray
-if (Get-Command uv -ErrorAction SilentlyContinue) {
-    & uv run --python 3.14 cadence doctor
+if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+    & dotnet run --project (Join-Path $RepoRoot "packages\cli\src\Cadence.Cli.csproj") -- doctor
     if ($LASTEXITCODE -ne 0) {
         Write-Failed "'cadence doctor' reported issues above — review before continuing."
     }
 }
 else {
-    Write-Info "Skipped 'cadence doctor' (uv not available)."
+    Write-Info "Skipped 'cadence doctor' (.NET SDK not available)."
 }
 
 if ($FailedStages.Count -eq 0) {

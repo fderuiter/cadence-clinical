@@ -34,6 +34,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Kernel decisions K001–K009](../ARCHITECTURE.md#2-key-decisions) | Current | Decisions and their ADRs (ADR-2244 to ADR-2255) |
 | [Execution migration inventory](kernel/EXECUTION_MIGRATION_INVENTORY.md) | Current | What `apps/execution` must change to run on the kernel (roadmap phase 1) |
 | [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
+| [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
 
 ## Architecture decision records
 
@@ -55,6 +56,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
 | [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
+| [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
 | [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md) | Baseline | Deployment topology and runbooks; being revised with the production-readiness work |
 | [Lab reference ranges](OPERATIONAL_LAB_RANGES.md) | Baseline | Range selection, scoring and tie-breaking rules |

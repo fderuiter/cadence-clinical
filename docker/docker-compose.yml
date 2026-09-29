@@ -1,107 +1,72 @@
-version: "3.8"
+# ==============================================================================
+# Cadence Clinical - local development stack
+# ==============================================================================
+# Every .NET service is built from docker/Dockerfile.dotnet and listens on 8080
+# inside its container (the aspnet image default). Host ports keep the
+# 8001-8017 map the gateway uses by default; the front proxy on host port 8000
+# is the entry point the web apps call (VITE_API_BASE_URL=http://localhost:8000).
+# Keycloak is published on host port 8080 (VITE_KEYCLOAK_URL).
+#
+# Database: one PostgreSQL database, `cadence`, with one schema per service
+# (docs/OPERATIONAL_DATABASE.md). Each service applies its own migrations on
+# start (Database__MigrateOnStartup) and reports ready at /healthz/ready once
+# the database answers.
+#
+# Credentials here are local-development values only. See docs/LOCAL_DEV_ENVIRONMENT.md.
+# ==============================================================================
+
+x-dotnet-service: &dotnet-service
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz/ready"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+x-dotnet-env: &dotnet-env
+  ASPNETCORE_ENVIRONMENT: Development
+  # Services refuse to start without a secret of at least 32 characters.
+  GATEWAY_SECRET: local-dev-gateway-secret-not-for-production # pragma: allowlist secret
+  AUDIT_LOG_SECRET_KEY: local-dev-audit-secret-not-for-production # pragma: allowlist secret
+
+x-db-env: &db-env
+  <<: *dotnet-env
+  ConnectionStrings__cadence: Host=postgres;Port=5432;Database=cadence;Username=cadence;Password=cadence_password # pragma: allowlist secret
+  Database__MigrateOnStartup: "true"
+
+x-db-depends: &db-depends
+  postgres:
+    condition: service_healthy
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: cadence-postgres
-    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
+    restart: unless-stopped
     environment:
       POSTGRES_USER: cadence
       POSTGRES_PASSWORD: cadence_password # pragma: allowlist secret
-      POSTGRES_DB: cadence_edc
+      POSTGRES_DB: cadence
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_edc"]
+      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence"]
       interval: 5s
       timeout: 5s
-      retries: 5
-
-  postgres-etmf:
-    image: postgres:15-alpine
-    container_name: cadence-postgres-etmf
-    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
-    environment:
-      POSTGRES_USER: cadence
-      POSTGRES_PASSWORD: cadence_password # pragma: allowlist secret
-      POSTGRES_DB: cadence_etmf
-    ports:
-      - "5433:5432"
-    volumes:
-      - ./postgres-etmf-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_etmf"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  postgres-ctms:
-    image: postgres:15-alpine
-    container_name: cadence-postgres-ctms
-    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
-    environment:
-      POSTGRES_USER: cadence
-      POSTGRES_PASSWORD: cadence_password # pragma: allowlist secret
-      POSTGRES_DB: cadence_ctms
-    ports:
-      - "5434:5432"
-    volumes:
-      - ./postgres-ctms-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_ctms"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  postgres-quality:
-    image: postgres:15-alpine
-    container_name: cadence-postgres-quality
-    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
-    environment:
-      POSTGRES_USER: cadence
-      POSTGRES_PASSWORD: cadence_password # pragma: allowlist secret
-      POSTGRES_DB: cadence_quality
-    ports:
-      - "5435:5432"
-    volumes:
-      - ./postgres-quality-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_quality"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  neo4j:
-    image: neo4j:5-community
-    container_name: cadence-neo4j
-    environment:
-      NEO4J_AUTH: neo4j/cadence_password # pragma: allowlist secret
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    volumes:
-      - neo4j_data:/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      retries: 10
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.3
     container_name: cadence-keycloak
+    restart: unless-stopped
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin_password # pragma: allowlist secret
       - KC_DB=dev-file
       - KC_HEALTH_ENABLED=true
-      - BRAND_NAME=Cadence Clinical Research Software
     ports:
       - "8080:8080"
     volumes:
@@ -117,44 +82,56 @@ services:
       timeout: 5s
       retries: 5
 
+  # No service reads MinIO or ClamAV yet; start them with `--profile storage`.
   clamav:
     image: clamav/clamav:stable
     container_name: cadence-clamav
+    profiles:
+      - storage
+    restart: unless-stopped
     ports:
       - "3310:3310"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "echo PING | nc -w 2 127.0.0.1 3310 | grep PONG || exit 0",
-        ]
+      test: ["CMD-SHELL", "echo PING | nc -w 2 127.0.0.1 3310 | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
+      # clamd downloads its signature database before it answers.
+      start_period: 180s
 
-  fileshare-transcoder:
-    build:
-      context: ..
-      dockerfile: docker/fileshare-transcoder/Dockerfile
-    container_name: cadence-fileshare-transcoder
-    volumes:
-      - ..:/app
+  minio:
+    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    container_name: cadence-minio
+    profiles:
+      - storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
     environment:
-      - BRAND_NAME=Cadence Clinical Research Software
-      - FILESHARE_DATABASE_URL=sqlite+aiosqlite:////app/fileshare.db
-      - GATEWAY_URL=http://gateway:8000
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - STORAGE_ENDPOINT_URL=http://minio:9000
-      - STORAGE_BUCKET=cadence-fileshare
-      - STORAGE_ACCESS_KEY=minio_admin
-      - STORAGE_SECRET_KEY=minio_password # pragma: allowlist secret
+      - MINIO_ROOT_USER=minio_admin
+      - MINIO_ROOT_PASSWORD=minio_password # pragma: allowlist secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  front-proxy:
+    image: nginx:1.25-alpine
+    container_name: cadence-front-proxy
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      postgres:
+      gateway:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      fileshare:
-        condition: service_started
 
   subject-portal:
     image: node:20-alpine
@@ -171,533 +148,282 @@ services:
     ports:
       - "5174:5174"
     depends_on:
-      gateway:
+      front-proxy:
         condition: service_started
-
-  front-proxy:
-    image: nginx:1.25-alpine
-    container_name: cadence-front-proxy
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-    depends_on:
-      gateway:
-        condition: service_started
-
-  gateway-rewrite:
-    image: node:20-alpine
-    container_name: cadence-gateway-rewrite
-    working_dir: /app
-    command: ["node", "packages/gateway-rewrite/dist/index.js"]
-    volumes:
-      - ..:/app
-    environment:
-      - BRAND_NAME=Cadence Clinical Research Software
-    expose:
-      - "3000"
-    depends_on:
-      keycloak:
-        condition: service_healthy
-
-  minio:
-    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
-    container_name: cadence-minio
-    command: server /data --console-address ":9001"
-    environment:
-      - MINIO_ROOT_USER=minio_admin
-      - MINIO_ROOT_PASSWORD=minio_password # pragma: allowlist secret
-      - BRAND_NAME=Cadence Clinical Research Software
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   # ----------------------------------------------------------------------------
-  # .NET Subsystem Containers (Default Microservices Stack)
+  # .NET services
   # ----------------------------------------------------------------------------
 
   gateway:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: gateway
-        PROJECT_PATH: apps/gateway/src
     container_name: cadence-gateway
-    ports:
-      - "8000:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - DESIGNER_SERVICE_URL=http://designer:8001
-      - EXECUTION_SERVICE_URL=http://execution:8002
-      - ETMF_SERVICE_URL=http://etmf:8003
-      - CTMS_SERVICE_URL=http://ctms:8007
-      - QUALITY_SERVICE_URL=http://quality:8005
-      - INTEROP_SERVICE_URL=http://interop:8004
-      - TICKETS_SERVICE_URL=http://tickets:8009
-      - NOTIFICATIONS_SERVICE_URL=http://notifications:8006
-      - SAFETY_SERVICE_URL=http://safety:8008
-      - ORG_SERVICE_URL=http://org:8012
-      - EISF_SERVICE_URL=http://eisf:8010
-      - ECONSENT_SERVICE_URL=http://econsent:8011
-      - FILESHARE_SERVICE_URL=http://fileshare:8013
-      - OIDC_AUTHORITY=http://localhost:8080/realms/cadence
-      - OIDC_METADATA_ADDRESS=http://keycloak:8080/realms/cadence/.well-known/openid-configuration
-      - OIDC_REQUIRE_HTTPS_METADATA=false
-      - BRAND_NAME=Cadence Clinical Research Software
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - AUDIT_LOG_SECRET_KEY=dev-audit-secret-key-cadence-2026-secure-32b # pragma: allowlist secret
-    depends_on:
-      keycloak:
-        condition: service_healthy
+    # Published only through front-proxy (host port 8000).
+    expose:
+      - "8080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
+      # The gateway has no database; liveness is its readiness.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      default:
-        aliases:
-          - gateway
+      start_period: 20s
+    environment:
+      <<: *dotnet-env
+      DESIGNER_SERVICE_URL: http://designer:8080
+      EXECUTION_SERVICE_URL: http://execution:8080
+      ETMF_SERVICE_URL: http://etmf:8080
+      INTEROP_SERVICE_URL: http://interop:8080
+      QUALITY_SERVICE_URL: http://quality:8080
+      NOTIFICATIONS_SERVICE_URL: http://notifications:8080
+      CTMS_SERVICE_URL: http://ctms:8080
+      SAFETY_SERVICE_URL: http://safety:8080
+      TICKETS_SERVICE_URL: http://tickets:8080
+      EISF_SERVICE_URL: http://eisf:8080
+      ECONSENT_SERVICE_URL: http://econsent:8080
+      ORG_SERVICE_URL: http://org:8080
+      FILESHARE_SERVICE_URL: http://fileshare:8080
+      IMAGING_SERVICE_URL: http://imaging:8080
+      KNOWLEDGE_SERVICE_URL: http://knowledge:8080
+      PAYMENTS_SERVICE_URL: http://payments:8080
+      AI_GATEWAY_SERVICE_URL: http://ai-gateway:8080
+      # Tokens are issued to browsers at localhost:8080, so that is the issuer; discovery
+      # and signing keys are fetched from the Keycloak container over the compose network.
+      OIDC_AUTHORITY: http://localhost:8080/realms/cadence
+      OIDC_METADATA_ADDRESS: http://keycloak:8080/realms/cadence/.well-known/openid-configuration
+      OIDC_REQUIRE_HTTPS_METADATA: "false"
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   designer:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: designer
-        PROJECT_PATH: apps/designer/src
     container_name: cadence-designer
     ports:
-      - "8001:8001"
-    volumes:
-      - ..:/workspace
+      - "8001:8080"
     environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=cadence_password # pragma: allowlist secret
-    depends_on:
-      neo4j:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - designer
+      <<: *dotnet-env
 
   execution:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: execution
-        PROJECT_PATH: apps/execution/src
     container_name: cadence-execution
     ports:
-      - "8002:8002"
-    volumes:
-      - ..:/workspace
+      - "8002:8080"
     environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - POSTGRES_USER=cadence
-      - POSTGRES_PASSWORD=cadence_password # pragma: allowlist secret
-      - POSTGRES_DB=cadence_edc
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc # pragma: allowlist secret
-      - ConnectionStrings__cadence=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - execution
-
-  ctms:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: ctms
-        PROJECT_PATH: apps/ctms/src
-    container_name: cadence-ctms
-    ports:
-      - "8007:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - CTMS_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-ctms:5432/cadence_ctms # pragma: allowlist secret
-      - ConnectionStrings__cadence=Host=postgres-ctms;Port=5432;Database=cadence_ctms;Username=cadence;Password=cadence_password # pragma: allowlist secret
-    depends_on:
-      postgres-ctms:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - ctms
+      <<: *db-env
+      # Local-only AES-256 key; generate a real one with `openssl rand -base64 32`.
+      DemographicsEncryption__KeyBase64: Y2FkZW5jZS1sb2NhbC1kZXYtZGVtb2dyYXBoaWNzISE= # pragma: allowlist secret
+    depends_on: *db-depends
 
   etmf:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: etmf
-        PROJECT_PATH: apps/etmf/src
     container_name: cadence-etmf
     ports:
-      - "8003:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - ETMF_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-etmf:5432/cadence_etmf # pragma: allowlist secret
-      - ConnectionStrings__cadence=Host=postgres-etmf;Port=5432;Database=cadence_etmf;Username=cadence;Password=cadence_password # pragma: allowlist secret
-      - INBOUND_EMAIL_HMAC_SECRET=dev-secret-inbound-email-hmac-secure-placeholder # pragma: allowlist secret
-      - INBOUND_EMAIL_MAX_SIZE_BYTES=10485760
-      - NOTIFICATIONS_URL=http://notifications:8006
-    depends_on:
-      postgres-etmf:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - etmf
-
-  quality:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: quality
-        PROJECT_PATH: apps/quality/src
-    container_name: cadence-quality
-    ports:
-      - "8005:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - QUALITY_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-quality:5432/cadence_quality # pragma: allowlist secret
-      - ConnectionStrings__cadence=Host=postgres-quality;Port=5432;Database=cadence_quality;Username=cadence;Password=cadence_password # pragma: allowlist secret
-    depends_on:
-      postgres-quality:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - quality
-
-  org:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: org
-        PROJECT_PATH: apps/org/src
-    container_name: cadence-org
-    ports:
-      - "8012:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - ORG_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc # pragma: allowlist secret
-      - ConnectionStrings__cadence=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - org
-
-  eisf:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: eisf
-        PROJECT_PATH: apps/eisf/src
-    container_name: cadence-eisf
-    ports:
-      - "8010:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - EISF_DATABASE_URL=sqlite+aiosqlite:////app/eisf.db
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - eisf
+      - "8003:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
   interop:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: interop
-        PROJECT_PATH: apps/interop/src
     container_name: cadence-interop
     ports:
-      - "8004:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - INTEROP_DATABASE_URL=sqlite+aiosqlite:////app/interop.db
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - interop
+      - "8004:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
-  tickets:
+  quality:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
-        APP_NAME: tickets
-        PROJECT_PATH: apps/tickets/src
-    container_name: cadence-tickets
+        APP_NAME: quality
+    container_name: cadence-quality
     ports:
-      - "8009:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - TICKETS_DATABASE_URL=sqlite+aiosqlite:////app/tickets.db
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - tickets
-
-  safety:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dotnet
-      args:
-        APP_NAME: safety
-        PROJECT_PATH: apps/safety/src
-    container_name: cadence-safety
-    ports:
-      - "8008:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - SAFETY_DATABASE_URL=sqlite+aiosqlite:////app/safety.db
-      - SAFETY_SALT=internal-safety-salt-12345
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - safety
+      - "8005:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
   notifications:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: notifications
-        PROJECT_PATH: apps/notifications/src
     container_name: cadence-notifications
     ports:
-      - "8006:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - NOTIFICATIONS_DATABASE_URL=sqlite+aiosqlite:////app/notifications.db
-      - SMTP_HOST=smtp.mailhog.local
-      - SMTP_PORT=1025
-      - SMTP_USERNAME=dev_user
-      - SMTP_PASSWORD=dev_password # pragma: allowlist secret
-      - SMTP_USE_TLS=false
-      - SMTP_USE_SSL=false
-      - SMTP_SENDER=no-reply@ccrsoft.com
-      - WEBHOOK_URL=http://webhooks.local/receiver
-      - WEBHOOK_SIGNING_SECRET=dev_webhook_secret_key_12345 # pragma: allowlist secret
-      - WEBHOOK_TIMEOUT=5.0
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - notifications
+      - "8006:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  ctms:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: ctms
+    container_name: cadence-ctms
+    ports:
+      - "8007:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  safety:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: safety
+    container_name: cadence-safety
+    ports:
+      - "8008:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  tickets:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: tickets
+    container_name: cadence-tickets
+    ports:
+      - "8009:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  eisf:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: eisf
+    container_name: cadence-eisf
+    ports:
+      - "8010:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
   econsent:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: econsent
-        PROJECT_PATH: apps/econsent/src
     container_name: cadence-econsent
     ports:
-      - "8011:8000"
-    volumes:
-      - ..:/workspace
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - ECONSENT_DATABASE_URL=sqlite+aiosqlite:////app/econsent.db
-      - GATEWAY_URL=http://gateway:8000
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - econsent
+      - "8011:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  org:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: org
+    container_name: cadence-org
+    ports:
+      - "8012:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
   fileshare:
+    <<: *dotnet-service
     build:
       context: ..
       dockerfile: docker/Dockerfile.dotnet
       args:
         APP_NAME: fileshare
-        PROJECT_PATH: apps/fileshare/src
     container_name: cadence-fileshare
     ports:
-      - "8013:8000"
-    volumes:
-      - ..:/workspace
+      - "8013:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  imaging:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: imaging
+    container_name: cadence-imaging
+    ports:
+      - "8014:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  knowledge:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: knowledge
+    container_name: cadence-knowledge
+    ports:
+      - "8015:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  payments:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: payments
+    container_name: cadence-payments
+    ports:
+      - "8016:8080"
+    environment: *db-env
+    depends_on: *db-depends
+
+  ai-gateway:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: ai_gateway
+    container_name: cadence-ai-gateway
+    ports:
+      - "8017:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - BRAND_NAME=Cadence Clinical Research Software
-      - FILESHARE_DATABASE_URL=sqlite+aiosqlite:////app/fileshare.db
-      - GATEWAY_URL=http://gateway:8000
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - STORAGE_ENDPOINT_URL=http://minio:9000
-      - STORAGE_BUCKET=cadence-fileshare
-      - STORAGE_ACCESS_KEY=minio_admin
-      - STORAGE_SECRET_KEY=minio_password # pragma: allowlist secret
-      - CLAMAV_HOST=clamav
-      - CLAMAV_PORT=3310
-      - CLAMAV_ENABLED=true
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      clamav:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      default:
-        aliases:
-          - fileshare
+      <<: *dotnet-env
 
   dotnet-dev:
     build:
@@ -708,24 +434,12 @@ services:
     profiles:
       - dotnet
     ports:
-      - "8000:8000"
-      - "8001:8001"
-      - "8002:8002"
+      - "5000:8080"
     volumes:
       - ..:/workspace
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-local-dev-only-gateway-secret-not-for-production} # pragma: allowlist secret
-      - AUDIT_LOG_SECRET_KEY=dev-audit-secret-key-cadence-2026-secure-32b # pragma: allowlist secret
-      - POSTGRES_CONNECTION_STRING=Host=postgres;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password # pragma: allowlist secret
-      - NEO4J_URI=bolt://neo4j:7687
-    depends_on:
-      postgres:
-        condition: service_healthy
-      neo4j:
-        condition: service_healthy
+    environment: *db-env
+    depends_on: *db-depends
 
 volumes:
   postgres_data:
-  neo4j_data:
   minio_data:

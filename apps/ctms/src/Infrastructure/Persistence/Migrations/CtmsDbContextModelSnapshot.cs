@@ -991,7 +991,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)
                         .WithMany()
                         .HasForeignKey("GrantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1000,7 +1000,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)
                         .WithMany()
                         .HasForeignKey("GrantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsPaymentMilestone", null)
@@ -1014,7 +1014,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)
                         .WithMany()
                         .HasForeignKey("GrantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

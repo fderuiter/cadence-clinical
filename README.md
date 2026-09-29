@@ -43,7 +43,7 @@ re-founded on the kernel. Both of these are true at once:
 | 17 ASP.NET Core 10 services under `apps/`, each with its own schema, behind a YARP gateway | One modular monolith: kernel + engines in a single PostgreSQL schema, products as application modules ([ADR-2244](docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md)) |
 | `apps/execution` (EDC) is the most complete service | Execution is the first product moved onto the kernel ([migration inventory](docs/kernel/EXECUTION_MIGRATION_INVENTORY.md)) |
 | `packages/kernel` holds the kernel projects (`Abstractions`, `Domain`, `Application`, `Persistence`, `Api`) with typed IDs, `IClock` and the `kernel` schema | Kernel phases 0–5 in [spec §15](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
-| Neo4j is still in `docker-compose.yml` | Neo4j retired; protocol versions stored in PostgreSQL ([ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [#4790](https://github.com/fderuiter/cadence-clinical/issues/4790)) |
+| The designer still references the Neo4j driver, though nothing uses it and compose no longer runs Neo4j | Neo4j retired; protocol versions stored in PostgreSQL ([ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [#4790](https://github.com/fderuiter/cadence-clinical/issues/4790)) |
 | Some `packages/` still contain Python reference sources | Deleted as each C# port is verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)) |
 
 [ARCHITECTURE.md](ARCHITECTURE.md) describes both views in detail.
@@ -85,14 +85,17 @@ refuses to start without `OIDC_AUTHORITY`
 Every non-health request must come through the gateway with a Keycloak token, so the web client
 has to sign in; its token-less demo mode can no longer reach the API.
 
+The compose stack sets local values for both and boots PostgreSQL, Keycloak, the gateway and every
+service. Each service applies its own migrations on start:
+
 ```bash
-cp .env.example .env                           # then set GATEWAY_SECRET
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml up -d --build
 ```
 
 Each service exposes `/healthz/live` (process up) and `/healthz/ready` (database reachable).
-Services and their ports are listed in [ARCHITECTURE.md §3](ARCHITECTURE.md#3-running-services-today),
-and every setting in [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md).
+Ports, tokens and other ways to run the platform are in
+[docs/LOCAL_DEV_ENVIRONMENT.md](docs/LOCAL_DEV_ENVIRONMENT.md), and every setting in
+[docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md).
 
 ## Developer CLI
 

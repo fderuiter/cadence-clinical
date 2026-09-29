@@ -52,7 +52,7 @@ The `execution-observations` slice encompasses the core electronic data capture 
   | `value` | `float` | No | `null` | Numeric measurement value. Required if `value_string` is omitted. |
   | `value_string` | `string` | No | `null` | Qualitative or textual finding. |
   | `unit` | `string` | No | `null` | Raw reported unit string (e.g. `mmHg`, `mg/dL`, `beats/min`). |
-  | `observation_date` | `datetime` | No | `UtcNow` | Timestamp when observation occurred. |
+  | `observation_date` | `datetime` | Yes | - | Timestamp when observation occurred (valid time). Required since #4769: the legacy `UtcNow` default collapsed valid time into recorded time, so requests and form payloads without it are rejected with `OBSERVATION_DATE_REQUIRED`. |
   | `page_id` | `string` | No | `null` | Associated eCRF page instance identifier. |
   | `protocol_version_tag` | `string` | No | `null` | Applicable protocol amendment tag. |
   | `protocol_version_index` | `int` | No | `null` | Monotonic protocol version sequence index. |
