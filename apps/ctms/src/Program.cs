@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
+using Cadence.Kernel.Templating;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -18,6 +19,11 @@ string connectionString = builder.Configuration["POSTGRES_CONNECTION_STRING"]
         : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
 
 builder.Services.AddDbContext<CtmsDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddFluidTemplating();
+
+FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
+FluidTemplateRenderer.RegisterType<SiteVisitFindingModel>();
+FluidTemplateRenderer.RegisterType<SiteVisitLetterModel>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
@@ -30,6 +36,14 @@ var api = app.MapGroup("/api/v1/ctms");
 api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = "Cadence.Apps.Ctms" }))
     .WithName("CtmsStatus")
     .WithSummary("Returns CTMS operational status.");
+
+api.MapPost("/letters/render", async (string templateName, SiteVisitLetterModel request, ITemplateRenderer renderer) =>
+{
+    string rendered = await renderer.RenderAsync(templateName, request, typeof(Program).Assembly);
+    return TypedResults.Content(rendered, "text/plain");
+})
+.WithName("RenderSiteVisitLetter")
+.WithSummary("Renders a CTMS site visit monitoring letter via Liquid template.");
 
 await app.RunAsync();
 

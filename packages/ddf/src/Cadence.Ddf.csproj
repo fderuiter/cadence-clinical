@@ -7,4 +7,10 @@
     <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fluid.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\Templates\**\*.liquid" Link="Templates\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

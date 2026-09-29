@@ -9,9 +9,9 @@ Thank you for your cooperation during the clinical monitoring visit for Trial/St
 
 The following findings and action items were recorded during the visit:
 
-{% if findings %}
+{% if findings != null and findings.size > 0 %}
 {% for finding in findings %}
-Finding {{ loop.index }}:
+Finding {{ forloop.index }}:
 - Text: {{ finding.text }}
 - Severity: {{ finding.severity }}
 - Status: {{ finding.resolution_status }}

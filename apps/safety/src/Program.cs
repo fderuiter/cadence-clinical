@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
+using Cadence.Kernel.Templating;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -18,6 +19,16 @@ string connectionString = builder.Configuration["POSTGRES_CONNECTION_STRING"]
         : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
 
 builder.Services.AddDbContext<SafetyDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddFluidTemplating();
+
+FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
+FluidTemplateRenderer.RegisterType<IcsrHeader>();
+FluidTemplateRenderer.RegisterType<IcsrReportIdentifiers>();
+FluidTemplateRenderer.RegisterType<IcsrPatient>();
+FluidTemplateRenderer.RegisterType<IcsrMeddraCoding>();
+FluidTemplateRenderer.RegisterType<IcsrReaction>();
+FluidTemplateRenderer.RegisterType<IcsrSuspectDrug>();
+FluidTemplateRenderer.RegisterType<IcsrReport>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
@@ -30,6 +41,14 @@ var api = app.MapGroup("/api/v1/safety");
 api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = "Cadence.Apps.Safety" }))
     .WithName("SafetyStatus")
     .WithSummary("Returns Safety operational status.");
+
+api.MapPost("/icsr/render", async (IcsrReport request, ITemplateRenderer renderer) =>
+{
+    string rendered = await renderer.RenderAsync("e2b_r3_icsr.xml.liquid", request, typeof(Program).Assembly);
+    return TypedResults.Content(rendered, "application/xml");
+})
+.WithName("RenderIcsrReport")
+.WithSummary("Renders an ICSR E2B(R3) safety report as Liquid XML.");
 
 await app.RunAsync();
 

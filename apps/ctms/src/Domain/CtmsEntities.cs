@@ -217,3 +217,20 @@ public sealed class CtmsInvestigatorPayable : AggregateRoot<string>
     public CtmsInvestigatorPayable() : base(Guid.NewGuid().ToString()) { }
     public CtmsInvestigatorPayable(string id) : base(id) { }
 }
+
+public record SiteVisitFindingModel(
+    string Text,
+    string Severity,
+    string ResolutionStatus
+);
+
+public record SiteVisitLetterModel(
+    string CraId,
+    string CreatedAt,
+    string StudyId,
+    string SiteId,
+    string VisitType = "Monitoring",
+    string? ScheduledDate = null,
+    string? ActualDate = null,
+    IReadOnlyList<SiteVisitFindingModel>? Findings = null
+);

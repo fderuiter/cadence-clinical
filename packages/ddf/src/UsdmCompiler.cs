@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -7,12 +8,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Templating;
 
 namespace Cadence.Ddf;
 
 /// <summary>
 /// Compiles CDISC USDM study protocol definitions into DDF Intermediate Representation (IR),
-/// CDISC ODM XML casebooks, and OpenRosa XForms schemas.
+/// CDISC ODM XML casebooks, and OpenRosa XForms schemas using Fluid Liquid templates.
 /// Conforms to ADR-2244, ADR-2245, and PRD-DDF-001.
 /// </summary>
 public static class UsdmCompiler
@@ -20,10 +22,10 @@ public static class UsdmCompiler
     /// <summary>
     /// Compiles an immutable ProtocolVersion snapshot entity into a complete DDF compilation artifact.
     /// </summary>
-    public static DDFCompilationResult Compile(ProtocolVersion protocolVersion, CompileOptions? options = null)
+    public static DDFCompilationResult Compile(ProtocolVersion protocolVersion, CompileOptions? options = null, ITemplateRenderer? templateRenderer = null)
     {
         ArgumentNullException.ThrowIfNull(protocolVersion);
-        return CompileUsdm(protocolVersion.UsdmPayloadJson, protocolVersion.StudyId.ToString(), protocolVersion.VersionTag, options);
+        return CompileUsdm(protocolVersion.UsdmPayloadJson, protocolVersion.StudyId.ToString(), protocolVersion.VersionTag, options, templateRenderer);
     }
 
     /// <summary>
@@ -33,13 +35,15 @@ public static class UsdmCompiler
         string usdmJson,
         string? fallbackStudyId = null,
         string? versionTag = null,
-        CompileOptions? options = null)
+        CompileOptions? options = null,
+        ITemplateRenderer? templateRenderer = null)
     {
         options ??= new CompileOptions();
         var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag);
 
-        string odmXml = GenerateOdmXml(studyIr);
-        string openRosaXml = GenerateOpenRosaXml(studyIr);
+        var renderer = templateRenderer ?? FluidTemplateRenderer.Instance;
+        string odmXml = renderer.Render("odm_template.xml.liquid", studyIr, typeof(UsdmCompiler).Assembly);
+        string openRosaXml = renderer.Render("openrosa_template.xml.liquid", studyIr, typeof(UsdmCompiler).Assembly);
         string formHash = ComputeSha256Hash(openRosaXml);
 
         var accessibility = options.ValidateAccessibility
@@ -155,114 +159,9 @@ public static class UsdmCompiler
         return (studyIr, warnings);
     }
 
-    private static string GenerateOdmXml(DDFStudyIR study)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<ODM xmlns=\"http://www.cdisc.org/ns/odm/v1.3\" FileType=\"Snapshot\" Originator=\"Cadence DDF Compiler\">");
-        sb.AppendLine($"  <Study OID=\"{study.StudyId}\">");
-        sb.AppendLine($"    <GlobalVariables>");
-        sb.AppendLine($"      <StudyName>{EscapeXml(study.Name)}</StudyName>");
-        sb.AppendLine($"      <StudyDescription>Compiled USDM protocol version {study.Version}</StudyDescription>");
-        sb.AppendLine($"      <ProtocolName>{EscapeXml(study.Name)}</ProtocolName>");
-        sb.AppendLine($"    </GlobalVariables>");
-        sb.AppendLine($"    <MetaDataVersion OID=\"MDV.{study.Version}\" Name=\"Version {study.Version}\">");
-
-        if (study.Items != null && study.Items.Count > 0)
-        {
-            sb.AppendLine("      <ItemGroupDef OID=\"IG.CRF\" Name=\"eCRF Data Group\" Repeating=\"No\">");
-            foreach (var item in study.Items)
-            {
-                sb.AppendLine($"        <ItemRef ItemOID=\"{item.Id}\" Mandatory=\"No\" />");
-            }
-            sb.AppendLine("      </ItemGroupDef>");
-
-            foreach (var item in study.Items)
-            {
-                string odmDataType = item.Type switch
-                {
-                    "integer" => "integer",
-                    "float" or "decimal" => "float",
-                    "date" => "date",
-                    "datetime" => "datetime",
-                    "boolean" => "boolean",
-                    _ => "text"
-                };
-                sb.AppendLine($"      <ItemDef OID=\"{item.Id}\" Name=\"{EscapeXml(item.Name)}\" DataType=\"{odmDataType}\" />");
-            }
-        }
-
-        sb.AppendLine("    </MetaDataVersion>");
-        sb.AppendLine("  </Study>");
-        sb.AppendLine("</ODM>");
-        return sb.ToString();
-    }
-
-    private static string GenerateOpenRosaXml(DDFStudyIR study)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<h:html xmlns=\"http://www.w3.org/2002/xforms\" xmlns:h=\"http://www.w3.org/1999/xhtml\">");
-        sb.AppendLine("  <h:head>");
-        sb.AppendLine($"    <h:title>{EscapeXml(study.Name)}</h:title>");
-        sb.AppendLine("    <model>");
-        sb.AppendLine($"      <instance>");
-        sb.AppendLine($"        <data id=\"{study.StudyId}\">");
-
-        if (study.Items != null)
-        {
-            foreach (var item in study.Items)
-            {
-                sb.AppendLine($"          <{item.Name} />");
-            }
-        }
-
-        sb.AppendLine("        </data>");
-        sb.AppendLine("      </instance>");
-
-        if (study.Items != null)
-        {
-            foreach (var item in study.Items)
-            {
-                string constraintAttr = !string.IsNullOrEmpty(item.Constraint) ? $" constraint=\"{EscapeXml(item.Constraint)}\"" : "";
-                sb.AppendLine($"      <bind nodeset=\"/data/{item.Name}\" type=\"{item.Type}\"{constraintAttr} />");
-            }
-        }
-
-        sb.AppendLine("    </model>");
-        sb.AppendLine("  </h:head>");
-        sb.AppendLine("  <h:body>");
-
-        if (study.Items != null)
-        {
-            for (int i = 0; i < study.Items.Count; i++)
-            {
-                var item = study.Items[i];
-                sb.AppendLine($"    <input ref=\"/data/{item.Name}\">");
-                sb.AppendLine($"      <label>{EscapeXml(item.Name)}</label>");
-                sb.AppendLine("    </input>");
-            }
-        }
-
-        sb.AppendLine("  </h:body>");
-        sb.AppendLine("</h:html>");
-        return sb.ToString();
-    }
-
     private static string ComputeSha256Hash(string rawData)
     {
         byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawData));
         return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private static string EscapeXml(string unescaped)
-    {
-        if (string.IsNullOrEmpty(unescaped)) return "";
-        return unescaped
-            .Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("\"", "&quot;")
-            .Replace("'", "&apos;");
     }
 }
