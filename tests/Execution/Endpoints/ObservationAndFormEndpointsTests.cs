@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +13,7 @@ using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -52,11 +52,7 @@ public sealed class ObservationAndFormEndpointsTests
 
     private static DefaultHttpContext CreateHttpContext(string role = "cra")
     {
-        var context = new DefaultHttpContext();
-        var claims = new[] { new Claim(ClaimTypes.Role, role), new Claim(ClaimTypes.NameIdentifier, "test_user") };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        context.User = new ClaimsPrincipal(identity);
-        return context;
+        return new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("test_user", role) };
     }
 
     /// <summary>
@@ -294,14 +290,15 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
-        var request = new FormSubmissionApproveRequest(
+        var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: DateTime.UtcNow,
             PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
 
-        var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, svc, CancellationToken.None);
+        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
+        var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
 
         result.Should().BeOfType<Ok<FormSubmissionResponse>>();
         var ok = (Ok<FormSubmissionResponse>)result;
@@ -336,14 +333,15 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
-        var request = new FormSubmissionApproveRequest(
+        var request = FormSubmissionApproveRequest.Create(
             SignerId: "user-01",
             SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: DateTime.UtcNow,
             PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
 
-        var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, svc, CancellationToken.None);
+        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
+        var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
 
         result.Should().BeOfType<ProblemHttpResult>();
         var problem = (ProblemHttpResult)result;
@@ -374,7 +372,7 @@ public sealed class ObservationAndFormEndpointsTests
             formId: new FormId("FORM-VS"),
             initialPayload: payload).Value!;
         form.Complete();
-        form.Approve(new SignatureManifest(
+        form.Approve(SignatureManifest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",

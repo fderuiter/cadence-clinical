@@ -137,10 +137,11 @@ public static class FormEndpoints
     public static async Task<IResult> ApproveFormSubmissionAsync(
         string id,
         FormSubmissionApproveRequest request,
+        HttpContext httpContext,
         IFormSubmissionApplicationService svc,
         CancellationToken ct)
     {
-        var result = await svc.ApproveAsync(id, request, ct).ConfigureAwait(false);
+        var result = await svc.ApproveAsync(id, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

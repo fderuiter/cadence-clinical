@@ -55,7 +55,7 @@ It provides a complete reference for all operational environment variables used 
 | `BIOSTAT_EXPORT_SALT` | `str` | `dev-biostat-export-salt-placeholder` | No | Biostat statistical export pseudonymization salt | `packages/config/settings.py:479`<br>`packages/config/settings.py:1` |
 | `DEID_SALT` | `str` | `dev-deid-salt-placeholder` | No | De-identification hashing salt | `packages/config/settings.py:544`<br>`packages/config/settings.py:1` |
 | `GATEWAY_INTERNAL_SECRET` | `str` | `dev-gateway-internal-secret-placeholder` | No | Gateway internal service authentication secret | `packages/config/settings.py:519`<br>`packages/config/settings.py:1` |
-| `GATEWAY_SECRET` | `str` | `internal-gateway-secret-12345` | No | Shared HMAC-SHA256 secret for inter-service Gateway authentication headers | `packages/cli/main.py:8`<br>`packages/config/settings.py:37`<br>`packages/security/auditor_token.py:26`<br>*(+11 more)* |
+| `GATEWAY_SECRET` | `str` | *(None)* | Yes | Shared HMAC-SHA256 secret (at least 32 characters). The gateway signs forwarded caller identity with it and every .NET service verifies that signature; services refuse to start without it. | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs`<br>`apps/gateway/src/Program.cs` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:400`<br>`packages/config/settings.py:1` |
 | `GXP_SIGNING_CERT` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:570`<br>`scripts/sync_gxp.py:96`<br>`packages/config/settings.py:1` |
 | `GXP_SIGNING_PRIVATE_KEY` | `str | None` | *(None)* | Yes | Operational setting for Cryptographic Secrets & Authentication Keys. | `packages/config/settings.py:567`<br>`scripts/sync_gxp.py:95`<br>`packages/config/settings.py:1` |
@@ -138,6 +138,10 @@ It provides a complete reference for all operational environment variables used 
 | `KEYCLOAK_CLIENT_ID` | `str` | `cadence-clinical` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:87`<br>`packages/config/settings.py:1` |
 | `KEYCLOAK_REALM` | `str` | `cadence` | No | Operational setting for Keycloak / OIDC Identity Provider Configuration. | `packages/config/settings.py:86`<br>`packages/config/settings.py:1` |
 | `KEYCLOAK_URL` | `str | None` | `http://localhost:8080` | No | 6. Keycloak / OIDC Identity Provider Configuration | `packages/config/settings.py:85`<br>`packages/config/settings.py:1` |
+| `OIDC_AUTHORITY` | `str` | *(None)* | Yes | Gateway only. Keycloak realm URL that issues caller tokens (the `iss` claim); the gateway refuses to start without it. | `apps/gateway/src/Program.cs` |
+| `OIDC_METADATA_ADDRESS` | `str | None` | *(None)* | No | Gateway only. Internal OpenID discovery URL, for when the public issuer URL is not reachable from the gateway. | `apps/gateway/src/Program.cs` |
+| `OIDC_AUDIENCE` | `str | None` | *(None)* | No | Gateway only. Expected token audience; validated whenever set. Set it in production. | `apps/gateway/src/Program.cs` |
+| `OIDC_REQUIRE_HTTPS_METADATA` | `bool` | `true` | No | Gateway only. Whether OIDC discovery must use HTTPS; set `false` only for a local http Keycloak. | `apps/gateway/src/Program.cs` |
 
 ## Notifications, SMTP & Webhooks
 

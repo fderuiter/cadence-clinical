@@ -41,6 +41,9 @@ public static class FormErrors
     public static DomainError UnauthorizedSignerRole(string role) =>
         DomainError.Forbidden("UNAUTHORIZED_SIGNER_ROLE", $"Role '{role}' is not authorized for Principal Investigator signature sign-off.");
 
+    public static DomainError SignerIdentityMismatch(string claimedSignerId) =>
+        DomainError.Forbidden("SIGNER_IDENTITY_MISMATCH", $"Signature manifest names signer '{claimedSignerId}', who is not the authenticated caller.");
+
     public static DomainError UnlockReasonRequired() =>
         DomainError.Validation("UNLOCK_REASON_REQUIRED", "A documented GxP ReasonForChange is strictly required to unlock an approved form.");
 

@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
+    <!-- TestSecurityContext.CreateSignedClient: gateway-signed clients for WebApplicationFactory hosts. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="NSubstitute" />
     <!-- MIG-SUBJ-025: GoldenMasterAssert.DbStateMatches/AuditLogContains are generic over any DbContext derived
          type rather than a concrete slice DbContext (e.g. Cadence.Apps.Execution's ExecutionDbContext),

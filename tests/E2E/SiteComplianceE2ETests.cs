@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Cadence.Testing.Security;
+
 using FluentAssertions;
 
 using Xunit;
@@ -19,7 +21,7 @@ public class SiteComplianceE2ETests : IClassFixture<ExecutionE2EFactory>
 
     public SiteComplianceE2ETests(ExecutionE2EFactory factory)
     {
-        _client = factory.CreateClient();
+        _client = factory.CreateSignedClient();
     }
 
     [Fact]

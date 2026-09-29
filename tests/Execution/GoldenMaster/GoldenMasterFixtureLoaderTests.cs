@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
+using Cadence.Testing.Security;
 using Cadence.UnitTests.Execution;
 
 using FluentAssertions;
@@ -369,7 +370,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     [GxPRequirement("PRD-SUB-001")]
     public async Task DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail()
     {
-        using var client = _factory.CreateClient(); // forces host/DbContext construction, per MIG-SUBJ-024 precedent.
+        using var client = _factory.CreateSignedClient(); // forces host/DbContext construction, per MIG-SUBJ-024 precedent.
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
@@ -403,7 +404,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     [GxPRequirement("PRD-SUB-001")]
     public async Task DbStateMatches_GivenAssertionThatHolds_DoesNotThrow()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
@@ -436,7 +437,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     [GxPRequirement("PRD-SUB-001")]
     public async Task AuditLogContains_GivenNoMatchingEntry_ThrowsWithScenarioIdAndRecordedEntries()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
@@ -471,7 +472,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     [GxPRequirement("PRD-SUB-001")]
     public async Task AuditLogContains_GivenAMatchingEntry_DoesNotThrow()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();

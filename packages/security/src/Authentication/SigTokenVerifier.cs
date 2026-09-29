@@ -35,7 +35,12 @@ public class SigTokenVerifier
 
         if (secret == null || secret.Length == 0)
         {
-            string gatewaySecret = Environment.GetEnvironmentVariable("GATEWAY_SECRET") ?? "internal-test-gateway-secret";
+            string? gatewaySecret = Environment.GetEnvironmentVariable("GATEWAY_SECRET");
+            if (string.IsNullOrWhiteSpace(gatewaySecret))
+            {
+                throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature tokens cannot be verified.");
+            }
+
             secret = Encoding.UTF8.GetBytes(gatewaySecret);
         }
 

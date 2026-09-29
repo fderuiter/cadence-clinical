@@ -18,15 +18,17 @@ public sealed record SignatureManifest(
     [property: JsonPropertyName("hmac_signature")] string? HmacSignature,
     [property: JsonPropertyName("signed_at")] DateTime SignedAt)
 {
-    public SignatureManifest(
+    /// <summary>
+    /// Convenience factory taking the signer's id as their display name when none is given. A factory rather
+    /// than a second public constructor, so System.Text.Json still has exactly one constructor to bind.
+    /// </summary>
+    public static SignatureManifest Create(
         string SignerId,
         string SignerRole,
         string SigningReason,
         DateTime SignedAt,
         string PayloadHash,
         string? SignerName = null,
-        string? HmacSignature = null)
-        : this(SignerId, SignerName ?? SignerId, SignerRole, SigningReason, PayloadHash, HmacSignature, SignedAt)
-    {
-    }
+        string? HmacSignature = null) =>
+        new(SignerId, SignerName ?? SignerId, SignerRole, SigningReason, PayloadHash, HmacSignature, SignedAt);
 }

@@ -19,6 +19,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
 using FluentValidation;
@@ -35,6 +36,7 @@ using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
+builder.Services.AddCadenceSecurity();
 
 // Shared snake_case wire convention (`subject_id`, `study_id`, ...) for every Application-layer
 // response/request DTO in this service, registered once here per MIG-SUBJ-008 (`02_technical_design.md`
@@ -244,10 +246,12 @@ builder.Services.AddMassTransit(x =>
 var app = builder.Build();
 
 app.UseCadenceWebDefaults();
+app.UseCadenceSecurity();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Execution", engine = "EDC" }))
     .WithName("ExecutionHealthCheck")
-    .WithSummary("Execution engine health probe.");
+    .WithSummary("Execution engine health probe.")
+    .AllowAnonymous();
 
 // Route-group registrations
 app.MapSubjectEndpoints();

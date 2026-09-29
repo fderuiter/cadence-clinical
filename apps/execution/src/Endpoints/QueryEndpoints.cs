@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Security.Claims;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -167,14 +167,12 @@ public static class QueryEndpoints
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
-    private static string? GetCallerRole(HttpContext httpContext)
-    {
-        var roleHeader = httpContext.Request.Headers["X-User-Role"].ToString();
-        if (!string.IsNullOrWhiteSpace(roleHeader))
-        {
-            return roleHeader;
-        }
-
-        return httpContext.User.FindFirst(ClaimTypes.Role)?.Value;
-    }
+    /// <summary>
+    /// The role the caller acts in: the first of their signed roles that may manage query lifecycle, or
+    /// their first role when none can (so the denial names a real role). Never read from a request header.
+    /// </summary>
+    private static string? GetCallerRole(HttpContext httpContext) =>
+        httpContext.User.ToAuthenticatedCaller() is { } caller
+            ? caller.FirstRoleMatching(ClinicalQueryApplicationService.CanManageQueryLifecycle) ?? caller.Roles.FirstOrDefault()
+            : null;
 }

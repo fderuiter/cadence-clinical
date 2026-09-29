@@ -220,6 +220,7 @@ public sealed class FormSubmissionApplicationService(
     public async Task<Result<FormSubmissionResponse>> ApproveAsync(
         string id,
         FormSubmissionApproveRequest request,
+        AuthenticatedCaller? signer,
         CancellationToken cancellationToken)
     {
         if (!FormSubmissionId.TryParse(id, out var submissionId))
@@ -249,10 +250,23 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.InvalidSigningReason(signingReason);
         }
 
-        // Validate investigator role
-        if (string.IsNullOrWhiteSpace(manifest.SignerRole) || !IsAuthorizedInvestigatorRole(manifest.SignerRole))
+        // The signer is the authenticated caller. The manifest may restate their id but cannot name
+        // someone else, and its role field is ignored: the investigator role must come from the caller's
+        // signed roles.
+        if (signer is null)
         {
-            return FormErrors.UnauthorizedSignerRole(manifest.SignerRole ?? string.Empty);
+            return FormErrors.UnauthorizedSignerRole(string.Empty);
+        }
+
+        if (!string.IsNullOrWhiteSpace(manifest.SignerId) && !string.Equals(manifest.SignerId, signer.UserId, StringComparison.Ordinal))
+        {
+            return FormErrors.SignerIdentityMismatch(manifest.SignerId);
+        }
+
+        string? signerRole = signer.FirstRoleMatching(IsAuthorizedInvestigatorRole);
+        if (signerRole is null)
+        {
+            return FormErrors.UnauthorizedSignerRole(string.Join(",", signer.Roles));
         }
 
         // Verify SHA-256 payload hash integrity
@@ -265,7 +279,13 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.InvalidPayloadHash();
         }
 
-        var normalizedManifest = manifest with { SigningReason = signingReason };
+        var normalizedManifest = manifest with
+        {
+            SignerId = signer.UserId,
+            SignerName = string.IsNullOrWhiteSpace(manifest.SignerName) ? signer.UserId : manifest.SignerName,
+            SignerRole = signerRole,
+            SigningReason = signingReason,
+        };
         var approveResult = submission.Approve(normalizedManifest);
         if (approveResult.IsFailure)
         {

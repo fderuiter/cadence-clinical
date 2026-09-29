@@ -2,13 +2,16 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Templating;
+using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
+builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
 
@@ -23,6 +26,7 @@ FluidTemplateRenderer.RegisterType<IcsrReport>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
+app.UseCadenceSecurity();
 app.MapCadenceHealthAndStatusEndpoints(
     "Cadence.Apps.Safety",
     "safety",
