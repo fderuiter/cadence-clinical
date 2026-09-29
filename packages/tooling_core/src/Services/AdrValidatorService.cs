@@ -298,7 +298,8 @@ public static class AdrValidatorService
         if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
             filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
             filepath.StartsWith(".github/") || filepath.EndsWith(".md") ||
-            filepath.EndsWith(".txt") || filepath.EndsWith(".gitignore"))
+            filepath.EndsWith(".txt") || filepath.EndsWith(".gitignore") ||
+            filepath.EndsWith(".d.ts"))
         {
             return false;
         }

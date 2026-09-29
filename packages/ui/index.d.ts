@@ -204,19 +204,36 @@ export function interpretComprehensionResult(result: any): any;
 export function toBeAccessible(received: any): any;
 
 export function canonicalSerialize(obj: any): string;
-export function generateCanonicalSignature(obj: any, key: any): string;
+export function generateCanonicalSignature(
+  obj: any,
+  key: string | Uint8Array
+): Promise<string>;
 export function verifyCanonicalSignature(
   obj: any,
   sig: string,
-  key: any
-): boolean;
-export function generateGatewaySignature(payload: any, key: any): string;
+  key: string | Uint8Array
+): Promise<boolean>;
+export function generateGatewaySignature(
+  userId: string,
+  roles: string,
+  timestamp: string,
+  version: string | undefined,
+  changeReason: string | null | undefined,
+  secret: string | Uint8Array
+): Promise<string>;
 export function verifyGatewaySignature(
+  signature: string,
+  userId: string,
+  roles: string,
+  timestamp: string,
+  version: string | undefined,
+  changeReason: string | null | undefined,
+  secret: string | Uint8Array
+): Promise<boolean>;
+export function generateJwtHS256(
   payload: any,
-  sig: string,
-  key: any
-): boolean;
-export function generateJwtHS256(payload: any, secret: string): string;
+  secret: string | Uint8Array
+): Promise<string>;
 export function sha256(message: string): Promise<string>;
 export function validateField(value: any, rules: any): any;
 export function buildLedgerBlock(
