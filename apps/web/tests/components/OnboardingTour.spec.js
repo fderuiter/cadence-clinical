@@ -48,9 +48,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.events[0].timestamp).toBeDefined();
 
       const savedEvents = JSON.parse(
-        window.localStorage.getItem(
-          `onboarding_${store.currentPersona}_events`
-        )
+        window.localStorage.getItem(`onboarding_${store.currentPersona}_events`)
       );
       expect(savedEvents.length).toBe(1);
       expect(savedEvents[0].type).toBe("test_type");

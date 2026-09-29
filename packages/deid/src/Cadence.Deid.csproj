@@ -3,4 +3,12 @@
     <RootNamespace>Cadence.Deid</RootNamespace>
     <Description>Clinical data de-identification and PII/PHI detection engine supporting HIPAA, GDPR, and EU CTR profiles.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="fo-dicom" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
+  </ItemGroup>
 </Project>
