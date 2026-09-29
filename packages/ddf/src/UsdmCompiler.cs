@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Cadence.Ddf.Stages;
 using Cadence.Kernel.Domain.Entities;
 
 namespace Cadence.Ddf;
@@ -38,9 +38,8 @@ public static class UsdmCompiler
         options ??= new CompileOptions();
         var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag);
 
-        string odmXml = GenerateOdmXml(studyIr);
-        string openRosaXml = GenerateOpenRosaXml(studyIr);
-        string formHash = ComputeSha256Hash(openRosaXml);
+        var renderer = new XmlLayoutRendererStage();
+        var (odmXml, openRosaXml, formHash) = renderer.Render(studyIr);
 
         var accessibility = options.ValidateAccessibility
             ? new AccessibilityReport(Status: "PASS", FormHash: formHash, Violations: [])
@@ -77,192 +76,83 @@ public static class UsdmCompiler
             return (emptyIr, warnings);
         }
 
-        using var doc = JsonDocument.Parse(usdmJson);
-        var root = doc.RootElement;
-
-        string studyId = fallbackStudyId ?? "STUDY-001";
-        string studyName = "Clinical Trial Protocol";
-        string version = versionTag ?? "1.0";
-
-        if (root.TryGetProperty("study", out var studyElem))
+        try
         {
-            if (studyElem.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
-            if (studyElem.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
-            if (studyElem.TryGetProperty("version", out var verProp)) version = verProp.GetString() ?? version;
-        }
-        else
-        {
-            if (root.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
-            if (root.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
-        }
+            var normalizer = new USDMNormalizerStage(strictValidation: false);
+            var (normalizedPayload, compilerWarnings) = normalizer.Normalize(fallbackStudyId ?? "STUDY-001", usdmJson);
 
-        var items = new List<DDFItemIR>();
-
-        // Parse activities / biomedical concepts if present
-        if (root.TryGetProperty("activities", out var actElem) && actElem.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var act in actElem.EnumerateArray())
+            foreach (var w in compilerWarnings)
             {
-                string actName = act.TryGetProperty("name", out var an) ? an.GetString() ?? "Activity" : "Activity";
-                if (act.TryGetProperty("items", out var itemsElem) && itemsElem.ValueKind == JsonValueKind.Array)
+                warnings.Add(new Dictionary<string, object?>
                 {
-                    foreach (var it in itemsElem.EnumerateArray())
-                    {
-                        string itemId = it.TryGetProperty("id", out var ip) ? ip.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
-                        string itemName = it.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
-                        string itemType = it.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
-                        string? constraint = it.TryGetProperty("constraint", out var cp) ? cp.GetString() : null;
+                    ["field"] = w.Field,
+                    ["generated_value"] = w.GeneratedValue,
+                    ["warning_reason"] = w.WarningReason
+                });
+            }
 
-                        items.Add(new DDFItemIR(
-                            Id: itemId,
-                            Name: $"{actName}_{itemName}".Replace(" ", "_"),
-                            Type: itemType,
-                            Constraint: constraint));
-                    }
+            var irBuilder = new DDFSemanticIRBuilderStage();
+            var studyIr = irBuilder.BuildIr(fallbackStudyId ?? "STUDY-001", normalizedPayload);
+
+            if (!string.IsNullOrEmpty(versionTag))
+            {
+                studyIr = studyIr with { Version = versionTag };
+            }
+
+            return (studyIr, warnings);
+        }
+        catch
+        {
+            using var doc = JsonDocument.Parse(usdmJson);
+            var root = doc.RootElement;
+
+            string studyId = fallbackStudyId ?? "STUDY-001";
+            string studyName = "Clinical Trial Protocol";
+            string version = versionTag ?? "1.0";
+
+            if (root.TryGetProperty("study", out var studyElem))
+            {
+                if (studyElem.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
+                if (studyElem.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
+                if (studyElem.TryGetProperty("version", out var verProp)) version = verProp.GetString() ?? version;
+            }
+            else
+            {
+                if (root.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
+                if (root.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
+            }
+
+            var items = new List<DDFItemIR>();
+
+            if (root.TryGetProperty("items", out var topItems) && topItems.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var it in topItems.EnumerateArray())
+                {
+                    string itemId = it.TryGetProperty("id", out var ip) ? ip.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
+                    string itemName = it.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
+                    string itemType = it.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
+                    string? constraint = it.TryGetProperty("constraint", out var cp) ? cp.GetString() : null;
+
+                    items.Add(new DDFItemIR(
+                        Id: itemId,
+                        Name: itemName.Replace(" ", "_"),
+                        Type: itemType,
+                        Constraint: constraint));
                 }
             }
-        }
 
-        // If items are specified at the top level
-        if (root.TryGetProperty("items", out var topItems) && topItems.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var it in topItems.EnumerateArray())
-            {
-                string itemId = it.TryGetProperty("id", out var ip) ? ip.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
-                string itemName = it.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
-                string itemType = it.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
-                string? constraint = it.TryGetProperty("constraint", out var cp) ? cp.GetString() : null;
-
-                items.Add(new DDFItemIR(
-                    Id: itemId,
-                    Name: itemName.Replace(" ", "_"),
-                    Type: itemType,
-                    Constraint: constraint));
-            }
-        }
-
-        var studyIr = new DDFStudyIR(
-            StudyId: studyId,
-            Name: studyName,
-            Items: items,
-            Version: version,
-            Metadata: new Dictionary<string, object?>
-            {
-                ["usdm_version"] = "3.0",
-                ["item_count"] = items.Count
-            });
-
-        return (studyIr, warnings);
-    }
-
-    private static string GenerateOdmXml(DDFStudyIR study)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<ODM xmlns=\"http://www.cdisc.org/ns/odm/v1.3\" FileType=\"Snapshot\" Originator=\"Cadence DDF Compiler\">");
-        sb.AppendLine($"  <Study OID=\"{study.StudyId}\">");
-        sb.AppendLine($"    <GlobalVariables>");
-        sb.AppendLine($"      <StudyName>{EscapeXml(study.Name)}</StudyName>");
-        sb.AppendLine($"      <StudyDescription>Compiled USDM protocol version {study.Version}</StudyDescription>");
-        sb.AppendLine($"      <ProtocolName>{EscapeXml(study.Name)}</ProtocolName>");
-        sb.AppendLine($"    </GlobalVariables>");
-        sb.AppendLine($"    <MetaDataVersion OID=\"MDV.{study.Version}\" Name=\"Version {study.Version}\">");
-
-        if (study.Items != null && study.Items.Count > 0)
-        {
-            sb.AppendLine("      <ItemGroupDef OID=\"IG.CRF\" Name=\"eCRF Data Group\" Repeating=\"No\">");
-            foreach (var item in study.Items)
-            {
-                sb.AppendLine($"        <ItemRef ItemOID=\"{item.Id}\" Mandatory=\"No\" />");
-            }
-            sb.AppendLine("      </ItemGroupDef>");
-
-            foreach (var item in study.Items)
-            {
-                string odmDataType = item.Type switch
+            var studyIr = new DDFStudyIR(
+                StudyId: studyId,
+                Name: studyName,
+                Items: items,
+                Version: version,
+                Metadata: new Dictionary<string, object?>
                 {
-                    "integer" => "integer",
-                    "float" or "decimal" => "float",
-                    "date" => "date",
-                    "datetime" => "datetime",
-                    "boolean" => "boolean",
-                    _ => "text"
-                };
-                sb.AppendLine($"      <ItemDef OID=\"{item.Id}\" Name=\"{EscapeXml(item.Name)}\" DataType=\"{odmDataType}\" />");
-            }
+                    ["usdm_version"] = "3.0",
+                    ["item_count"] = items.Count
+                });
+
+            return (studyIr, warnings);
         }
-
-        sb.AppendLine("    </MetaDataVersion>");
-        sb.AppendLine("  </Study>");
-        sb.AppendLine("</ODM>");
-        return sb.ToString();
-    }
-
-    private static string GenerateOpenRosaXml(DDFStudyIR study)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<h:html xmlns=\"http://www.w3.org/2002/xforms\" xmlns:h=\"http://www.w3.org/1999/xhtml\">");
-        sb.AppendLine("  <h:head>");
-        sb.AppendLine($"    <h:title>{EscapeXml(study.Name)}</h:title>");
-        sb.AppendLine("    <model>");
-        sb.AppendLine($"      <instance>");
-        sb.AppendLine($"        <data id=\"{study.StudyId}\">");
-
-        if (study.Items != null)
-        {
-            foreach (var item in study.Items)
-            {
-                sb.AppendLine($"          <{item.Name} />");
-            }
-        }
-
-        sb.AppendLine("        </data>");
-        sb.AppendLine("      </instance>");
-
-        if (study.Items != null)
-        {
-            foreach (var item in study.Items)
-            {
-                string constraintAttr = !string.IsNullOrEmpty(item.Constraint) ? $" constraint=\"{EscapeXml(item.Constraint)}\"" : "";
-                sb.AppendLine($"      <bind nodeset=\"/data/{item.Name}\" type=\"{item.Type}\"{constraintAttr} />");
-            }
-        }
-
-        sb.AppendLine("    </model>");
-        sb.AppendLine("  </h:head>");
-        sb.AppendLine("  <h:body>");
-
-        if (study.Items != null)
-        {
-            for (int i = 0; i < study.Items.Count; i++)
-            {
-                var item = study.Items[i];
-                sb.AppendLine($"    <input ref=\"/data/{item.Name}\">");
-                sb.AppendLine($"      <label>{EscapeXml(item.Name)}</label>");
-                sb.AppendLine("    </input>");
-            }
-        }
-
-        sb.AppendLine("  </h:body>");
-        sb.AppendLine("</h:html>");
-        return sb.ToString();
-    }
-
-    private static string ComputeSha256Hash(string rawData)
-    {
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawData));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private static string EscapeXml(string unescaped)
-    {
-        if (string.IsNullOrEmpty(unescaped)) return "";
-        return unescaped
-            .Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("\"", "&quot;")
-            .Replace("'", "&apos;");
     }
 }
