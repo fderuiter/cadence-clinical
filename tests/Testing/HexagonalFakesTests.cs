@@ -5,13 +5,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using FluentAssertions;
-using Xunit;
-
 using Cadence.Core.Domain;
 using Cadence.Storage;
 using Cadence.Testing;
 using Cadence.Testing.Fakes;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests.Testing;
 

@@ -1,10 +1,11 @@
 using System;
 
-using FluentAssertions;
-using Xunit;
-
 using Cadence.Testing;
 using Cadence.Testing.Factories;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests.Testing;
 

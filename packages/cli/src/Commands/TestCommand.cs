@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+using Cadence.Testing.Graph;
+
 using Spectre.Console;
 using Spectre.Console.Cli;
-
-using Cadence.Testing.Graph;
 
 namespace Cadence.Cli.Commands;
 

@@ -1,12 +1,13 @@
 using System;
 using System.Text;
 
-using FluentAssertions;
-using Xunit;
-
 using Cadence.Security;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests.Testing;
 

@@ -2,11 +2,12 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-using FluentAssertions;
-using Xunit;
-
 using Cadence.Testing;
 using Cadence.Testing.Graph;
+
+using FluentAssertions;
+
+using Xunit;
 
 namespace Cadence.UnitTests.Testing;
 
