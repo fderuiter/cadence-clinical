@@ -67,6 +67,9 @@
     <ProjectReference Include="..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
+    <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
+    <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
     <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />

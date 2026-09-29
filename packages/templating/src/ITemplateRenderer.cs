@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Cadence.Kernel.Templating;
+namespace Cadence.Templating;
 
 /// <summary>
 /// Defines the contract for Liquid template rendering across Cadence microservices.

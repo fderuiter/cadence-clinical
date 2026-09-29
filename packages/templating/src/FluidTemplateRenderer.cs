@@ -14,7 +14,7 @@ using Fluid.Values;
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cadence.Kernel.Templating;
+namespace Cadence.Templating;
 
 /// <summary>
 /// Core implementation of <see cref="ITemplateRenderer"/> powered by Fluid.Core Liquid engine.

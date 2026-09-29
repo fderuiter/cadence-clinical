@@ -1,9 +1,9 @@
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
-using Cadence.Kernel.Templating;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
+using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

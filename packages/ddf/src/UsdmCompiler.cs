@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Cadence.Kernel.Domain.Entities;
-using Cadence.Kernel.Templating;
+using Cadence.Templating;
 
 namespace Cadence.Ddf;
 
