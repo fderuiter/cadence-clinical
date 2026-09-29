@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(InteropDbContext))]
     partial class InteropDbContextModelSnapshot : ModelSnapshot
     {
@@ -686,17 +687,20 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<double?>("ActiveMinutes")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("ActiveMinutes")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<double>("ActiveWearHours")
                         .HasColumnType("double precision");
 
-                    b.Property<double?>("BestFev1Liters")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("BestFev1Liters")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("BestFvcLiters")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("BestFvcLiters")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -711,54 +715,68 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<double?>("Fev1FvcRatio")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("Fev1FvcRatio")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("Fev1PercentPredicted")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("Fev1PercentPredicted")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("GlucoseCvPercent")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("GlucoseCvPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("GlucoseManagementIndicator")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("GlucoseManagementIndicator")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("GlucoseSd")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("GlucoseSd")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("LakehouseRecordId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double?>("MeanArterialPressureMmhg")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("MeanArterialPressureMmhg")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("MeanCadenceSpm")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("MeanCadenceSpm")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("MeanDiastolicMmhg")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("MeanDiastolicMmhg")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("MeanGlucoseMgDl")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("MeanGlucoseMgDl")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("MeanSystolicMmhg")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("MeanSystolicMmhg")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("PeakCadenceSpm")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("PeakCadenceSpm")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("PeakExpiratoryFlowLMin")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("PeakExpiratoryFlowLMin")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<int>("ReadingsCount")
                         .HasColumnType("integer");
 
-                    b.Property<double?>("RestingHeartRateBpm")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("RestingHeartRateBpm")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("SedentaryMinutes")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("SedentaryMinutes")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Sha256Hash")
                         .IsRequired()
@@ -769,11 +787,13 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double?>("SleepDurationMinutes")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("SleepDurationMinutes")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("SleepEfficiencyPercent")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("SleepEfficiencyPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("StudyId")
                         .IsRequired()
@@ -792,20 +812,25 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<double?>("TarLevel1Percentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("TarLevel1Percentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("TarLevel2Percentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("TarLevel2Percentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("TbrLevel1Percentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("TbrLevel1Percentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("TbrLevel2Percentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("TbrLevel2Percentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
-                    b.Property<double?>("TirPercentage")
-                        .HasColumnType("double precision");
+                    b.Property<decimal?>("TirPercentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<int?>("TotalSteps")
                         .HasColumnType("integer");
@@ -878,8 +903,9 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("IsAcknowledged")
                         .HasColumnType("boolean");
 
-                    b.Property<double>("ObservedValue")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("ObservedValue")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("ParameterName")
                         .IsRequired()
@@ -905,8 +931,9 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<double>("ThresholdValue")
-                        .HasColumnType("double precision");
+                    b.Property<decimal>("ThresholdValue")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("TriggeredAt")
                         .HasColumnType("timestamp with time zone");
@@ -1212,3 +1239,4 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}
