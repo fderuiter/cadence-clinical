@@ -47,7 +47,7 @@ public class DoctorCommand : Command
             if (success && client.Connected)
                 AnsiConsole.MarkupLine("  PostgreSQL (5432): [green]Connected[/]");
             else
-                AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable (start via docker compose --profile python up -d postgres)[/]");
+                AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable (start via docker compose -f docker/docker-compose.yml up -d postgres)[/]");
         }
         catch
         {
@@ -63,7 +63,7 @@ public class DoctorCommand : Command
             if (success && client.Connected)
                 AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [green]Connected[/]");
             else
-                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable (start via docker compose --profile python up -d neo4j)[/]");
+                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable (start via docker compose -f docker/docker-compose.yml up -d neo4j)[/]");
         }
         catch
         {
