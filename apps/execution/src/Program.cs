@@ -138,10 +138,9 @@ builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 //
 // The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; only the Development
 // environment falls back to the local docker-compose database, so a misconfigured deployment fails at startup.
-string executionDbConnectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionString(
-    builder.Configuration,
-    builder.Environment,
-    "cadence_edc");
+string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
+    CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment),
+    ExecutionDbContextFactory.Schema);
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
 builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 {
@@ -153,6 +152,7 @@ builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
+builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration);
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
