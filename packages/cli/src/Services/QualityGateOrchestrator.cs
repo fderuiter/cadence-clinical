@@ -236,10 +236,16 @@ public static class QualityGateOrchestrator
             "validate-vulnerabilities" or "vulnerabilities" => VulnerabilityAuditorService.AuditVulnerabilities() == 0,
             "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
             "gxp-rtm-validate" or "rtm" => RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true) == 0,
-            _ => true
+            _ => ReportUnknownGate(gateName)
         };
 
         return passed ? 0 : 1;
+    }
+
+    private static bool ReportUnknownGate(string gateName)
+    {
+        AnsiConsole.MarkupLine($"[red]Unknown quality gate '{Markup.Escape(gateName)}'. Run 'cadence check --help' for the list of gates.[/]");
+        return false;
     }
 
     public static string FindRepoRoot()

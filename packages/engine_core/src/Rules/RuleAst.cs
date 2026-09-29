@@ -55,6 +55,7 @@ public class RuleDefinition
                 ["rule_id"] = RuleId,
                 ["study_id"] = StudyId,
                 ["rule_type"] = RuleType,
+                ["condition"] = JsonSerializer.SerializeToNode(Condition, RuleJsonSerializerContext.Default.ExpressionNode),
                 ["action"] = Action,
                 ["target_field"] = TargetField,
                 ["target_form"] = TargetForm,
@@ -67,3 +68,17 @@ public class RuleDefinition
         }
     }
 }
+
+/// <summary>
+/// Source-generated serialization metadata for rule payloads, so checksums can be computed
+/// without reflection in the Native AOT CLI.
+/// </summary>
+[JsonSerializable(typeof(ExpressionNode))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(bool))]
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(double))]
+[JsonSerializable(typeof(decimal))]
+[JsonSerializable(typeof(JsonElement))]
+internal sealed partial class RuleJsonSerializerContext : JsonSerializerContext;

@@ -11,8 +11,10 @@
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-    <NoWarn>$(NoWarn);IL2104;IL3000;IL3053;IL2026;IL3050</NoWarn>
+    <!-- Neo4j.Driver and Spectre.Console.Cli are not annotated for trimming/AOT: IL2104/IL3053 are their
+         assembly-level aggregates and IL3000 is Spectre's Assembly.Location call. Warnings raised by
+         Cadence code must be fixed, not added here. -->
+    <NoWarn>$(NoWarn);IL2104;IL3053;IL3000</NoWarn>
     <RootAllApplicationAssemblies>true</RootAllApplicationAssemblies>
   </PropertyGroup>
 
