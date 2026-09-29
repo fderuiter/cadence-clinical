@@ -6,16 +6,20 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Blinding;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
+
 using FluentAssertions;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+
 using Xunit;
 
 namespace Cadence.UnitTests.Packages;
