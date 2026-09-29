@@ -1,11 +1,14 @@
 # ADR-2237: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-2250](2026-09-29-kernel-tenant-isolation-via-row-level-security.md)
 - **Date:** 2026-08-29
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
 
 ---
+
+> [!NOTE]
+> **Superseded Notice (2026-09-29):** Schema-per-tenant isolation is superseded for the Clinical Kernel by [ADR-2250](2026-09-29-kernel-tenant-isolation-via-row-level-security.md): one `kernel` schema with `tenant_id`, composite foreign keys and forced Row-Level Security, with database-per-tenant as the upgrade path for regulated customers.
 
 ## 1. Context & Problem Statement
 

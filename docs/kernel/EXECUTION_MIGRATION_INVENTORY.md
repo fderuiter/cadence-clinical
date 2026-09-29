@@ -8,6 +8,7 @@
 | **Base commit** | `dd6686e` |
 | **Scope** | Every `.cs` file under `apps/execution/src` (excluding `obj/`; EF `Migrations/` listed as one row) |
 | **Related ADRs** | ADR-2244 (modular monolith), ADR-2245 (ProtocolVersion snapshots), ADR-2246 (bitemporal `tstzrange`), ADR-2247 (single DB + sentinels) |
+| **Resolution** | Spec v0.2 answers §3 in its Appendix A and §4 in its Appendix B. Where they differ, the spec wins. |
 
 Dispositions: **KEEP** (unchanged in the EDC module) · **MIGRATE→KERNEL** (the logic moves into `packages/kernel`) ·
 **REMAIN EDC-SPECIFIC** (stays as EDC workflow/projection but is refactored to use kernel types) · **REPLACE**
