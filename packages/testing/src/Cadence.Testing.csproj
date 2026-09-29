@@ -7,11 +7,15 @@
   <ItemGroup>
     <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\storage\src\Cadence.Storage.csproj" />
+    <ProjectReference Include="..\..\ddf\src\Cadence.Ddf.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <!-- MIG-SUBJ-025: GoldenMasterAssert.DbStateMatches/AuditLogContains are generic over any DbContext derived
          type rather than a concrete slice DbContext (e.g. Cadence.Apps.Execution's ExecutionDbContext),
          specifically so this shared, cross-slice package never needs a project reference to a slice's

@@ -17,33 +17,39 @@ The `testing` package operates as a modular shared library within the Cadence Cl
 
 ## Public APIs / Exports
 
-Key exported interfaces and components:
-- AuditLogFactory
-- ClinicalObservationFactory
-- ConsentRecordFactory
-- DocumentMetadataFactory
-- InMemoryNotificationDispatcher
-- InMemoryRepository
-- InMemoryStoragePort
-- ProtocolDefinitionFactory
+Key exported C# interfaces and components:
+- `SubjectFactory`
+- `ProtocolDefinitionFactory`
+- `ClinicalObservationFactory`
+- `QueryDiscrepancyFactory`
+- `ConsentRecordFactory`
+- `DocumentMetadataFactory`
+- `AuditLogFactory`
+- `InMemoryStoragePort`
+- `FakeAccessibilityValidator`
+- `InMemoryNotificationDispatcher`
+- `InMemoryRepository<TEntity, TId>`
+- `TestSecurityContextFactory`
+- `TestDependencyGraph`
 
 ---
 
 ## Dependencies
 
-This package relies on the following standard dependencies:
-- `packages-ddf`
-- `packages-hexagonal`
-- `packages-security`
-- `packages-storage`
-- `pydantic>=2.6.0`
+This package relies on the following standard .NET 10 projects and libraries:
+- `Cadence.Core.Domain`
+- `Cadence.Security`
+- `Cadence.Storage`
+- `Cadence.Ddf`
+- `Bogus`
+- `Microsoft.CodeAnalysis.CSharp`
 
 ---
 
 ## Local Development & Testing
 
-Run unit and contract tests for this package:
+Run unit tests for this package and the entire solution:
 
 ```bash
-uv run pytest packages/testing
+dotnet test Cadence.sln
 ```
