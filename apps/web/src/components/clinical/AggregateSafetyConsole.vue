@@ -1341,6 +1341,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
+import { useToastStore } from "../../stores/toasts.js";
+import { ensureOk } from "../../utils/apiErrors.js";
+
+const toasts = useToastStore();
+
 // Configuration Props
 const props = withDefaults(
   defineProps<{
@@ -1706,32 +1711,19 @@ async function compileReport() {
         benefit_risk_narrative: benefitRiskNarrative.value,
       }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      activeReportId.value = data.id;
-      reportStatus.value = data.status;
-      snapshotHash.value =
-        data.snapshot_hash ||
-        "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291";
-      frozenCasesCount.value =
-        data.line_listings_count || lineListings.value.length;
-      frozenSubjectsCount.value =
-        data.total_subject_exposure || totalCumulativeSubjects.value;
-    } else {
-      // Local fallback simulation
-      activeReportId.value = `rpt_${Math.random().toString(16).substring(2, 10)}`;
-      snapshotHash.value =
-        "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291";
-      frozenCasesCount.value = lineListings.value.length;
-      frozenSubjectsCount.value = totalCumulativeSubjects.value;
-    }
+    await ensureOk(res);
+    const data = await res.json();
+    activeReportId.value = data.id;
+    reportStatus.value = data.status;
+    // Only the server's hash identifies the frozen snapshot; never substitute one (#4523).
+    snapshotHash.value = data.snapshot_hash || "";
+    frozenCasesCount.value =
+      data.line_listings_count || lineListings.value.length;
+    frozenSubjectsCount.value =
+      data.total_subject_exposure || totalCumulativeSubjects.value;
   } catch (err) {
-    console.warn("Fallback simulated report compilation:", err);
-    activeReportId.value = `rpt_${Math.random().toString(16).substring(2, 10)}`;
-    snapshotHash.value =
-      "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291";
-    frozenCasesCount.value = lineListings.value.length;
-    frozenSubjectsCount.value = totalCumulativeSubjects.value;
+    // #4523: never invent a report id or snapshot hash when compilation fails.
+    toasts.apiError("Periodic report compilation failed", err);
   } finally {
     isCompiling.value = false;
   }
@@ -1769,54 +1761,24 @@ async function executeQppvSignoff() {
       }
     );
 
-    const nowIso = new Date().toISOString();
-    const manifestId = `sig_qppv_${Math.random().toString(16).substring(2, 10)}`;
-
-    if (res.ok) {
-      const data = await res.json();
-      qppvManifest.value = data.qppv_manifest || {
-        qppv_user_id: qppvUserId.value,
-        qppv_name: qppvUserId.value,
-        qppv_role: qppvRole.value,
-        meaning_of_signature: qppvMeaning.value,
-        signed_at: nowIso,
-        manifest_id: manifestId,
-        snapshot_hash: snapshotHash.value,
-        verification_status: "VALID",
-      };
-    } else {
-      qppvManifest.value = {
-        qppv_user_id: qppvUserId.value,
-        qppv_name: qppvUserId.value,
-        qppv_role: qppvRole.value,
-        meaning_of_signature: qppvMeaning.value,
-        signed_at: nowIso,
-        manifest_id: manifestId,
-        snapshot_hash:
-          snapshotHash.value ||
-          "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291",
-        verification_status: "VALID",
-      };
-    }
-    reportStatus.value = "APPROVED";
-    isQppvModalOpen.value = false;
-    activeTab.value = "qppv";
-  } catch (err) {
-    console.warn("QPPV sign-off fallback simulation:", err);
-    reportStatus.value = "APPROVED";
-    isQppvModalOpen.value = false;
-    qppvManifest.value = {
+    await ensureOk(res);
+    const data = await res.json();
+    qppvManifest.value = data.qppv_manifest || {
       qppv_user_id: qppvUserId.value,
       qppv_name: qppvUserId.value,
       qppv_role: qppvRole.value,
       meaning_of_signature: qppvMeaning.value,
       signed_at: new Date().toISOString(),
       manifest_id: `sig_qppv_${Math.random().toString(16).substring(2, 10)}`,
-      snapshot_hash:
-        snapshotHash.value ||
-        "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291",
+      snapshot_hash: snapshotHash.value,
       verification_status: "VALID",
     };
+    reportStatus.value = "APPROVED";
+    isQppvModalOpen.value = false;
+    activeTab.value = "qppv";
+  } catch (err) {
+    // #4523: a failed QPPV sign-off must not approve the report or produce a signature manifest.
+    toasts.apiError("QPPV sign-off failed", err);
   } finally {
     isSigning.value = false;
   }
@@ -1988,24 +1950,6 @@ const isSigningPhysician = ref(false);
 async function runTriageSimulation() {
   isSimulating.value = true;
   try {
-    const isFatalOrLt =
-      simSeriousnessDeath.value || simSeriousnessLifeThreatening.value;
-    const isOtherSerious =
-      simSeriousnessHospitalization.value ||
-      simSeriousnessDisability.value ||
-      simSeriousnessCongenital.value ||
-      simSeriousnessOther.value;
-    const isSerious = isFatalOrLt || isOtherSerious;
-    const isCausal = [
-      "RELATED",
-      "SUSPECTED",
-      "POSSIBLY_RELATED",
-      "PROBABLY_RELATED",
-      "DEFINITELY_RELATED",
-    ].includes(simCausality.value);
-    const isUnexpected = simExpectedness.value === "UNEXPECTED";
-    const isSusar = isSerious && isCausal && isUnexpected;
-
     const res = await fetch("/api/v1/safety/rules/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2026,154 +1970,13 @@ async function runTriageSimulation() {
       }),
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      simulationResult.value = data;
-    } else {
-      // Local deterministic derivation fallback
-      const evals = [
-        {
-          authority: "US_FDA",
-          country_code: "US",
-          is_expedited: isSusar,
-          timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-          due_date: isSusar
-            ? isFatalOrLt
-              ? "7 calendar days"
-              : "15 calendar days"
-            : null,
-          rule_name: isSusar
-            ? isFatalOrLt
-              ? "FDA 7-Day Fatal/Life-Threatening SUSAR"
-              : "FDA 15-Day Serious Unexpected SAR"
-            : "FDA Annual Progress Report",
-          statutory_citation: isSusar
-            ? isFatalOrLt
-              ? "21 CFR 312.32(c)(1)(i)"
-              : "21 CFR 312.32(c)(1)(ii)"
-            : "21 CFR 312.33",
-          countdown: isSusar
-            ? {
-                alert_level: "NORMAL",
-                remaining_hours: isFatalOrLt ? 168.0 : 360.0,
-                elapsed_percentage: 0.0,
-              }
-            : null,
-        },
-        {
-          authority: "EMA",
-          country_code: "EU",
-          is_expedited: isSusar,
-          timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-          due_date: isSusar
-            ? isFatalOrLt
-              ? "7 calendar days"
-              : "15 calendar days"
-            : null,
-          rule_name: isSusar
-            ? isFatalOrLt
-              ? "EMA 7-Day Fatal/Life-Threatening SUSAR (EudraVigilance)"
-              : "EMA 15-Day Other SUSAR (EudraVigilance)"
-            : "EMA Annual Safety Report",
-          statutory_citation: isSusar
-            ? isFatalOrLt
-              ? "Regulation (EU) No 536/2014 Art. 40(1)"
-              : "Regulation (EU) No 536/2014 Art. 40(2)"
-            : "Regulation (EU) No 536/2014 Art. 43",
-          countdown: isSusar
-            ? {
-                alert_level: "NORMAL",
-                remaining_hours: isFatalOrLt ? 168.0 : 360.0,
-                elapsed_percentage: 0.0,
-              }
-            : null,
-        },
-        {
-          authority: "PMDA",
-          country_code: "JP",
-          is_expedited: isSusar,
-          timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-          due_date: isSusar
-            ? isFatalOrLt
-              ? "7 calendar days"
-              : "15 calendar days"
-            : null,
-          rule_name: isSusar
-            ? isFatalOrLt
-              ? "PMDA 7-Day Fatal/Life-Threatening Unexpected Adverse Reaction"
-              : "PMDA 15-Day Serious Unexpected Adverse Reaction"
-            : "PMDA Periodic Safety Report",
-          statutory_citation: "PMD Act Art. 80-2 / MHLW Ordinance 28",
-          countdown: isSusar
-            ? {
-                alert_level: "NORMAL",
-                remaining_hours: isFatalOrLt ? 168.0 : 360.0,
-                elapsed_percentage: 0.0,
-              }
-            : null,
-        },
-        {
-          authority: "MHRA",
-          country_code: "GB",
-          is_expedited: isSusar,
-          timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-          due_date: isSusar
-            ? isFatalOrLt
-              ? "7 calendar days"
-              : "15 calendar days"
-            : null,
-          rule_name: isSusar
-            ? isFatalOrLt
-              ? "MHRA 7-Day Fatal/Life-Threatening SUSAR"
-              : "MHRA 15-Day Serious Unexpected SUSAR"
-            : "MHRA DSUR Report",
-          statutory_citation: "SI 2004/1031 Regulation 33",
-          countdown: isSusar
-            ? {
-                alert_level: "NORMAL",
-                remaining_hours: isFatalOrLt ? 168.0 : 360.0,
-                elapsed_percentage: 0.0,
-              }
-            : null,
-        },
-        {
-          authority: "HEALTH_CANADA",
-          country_code: "CA",
-          is_expedited: isSusar,
-          timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-          due_date: isSusar
-            ? isFatalOrLt
-              ? "7 calendar days"
-              : "15 calendar days"
-            : null,
-          rule_name: isSusar
-            ? isFatalOrLt
-              ? "Health Canada 7-Day Fatal/Life-Threatening ADR"
-              : "Health Canada 15-Day Serious Unexpected ADR"
-            : "Health Canada Annual Report",
-          statutory_citation: "Food and Drug Regulations C.05.014",
-          countdown: isSusar
-            ? {
-                alert_level: "NORMAL",
-                remaining_hours: isFatalOrLt ? 168.0 : 360.0,
-                elapsed_percentage: 0.0,
-              }
-            : null,
-        },
-      ];
-
-      simulationResult.value = {
-        case_id: simCaseId.value,
-        is_serious: isSerious,
-        is_unexpected: isUnexpected,
-        is_causal: isCausal,
-        is_susar: isSusar,
-        shortest_timeframe_days: isSusar ? (isFatalOrLt ? 7 : 15) : null,
-        evaluations: evals,
-      };
-    }
+    await ensureOk(res);
+    simulationResult.value = await res.json();
   } catch (err) {
-    console.warn("Simulation fallback:", err);
+    // #4523: SUSAR / expedited-clock determinations come only from the safety rules engine; a locally
+    // derived result must never be shown in place of the server evaluation.
+    simulationResult.value = null;
+    toasts.apiError("Regulatory triage evaluation failed", err);
   } finally {
     isSimulating.value = false;
   }

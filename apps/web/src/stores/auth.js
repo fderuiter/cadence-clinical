@@ -1,11 +1,33 @@
 import { defineStore } from "pinia";
 import { useNotificationsStore } from "./notifications.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 /**
  * Seeding Gap Documentation Resolved:
  * The "Sponsor Designer" role has been successfully seeded in the Keycloak realm configuration
  * (`cadence-realm.json`) and is centrally mapped in the OIDC normalizer.
  */
+/** Offline identity used only by demo builds (see utils/demoMode.js). */
+export const DEMO_IDENTITY = Object.freeze({
+  username: "fderuiter",
+  email: "fderuiter@example.com", // deid-ignore
+  firstName: "Frans",
+  lastName: "de Ruiter",
+  id: "fderuiter-id-12345",
+});
+
+export const DEMO_ROLES = Object.freeze([
+  "Sponsor Admin",
+  "Sponsor Designer",
+  "Data Manager",
+  "Site Investigator",
+  "CRC",
+  "CRA",
+  "Monitor",
+  "Auditor",
+  "TMF Auditor",
+]);
+
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
   site_investigator: ["site_investigator", "crc"],
@@ -169,22 +191,17 @@ export const useAuthStore = defineStore("auth", {
       idToken: saved.idToken || null,
       refreshToken: saved.refreshToken || null,
       user: saved.user || null, // includes identity details like username, email, firstName, lastName, and id
-      rawRoles: restoredRoles,
+      // Outside a demo build nothing grants roles except a verified token.
+      rawRoles: isDemoBuild() ? restoredRoles : saved.rawRoles || [],
       currentPersona: restoredPersona,
-      isDemoMode: saved.isDemoMode !== undefined ? saved.isDemoMode : true, // defaults to true, set to false if Keycloak initializes successfully
+      // Only a demo build can run in demo mode; a stored flag cannot turn it on (#4523).
+      isDemoMode: isDemoBuild(),
     };
   },
   getters: {
     identity: (state) => {
       if (state.isDemoMode && !state.isAuthenticated) {
-        // Fallback demo identity
-        return {
-          username: "fderuiter",
-          email: "fderuiter@example.com",
-          firstName: "Frans",
-          lastName: "de Ruiter",
-          id: "fderuiter-id-12345",
-        };
+        return { ...DEMO_IDENTITY };
       }
       return state.user;
     },
@@ -276,87 +293,16 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
       } else {
-        const isProduction =
-          (import.meta.env.PROD || import.meta.env.MODE === "production") &&
-          import.meta.env.MODE !== "demo";
-        if (isProduction) {
+        if (!isDemoBuild()) {
           throw new Error(
-            "Offline login fallback is disabled in production environments."
+            "Sign-in is unavailable: the identity provider could not be reached."
           );
         }
-        console.warn(
-          "Keycloak not initialized or running in demo mode. Attempting gateway-issued ephemeral session login."
-        );
-        try {
-          const baseUrl =
-            import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
-          const resp = await fetch(`${baseUrl}/api/v1/auth/demo-session`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              username: "demo-user",
-              roles: [
-                "Sponsor Admin",
-                "Sponsor Designer",
-                "Data Manager",
-                "Site Investigator",
-                "CRC",
-                "CRA",
-                "Monitor",
-                "Auditor",
-                "TMF Auditor",
-              ],
-              tenant_id: "sandbox-tenant-default",
-            }),
-          });
-          if (resp.ok) {
-            const data = await resp.json();
-            this.accessToken = data.access_token;
-            this.isAuthenticated = true;
-            this.isDemoMode = true;
-            this.user = {
-              username: data.username,
-              email: "demo-user@example.com",
-              firstName: "Demo",
-              lastName: "User",
-              id: "demo-sub-id",
-            };
-            this.rawRoles = data.roles || [
-              "Sponsor Admin",
-              "Sponsor Designer",
-              "Data Manager",
-              "Site Investigator",
-              "CRC",
-              "CRA",
-              "Monitor",
-              "Auditor",
-              "TMF Auditor",
-            ];
-          } else {
-            throw new Error("Demo session endpoint failed");
-          }
-        } catch (e) {
-          console.error(
-            "Gateway demo session login failed. Falling back to offline client mock.",
-            e
-          );
-          this.isAuthenticated = true;
-          this.isDemoMode = true;
-          // Seed default roles so the offline UI is functional
-          this.rawRoles = [
-            "Sponsor Admin",
-            "Sponsor Designer",
-            "Data Manager",
-            "Site Investigator",
-            "CRC",
-            "CRA",
-            "Monitor",
-            "Auditor",
-            "TMF Auditor",
-          ];
-        }
+        // Demo build: an offline identity with every persona's roles.
+        this.isAuthenticated = true;
+        this.isDemoMode = true;
+        this.user = { ...DEMO_IDENTITY };
+        this.rawRoles = [...DEMO_ROLES];
       }
       this.persist();
     },
@@ -378,19 +324,7 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.logout(options);
       } else {
-        const isProduction =
-          (import.meta.env.PROD || import.meta.env.MODE === "production") &&
-          import.meta.env.MODE !== "demo";
-        if (isProduction) {
-          throw new Error(
-            "Offline logout fallback is disabled in production environments."
-          );
-        }
-        console.warn(
-          "Keycloak not initialized or running in demo mode. Logging out from offline mock."
-        );
         this.isAuthenticated = false;
-        this.isDemoMode = true;
         this.rawRoles = [];
       }
       this.currentPersona = "super_admin";

@@ -103,4 +103,5 @@ Vite inlines `VITE_*` values at build time. Put overrides in `apps/<app>/.env.lo
 | `VITE_KEYCLOAK_URL` | `apps/web/src/main.js:25`, `apps/subject-portal/src/index.js:2413` | `http://localhost:8080/` |
 | `VITE_KEYCLOAK_REALM` | `apps/web/src/main.js:26`, `apps/subject-portal/src/index.js:2414` | `cadence` |
 | `VITE_KEYCLOAK_CLIENT_ID` | `apps/web/src/main.js:28`, `apps/subject-portal/src/index.js:2415` | `cadence-web` |
-| `VITE_ENABLE_MSW` | `apps/web/src/main.js:138`, `apps/subject-portal/src/index.js:2331` | off (MSW always runs in dev and `--mode demo`) |
+| `VITE_DEMO_MODE` | `apps/web/src/utils/demoMode.js` | off. `true` (or `vite --mode demo`, `pnpm build:demo`) makes a demo build: offline demo identity, MSW mock API and sample data. Any other build shows API failures as errors and never substitutes sample data |
+| `VITE_ENABLE_MSW` | `apps/web/src/main.js`, `apps/subject-portal/src/index.js:2331` | off. Web: starts the MSW mock worker without the rest of demo mode (demo builds start it anyway) |

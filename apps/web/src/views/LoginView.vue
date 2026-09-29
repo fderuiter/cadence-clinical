@@ -385,8 +385,9 @@
               🔐 Authenticate via Keycloak
             </button>
 
-            <!-- Offline Demo mode fallback -->
+            <!-- Offline demo sign-in: demo builds only (#4523) -->
             <button
+              v-if="demoBuild"
               class="btn btn-secondary btn-login-demo"
               style="
                 width: 100%;
@@ -433,6 +434,9 @@ import { ref, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useRouter, useRoute } from "vue-router";
 import { offlineAuthManager } from "../utils/offlineAuth";
+import { isDemoBuild } from "../utils/demoMode";
+
+const demoBuild = isDemoBuild();
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -536,7 +540,7 @@ async function submitPinSetup() {
       };
       await offlineAuthManager.storeEncryptedSession(pinInput.value, session);
     } else {
-      authStore.isDemoMode = true;
+      // Throws outside a demo build.
       await authStore.login();
       const identity = authStore.identity || {
         id: "demo-user-id",
@@ -567,7 +571,8 @@ async function submitPinUnlock() {
 
     // Decrypt succeeded, set auth state in store
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = true;
+    // An unlocked offline session carries no API token; it must not enable demo data (#4523).
+    authStore.isDemoMode = demoBuild;
     authStore.user = {
       id: session.userId,
       username: session.userId,

@@ -332,6 +332,7 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toasts.js";
 import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
@@ -358,6 +359,7 @@ import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const toasts = useToastStore();
 const route = useRoute();
 
 const showEhrReconciliationDrawer = ref(false);
@@ -1201,7 +1203,9 @@ async function submitEcrf() {
       payload: { ...store.formValues },
     });
   } catch (err) {
-    console.warn("Failed to persist form submission to backend:", err);
+    // Never record a submission the backend did not accept (#4523): no ledger block, no success alert.
+    toasts.apiError("eCRF submission failed", err);
+    return;
   }
 
   store.addLedgerBlock(

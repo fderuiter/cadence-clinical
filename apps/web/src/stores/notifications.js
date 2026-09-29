@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { notificationsService } from "../api/notifications";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
 const defaultTemplates = [
@@ -75,7 +76,9 @@ function getStorageKey(authStore) {
 export const useNotificationsStore = defineStore("notifications", {
   state: () => {
     let savedNotifications = null;
-    if (typeof window !== "undefined" && window.localStorage) {
+    // Locally simulated notifications exist only in a demo build (#4523).
+    const demoBuild = isDemoBuild();
+    if (demoBuild && typeof window !== "undefined" && window.localStorage) {
       try {
         let authStore = null;
         try {
@@ -96,7 +99,7 @@ export const useNotificationsStore = defineStore("notifications", {
       }
     }
     return {
-      notifications: savedNotifications || defaultTemplates,
+      notifications: demoBuild ? savedNotifications || defaultTemplates : [],
       filters: {
         category: "",
         priority: "",
@@ -122,7 +125,12 @@ export const useNotificationsStore = defineStore("notifications", {
           notificationsService.getNotifications &&
           (notificationsService.getNotifications._isMockFunction ||
             typeof notificationsService.getNotifications.mock === "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -175,7 +183,12 @@ export const useNotificationsStore = defineStore("notifications", {
           (notificationsService.acknowledgeNotification._isMockFunction ||
             typeof notificationsService.acknowledgeNotification.mock ===
               "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -239,7 +252,12 @@ export const useNotificationsStore = defineStore("notifications", {
           notificationsService.resolveNotification &&
           (notificationsService.resolveNotification._isMockFunction ||
             typeof notificationsService.resolveNotification.mock === "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -298,7 +316,9 @@ export const useNotificationsStore = defineStore("notifications", {
         const storageKey = getStorageKey(authStore);
         window.localStorage.removeItem(storageKey);
       }
-      this.notifications = JSON.parse(JSON.stringify(defaultTemplates));
+      this.notifications = isDemoBuild()
+        ? JSON.parse(JSON.stringify(defaultTemplates))
+        : [];
     },
   },
 });
