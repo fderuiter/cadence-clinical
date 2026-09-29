@@ -83,29 +83,26 @@ string knowledgeUrl = GetServiceUrl("KNOWLEDGE_SERVICE_URL", 8015);
 string paymentsUrl = GetServiceUrl("PAYMENTS_SERVICE_URL", 8016);
 string aiGatewayUrl = GetServiceUrl("AI_GATEWAY_SERVICE_URL", 8017);
 
+// Every route must lead to paths its service maps; tests/Gateway/GatewayRouteCoverageTests.cs checks both directions.
 var routes = new[]
 {
     new RouteConfig { RouteId = "designer-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/studies/{**catch-all}" } },
-    new RouteConfig { RouteId = "execution-subjects-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/subjects/{**catch-all}" } },
+    new RouteConfig { RouteId = "designer-protocols-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/protocols/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-obs-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/observations/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-forms-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/forms/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-queries-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/queries/{**catch-all}" } },
-    new RouteConfig { RouteId = "execution-comp-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/compliance/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-generic-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/execution/{**catch-all}" } },
     new RouteConfig { RouteId = "etmf-route", ClusterId = "etmf-cluster", Match = new RouteMatch { Path = "/api/v1/etmf/{**catch-all}" } },
-    new RouteConfig { RouteId = "etmf-docs-route", ClusterId = "etmf-cluster", Match = new RouteMatch { Path = "/api/v1/documents/{**catch-all}" } },
     new RouteConfig { RouteId = "interop-route", ClusterId = "interop-cluster", Match = new RouteMatch { Path = "/api/v1/interop/{**catch-all}" } },
     new RouteConfig { RouteId = "quality-route", ClusterId = "quality-cluster", Match = new RouteMatch { Path = "/api/v1/quality/{**catch-all}" } },
     new RouteConfig { RouteId = "notifications-route", ClusterId = "notifications-cluster", Match = new RouteMatch { Path = "/api/v1/notifications/{**catch-all}" } },
     new RouteConfig { RouteId = "ctms-route", ClusterId = "ctms-cluster", Match = new RouteMatch { Path = "/api/v1/ctms/{**catch-all}" } },
-    new RouteConfig { RouteId = "ctms-sites-route", ClusterId = "ctms-cluster", Match = new RouteMatch { Path = "/api/v1/sites/{**catch-all}" } },
     new RouteConfig { RouteId = "safety-route", ClusterId = "safety-cluster", Match = new RouteMatch { Path = "/api/v1/safety/{**catch-all}" } },
     new RouteConfig { RouteId = "tickets-route", ClusterId = "tickets-cluster", Match = new RouteMatch { Path = "/api/v1/tickets/{**catch-all}" } },
     new RouteConfig { RouteId = "eisf-route", ClusterId = "eisf-cluster", Match = new RouteMatch { Path = "/api/v1/eisf/{**catch-all}" } },
     new RouteConfig { RouteId = "econsent-route", ClusterId = "econsent-cluster", Match = new RouteMatch { Path = "/api/v1/econsent/{**catch-all}" } },
     new RouteConfig { RouteId = "org-route", ClusterId = "org-cluster", Match = new RouteMatch { Path = "/api/v1/org/{**catch-all}" } },
     new RouteConfig { RouteId = "fileshare-route", ClusterId = "fileshare-cluster", Match = new RouteMatch { Path = "/api/v1/fileshare/{**catch-all}" } },
-    new RouteConfig { RouteId = "fileshare-files-route", ClusterId = "fileshare-cluster", Match = new RouteMatch { Path = "/api/v1/files/{**catch-all}" } },
     new RouteConfig { RouteId = "imaging-route", ClusterId = "imaging-cluster", Match = new RouteMatch { Path = "/api/v1/imaging/{**catch-all}" } },
     new RouteConfig { RouteId = "knowledge-route", ClusterId = "knowledge-cluster", Match = new RouteMatch { Path = "/api/v1/knowledge/{**catch-all}" } },
     new RouteConfig { RouteId = "payments-route", ClusterId = "payments-cluster", Match = new RouteMatch { Path = "/api/v1/payments/{**catch-all}" } },

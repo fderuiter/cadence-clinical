@@ -37,6 +37,8 @@
     <ProjectReference Include="..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
     <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
+    <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" />
     <ProjectReference Include="..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
     <ProjectReference Include="..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
     <ProjectReference Include="..\apps\quality\src\Cadence.Apps.Quality.csproj" />
