@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useNotificationsStore } from "./notifications.js";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -365,6 +366,12 @@ export const useAuthStore = defineStore("auth", {
         this.currentPersona = personaKey;
         this.rawRoles = [...found.roles];
         this.persist();
+        try {
+          const notificationsStore = useNotificationsStore();
+          notificationsStore.fetchNotifications();
+        } catch {
+          // Pinia store not ready or active
+        }
       }
     },
     async logout(options = {}) {
