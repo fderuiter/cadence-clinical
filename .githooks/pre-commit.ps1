@@ -11,23 +11,15 @@ Write-Host "[Pre-Commit] Executing Cadence Quality Sentinels..." -ForegroundColo
 # 1. Format check
 $dotnet = Get-Command "dotnet" -ErrorAction SilentlyContinue
 if ($dotnet) {
-    Write-Host "  Validating C# code style (.editorconfig)..." -ForegroundColor Gray
-    try {
-        & dotnet format whitespace Cadence.sln --verify-no-changes --no-restore
+    # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
+    $stagedCs = @(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
+    if ($stagedCs.Count -gt 0) {
+        Write-Host "  Validating formatting, code style and analyzers on staged C# files..." -ForegroundColor Gray
+        & dotnet format Cadence.sln --verify-no-changes --include @stagedCs
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "::error:: C# formatting violations detected! Run 'dotnet format whitespace Cadence.sln' to auto-fix." -ForegroundColor Red
+            Write-Host "::error:: C# formatting, style or analyzer violations detected! Run 'dotnet format Cadence.sln' to auto-fix." -ForegroundColor Red
             exit 1
         }
-        Write-Host "  Validating C# Roslyn analyzer and code style rules..." -ForegroundColor Gray
-        & dotnet format style Cadence.sln --verify-no-changes --no-restore
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "::error:: C# Roslyn style or analyzer violations detected! Run 'dotnet format style Cadence.sln' to auto-fix." -ForegroundColor Red
-            exit 1
-        }
-    }
-    catch {
-        Write-Host "::error:: Failed checking dotnet format or Roslyn style analyzer rules." -ForegroundColor Red
-        exit 1
     }
 }
 

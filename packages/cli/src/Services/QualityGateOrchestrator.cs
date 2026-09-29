@@ -26,7 +26,11 @@ public static class QualityGateOrchestrator
 
         // 1. Formatting
         AnsiConsole.MarkupLine("1/21 Validating C# Code Formatting (.editorconfig)...");
-        if (RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") != 0)
+        if (preCommit)
+        {
+            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
+        }
+        else if (RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 1 (dotnet-format) failed![/]");
             allPassed = false;
@@ -34,7 +38,11 @@ public static class QualityGateOrchestrator
 
         // 2. Roslyn Style
         AnsiConsole.MarkupLine("\n2/21 Validating Roslyn Analyzer Rules...");
-        if (RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") != 0)
+        if (preCommit)
+        {
+            AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
+        }
+        else if (RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 2 (dotnet-format-style) failed![/]");
             allPassed = false;
