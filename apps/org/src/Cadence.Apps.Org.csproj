@@ -11,7 +11,6 @@
     <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -27,11 +27,14 @@ public class StudySite : AggregateRoot<StudySiteId>
         ReasonForChange = reasonForChange;
     }
 
-    public void Activate(string updatedBy, string reasonForChange)
+    /// <summary>
+    /// Activates the study site. <see cref="AggregateRootBase.CreatedBy"/> stays the creator and
+    /// <see cref="AggregateRootBase.VersionIndex"/> is advanced by the GxP audit interceptor on save, which also
+    /// records the acting user in the audit trail.
+    /// </summary>
+    public void Activate(string reasonForChange)
     {
         Status = "Active";
-        CreatedBy = updatedBy;
         ReasonForChange = reasonForChange;
-        VersionIndex++;
     }
 }

@@ -13,7 +13,7 @@ public class EproSubmission
     public string OfflineSyncMarkersJson { get; set; } = "{}";
     public string SyncStatus { get; set; } = "RESOLVED";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public string ReasonForChange { get; set; } = "ePRO mobile submission";
     public int VersionIndex { get; set; } = 1;
 }
@@ -132,7 +132,7 @@ public class EhrEndpointRecord
     public bool IsActive { get; set; } = true;
     public DateTime? LastPolledAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public string ReasonForChange { get; set; } = "Hospital EHR endpoint configuration";
     public int VersionIndex { get; set; } = 1;
 }
@@ -192,7 +192,7 @@ public class DeviceRegistrationRecord
     public DateTime? CalibrationDate { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public string ReasonForChange { get; set; } = "Initial device registration";
     public int VersionIndex { get; set; } = 1;
 }

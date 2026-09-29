@@ -281,12 +281,8 @@ public sealed class SubjectApplicationService(
     /// Soft-deletes (clears) demographics (raise site #25) — a distinct error family
     /// (<see cref="SubjectErrors.SoftDeleteBlocked"/>) from <see cref="UpdateDemographicsAsync"/>'s
     /// <see cref="SubjectErrors.LockedFactorMutation"/> despite both gating on the same
-    /// <see cref="ClinicalSubject.IsPostRandomization"/> predicate. No <see cref="IAuditLogWriter"/> entry is
-    /// written on success here: neither <c>01_spec.md</c> Rule 6's action list nor this ticket's own
-    /// technical-implementation notes name one for this call site (unlike <see cref="AdvanceStateAsync"/>/
-    /// <see cref="UpdateDemographicsAsync"/>, both of which explicitly do), and the legacy
-    /// <c>delete_subject_demographics_endpoint</c> this replaces has no parallel service-layer method to
-    /// consolidate onto the way <c>update_demographics</c> did.
+    /// <see cref="ClinicalSubject.IsPostRandomization"/> predicate. Writes a <c>DELETE_DEMOGRAPHICS</c> audit
+    /// entry in the same transaction (#4767; the legacy endpoint wrote none).
     /// </summary>
     public async Task<Result<SubjectResponse>> DeleteDemographicsAsync(
         string subjectIdOrCode, string changeReason, CancellationToken ct)
@@ -305,6 +301,8 @@ public sealed class SubjectApplicationService(
         }
 
         subject.ReasonForChange = changeReason;
+        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "DELETE_DEMOGRAPHICS",
+            auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return SubjectResponse.FromAggregate(subject);

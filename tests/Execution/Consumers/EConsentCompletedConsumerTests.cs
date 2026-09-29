@@ -17,6 +17,7 @@ using FluentAssertions;
 using MassTransit;
 using MassTransit.Testing;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -179,6 +180,7 @@ public class EConsentCompletedConsumerTests
         services.AddSingleton<ISubjectRepository>(new FakeSubjectRepository(unitOfWork));
         services.AddSingleton<IConsentRepository>(new FakeConsentRepository(unitOfWork));
         services.AddSingleton<IAuditLogWriter>(auditWriter);
+        services.AddScoped<IAuditActorScope>(_ => new AmbientAuditContextAccessor(new HttpContextAccessor()));
         services.AddSingleton(clock);
 
         // ConcurrentMessageLimit = 1: the redelivery test publishes the same event twice and asserts the
@@ -244,7 +246,7 @@ public class EConsentCompletedConsumerTests
             subject.StudyCode.Value.Should().Be("STUDY-AUTO");
             subject.Status.Should().Be(SubjectState.Screening);
             subject.EnrollmentIndex.Should().Be(0);
-            subject.ReasonForChange.Should().Be(SystemAuditContextAccessor.SystemChangeReason);
+            subject.ReasonForChange.Should().Be(ServiceAccounts.EConsentConsumer.ChangeReason);
 
             unitOfWork.Consents.Should().ContainSingle();
             var consent = unitOfWork.Consents[0];
@@ -258,13 +260,13 @@ public class EConsentCompletedConsumerTests
             var subjectAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "clinical_subjects").Which;
             subjectAudit.Action.Should().Be("INSERT");
             subjectAudit.RecordId.Should().Be(subject.Id.ToString());
-            subjectAudit.UserId.Should().Be(SystemAuditContextAccessor.SystemUserId);
-            subjectAudit.ChangeReason.Should().Be(SystemAuditContextAccessor.SystemChangeReason);
+            subjectAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
+            subjectAudit.ChangeReason.Should().Be(ServiceAccounts.EConsentConsumer.ChangeReason);
 
             var consentAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "subject_consents").Which;
             consentAudit.Action.Should().Be("INSERT");
             consentAudit.RecordId.Should().Be(consent.Id.ToString());
-            consentAudit.UserId.Should().Be(SystemAuditContextAccessor.SystemUserId);
+            consentAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
         }
         finally
         {

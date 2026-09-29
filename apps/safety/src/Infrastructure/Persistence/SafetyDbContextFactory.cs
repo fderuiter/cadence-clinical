@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Database;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -11,8 +13,11 @@ namespace Cadence.Apps.Safety.Infrastructure.Persistence;
 /// </summary>
 public sealed class SafetyDbContextFactory : IDesignTimeDbContextFactory<SafetyDbContext>
 {
+    /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
+    public const string Schema = "safety";
+
     private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
 
     public SafetyDbContext CreateDbContext(string[] args)
     {
@@ -20,7 +25,8 @@ public sealed class SafetyDbContextFactory : IDesignTimeDbContextFactory<SafetyD
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var optionsBuilder = new DbContextOptionsBuilder<SafetyDbContext>().UseNpgsql(connectionString);
+        var optionsBuilder = new DbContextOptionsBuilder<SafetyDbContext>()
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
 
         return new SafetyDbContext(optionsBuilder.Options);
     }

@@ -11,6 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-09-29: ADR-2447 Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
 - [2026-09-28: Topological Tier-Based .NET 10 Migration and Legacy Python Decommissioning](2026-09-28-topological-tier-based-dotnet-10-migration-and-python-decommissioning.md)
 - [2026-09-25: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](2026-09-25-payments-primitive-decimal-conversion-and-explicit-ef-core-precision.md)
 - [2026-09-25: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime](2026-09-25-decommission-legacy-python-services-and-default-dotnet10-runtime.md)
@@ -463,3 +464,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
 - [2026-09-29: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
+- [2026-09-29: ADR-2257 Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md)

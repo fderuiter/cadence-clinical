@@ -13,6 +13,7 @@ using Cadence.Testing;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -303,6 +304,13 @@ public class TelemetryUnitTests
 
         live.StatusCode.Should().Be(HttpStatusCode.OK);
         ready.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+        var probes = app.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(e => e.RoutePattern.RawText is "/healthz/live" or "/healthz/ready")
+            .ToList();
+        probes.Should().HaveCount(2);
+        probes.Should().OnlyContain(e => e.Metadata.GetMetadata<IAllowAnonymous>() != null);
 
         await app.StopAsync(TestContext.Current.CancellationToken);
     }

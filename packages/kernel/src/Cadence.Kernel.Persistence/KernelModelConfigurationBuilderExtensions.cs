@@ -1,8 +1,6 @@
-using Cadence.Kernel.Domain.ValueConversion;
-
 using Microsoft.EntityFrameworkCore;
 
-namespace Cadence.Kernel.Domain;
+namespace Cadence.Kernel.Persistence;
 
 /// <summary>
 /// EF Core configuration extensions registering strongly-typed UUIDv7 converters across clinical kernel entity models.

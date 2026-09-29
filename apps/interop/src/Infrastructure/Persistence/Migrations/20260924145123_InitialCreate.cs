@@ -30,24 +30,25 @@ public partial class InitialCreate : Migration
                 CREATE INDEX IF NOT EXISTS ""IX_audit_log_entries_EntityName_Timestamp"" ON audit_log_entries (""EntityName"", ""Timestamp"");
             ");
 
-        migrationBuilder.Sql(@"
-                CREATE TABLE IF NOT EXISTS clinical_queries (
-                    ""Id"" character varying(36) NOT NULL,
-                    ""QueryId"" character varying(255) NOT NULL,
-                    ""SubjectCode"" character varying(255) NOT NULL,
-                    ""StudyCode"" character varying(255) NOT NULL,
-                    ""SiteCode"" character varying(255) NOT NULL,
-                    ""ObservationId"" character varying(255),
-                    ""QueryText"" text NOT NULL,
-                    ""Status"" character varying(50) NOT NULL,
-                    ""ResolutionText"" text,
-                    ""_version"" bigint NOT NULL DEFAULT 0,
-                    ""CreatedAt"" timestamp with time zone NOT NULL,
-                    ""CreatedBy"" character varying(255) NOT NULL,
-                    ""ReasonForChange"" character varying(1000) NOT NULL,
-                    CONSTRAINT ""PK_clinical_queries"" PRIMARY KEY (""Id"")
-                );
-            ");
+        migrationBuilder.CreateTable(
+            name: "clinical_queries",
+            columns: table => new
+            {
+                Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                StudyId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                SubjectId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                VisitId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                Domain = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                TestCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                Explanation = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_clinical_queries", x => x.Id);
+            });
 
         migrationBuilder.CreateTable(
             name: "device_registrations",

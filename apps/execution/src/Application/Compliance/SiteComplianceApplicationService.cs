@@ -19,8 +19,8 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 /// <para>
 /// Three deliberately asymmetric behaviors, all load-bearing acceptance criteria — do not "fix" any of them:
 /// <list type="bullet">
-/// <item><see cref="ApplyEtmfWebhookAsync"/> writes <b>no</b> audit-log entry at all, on either branch — this
-/// slice's one documented exception to auditing every mutation.</item>
+/// <item><see cref="ApplyEtmfWebhookAsync"/> writes an <c>ETMF_COMPLIANCE_UPDATE</c> audit entry whenever it
+/// changes a row, attributed to the calling eTMF integration (#4767; the legacy wrote none).</item>
 /// <item><see cref="ActivateSiteAsync"/>'s blocked path writes its <c>BLOCKED_ACTIVATION</c> audit entry (and
 /// commits it via <see cref="ISiteComplianceRepository.SaveChangesAsync"/>) <b>before</b> returning the
 /// failure result — matching the legacy's "own nested session, committed independently of the outer one"
@@ -40,8 +40,7 @@ public sealed class SiteComplianceApplicationService(
     ICurrentAuditContextAccessor auditContext) : ISiteComplianceApplicationService
 {
     // Matches SiteComplianceCacheConfiguration.ToTable("site_compliance_caches") -- the audit chain's
-    // per-tableName scoping key (EfAuditLogWriter) for ActivateSiteAsync's two audit entries.
-    // ApplyEtmfWebhookAsync writes no audit entry at all, so it never uses this constant.
+    // per-tableName scoping key (EfAuditLogWriter) for every audit entry this service writes.
     private const string SiteComplianceTableName = "site_compliance_caches";
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
 
@@ -52,15 +51,18 @@ public sealed class SiteComplianceApplicationService(
         IReadOnlyList<string> missingDocuments = payload.MissingArtifacts ?? Array.Empty<string>();
 
         var existing = await compliance.GetAsync(studyCode, siteCode, payload.Milestone, ct);
+        SiteComplianceCache? changed = null;
         if (existing is not null)
         {
             existing.ApplyWebhookUpdate(payload.IsComplete, missingDocuments);
+            changed = existing;
         }
         else if (siteCode is { } concreteSiteCode)
         {
             var created = SiteComplianceCache.Create(
                 studyCode, concreteSiteCode, payload.Milestone, payload.IsComplete, missingDocuments);
             await compliance.AddAsync(created, ct);
+            changed = created;
         }
         // else: SiteId is null (a study-level milestone, legitimate per EtmfCompletenessWebhookPayload's own
         // doc comment) and no existing row was found. SiteComplianceCache.SiteCode is non-nullable (MIG-SUBJ-006),
@@ -69,11 +71,21 @@ public sealed class SiteComplianceApplicationService(
         // without touching the aggregate itself. Rather than throw or fabricate a placeholder site, this is a
         // documented no-op: the call still "always upserts" in the sense of never failing or throwing.
 
-        await compliance.SaveChangesAsync(ct);
+        if (changed is not null)
+        {
+            // The legacy wrote no audit entry here (01_spec.md §1.1); #4767 closes that gap so every
+            // compliance change is attributable to the integration that reported it.
+            await auditLog.WriteAsync(SiteComplianceTableName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
+                auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+                newValues: new Dictionary<string, object?>
+                {
+                    ["milestone"] = payload.Milestone,
+                    ["is_complete"] = payload.IsComplete,
+                    ["missing_documents"] = missingDocuments,
+                }, ct);
+        }
 
-        // Deliberately no IAuditLogWriter call anywhere in this method, on either branch -- 01_spec.md §1.1's
-        // one documented exception to this slice's "audit every mutation" rule. Do not add one "for
-        // consistency" with ActivateSiteAsync below; that would be an undocumented behavior change.
+        await compliance.SaveChangesAsync(ct);
         return true;
     }
 
