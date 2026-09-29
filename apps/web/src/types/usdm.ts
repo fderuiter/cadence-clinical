@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definitions in /app/cadence-clinical/docs/openapi
-// Generated on: 2026-09-29T06:19:26.817Z
+// Generated on: 2026-09-29T06:51:44.087Z
 
 export interface ChatMessageDTO {
   role?: MessageRole | string;
@@ -173,7 +173,8 @@ export interface ReasoningStepState {
   step_citations?: ParsedCitation[];
 }
 
-export type ReasoningStepType = "planning" | "extraction" | "synthesis" | "verification" | "draft_staging";
+export type ReasoningStepType =
+  "planning" | "extraction" | "synthesis" | "verification" | "draft_staging";
 
 export interface TierInfoDTO {
   tier: ModelTier;
@@ -337,7 +338,8 @@ export interface Ai_gateway_HTTPValidationError {
 
 export type Ai_gateway_MessageRole = "system" | "user" | "assistant" | "tool";
 
-export type Ai_gateway_ModelTier = "tier_1_local" | "tier_2_fast" | "tier_3_frontier";
+export type Ai_gateway_ModelTier =
+  "tier_1_local" | "tier_2_fast" | "tier_3_frontier";
 
 export interface Ai_gateway_ParsedCitation {
   protocol_version: string;
@@ -390,7 +392,8 @@ export interface Ai_gateway_ReasoningStepState {
   step_citations?: Ai_gateway_ParsedCitation[];
 }
 
-export type Ai_gateway_ReasoningStepType = "planning" | "extraction" | "synthesis" | "verification" | "draft_staging";
+export type Ai_gateway_ReasoningStepType =
+  "planning" | "extraction" | "synthesis" | "verification" | "draft_staging";
 
 export interface Ai_gateway_TierInfoDTO {
   tier: Ai_gateway_ModelTier;
@@ -1570,7 +1573,17 @@ export interface Designer_CdiscMetadata {
   sdtm_target?: string | null;
 }
 
-export type Designer_ClinicalDataType = "string" | "integer" | "float" | "date" | "datetime" | "time" | "boolean" | "codelist" | "text" | "repeat_log";
+export type Designer_ClinicalDataType =
+  | "string"
+  | "integer"
+  | "float"
+  | "date"
+  | "datetime"
+  | "time"
+  | "boolean"
+  | "codelist"
+  | "text"
+  | "repeat_log";
 
 export type Designer_CodeValidationState = "VALID" | "INVALID" | "DEGRADED";
 
@@ -1608,7 +1621,8 @@ export interface Designer_CohortFeasibilityRequest {
   analysis_id?: string | null;
   study_id: string;
   cohort_id?: string | null;
-  unstructured_protocol_text?: string | Designer_ProtocolRAGContextChunk[] | null;
+  unstructured_protocol_text?:
+    string | Designer_ProtocolRAGContextChunk[] | null;
   structured_criteria?: Designer_EligibilityCriterion_Input[];
   patient_profiles?: Record<string, any>[] | null;
   synthetic_simulation_count?: number;
@@ -1922,9 +1936,20 @@ export interface Designer_DifferenceResult {
   new_value: any;
 }
 
-export type Designer_DigitizationJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "PENDING_REVIEW" | "FAILED" | "CANCELLED";
+export type Designer_DigitizationJobStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "COMPLETED"
+  | "PENDING_REVIEW"
+  | "FAILED"
+  | "CANCELLED";
 
-export type Designer_DigitizationStage = "LAYOUT_PARSING" | "SOA_EXTRACTION" | "BIOMEDICAL_CONCEPT_MAPPING" | "ECRF_SYNTHESIS" | "USDM_COMPILATION";
+export type Designer_DigitizationStage =
+  | "LAYOUT_PARSING"
+  | "SOA_EXTRACTION"
+  | "BIOMEDICAL_CONCEPT_MAPPING"
+  | "ECRF_SYNTHESIS"
+  | "USDM_COMPILATION";
 
 export interface Designer_DispatchedTicketInfo {
   ticket_id: string;
@@ -1936,7 +1961,12 @@ export interface Designer_DispatchedTicketInfo {
   assignee_role: string;
 }
 
-export type Designer_DomainQueue = "DATA_CAPTURE_ECRF" | "SUBJECT_MANAGEMENT_RTSM" | "REGULATORY_COMPLIANCE" | "SITE_OPERATIONS" | "CLINICAL_OPERATIONS";
+export type Designer_DomainQueue =
+  | "DATA_CAPTURE_ECRF"
+  | "SUBJECT_MANAGEMENT_RTSM"
+  | "REGULATORY_COMPLIANCE"
+  | "SITE_OPERATIONS"
+  | "CLINICAL_OPERATIONS";
 
 export interface Designer_EligibilityCriterion_Input {
   created_at?: string;
@@ -2003,7 +2033,8 @@ export interface Designer_EpochReorderRequest {
 
 export interface Designer_ExpressionNode_Output {
   type: "logical" | "comparison" | "field_ref" | "constant";
-  operator?: Designer_ComparisonOperator | Designer_LogicalOperator | string | null;
+  operator?:
+    Designer_ComparisonOperator | Designer_LogicalOperator | string | null;
   operands?: Designer_ExpressionNode_Output[] | null;
   value?: any | null;
   field_ref?: Designer_FieldReference_Output | null;
@@ -2021,7 +2052,12 @@ export interface Designer_ExtractedActivity {
 
 export interface Designer_ExtractedArm {
   name: string;
-  arm_type: "EXPERIMENTAL" | "ACTIVE_COMPARATOR" | "PLACEBO_COMPARATOR" | "SHAM_COMPARATOR" | "NO_INTERVENTION";
+  arm_type:
+    | "EXPERIMENTAL"
+    | "ACTIVE_COMPARATOR"
+    | "PLACEBO_COMPARATOR"
+    | "SHAM_COMPARATOR"
+    | "NO_INTERVENTION";
   description?: string | null;
   target_sample_size?: number | null;
 }
@@ -2193,7 +2229,11 @@ export interface Designer_LibraryObjectAmendRequest {
 
 export interface Designer_LibraryObjectListResponse {
   object?: string;
-  data: Designer_FormLibraryObjectDetail | Designer_DataElementLibraryObjectDetail | Designer_ArmLibraryObjectDetail | Designer_VisitLibraryObjectDetail[];
+  data:
+    | Designer_FormLibraryObjectDetail
+    | Designer_DataElementLibraryObjectDetail
+    | Designer_ArmLibraryObjectDetail
+    | Designer_VisitLibraryObjectDetail[];
   has_more: boolean;
   next_cursor?: string | null;
 }
@@ -2203,7 +2243,8 @@ export interface Designer_LibraryObjectTransitionRequest {
   change_reason: string;
 }
 
-export type Designer_LibraryStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
+export type Designer_LibraryStatus =
+  "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
 
 export interface Designer_LinkArmApplicabilityRequest {
   arm_id: string;
@@ -2505,7 +2546,8 @@ export interface Designer_SchemaRevisionSummary {
   forms?: Record<string, any>;
 }
 
-export type Designer_SectionReviewStatus = "DRAFT" | "IN_REVIEW" | "LOCKED" | "APPROVED";
+export type Designer_SectionReviewStatus =
+  "DRAFT" | "IN_REVIEW" | "LOCKED" | "APPROVED";
 
 export interface Designer_SectionReviewTransition {
   transition_id: string;
@@ -2547,7 +2589,22 @@ export interface Designer_SemanticDiffResponse {
   migration_directives?: Designer_apps__designer__domain__cdisc__branch_models__MigrationDirective[];
 }
 
-export type Designer_SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
+export type Designer_SigningReason =
+  | "AUTHOR"
+  | "REVIEW"
+  | "APPROVAL"
+  | "SPONSOR_APPROVAL"
+  | "INVESTIGATOR_SIGNATURE"
+  | "TECHNICAL_QC"
+  | "CLINICAL_QC"
+  | "DATA_LOCK"
+  | "SYSTEM_SEAL"
+  | "PROTOCOL_APPROVAL"
+  | "REGULATORY_FORM_SIGNATURE"
+  | "TRAINING_ACKNOWLEDGEMENT"
+  | "SITE_VISIT_SIGN_OFF"
+  | "ADJUDICATION_SIGN_OFF"
+  | "ENDPOINT_ADJUDICATION";
 
 export interface Designer_SoACellView {
   activity_id: string;
@@ -2772,7 +2829,8 @@ export interface Designer_TerminologyConcept {
   valid: boolean;
 }
 
-export type Designer_TerminologyEnum = "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
+export type Designer_TerminologyEnum =
+  "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
 
 export interface Designer_TerminologySearchResponse {
   query: string;
@@ -2960,7 +3018,8 @@ export interface Designer_VersionDiffResponse {
   deleted_nodes: Designer_DifferenceResult[];
 }
 
-export type Designer_ViewportMode = "desktop_edc" | "mobile_epro" | "tablet_esource";
+export type Designer_ViewportMode =
+  "desktop_edc" | "mobile_epro" | "tablet_esource";
 
 export interface Designer_VisitAttributes {
   visit_type: string;
@@ -3013,7 +3072,20 @@ export interface Designer_VisitToEpochAssignmentRequest {
   visit_ids: string[];
 }
 
-export type Designer_WidgetType = "text_input" | "textarea" | "number_input" | "radio_group" | "select_dropdown" | "multi_select" | "date_picker" | "time_picker" | "slider_vas" | "body_map_coordinate" | "repeating_log_grid" | "medical_autocode" | "sensor_stream_card";
+export type Designer_WidgetType =
+  | "text_input"
+  | "textarea"
+  | "number_input"
+  | "radio_group"
+  | "select_dropdown"
+  | "multi_select"
+  | "date_picker"
+  | "time_picker"
+  | "slider_vas"
+  | "body_map_coordinate"
+  | "repeating_log_grid"
+  | "medical_autocode"
+  | "sensor_stream_card";
 
 export interface Designer_apps__designer__domain__cdisc__branch_models__MigrationDirective {
   directive_id: string;
@@ -3025,8 +3097,11 @@ export interface Designer_apps__designer__domain__cdisc__branch_models__Migratio
 
 export interface Designer_apps__designer__domain__eligibility__models__ExpressionNode_Input {
   type: "logical" | "comparison" | "field_ref" | "constant";
-  operator?: Designer_ComparisonOperator | Designer_LogicalOperator | string | null;
-  operands?: Designer_apps__designer__domain__eligibility__models__ExpressionNode_Input[] | null;
+  operator?:
+    Designer_ComparisonOperator | Designer_LogicalOperator | string | null;
+  operands?:
+    | Designer_apps__designer__domain__eligibility__models__ExpressionNode_Input[]
+    | null;
   value?: any | null;
   field_ref?: Designer_apps__designer__domain__eligibility__models__FieldReference | null;
 }
@@ -4029,7 +4104,8 @@ export interface ETMF_DocumentIntelligenceSignatureRequest {
   filename?: string;
 }
 
-export type ETMF_DocumentModality = "TEXT" | "PDF_BINARY" | "SCANNED_IMAGE" | "STRUCTURED_FORM";
+export type ETMF_DocumentModality =
+  "TEXT" | "PDF_BINARY" | "SCANNED_IMAGE" | "STRUCTURED_FORM";
 
 export interface ETMF_DocumentResponse {
   id: string;
@@ -4220,9 +4296,11 @@ export interface ETMF_ProtocolVersionRefDTO {
   status: ETMF_ProtocolVersionStatusDTO;
 }
 
-export type ETMF_ProtocolVersionStatusDTO = "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
+export type ETMF_ProtocolVersionStatusDTO =
+  "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
 
-export type ETMF_QCRecommendation = "AUTO_CLASSIFY" | "FLAG_FOR_QC_REVIEW" | "MANUAL_RECLASSIFICATION_REQUIRED";
+export type ETMF_QCRecommendation =
+  "AUTO_CLASSIFY" | "FLAG_FOR_QC_REVIEW" | "MANUAL_RECLASSIFICATION_REQUIRED";
 
 export interface ETMF_RedactRequest {
   redacted_content: string;
@@ -4247,7 +4325,8 @@ export interface ETMF_SignatureAnalysisResult {
   details?: string;
 }
 
-export type ETMF_SignaturePresenceStatus = "FULLY_SIGNED" | "PARTIALLY_SIGNED" | "UNSIGNED" | "SIGNATURE_NOT_REQUIRED";
+export type ETMF_SignaturePresenceStatus =
+  "FULLY_SIGNED" | "PARTIALLY_SIGNED" | "UNSIGNED" | "SIGNATURE_NOT_REQUIRED";
 
 export interface ETMF_SignatureVerificationResponse {
   document_id: string;
@@ -4261,7 +4340,22 @@ export interface ETMF_SignatureVerificationResponse {
   details: string;
 }
 
-export type ETMF_SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
+export type ETMF_SigningReason =
+  | "AUTHOR"
+  | "REVIEW"
+  | "APPROVAL"
+  | "SPONSOR_APPROVAL"
+  | "INVESTIGATOR_SIGNATURE"
+  | "TECHNICAL_QC"
+  | "CLINICAL_QC"
+  | "DATA_LOCK"
+  | "SYSTEM_SEAL"
+  | "PROTOCOL_APPROVAL"
+  | "REGULATORY_FORM_SIGNATURE"
+  | "TRAINING_ACKNOWLEDGEMENT"
+  | "SITE_VISIT_SIGN_OFF"
+  | "ADJUDICATION_SIGN_OFF"
+  | "ENDPOINT_ADJUDICATION";
 
 export interface ETMF_SpanItem {
   start: number;
@@ -4375,7 +4469,13 @@ export interface ETMF_ZoneReadinessDetail {
   completeness_percentage: number;
 }
 
-export type Execution_ActionTakenDevice = "QUARANTINED_AT_SITE" | "RETURNED_TO_SPONSOR" | "REPLACED" | "DISPOSED" | "REPAIRED" | "NONE";
+export type Execution_ActionTakenDevice =
+  | "QUARANTINED_AT_SITE"
+  | "RETURNED_TO_SPONSOR"
+  | "REPLACED"
+  | "DISPOSED"
+  | "REPAIRED"
+  | "NONE";
 
 export interface Execution_AdaptiveTrialConfigDTO {
   study_id: string;
@@ -4402,7 +4502,19 @@ export interface Execution_AddDOAAssignmentRequest {
 
 export type Execution_AdjudicationActionEnum = "APPROVE" | "REJECT";
 
-export type Execution_AdjudicationClassification = "CONFIRMED_MI" | "CONFIRMED_ISCHEMIC_STROKE" | "CONFIRMED_HEMORRHAGIC_STROKE" | "CONFIRMED_CV_DEATH" | "CONFIRMED_NON_CV_DEATH" | "CONFIRMED_HEART_FAILURE_HOSPITALIZATION" | "CONFIRMED_STENT_THROMBOSIS" | "CONFIRMED_VTE" | "CONFIRMED_DISEASE_PROGRESSION" | "NOT_AN_ENDPOINT" | "INDETERMINATE" | "INSUFFICIENT_DATA";
+export type Execution_AdjudicationClassification =
+  | "CONFIRMED_MI"
+  | "CONFIRMED_ISCHEMIC_STROKE"
+  | "CONFIRMED_HEMORRHAGIC_STROKE"
+  | "CONFIRMED_CV_DEATH"
+  | "CONFIRMED_NON_CV_DEATH"
+  | "CONFIRMED_HEART_FAILURE_HOSPITALIZATION"
+  | "CONFIRMED_STENT_THROMBOSIS"
+  | "CONFIRMED_VTE"
+  | "CONFIRMED_DISEASE_PROGRESSION"
+  | "NOT_AN_ENDPOINT"
+  | "INDETERMINATE"
+  | "INSUFFICIENT_DATA";
 
 export interface Execution_AdjudicationRequest {
   action: Execution_AdjudicationActionEnum;
@@ -4419,7 +4531,16 @@ export interface Execution_AdjudicationResponse {
   adjudicated_at: string;
 }
 
-export type Execution_AdjudicationWorkflowStatus = "PENDING_PRIMARY_REVIEWS" | "READER_1_COMPLETED" | "READER_2_COMPLETED" | "CONSENSUS_REACHED" | "DISCORDANCE_DETECTED" | "ESCALATED_TO_CHAIR" | "FINALIZED_CONCORDANT" | "FINALIZED_BY_CHAIR" | "FINALIZED_BY_COMMITTEE";
+export type Execution_AdjudicationWorkflowStatus =
+  | "PENDING_PRIMARY_REVIEWS"
+  | "READER_1_COMPLETED"
+  | "READER_2_COMPLETED"
+  | "CONSENSUS_REACHED"
+  | "DISCORDANCE_DETECTED"
+  | "ESCALATED_TO_CHAIR"
+  | "FINALIZED_CONCORDANT"
+  | "FINALIZED_BY_CHAIR"
+  | "FINALIZED_BY_COMMITTEE";
 
 export interface Execution_AnomalyCandidateItem {
   query_id: string;
@@ -4534,7 +4655,12 @@ export interface Execution_BatchSignatureResponse {
   audit_tx: string;
 }
 
-export type Execution_BindingDeterminationSource = "CONCORDANT_CONSENSUS" | "CHAIR_UPHELD_READER_1" | "CHAIR_UPHELD_READER_2" | "CHAIR_CUSTOM_DETERMINATION" | "COMMITTEE_QUORUM_VOTE";
+export type Execution_BindingDeterminationSource =
+  | "CONCORDANT_CONSENSUS"
+  | "CHAIR_UPHELD_READER_1"
+  | "CHAIR_UPHELD_READER_2"
+  | "CHAIR_CUSTOM_DETERMINATION"
+  | "COMMITTEE_QUORUM_VOTE";
 
 export interface Execution_Body_import_dictionary_api_v1_dictionaries_import_post {
   dictionary_type: Execution_DictTypeEnum;
@@ -4928,7 +5054,8 @@ export interface Execution_CecDossierSummaryItem {
   created_at: string;
 }
 
-export type Execution_CertificationStatusEnum = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING_RENEWAL";
+export type Execution_CertificationStatusEnum =
+  "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING_RENEWAL";
 
 export interface Execution_ChairAdjudicateDTO {
   final_classification: Execution_AdjudicationClassification;
@@ -5062,7 +5189,14 @@ export interface Execution_CohortEvaluationResult {
   rationale: string;
 }
 
-export type Execution_CohortRecommendationAction = "ESCALATE" | "DE_ESCALATE" | "STAY" | "EXPAND_COHORT" | "STOP_SAFETY" | "STOP_SUCCESS" | "MTD_FOUND";
+export type Execution_CohortRecommendationAction =
+  | "ESCALATE"
+  | "DE_ESCALATE"
+  | "STAY"
+  | "EXPAND_COHORT"
+  | "STOP_SAFETY"
+  | "STOP_SUCCESS"
+  | "MTD_FOUND";
 
 export interface Execution_CohortTransitionLogResponse {
   id: string;
@@ -5158,7 +5292,15 @@ export interface Execution_CrossDomainAnomaly {
   field_id?: string | null;
 }
 
-export type Execution_CrossDomainAnomalyType = "AE_WITHOUT_CONCOMITANT_MED" | "CONCOMITANT_MED_WITHOUT_AE" | "MARKED_LAB_ABNORMALITY_WITHOUT_AE" | "CRITICAL_VITALS_WITHOUT_AE" | "VITALS_INCONSISTENT_WITH_HISTORY" | "DRUG_DISCONTINUATION_WITHOUT_AE" | "TEMPORAL_SEQUENCE_MISMATCH" | "AI_CONTEXTUAL_INCONSISTENCY";
+export type Execution_CrossDomainAnomalyType =
+  | "AE_WITHOUT_CONCOMITANT_MED"
+  | "CONCOMITANT_MED_WITHOUT_AE"
+  | "MARKED_LAB_ABNORMALITY_WITHOUT_AE"
+  | "CRITICAL_VITALS_WITHOUT_AE"
+  | "VITALS_INCONSISTENT_WITH_HISTORY"
+  | "DRUG_DISCONTINUATION_WITHOUT_AE"
+  | "TEMPORAL_SEQUENCE_MISMATCH"
+  | "AI_CONTEXTUAL_INCONSISTENCY";
 
 export type Execution_CustodianEnum = "Lead Unblinded Statistician" | "IDMC";
 
@@ -5210,9 +5352,19 @@ export interface Execution_DOASignOffRequest {
   reason_for_change: string;
 }
 
-export type Execution_DOATaskDelegationEnum = "SUBJECT_INFORMED_CONSENT" | "PHYSICAL_EXAMINATION" | "AE_SAE_REPORTING" | "CRF_DATA_ENTRY" | "PI_CASEBOOK_SIGNOFF";
+export type Execution_DOATaskDelegationEnum =
+  | "SUBJECT_INFORMED_CONSENT"
+  | "PHYSICAL_EXAMINATION"
+  | "AE_SAE_REPORTING"
+  | "CRF_DATA_ENTRY"
+  | "PI_CASEBOOK_SIGNOFF";
 
-export type Execution_DOATaskRoleEnum = "PRINCIPAL_INVESTIGATOR" | "SUB_INVESTIGATOR" | "CLINICAL_RESEARCH_COORDINATOR" | "STUDY_NURSE" | "DATA_MANAGER";
+export type Execution_DOATaskRoleEnum =
+  | "PRINCIPAL_INVESTIGATOR"
+  | "SUB_INVESTIGATOR"
+  | "CLINICAL_RESEARCH_COORDINATOR"
+  | "STUDY_NURSE"
+  | "DATA_MANAGER";
 
 export interface Execution_DailyDemandProjection {
   day_index: number;
@@ -5297,7 +5449,15 @@ export interface Execution_Demographics {
   race?: string | null;
 }
 
-export type Execution_DeviceClassification = "CLASS_I" | "CLASS_IIA" | "CLASS_IIB" | "CLASS_III" | "IVD_CLASS_A" | "IVD_CLASS_B" | "IVD_CLASS_C" | "IVD_CLASS_D";
+export type Execution_DeviceClassification =
+  | "CLASS_I"
+  | "CLASS_IIA"
+  | "CLASS_IIB"
+  | "CLASS_III"
+  | "IVD_CLASS_A"
+  | "IVD_CLASS_B"
+  | "IVD_CLASS_C"
+  | "IVD_CLASS_D";
 
 export interface Execution_DeviceDeficiencyCreateRequest {
   study_id: string;
@@ -5357,7 +5517,13 @@ export interface Execution_DeviceDeficiencyResponse {
   version_index: number;
 }
 
-export type Execution_DeviceDeficiencyType = "MALFUNCTION" | "USABILITY_ERROR" | "INADEQUATE_LABELING" | "DESIGN_DEFECT" | "PACKAGING_BREACH" | "SOFTWARE_FAULT";
+export type Execution_DeviceDeficiencyType =
+  | "MALFUNCTION"
+  | "USABILITY_ERROR"
+  | "INADEQUATE_LABELING"
+  | "DESIGN_DEFECT"
+  | "PACKAGING_BREACH"
+  | "SOFTWARE_FAULT";
 
 export interface Execution_DeviceDispensationRequest {
   study_id: string;
@@ -5479,7 +5645,8 @@ export interface Execution_DeviceQuarantineResponse {
   version_index: number;
 }
 
-export type Execution_DeviceType = "THERAPEUTIC" | "DIAGNOSTIC_IVD" | "IMPLANTABLE" | "SAMD" | "COMBINATION";
+export type Execution_DeviceType =
+  "THERAPEUTIC" | "DIAGNOSTIC_IVD" | "IMPLANTABLE" | "SAMD" | "COMBINATION";
 
 export interface Execution_DiagnosticAttachment {
   attachment_id: string;
@@ -5678,7 +5845,15 @@ export interface Execution_EISFDocumentRecord {
   is_redacted?: boolean;
 }
 
-export type Execution_EISFTaxonomyCategoryEnum = "1_INVESTIGATOR_CV" | "2_MEDICAL_LICENSE" | "3_PROTOCOL_APPROVAL" | "4_IRB_IEC_APPROVAL" | "5_INFORMED_CONSENT" | "6_FINANCIAL_DISCLOSURE" | "7_DELEGATION_OF_AUTHORITY" | "8_SAFETY_REPORT";
+export type Execution_EISFTaxonomyCategoryEnum =
+  | "1_INVESTIGATOR_CV"
+  | "2_MEDICAL_LICENSE"
+  | "3_PROTOCOL_APPROVAL"
+  | "4_IRB_IEC_APPROVAL"
+  | "5_INFORMED_CONSENT"
+  | "6_FINANCIAL_DISCLOSURE"
+  | "7_DELEGATION_OF_AUTHORITY"
+  | "8_SAFETY_REPORT";
 
 export interface Execution_ETMFCompletenessWebhookPayload {
   study_id: string;
@@ -5703,7 +5878,17 @@ export interface Execution_EdcCasebookWritebackResult {
   status?: string;
 }
 
-export type Execution_EndpointCategory = "MACE" | "MYOCARDIAL_INFARCTION" | "STROKE" | "CARDIOVASCULAR_MORTALITY" | "ALL_CAUSE_MORTALITY" | "HEART_FAILURE_HOSPITALIZATION" | "STENT_THROMBOSIS" | "VENOUS_THROMBOEMBOLISM" | "DISEASE_PROGRESSION" | "OTHER";
+export type Execution_EndpointCategory =
+  | "MACE"
+  | "MYOCARDIAL_INFARCTION"
+  | "STROKE"
+  | "CARDIOVASCULAR_MORTALITY"
+  | "ALL_CAUSE_MORTALITY"
+  | "HEART_FAILURE_HOSPITALIZATION"
+  | "STENT_THROMBOSIS"
+  | "VENOUS_THROMBOEMBOLISM"
+  | "DISEASE_PROGRESSION"
+  | "OTHER";
 
 export interface Execution_ExcursionEvaluationResponse {
   id?: string | null;
@@ -5778,7 +5963,8 @@ export interface Execution_FormSubmissionResponse {
   cloned_from_id?: string | null;
 }
 
-export type Execution_FormSubmissionStatusEnum = "DRAFT" | "COMPLETED" | "APPROVED";
+export type Execution_FormSubmissionStatusEnum =
+  "DRAFT" | "COMPLETED" | "APPROVED";
 
 export interface Execution_GUDIDDeviceRecord {
   primary_di: string;
@@ -5832,7 +6018,13 @@ export interface Execution_HTTPValidationError {
   detail?: Execution_ValidationError[];
 }
 
-export type Execution_HealthImpact = "NONE" | "MILD_TRANSIENT" | "SERIOUS_DETERIORATION" | "PERMANENT_IMPAIRMENT" | "LIFE_THREATENING" | "DEATH";
+export type Execution_HealthImpact =
+  | "NONE"
+  | "MILD_TRANSIENT"
+  | "SERIOUS_DETERIORATION"
+  | "PERMANENT_IMPAIRMENT"
+  | "LIFE_THREATENING"
+  | "DEATH";
 
 export interface Execution_IPKitCreateRequest {
   study_id: string;
@@ -5904,7 +6096,13 @@ export interface Execution_IVDAssayPerformanceResponse {
   created_by: string;
 }
 
-export type Execution_IVDContainerType = "EDTA_TUBE" | "SST_TUBE" | "CRYOBIO_VIAL" | "HEPARIN_TUBE" | "STERILE_CUP" | "SWAB_TRANSPORT_MEDIA";
+export type Execution_IVDContainerType =
+  | "EDTA_TUBE"
+  | "SST_TUBE"
+  | "CRYOBIO_VIAL"
+  | "HEPARIN_TUBE"
+  | "STERILE_CUP"
+  | "SWAB_TRANSPORT_MEDIA";
 
 export interface Execution_IVDSampleIntegrityCheckRequest {
   hemolysis_index_mg_dl?: number;
@@ -6032,7 +6230,16 @@ export interface Execution_IVDSpecimenResponse {
   version_index: number;
 }
 
-export type Execution_IVDSpecimenType = "WHOLE_BLOOD" | "SERUM" | "PLASMA" | "URINE" | "SALIVA" | "CSF" | "TISSUE_BIOPSY" | "NASOPHARYNGEAL_SWAB" | "CELL_CULTURE";
+export type Execution_IVDSpecimenType =
+  | "WHOLE_BLOOD"
+  | "SERUM"
+  | "PLASMA"
+  | "URINE"
+  | "SALIVA"
+  | "CSF"
+  | "TISSUE_BIOPSY"
+  | "NASOPHARYNGEAL_SWAB"
+  | "CELL_CULTURE";
 
 export interface Execution_ImpactAnalysisRequest {
   dictionary_type: Execution_DictTypeEnum;
@@ -6062,7 +6269,8 @@ export interface Execution_InvalidParam {
   value?: string | null;
 }
 
-export type Execution_JobStatusEnum = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type Execution_JobStatusEnum =
+  "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
 export interface Execution_JobStatusResponse {
   job_id: string;
@@ -6296,9 +6504,18 @@ export interface Execution_LocalLedgerBlock {
   hash: string;
 }
 
-export type Execution_LockScopeEnum = "STUDY" | "TRIAL" | "SITE" | "SUBJECT" | "VISIT" | "FORM" | "ITEM_GROUP" | "FIELD";
+export type Execution_LockScopeEnum =
+  | "STUDY"
+  | "TRIAL"
+  | "SITE"
+  | "SUBJECT"
+  | "VISIT"
+  | "FORM"
+  | "ITEM_GROUP"
+  | "FIELD";
 
-export type Execution_LockStatusEnum = "UNLOCKED" | "FROZEN" | "LOCKED" | "HARD_LOCK" | "SOFT_LOCK";
+export type Execution_LockStatusEnum =
+  "UNLOCKED" | "FROZEN" | "LOCKED" | "HARD_LOCK" | "SOFT_LOCK";
 
 export interface Execution_LockStatusResponse {
   locked_sites: string[];
@@ -6640,7 +6857,8 @@ export interface Execution_ProtocolVersionRefDTO {
   status: Execution_ProtocolVersionStatusEnum;
 }
 
-export type Execution_ProtocolVersionStatusEnum = "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
+export type Execution_ProtocolVersionStatusEnum =
+  "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
 
 export interface Execution_PublishAmendmentRequest {
   study_id: string;
@@ -6660,7 +6878,8 @@ export interface Execution_PublishAmendmentResponse {
   removed_activities_count: number;
 }
 
-export type Execution_QuarantineScope = "DEVICE_SERIAL" | "SITE_LOT" | "STUDY_GLOBAL_LOT";
+export type Execution_QuarantineScope =
+  "DEVICE_SERIAL" | "SITE_LOT" | "STUDY_GLOBAL_LOT";
 
 export interface Execution_QueryCancel {
   reason: string;
@@ -6856,7 +7075,8 @@ export interface Execution_ReaderAssessmentSubmitDTO {
   clinical_rationale?: string;
 }
 
-export type Execution_ReaderRole = "READER_1" | "READER_2" | "CHAIR" | "COMMITTEE_MEMBER" | "COORDINATOR";
+export type Execution_ReaderRole =
+  "READER_1" | "READER_2" | "CHAIR" | "COMMITTEE_MEMBER" | "COORDINATOR";
 
 export interface Execution_RedactPDFRequest {
   pdf_base64: string;
@@ -6930,7 +7150,8 @@ export interface Execution_SafetyDispatchResponse {
   ack_status: string;
 }
 
-export type Execution_SamplingModelEnum = "SUBJECT_BASED" | "FIELD_BASED" | "COMBINED";
+export type Execution_SamplingModelEnum =
+  "SUBJECT_BASED" | "FIELD_BASED" | "COMBINED";
 
 export interface Execution_SdtmCeCompilationResult {
   study_id: string;
@@ -7233,7 +7454,8 @@ export interface Execution_SupplyNodeResponse {
   is_active: boolean;
 }
 
-export type Execution_SupplyNodeType = "PRIMARY_MANUFACTURER" | "CENTRAL_DEPOT" | "REGIONAL_DEPOT" | "CLINICAL_SITE";
+export type Execution_SupplyNodeType =
+  "PRIMARY_MANUFACTURER" | "CENTRAL_DEPOT" | "REGIONAL_DEPOT" | "CLINICAL_SITE";
 
 export interface Execution_SyncBlockDetails {
   fieldId: string;
@@ -7413,7 +7635,8 @@ export interface Execution_UCUMUnitValue {
   unit: string;
 }
 
-export type Execution_UDICarrierFormat = "GS1_128" | "GS1_DATAMATRIX" | "HIBCC_128" | "HIBCC_DATAMATRIX" | "RAW_UDI";
+export type Execution_UDICarrierFormat =
+  "GS1_128" | "GS1_DATAMATRIX" | "HIBCC_128" | "HIBCC_DATAMATRIX" | "RAW_UDI";
 
 export interface Execution_UDIParseRequest {
   raw_barcode: string;
@@ -7425,7 +7648,10 @@ export interface Execution_UnblindRequest {
   shares: Execution_CustodianShare[];
 }
 
-export type Execution_UnblindingReasonCode = "SAE-Life-Threatening-Event" | "Accidental-Overdose" | "Required-by-Regulatory-Authority";
+export type Execution_UnblindingReasonCode =
+  | "SAE-Life-Threatening-Event"
+  | "Accidental-Overdose"
+  | "Required-by-Regulatory-Authority";
 
 export interface Execution_UnitConversionRequest {
   value: number;
@@ -7522,7 +7748,8 @@ export interface Execution_VisitResponse {
   window_status?: string | null;
 }
 
-export type Execution_VotingRule = "UNANIMOUS" | "MAJORITY_2_OF_3" | "CHAIR_TIE_BREAKER" | "SUPERMAJORITY";
+export type Execution_VotingRule =
+  "UNANIMOUS" | "MAJORITY_2_OF_3" | "CHAIR_TIE_BREAKER" | "SUPERMAJORITY";
 
 export interface Execution_WHODrugATCContext {
   atc_code: string;
@@ -7570,9 +7797,11 @@ export interface Fileshare_ActivityFeedResponse {
   page_size: number;
 }
 
-export type Fileshare_ApprovalStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "APPROVAL_RESCINDED";
+export type Fileshare_ApprovalStatus =
+  "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "APPROVAL_RESCINDED";
 
-export type Fileshare_ConversionStatus = "NOT_REQUIRED" | "PENDING" | "READY" | "FAILED";
+export type Fileshare_ConversionStatus =
+  "NOT_REQUIRED" | "PENDING" | "READY" | "FAILED";
 
 export interface Fileshare_FileApproveRequest {
   signing_reason: string;
@@ -7657,7 +7886,8 @@ export interface Fileshare_FileRescindApprovalRequest {
   reason_for_change: string;
 }
 
-export type Fileshare_FileStatus = "PENDING_SCAN" | "READY" | "PENDING_TRANSCODE" | "QUARANTINED";
+export type Fileshare_FileStatus =
+  "PENDING_SCAN" | "READY" | "PENDING_TRANSCODE" | "QUARANTINED";
 
 export interface Fileshare_FileUploadUrlRequest {
   study_id: string;
@@ -7701,7 +7931,16 @@ export interface Fileshare_HTTPValidationError {
   detail?: Fileshare_ValidationError[];
 }
 
-export type Fileshare_PermissionLevel = "view" | "comment" | "download" | "edit" | "upload_revision" | "reshare" | "approve" | "admin" | "expire_revoke";
+export type Fileshare_PermissionLevel =
+  | "view"
+  | "comment"
+  | "download"
+  | "edit"
+  | "upload_revision"
+  | "reshare"
+  | "approve"
+  | "admin"
+  | "expire_revoke";
 
 export interface Fileshare_PlaybackAuditCreateRequest {
   file_record_id: string;
@@ -7726,9 +7965,11 @@ export interface Fileshare_PlaybackAuditResponse {
 
 export type Fileshare_PlaybackEventSource = "internal" | "guest_link";
 
-export type Fileshare_PlaybackEventType = "PLAY_START" | "PLAY_25" | "PLAY_50" | "PLAY_75" | "PLAY_END";
+export type Fileshare_PlaybackEventType =
+  "PLAY_START" | "PLAY_25" | "PLAY_50" | "PLAY_75" | "PLAY_END";
 
-export type Fileshare_ScanStatus = "PENDING" | "CLEAN" | "INFECTED" | "SCAN_ERROR";
+export type Fileshare_ScanStatus =
+  "PENDING" | "CLEAN" | "INFECTED" | "SCAN_ERROR";
 
 export interface Fileshare_ShareGrantCreateRequest {
   granted_to_user_id?: string | null;
@@ -7753,7 +7994,8 @@ export interface Fileshare_ShareGrantResponse {
   reason_for_change: string;
 }
 
-export type Fileshare_ShareScope = "study" | "site" | "individual" | "role" | "folder";
+export type Fileshare_ShareScope =
+  "study" | "site" | "individual" | "role" | "folder";
 
 export interface Fileshare_StreamUrlResponse {
   file_id: string;
@@ -7763,7 +8005,8 @@ export interface Fileshare_StreamUrlResponse {
   message?: string | null;
 }
 
-export type Fileshare_TranscodeStatus = "NOT_REQUIRED" | "PENDING" | "IN_PROGRESS" | "READY" | "FAILED";
+export type Fileshare_TranscodeStatus =
+  "NOT_REQUIRED" | "PENDING" | "IN_PROGRESS" | "READY" | "FAILED";
 
 export interface Fileshare_UploadCompleteRequest {
   upload_id?: string | null;
@@ -8307,7 +8550,8 @@ export interface Interop_ActigraphyDailySummary {
   readings_count: number;
 }
 
-export type Interop_AlertSeverity = "INFO" | "WARNING" | "CRITICAL" | "LIFE_THREATENING";
+export type Interop_AlertSeverity =
+  "INFO" | "WARNING" | "CRITICAL" | "LIFE_THREATENING";
 
 export interface Interop_ArchiveRecordingRequest {
   media_payload_or_hash: string;
@@ -8363,7 +8607,8 @@ export interface Interop_CGMDailySummary {
   active_wear_percentage: number;
 }
 
-export type Interop_CalibrationState = "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
+export type Interop_CalibrationState =
+  "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
 
 export interface Interop_CanonicalClinicalRecord {
   record_id?: string;
@@ -8563,7 +8808,16 @@ export interface Interop_DTPShipmentResponse {
   message?: string;
 }
 
-export type Interop_DTPShipmentStatus = "ORDER_CREATED" | "DEPOT_PICKED" | "PACKED" | "COURIER_DISPATCHED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "TEMP_EXCURSION_HOLD" | "RETURNED";
+export type Interop_DTPShipmentStatus =
+  | "ORDER_CREATED"
+  | "DEPOT_PICKED"
+  | "PACKED"
+  | "COURIER_DISPATCHED"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "TEMP_EXCURSION_HOLD"
+  | "RETURNED";
 
 export interface Interop_DailySummariesResponse {
   study_id: string;
@@ -8588,7 +8842,14 @@ export interface Interop_DailySummaryEndpoints {
   created_at?: string;
 }
 
-export type Interop_DataStreamType = "EDC_ECRF" | "EPRO_ECOA" | "CENTRAL_LAB" | "LOCAL_LAB" | "IOT_WEARABLE" | "EHR_FHIR" | "MEDICAL_IMAGING";
+export type Interop_DataStreamType =
+  | "EDC_ECRF"
+  | "EPRO_ECOA"
+  | "CENTRAL_LAB"
+  | "LOCAL_LAB"
+  | "IOT_WEARABLE"
+  | "EHR_FHIR"
+  | "MEDICAL_IMAGING";
 
 export interface Interop_DatabaseLockAuthToken {
   token_id: string;
@@ -8948,7 +9209,8 @@ export interface Interop_EhrReconcileRejectRequest {
   change_reason?: string;
 }
 
-export type Interop_EhrSystemType = "EPIC" | "CERNER" | "ALLSCRIPTS" | "SMART_FHIR_GENERIC";
+export type Interop_EhrSystemType =
+  "EPIC" | "CERNER" | "ALLSCRIPTS" | "SMART_FHIR_GENERIC";
 
 export interface Interop_ElectronicSignatureBlock {
   signer_id: string;
@@ -8958,7 +9220,8 @@ export interface Interop_ElectronicSignatureBlock {
   hmac_signature: string;
 }
 
-export type Interop_ExcursionSeverity = "NONE" | "MINOR_WARNING" | "CRITICAL_EXCURSION_QUARANTINE";
+export type Interop_ExcursionSeverity =
+  "NONE" | "MINOR_WARNING" | "CRITICAL_EXCURSION_QUARANTINE";
 
 export interface Interop_ExecuteProgramRequest {
   study_id: string;
@@ -9029,7 +9292,8 @@ export interface Interop_ExecutionSandboxConfig {
   environment_variables?: Record<string, any>;
 }
 
-export type Interop_ExecutionStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "REJECTED";
+export type Interop_ExecutionStatus =
+  "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "REJECTED";
 
 export interface Interop_ExportDatasetJSONRequest {
   study_id: string;
@@ -9152,7 +9416,15 @@ export interface Interop_InHomeVisitResponse {
   message?: string;
 }
 
-export type Interop_InHomeVisitStatus = "SCHEDULED" | "CONFIRMED" | "EN_ROUTE" | "ARRIVED_ON_SITE" | "PROCEDURES_IN_PROGRESS" | "VISIT_COMPLETED" | "CANCELLED" | "RESCHEDULED";
+export type Interop_InHomeVisitStatus =
+  | "SCHEDULED"
+  | "CONFIRMED"
+  | "EN_ROUTE"
+  | "ARRIVED_ON_SITE"
+  | "PROCEDURES_IN_PROGRESS"
+  | "VISIT_COMPLETED"
+  | "CANCELLED"
+  | "RESCHEDULED";
 
 export interface Interop_InHomeVisitStatusUpdateRequest {
   status: Interop_InHomeVisitStatus;
@@ -9208,7 +9480,12 @@ export interface Interop_IssueLockTokenRequest {
   authorized_roles?: string[] | null;
 }
 
-export type Interop_LARRelationship = "PARENT" | "LEGAL_GUARDIAN" | "POWER_OF_ATTORNEY" | "COURT_APPOINTED" | "NEXT_OF_KIN";
+export type Interop_LARRelationship =
+  | "PARENT"
+  | "LEGAL_GUARDIAN"
+  | "POWER_OF_ATTORNEY"
+  | "COURT_APPOINTED"
+  | "NEXT_OF_KIN";
 
 export interface Interop_LakehouseMetrics {
   study_id: string;
@@ -9243,7 +9520,15 @@ export interface Interop_LocalLabIngestItem {
   metadata?: Record<string, any>;
 }
 
-export type Interop_LockMilestoneType = "INTERIM_ANALYSIS_1" | "INTERIM_ANALYSIS_2" | "DATABASE_LOCK" | "SAFETY_REVIEW" | "REGULATORY_SUBMISSION" | "PROTOCOL_FREEZE" | "ADJUDICATION_MILESTONE" | "CUSTOM";
+export type Interop_LockMilestoneType =
+  | "INTERIM_ANALYSIS_1"
+  | "INTERIM_ANALYSIS_2"
+  | "DATABASE_LOCK"
+  | "SAFETY_REVIEW"
+  | "REGULATORY_SUBMISSION"
+  | "PROTOCOL_FREEZE"
+  | "ADJUDICATION_MILESTONE"
+  | "CUSTOM";
 
 export interface Interop_LockTokenListResponse {
   study_id: string;
@@ -9255,7 +9540,12 @@ export interface Interop_LockTokenResponse {
   token: Interop_DatabaseLockAuthToken;
 }
 
-export type Interop_LockValidationStatus = "VALID" | "TAMPERED" | "INVALID_SYNTAX" | "UNQUALIFIED_PACKAGE" | "UNVERIFIED";
+export type Interop_LockValidationStatus =
+  | "VALID"
+  | "TAMPERED"
+  | "INVALID_SYNTAX"
+  | "UNQUALIFIED_PACKAGE"
+  | "UNVERIFIED";
 
 export interface Interop_MDRIncidentReportRequest {
   study_id: string;
@@ -9362,7 +9652,8 @@ export interface Interop_OutputArtifact {
   content_preview?: string | null;
 }
 
-export type Interop_OutputArtifactType = "TABLE" | "LISTING" | "FIGURE" | "DATASET" | "LOG" | "MANIFEST";
+export type Interop_OutputArtifactType =
+  "TABLE" | "LISTING" | "FIGURE" | "DATASET" | "LOG" | "MANIFEST";
 
 export interface Interop_PackageEntry {
   name: string;
@@ -9372,7 +9663,8 @@ export interface Interop_PackageEntry {
   is_qualified?: boolean;
 }
 
-export type Interop_PackageLockType = "UV_LOCK" | "RENV_LOCK" | "REQUIREMENTS_TXT";
+export type Interop_PackageLockType =
+  "UV_LOCK" | "RENV_LOCK" | "REQUIREMENTS_TXT";
 
 export interface Interop_PackageLockValidationResult {
   lock_type: Interop_PackageLockType;
@@ -9385,7 +9677,13 @@ export interface Interop_PackageLockValidationResult {
   details: string;
 }
 
-export type Interop_ParticipantRole = "INVESTIGATOR" | "SUBJECT" | "LAR" | "NURSE_COORDINATOR" | "TRANSLATOR" | "WITNESS";
+export type Interop_ParticipantRole =
+  | "INVESTIGATOR"
+  | "SUBJECT"
+  | "LAR"
+  | "NURSE_COORDINATOR"
+  | "TRANSLATOR"
+  | "WITNESS";
 
 export interface Interop_PediatricAssentDTO {
   assent_id: string;
@@ -9432,7 +9730,8 @@ export interface Interop_PediatricAssentSubmitRequest {
   investigator_signature?: string | null;
 }
 
-export type Interop_PediatricAssentTier = "CHILD_7_11" | "ADOLESCENT_12_17" | "LAR_PARENT_GUARDIAN" | "ADULT_18_PLUS";
+export type Interop_PediatricAssentTier =
+  "CHILD_7_11" | "ADOLESCENT_12_17" | "LAR_PARENT_GUARDIAN" | "ADULT_18_PLUS";
 
 export interface Interop_PipelineExecutionResult {
   execution_id: string;
@@ -9451,9 +9750,18 @@ export interface Interop_PipelineExecutionResult {
   errors?: string[];
 }
 
-export type Interop_PipelineExecutionStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+export type Interop_PipelineExecutionStatus =
+  "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
-export type Interop_ProcedureType = "VITAL_SIGNS" | "PK_BLOOD_DRAW" | "IP_ADMINISTRATION" | "12_LEAD_ECG" | "SAFETY_LABS" | "PHYSICAL_EXAM" | "BIOMARKER_SAMPLING" | "PATIENT_DIARY_REVIEW";
+export type Interop_ProcedureType =
+  | "VITAL_SIGNS"
+  | "PK_BLOOD_DRAW"
+  | "IP_ADMINISTRATION"
+  | "12_LEAD_ECG"
+  | "SAFETY_LABS"
+  | "PHYSICAL_EXAM"
+  | "BIOMARKER_SAMPLING"
+  | "PATIENT_DIARY_REVIEW";
 
 export interface Interop_ProgramListResponse {
   study_id: string;
@@ -9600,7 +9908,21 @@ export interface Interop_SemanticMappedItemDTO {
   status?: string;
 }
 
-export type Interop_SensorAlertType = "SEVERE_HYPOGLYCEMIA" | "HYPOGLYCEMIA" | "SEVERE_HYPERGLYCEMIA" | "HYPERGLYCEMIA" | "EXTREME_TACHYCARDIA" | "TACHYCARDIA" | "SEVERE_BRADYCARDIA" | "BRADYCARDIA" | "HYPERTENSIVE_CRISIS" | "STAGE2_HYPERTENSION" | "SEVERE_HYPOTENSION" | "ACUTE_BRONCHOCONSTRICTION" | "DEVICE_CLOCK_DRIFT_EXCESSIVE" | "BATTERY_CRITICAL";
+export type Interop_SensorAlertType =
+  | "SEVERE_HYPOGLYCEMIA"
+  | "HYPOGLYCEMIA"
+  | "SEVERE_HYPERGLYCEMIA"
+  | "HYPERGLYCEMIA"
+  | "EXTREME_TACHYCARDIA"
+  | "TACHYCARDIA"
+  | "SEVERE_BRADYCARDIA"
+  | "BRADYCARDIA"
+  | "HYPERTENSIVE_CRISIS"
+  | "STAGE2_HYPERTENSION"
+  | "SEVERE_HYPOTENSION"
+  | "ACUTE_BRONCHOCONSTRICTION"
+  | "DEVICE_CLOCK_DRIFT_EXCESSIVE"
+  | "BATTERY_CRITICAL";
 
 export interface Interop_SensorDashboardMetrics {
   study_id: string;
@@ -9617,7 +9939,13 @@ export interface Interop_SensorDashboardMetrics {
   last_telemetry_received_at?: string | null;
 }
 
-export type Interop_SensorDeviceType = "CGM" | "ACTIGRAPHY" | "SPIROMETRY" | "BLOOD_PRESSURE" | "PULSE_OXIMETER" | "ECG";
+export type Interop_SensorDeviceType =
+  | "CGM"
+  | "ACTIGRAPHY"
+  | "SPIROMETRY"
+  | "BLOOD_PRESSURE"
+  | "PULSE_OXIMETER"
+  | "ECG";
 
 export interface Interop_SensorIngestResponse {
   success?: boolean;
@@ -9687,7 +10015,15 @@ export interface Interop_SensorSafetyAlert {
   notified_roles?: string[];
 }
 
-export type Interop_SignalingMessageType = "OFFER" | "ANSWER" | "ICE_CANDIDATE" | "JOIN_ROOM" | "LEAVE_ROOM" | "CO_VIEW_STATE" | "ANNOTATION" | "CHAT";
+export type Interop_SignalingMessageType =
+  | "OFFER"
+  | "ANSWER"
+  | "ICE_CANDIDATE"
+  | "JOIN_ROOM"
+  | "LEAVE_ROOM"
+  | "CO_VIEW_STATE"
+  | "ANNOTATION"
+  | "CHAT";
 
 export interface Interop_SmartAssertionVerifyRequest {
   assertion_jwt: string;
@@ -9887,7 +10223,13 @@ export interface Interop_TelehealthSessionResponse {
   message?: string;
 }
 
-export type Interop_TelehealthSessionStatus = "SCHEDULED" | "WAITING_ROOM" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "RECORDING_PROCESSING";
+export type Interop_TelehealthSessionStatus =
+  | "SCHEDULED"
+  | "WAITING_ROOM"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "RECORDING_PROCESSING";
 
 export interface Interop_TemperatureIngestRequest {
   readings: Interop_TemperatureReadingDTO[];
@@ -9900,7 +10242,8 @@ export interface Interop_TemperatureReadingDTO {
   battery_percent?: number;
 }
 
-export type Interop_TemperatureZone = "CRYOGENIC" | "ULTRA_COLD" | "FROZEN" | "REFRIGERATED" | "CONTROLLED_AMBIENT";
+export type Interop_TemperatureZone =
+  "CRYOGENIC" | "ULTRA_COLD" | "FROZEN" | "REFRIGERATED" | "CONTROLLED_AMBIENT";
 
 export interface Interop_ValidateDatasetJSONRequest {
   payload: Record<string, any> | string;
@@ -10030,7 +10373,14 @@ export interface Knowledge_ArticleSearchResult {
   created_at: string;
 }
 
-export type Knowledge_ArticleStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "SUPERSEDED" | "ARCHIVED" | "REJECTED";
+export type Knowledge_ArticleStatus =
+  | "DRAFT"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "PUBLISHED"
+  | "SUPERSEDED"
+  | "ARCHIVED"
+  | "REJECTED";
 
 export interface Knowledge_ArticleSubmitReviewRequest {
   reason_for_change?: string | null;
@@ -10377,7 +10727,8 @@ export interface Notifications_HTTPValidationError {
   detail?: Notifications_ValidationError[];
 }
 
-export type Notifications_NotificationCategory = "ALERTS" | "SYSTEM" | "ACTION_ITEMS";
+export type Notifications_NotificationCategory =
+  "ALERTS" | "SYSTEM" | "ACTION_ITEMS";
 
 export interface Notifications_NotificationCreate {
   recipient_user_id?: string | null;
@@ -10390,7 +10741,8 @@ export interface Notifications_NotificationCreate {
   related_entity_type?: string | null;
 }
 
-export type Notifications_NotificationPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type Notifications_NotificationPriority =
+  "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export interface Notifications_NotificationResponse {
   id: string;
@@ -10411,7 +10763,8 @@ export interface Notifications_NotificationResponse {
   reason_for_change: string;
 }
 
-export type Notifications_NotificationStatus = "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+export type Notifications_NotificationStatus =
+  "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
 
 export interface Notifications_ValidationError {
   loc: string | number[];
@@ -10428,7 +10781,12 @@ export interface Org_AssignmentResolutionResponse {
   assigned_studies: string[];
 }
 
-export type Org_ClinicalStaffRole = "Principal Investigator" | "Sub-Investigator" | "CRC" | "CRA/Monitor" | "External Monitor";
+export type Org_ClinicalStaffRole =
+  | "Principal Investigator"
+  | "Sub-Investigator"
+  | "CRC"
+  | "CRA/Monitor"
+  | "External Monitor";
 
 export interface Org_DelegationCreate {
   delegator_id: string;
@@ -10505,7 +10863,8 @@ export interface Org_OrganizationResponse {
   version_index: number;
 }
 
-export type Org_OrganizationType = "sponsor" | "CRO" | "IRB/IEC" | "central laboratory" | "site";
+export type Org_OrganizationType =
+  "sponsor" | "CRO" | "IRB/IEC" | "central laboratory" | "site";
 
 export interface Org_OrganizationUpdate {
   name?: string | null;
@@ -11445,7 +11804,8 @@ export interface Payments_W9VerifyRequest {
   notes?: string | null;
 }
 
-export type Quality_ActionItemStatus = "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "OPEN";
+export type Quality_ActionItemStatus =
+  "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "OPEN";
 
 export interface Quality_AuditCreate {
   audit_number: string;
@@ -11535,7 +11895,13 @@ export interface Quality_AuditResponse {
   reason_for_change: string;
 }
 
-export type Quality_AuditStatus = "CANCELLED" | "CAPA_PENDING" | "COMPLETED" | "FINDINGS_REPORTED" | "IN_PROGRESS" | "PLANNED";
+export type Quality_AuditStatus =
+  | "CANCELLED"
+  | "CAPA_PENDING"
+  | "COMPLETED"
+  | "FINDINGS_REPORTED"
+  | "IN_PROGRESS"
+  | "PLANNED";
 
 export interface Quality_AuditStatusUpdate {
   status: Quality_AuditStatus;
@@ -11543,7 +11909,11 @@ export interface Quality_AuditStatusUpdate {
   actual_end_date?: string | null;
 }
 
-export type Quality_BenfordConformity = "ACCEPTABLE_CONFORMITY" | "CLOSE_CONFORMITY" | "MARGINAL_CONFORMITY" | "NON_CONFORMING";
+export type Quality_BenfordConformity =
+  | "ACCEPTABLE_CONFORMITY"
+  | "CLOSE_CONFORMITY"
+  | "MARGINAL_CONFORMITY"
+  | "NON_CONFORMING";
 
 export interface Quality_BenfordDigitDistributionResponse {
   sample_size: number;
@@ -11555,7 +11925,12 @@ export interface Quality_BenfordDigitDistributionResponse {
   expected_frequencies: Record<string, any>;
 }
 
-export type Quality_BreachStatus = "AUTHORITY_NOTIFIED" | "CONFIRMED_BREACH" | "DISMISSED" | "RESOLVED" | "UNDER_EVALUATION";
+export type Quality_BreachStatus =
+  | "AUTHORITY_NOTIFIED"
+  | "CONFIRMED_BREACH"
+  | "DISMISSED"
+  | "RESOLVED"
+  | "UNDER_EVALUATION";
 
 export interface Quality_CAPAActionItemCreate {
   title: string;
@@ -11656,7 +12031,16 @@ export interface Quality_CAPAResponse {
   effectiveness_checks?: Quality_CAPAEffectivenessCheckResponse[];
 }
 
-export type Quality_CAPAStatus = "INITIATED" | "UNDER_REVIEW" | "APPROVED" | "IMPLEMENTATION" | "IMPLEMENTATION_VERIFIED" | "EFFECTIVENESS_CHECK" | "CLOSED" | "INEFFECTIVE" | "CANCELLED";
+export type Quality_CAPAStatus =
+  | "INITIATED"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "IMPLEMENTATION"
+  | "IMPLEMENTATION_VERIFIED"
+  | "EFFECTIVENESS_CHECK"
+  | "CLOSED"
+  | "INEFFECTIVE"
+  | "CANCELLED";
 
 export interface Quality_CAPATransitionRequest {
   to_status: Quality_CAPAStatus;
@@ -11757,7 +12141,8 @@ export interface Quality_DataIntegrityFindingResponse {
   reason_for_change: string;
 }
 
-export type Quality_DataIntegrityFindingStatus = "CONFIRMED" | "DISMISSED" | "INVESTIGATING" | "OPEN";
+export type Quality_DataIntegrityFindingStatus =
+  "CONFIRMED" | "DISMISSED" | "INVESTIGATING" | "OPEN";
 
 export interface Quality_DataIntegrityInvestigationDispatchRequest {
   finding_id: string;
@@ -11784,7 +12169,11 @@ export interface Quality_DataIntegritySentinelRunResponse {
   reason_for_change: string;
 }
 
-export type Quality_DataIntegritySentinelType = "COMPREHENSIVE_INTEGRITY_SCAN" | "DUPLICATE_PATIENT_RECORD" | "PERCEPTUAL_IMAGE_HASH" | "TEMPORAL_BEHAVIORAL_ANOMALY";
+export type Quality_DataIntegritySentinelType =
+  | "COMPREHENSIVE_INTEGRITY_SCAN"
+  | "DUPLICATE_PATIENT_RECORD"
+  | "PERCEPTUAL_IMAGE_HASH"
+  | "TEMPORAL_BEHAVIORAL_ANOMALY";
 
 export interface Quality_DataIntegritySimulationRequest {
   study_id?: string;
@@ -11860,11 +12249,29 @@ export interface Quality_DeviationResponse {
   reason_for_change: string;
 }
 
-export type Quality_DeviationSeverity = "MINOR" | "MAJOR" | "CRITICAL" | "SYSTEMATIC_TREND";
+export type Quality_DeviationSeverity =
+  "MINOR" | "MAJOR" | "CRITICAL" | "SYSTEMATIC_TREND";
 
-export type Quality_DeviationStatus = "REPORTED" | "UNDER_INVESTIGATION" | "RCA_COMPLETE" | "CAPA_INITIATED" | "RESOLVED" | "CLOSED";
+export type Quality_DeviationStatus =
+  | "REPORTED"
+  | "UNDER_INVESTIGATION"
+  | "RCA_COMPLETE"
+  | "CAPA_INITIATED"
+  | "RESOLVED"
+  | "CLOSED";
 
-export type Quality_DeviationType = "CONCOMITANT_MED" | "ELIGIBILITY" | "GCP_COMPLIANCE" | "INFORMED_CONSENT" | "INVESTIGATIONAL_PRODUCT" | "IP_MANAGEMENT" | "LAB_SPECIMEN" | "OTHER" | "PROTOCOL_PROCEDURE" | "SAFETY_REPORTING" | "VISIT_WINDOW";
+export type Quality_DeviationType =
+  | "CONCOMITANT_MED"
+  | "ELIGIBILITY"
+  | "GCP_COMPLIANCE"
+  | "INFORMED_CONSENT"
+  | "INVESTIGATIONAL_PRODUCT"
+  | "IP_MANAGEMENT"
+  | "LAB_SPECIMEN"
+  | "OTHER"
+  | "PROTOCOL_PROCEDURE"
+  | "SAFETY_REPORTING"
+  | "VISIT_WINDOW";
 
 export interface Quality_DuplicatePatientScanRequest {
   study_id: string;
@@ -11874,9 +12281,22 @@ export interface Quality_DuplicatePatientScanRequest {
   auto_dispatch_investigation?: boolean;
 }
 
-export type Quality_EffectivenessOutcome = "EFFECTIVE" | "INEFFECTIVE" | "PARTIALLY_EFFECTIVE" | "PENDING";
+export type Quality_EffectivenessOutcome =
+  "EFFECTIVE" | "INEFFECTIVE" | "PARTIALLY_EFFECTIVE" | "PENDING";
 
-export type Quality_ForensicsAnomalyFlag = "ANOMALOUS_VARIANCE_SHRINKAGE" | "BENFORD_NON_CONFORMANCE" | "CROSS_SITE_CLONING_SUSPICION" | "DATA_FABRICATION_SUSPICION" | "DUPLICATE_PATIENT_RECORD" | "IDENTICAL_PROCEDURE_INTERVALS" | "MULTIVARIATE_MAHALANOBIS_OUTLIER" | "OFF_HOURS_BURST_ANOMALY" | "PERCEPTUAL_IMAGE_HASH_MATCH" | "RAPID_BURST_SUBMISSION" | "SUSPICIOUS_TIMESTAMP_CLUSTER" | "TERMINAL_DIGIT_ROUNDING_BIAS";
+export type Quality_ForensicsAnomalyFlag =
+  | "ANOMALOUS_VARIANCE_SHRINKAGE"
+  | "BENFORD_NON_CONFORMANCE"
+  | "CROSS_SITE_CLONING_SUSPICION"
+  | "DATA_FABRICATION_SUSPICION"
+  | "DUPLICATE_PATIENT_RECORD"
+  | "IDENTICAL_PROCEDURE_INTERVALS"
+  | "MULTIVARIATE_MAHALANOBIS_OUTLIER"
+  | "OFF_HOURS_BURST_ANOMALY"
+  | "PERCEPTUAL_IMAGE_HASH_MATCH"
+  | "RAPID_BURST_SUBMISSION"
+  | "SUSPICIOUS_TIMESTAMP_CLUSTER"
+  | "TERMINAL_DIGIT_ROUNDING_BIAS";
 
 export interface Quality_ForensicsSimulationRequest {
   study_id?: string;
@@ -11921,7 +12341,15 @@ export interface Quality_ImageHashScanRequest {
   auto_dispatch_investigation?: boolean;
 }
 
-export type Quality_ImageTransformationType = "BRIGHTNESS_ADJUSTED" | "CROPPED_OR_RESCALED" | "EXACT" | "FLIPPED_HORIZONTAL" | "FLIPPED_VERTICAL" | "ROTATED_180" | "ROTATED_270" | "ROTATED_90";
+export type Quality_ImageTransformationType =
+  | "BRIGHTNESS_ADJUSTED"
+  | "CROPPED_OR_RESCALED"
+  | "EXACT"
+  | "FLIPPED_HORIZONTAL"
+  | "FLIPPED_VERTICAL"
+  | "ROTATED_180"
+  | "ROTATED_270"
+  | "ROTATED_90";
 
 export interface Quality_KRIBatchEvaluationRequest {
   study_id: string;
@@ -12066,7 +12494,13 @@ export interface Quality_QualitySurveillanceRunResponse {
   sentinel_run_id?: string | null;
 }
 
-export type Quality_RACTCategory = "SAFETY" | "CONSENT" | "STUDY_CONDUCT" | "DATA_INTEGRITY" | "IP_MANAGEMENT" | "TECHNOLOGY";
+export type Quality_RACTCategory =
+  | "SAFETY"
+  | "CONSENT"
+  | "STUDY_CONDUCT"
+  | "DATA_INTEGRITY"
+  | "IP_MANAGEMENT"
+  | "TECHNOLOGY";
 
 export interface Quality_RACTCategorySummary {
   category: string;
@@ -12173,7 +12607,8 @@ export interface Quality_RegulatoryClockStatusResponse {
 
 export type Quality_RiskTier = "CRITICAL" | "HIGH" | "LOW" | "MEDIUM";
 
-export type Quality_RoundingBiasTier = "MODERATE_ROUNDING" | "NORMAL" | "SEVERE_ROUNDING";
+export type Quality_RoundingBiasTier =
+  "MODERATE_ROUNDING" | "NORMAL" | "SEVERE_ROUNDING";
 
 export interface Quality_SeriousBreachConfirmRequest {
   affected_authorities: string[];
@@ -12341,9 +12776,11 @@ export interface Quality_VarianceShrinkageMetricsResponse {
   is_variance_shrunk: boolean;
 }
 
-export type Safety_AIReviewStatus = "DRAFT_AI" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+export type Safety_AIReviewStatus =
+  "DRAFT_AI" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 
-export type Safety_AS2Authority = "FDA_ESG" | "EMA_GATEWAY" | "PMDA" | "MHRA" | "HEALTH_CANADA";
+export type Safety_AS2Authority =
+  "FDA_ESG" | "EMA_GATEWAY" | "PMDA" | "MHRA" | "HEALTH_CANADA";
 
 export interface Safety_AS2OutboundTransmissionRequestDTO {
   case_id?: string | null;
@@ -12424,9 +12861,17 @@ export interface Safety_AuthorityRuleEvaluationResult {
   countdown?: Safety_CountdownClockStatus | null;
 }
 
-export type Safety_BenchmarkReferenceDataset = "INTERNAL_TRIAL_POOL" | "FAERS" | "EUDRAVIGILANCE" | "CUSTOM";
+export type Safety_BenchmarkReferenceDataset =
+  "INTERNAL_TRIAL_POOL" | "FAERS" | "EUDRAVIGILANCE" | "CUSTOM";
 
-export type Safety_CausalityCategory = "RELATED" | "SUSPECTED" | "POSSIBLY_RELATED" | "PROBABLY_RELATED" | "DEFINITELY_RELATED" | "NOT_RELATED" | "UNLIKELY";
+export type Safety_CausalityCategory =
+  | "RELATED"
+  | "SUSPECTED"
+  | "POSSIBLY_RELATED"
+  | "PROBABLY_RELATED"
+  | "DEFINITELY_RELATED"
+  | "NOT_RELATED"
+  | "UNLIKELY";
 
 export interface Safety_ClinicalTimelineEvent {
   event_id: string;
@@ -12440,7 +12885,8 @@ export interface Safety_ClinicalTimelineEvent {
   details?: Record<string, any>;
 }
 
-export type Safety_ClockAlertLevel = "NORMAL" | "WARNING" | "CRITICAL" | "OVERDUE";
+export type Safety_ClockAlertLevel =
+  "NORMAL" | "WARNING" | "CRITICAL" | "OVERDUE";
 
 export interface Safety_CountdownClockStatus {
   clock_start_date: string;
@@ -12640,9 +13086,14 @@ export interface Safety_DisproportionalityMetricResult {
 
 export type Safety_ExpectednessCategory = "EXPECTED" | "UNEXPECTED";
 
-export type Safety_ExpeditedClassification = "SUSAR_FATAL_LIFE_THREATENING_7_DAY" | "SUSAR_SERIOUS_UNEXPECTED_15_DAY" | "NON_EXPEDITED_PERIODIC" | "EXEMPT";
+export type Safety_ExpeditedClassification =
+  | "SUSAR_FATAL_LIFE_THREATENING_7_DAY"
+  | "SUSAR_SERIOUS_UNEXPECTED_15_DAY"
+  | "NON_EXPEDITED_PERIODIC"
+  | "EXEMPT";
 
-export type Safety_ExposureStratificationCategory = "TREATMENT_ARM" | "DOSAGE_COHORT" | "AGE_GROUP" | "SEX" | "OVERALL";
+export type Safety_ExposureStratificationCategory =
+  "TREATMENT_ARM" | "DOSAGE_COHORT" | "AGE_GROUP" | "SEX" | "OVERALL";
 
 export interface Safety_ExposureStratificationRow {
   category: Safety_ExposureStratificationCategory;
@@ -12666,7 +13117,8 @@ export interface Safety_HTTPValidationError {
   detail?: Safety_ValidationError[];
 }
 
-export type Safety_ICSRApprovalStatus = "DRAFT" | "PHYSICIAN_APPROVED" | "TRANSMITTED" | "REJECTED";
+export type Safety_ICSRApprovalStatus =
+  "DRAFT" | "PHYSICIAN_APPROVED" | "TRANSMITTED" | "REJECTED";
 
 export interface Safety_ICSRDataExportRequest {
   job_name: string;
@@ -12823,7 +13275,13 @@ export interface Safety_NarrativeGenerateRequest {
   additional_context?: string | null;
 }
 
-export type Safety_NarrativeSectionType = "DEMOGRAPHICS_BASELINE" | "MEDICAL_TREATMENT_HISTORY" | "INDEX_AE_CHRONOLOGY" | "DIAGNOSTIC_LABS" | "CLINICAL_MANAGEMENT" | "OUTCOME_CAUSALITY";
+export type Safety_NarrativeSectionType =
+  | "DEMOGRAPHICS_BASELINE"
+  | "MEDICAL_TREATMENT_HISTORY"
+  | "INDEX_AE_CHRONOLOGY"
+  | "DIAGNOSTIC_LABS"
+  | "CLINICAL_MANAGEMENT"
+  | "OUTCOME_CAUSALITY";
 
 export interface Safety_NarrativeSignRequest {
   narrative_id: string;
@@ -12934,7 +13392,8 @@ export interface Safety_PeriodicReportSignResponse {
   qppv_manifest?: Safety_QPPVSignoffManifest | null;
 }
 
-export type Safety_PeriodicReportStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
+export type Safety_PeriodicReportStatus =
+  "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
 
 export type Safety_PeriodicSafetyReportType = "DSUR" | "PSUR" | "PBRER";
 
@@ -13034,7 +13493,8 @@ export interface Safety_RegulatorySnapshotVerifyResponse {
   verified_at: string;
 }
 
-export type Safety_ReportingAuthority = "US_FDA" | "EMA" | "PMDA" | "MHRA" | "HEALTH_CANADA";
+export type Safety_ReportingAuthority =
+  "US_FDA" | "EMA" | "PMDA" | "MHRA" | "HEALTH_CANADA";
 
 export interface Safety_SAEDiscrepancyResponse {
   id: string;
@@ -13222,9 +13682,11 @@ export interface Safety_SafetySignalAlertSignResponse {
   message: string;
 }
 
-export type Safety_SafetySignalAlertStatus = "TRIGGERED" | "UNDER_REVIEW" | "CONFIRMED_SIGNAL" | "REFUTED" | "CLOSED";
+export type Safety_SafetySignalAlertStatus =
+  "TRIGGERED" | "UNDER_REVIEW" | "CONFIRMED_SIGNAL" | "REFUTED" | "CLOSED";
 
-export type Safety_SafetySignalReviewDecision = "CONFIRM_SIGNAL" | "REFUTE_SIGNAL" | "REQUEST_SAFETY_INQUIRY" | "CLOSE_ALERT";
+export type Safety_SafetySignalReviewDecision =
+  "CONFIRM_SIGNAL" | "REFUTE_SIGNAL" | "REQUEST_SAFETY_INQUIRY" | "CLOSE_ALERT";
 
 export interface Safety_SignICSRRuleEvaluationRequest {
   reason_for_change: string;
@@ -13271,7 +13733,8 @@ export interface Safety_SignalDetectionScanResponse {
   created_at: string;
 }
 
-export type Safety_SignalStrength = "CRITICAL" | "STRONG" | "MODERATE" | "WEAK" | "NONE";
+export type Safety_SignalStrength =
+  "CRITICAL" | "STRONG" | "MODERATE" | "WEAK" | "NONE";
 
 export type Safety_StratificationLevel = "PT" | "SOC";
 
@@ -13301,7 +13764,15 @@ export interface Safety_SubjectExposureMetrics {
   by_sex?: Safety_ExposureStratificationRow[];
 }
 
-export type Safety_TimelineEventType = "DEMOGRAPHICS" | "MEDICAL_HISTORY" | "DRUG_ADMINISTRATION" | "CONCOMITANT_MEDICATION" | "ADVERSE_EVENT" | "DIAGNOSTIC_LAB" | "HOSPITALIZATION" | "DECHALLENGE_RECHALLENGE";
+export type Safety_TimelineEventType =
+  | "DEMOGRAPHICS"
+  | "MEDICAL_HISTORY"
+  | "DRUG_ADMINISTRATION"
+  | "CONCOMITANT_MEDICATION"
+  | "ADVERSE_EVENT"
+  | "DIAGNOSTIC_LAB"
+  | "HOSPITALIZATION"
+  | "DECHALLENGE_RECHALLENGE";
 
 export interface Safety_ValidationError {
   loc: string | number[];
@@ -13363,7 +13834,8 @@ export interface Tickets_CrossAppEventCreate {
   context_payload?: Record<string, any> | null;
 }
 
-export type Tickets_GxPSeverity = "NOT_APPLICABLE" | "MINOR" | "MAJOR" | "CRITICAL";
+export type Tickets_GxPSeverity =
+  "NOT_APPLICABLE" | "MINOR" | "MAJOR" | "CRITICAL";
 
 export interface Tickets_HTTPValidationError {
   detail?: Tickets_ValidationError[];
@@ -13406,9 +13878,24 @@ export interface Tickets_RegulatoryRiskAssessment {
   risk_summary: string;
 }
 
-export type Tickets_ResolutionCode = "RESOLVED_AS_EXPECTED" | "PROTOCOL_CLARIFICATION_ISSUED" | "DATA_AMENDED" | "CAPA_INITIATED" | "FALSE_POSITIVE_VOIDED" | "WORKAROUND_APPLIED" | "CLOSED_UNRESOLVED";
+export type Tickets_ResolutionCode =
+  | "RESOLVED_AS_EXPECTED"
+  | "PROTOCOL_CLARIFICATION_ISSUED"
+  | "DATA_AMENDED"
+  | "CAPA_INITIATED"
+  | "FALSE_POSITIVE_VOIDED"
+  | "WORKAROUND_APPLIED"
+  | "CLOSED_UNRESOLVED";
 
-export type Tickets_RootCauseCategory = "HUMAN_ERROR" | "PROTOCOL_DESIGN" | "PROCESS_WORKFLOW" | "SYSTEM_TECHNICAL" | "INVESTIGATIONAL_PRODUCT" | "VENDOR_LAB" | "TRAINING_GAP" | "OTHER";
+export type Tickets_RootCauseCategory =
+  | "HUMAN_ERROR"
+  | "PROTOCOL_DESIGN"
+  | "PROCESS_WORKFLOW"
+  | "SYSTEM_TECHNICAL"
+  | "INVESTIGATIONAL_PRODUCT"
+  | "VENDOR_LAB"
+  | "TRAINING_GAP"
+  | "OTHER";
 
 export interface Tickets_SettingDiffEntry {
   setting_key: string;
@@ -13435,7 +13922,19 @@ export interface Tickets_TicketAuditLogResponse {
   record_id?: string | null;
 }
 
-export type Tickets_TicketCategory = "TECHNICAL" | "CLINICAL" | "HARDWARE" | "ACCESS" | "PROTOCOL_DEVIATION" | "DATA_QUERY" | "SAFETY_ADVERSE_EVENT" | "SUPPLY_EXCURSION" | "SITE_OPERATIONS" | "REGULATORY_ETMF" | "CHANGE_REQUEST" | "OTHER";
+export type Tickets_TicketCategory =
+  | "TECHNICAL"
+  | "CLINICAL"
+  | "HARDWARE"
+  | "ACCESS"
+  | "PROTOCOL_DEVIATION"
+  | "DATA_QUERY"
+  | "SAFETY_ADVERSE_EVENT"
+  | "SUPPLY_EXCURSION"
+  | "SITE_OPERATIONS"
+  | "REGULATORY_ETMF"
+  | "CHANGE_REQUEST"
+  | "OTHER";
 
 export interface Tickets_TicketCreate {
   title: string;
@@ -13524,7 +14023,16 @@ export interface Tickets_TicketSignaturePayload {
   version_index: number;
 }
 
-export type Tickets_TicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_ON_SITE" | "WAITING_ON_SPONSOR" | "PENDING_REGULATORY_REVIEW" | "RESOLVED" | "CLOSED" | "REOPENED" | "CANCELLED";
+export type Tickets_TicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_ON_SITE"
+  | "WAITING_ON_SPONSOR"
+  | "PENDING_REGULATORY_REVIEW"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "CANCELLED";
 
 export interface Tickets_TicketTransitionPayload {
   status: Tickets_TicketStatus;
@@ -15396,7 +15904,8 @@ export interface DocumentIntelligenceSignatureRequest {
   filename?: string;
 }
 
-export type DocumentModality = "TEXT" | "PDF_BINARY" | "SCANNED_IMAGE" | "STRUCTURED_FORM";
+export type DocumentModality =
+  "TEXT" | "PDF_BINARY" | "SCANNED_IMAGE" | "STRUCTURED_FORM";
 
 export interface DocumentVersionEntry {
   id: string;
@@ -15548,9 +16057,11 @@ export interface ProtocolVersionRefDTO {
   status: ProtocolVersionStatusDTO;
 }
 
-export type ProtocolVersionStatusDTO = "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
+export type ProtocolVersionStatusDTO =
+  "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
 
-export type QCRecommendation = "AUTO_CLASSIFY" | "FLAG_FOR_QC_REVIEW" | "MANUAL_RECLASSIFICATION_REQUIRED";
+export type QCRecommendation =
+  "AUTO_CLASSIFY" | "FLAG_FOR_QC_REVIEW" | "MANUAL_RECLASSIFICATION_REQUIRED";
 
 export interface RedactRequest {
   redacted_content: string;
@@ -15575,7 +16086,8 @@ export interface SignatureAnalysisResult {
   details?: string;
 }
 
-export type SignaturePresenceStatus = "FULLY_SIGNED" | "PARTIALLY_SIGNED" | "UNSIGNED" | "SIGNATURE_NOT_REQUIRED";
+export type SignaturePresenceStatus =
+  "FULLY_SIGNED" | "PARTIALLY_SIGNED" | "UNSIGNED" | "SIGNATURE_NOT_REQUIRED";
 
 export interface SignatureVerificationResponse {
   document_id: string;
@@ -15589,7 +16101,22 @@ export interface SignatureVerificationResponse {
   details: string;
 }
 
-export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
+export type SigningReason =
+  | "AUTHOR"
+  | "REVIEW"
+  | "APPROVAL"
+  | "SPONSOR_APPROVAL"
+  | "INVESTIGATOR_SIGNATURE"
+  | "TECHNICAL_QC"
+  | "CLINICAL_QC"
+  | "DATA_LOCK"
+  | "SYSTEM_SEAL"
+  | "PROTOCOL_APPROVAL"
+  | "REGULATORY_FORM_SIGNATURE"
+  | "TRAINING_ACKNOWLEDGEMENT"
+  | "SITE_VISIT_SIGN_OFF"
+  | "ADJUDICATION_SIGN_OFF"
+  | "ENDPOINT_ADJUDICATION";
 
 export interface SpanItem {
   start: number;
@@ -15695,7 +16222,13 @@ export interface ZoneReadinessDetail {
   completeness_percentage: number;
 }
 
-export type ActionTakenDevice = "QUARANTINED_AT_SITE" | "RETURNED_TO_SPONSOR" | "REPLACED" | "DISPOSED" | "REPAIRED" | "NONE";
+export type ActionTakenDevice =
+  | "QUARANTINED_AT_SITE"
+  | "RETURNED_TO_SPONSOR"
+  | "REPLACED"
+  | "DISPOSED"
+  | "REPAIRED"
+  | "NONE";
 
 export interface AdaptiveTrialConfigDTO {
   study_id: string;
@@ -15722,7 +16255,19 @@ export interface AddDOAAssignmentRequest {
 
 export type AdjudicationActionEnum = "APPROVE" | "REJECT";
 
-export type AdjudicationClassification = "CONFIRMED_MI" | "CONFIRMED_ISCHEMIC_STROKE" | "CONFIRMED_HEMORRHAGIC_STROKE" | "CONFIRMED_CV_DEATH" | "CONFIRMED_NON_CV_DEATH" | "CONFIRMED_HEART_FAILURE_HOSPITALIZATION" | "CONFIRMED_STENT_THROMBOSIS" | "CONFIRMED_VTE" | "CONFIRMED_DISEASE_PROGRESSION" | "NOT_AN_ENDPOINT" | "INDETERMINATE" | "INSUFFICIENT_DATA";
+export type AdjudicationClassification =
+  | "CONFIRMED_MI"
+  | "CONFIRMED_ISCHEMIC_STROKE"
+  | "CONFIRMED_HEMORRHAGIC_STROKE"
+  | "CONFIRMED_CV_DEATH"
+  | "CONFIRMED_NON_CV_DEATH"
+  | "CONFIRMED_HEART_FAILURE_HOSPITALIZATION"
+  | "CONFIRMED_STENT_THROMBOSIS"
+  | "CONFIRMED_VTE"
+  | "CONFIRMED_DISEASE_PROGRESSION"
+  | "NOT_AN_ENDPOINT"
+  | "INDETERMINATE"
+  | "INSUFFICIENT_DATA";
 
 export interface AdjudicationRequest {
   action: AdjudicationActionEnum;
@@ -15739,7 +16284,16 @@ export interface AdjudicationResponse {
   adjudicated_at: string;
 }
 
-export type AdjudicationWorkflowStatus = "PENDING_PRIMARY_REVIEWS" | "READER_1_COMPLETED" | "READER_2_COMPLETED" | "CONSENSUS_REACHED" | "DISCORDANCE_DETECTED" | "ESCALATED_TO_CHAIR" | "FINALIZED_CONCORDANT" | "FINALIZED_BY_CHAIR" | "FINALIZED_BY_COMMITTEE";
+export type AdjudicationWorkflowStatus =
+  | "PENDING_PRIMARY_REVIEWS"
+  | "READER_1_COMPLETED"
+  | "READER_2_COMPLETED"
+  | "CONSENSUS_REACHED"
+  | "DISCORDANCE_DETECTED"
+  | "ESCALATED_TO_CHAIR"
+  | "FINALIZED_CONCORDANT"
+  | "FINALIZED_BY_CHAIR"
+  | "FINALIZED_BY_COMMITTEE";
 
 export interface AnomalyCandidateItem {
   query_id: string;
@@ -15854,7 +16408,12 @@ export interface BatchSignatureResponse {
   audit_tx: string;
 }
 
-export type BindingDeterminationSource = "CONCORDANT_CONSENSUS" | "CHAIR_UPHELD_READER_1" | "CHAIR_UPHELD_READER_2" | "CHAIR_CUSTOM_DETERMINATION" | "COMMITTEE_QUORUM_VOTE";
+export type BindingDeterminationSource =
+  | "CONCORDANT_CONSENSUS"
+  | "CHAIR_UPHELD_READER_1"
+  | "CHAIR_UPHELD_READER_2"
+  | "CHAIR_CUSTOM_DETERMINATION"
+  | "COMMITTEE_QUORUM_VOTE";
 
 export interface Body_import_dictionary_api_v1_dictionaries_import_post {
   dictionary_type: DictTypeEnum;
@@ -16248,7 +16807,8 @@ export interface CecDossierSummaryItem {
   created_at: string;
 }
 
-export type CertificationStatusEnum = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING_RENEWAL";
+export type CertificationStatusEnum =
+  "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING_RENEWAL";
 
 export interface ChairAdjudicateDTO {
   final_classification: AdjudicationClassification;
@@ -16382,7 +16942,14 @@ export interface CohortEvaluationResult {
   rationale: string;
 }
 
-export type CohortRecommendationAction = "ESCALATE" | "DE_ESCALATE" | "STAY" | "EXPAND_COHORT" | "STOP_SAFETY" | "STOP_SUCCESS" | "MTD_FOUND";
+export type CohortRecommendationAction =
+  | "ESCALATE"
+  | "DE_ESCALATE"
+  | "STAY"
+  | "EXPAND_COHORT"
+  | "STOP_SAFETY"
+  | "STOP_SUCCESS"
+  | "MTD_FOUND";
 
 export interface CohortTransitionLogResponse {
   id: string;
@@ -16478,7 +17045,15 @@ export interface CrossDomainAnomaly {
   field_id?: string | null;
 }
 
-export type CrossDomainAnomalyType = "AE_WITHOUT_CONCOMITANT_MED" | "CONCOMITANT_MED_WITHOUT_AE" | "MARKED_LAB_ABNORMALITY_WITHOUT_AE" | "CRITICAL_VITALS_WITHOUT_AE" | "VITALS_INCONSISTENT_WITH_HISTORY" | "DRUG_DISCONTINUATION_WITHOUT_AE" | "TEMPORAL_SEQUENCE_MISMATCH" | "AI_CONTEXTUAL_INCONSISTENCY";
+export type CrossDomainAnomalyType =
+  | "AE_WITHOUT_CONCOMITANT_MED"
+  | "CONCOMITANT_MED_WITHOUT_AE"
+  | "MARKED_LAB_ABNORMALITY_WITHOUT_AE"
+  | "CRITICAL_VITALS_WITHOUT_AE"
+  | "VITALS_INCONSISTENT_WITH_HISTORY"
+  | "DRUG_DISCONTINUATION_WITHOUT_AE"
+  | "TEMPORAL_SEQUENCE_MISMATCH"
+  | "AI_CONTEXTUAL_INCONSISTENCY";
 
 export type CustodianEnum = "Lead Unblinded Statistician" | "IDMC";
 
@@ -16525,9 +17100,19 @@ export interface DOADelegationRecordResponse {
   is_active: boolean;
 }
 
-export type DOATaskDelegationEnum = "SUBJECT_INFORMED_CONSENT" | "PHYSICAL_EXAMINATION" | "AE_SAE_REPORTING" | "CRF_DATA_ENTRY" | "PI_CASEBOOK_SIGNOFF";
+export type DOATaskDelegationEnum =
+  | "SUBJECT_INFORMED_CONSENT"
+  | "PHYSICAL_EXAMINATION"
+  | "AE_SAE_REPORTING"
+  | "CRF_DATA_ENTRY"
+  | "PI_CASEBOOK_SIGNOFF";
 
-export type DOATaskRoleEnum = "PRINCIPAL_INVESTIGATOR" | "SUB_INVESTIGATOR" | "CLINICAL_RESEARCH_COORDINATOR" | "STUDY_NURSE" | "DATA_MANAGER";
+export type DOATaskRoleEnum =
+  | "PRINCIPAL_INVESTIGATOR"
+  | "SUB_INVESTIGATOR"
+  | "CLINICAL_RESEARCH_COORDINATOR"
+  | "STUDY_NURSE"
+  | "DATA_MANAGER";
 
 export interface DailyDemandProjection {
   day_index: number;
@@ -16612,7 +17197,15 @@ export interface Demographics {
   race?: string | null;
 }
 
-export type DeviceClassification = "CLASS_I" | "CLASS_IIA" | "CLASS_IIB" | "CLASS_III" | "IVD_CLASS_A" | "IVD_CLASS_B" | "IVD_CLASS_C" | "IVD_CLASS_D";
+export type DeviceClassification =
+  | "CLASS_I"
+  | "CLASS_IIA"
+  | "CLASS_IIB"
+  | "CLASS_III"
+  | "IVD_CLASS_A"
+  | "IVD_CLASS_B"
+  | "IVD_CLASS_C"
+  | "IVD_CLASS_D";
 
 export interface DeviceDeficiencyCreateRequest {
   study_id: string;
@@ -16672,7 +17265,13 @@ export interface DeviceDeficiencyResponse {
   version_index: number;
 }
 
-export type DeviceDeficiencyType = "MALFUNCTION" | "USABILITY_ERROR" | "INADEQUATE_LABELING" | "DESIGN_DEFECT" | "PACKAGING_BREACH" | "SOFTWARE_FAULT";
+export type DeviceDeficiencyType =
+  | "MALFUNCTION"
+  | "USABILITY_ERROR"
+  | "INADEQUATE_LABELING"
+  | "DESIGN_DEFECT"
+  | "PACKAGING_BREACH"
+  | "SOFTWARE_FAULT";
 
 export interface DeviceDispensationRequest {
   study_id: string;
@@ -16794,7 +17393,8 @@ export interface DeviceQuarantineResponse {
   version_index: number;
 }
 
-export type DeviceType = "THERAPEUTIC" | "DIAGNOSTIC_IVD" | "IMPLANTABLE" | "SAMD" | "COMBINATION";
+export type DeviceType =
+  "THERAPEUTIC" | "DIAGNOSTIC_IVD" | "IMPLANTABLE" | "SAMD" | "COMBINATION";
 
 export interface DiagnosticAttachment {
   attachment_id: string;
@@ -16993,7 +17593,15 @@ export interface EISFDocumentRecord {
   is_redacted?: boolean;
 }
 
-export type EISFTaxonomyCategoryEnum = "1_INVESTIGATOR_CV" | "2_MEDICAL_LICENSE" | "3_PROTOCOL_APPROVAL" | "4_IRB_IEC_APPROVAL" | "5_INFORMED_CONSENT" | "6_FINANCIAL_DISCLOSURE" | "7_DELEGATION_OF_AUTHORITY" | "8_SAFETY_REPORT";
+export type EISFTaxonomyCategoryEnum =
+  | "1_INVESTIGATOR_CV"
+  | "2_MEDICAL_LICENSE"
+  | "3_PROTOCOL_APPROVAL"
+  | "4_IRB_IEC_APPROVAL"
+  | "5_INFORMED_CONSENT"
+  | "6_FINANCIAL_DISCLOSURE"
+  | "7_DELEGATION_OF_AUTHORITY"
+  | "8_SAFETY_REPORT";
 
 export interface ETMFCompletenessWebhookPayload {
   study_id: string;
@@ -17018,7 +17626,17 @@ export interface EdcCasebookWritebackResult {
   status?: string;
 }
 
-export type EndpointCategory = "MACE" | "MYOCARDIAL_INFARCTION" | "STROKE" | "CARDIOVASCULAR_MORTALITY" | "ALL_CAUSE_MORTALITY" | "HEART_FAILURE_HOSPITALIZATION" | "STENT_THROMBOSIS" | "VENOUS_THROMBOEMBOLISM" | "DISEASE_PROGRESSION" | "OTHER";
+export type EndpointCategory =
+  | "MACE"
+  | "MYOCARDIAL_INFARCTION"
+  | "STROKE"
+  | "CARDIOVASCULAR_MORTALITY"
+  | "ALL_CAUSE_MORTALITY"
+  | "HEART_FAILURE_HOSPITALIZATION"
+  | "STENT_THROMBOSIS"
+  | "VENOUS_THROMBOEMBOLISM"
+  | "DISEASE_PROGRESSION"
+  | "OTHER";
 
 export interface ExcursionEvaluationResponse {
   id?: string | null;
@@ -17143,7 +17761,13 @@ export interface GenerateAuditorTokenRequest {
 
 export type GradingScaleEnum = "CTCAE_V5" | "DAIDS_V2_1";
 
-export type HealthImpact = "NONE" | "MILD_TRANSIENT" | "SERIOUS_DETERIORATION" | "PERMANENT_IMPAIRMENT" | "LIFE_THREATENING" | "DEATH";
+export type HealthImpact =
+  | "NONE"
+  | "MILD_TRANSIENT"
+  | "SERIOUS_DETERIORATION"
+  | "PERMANENT_IMPAIRMENT"
+  | "LIFE_THREATENING"
+  | "DEATH";
 
 export interface IPKitCreateRequest {
   study_id: string;
@@ -17215,7 +17839,13 @@ export interface IVDAssayPerformanceResponse {
   created_by: string;
 }
 
-export type IVDContainerType = "EDTA_TUBE" | "SST_TUBE" | "CRYOBIO_VIAL" | "HEPARIN_TUBE" | "STERILE_CUP" | "SWAB_TRANSPORT_MEDIA";
+export type IVDContainerType =
+  | "EDTA_TUBE"
+  | "SST_TUBE"
+  | "CRYOBIO_VIAL"
+  | "HEPARIN_TUBE"
+  | "STERILE_CUP"
+  | "SWAB_TRANSPORT_MEDIA";
 
 export interface IVDSampleIntegrityCheckRequest {
   hemolysis_index_mg_dl?: number;
@@ -17343,7 +17973,16 @@ export interface IVDSpecimenResponse {
   version_index: number;
 }
 
-export type IVDSpecimenType = "WHOLE_BLOOD" | "SERUM" | "PLASMA" | "URINE" | "SALIVA" | "CSF" | "TISSUE_BIOPSY" | "NASOPHARYNGEAL_SWAB" | "CELL_CULTURE";
+export type IVDSpecimenType =
+  | "WHOLE_BLOOD"
+  | "SERUM"
+  | "PLASMA"
+  | "URINE"
+  | "SALIVA"
+  | "CSF"
+  | "TISSUE_BIOPSY"
+  | "NASOPHARYNGEAL_SWAB"
+  | "CELL_CULTURE";
 
 export interface ImpactAnalysisRequest {
   dictionary_type: DictTypeEnum;
@@ -17607,9 +18246,18 @@ export interface LocalLedgerBlock {
   hash: string;
 }
 
-export type LockScopeEnum = "STUDY" | "TRIAL" | "SITE" | "SUBJECT" | "VISIT" | "FORM" | "ITEM_GROUP" | "FIELD";
+export type LockScopeEnum =
+  | "STUDY"
+  | "TRIAL"
+  | "SITE"
+  | "SUBJECT"
+  | "VISIT"
+  | "FORM"
+  | "ITEM_GROUP"
+  | "FIELD";
 
-export type LockStatusEnum = "UNLOCKED" | "FROZEN" | "LOCKED" | "HARD_LOCK" | "SOFT_LOCK";
+export type LockStatusEnum =
+  "UNLOCKED" | "FROZEN" | "LOCKED" | "HARD_LOCK" | "SOFT_LOCK";
 
 export interface LockStatusResponse {
   locked_sites: string[];
@@ -17944,7 +18592,8 @@ export interface ProblemDetails {
   invalid_params?: InvalidParam[] | null;
 }
 
-export type ProtocolVersionStatusEnum = "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
+export type ProtocolVersionStatusEnum =
+  "DRAFT" | "ACTIVE" | "LOCKED" | "PUBLISHED" | "ARCHIVED" | "FROZEN";
 
 export interface PublishAmendmentRequest {
   study_id: string;
@@ -18160,7 +18809,8 @@ export interface ReaderAssessmentSubmitDTO {
   clinical_rationale?: string;
 }
 
-export type ReaderRole = "READER_1" | "READER_2" | "CHAIR" | "COMMITTEE_MEMBER" | "COORDINATOR";
+export type ReaderRole =
+  "READER_1" | "READER_2" | "CHAIR" | "COMMITTEE_MEMBER" | "COORDINATOR";
 
 export interface RedactPDFRequest {
   pdf_base64: string;
@@ -18518,7 +19168,8 @@ export interface SupplyNodeResponse {
   is_active: boolean;
 }
 
-export type SupplyNodeType = "PRIMARY_MANUFACTURER" | "CENTRAL_DEPOT" | "REGIONAL_DEPOT" | "CLINICAL_SITE";
+export type SupplyNodeType =
+  "PRIMARY_MANUFACTURER" | "CENTRAL_DEPOT" | "REGIONAL_DEPOT" | "CLINICAL_SITE";
 
 export interface SyncBlockDetails {
   fieldId: string;
@@ -18698,7 +19349,8 @@ export interface UCUMUnitValue {
   unit: string;
 }
 
-export type UDICarrierFormat = "GS1_128" | "GS1_DATAMATRIX" | "HIBCC_128" | "HIBCC_DATAMATRIX" | "RAW_UDI";
+export type UDICarrierFormat =
+  "GS1_128" | "GS1_DATAMATRIX" | "HIBCC_128" | "HIBCC_DATAMATRIX" | "RAW_UDI";
 
 export interface UDIParseRequest {
   raw_barcode: string;
@@ -18710,7 +19362,10 @@ export interface UnblindRequest {
   shares: CustodianShare[];
 }
 
-export type UnblindingReasonCode = "SAE-Life-Threatening-Event" | "Accidental-Overdose" | "Required-by-Regulatory-Authority";
+export type UnblindingReasonCode =
+  | "SAE-Life-Threatening-Event"
+  | "Accidental-Overdose"
+  | "Required-by-Regulatory-Authority";
 
 export interface UnitConversionRequest {
   value: number;
@@ -18799,7 +19454,8 @@ export interface VisitResponse {
   window_status?: string | null;
 }
 
-export type VotingRule = "UNANIMOUS" | "MAJORITY_2_OF_3" | "CHAIR_TIE_BREAKER" | "SUPERMAJORITY";
+export type VotingRule =
+  "UNANIMOUS" | "MAJORITY_2_OF_3" | "CHAIR_TIE_BREAKER" | "SUPERMAJORITY";
 
 export interface WHODrugATCContext {
   atc_code: string;
@@ -18847,7 +19503,8 @@ export interface ActivityFeedResponse {
   page_size: number;
 }
 
-export type ApprovalStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "APPROVAL_RESCINDED";
+export type ApprovalStatus =
+  "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "APPROVAL_RESCINDED";
 
 export type ConversionStatus = "NOT_REQUIRED" | "PENDING" | "READY" | "FAILED";
 
@@ -18934,7 +19591,8 @@ export interface FileRescindApprovalRequest {
   reason_for_change: string;
 }
 
-export type FileStatus = "PENDING_SCAN" | "READY" | "PENDING_TRANSCODE" | "QUARANTINED";
+export type FileStatus =
+  "PENDING_SCAN" | "READY" | "PENDING_TRANSCODE" | "QUARANTINED";
 
 export interface FileUploadUrlRequest {
   study_id: string;
@@ -18974,7 +19632,16 @@ export interface GuestLinkResponse {
   is_valid: boolean;
 }
 
-export type PermissionLevel = "view" | "comment" | "download" | "edit" | "upload_revision" | "reshare" | "approve" | "admin" | "expire_revoke";
+export type PermissionLevel =
+  | "view"
+  | "comment"
+  | "download"
+  | "edit"
+  | "upload_revision"
+  | "reshare"
+  | "approve"
+  | "admin"
+  | "expire_revoke";
 
 export interface PlaybackAuditCreateRequest {
   file_record_id: string;
@@ -18999,7 +19666,8 @@ export interface PlaybackAuditResponse {
 
 export type PlaybackEventSource = "internal" | "guest_link";
 
-export type PlaybackEventType = "PLAY_START" | "PLAY_25" | "PLAY_50" | "PLAY_75" | "PLAY_END";
+export type PlaybackEventType =
+  "PLAY_START" | "PLAY_25" | "PLAY_50" | "PLAY_75" | "PLAY_END";
 
 export type ScanStatus = "PENDING" | "CLEAN" | "INFECTED" | "SCAN_ERROR";
 
@@ -19036,7 +19704,8 @@ export interface StreamUrlResponse {
   message?: string | null;
 }
 
-export type TranscodeStatus = "NOT_REQUIRED" | "PENDING" | "IN_PROGRESS" | "READY" | "FAILED";
+export type TranscodeStatus =
+  "NOT_REQUIRED" | "PENDING" | "IN_PROGRESS" | "READY" | "FAILED";
 
 export interface UploadCompleteRequest {
   upload_id?: string | null;
@@ -19560,7 +20229,8 @@ export interface ActigraphyDailySummary {
   readings_count: number;
 }
 
-export type AlertSeverity = "INFO" | "WARNING" | "CRITICAL" | "LIFE_THREATENING";
+export type AlertSeverity =
+  "INFO" | "WARNING" | "CRITICAL" | "LIFE_THREATENING";
 
 export interface ArchiveRecordingRequest {
   media_payload_or_hash: string;
@@ -19616,7 +20286,8 @@ export interface CGMDailySummary {
   active_wear_percentage: number;
 }
 
-export type CalibrationState = "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
+export type CalibrationState =
+  "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
 
 export interface CanonicalClinicalRecord {
   record_id?: string;
@@ -19814,7 +20485,16 @@ export interface DTPShipmentResponse {
   message?: string;
 }
 
-export type DTPShipmentStatus = "ORDER_CREATED" | "DEPOT_PICKED" | "PACKED" | "COURIER_DISPATCHED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "TEMP_EXCURSION_HOLD" | "RETURNED";
+export type DTPShipmentStatus =
+  | "ORDER_CREATED"
+  | "DEPOT_PICKED"
+  | "PACKED"
+  | "COURIER_DISPATCHED"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "TEMP_EXCURSION_HOLD"
+  | "RETURNED";
 
 export interface DailySummariesResponse {
   study_id: string;
@@ -19839,7 +20519,14 @@ export interface DailySummaryEndpoints {
   created_at?: string;
 }
 
-export type DataStreamType = "EDC_ECRF" | "EPRO_ECOA" | "CENTRAL_LAB" | "LOCAL_LAB" | "IOT_WEARABLE" | "EHR_FHIR" | "MEDICAL_IMAGING";
+export type DataStreamType =
+  | "EDC_ECRF"
+  | "EPRO_ECOA"
+  | "CENTRAL_LAB"
+  | "LOCAL_LAB"
+  | "IOT_WEARABLE"
+  | "EHR_FHIR"
+  | "MEDICAL_IMAGING";
 
 export interface DatabaseLockAuthToken {
   token_id: string;
@@ -20199,7 +20886,8 @@ export interface EhrReconcileRejectRequest {
   change_reason?: string;
 }
 
-export type EhrSystemType = "EPIC" | "CERNER" | "ALLSCRIPTS" | "SMART_FHIR_GENERIC";
+export type EhrSystemType =
+  "EPIC" | "CERNER" | "ALLSCRIPTS" | "SMART_FHIR_GENERIC";
 
 export interface ElectronicSignatureBlock {
   signer_id: string;
@@ -20209,7 +20897,8 @@ export interface ElectronicSignatureBlock {
   hmac_signature: string;
 }
 
-export type ExcursionSeverity = "NONE" | "MINOR_WARNING" | "CRITICAL_EXCURSION_QUARANTINE";
+export type ExcursionSeverity =
+  "NONE" | "MINOR_WARNING" | "CRITICAL_EXCURSION_QUARANTINE";
 
 export interface ExecuteProgramRequest {
   study_id: string;
@@ -20280,7 +20969,8 @@ export interface ExecutionSandboxConfig {
   environment_variables?: Record<string, any>;
 }
 
-export type ExecutionStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "REJECTED";
+export type ExecutionStatus =
+  "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "REJECTED";
 
 export interface ExportDatasetJSONRequest {
   study_id: string;
@@ -20399,7 +21089,15 @@ export interface InHomeVisitResponse {
   message?: string;
 }
 
-export type InHomeVisitStatus = "SCHEDULED" | "CONFIRMED" | "EN_ROUTE" | "ARRIVED_ON_SITE" | "PROCEDURES_IN_PROGRESS" | "VISIT_COMPLETED" | "CANCELLED" | "RESCHEDULED";
+export type InHomeVisitStatus =
+  | "SCHEDULED"
+  | "CONFIRMED"
+  | "EN_ROUTE"
+  | "ARRIVED_ON_SITE"
+  | "PROCEDURES_IN_PROGRESS"
+  | "VISIT_COMPLETED"
+  | "CANCELLED"
+  | "RESCHEDULED";
 
 export interface InHomeVisitStatusUpdateRequest {
   status: InHomeVisitStatus;
@@ -20455,7 +21153,12 @@ export interface IssueLockTokenRequest {
   authorized_roles?: string[] | null;
 }
 
-export type LARRelationship = "PARENT" | "LEGAL_GUARDIAN" | "POWER_OF_ATTORNEY" | "COURT_APPOINTED" | "NEXT_OF_KIN";
+export type LARRelationship =
+  | "PARENT"
+  | "LEGAL_GUARDIAN"
+  | "POWER_OF_ATTORNEY"
+  | "COURT_APPOINTED"
+  | "NEXT_OF_KIN";
 
 export interface LakehouseMetrics {
   study_id: string;
@@ -20490,7 +21193,15 @@ export interface LocalLabIngestItem {
   metadata?: Record<string, any>;
 }
 
-export type LockMilestoneType = "INTERIM_ANALYSIS_1" | "INTERIM_ANALYSIS_2" | "DATABASE_LOCK" | "SAFETY_REVIEW" | "REGULATORY_SUBMISSION" | "PROTOCOL_FREEZE" | "ADJUDICATION_MILESTONE" | "CUSTOM";
+export type LockMilestoneType =
+  | "INTERIM_ANALYSIS_1"
+  | "INTERIM_ANALYSIS_2"
+  | "DATABASE_LOCK"
+  | "SAFETY_REVIEW"
+  | "REGULATORY_SUBMISSION"
+  | "PROTOCOL_FREEZE"
+  | "ADJUDICATION_MILESTONE"
+  | "CUSTOM";
 
 export interface LockTokenListResponse {
   study_id: string;
@@ -20502,7 +21213,12 @@ export interface LockTokenResponse {
   token: DatabaseLockAuthToken;
 }
 
-export type LockValidationStatus = "VALID" | "TAMPERED" | "INVALID_SYNTAX" | "UNQUALIFIED_PACKAGE" | "UNVERIFIED";
+export type LockValidationStatus =
+  | "VALID"
+  | "TAMPERED"
+  | "INVALID_SYNTAX"
+  | "UNQUALIFIED_PACKAGE"
+  | "UNVERIFIED";
 
 export interface MDRIncidentReportRequest {
   study_id: string;
@@ -20601,7 +21317,8 @@ export interface OutputArtifact {
   content_preview?: string | null;
 }
 
-export type OutputArtifactType = "TABLE" | "LISTING" | "FIGURE" | "DATASET" | "LOG" | "MANIFEST";
+export type OutputArtifactType =
+  "TABLE" | "LISTING" | "FIGURE" | "DATASET" | "LOG" | "MANIFEST";
 
 export interface PackageEntry {
   name: string;
@@ -20624,7 +21341,13 @@ export interface PackageLockValidationResult {
   details: string;
 }
 
-export type ParticipantRole = "INVESTIGATOR" | "SUBJECT" | "LAR" | "NURSE_COORDINATOR" | "TRANSLATOR" | "WITNESS";
+export type ParticipantRole =
+  | "INVESTIGATOR"
+  | "SUBJECT"
+  | "LAR"
+  | "NURSE_COORDINATOR"
+  | "TRANSLATOR"
+  | "WITNESS";
 
 export interface PediatricAssentDTO {
   assent_id: string;
@@ -20671,7 +21394,8 @@ export interface PediatricAssentSubmitRequest {
   investigator_signature?: string | null;
 }
 
-export type PediatricAssentTier = "CHILD_7_11" | "ADOLESCENT_12_17" | "LAR_PARENT_GUARDIAN" | "ADULT_18_PLUS";
+export type PediatricAssentTier =
+  "CHILD_7_11" | "ADOLESCENT_12_17" | "LAR_PARENT_GUARDIAN" | "ADULT_18_PLUS";
 
 export interface PipelineExecutionResult {
   execution_id: string;
@@ -20690,9 +21414,18 @@ export interface PipelineExecutionResult {
   errors?: string[];
 }
 
-export type PipelineExecutionStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+export type PipelineExecutionStatus =
+  "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
-export type ProcedureType = "VITAL_SIGNS" | "PK_BLOOD_DRAW" | "IP_ADMINISTRATION" | "12_LEAD_ECG" | "SAFETY_LABS" | "PHYSICAL_EXAM" | "BIOMARKER_SAMPLING" | "PATIENT_DIARY_REVIEW";
+export type ProcedureType =
+  | "VITAL_SIGNS"
+  | "PK_BLOOD_DRAW"
+  | "IP_ADMINISTRATION"
+  | "12_LEAD_ECG"
+  | "SAFETY_LABS"
+  | "PHYSICAL_EXAM"
+  | "BIOMARKER_SAMPLING"
+  | "PATIENT_DIARY_REVIEW";
 
 export interface ProgramListResponse {
   study_id: string;
@@ -20839,7 +21572,21 @@ export interface SemanticMappedItemDTO {
   status?: string;
 }
 
-export type SensorAlertType = "SEVERE_HYPOGLYCEMIA" | "HYPOGLYCEMIA" | "SEVERE_HYPERGLYCEMIA" | "HYPERGLYCEMIA" | "EXTREME_TACHYCARDIA" | "TACHYCARDIA" | "SEVERE_BRADYCARDIA" | "BRADYCARDIA" | "HYPERTENSIVE_CRISIS" | "STAGE2_HYPERTENSION" | "SEVERE_HYPOTENSION" | "ACUTE_BRONCHOCONSTRICTION" | "DEVICE_CLOCK_DRIFT_EXCESSIVE" | "BATTERY_CRITICAL";
+export type SensorAlertType =
+  | "SEVERE_HYPOGLYCEMIA"
+  | "HYPOGLYCEMIA"
+  | "SEVERE_HYPERGLYCEMIA"
+  | "HYPERGLYCEMIA"
+  | "EXTREME_TACHYCARDIA"
+  | "TACHYCARDIA"
+  | "SEVERE_BRADYCARDIA"
+  | "BRADYCARDIA"
+  | "HYPERTENSIVE_CRISIS"
+  | "STAGE2_HYPERTENSION"
+  | "SEVERE_HYPOTENSION"
+  | "ACUTE_BRONCHOCONSTRICTION"
+  | "DEVICE_CLOCK_DRIFT_EXCESSIVE"
+  | "BATTERY_CRITICAL";
 
 export interface SensorDashboardMetrics {
   study_id: string;
@@ -20856,7 +21603,13 @@ export interface SensorDashboardMetrics {
   last_telemetry_received_at?: string | null;
 }
 
-export type SensorDeviceType = "CGM" | "ACTIGRAPHY" | "SPIROMETRY" | "BLOOD_PRESSURE" | "PULSE_OXIMETER" | "ECG";
+export type SensorDeviceType =
+  | "CGM"
+  | "ACTIGRAPHY"
+  | "SPIROMETRY"
+  | "BLOOD_PRESSURE"
+  | "PULSE_OXIMETER"
+  | "ECG";
 
 export interface SensorIngestResponse {
   success?: boolean;
@@ -20926,7 +21679,15 @@ export interface SensorSafetyAlert {
   notified_roles?: string[];
 }
 
-export type SignalingMessageType = "OFFER" | "ANSWER" | "ICE_CANDIDATE" | "JOIN_ROOM" | "LEAVE_ROOM" | "CO_VIEW_STATE" | "ANNOTATION" | "CHAT";
+export type SignalingMessageType =
+  | "OFFER"
+  | "ANSWER"
+  | "ICE_CANDIDATE"
+  | "JOIN_ROOM"
+  | "LEAVE_ROOM"
+  | "CO_VIEW_STATE"
+  | "ANNOTATION"
+  | "CHAT";
 
 export interface SmartAssertionVerifyRequest {
   assertion_jwt: string;
@@ -21126,7 +21887,13 @@ export interface TelehealthSessionResponse {
   message?: string;
 }
 
-export type TelehealthSessionStatus = "SCHEDULED" | "WAITING_ROOM" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "RECORDING_PROCESSING";
+export type TelehealthSessionStatus =
+  | "SCHEDULED"
+  | "WAITING_ROOM"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "RECORDING_PROCESSING";
 
 export interface TemperatureIngestRequest {
   readings: TemperatureReadingDTO[];
@@ -21139,7 +21906,8 @@ export interface TemperatureReadingDTO {
   battery_percent?: number;
 }
 
-export type TemperatureZone = "CRYOGENIC" | "ULTRA_COLD" | "FROZEN" | "REFRIGERATED" | "CONTROLLED_AMBIENT";
+export type TemperatureZone =
+  "CRYOGENIC" | "ULTRA_COLD" | "FROZEN" | "REFRIGERATED" | "CONTROLLED_AMBIENT";
 
 export interface ValidateDatasetJSONRequest {
   payload: Record<string, any> | string;
@@ -21261,7 +22029,14 @@ export interface ArticleSearchResult {
   created_at: string;
 }
 
-export type ArticleStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "SUPERSEDED" | "ARCHIVED" | "REJECTED";
+export type ArticleStatus =
+  | "DRAFT"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "PUBLISHED"
+  | "SUPERSEDED"
+  | "ARCHIVED"
+  | "REJECTED";
 
 export interface ArticleSubmitReviewRequest {
   reason_for_change?: string | null;
@@ -21610,7 +22385,12 @@ export interface AssignmentResolutionResponse {
   assigned_studies: string[];
 }
 
-export type ClinicalStaffRole = "Principal Investigator" | "Sub-Investigator" | "CRC" | "CRA/Monitor" | "External Monitor";
+export type ClinicalStaffRole =
+  | "Principal Investigator"
+  | "Sub-Investigator"
+  | "CRC"
+  | "CRA/Monitor"
+  | "External Monitor";
 
 export interface DelegationCreate {
   delegator_id: string;
@@ -21683,7 +22463,8 @@ export interface OrganizationResponse {
   version_index: number;
 }
 
-export type OrganizationType = "sponsor" | "CRO" | "IRB/IEC" | "central laboratory" | "site";
+export type OrganizationType =
+  "sponsor" | "CRO" | "IRB/IEC" | "central laboratory" | "site";
 
 export interface OrganizationUpdate {
   name?: string | null;
@@ -22603,7 +23384,8 @@ export interface W9VerifyRequest {
   notes?: string | null;
 }
 
-export type ActionItemStatus = "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "OPEN";
+export type ActionItemStatus =
+  "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "OPEN";
 
 export interface AuditCreate {
   audit_number: string;
@@ -22676,7 +23458,13 @@ export interface AuditResponse {
   reason_for_change: string;
 }
 
-export type AuditStatus = "CANCELLED" | "CAPA_PENDING" | "COMPLETED" | "FINDINGS_REPORTED" | "IN_PROGRESS" | "PLANNED";
+export type AuditStatus =
+  | "CANCELLED"
+  | "CAPA_PENDING"
+  | "COMPLETED"
+  | "FINDINGS_REPORTED"
+  | "IN_PROGRESS"
+  | "PLANNED";
 
 export interface AuditStatusUpdate {
   status: AuditStatus;
@@ -22684,7 +23472,11 @@ export interface AuditStatusUpdate {
   actual_end_date?: string | null;
 }
 
-export type BenfordConformity = "ACCEPTABLE_CONFORMITY" | "CLOSE_CONFORMITY" | "MARGINAL_CONFORMITY" | "NON_CONFORMING";
+export type BenfordConformity =
+  | "ACCEPTABLE_CONFORMITY"
+  | "CLOSE_CONFORMITY"
+  | "MARGINAL_CONFORMITY"
+  | "NON_CONFORMING";
 
 export interface BenfordDigitDistributionResponse {
   sample_size: number;
@@ -22696,7 +23488,12 @@ export interface BenfordDigitDistributionResponse {
   expected_frequencies: Record<string, any>;
 }
 
-export type BreachStatus = "AUTHORITY_NOTIFIED" | "CONFIRMED_BREACH" | "DISMISSED" | "RESOLVED" | "UNDER_EVALUATION";
+export type BreachStatus =
+  | "AUTHORITY_NOTIFIED"
+  | "CONFIRMED_BREACH"
+  | "DISMISSED"
+  | "RESOLVED"
+  | "UNDER_EVALUATION";
 
 export interface CAPAActionItemCreate {
   title: string;
@@ -22797,7 +23594,16 @@ export interface CAPAResponse {
   effectiveness_checks?: CAPAEffectivenessCheckResponse[];
 }
 
-export type CAPAStatus = "INITIATED" | "UNDER_REVIEW" | "APPROVED" | "IMPLEMENTATION" | "IMPLEMENTATION_VERIFIED" | "EFFECTIVENESS_CHECK" | "CLOSED" | "INEFFECTIVE" | "CANCELLED";
+export type CAPAStatus =
+  | "INITIATED"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "IMPLEMENTATION"
+  | "IMPLEMENTATION_VERIFIED"
+  | "EFFECTIVENESS_CHECK"
+  | "CLOSED"
+  | "INEFFECTIVE"
+  | "CANCELLED";
 
 export interface CAPATransitionRequest {
   to_status: CAPAStatus;
@@ -22898,7 +23704,8 @@ export interface DataIntegrityFindingResponse {
   reason_for_change: string;
 }
 
-export type DataIntegrityFindingStatus = "CONFIRMED" | "DISMISSED" | "INVESTIGATING" | "OPEN";
+export type DataIntegrityFindingStatus =
+  "CONFIRMED" | "DISMISSED" | "INVESTIGATING" | "OPEN";
 
 export interface DataIntegrityInvestigationDispatchRequest {
   finding_id: string;
@@ -22925,7 +23732,11 @@ export interface DataIntegritySentinelRunResponse {
   reason_for_change: string;
 }
 
-export type DataIntegritySentinelType = "COMPREHENSIVE_INTEGRITY_SCAN" | "DUPLICATE_PATIENT_RECORD" | "PERCEPTUAL_IMAGE_HASH" | "TEMPORAL_BEHAVIORAL_ANOMALY";
+export type DataIntegritySentinelType =
+  | "COMPREHENSIVE_INTEGRITY_SCAN"
+  | "DUPLICATE_PATIENT_RECORD"
+  | "PERCEPTUAL_IMAGE_HASH"
+  | "TEMPORAL_BEHAVIORAL_ANOMALY";
 
 export interface DataIntegritySimulationRequest {
   study_id?: string;
@@ -23001,11 +23812,29 @@ export interface DeviationResponse {
   reason_for_change: string;
 }
 
-export type DeviationSeverity = "MINOR" | "MAJOR" | "CRITICAL" | "SYSTEMATIC_TREND";
+export type DeviationSeverity =
+  "MINOR" | "MAJOR" | "CRITICAL" | "SYSTEMATIC_TREND";
 
-export type DeviationStatus = "REPORTED" | "UNDER_INVESTIGATION" | "RCA_COMPLETE" | "CAPA_INITIATED" | "RESOLVED" | "CLOSED";
+export type DeviationStatus =
+  | "REPORTED"
+  | "UNDER_INVESTIGATION"
+  | "RCA_COMPLETE"
+  | "CAPA_INITIATED"
+  | "RESOLVED"
+  | "CLOSED";
 
-export type DeviationType = "CONCOMITANT_MED" | "ELIGIBILITY" | "GCP_COMPLIANCE" | "INFORMED_CONSENT" | "INVESTIGATIONAL_PRODUCT" | "IP_MANAGEMENT" | "LAB_SPECIMEN" | "OTHER" | "PROTOCOL_PROCEDURE" | "SAFETY_REPORTING" | "VISIT_WINDOW";
+export type DeviationType =
+  | "CONCOMITANT_MED"
+  | "ELIGIBILITY"
+  | "GCP_COMPLIANCE"
+  | "INFORMED_CONSENT"
+  | "INVESTIGATIONAL_PRODUCT"
+  | "IP_MANAGEMENT"
+  | "LAB_SPECIMEN"
+  | "OTHER"
+  | "PROTOCOL_PROCEDURE"
+  | "SAFETY_REPORTING"
+  | "VISIT_WINDOW";
 
 export interface DuplicatePatientScanRequest {
   study_id: string;
@@ -23015,9 +23844,22 @@ export interface DuplicatePatientScanRequest {
   auto_dispatch_investigation?: boolean;
 }
 
-export type EffectivenessOutcome = "EFFECTIVE" | "INEFFECTIVE" | "PARTIALLY_EFFECTIVE" | "PENDING";
+export type EffectivenessOutcome =
+  "EFFECTIVE" | "INEFFECTIVE" | "PARTIALLY_EFFECTIVE" | "PENDING";
 
-export type ForensicsAnomalyFlag = "ANOMALOUS_VARIANCE_SHRINKAGE" | "BENFORD_NON_CONFORMANCE" | "CROSS_SITE_CLONING_SUSPICION" | "DATA_FABRICATION_SUSPICION" | "DUPLICATE_PATIENT_RECORD" | "IDENTICAL_PROCEDURE_INTERVALS" | "MULTIVARIATE_MAHALANOBIS_OUTLIER" | "OFF_HOURS_BURST_ANOMALY" | "PERCEPTUAL_IMAGE_HASH_MATCH" | "RAPID_BURST_SUBMISSION" | "SUSPICIOUS_TIMESTAMP_CLUSTER" | "TERMINAL_DIGIT_ROUNDING_BIAS";
+export type ForensicsAnomalyFlag =
+  | "ANOMALOUS_VARIANCE_SHRINKAGE"
+  | "BENFORD_NON_CONFORMANCE"
+  | "CROSS_SITE_CLONING_SUSPICION"
+  | "DATA_FABRICATION_SUSPICION"
+  | "DUPLICATE_PATIENT_RECORD"
+  | "IDENTICAL_PROCEDURE_INTERVALS"
+  | "MULTIVARIATE_MAHALANOBIS_OUTLIER"
+  | "OFF_HOURS_BURST_ANOMALY"
+  | "PERCEPTUAL_IMAGE_HASH_MATCH"
+  | "RAPID_BURST_SUBMISSION"
+  | "SUSPICIOUS_TIMESTAMP_CLUSTER"
+  | "TERMINAL_DIGIT_ROUNDING_BIAS";
 
 export interface ForensicsSimulationRequest {
   study_id?: string;
@@ -23058,7 +23900,15 @@ export interface ImageHashScanRequest {
   auto_dispatch_investigation?: boolean;
 }
 
-export type ImageTransformationType = "BRIGHTNESS_ADJUSTED" | "CROPPED_OR_RESCALED" | "EXACT" | "FLIPPED_HORIZONTAL" | "FLIPPED_VERTICAL" | "ROTATED_180" | "ROTATED_270" | "ROTATED_90";
+export type ImageTransformationType =
+  | "BRIGHTNESS_ADJUSTED"
+  | "CROPPED_OR_RESCALED"
+  | "EXACT"
+  | "FLIPPED_HORIZONTAL"
+  | "FLIPPED_VERTICAL"
+  | "ROTATED_180"
+  | "ROTATED_270"
+  | "ROTATED_90";
 
 export interface KRIBatchEvaluationRequest {
   study_id: string;
@@ -23203,7 +24053,13 @@ export interface QualitySurveillanceRunResponse {
   sentinel_run_id?: string | null;
 }
 
-export type RACTCategory = "SAFETY" | "CONSENT" | "STUDY_CONDUCT" | "DATA_INTEGRITY" | "IP_MANAGEMENT" | "TECHNOLOGY";
+export type RACTCategory =
+  | "SAFETY"
+  | "CONSENT"
+  | "STUDY_CONDUCT"
+  | "DATA_INTEGRITY"
+  | "IP_MANAGEMENT"
+  | "TECHNOLOGY";
 
 export interface RACTCategorySummary {
   category: string;
@@ -23310,7 +24166,8 @@ export interface RegulatoryClockStatusResponse {
 
 export type RiskTier = "CRITICAL" | "HIGH" | "LOW" | "MEDIUM";
 
-export type RoundingBiasTier = "MODERATE_ROUNDING" | "NORMAL" | "SEVERE_ROUNDING";
+export type RoundingBiasTier =
+  "MODERATE_ROUNDING" | "NORMAL" | "SEVERE_ROUNDING";
 
 export interface SeriousBreachConfirmRequest {
   affected_authorities: string[];
@@ -23470,9 +24327,11 @@ export interface VarianceShrinkageMetricsResponse {
   is_variance_shrunk: boolean;
 }
 
-export type AIReviewStatus = "DRAFT_AI" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+export type AIReviewStatus =
+  "DRAFT_AI" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 
-export type AS2Authority = "FDA_ESG" | "EMA_GATEWAY" | "PMDA" | "MHRA" | "HEALTH_CANADA";
+export type AS2Authority =
+  "FDA_ESG" | "EMA_GATEWAY" | "PMDA" | "MHRA" | "HEALTH_CANADA";
 
 export interface AS2OutboundTransmissionRequestDTO {
   case_id?: string | null;
@@ -23553,9 +24412,17 @@ export interface AuthorityRuleEvaluationResult {
   countdown?: CountdownClockStatus | null;
 }
 
-export type BenchmarkReferenceDataset = "INTERNAL_TRIAL_POOL" | "FAERS" | "EUDRAVIGILANCE" | "CUSTOM";
+export type BenchmarkReferenceDataset =
+  "INTERNAL_TRIAL_POOL" | "FAERS" | "EUDRAVIGILANCE" | "CUSTOM";
 
-export type CausalityCategory = "RELATED" | "SUSPECTED" | "POSSIBLY_RELATED" | "PROBABLY_RELATED" | "DEFINITELY_RELATED" | "NOT_RELATED" | "UNLIKELY";
+export type CausalityCategory =
+  | "RELATED"
+  | "SUSPECTED"
+  | "POSSIBLY_RELATED"
+  | "PROBABLY_RELATED"
+  | "DEFINITELY_RELATED"
+  | "NOT_RELATED"
+  | "UNLIKELY";
 
 export interface ClinicalTimelineEvent {
   event_id: string;
@@ -23769,9 +24636,14 @@ export interface DisproportionalityMetricResult {
 
 export type ExpectednessCategory = "EXPECTED" | "UNEXPECTED";
 
-export type ExpeditedClassification = "SUSAR_FATAL_LIFE_THREATENING_7_DAY" | "SUSAR_SERIOUS_UNEXPECTED_15_DAY" | "NON_EXPEDITED_PERIODIC" | "EXEMPT";
+export type ExpeditedClassification =
+  | "SUSAR_FATAL_LIFE_THREATENING_7_DAY"
+  | "SUSAR_SERIOUS_UNEXPECTED_15_DAY"
+  | "NON_EXPEDITED_PERIODIC"
+  | "EXEMPT";
 
-export type ExposureStratificationCategory = "TREATMENT_ARM" | "DOSAGE_COHORT" | "AGE_GROUP" | "SEX" | "OVERALL";
+export type ExposureStratificationCategory =
+  "TREATMENT_ARM" | "DOSAGE_COHORT" | "AGE_GROUP" | "SEX" | "OVERALL";
 
 export interface ExposureStratificationRow {
   category: ExposureStratificationCategory;
@@ -23791,7 +24663,8 @@ export interface GroundedClaim {
   confidence_score?: number;
 }
 
-export type ICSRApprovalStatus = "DRAFT" | "PHYSICIAN_APPROVED" | "TRANSMITTED" | "REJECTED";
+export type ICSRApprovalStatus =
+  "DRAFT" | "PHYSICIAN_APPROVED" | "TRANSMITTED" | "REJECTED";
 
 export interface ICSRDataExportRequest {
   job_name: string;
@@ -23948,7 +24821,13 @@ export interface NarrativeGenerateRequest {
   additional_context?: string | null;
 }
 
-export type NarrativeSectionType = "DEMOGRAPHICS_BASELINE" | "MEDICAL_TREATMENT_HISTORY" | "INDEX_AE_CHRONOLOGY" | "DIAGNOSTIC_LABS" | "CLINICAL_MANAGEMENT" | "OUTCOME_CAUSALITY";
+export type NarrativeSectionType =
+  | "DEMOGRAPHICS_BASELINE"
+  | "MEDICAL_TREATMENT_HISTORY"
+  | "INDEX_AE_CHRONOLOGY"
+  | "DIAGNOSTIC_LABS"
+  | "CLINICAL_MANAGEMENT"
+  | "OUTCOME_CAUSALITY";
 
 export interface NarrativeSignRequest {
   narrative_id: string;
@@ -24059,7 +24938,8 @@ export interface PeriodicReportSignResponse {
   qppv_manifest?: QPPVSignoffManifest | null;
 }
 
-export type PeriodicReportStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
+export type PeriodicReportStatus =
+  "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
 
 export type PeriodicSafetyReportType = "DSUR" | "PSUR" | "PBRER";
 
@@ -24159,7 +25039,8 @@ export interface RegulatorySnapshotVerifyResponse {
   verified_at: string;
 }
 
-export type ReportingAuthority = "US_FDA" | "EMA" | "PMDA" | "MHRA" | "HEALTH_CANADA";
+export type ReportingAuthority =
+  "US_FDA" | "EMA" | "PMDA" | "MHRA" | "HEALTH_CANADA";
 
 export interface SAEDiscrepancyResponse {
   id: string;
@@ -24347,9 +25228,11 @@ export interface SafetySignalAlertSignResponse {
   message: string;
 }
 
-export type SafetySignalAlertStatus = "TRIGGERED" | "UNDER_REVIEW" | "CONFIRMED_SIGNAL" | "REFUTED" | "CLOSED";
+export type SafetySignalAlertStatus =
+  "TRIGGERED" | "UNDER_REVIEW" | "CONFIRMED_SIGNAL" | "REFUTED" | "CLOSED";
 
-export type SafetySignalReviewDecision = "CONFIRM_SIGNAL" | "REFUTE_SIGNAL" | "REQUEST_SAFETY_INQUIRY" | "CLOSE_ALERT";
+export type SafetySignalReviewDecision =
+  "CONFIRM_SIGNAL" | "REFUTE_SIGNAL" | "REQUEST_SAFETY_INQUIRY" | "CLOSE_ALERT";
 
 export interface SignICSRRuleEvaluationRequest {
   reason_for_change: string;
@@ -24396,7 +25279,8 @@ export interface SignalDetectionScanResponse {
   created_at: string;
 }
 
-export type SignalStrength = "CRITICAL" | "STRONG" | "MODERATE" | "WEAK" | "NONE";
+export type SignalStrength =
+  "CRITICAL" | "STRONG" | "MODERATE" | "WEAK" | "NONE";
 
 export type StratificationLevel = "PT" | "SOC";
 
@@ -24426,7 +25310,15 @@ export interface SubjectExposureMetrics {
   by_sex?: ExposureStratificationRow[];
 }
 
-export type TimelineEventType = "DEMOGRAPHICS" | "MEDICAL_HISTORY" | "DRUG_ADMINISTRATION" | "CONCOMITANT_MEDICATION" | "ADVERSE_EVENT" | "DIAGNOSTIC_LAB" | "HOSPITALIZATION" | "DECHALLENGE_RECHALLENGE";
+export type TimelineEventType =
+  | "DEMOGRAPHICS"
+  | "MEDICAL_HISTORY"
+  | "DRUG_ADMINISTRATION"
+  | "CONCOMITANT_MEDICATION"
+  | "ADVERSE_EVENT"
+  | "DIAGNOSTIC_LAB"
+  | "HOSPITALIZATION"
+  | "DECHALLENGE_RECHALLENGE";
 
 export interface AttachmentResponse {
   id: string;
@@ -24519,9 +25411,24 @@ export interface RegulatoryRiskAssessment {
   risk_summary: string;
 }
 
-export type ResolutionCode = "RESOLVED_AS_EXPECTED" | "PROTOCOL_CLARIFICATION_ISSUED" | "DATA_AMENDED" | "CAPA_INITIATED" | "FALSE_POSITIVE_VOIDED" | "WORKAROUND_APPLIED" | "CLOSED_UNRESOLVED";
+export type ResolutionCode =
+  | "RESOLVED_AS_EXPECTED"
+  | "PROTOCOL_CLARIFICATION_ISSUED"
+  | "DATA_AMENDED"
+  | "CAPA_INITIATED"
+  | "FALSE_POSITIVE_VOIDED"
+  | "WORKAROUND_APPLIED"
+  | "CLOSED_UNRESOLVED";
 
-export type RootCauseCategory = "HUMAN_ERROR" | "PROTOCOL_DESIGN" | "PROCESS_WORKFLOW" | "SYSTEM_TECHNICAL" | "INVESTIGATIONAL_PRODUCT" | "VENDOR_LAB" | "TRAINING_GAP" | "OTHER";
+export type RootCauseCategory =
+  | "HUMAN_ERROR"
+  | "PROTOCOL_DESIGN"
+  | "PROCESS_WORKFLOW"
+  | "SYSTEM_TECHNICAL"
+  | "INVESTIGATIONAL_PRODUCT"
+  | "VENDOR_LAB"
+  | "TRAINING_GAP"
+  | "OTHER";
 
 export interface SettingDiffEntry {
   setting_key: string;
@@ -24548,7 +25455,19 @@ export interface TicketAuditLogResponse {
   record_id?: string | null;
 }
 
-export type TicketCategory = "TECHNICAL" | "CLINICAL" | "HARDWARE" | "ACCESS" | "PROTOCOL_DEVIATION" | "DATA_QUERY" | "SAFETY_ADVERSE_EVENT" | "SUPPLY_EXCURSION" | "SITE_OPERATIONS" | "REGULATORY_ETMF" | "CHANGE_REQUEST" | "OTHER";
+export type TicketCategory =
+  | "TECHNICAL"
+  | "CLINICAL"
+  | "HARDWARE"
+  | "ACCESS"
+  | "PROTOCOL_DEVIATION"
+  | "DATA_QUERY"
+  | "SAFETY_ADVERSE_EVENT"
+  | "SUPPLY_EXCURSION"
+  | "SITE_OPERATIONS"
+  | "REGULATORY_ETMF"
+  | "CHANGE_REQUEST"
+  | "OTHER";
 
 export interface TicketCreate {
   title: string;
@@ -24637,7 +25556,16 @@ export interface TicketSignaturePayload {
   version_index: number;
 }
 
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_ON_SITE" | "WAITING_ON_SPONSOR" | "PENDING_REGULATORY_REVIEW" | "RESOLVED" | "CLOSED" | "REOPENED" | "CANCELLED";
+export type TicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_ON_SITE"
+  | "WAITING_ON_SPONSOR"
+  | "PENDING_REGULATORY_REVIEW"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "CANCELLED";
 
 export interface TicketTransitionPayload {
   status: TicketStatus;
@@ -24668,4 +25596,3 @@ export interface TicketUpdate {
   is_deleted?: boolean | null;
   version_index?: number | null;
 }
-
