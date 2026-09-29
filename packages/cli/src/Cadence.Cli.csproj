@@ -8,7 +8,18 @@
     <ToolCommandName>cadence</ToolCommandName>
     <PackageId>Cadence.Cli</PackageId>
     <Version>10.0.0</Version>
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <StackTraceSupport>true</StackTraceSupport>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <NoWarn>$(NoWarn);IL2104;IL3000;IL3053;IL2026;IL3050</NoWarn>
+    <RootAllApplicationAssemblies>true</RootAllApplicationAssemblies>
   </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Spectre.Console.Cli" />
+    <TrimmerRootAssembly Include="cadence" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />

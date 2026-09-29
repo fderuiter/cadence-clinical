@@ -181,12 +181,12 @@ public static class OpenApiToolingService
             },
             ["servers"] = new JsonArray
             {
-                new JsonObject
+                (JsonNode)new JsonObject
                 {
                     ["url"] = $"https://api.{brandDomain}/api/v1",
                     ["description"] = "Production API Gateway"
                 },
-                new JsonObject
+                (JsonNode)new JsonObject
                 {
                     ["url"] = "http://localhost:8000/api/v1",
                     ["description"] = "Local Dev Gateway Proxy"

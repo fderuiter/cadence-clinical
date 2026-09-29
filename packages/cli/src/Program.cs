@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Cadence.Cli.Commands;
 
 using Spectre.Console;
@@ -7,6 +9,8 @@ namespace Cadence.Cli;
 
 public static class Program
 {
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(EmptyCommandSettings))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandSettings))]
     public static int Main(string[] args)
     {
         AnsiConsole.Write(
@@ -74,6 +78,8 @@ public static class Program
                     .WithDescription("Executes test suites and regenerates RTM compliance docs");
                 gxp.AddCommand<GxPValidateCommand>("validate")
                     .WithDescription("Validates RTM compliance matrix against design requirements");
+                gxp.AddCommand<VerifyGxPSignaturesCommand>("verify")
+                    .WithDescription("Verify electronic signatures and document integrity of signed GxP reports");
             });
 
             config.AddBranch("db", db =>
@@ -85,6 +91,15 @@ public static class Program
                     .WithDescription("Runs pre-boot EF Core database migrations");
                 db.AddCommand<DbStatusCommand>("status")
                     .WithDescription("Checks status of local databases");
+                db.AddCommand<DbSeedCommand>("seed")
+                    .WithDescription("Populates multi-engine databases with trial datasets");
+            });
+
+            config.AddBranch("settings", settings =>
+            {
+                settings.SetDescription("Manage microservice configuration settings models and template exports");
+                settings.AddCommand<ExtractEnvVarsCommand>("export")
+                    .WithDescription("Export Pydantic settings models into .env.example and docs");
             });
 
             config.AddBranch("scaffold", scaffold =>
