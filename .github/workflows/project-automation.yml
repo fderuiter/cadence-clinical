@@ -2,9 +2,9 @@ name: GitHub Project & Issue Automation
 
 on:
   issues:
-    types: [opened, edited, labeled, unlabeled, closed, reopened]
+    types: [opened, closed, reopened]
   pull_request:
-    types: [opened, closed, reopened, synchronize]
+    types: [opened, closed, reopened]
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
