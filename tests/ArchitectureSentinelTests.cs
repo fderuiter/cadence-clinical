@@ -65,7 +65,7 @@ public class ArchitectureSentinelTests
         {
             typeof(AggregateRoot<>).Assembly,
             typeof(ClinicalSubject).Assembly,
-            typeof(CtmsStudy).Assembly,
+            typeof(CtmsSiteMilestone).Assembly,
             typeof(TmfDocument).Assembly,
             typeof(QualityDeviation).Assembly,
             typeof(FileRecord).Assembly,
@@ -183,15 +183,30 @@ public class ArchitectureSentinelTests
                 "ClinicalSubject signatures must remain completely pure of web or messaging infrastructure");
     }
 
+    private static readonly Assembly[] ProductModuleAssemblies =
+    [
+        typeof(ClinicalSubject).Assembly,
+        typeof(CtmsSiteMilestone).Assembly,
+        typeof(Cadence.Apps.Designer.Program).Assembly,
+        typeof(TmfDocument).Assembly,
+        typeof(QualityDeviation).Assembly,
+        typeof(FileRecord).Assembly,
+        typeof(Cadence.Apps.AiGateway.Program).Assembly,
+        typeof(Cadence.Apps.Econsent.Program).Assembly,
+        typeof(Cadence.Apps.Eisf.Program).Assembly,
+        typeof(Cadence.Apps.Gateway.Program).Assembly,
+        typeof(Cadence.Apps.Imaging.Program).Assembly,
+        typeof(Cadence.Apps.Interop.Program).Assembly,
+        typeof(Cadence.Apps.Knowledge.Program).Assembly,
+        typeof(Cadence.Apps.Notifications.Program).Assembly,
+        typeof(Cadence.Apps.Org.Program).Assembly,
+        typeof(Cadence.Apps.Payments.Program).Assembly,
+        typeof(Cadence.Apps.Safety.Program).Assembly,
+        typeof(Cadence.Apps.Tickets.Program).Assembly
+    ];
+
     private static readonly ArchArchitecture ProductArchitecture = new ArchLoader()
-        .LoadAssemblies(
-            typeof(ClinicalSubject).Assembly,
-            typeof(CtmsStudy).Assembly,
-            typeof(Cadence.Apps.Designer.Program).Assembly,
-            typeof(TmfDocument).Assembly,
-            typeof(QualityDeviation).Assembly,
-            typeof(FileRecord).Assembly
-        )
+        .LoadAssemblies(ProductModuleAssemblies)
         .Build();
 
     /// <summary>
@@ -204,28 +219,18 @@ public class ArchitectureSentinelTests
     [GxPRequirement("PRD-SYS-053")]
     public void ProductModulesMustReferenceKernelAbstractionsAndNotDeclareDuplicateClinicalAggregates()
     {
-        var productModuleAssemblies = new[]
-        {
-            typeof(ClinicalSubject).Assembly,
-            typeof(CtmsStudy).Assembly,
-            typeof(Cadence.Apps.Designer.Program).Assembly,
-            typeof(TmfDocument).Assembly,
-            typeof(QualityDeviation).Assembly,
-            typeof(FileRecord).Assembly
-        };
-
-        // 1. ArchUnitNET Rule: Aggregate roots in product modules must not declare duplicate clinical aggregates
+        // 1. ArchUnitNET Rule: Classes in product modules must not declare duplicate clinical aggregates
         IArchRule duplicateAggregatesRule = Classes()
-            .That().AreAssignableTo(typeof(AggregateRootBase))
-            .Or().AreAssignableTo(typeof(AggregateRoot<>))
             .Should().NotHaveName("Study")
             .AndShould().NotHaveName("Site")
-            .AndShould().NotHaveName("Participant");
+            .AndShould().NotHaveName("Participant")
+            .AndShould().NotHaveName("CtmsStudy")
+            .AndShould().NotHaveName("SiteStaffMember");
 
         ArchRuleExtensions.Check(duplicateAggregatesRule, ProductArchitecture);
 
         // 2. Project reference check: Every product module must reference Cadence.Kernel.Abstractions
-        foreach (var assembly in productModuleAssemblies)
+        foreach (var assembly in ProductModuleAssemblies)
         {
             var hasReference = HasProjectOrAssemblyReference(assembly, "Cadence.Kernel.Abstractions");
 
@@ -243,16 +248,6 @@ public class ArchitectureSentinelTests
     [GxPRequirement("PRD-SYS-053")]
     public void ProductModulesMustNeverReferenceInternalKernelPersistence()
     {
-        var productModuleAssemblies = new[]
-        {
-            typeof(ClinicalSubject).Assembly,
-            typeof(CtmsStudy).Assembly,
-            typeof(Cadence.Apps.Designer.Program).Assembly,
-            typeof(TmfDocument).Assembly,
-            typeof(QualityDeviation).Assembly,
-            typeof(FileRecord).Assembly
-        };
-
         // 1. ArchUnitNET Rule: Product module types must not depend on any Kernel.Persistence types
         IArchRule kernelPersistenceRule = Types()
             .Should().NotDependOnAny(
@@ -262,7 +257,7 @@ public class ArchitectureSentinelTests
         ArchRuleExtensions.Check(kernelPersistenceRule, ProductArchitecture);
 
         // 2. Assembly reference check: No referenced assembly may contain 'Kernel.Persistence'
-        foreach (var assembly in productModuleAssemblies)
+        foreach (var assembly in ProductModuleAssemblies)
         {
             var referencedAssemblies = assembly.GetReferencedAssemblies().Select(a => a.Name!).ToList();
 

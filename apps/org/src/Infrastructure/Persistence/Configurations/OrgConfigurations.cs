@@ -5,62 +5,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Cadence.Apps.Org.Infrastructure.Persistence.Configurations;
 
-public class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
-{
-    public void Configure(EntityTypeBuilder<Organization> builder)
-    {
-        builder.ToTable("organizations");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasMaxLength(36);
-        builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.OrgType).HasMaxLength(50).IsRequired();
-        builder.HasIndex(x => x.OrgType);
-        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
-    }
-}
-
-public class SiteConfiguration : IEntityTypeConfiguration<Site>
-{
-    public void Configure(EntityTypeBuilder<Site> builder)
-    {
-        builder.ToTable("sites");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasMaxLength(36);
-        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.SiteId);
-        builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.OrganizationId).HasMaxLength(36).IsRequired();
-        builder.Property(x => x.StudyId).HasMaxLength(255);
-        builder.HasIndex(x => x.StudyId);
-        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
-    }
-}
-
-public class PersonnelConfiguration : IEntityTypeConfiguration<Personnel>
-{
-    public void Configure(EntityTypeBuilder<Personnel> builder)
-    {
-        builder.ToTable("personnel");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasMaxLength(36);
-        builder.Property(x => x.KeycloakUserId).HasMaxLength(255);
-        builder.HasIndex(x => x.KeycloakUserId);
-        builder.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.LastName).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.Email).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.Email);
-        builder.Property(x => x.Role).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.OrganizationId).HasMaxLength(36);
-        builder.Property(x => x.SiteId).HasMaxLength(255);
-        builder.HasIndex(x => x.SiteId);
-        builder.Property(x => x.StudyId).HasMaxLength(255);
-        builder.HasIndex(x => x.StudyId);
-        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
-    }
-}
 
 public class PersonnelAssignmentConfiguration : IEntityTypeConfiguration<PersonnelAssignment>
 {

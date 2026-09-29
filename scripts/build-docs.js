@@ -51,13 +51,6 @@ function runPreflightChecks() {
       expected: "expected to be provided by Node.js installer or nvm",
     },
     {
-      name: "python3",
-      cmd: "python3 --version",
-      desc: "Python 3 interpreter",
-      expected:
-        "expected to be provided by Python 3 installer or your system package manager",
-    },
-    {
       name: "pnpm",
       cmd: `${pnpmCmd} -v`,
       desc: "pnpm package manager",

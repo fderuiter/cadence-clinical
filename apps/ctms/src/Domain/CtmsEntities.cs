@@ -163,32 +163,6 @@ public sealed class CtmsSiteMilestone : AggregateRoot<string>
     public CtmsSiteMilestone(string id) : base(id) { }
 }
 
-public sealed class CtmsStudy : AggregateRoot<string>
-{
-    public string StudyId { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-
-    public CtmsStudy() : base(Guid.NewGuid().ToString()) { }
-    public CtmsStudy(string id) : base(id) { }
-}
-
-public sealed class SiteStaffMember : AggregateRoot<string>
-{
-    public string SiteId { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string PrimaryRole { get; set; } = string.Empty;
-    public string? LicenseNumber { get; set; }
-    public bool GcpCertified { get; set; }
-    public bool IsActive { get; set; } = true;
-    public bool IsDeleted { get; set; }
-
-    public SiteStaffMember() : base(Guid.NewGuid().ToString()) { }
-    public SiteStaffMember(string id) : base(id) { }
-}
 
 public sealed class CtmsBudgetLineItem : AggregateRoot<string>
 {

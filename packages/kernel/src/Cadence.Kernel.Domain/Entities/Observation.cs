@@ -9,7 +9,7 @@ namespace Cadence.Kernel.Domain.Entities;
 /// Canonical Observation aggregate root capturing clinical data with full bitemporal intervals under 21 CFR Part 11.
 /// @req:PRD-SYS-053
 /// </summary>
-public class Observation : AggregateRoot<ObservationId>
+public class Observation : AggregateRoot<ObservationId>, IBitemporalEntity
 {
     public TenantId TenantId { get; private set; }
     public StudyId StudyId { get; private set; }

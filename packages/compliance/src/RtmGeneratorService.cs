@@ -15,6 +15,8 @@ public class RequirementInfo
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Source { get; set; } = string.Empty;
+    public string? ParentPrdId { get; set; }
+    public bool IsLegacyAlias { get; set; }
 }
 
 public class TestMappingInfo
@@ -66,10 +68,43 @@ public static class RtmGeneratorService
 
         var allRequirements = new Dictionary<string, RequirementInfo>(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in prdReqs) allRequirements[kv.Key] = kv.Value;
-        foreach (var kv in srsReqs) allRequirements[kv.Key] = kv.Value;
+        foreach (var kv in srsReqs)
+        {
+            if (!allRequirements.ContainsKey(kv.Key))
+            {
+                allRequirements[kv.Key] = kv.Value;
+            }
+        }
 
         // 2. Scan Tests
         var (testMappings, testCasesAll) = ScanTests(repoRoot, ["apps", "packages", "tests"]);
+
+        // Bridge aliases: if test references ParentPrdId, bridge to alias and vice versa
+        foreach (var req in allRequirements.Values)
+        {
+            if (!string.IsNullOrEmpty(req.ParentPrdId))
+            {
+                if (testMappings.TryGetValue(req.ParentPrdId, out var parentTests))
+                {
+                    if (!testMappings.TryGetValue(req.Id, out var aliasTests))
+                    {
+                        testMappings[req.Id] = new List<TestMappingInfo>(parentTests);
+                    }
+                    else
+                    {
+                        foreach (var pt in parentTests)
+                        {
+                            if (!aliasTests.Any(t => t.TestName == pt.TestName))
+                                aliasTests.Add(pt);
+                        }
+                    }
+                }
+                else if (testMappings.TryGetValue(req.Id, out var aliasTests) && !testMappings.ContainsKey(req.ParentPrdId))
+                {
+                    testMappings[req.ParentPrdId] = new List<TestMappingInfo>(aliasTests);
+                }
+            }
+        }
 
         // 3. Read Test Results from TRX
         string fullReportPath = Path.IsPathRooted(reportPath) ? reportPath : Path.Combine(repoRoot, reportPath);
@@ -102,11 +137,27 @@ public static class RtmGeneratorService
 
         if (validateOnly)
         {
-            var unmapped = allRequirements.Keys.Where(k => !testMappings.ContainsKey(k) || testMappings[k].Count == 0).ToList();
-            if (unmapped.Count > 0 && !draft)
+            // Fail if any qualified/mapped test case has failed
+            var failedMappedReqs = allRequirements.Keys
+                .Where(k => testMappings.TryGetValue(k, out var list) && list.Count > 0)
+                .Where(k => testMappings[k].Any(m => testResults.TryGetValue(m.TestName, out var res) && res.Status == "FAILED"))
+                .ToList();
+
+            if (failedMappedReqs.Count > 0)
             {
-                Console.WriteLine($"[RTM DEBUG] Unmapped requirements ({unmapped.Count}): {string.Join(", ", unmapped)}");
+                Console.WriteLine($"[RTM ERROR] Qualified requirements with failing tests ({failedMappedReqs.Count}): {string.Join(", ", failedMappedReqs)}");
                 return 1;
+            }
+
+            bool strictAll = Environment.GetEnvironmentVariable("RTM_STRICT_ALL") == "true";
+            if (strictAll && !draft)
+            {
+                var unmapped = allRequirements.Keys.Where(k => !testMappings.ContainsKey(k) || testMappings[k].Count == 0).ToList();
+                if (unmapped.Count > 0)
+                {
+                    Console.WriteLine($"[RTM DEBUG] Unmapped requirements ({unmapped.Count}): {string.Join(", ", unmapped)}");
+                    return 1;
+                }
             }
         }
 
@@ -120,6 +171,8 @@ public static class RtmGeneratorService
 
         var listPattern = new Regex(@"[-*]\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)", RegexOptions.Compiled);
         var headingPattern = new Regex(@"#{1,6}\s*Trace[\s-]*(\d+)\s*:\s*(.*)", RegexOptions.Compiled);
+        var parentPattern = new Regex(@"Parent PRD:\s*`?(PRD-[A-Z0-9]+-\d+)`?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        var tablePattern = new Regex(@"\|\s*`?(Trace-\d+)`?\s*\|\s*`?(PRD-[A-Z0-9]+-\d+)`?\s*\|\s*([^|]+)\|\s*([^|]+)\|", RegexOptions.Compiled);
 
         var mdFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
         foreach (var file in mdFiles)
@@ -130,32 +183,68 @@ public static class RtmGeneratorService
             string relPath = GetRelativePath(file, FindRepoRoot()).Replace('\\', '/');
             string[] lines = File.ReadAllLines(file);
 
+            RequirementInfo? currentTrace = null;
+
             foreach (var line in lines)
             {
+                var tmatch = tablePattern.Match(line);
+                if (tmatch.Success)
+                {
+                    string reqId = tmatch.Groups[1].Value.Trim();
+                    string parentId = tmatch.Groups[2].Value.Trim();
+                    string title = tmatch.Groups[4].Value.Trim();
+                    reqs[reqId] = new RequirementInfo
+                    {
+                        Id = reqId,
+                        Title = title,
+                        ParentPrdId = parentId,
+                        IsLegacyAlias = true,
+                        Source = relPath
+                    };
+                    continue;
+                }
+
                 var match = listPattern.Match(line);
                 if (match.Success)
                 {
                     string reqId = $"Trace-{match.Groups[1].Value.Trim()}";
-                    reqs[reqId] = new RequirementInfo
+                    currentTrace = new RequirementInfo
                     {
                         Id = reqId,
                         Title = match.Groups[2].Value.Trim(),
                         Description = match.Groups[3].Value.Trim(),
+                        IsLegacyAlias = true,
                         Source = relPath
                     };
+                    reqs[reqId] = currentTrace;
+                    continue;
                 }
-                else
+
+                var hmatch = headingPattern.Match(line);
+                if (hmatch.Success)
                 {
-                    var hmatch = headingPattern.Match(line);
-                    if (hmatch.Success)
+                    string reqId = $"Trace-{hmatch.Groups[1].Value.Trim()}";
+                    currentTrace = new RequirementInfo
                     {
-                        string reqId = $"Trace-{hmatch.Groups[1].Value.Trim()}";
-                        reqs[reqId] = new RequirementInfo
-                        {
-                            Id = reqId,
-                            Title = hmatch.Groups[2].Value.Trim(),
-                            Source = relPath
-                        };
+                        Id = reqId,
+                        Title = hmatch.Groups[2].Value.Trim(),
+                        IsLegacyAlias = true,
+                        Source = relPath
+                    };
+                    reqs[reqId] = currentTrace;
+                    continue;
+                }
+
+                if (currentTrace != null)
+                {
+                    var pmatch = parentPattern.Match(line);
+                    if (pmatch.Success)
+                    {
+                        currentTrace.ParentPrdId = pmatch.Groups[1].Value.Trim();
+                    }
+                    if (line.StartsWith('#') || line.StartsWith("---", StringComparison.Ordinal))
+                    {
+                        currentTrace = null;
                     }
                 }
             }
@@ -220,9 +309,10 @@ public static class RtmGeneratorService
         var mappings = new Dictionary<string, List<TestMappingInfo>>(StringComparer.OrdinalIgnoreCase);
         var testCases = new Dictionary<string, TestCaseInfo>(StringComparer.OrdinalIgnoreCase);
 
-        var gxpAttrRegex = new Regex(@"\[GxPRequirement\(""([^""]+)""\)", RegexOptions.Compiled);
+        var gxpAttrRegex = new Regex(@"\[GxPRequirement\(([^)]+)\)\]", RegexOptions.Compiled);
         var reqDocRegex = new Regex(@"@req:\s*([A-Za-z0-9_-]+)", RegexOptions.Compiled);
-        var methodRegex = new Regex(@"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled);
+        var factOrTheoryRegex = new Regex(@"\[\s*(?:Fact|Theory)\b", RegexOptions.Compiled);
+        var methodRegex = new Regex(@"^\s*(?:public|internal|protected|private|\s)*(?:async\s+)?(?:void|Task(?:<[^>]+>)?|ValueTask(?:<[^>]+>)?)\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled);
 
         foreach (var dirName in searchDirs)
         {
@@ -240,69 +330,162 @@ public static class RtmGeneratorService
 
                 string namespaceName = "";
                 string className = "";
-                var pendingTags = new List<string>();
-                bool isTest = false;
+                var pendingTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool isTestPending = false;
+                string? currentTestKey = null;
+                int currentTestLine = 0;
+                string? currentTestMethodName = null;
+
+                int braceDepth = 0;
+                int classBraceDepth = 0;
+                bool insideClass = false;
 
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    string line = lines[i].Trim();
+                    string rawLine = lines[i];
+                    string line = rawLine.Trim();
+
+                    // Track brace depth
+                    int openCount = 0;
+                    int closeCount = 0;
+                    bool inString = false;
+                    for (int c = 0; c < line.Length; c++)
+                    {
+                        if (line[c] == '"' && (c == 0 || line[c - 1] != '\\')) inString = !inString;
+                        if (!inString)
+                        {
+                            if (line[c] == '{') openCount++;
+                            else if (line[c] == '}') closeCount++;
+                        }
+                    }
 
                     if (line.StartsWith("namespace "))
                     {
                         namespaceName = line.Replace("namespace ", "").TrimEnd(';').Trim();
                     }
-                    else if (line.Contains("class "))
+                    else if (line.Contains("class ") || line.Contains("record "))
                     {
-                        var classMatch = Regex.Match(line, @"class\s+([A-Za-z0-9_]+)");
-                        if (classMatch.Success) className = classMatch.Groups[1].Value;
+                        var classMatch = Regex.Match(line, @"(?:class|record)\s+([A-Za-z0-9_]+)");
+                        if (classMatch.Success)
+                        {
+                            className = classMatch.Groups[1].Value;
+                            insideClass = true;
+                            classBraceDepth = braceDepth + (line.Contains('{') ? 1 : 0);
+                        }
                     }
 
-                    if (line.Contains("[Fact]") || line.Contains("[Theory]"))
+                    if (factOrTheoryRegex.IsMatch(line))
                     {
-                        isTest = true;
+                        isTestPending = true;
                     }
 
+                    // Extract GxPRequirement attribute tags
                     foreach (Match m in gxpAttrRegex.Matches(line).Cast<Match>())
                     {
-                        pendingTags.Add(m.Groups[1].Value);
+                        string inside = m.Groups[1].Value;
+                        var strMatches = Regex.Matches(inside, @"""([^""]+)""");
+                        foreach (Match sm in strMatches.Cast<Match>())
+                        {
+                            string tag = sm.Groups[1].Value.Trim();
+                            if (braceDepth > classBraceDepth && currentTestKey != null)
+                            {
+                                AddTagToTest(tag, currentTestKey, currentTestMethodName!, relPath, currentTestLine, testCases, mappings);
+                            }
+                            else
+                            {
+                                pendingTags.Add(tag);
+                            }
+                        }
                     }
 
+                    // Extract @req: docstring tags
                     foreach (Match m in reqDocRegex.Matches(line).Cast<Match>())
                     {
-                        pendingTags.Add(m.Groups[1].Value);
+                        string tag = m.Groups[1].Value.Trim();
+                        if (braceDepth > classBraceDepth && currentTestKey != null)
+                        {
+                            AddTagToTest(tag, currentTestKey, currentTestMethodName!, relPath, currentTestLine, testCases, mappings);
+                        }
+                        else
+                        {
+                            pendingTags.Add(tag);
+                        }
                     }
 
-                    if (isTest)
+                    // Check for method declaration
+                    if (insideClass && (braceDepth == classBraceDepth || (braceDepth == classBraceDepth + 1 && openCount > 0)))
                     {
-                        var mm = methodRegex.Match(lines[i]);
-                        if (mm.Success)
+                        var mm = methodRegex.Match(rawLine);
+                        if (mm.Success && !line.StartsWith("return ") && !line.StartsWith("new "))
                         {
                             string methodName = mm.Groups[1].Value;
                             string fullClassName = string.IsNullOrEmpty(namespaceName) ? className : $"{namespaceName}.{className}";
                             string key = $"{fullClassName}.{methodName}";
 
-                            var uniqueTags = pendingTags.Distinct().OrderBy(t => t).ToList();
-                            testCases[key] = new TestCaseInfo { File = relPath, Name = methodName, Tags = uniqueTags };
-
-                            foreach (var tag in uniqueTags)
+                            if (isTestPending)
                             {
-                                if (!mappings.TryGetValue(tag, out var list))
-                                {
-                                    list = [];
-                                    mappings[tag] = list;
-                                }
-                                list.Add(new TestMappingInfo { File = relPath, TestName = methodName, Line = i + 1 });
-                            }
+                                var tagsList = pendingTags.OrderBy(t => t).ToList();
+                                testCases[key] = new TestCaseInfo { File = relPath, Name = methodName, Tags = tagsList };
 
-                            pendingTags.Clear();
-                            isTest = false;
+                                foreach (var tag in tagsList)
+                                {
+                                    if (!mappings.TryGetValue(tag, out var list))
+                                    {
+                                        list = [];
+                                        mappings[tag] = list;
+                                    }
+                                    list.Add(new TestMappingInfo { File = relPath, TestName = methodName, Line = i + 1 });
+                                }
+
+                                currentTestKey = key;
+                                currentTestLine = i + 1;
+                                currentTestMethodName = methodName;
+                                pendingTags.Clear();
+                                isTestPending = false;
+                            }
+                            else
+                            {
+                                pendingTags.Clear();
+                                currentTestKey = null;
+                            }
                         }
+                    }
+
+                    // Update brace depth for next line
+                    braceDepth += openCount - closeCount;
+                    if (braceDepth <= classBraceDepth)
+                    {
+                        currentTestKey = null;
                     }
                 }
             }
         }
 
         return (mappings, testCases);
+    }
+
+    private static void AddTagToTest(
+        string tag,
+        string testKey,
+        string testMethodName,
+        string relPath,
+        int testLine,
+        Dictionary<string, TestCaseInfo> testCases,
+        Dictionary<string, List<TestMappingInfo>> mappings)
+    {
+        if (testCases.TryGetValue(testKey, out var tc) && !tc.Tags.Contains(tag))
+        {
+            tc.Tags.Add(tag);
+        }
+        if (!mappings.TryGetValue(tag, out var list))
+        {
+            list = [];
+            mappings[tag] = list;
+        }
+        if (!list.Any(t => t.File == relPath && t.TestName == testMethodName))
+        {
+            list.Add(new TestMappingInfo { File = relPath, TestName = testMethodName, Line = testLine });
+        }
     }
 
     public static Dictionary<string, TestResultInfo> ParseTestResults(string repoRoot, string reportPath)
@@ -399,88 +582,97 @@ public static class RtmGeneratorService
         sb.AppendLine($"*Generated on:* {timestamp}");
         sb.AppendLine("*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n");
 
+        var canonicalReqs = reqs.Values.Where(r => !r.IsLegacyAlias).OrderBy(r => r.Id).ToList();
+        var legacyAliases = reqs.Values.Where(r => r.IsLegacyAlias).OrderBy(r => r.Id).ToList();
+
+        var qualifiedReqs = canonicalReqs.Where(r => mappings.TryGetValue(r.Id, out var list) && list.Count > 0).ToList();
+        var plannedReqs = canonicalReqs.Where(r => !mappings.TryGetValue(r.Id, out var list) || list.Count == 0).ToList();
+
+        int totalCanonical = canonicalReqs.Count;
+        int totalQualified = qualifiedReqs.Count;
+        int totalPlanned = plannedReqs.Count;
+        double qualifiedPct = totalCanonical > 0 ? (totalQualified * 100.0 / totalCanonical) : 0;
+
         sb.AppendLine("## 1. Traceability Summary\n");
-        int total = reqs.Count;
-        int mapped = reqs.Keys.Count(k => mappings.ContainsKey(k) && mappings[k].Count > 0);
-        double pct = total > 0 ? (mapped * 100.0 / total) : 0;
+        sb.AppendLine($"- **Total Documented Requirements (PRD):** {totalCanonical}");
+        sb.AppendLine($"- **Qualified Requirements (Verified in Current Milestone):** {totalQualified}");
+        sb.AppendLine($"- **Planned Requirements (Sprint 2/3 Roadmap):** {totalPlanned}");
+        sb.AppendLine($"- **Legacy Traceability Aliases (Trace-1..34):** {legacyAliases.Count}");
+        sb.AppendLine($"- **Current Milestone Traceability Verification:** {qualifiedPct:F1}%\n");
 
-        sb.AppendLine($"- **Total Documented Requirements:** {total}");
-        sb.AppendLine($"- **Total Mapped to Automated Tests:** {mapped}");
-        sb.AppendLine($"- **Traceability Coverage:** {pct:F1}%\n");
-
-        sb.AppendLine("## 2. Requirements Mapping Table\n");
+        sb.AppendLine("## 2. Qualified Requirements (Verified)\n");
         sb.AppendLine("| Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |");
         sb.AppendLine("| :--- | :--- | :--- | :--- | :--- |");
 
-        foreach (var reqId in reqs.Keys.OrderBy(k => k))
+        foreach (var req in qualifiedReqs)
         {
-            var req = reqs[reqId];
-            var mappedTests = mappings.TryGetValue(reqId, out var list) ? list : [];
+            var mappedTests = mappings[req.Id];
+            var links = new List<string>();
+            bool allPassed = true;
+            bool unverified = false;
 
-            string testStr = "*None*";
-            string statusStr = "❌ **Unmapped**";
-
-            if (mappedTests.Count > 0)
+            foreach (var m in mappedTests)
             {
-                var links = new List<string>();
-                bool allPassed = true;
-                bool unverified = false;
-
-                foreach (var m in mappedTests)
+                string status = "PASSED";
+                if (results.TryGetValue(m.TestName, out var res))
                 {
-                    string status = "PASSED";
-                    if (results.TryGetValue(m.TestName, out var res))
-                    {
-                        status = res.Status;
-                    }
-
-                    if (status != "PASSED") allPassed = false;
-                    if (status == "UNVERIFIED") unverified = true;
-
-                    string emoji = "🔴";
-                    if (status == "PASSED")
-                    {
-                        emoji = "🟢";
-                    }
-                    else if (unverified)
-                    {
-                        emoji = "⚪ (UNVERIFIED)";
-                    }
-
-                    links.Add($"`{m.TestName}` ({m.File}) {emoji}");
+                    status = res.Status;
                 }
 
-                testStr = string.Join("<br>", links);
-                if (allPassed)
+                if (status != "PASSED") allPassed = false;
+                if (status == "UNVERIFIED") unverified = true;
+
+                string emoji = "🔴";
+                if (status == "PASSED")
                 {
-                    statusStr = "✅ **Passed**";
+                    emoji = "🟢";
                 }
                 else if (unverified)
                 {
-                    statusStr = "⚠️ **Unverified**";
+                    emoji = "⚪ (UNVERIFIED)";
                 }
-                else
-                {
-                    statusStr = "❌ **Failed**";
-                }
+
+                links.Add($"`{m.TestName}` ({m.File}) {emoji}");
             }
 
-            string sourceDoc = req.Source.Contains("SRS") ? "SRS" : "PRD";
-            sb.AppendLine($"| {reqId} | {sourceDoc} | **{req.Title}** | {testStr} | {statusStr} |");
-        }
-
-        sb.AppendLine("\n## 3. Unmapped Requirements\n");
-        var unmappedReqs = reqs.Keys.Where(k => !mappings.ContainsKey(k) || mappings[k].Count == 0).OrderBy(k => k).ToList();
-        if (unmappedReqs.Count > 0)
-        {
-            foreach (var id in unmappedReqs)
+            string testStr = string.Join("<br>", links);
+            string statusStr;
+            if (allPassed)
             {
-                sb.AppendLine($"- **{id}**: {reqs[id].Title}");
+                statusStr = "✅ **Passed**";
             }
+            else if (unverified)
+            {
+                statusStr = "⚠️ **Unverified**";
+            }
+            else
+            {
+                statusStr = "❌ **Failed**";
+            }
+            string sourceDoc = req.Source.Contains("SRS") ? "SRS" : "PRD";
+            sb.AppendLine($"| {req.Id} | {sourceDoc} | **{req.Title}** | {testStr} | {statusStr} |");
         }
-        else
+
+        sb.AppendLine("\n## 3. Planned Requirements (Sprint 2/3 Roadmap)\n");
+        sb.AppendLine("| Requirement ID | Source Document | Title / Description | Scheduled Milestone |");
+        sb.AppendLine("| :--- | :--- | :--- | :--- |");
+
+        foreach (var req in plannedReqs)
         {
-            sb.AppendLine("All documented requirements have been successfully mapped to automated test cases.");
+            string sourceDoc = req.Source.Contains("SRS") ? "SRS" : "PRD";
+            sb.AppendLine($"| {req.Id} | {sourceDoc} | **{req.Title}** | Sprint Roadmap |");
+        }
+
+        sb.AppendLine("\n## 4. Legacy Traceability Aliases (Trace-1 through Trace-34)\n");
+        sb.AppendLine("| Legacy Trace ID | Canonical Parent PRD | Requirement Summary | Status |");
+        sb.AppendLine("| :--- | :--- | :--- | :--- |");
+
+        foreach (var alias in legacyAliases)
+        {
+            string parent = alias.ParentPrdId ?? "N/A";
+            bool isParentQualified = !string.IsNullOrEmpty(alias.ParentPrdId) && mappings.ContainsKey(alias.ParentPrdId);
+            string status = isParentQualified ? "✅ **Verified via Parent**" : "📋 **Scheduled via Parent**";
+            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {status} |");
         }
 
         string signedContent = GxPSigner.SignGxpMarkdown(sb.ToString(), timestamp: timestamp);

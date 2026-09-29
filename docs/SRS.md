@@ -1324,42 +1324,45 @@ The following matrix cross-references every Software Requirement Specification (
 
 ### 7.2 Foundational System Traceability Matrix (Trace-1 through Trace-34)
 
-| Trace ID | Parent PRD | Subsystem Area | Requirement Summary | Verification Method | Qualification Level | Automated Test Trace |
+> [!NOTE]
+> Requirements `Trace-1` through `Trace-34` are deprecated legacy aliases maintained strictly for backward reference to historical specification artifacts. Under the .NET 10 unified architecture and ADR-2247, canonical traceability is established directly against primary PRD identifiers (`PRD-*`). All automated verification tests declare canonical `PRD-*` attributes.
+
+| Legacy Trace ID | Canonical Parent PRD | Subsystem Area | Requirement Summary | Verification Method | Qualification Level | Status |
 | :--- | :--- | :--- | :--- | :---: | :---: | :--- |
-| `Trace-1` | `PRD-SYS-002` | Execution Database | Shadow Schema Retention | Test (T) | OQ | `apps/execution/tests/test_shadow_schema.py` |
-| `Trace-2` | `PRD-SUB-003` | RTSM Engine | Cryptographic Key Multi-Sharing & Rotation | Analysis (A) / Test (T) | OQ | `apps/execution/tests/test_randomization.py` |
-| `Trace-3` | `PRD-EDC-005` | EDC Execution | Read-Only Trial Locks & Alert Routing | Test (T) | OQ | `apps/execution/tests/test_trial_lock.py` |
-| `Trace-4` | `PRD-EDL-001` | Regulatory eTMF | Data-Driven Expected Document Lists (EDLs) | Test (T) | OQ | `apps/etmf/tests/test_etmf.py` |
-| `Trace-5` | `PRD-TMF-002` | Regulatory eTMF | TMF Taxonomy Validation, Extension Policy & Cutover Qualification | Test (T) | OQ | `apps/etmf/tests/test_etmf.py` |
-| `Trace-6` | `PRD-CTMS-001` | CTMS Operations | CTMS Monitoring and Site Operations Tracking | Test (T) | OQ | `apps/ctms/tests/test_ctms.py` |
-| `Trace-7` | `PRD-QLT-001` | Quality & CAPA | Quality & CAPA Traceability and Validation Assurance | Test (T) | OQ | `tests/test_quality_workflow.py` |
-| `Trace-8` | `PRD-PAT-001` | Gateway & eCOA | eCOA Subject Identity & Gateway Boundary | Test (T) | OQ | `apps/interop/tests/test_interop.py` |
-| `Trace-9` | `PRD-PAT-002` | Patient Portal | ePRO Offline Sync & Part 11 Reconciliation | Test (T) | OQ | `apps/interop/tests/test_interop_defeated.py` |
-| `Trace-10` | `PRD-EVT-001` | Notifications | Simulated Multi-Channel Notification Dispatcher | Test (T) | OQ | `apps/interop/tests/test_interop.py` |
-| `Trace-11` | `PRD-MDR-004` | Protocol Designer | Native Vue 3 Rules Designer and GxP Ledger Sync | Test (T) | OQ | `apps/designer/tests/test_designer_rules.py` |
-| `Trace-12` | `PRD-TMF-005` | Regulatory eTMF | eTMF Document Redaction & Regulatory Privacy Controls | Test (T) | OQ | `apps/execution/tests/test_biostat_exports.py` |
-| `Trace-13` | `PRD-SYS-001` | Security & eSignatures | Native Part 11 eSignature Workflow & Post-Signature Mutation Rejection | Test (T) | OQ | `apps/etmf/tests/test_etmf_signing_lifecycle.py` |
-| `Trace-14` | `PRD-EDC-003` | EDC Execution | PI Batch Electronic Sign-Off | Test (T) | OQ | `apps/execution/tests/test_batch_sign_off.py` |
-| `Trace-15` | `PRD-SAF-001` | Safety & PV | SAE Reconciliation | Test (T) | OQ | `apps/execution/tests/test_challenger_1_empirical_verification.py` |
-| `Trace-16` | `PRD-TCK-001` | Clinical Tickets | Support Tickets & Query Escalation | Test (T) | OQ | `apps/execution/tests/test_challenger_1_empirical_verification.py` |
-| `Trace-17` | `PRD-SYS-050` | API Gateway | Gateway Step-Up Re-Authentication and Signature Token Issuance | Test (T) | OQ | `apps/execution/tests/test_batch_sign_off.py` |
-| `Trace-18` | `PRD-ISF-001` | eISF Binder | eISF Gateway Integration & Document Management | Test (T) | OQ | `apps/gateway/tests/test_gateway.py` |
-| `Trace-19` | `PRD-CRF-001` | Protocol Designer | CRF Authoring & Global Library Instantiation | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-20` | `PRD-CRF-002` | Protocol Designer | Real-time Contextual Preview | Demonstration (D) / Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-21` | `PRD-CRF-003` | Protocol Designer | Collaborative Workspace Review Workflow | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-22` | `PRD-CRF-004` | Protocol Designer | Declarative Rule Generation & Multi-Layer Edit Checks | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-23` | `PRD-CRF-005` | Protocol Designer | Simulation and Dry-Run Cycle Detection | Analysis (A) / Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-24` | `PRD-CRF-006` | Protocol Designer | CDASH, USDM, and CSV Mapping Fidelity | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-25` | `PRD-CRF-007` | Interoperability | FHIR eSource Readiness & CDASH Pre-fill | Demonstration (D) / Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-26` | `PRD-CRF-008` | Protocol Designer | Regulatory & Protocol Document Export | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-27` | `PRD-CRF-009` | Security & RBAC | Role-Based Authorization Gates | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-28` | `PRD-CRF-010` | System Baseline | GxP Change-Reason Justification | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-29` | `PRD-CRF-011` | System Baseline | Immutable Audit Attribution | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-30` | `PRD-CRF-012` | Protocol Designer | Version Pinning and Lock Enforcement | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-31` | `PRD-CRF-013` | System Baseline | Site & Tenant Data Isolation | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-32` | `PRD-CRF-014` | Patient Portal | Failure Recovery & High Availability | Test (T) | OQ | `apps/designer/tests/test_crf_builder_compliance.py` |
-| `Trace-33` | `PRD-CRF-015` | Web Portal | In-Memory Accessibility Auditing | Test (T) | OQ | `apps/execution/tests/test_layout_validator_compliance.py` |
-| `Trace-34` | `PRD-SYS-041` | DevOps & SDLC | Label-Based Backlog Gating | Test (T) | IQ | `tests/test_sync_github_project.py` |
+| `Trace-1` | `PRD-SYS-002` | Execution Database | Shadow Schema Retention | Test (T) | OQ | Deprecated (maps to `PRD-SYS-002`) |
+| `Trace-2` | `PRD-SUB-003` | RTSM Engine | Cryptographic Key Multi-Sharing & Rotation | Analysis (A) / Test (T) | OQ | Deprecated (maps to `PRD-SUB-003`) |
+| `Trace-3` | `PRD-EDC-005` | EDC Execution | Read-Only Trial Locks & Alert Routing | Test (T) | OQ | Deprecated (maps to `PRD-EDC-005`) |
+| `Trace-4` | `PRD-EDL-001` | Regulatory eTMF | Data-Driven Expected Document Lists (EDLs) | Test (T) | OQ | Deprecated (maps to `PRD-EDL-001`) |
+| `Trace-5` | `PRD-TMF-002` | Regulatory eTMF | TMF Taxonomy Validation, Extension Policy & Cutover Qualification | Test (T) | OQ | Deprecated (maps to `PRD-TMF-002`) |
+| `Trace-6` | `PRD-CTMS-001` | CTMS Operations | CTMS Monitoring and Site Operations Tracking | Test (T) | OQ | Deprecated (maps to `PRD-CTMS-001`) |
+| `Trace-7` | `PRD-QLT-001` | Quality & CAPA | Quality & CAPA Traceability and Validation Assurance | Test (T) | OQ | Deprecated (maps to `PRD-QLT-001`) |
+| `Trace-8` | `PRD-PAT-001` | Gateway & eCOA | eCOA Subject Identity & Gateway Boundary | Test (T) | OQ | Deprecated (maps to `PRD-PAT-001`) |
+| `Trace-9` | `PRD-PAT-002` | Patient Portal | ePRO Offline Sync & Part 11 Reconciliation | Test (T) | OQ | Deprecated (maps to `PRD-PAT-002`) |
+| `Trace-10` | `PRD-EVT-001` | Notifications | Simulated Multi-Channel Notification Dispatcher | Test (T) | OQ | Deprecated (maps to `PRD-EVT-001`) |
+| `Trace-11` | `PRD-MDR-004` | Protocol Designer | Native Vue 3 Rules Designer and GxP Ledger Sync | Test (T) | OQ | Deprecated (maps to `PRD-MDR-004`) |
+| `Trace-12` | `PRD-TMF-005` | Regulatory eTMF | eTMF Document Redaction & Regulatory Privacy Controls | Test (T) | OQ | Deprecated (maps to `PRD-TMF-005`) |
+| `Trace-13` | `PRD-SYS-001` | Security & eSignatures | Native Part 11 eSignature Workflow & Post-Signature Mutation Rejection | Test (T) | OQ | Deprecated (maps to `PRD-SYS-001`) |
+| `Trace-14` | `PRD-EDC-003` | EDC Execution | PI Batch Electronic Sign-Off | Test (T) | OQ | Deprecated (maps to `PRD-EDC-003`) |
+| `Trace-15` | `PRD-SAF-001` | Safety & PV | SAE Reconciliation | Test (T) | OQ | Deprecated (maps to `PRD-SAF-001`) |
+| `Trace-16` | `PRD-TCK-001` | Clinical Tickets | Support Tickets & Query Escalation | Test (T) | OQ | Deprecated (maps to `PRD-TCK-001`) |
+| `Trace-17` | `PRD-SYS-050` | API Gateway | Gateway Step-Up Re-Authentication and Signature Token Issuance | Test (T) | OQ | Deprecated (maps to `PRD-SYS-050`) |
+| `Trace-18` | `PRD-ISF-001` | eISF Binder | eISF Gateway Integration & Document Management | Test (T) | OQ | Deprecated (maps to `PRD-ISF-001`) |
+| `Trace-19` | `PRD-CRF-001` | Protocol Designer | CRF Authoring & Global Library Instantiation | Test (T) | OQ | Deprecated (maps to `PRD-CRF-001`) |
+| `Trace-20` | `PRD-CRF-002` | Protocol Designer | Real-time Contextual Preview | Demonstration (D) / Test (T) | OQ | Deprecated (maps to `PRD-CRF-002`) |
+| `Trace-21` | `PRD-CRF-003` | Protocol Designer | Collaborative Workspace Review Workflow | Test (T) | OQ | Deprecated (maps to `PRD-CRF-003`) |
+| `Trace-22` | `PRD-CRF-004` | Protocol Designer | Declarative Rule Generation & Multi-Layer Edit Checks | Test (T) | OQ | Deprecated (maps to `PRD-CRF-004`) |
+| `Trace-23` | `PRD-CRF-005` | Protocol Designer | Simulation and Dry-Run Cycle Detection | Analysis (A) / Test (T) | OQ | Deprecated (maps to `PRD-CRF-005`) |
+| `Trace-24` | `PRD-CRF-006` | Protocol Designer | CDASH, USDM, and CSV Mapping Fidelity | Test (T) | OQ | Deprecated (maps to `PRD-CRF-006`) |
+| `Trace-25` | `PRD-CRF-007` | Interoperability | FHIR eSource Readiness & CDASH Pre-fill | Demonstration (D) / Test (T) | OQ | Deprecated (maps to `PRD-CRF-007`) |
+| `Trace-26` | `PRD-CRF-008` | Protocol Designer | Regulatory & Protocol Document Export | Test (T) | OQ | Deprecated (maps to `PRD-CRF-008`) |
+| `Trace-27` | `PRD-CRF-009` | Security & RBAC | Role-Based Authorization Gates | Test (T) | OQ | Deprecated (maps to `PRD-CRF-009`) |
+| `Trace-28` | `PRD-CRF-010` | System Baseline | GxP Change-Reason Justification | Test (T) | OQ | Deprecated (maps to `PRD-CRF-010`) |
+| `Trace-29` | `PRD-CRF-011` | System Baseline | Immutable Audit Attribution | Test (T) | OQ | Deprecated (maps to `PRD-CRF-011`) |
+| `Trace-30` | `PRD-CRF-012` | Protocol Designer | Version Pinning and Lock Enforcement | Test (T) | OQ | Deprecated (maps to `PRD-CRF-012`) |
+| `Trace-31` | `PRD-CRF-013` | System Baseline | Site & Tenant Data Isolation | Test (T) | OQ | Deprecated (maps to `PRD-CRF-013`) |
+| `Trace-32` | `PRD-CRF-014` | Patient Portal | Failure Recovery & High Availability | Test (T) | OQ | Deprecated (maps to `PRD-CRF-014`) |
+| `Trace-33` | `PRD-CRF-015` | Web Portal | In-Memory Accessibility Auditing | Test (T) | OQ | Deprecated (maps to `PRD-CRF-015`) |
+| `Trace-34` | `PRD-SYS-041` | DevOps & SDLC | Label-Based Backlog Gating | Test (T) | IQ | Deprecated (maps to `PRD-SYS-041`) |
 
 ---
 

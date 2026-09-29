@@ -11,11 +11,21 @@ public static class MarkdownValidatorService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Validating Markdown documentation formatting...");
 
+        string[] excludedDirs = [
+            $"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}.system_generated{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}.tmp{Path.DirectorySeparatorChar}"
+        ];
+
         var mdFiles = files != null && files.Length > 0
             ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists)
             : Directory.EnumerateFiles(repoRoot, "*.md", SearchOption.AllDirectories)
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}"));
+                .Where(f => !excludedDirs.Any(d => f.Contains(d)));
 
         int issues = 0;
         foreach (var file in mdFiles)
@@ -23,8 +33,21 @@ public static class MarkdownValidatorService
             string[] lines;
             try { lines = File.ReadAllLines(file); } catch { continue; }
 
+            bool inFencedBlock = false;
             for (int i = 0; i < lines.Length; i++)
             {
+                string trimmed = lines[i].TrimStart();
+                if (trimmed.StartsWith("```") || trimmed.StartsWith("~~~"))
+                {
+                    inFencedBlock = !inFencedBlock;
+                    continue;
+                }
+
+                if (inFencedBlock)
+                {
+                    continue;
+                }
+
                 if (lines[i].StartsWith('#') && !lines[i].Contains(' '))
                 {
                     string relPath = Path.GetRelativePath(repoRoot, file);

@@ -59,3 +59,9 @@ public class AttestationIdValueConverter() : ValueConverter<AttestationId, Guid>
     id => id.Value,
     guid => new AttestationId(guid)
 );
+
+public class ProtocolVersionIdValueConverter() : ValueConverter<ProtocolVersionId, Guid>(
+    id => id.Value,
+    guid => new ProtocolVersionId(guid)
+);
+
