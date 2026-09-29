@@ -207,11 +207,11 @@ describe("cross-language parity", () => {
       .filter(Boolean)
       .join("; ");
     try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
+      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
+      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     }
