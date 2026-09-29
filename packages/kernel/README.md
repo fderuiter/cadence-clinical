@@ -4,7 +4,7 @@ The core clinical domain modular monolith (`Cadence.Kernel.*`) providing the uni
 
 ## Architecture
 
-As formalized in [ADR-2244](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and specified in [`CLINICAL_KERNEL_SPECIFICATION.md`](file:///Volumes/SanDisk%20External%20SSD/Code/cadence-clinical/docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), the Clinical Kernel consolidates:
+As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and specified in [`CLINICAL_KERNEL_SPECIFICATION.md`](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), the Clinical Kernel consolidates:
 - **Identity & Ownership**: Tenant, Organization, Person, Study, Site, StudySite
 - **Clinical Subjects**: Participant, Enrollment, Cohort
 - **Clinical Truth**: Observations, Assertions, Sources, Provenance
