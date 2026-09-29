@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -59,6 +60,8 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseTestGatewaySecret();
+
         builder.ConfigureServices(services =>
         {
             // See this type's own remarks: a completely separate, isolated InMemory service provider is EF

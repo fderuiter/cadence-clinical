@@ -87,6 +87,12 @@ public static class HmacSigner
         return Convert.ToHexStringLower(hash);
     }
 
+    /// <summary>
+    /// Verifies a gateway identity signature against the one canonical payload
+    /// <see cref="GenerateGatewaySignature"/> produces. There are deliberately no fallback payload shapes: every
+    /// signed field must match exactly, so a caller cannot drop a scope field (site, sponsor, tenant, unblinded
+    /// access) and still pass verification.
+    /// </summary>
     public static bool VerifyGatewaySignature(
         string userId,
         string roles,
@@ -105,91 +111,10 @@ public static class HmacSigner
             return false;
         }
 
-        // 1. Verify with canonical 9-field scope-aware payload (includes sig_token if present)
         string expected = GenerateGatewaySignature(
             userId, roles, timestamp, secret, changeReason, siteId, sponsorId, unblindedAccess, tenantId, sigToken);
 
-        if (FixedTimeEqualsHex(expected, signature))
-        {
-            return true;
-        }
-
-        // Fallback 0: Try verifying with canonical 8-field scope-aware payload (no sig_token)
-        if (sigToken != null)
-        {
-            string fallback8Field = GenerateGatewaySignature(
-                userId, roles, timestamp, secret, changeReason, siteId, sponsorId, unblindedAccess, tenantId, null);
-            if (FixedTimeEqualsHex(fallback8Field, signature))
-            {
-                return true;
-            }
-        }
-
-        // Fallback 1: Try verifying with tenant_id = null
-        bool hasOtherScopes = !string.IsNullOrWhiteSpace(siteId) || !string.IsNullOrWhiteSpace(sponsorId) || unblindedAccess;
-        if (!string.IsNullOrWhiteSpace(tenantId) && hasOtherScopes)
-        {
-            string fallbackTenant = GenerateGatewaySignature(
-                userId, roles, timestamp, secret, changeReason, siteId, sponsorId, unblindedAccess, null, sigToken);
-            if (FixedTimeEqualsHex(fallbackTenant, signature))
-            {
-                return true;
-            }
-
-            if (sigToken != null)
-            {
-                string fallbackTenantNoSig = GenerateGatewaySignature(
-                    userId, roles, timestamp, secret, changeReason, siteId, sponsorId, unblindedAccess, null, null);
-                if (FixedTimeEqualsHex(fallbackTenantNoSig, signature))
-                {
-                    return true;
-                }
-            }
-        }
-
-        // 2. Scope-free fallbacks: Only permitted if no scope fields are present/active
-        bool hasScopes = !string.IsNullOrWhiteSpace(siteId)
-            || !string.IsNullOrWhiteSpace(sponsorId)
-            || unblindedAccess
-            || (!string.IsNullOrWhiteSpace(tenantId) && tenantId != "tenant_default");
-
-        if (!hasScopes)
-        {
-            string noScopeExpected = GenerateGatewaySignature(
-                userId, roles, timestamp, secret, changeReason, null, null, false, null, sigToken);
-            if (FixedTimeEqualsHex(noScopeExpected, signature))
-            {
-                return true;
-            }
-
-            if (sigToken != null)
-            {
-                string noScopeNoSig = GenerateGatewaySignature(
-                    userId, roles, timestamp, secret, changeReason, null, null, false, null, null);
-                if (FixedTimeEqualsHex(noScopeNoSig, signature))
-                {
-                    return true;
-                }
-            }
-
-            // Fallback 3: Legacy 4-field V2 payload
-            var legacyPayload = new Dictionary<string, object?>
-            {
-                ["change_reason"] = changeReason ?? "",
-                ["roles"] = roles ?? "",
-                ["timestamp"] = timestamp ?? "",
-                ["user_id"] = userId ?? ""
-            };
-            byte[] legacySerialized = CanonicalSerialize(legacyPayload);
-            using var hmac = new HMACSHA256(secret);
-            string legacyExpected = Convert.ToHexStringLower(hmac.ComputeHash(legacySerialized));
-            if (FixedTimeEqualsHex(legacyExpected, signature))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return FixedTimeEqualsHex(expected, signature);
     }
 
     public static string ComputeSha256Hash(string input)

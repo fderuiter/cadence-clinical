@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+* **Status:** Superseded by [ADR-2250](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
+
+> [!NOTE]
+> **Superseded Notice (2026-09-29):** This record described the gateway identity propagation design. The .NET 10 enforcement of it, failing closed with no default secret, is [ADR-2250](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
 ## Context
 

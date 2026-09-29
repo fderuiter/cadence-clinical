@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -280,5 +281,44 @@ public class TelemetryUnitTests
         act5.Should().Throw<ArgumentNullException>();
         act6.Should().Throw<ArgumentNullException>();
         act7.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task UseCadenceWebDefaults_MapsLivenessAndReadinessProbes()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.AddCadenceWebDefaults();
+        builder.Services.AddHealthChecks()
+            .AddCheck("database", () => HealthCheckResult.Unhealthy(), tags: [CadenceTelemetryExtensions.ReadinessTag]);
+
+        using var app = builder.Build();
+        app.UseCadenceWebDefaults();
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        using var client = app.GetTestClient();
+
+        var live = await client.GetAsync("/healthz/live", TestContext.Current.CancellationToken);
+        var ready = await client.GetAsync("/healthz/ready", TestContext.Current.CancellationToken);
+
+        live.StatusCode.Should().Be(HttpStatusCode.OK);
+        ready.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+        await app.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public void AddCadenceWebDefaults_WithOtlpEndpoint_RegistersProvidersNamedAfterService()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Configuration[CadenceTelemetryExtensions.OtlpEndpointKey] = "http://localhost:4317";
+        builder.Configuration["OTEL_SERVICE_NAME"] = "cadence-test";
+
+        builder.AddCadenceWebDefaults();
+
+        using var app = builder.Build();
+        app.Services.GetService<TracerProvider>().Should().NotBeNull();
+        app.Services.GetService<MeterProvider>().Should().NotBeNull();
     }
 }

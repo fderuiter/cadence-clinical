@@ -1,5 +1,17 @@
 # Clinical Domain Glossary
 
+### Clinical Research OS (Engines and Kernel)
+
+The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation, eConsent, RTSM, Safety and the rest as applications built on them. Founding invariant K-TRUTH-1: no product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the kernel when it explains the provenance, authority, meaning or lifecycle of clinical evidence across more than one application.
+
+### Concept Registry
+
+The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation.
+
+### Rules, Validation Findings and Lineage
+
+Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254), producing `ValidationFinding`s with workflow and stable identity across runs. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).
+
 ### Clinical Kernel Modular Monolith
 
 An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).

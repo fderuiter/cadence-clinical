@@ -20,6 +20,7 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -400,7 +401,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // The literal AC wording: "WebApplicationFactory<Program>().CreateClient() succeeding without
         // throwing". xunit fails this test automatically if CreateClient() (or the host startup it triggers)
         // throws, so no further assertion is needed beyond "this call returns".
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
 
         client.Should().NotBeNull();
     }
@@ -411,7 +412,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     {
         // AC #7's own wording: "app.Services.GetRequiredService<T>() for every interface registered in this
         // ticket". Forces client/host creation first so this exercises the fully-built service provider.
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         using var scope = _factory.Services.CreateScope();
         var sp = scope.ServiceProvider;
 
@@ -440,7 +441,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     public async Task Healthz_GivenTheFullyWiredCompositionRoot_StillReturnsTheUnchangedPreExistingResponse()
     {
         // AC #3: this ticket must not regress the pre-existing placeholder route.
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
 
         var response = await client.GetAsync("/healthz", TestContext.Current.CancellationToken);
 
@@ -458,7 +459,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // AC #4, exercised through the REAL ISiteComplianceApplicationService/ISiteComplianceRepository/
         // ExecutionDbContext -- not a fake -- proving the eTMF webhook route's full DI graph actually
         // persists a new SiteComplianceCache row end to end.
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         var payload = new EtmfCompletenessWebhookPayload("STUDY-E2E", "SITE-E2E", "SITE_ACTIVATION", true, null);
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", payload,
@@ -479,7 +480,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // eTMF. Missing expected documents.'" -- exercised end to end: no SiteComplianceCache row exists yet
         // for this (study, site) pair, which is itself "not compliant" per
         // SiteComplianceApplicationService.ActivateSiteAsync's own `gate is not { IsComplete: true }` check.
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
         var request = new SiteActivationRequest("STUDY-E2E-BLOCKED");
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/sites/SITE-E2E-BLOCKED/activate", request,
@@ -499,7 +500,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // .../compliance-status is called, then the response is 200 (never 404) with is_complete: false,
         // missing_documents: []" -- exercised end to end against a genuinely empty ExecutionDbContext table
         // (no prior webhook/activation call for this study/site pair in this test).
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateSignedClient();
 
         var response = await client.GetAsync(
             "/api/v1/execution/sites/SITE-NEVER-SEEN/compliance-status?study_id=STUDY-NEVER-SEEN",
@@ -529,6 +530,8 @@ public sealed class ExecutionProgramStartupTests : IDisposable
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseTestGatewaySecret();
+
             builder.ConfigureServices(services =>
             {
                 // `Program.cs`'s own registration configures ExecutionDbContext for Npgsql, which -- via

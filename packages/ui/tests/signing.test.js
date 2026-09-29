@@ -1,6 +1,4 @@
-import { execSync } from "child_process";
-import fs from "fs";
-import path from "path";
+import crypto from "node:crypto";
 import { describe, it, expect } from "vitest";
 import {
   canonicalSerialize,
@@ -172,126 +170,99 @@ describe("sha256", () => {
   });
 });
 
-describe("cross-language parity", () => {
-  const getPythonOutput = (script) => {
-    const cwd = process.cwd();
-    let repoRoot = cwd;
-    for (let i = 0; i < 5; i++) {
-      if (
-        fs.existsSync(path.join(repoRoot, "Cadence.sln")) ||
-        fs.existsSync(path.join(repoRoot, "pnpm-workspace.yaml")) ||
-        fs.existsSync(path.join(repoRoot, "pyproject.toml"))
-      ) {
-        break;
-      }
-      repoRoot = path.dirname(repoRoot);
-    }
-    const env = {
-      ...process.env,
-      PYTHONPATH: repoRoot,
-      AUDIT_LOG_SECRET_KEY:
-        process.env.AUDIT_LOG_SECRET_KEY ||
-        "test-gxp-audit-secret-key-placeholder-abc",
-      INBOUND_EMAIL_HMAC_SECRET:
-        process.env.INBOUND_EMAIL_HMAC_SECRET ||
-        "test-email-hmac-secret-placeholder-xyz",
-      GATEWAY_SECRET:
-        process.env.GATEWAY_SECRET || "internal-gateway-secret-12345",
-      SIGNING_SECRET:
-        process.env.SIGNING_SECRET || "designer-amendment-secure-key-12345",
-    };
-    const pyScript = script
-      .trim()
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .join("; ");
-    try {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
-        .toString()
-        .trim();
-    } catch {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
-        .toString()
-        .trim();
-    }
+// Envelope format parity with the retired Python reference (packages/security/encryption.py).
+// These are frozen known-answer vectors captured from that module, so the tests no longer
+// shell out to a Python interpreter. The JS -> other direction is checked against Node's own
+// crypto implementation, which is independent of WebCrypto's envelope handling in signing.js.
+describe("envelope format parity (known-answer vectors)", () => {
+  // Captured from encryption.encrypt({"hello": "world", "count": 42}, bytes(range(32)), 1,
+  // b"my_aad_data") with os.urandom patched to return bytes(range(100, 112)) as the nonce.
+  const PYTHON_ENVELOPE =
+    "AAAAAWRlZmdoaWprbG1ubzM5vQkMhyK8BFZtxPgND5EurSQwqRucAMu1jjW7ZevBCA2O52kx0C05XFR1";
+  // Captured from encryption.derive_session_key(b"session_material_abc", b"salt_123", b"info_456").
+  const PYTHON_HKDF_HEX =
+    "697e50afc31edfdf1951156b913b1f542d73a5b55e00d78e2a0870ba7b1caa1e"; // pragma: allowlist secret
+
+  const keyFrom = (offset) => {
+    const key = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) key[i] = i + offset;
+    return key;
   };
 
   it("JS can decrypt a Python-produced AES-GCM envelope", async () => {
-    const rawKey = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) rawKey[i] = i;
-    const hexKey = Array.from(rawKey)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    const payload = { hello: "world", count: 42 };
-    const aad = "my_aad_data";
-
-    const pythonEnvelope = getPythonOutput(`
-from packages.security.encryption import encrypt
-key = bytes.fromhex('${hexKey}')
-payload = {'hello': 'world', 'count': 42}
-aad = '${aad}'.encode('utf-8')
-print(encrypt(payload, key, 1, aad))
-`);
-
     const decrypted = await decryptAESGCM(
-      pythonEnvelope,
-      rawKey,
+      PYTHON_ENVELOPE,
+      keyFrom(0),
       1,
-      new TextEncoder().encode(aad)
+      new TextEncoder().encode("my_aad_data")
     );
-    expect(decrypted).toEqual(payload);
+    expect(decrypted).toEqual({ hello: "world", count: 42 });
   });
 
-  it("Python can decrypt a JS-produced AES-GCM envelope", async () => {
-    const rawKey = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) rawKey[i] = i + 10;
-    const hexKey = Array.from(rawKey)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+  it("rejects the Python-produced envelope when the AAD differs", async () => {
+    await expect(
+      decryptAESGCM(
+        PYTHON_ENVELOPE,
+        keyFrom(0),
+        1,
+        new TextEncoder().encode("other_aad")
+      )
+    ).rejects.toThrow("Decryption failed");
+  });
 
+  it("JS envelope is version(4B BE) || nonce(12B) || ciphertext || tag(16B)", async () => {
+    const rawKey = keyFrom(10);
     const payload = {
       msg: "from javascript to python with love",
       success: true,
     };
-    const aad = "another_aad";
+    const aad = Buffer.from("another_aad", "utf8");
 
     const jsEnvelope = await encryptAESGCM(
       payload,
       rawKey,
       1,
-      new TextEncoder().encode(aad)
+      new Uint8Array(aad)
     );
 
-    const pythonOutput = getPythonOutput(`
-import json
-from packages.security.encryption import decrypt
-key = bytes.fromhex('${hexKey}')
-aad = '${aad}'.encode('utf-8')
-decrypted = decrypt('${jsEnvelope}', key, 1, aad)
-print(json.dumps(decrypted))
-`);
-    const parsedOutput = JSON.parse(pythonOutput);
-    expect(parsedOutput).toEqual(payload);
+    const packed = Buffer.from(jsEnvelope, "base64");
+    expect(packed.readUInt32BE(0)).toBe(1);
+    const nonce = packed.subarray(4, 16);
+    const ciphertext = packed.subarray(16, packed.length - 16);
+    const tag = packed.subarray(packed.length - 16);
+
+    const decipher = crypto.createDecipheriv("aes-256-gcm", rawKey, nonce);
+    decipher.setAAD(aad);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ]).toString("utf8");
+
+    expect(plaintext).toBe(canonicalSerialize(payload));
+    expect(JSON.parse(plaintext)).toEqual(payload);
   });
 
   it("HKDF key derivation matches Python exactly", async () => {
-    const material = "session_material_abc";
-    const salt = "salt_123";
-    const info = "info_456";
+    const jsDerived = await deriveSessionKey(
+      "session_material_abc",
+      "salt_123",
+      "info_456"
+    );
+    expect(Buffer.from(jsDerived).toString("hex")).toBe(PYTHON_HKDF_HEX);
+  });
 
-    const jsDerived = await deriveSessionKey(material, salt, info);
-    const jsHex = Array.from(jsDerived)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    const pythonHex = getPythonOutput(`
-from packages.security.encryption import derive_session_key
-derived = derive_session_key(b'${material}', b'${salt}', b'${info}')
-print(derived.hex())
-`);
-    expect(jsHex).toBe(pythonHex);
+  it("HKDF matches RFC 5869 test case 1", async () => {
+    // RFC 5869 A.1 truncated to the 32-byte output deriveSessionKey produces.
+    const ikm = new Uint8Array(22).fill(0x0b);
+    const salt = Uint8Array.from(
+      Buffer.from("000102030405060708090a0b0c", "hex")
+    );
+    const info = Uint8Array.from(Buffer.from("f0f1f2f3f4f5f6f7f8f9", "hex"));
+    const okm = await deriveSessionKey(ikm, salt, info);
+    expect(Buffer.from(okm).toString("hex")).toBe(
+      "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf" // pragma: allowlist secret
+    );
   });
 });
 

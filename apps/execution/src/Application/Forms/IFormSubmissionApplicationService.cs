@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Execution.Application.Forms;
@@ -25,7 +26,15 @@ public interface IFormSubmissionApplicationService
 
     Task<Result<FormSubmissionResponse>> CompleteAsync(string id, CancellationToken cancellationToken);
 
-    Task<Result<FormSubmissionResponse>> ApproveAsync(string id, FormSubmissionApproveRequest request, CancellationToken cancellationToken);
+    /// <summary>
+    /// Applies the Principal Investigator signature. The signer is always <paramref name="signer"/>, the
+    /// authenticated caller; a manifest naming anyone else is rejected.
+    /// </summary>
+    Task<Result<FormSubmissionResponse>> ApproveAsync(
+        string id,
+        FormSubmissionApproveRequest request,
+        AuthenticatedCaller? signer,
+        CancellationToken cancellationToken);
 
     Task<Result<FormSubmissionResponse>> UnlockAsync(string id, string reason, CancellationToken cancellationToken);
 }

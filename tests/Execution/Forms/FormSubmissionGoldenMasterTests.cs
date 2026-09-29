@@ -60,7 +60,7 @@ public sealed class FormSubmissionGoldenMasterTests
 
         // 3. Approve with valid Part 11 signature
         var hash = ComputeSha256(payload);
-        var manifest = new SignatureManifest(
+        var manifest = SignatureManifest.Create(
             SignerId: "pi-user-smith",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I approve the accuracy and completeness of this form.",

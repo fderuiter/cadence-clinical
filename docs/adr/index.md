@@ -142,7 +142,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
 
 - [2023-01-04: ADR 2023-01-04: Keycloak Identity Management](2023-01-04-keycloak-identity-management.md)
-- [2026-07-22: ADR 2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md)
+- [2026-07-22: ADR 2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md) _(Superseded by ADR-2250)_
 - [2026-07-22: ADR 2026-07-22: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md)
 - [2026-07-22: ADR 2026-07-22: Signature Re-Authentication](2026-07-22-signature-re-authentication.md)
 - [2026-07-23: ADR 2026-07-23: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)](2026-07-23-canonical-json-signatures-and-rolling-versioning.md)
@@ -441,7 +441,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-24: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
 - [2026-08-25: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer](2026-08-25-standardize-microservice-domain-exceptions-rfc-7807-handlers-and-repository-layer.md)
 - [2026-08-29: E2B R3 Suspect Drug WHODrug Active Ingredient Validation and AS2 PreFlight Gating](2026-08-29-e2b-r3-suspect-drug-whodrug-active-ingredient-validation-and-as2-preflight-gating.md)
-- [2026-08-29: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md)
+- [2026-08-29: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md) _(Superseded by ADR-2250)_
 - [2026-08-29: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md)
 - [2026-08-29: Schedule of Activities Matrix WCAG 2.1 AA 2D Grid Navigation and Background Sync Hardening](2026-08-29-schedule-of-activities-matrix-wcag-21-aa-2d-grid-navigation-and-background-sync-hardening.md)
 - [2026-09-04: Pin `uv` Python Preference to System for Python 3.14](2026-09-04-pin-uv-python-preference-to-system-for-python-314.md)
@@ -453,6 +453,13 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: PostgreSQL Native Bitemporal Interval Standard via tstzrange and GiST](2026-09-29-postgresql-native-bitemporal-interval-standard-via-tstzrange-and-gist.md)
 
 - [2026-09-29: Clinical Kernel Single Database Schema and Architecture Sentinel Hardening](2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md)
+- [2026-09-29: ADR-2250 Kernel Tenant Isolation via Row-Level Security (K003)](2026-09-29-kernel-tenant-isolation-via-row-level-security.md)
+- [2026-09-29: ADR-2251 Kernel Authority Computed from Evidence via a Hand-Coded Policy Evaluator (K004)](2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md)
+- [2026-09-29: ADR-2252 Concept Registry with CDISC Biomedical Concepts as the Semantic Key (K005)](2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md)
+- [2026-09-29: ADR-2253 Identity Vault and Layered Participant Identity (K006)](2026-09-29-identity-vault-and-layered-participant-identity.md)
+- [2026-09-29: ADR-2254 Rules as Versioned Data and a Unified Rules Engine (K008)](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md)
+- [2026-09-29: ADR-2255 Kernel Lineage Graph and Scientific Traceability (K009)](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md)
 
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
+- [2026-09-29: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)

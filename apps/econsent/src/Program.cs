@@ -1,15 +1,19 @@
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
+builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
+app.UseCadenceSecurity();
 app.MapCadenceHealthAndStatusEndpoints(
     "Cadence.Apps.Econsent",
     "econsent",
