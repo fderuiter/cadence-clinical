@@ -8,6 +8,8 @@ using Cadence.Database;
 
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 using Testcontainers.PostgreSql;
 
 using Xunit;
@@ -15,77 +17,103 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Integration;
 
 /// <summary>
-/// Testcontainers PostgreSQL fixture for execution-subjects integration and concurrency testing.
-/// Manages container lifecycle, executes EF Core migrations on initialization, and provides
-/// resilient environment detection so test suites pass seamlessly when Docker is dormant.
-/// @req:PRD-SUB-001, PRD-SYS-053
+/// PostgreSQL fixture for execution-subjects integration and concurrency testing.
+/// Two opt-in sources, checked in order:
+/// <list type="number">
+/// <item><c>CADENCE_TEST_POSTGRES</c>: an Npgsql connection string to an existing server; the fixture
+/// creates a throwaway database on it and drops it afterwards (works without Docker).</item>
+/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</item>
+/// </list>
+/// With neither set, <see cref="ConnectionString"/> is null and tests call <see cref="SkipIfUnavailable"/>
+/// so they report as skipped rather than passing against a stand-in. Once opted in, any startup
+/// failure is rethrown so a broken database never masquerades as a green run.
+/// @req:PRD-SUB-001
 /// </summary>
 public sealed class ExecutionPostgresFixture : IAsyncLifetime
 {
-    private PostgreSqlContainer? _container;
+    private const string SkipReason =
+        "PostgreSQL integration tests need CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1.";
 
-    public bool IsDockerAvailable { get; private set; }
+    private PostgreSqlContainer? _container;
+    private string? _adminConnectionString;
+    private string? _databaseName;
 
     public string? ConnectionString { get; private set; }
 
+    public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
+
     public async ValueTask InitializeAsync()
     {
-        if (!CheckDockerSocketAvailable())
+        var external = Environment.GetEnvironmentVariable("CADENCE_TEST_POSTGRES");
+        if (!string.IsNullOrWhiteSpace(external))
         {
-            IsDockerAvailable = false;
+            await CreateThrowawayDatabaseAsync(external).ConfigureAwait(false);
+        }
+        else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
+        {
+            await StartContainerAsync().ConfigureAwait(false);
+        }
+        else
+        {
             return;
         }
 
-        try
-        {
-            var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOCKER_HOST")) && File.Exists(userSocket))
-            {
-                Environment.SetEnvironmentVariable("DOCKER_HOST", $"unix://{userSocket}");
-            }
-
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED")))
-            {
-                Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
-            }
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            _container = new PostgreSqlBuilder()
-                .WithImage("postgres:16-alpine")
-                .Build();
-
-            await _container.StartAsync(cts.Token).ConfigureAwait(false);
-            ConnectionString = _container.GetConnectionString();
-            IsDockerAvailable = true;
-
-            await ApplyMigrationsAsync(ConnectionString).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            IsDockerAvailable = false;
-            if (_container != null)
-            {
-                try
-                {
-                    await _container.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // Suppress cleanup failure on aborted initialization
-                }
-
-                _container = null;
-            }
-        }
+        await ApplyMigrationsAsync(ConnectionString!).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (_databaseName is not null && _adminConnectionString is not null)
+        {
+            NpgsqlConnection.ClearAllPools();
+            await using var admin = new NpgsqlConnection(_adminConnectionString);
+            await admin.OpenAsync().ConfigureAwait(false);
+            await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);
+            await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+        }
+
         if (_container != null)
         {
             await _container.DisposeAsync().ConfigureAwait(false);
             _container = null;
         }
+    }
+
+    private async Task CreateThrowawayDatabaseAsync(string adminConnectionString)
+    {
+        _adminConnectionString = adminConnectionString;
+        _databaseName = $"cadence_it_{Guid.NewGuid():N}";
+
+        await using (var admin = new NpgsqlConnection(adminConnectionString))
+        {
+            await admin.OpenAsync().ConfigureAwait(false);
+            await using var create = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\"", admin);
+            await create.ExecuteNonQueryAsync().ConfigureAwait(false);
+        }
+
+        ConnectionString = new NpgsqlConnectionStringBuilder(adminConnectionString) { Database = _databaseName }.ConnectionString;
+    }
+
+    private async Task StartContainerAsync()
+    {
+        var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOCKER_HOST")) && File.Exists(userSocket))
+        {
+            Environment.SetEnvironmentVariable("DOCKER_HOST", $"unix://{userSocket}");
+        }
+
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED")))
+        {
+            Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        }
+
+        _container = new PostgreSqlBuilder()
+            .WithImage("postgres:16-alpine")
+            .Build();
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        await _container.StartAsync(cts.Token).ConfigureAwait(false);
+        ConnectionString = _container.GetConnectionString();
     }
 
     public static ExecutionDbContext CreateDbContext(string connectionString)
@@ -100,51 +128,5 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     {
         await using var context = CreateDbContext(connectionString);
         await context.Database.MigrateAsync().ConfigureAwait(false);
-    }
-
-    public static bool CheckDockerSocketAvailable()
-    {
-        // Require explicit opt-in via CADENCE_TEST_DOCKER=1 so ordinary test runs
-        // exercise the fast, resilient in-memory concurrency harness without hanging on dormant Docker daemons
-        if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") != "1")
-        {
-            return false;
-        }
-
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo("docker", "info")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var proc = System.Diagnostics.Process.Start(psi);
-            if (proc == null)
-            {
-                return false;
-            }
-
-            if (!proc.WaitForExit(3000))
-            {
-                try
-                {
-                    proc.Kill();
-                }
-                catch (Exception)
-                {
-                    // Ignore failure terminating timed-out probe process
-                }
-
-                return false;
-            }
-
-            return proc.ExitCode == 0;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
     }
 }
