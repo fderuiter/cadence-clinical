@@ -13,10 +13,10 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 1142
-- **Passed:** 1142 🟢
+- **Total Automated Test Cases Run:** 1214
+- **Passed:** 1208 🟢
 - **Failed/Errors:** 0 🔴
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.51%
 
 ## 2. Installation Qualification (IQ)
 
@@ -75,8 +75,8 @@ The Installation Qualification verifies that the software execution environment 
 | `ApplicationService_Close_ValidatesCraOrDmRole` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplicationService_CloseReopenCancel_WithoutRole_AreDenied` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplyEtmfWebhookAsync_GivenNoExistingRowAndNullMissingArtifacts_CreatesRowWithEmptyMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplyEtmfWebhookAsync_GivenNullSiteIdWithNoExistingRow_SucceedsAsNoOpSinceAggregateCannotRepresentASitelessRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ApplyEtmfWebhookAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -98,6 +98,7 @@ The Installation Qualification verifies that the software execution environment 
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `AuditorPersona_RestrictedToReadOnlyAccess` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BankerRounding_ToEven_DivergesFromFloatingPointBoundaryErrors` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `BannedSymbolsBanWallClockAndKernelIsWired` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BatchEvaluation_ConcurrentExecution_ThreadSafeAndDeterministic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BatchEvaluation_MultiObservationContext_DetectsDiscrepanciesAcrossVisits` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `BitemporalQueryExtensionsAsOfPointInTimeStateReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -123,6 +124,8 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests.SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.ComprehensionResult_ExactBoundaryCheck_DivergesFromFloatingPointDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.ComprehensionResult_ScoreProperty_IsDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Econsent.EconsentScoreDecimalPrecisionTests.EconsentDbContext_ComprehensionResultScore_HasPrecision5Scale2` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -131,8 +134,8 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndWritesNoAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNoExistingRowAndNullMissingArtifacts_CreatesRowWithEmptyMissingDocuments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.ApplyEtmfWebhookAsync_GivenNullSiteIdWithNoExistingRow_SucceedsAsNoOpSinceAggregateCannotRepresentASitelessRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests.GetComplianceStatusAsync_GivenExistingRow_ReturnsItsCurrentState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -165,6 +168,11 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderAbsent_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderPresentAndPopulated_InvokesNextAndReturnsItsResultUnchanged` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Endpoints.ChangeReasonHeaderFilterTests.InvokeAsync_HeaderPresentButWhitespaceOnly_ShortCircuitsWith400AndNeverInvokesNext` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests.SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_SignedWithWrongSecret_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithoutGatewaySignature_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests.ApiRequest_WithRolesAddedAfterSigning_Returns401` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -272,7 +280,6 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests.ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests.NominalScenario_MatchesGoldenMaster` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.CreateAsync_ConcurrentCalls_PropagatesTaskFailures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Integration.EnrollmentIndexConcurrencyTests.EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Observations.ObservationGoldenMasterTests.LabRangeEvaluation_GoldenMasterVectors_MatchExpectedIndicators` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -386,14 +393,14 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.SystemAuditContextAccessor_ChangeReason_AlwaysReturnsFixedAutomatedEnrollmentReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.SystemAuditContextAccessor_UserId_AlwaysReturnsFixedPubsubIdentity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.SystemAuditContextAccessor_ValuesAreCompileTimeConstantsNotConfigurable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenEmptySubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoHttpContext_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoSubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenWhitespaceOnlySubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests.UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenNullBirthDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Security.DemographicsNormalizationServiceTests.CalculateAge_GivenNullObservationDate_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -485,7 +492,7 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_OnSuccess_WritesNoAuditLogEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubject_ChangedDemographicsWithDecryptableExistingCiphertext_FailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubject_StratFactorsUpdateFailsWithLockedFactorMutation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests.UpdateDemographicsAsync_GivenPostRandomizationSubjectWithBothFieldsSupplied_StratFactorsFailureShortCircuitsBeforeDemographicsIsTouched` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -583,6 +590,11 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodCreateCurrentSetsOpenEndedUpperBounds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodOverlapsDetectsIntervalCollisions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.BitemporalTests.TemporalPeriodSupersedeClosesRecordedInterval` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Kernel.ClockTests.BannedSymbolsBanWallClockAndKernelIsWired` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Kernel.ClockTests.FakeClockAdvanceRejectsNegativeDelta` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Kernel.ClockTests.FakeClockIsFrozenUntilAdvanced` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Kernel.ClockTests.FakeClockSetNormalisesToUtc` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Kernel.ClockTests.SystemClockReturnsCurrentUtcInstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.KernelEfCoreConfigurationTests.EfCoreConfigureKernelEntityIdsPersistsAndQueriesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.KernelIdentifierTests.BitemporalTemporalPeriodDualClockReconstruction` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.KernelIdentifierTests.IdentifiersEmptyAndDefaultStatesAreConsistent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -595,6 +607,17 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionCreateInitializesInDraftStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionDraftWorkflowAllowsUpdatesAndSubmission` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Kernel.ProtocolVersionTests.ProtocolVersionForkAmendmentSupersedesPriorAndCreatesNewDraft` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Ecdsa_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Ecdsa_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.RsaPss_SignsWithPasswordProtectedKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Sign_ThrowsForUnparseablePrivateKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsEcdsaSignatureAgainstAnRsaKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsGarbageKeyMaterialInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsSignatureFromADifferentKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.AsymmetricSignerTests.Verify_RejectsTamperedData` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.AddCadenceDbContext_ExecutesOptionsActionWithServiceProvider` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.AddCadenceDbContext_RegistersDbContextInServiceCollection` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests.GetCompiledModel_ReturnsNull_WhenNoCompiledModelExists` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -608,6 +631,15 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.SiteAccessEvaluator_EnforcesFailClosedSiteScopedLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.CadenceSecurityUnitTests.StudyAccessEvaluator_RestrictsStudyScopedUsers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.CanonicalSerialize_IsIndependentOfInputKeyOrderAndInputShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.CanonicalSerialize_SortsKeysRecursivelyAndKeepsArrayOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.GenerateCanonicalSignature_MatchesTheUiPackageForAsciiPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.GenerateCanonicalSignature_RejectsBlankSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_AcceptsOwnSignatureInEitherHexCase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsBlankOrMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsBlankSecretInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsTamperedPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.CanonicalSignerTests.VerifyCanonicalSignature_RejectsWrongSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.ComplianceUnitTests.ESignatureVerifier_DetectsTamperedMarkdownBody` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.ComplianceUnitTests.GxPSigner_SignGxpMarkdown_GeneratesValidSignature_NotDummy` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.ComplianceUnitTests.PhiRedactorService_RedactsConfiguredTermsAndAutoDetectedPhi` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -681,6 +713,11 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Packages.TelemetryUnitTests.UseCadenceWebDefaults_MapsLivenessAndReadinessProbes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TemplateCatalogTests.Catalog_OnlyResolvesTemplatesEmbeddedInItsOwnAssembly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TemplateCatalogTests.CtmsLetterEndpoint_RejectsAnythingOutsideItsAllowList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TemplateCatalogTests.CtmsLetterEndpoint_RendersAnAllowedLetter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TemplateCatalogTests.Renderer_RejectsKeysOutsideTheCatalog` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Packages.TemplateCatalogTests.SameKeyInTwoModules_RendersEachModulesOwnTemplate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.AllMonetaryAndRatePropertiesInPaymentEntities_UseDecimalType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.BankerRounding_ToEven_DivergesFromFloatingPointBoundaryErrors` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Payments.PaymentDecimalCalculationTests.CalculatePayable_UsesFixedPointDecimalArithmetic_AndBankersRounding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -697,6 +734,9 @@ The Installation Qualification verifies that the software execution environment 
 | `CalculateAge_GivenTwentyYearSpan_ReturnsExactComputedValueNotApproximation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CalculatePayable_UsesFixedPointDecimalArithmetic_AndBankersRounding` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CancelQuery_FromOpen_SucceedsWithReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `CanonicalSerialize_IsIndependentOfInputKeyOrderAndInputShape` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `CanonicalSerialize_SortsKeysRecursivelyAndKeepsArrayOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Catalog_OnlyResolvesTemplatesEmbeddedInItsOwnAssembly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ChangeReason_GivenHeaderPresent_ReturnsActualHeaderValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -758,7 +798,6 @@ The Installation Qualification verifies that the software execution environment 
 | `Create_TwoSubjects_ProduceDistinctIds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CreateAsync_ConcurrentCalls_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `CreateAsync_ConcurrentCalls_PropagatesTaskFailures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CreateAsync_ConcurrentCallsAcrossTwoStudies_AssignsIndependentIndices` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CreateAsync_GivenEachEnrollment_WritesEnrollSubjectAuditEntryForThatSubject` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CreateAsync_GivenEmptyStudy_EnrollsSequentialSubjectsWithZeroBasedIndexAndScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -775,6 +814,8 @@ The Installation Qualification verifies that the software execution environment 
 | `CreateSubject_GivenValidRequest_Returns201WithLocationHeaderPointingAtCanonicalRoute` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CreateSubjectAsync_GivenPreCancelledToken_ThrowsOperationCanceledExceptionRatherThanCompleting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `CtmsLetterEndpoint_RejectsAnythingOutsideItsAllowList` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `CtmsLetterEndpoint_RendersAnAllowedLetter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DbStateMatches_GivenAssertionThatHolds_DoesNotThrow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Ddf_Models_ConstructsSuccessfully` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -796,7 +837,7 @@ The Installation Qualification verifies that the software execution environment 
 | `DeleteDemographicsAsync_GivenPreRandomizationSubject_SucceedsAndReturnsRealStateWithClearedDemographics` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DeleteDemographicsAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DeleteDemographicsAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `DeleteDemographicsAsync_OnSuccess_WritesNoAuditLogEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DeleteSubjectDemographics_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DeleteSubjectDemographics_GivenSubjectNotFound_Returns404WithStandardizedDetail` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DeleteSubjectDemographics_GivenValidRequestAndHeader_Returns200` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -805,6 +846,8 @@ The Installation Qualification verifies that the software execution environment 
 | `DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Ecdsa_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Ecdsa_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EConsentCompletedConsumer_ConcurrentEvents_AssignsSequentialIndicesWithoutGapsOrDuplicates` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EConsentConsumerLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EconsentDbContext_ComprehensionResultScore_HasPrecision5Scale2` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -848,15 +891,21 @@ The Installation Qualification verifies that the software execution environment 
 | `ExistsAsync_GivenNoMatchingConsent_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ExistsAsync_GivenSameSubjectAndStudyButDifferentVersionIndex_ReturnsFalse` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ExtensionMethods_ThrowOnNullArguments` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `FakeClockAdvanceRejectsNegativeDelta` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `FakeClockIsFrozenUntilAdvanced` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `FakeClockSetNormalisesToUtc` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FieldMasker_ObfuscatesBlindedFields_AndUnmasksRtsmRoles` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FlagSdv_WithReason_ResetsSdvVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FormSubmissionRepository_GetForUpdateAsync_ThenComplete_PersistsStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_EnrolledSubjectWithSite_ReflectsAggregatesActualState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_ForEnrolledSubjectWithSite_ReportsTheRealStatusAndSite` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `FromAggregate_ScreeningSubject_ReportsScreeningStatus` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `GenerateCanonicalSignature_MatchesTheUiPackageForAsciiPayloads` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `GenerateCanonicalSignature_RejectsBlankSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `GetAsync_GivenMatchingRow_ReturnsTheTrackedEntity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `GetAsync_GivenMatchingStudySiteAndMilestone_ReturnsTheRow` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `GetAsync_GivenNoMatchingRow_ReturnsNull` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -975,6 +1024,7 @@ The Installation Qualification verifies that the software execution environment 
 | `NotFound_ReturnsFixedCodeAndType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ObservationApplicationService_Create_PersistsAndReturnsNormalizedObservation` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ObservationRepository_GetForUpdateAsync_ThenVerifySdv_PersistsVerification` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `OperationEnvelopeResponse_SerializesWithSpecFieldNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `OutlierDetection_IdentifiesStatisticalOutliers` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ParticipantWallet_StipendLedgerAccumulation_MatchesExactDecimal` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -998,6 +1048,7 @@ The Installation Qualification verifies that the software execution environment 
 | `ProxiedRoute_WithValidToken_ForwardsSignedIdentityFromTokenOnly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `QueryLifecycle_FullTransitionSequence_Succeeds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RaiseQuery_CreatesQueryInOpenState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ReconsentRequired_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RecordConsentAsync_CascadeClearance_DoesNotTouchADifferentSubjectsConsent` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1017,11 +1068,20 @@ The Installation Qualification verifies that the software execution environment 
 | `RecordSubjectConsentAlias_IsExcludedFromGeneratedOpenApiDocument_WhileCanonicalRouteIsIncluded` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RecordSubjectConsentAsync_GivenPreCancelledToken_ThrowsOperationCanceledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RedactionManifest_BuildsAndVerifiesSymmetricAndAsymmetricSignatures` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Renderer_RejectsKeysOutsideTheCatalog` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ResolvePostgresConnectionString_InDevelopment_FallsBackToLocalDatabase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ResolvePostgresConnectionString_PrefersNamedConnectionStringOverLegacyKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `ResultMonadHandlesSuccessAndFailureWithoutThrowingExceptions` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RoleNormalization_MapsAliasesToCanonicalNames` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `RsaPss_RoundTripsWithCertificatePem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `RsaPss_RoundTripsWithPublicKeyPem` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `RsaPss_SignsWithPasswordProtectedKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `RuleEvaluator_EvaluatesAstAndJsonLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SameKeyInTwoModules_RendersEachModulesOwnTemplate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenARowDeletedOutFromUnderTheRetryingWriter_ExhaustsRetriesAndStillThrowsDbUpdateConcurrencyException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenAStaleWriteThatAnotherWriterAlreadyCommitted_ResolvesTheConflictAndPersistsThisCallersChange` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1043,6 +1103,8 @@ The Installation Qualification verifies that the software execution environment 
 | `SavingChangesAsync_NeverIncrementsSiteComplianceCacheVersionDomainCounter` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SdvVerification_StateTransitions_MaintainStrictPart11Audit` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Sentinels_Engine_ExecutesRegisteredCheck` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Sign_ThrowsForUnparseablePrivateKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SiteAccessEvaluator_EnforcesFailClosedSiteScopedLogic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SiteActivationRequest_ValueEquality_ComparesByStudyId` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1052,6 +1114,7 @@ The Installation Qualification verifies that the software execution environment 
 | `SiteComplianceCaches_GivenEmptyMissingDocuments_RoundTripsAsEmptyArray` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SiteComplianceCaches_GivenMissingDocuments_RoundTripsAsNativeArrayInOrder` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SiteComplianceCaches_GivenVersionIncrementedTwiceBeforeOneSaveChangesAsync_PersistsFinalValueNotIntermediate` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SoftDeleteBlocked_ReturnsFixedCodeAndForbiddenType` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SplitPayeeAllocation_CalculatesShares_UsingDecimalArithmetic` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Storage_InMemoryBlobStore_StoresAndRetrievesPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1090,9 +1153,8 @@ The Installation Qualification verifies that the software execution environment 
 | `SubjectStateUpdateRequest_StatusNullStateEnrolled_ValidatesAndTargetResolvesToState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SubjectStateUpdateRequestValidator_BothBlankOrWhitespace_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `SubjectStateUpdateRequestValidator_BothNull_FailsWithMissingTargetStateErrorCode` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SystemAuditContextAccessor_ChangeReason_AlwaysReturnsFixedAutomatedEnrollmentReason` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SystemAuditContextAccessor_UserId_AlwaysReturnsFixedPubsubIdentity` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `SystemAuditContextAccessor_ValuesAreCompileTimeConstantsNotConfigurable` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `SystemClockReturnsCurrentUtcInstant` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `TelemetryLoggerMessages_EmitValidEventIdsAndFormattedMessages` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `TemporalPeriodCreateBoundedEnforcesBoundaryConstraints` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `TemporalPeriodCreateCurrentSetsOpenEndedUpperBounds` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1148,12 +1210,22 @@ The Installation Qualification verifies that the software execution environment 
 | `UseCadenceTraceparent_InjectsW3CTraceparentHeaderWhenActivityActive` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `UseCadenceWebDefaults_MapsLivenessAndReadinessProbes` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenEmptySubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenNoHttpContext_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenNoSubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `UserId_GivenSubClaimPresent_ReturnsActualClaimValueNotDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
-| `UserId_GivenWhitespaceOnlySubClaim_ReturnsSystemDefault` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `UserIdAndChangeReason_GivenBothClaimAndHeaderPresent_ReturnActualValuesNotDefaults` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Verify_RejectsEcdsaSignatureAgainstAnRsaKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Verify_RejectsGarbageKeyMaterialInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Verify_RejectsMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Verify_RejectsSignatureFromADifferentKey` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Verify_RejectsTamperedData` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `VerifyCanonicalSignature_AcceptsOwnSignatureInEitherHexCase` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `VerifyCanonicalSignature_RejectsBlankOrMalformedSignature` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `VerifyCanonicalSignature_RejectsBlankSecretInsteadOfThrowing` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `VerifyCanonicalSignature_RejectsTamperedPayload` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `VerifyCanonicalSignature_RejectsWrongSecret` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `VerifyObservationSdv_Handler_ReturnsOkWithVerifiedState` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `VerifySdv_WhenAlreadyVerified_ReturnsError` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `VerifySdv_WhenUnverified_TransitionsToVerified` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -1187,30 +1259,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 1306d81f8ae709dfc07fcad441ab01976ac2debe152c364263dd088d19b61e70
+- **Cryptographic Hash (SHA-256):** 8e1fb05b606bf85fd1b0ede0c7fcac1216bc6d936f6167bf0a5fc9ba48474b0c
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAn2gAwIBAgIJAIWApHy+bmdeMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
+MIIDxTCCAn2gAwIBAgIJAKmbXARkf7hPMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
 AWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgMGgxIjAgBgNV
 BAoTGUNhZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2Ug
 R3hQIFZhbGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVy
-KTAeFw0yNjA5MjgxOTA4MjFaFw0yNzA5MjkxOTA4MjFaMGgxIjAgBgNVBAoTGUNh
+KTAeFw0yNjA5MjgxOTQ4MjFaFw0yNzA5MjkxOTQ4MjFaMGgxIjAgBgNVBAoTGUNh
 ZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2UgR3hQIFZh
 bGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVyKTCCASIw
-DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKMfmf7SsnE+KYCqxuA0cEAkgxeR
-gXa1C3Z/EFso097TBTGh99jzl5joTsETSAp7iT12OwihZ1uD+x30qZvM5aBzGyol
-Iek5d/joIaRDfmi3VOsUFhU74cB2yvYxa8MnX+Bg4LoOytUUcCj43GWsT3r0GVJB
-gy6gr6lPGWK9kk1RJfNyrXhkEoyrYXO1ffVCOCWWcJT94leK25I3W+KUFyTG+aBJ
-Zn+170MLOy+CsMPCLXG1P7jEOvpP9RmfumFZwNeWSTTQ04cd/f9g30S7HgGlDojY
-8c32ZUueCyiQH0FohdGorXqECPUPbF2CqWXukHJ9QorKErxirykkShH6apcCAwEA
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKkJHcfGzAVCdfpgmc3KFGsCJHBW
+8DPBgNEfXLFNFFKoc/pinp6Us1BcvFwyQpzJoCOdjjRUBdJMlfiKkEdLBSaBxla9
+xqZn+XaXyvLFisHZGDXFmuJxfAJACyDC/DSvcYMXlHzjWyizD3TZcMz7XljTo3VY
+AMkuj2UEJeAOZE8jgpOIWNe71CU6lBcn97WVbNxmEIdsXjiVnDiTOONitC7IHEeu
+m1ioSd7yivaJ0I/urFlQZEQpfoPjA+l4//9zLTlbvDnJhdr/pnQJJNPl6SQZcGMP
+AuB66jqDSvjVDbKkY/TnePbmZDMCbUmh/ko7BE+trW6+jNcaItzVbu157g8CAwEA
 AaMSMBAwDgYDVR0PAQH/BAQDAgbAMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZIAWUD
-BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQBEPOON0OUR
-bpDQcSBYHxsuwG3K9ieqFbDSZdzzY1puv2BG/kEtIDyw39p8vtFqP6jjTXxiWnyJ
-F0WE01AsOdOnZoeOuCsqFp6aPYYgRavFqtp9HXPanwGYuvHiVcR9SaYBhRF68Iob
-Bv4UDK/YUFLzsUFtzyw3v3080jnjG7wx+YMJpFSnkw9Oqk2MVKV1RThmmz122OkL
-U+WKtQFBEzzxEfHPTPJgwnwubWhrTFfI8WZIeh3TnTDYOBO36P+tDIJweyN3lY9K
-4qaVIUSGqnYHCRL5qT6C9IlWH54HXsQ/MAExWoG4nUPpnzBMomwCxu9D7zWoNKQl
-woWqqj9ycSv5
+BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQCmkCVwHTsc
+hxwwNfuubEOiKYLNnuH+dHWdgvFmeOjpoYD5Ypt9Y0+6qi3HsSr0U9h1TnhhLwuB
+cjpedox+ZAxAUKN7kBOYWKQ2y3ouXtgY5cGme2mgUV3EfvHfa9P2tnRGXnLQVE9h
+WoOfnTojmMzVPC4D6HwfnqMOJ6UQGFdRt+RkBpsmJliDxjRfJv5oNZC2NZuAnWzn
+zapnDMQO5mtTvKKGDTdECsutvX27zdfaROrdfE4KOO5Mtcou1TcEg8KPXRWOF7ES
+7b4U54YpF2BW5sHF5WXoPC3sfSoz6VXw/ta9zcdMq9/SSiXHLJNqm3sxO9mdnZgZ
+B/yGXERWPQKb
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-nmEoDeC2bykKPw982k2jslnJXD2PX+0lY1GLKhL+2YyvllQjZHSlZ0u5+ie1JmD6mk7pO4LxDhf4lmjGFXnqQWNAL43gt4XG7CYK60Dg+vpWxei/sXASALPkA1+BL8zpkc2q1pvuR4Ls3TRNFERTW26w88Y7TrQRPgBI701PNKq2cZNOIax+YINaN78YQPmQLsbp3g95etybuAlIDlU5U+OOhb3TnSIjCzMhBPBqLGYhhvFdb0G54CPb540RhI74xvj/6vSD7vSVXDvmh6IKTWrzGEnFHMQhUzTbyoreGmiTSPuK+7dZ3WfyegntCS4GQT5eqBLSt9e1D2zLeQCHmQ==
+VeltWHOwj506isLeR22UWsTh6TcCWvj1+s+R7GRVf7VQj5jDt98pBBSSuvBQjmKYrlXM2nVCKTfuR/QKkAqeTHb+WkdRDnJdDdp9unKdB3KKlZd2R85GzzjLDOdU6JN8NLLi8LtmXhq79z0l5XnN3EAz/0lpj+n7/0xsGkUfuqCoO8D2GB+al13qUWh6YA5BLZJKgLUjTqpKhm/8sZ+23oT9QuQLSzKms3OtQbOlc4XMPQIoadlvOAIipDYyzc1Z/gCTKkkVdGA9eqT22p1MVKVNYL0eKfllePBBkprRoh6rgRR/uM+yVTZ9S5UqhECozR/UBphQzJgo3X0qERCIRg==
 -----END SIGNATURE-----

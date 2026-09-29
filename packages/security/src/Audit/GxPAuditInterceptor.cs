@@ -54,20 +54,26 @@ public class GxPAuditInterceptor : SaveChangesInterceptor
 
     private void RecordAuditLogs(DbContext context)
     {
-        string userId = "system";
-        string tenantId = "tenant_default";
-        string changeReason = "Database SaveChanges mutation";
-
-        if (_httpContextAccessor?.HttpContext?.Items["Principal"] is Rbac.Principal principal)
-        {
-            if (!string.IsNullOrWhiteSpace(principal.UserId)) userId = principal.UserId;
-            if (!string.IsNullOrWhiteSpace(principal.SponsorId)) tenantId = principal.SponsorId;
-            if (!string.IsNullOrWhiteSpace(principal.ChangeReason)) changeReason = principal.ChangeReason;
-        }
-
         var entries = context.ChangeTracker.Entries()
             .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted)
             .ToList();
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        // No anonymous fallback actor: a write with no authenticated principal fails instead of being
+        // recorded against "system" (21 CFR 11.10(e)).
+        var principal = _httpContextAccessor?.HttpContext?.Items["Principal"] as Rbac.Principal;
+        if (string.IsNullOrWhiteSpace(principal?.UserId))
+        {
+            throw new InvalidOperationException(
+                "No audit actor: the request has no authenticated principal, so the change cannot be attributed.");
+        }
+
+        string userId = principal.UserId;
+        string tenantId = string.IsNullOrWhiteSpace(principal.SponsorId) ? "tenant_default" : principal.SponsorId;
+        string changeReason = string.IsNullOrWhiteSpace(principal.ChangeReason) ? "Database SaveChanges mutation" : principal.ChangeReason;
 
         foreach (var entry in entries)
         {

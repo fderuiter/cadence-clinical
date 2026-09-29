@@ -54,6 +54,7 @@
     <!-- #4761: host-level authentication tests boot the real execution and gateway composition roots
          (ExecutionApiFactory, WebApplicationFactory of the gateway); compiled into Cadence.UnitTests only. -->
     <Compile Remove="Execution/Endpoints/ExecutionAuthenticationTests.cs" />
+    <Compile Remove="Execution/Endpoints/ExecutionAuditAttributionTests.cs" />
     <Compile Remove="Gateway/**" />
     <Compile Remove="Audit/GxPAuditTrailGenerationTests.cs" />
     <Compile Remove="Packages/**" />

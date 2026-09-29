@@ -27,6 +27,13 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
         }
 
         DbContext context = eventData.Context;
+        if (!context.ChangeTracker.Entries<IGxPAuditable>().Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            // Nothing audited in this save (e.g. outbox bookkeeping), so there is no actor to resolve.
+            return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Resolved only once an audited change exists; a provider with no actor throws here and the save fails.
         string currentUser = currentUserProvider();
         DateTime now = (clockProvider ?? (() => DateTime.UtcNow))();
 

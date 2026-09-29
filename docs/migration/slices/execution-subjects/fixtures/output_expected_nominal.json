@@ -203,6 +203,7 @@
     {
       "scenario_id": "SCN-009-A",
       "status": "n/a (background handler, not HTTP)",
+      "note": "Since #4767 the consumer runs as the named service account svc:econsent-consumer; the legacy subscriber wrote user_id 'system-pubsub'.",
       "db_assertions": {
         "clinical_subject": {
           "subject_id": "SUBJ-AUTO-01",
@@ -222,12 +223,12 @@
         {
           "table_name": "clinical_subjects",
           "action": "INSERT",
-          "user_id": "system-pubsub"
+          "user_id": "svc:econsent-consumer"
         },
         {
           "table_name": "subject_consents",
           "action": "INSERT",
-          "user_id": "system-pubsub"
+          "user_id": "svc:econsent-consumer"
         }
       ]
     },

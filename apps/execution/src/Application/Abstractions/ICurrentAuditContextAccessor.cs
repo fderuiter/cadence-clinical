@@ -1,19 +1,43 @@
 namespace Cadence.Apps.Execution.Application.Abstractions;
 
 /// <summary>
-/// Replaces Python's `contextvars.ContextVar` (`current_user_id`, `current_change_reason`) readers
-/// (`01_spec.md` Rule 9, `02_technical_design.md` §4.4) with one consistently-defaulting accessor —
-/// closing the legacy's two-idiom split (a `.get()` + `LookupError` catch that only special-cased
-/// "absent" vs. a `.get() or "system"` truthy check that happened to treat blank strings as falsy too)
-/// by giving every reader exactly one resolution path. Both properties always resolve to a fixed
-/// default when ambient context is missing, empty, or whitespace-only, and neither ever throws.
+/// The actor and reason for change stamped on every audited write. The actor is always a real identity:
+/// the authenticated caller's <c>sub</c> claim inside an HTTP request, or a named
+/// <see cref="ServiceAccount"/> that background work declared through <see cref="IAuditActorScope"/>.
+/// There is no anonymous fallback; reading <see cref="UserId"/> with neither in place throws
+/// <see cref="AuditActorUnresolvedException"/>, so the write fails instead of being recorded against
+/// nobody (21 CFR 11.10(e), ALCOA+ attributable).
 /// @req:PRD-SYS-053
 /// </summary>
 public interface ICurrentAuditContextAccessor
 {
-    /// <summary>The acting user's identity. Defaults to <c>"system"</c> when unresolvable.</summary>
+    /// <summary>The acting user or service account.</summary>
+    /// <exception cref="AuditActorUnresolvedException">No authenticated caller and no service account.</exception>
     string UserId { get; }
 
-    /// <summary>The caller-supplied reason for change. Defaults to <c>"system_operation"</c> when unresolvable.</summary>
+    /// <summary>
+    /// The reason for change: the service account's declared reason, else the caller's
+    /// <c>X-Change-Reason</c> header, else <c>"system_operation"</c>.
+    /// </summary>
     string ChangeReason { get; }
 }
+
+/// <summary>
+/// Lets background work (message consumers, scheduled jobs) run the current DI scope as a named
+/// <see cref="ServiceAccount"/>, so its writes are attributed to that account rather than failing.
+/// @req:PRD-SYS-053
+/// </summary>
+public interface IAuditActorScope
+{
+    /// <summary>Attributes every write in the current scope to <paramref name="account"/>.</summary>
+    void RunAs(ServiceAccount account);
+}
+
+/// <summary>
+/// Thrown when an audited write has no resolvable actor. Surfaces as a 500 rather than a write attributed to
+/// no one; authenticated HTTP callers never reach it because the gateway scheme rejects them first with 401.
+/// @req:PRD-SYS-053
+/// </summary>
+public sealed class AuditActorUnresolvedException()
+    : InvalidOperationException(
+        "No audit actor: the request has no authenticated 'sub' claim and no service account was declared for this scope.");

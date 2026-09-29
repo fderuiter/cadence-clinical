@@ -371,7 +371,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     public async Task DbStateMatches_GivenAssertionThatDoesNotHold_ThrowsWithScenarioIdAndFieldDetail()
     {
         using var client = _factory.CreateSignedClient(); // forces host/DbContext construction, per MIG-SUBJ-024 precedent.
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = _factory.Services.CreateSeedingScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             dbContext.ClinicalSubjects.Add(ClinicalSubject.Create(
@@ -405,7 +405,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     public async Task DbStateMatches_GivenAssertionThatHolds_DoesNotThrow()
     {
         using var client = _factory.CreateSignedClient();
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = _factory.Services.CreateSeedingScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             dbContext.ClinicalSubjects.Add(ClinicalSubject.Create(
@@ -438,7 +438,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     public async Task AuditLogContains_GivenNoMatchingEntry_ThrowsWithScenarioIdAndRecordedEntries()
     {
         using var client = _factory.CreateSignedClient();
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = _factory.Services.CreateSeedingScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             dbContext.AuditLogEntries.Add(new AuditLogEntry
@@ -473,7 +473,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
     public async Task AuditLogContains_GivenAMatchingEntry_DoesNotThrow()
     {
         using var client = _factory.CreateSignedClient();
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = _factory.Services.CreateSeedingScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             dbContext.AuditLogEntries.Add(new AuditLogEntry

@@ -19,7 +19,7 @@ public class ImagingStudyEnvelope
     public string AdjudicationStatus { get; set; } = "UNASSIGNED";
     public string TenantId { get; set; } = "tenant_default";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -119,10 +119,10 @@ public class ImagingAnnotation
     public int? DeauvilleScore { get; set; }
     public string PointsJson { get; set; } = "[]";
     public string? HounsfieldStatsJson { get; set; }
-    public string ReaderId { get; set; } = "system";
+    public required string ReaderId { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -156,11 +156,11 @@ public class TumorResponseAssessment
     public bool IsLocked { get; set; }
     public DateTime? LockedAt { get; set; }
     public string? LockedBy { get; set; }
-    public string ReaderId { get; set; } = "system";
+    public required string ReaderId { get; set; }
     public string ManifestSha256 { get; set; } = string.Empty;
     public string Signature { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -200,7 +200,7 @@ public class ImagingAdjudicationSession
     public string SessionDigest { get; set; } = string.Empty;
     public string TenantId { get; set; } = "tenant_default";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedBy { get; set; } = "system";
+    public required string CreatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;

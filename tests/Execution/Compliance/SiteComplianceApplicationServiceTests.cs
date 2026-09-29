@@ -80,7 +80,7 @@ public class SiteComplianceApplicationServiceTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndWritesNoAuditEntry()
+    public async Task ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
         var auditLog = new FakeAuditLogWriter();
@@ -101,7 +101,11 @@ public class SiteComplianceApplicationServiceTests
         row.IsComplete.Should().BeTrue();
         row.MissingDocuments.Should().Equal("Form-A");
 
-        auditLog.Calls.Should().BeEmpty("the eTMF webhook is this slice's one documented mutation that never audit-logs");
+        var call = auditLog.Calls.Should().ContainSingle().Which;
+        call.Action.Should().Be("ETMF_COMPLIANCE_UPDATE");
+        call.TableName.Should().Be("site_compliance_caches");
+        call.RecordId.Should().Be(row.Id.ToString());
+        call.UserId.Should().Be("user-compliance-1");
     }
 
     [Fact]
@@ -128,7 +132,7 @@ public class SiteComplianceApplicationServiceTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
-    public async Task ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndWritesNoAuditEntry()
+    public async Task ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
         var auditLog = new FakeAuditLogWriter();
@@ -157,7 +161,10 @@ public class SiteComplianceApplicationServiceTests
         row.IsComplete.Should().BeTrue();
         row.MissingDocuments.Should().BeEmpty("ApplyWebhookUpdate always fully replaces, never merges");
 
-        auditLog.Calls.Should().BeEmpty("both webhook branches share the same 'no audit entry' rule");
+        var call = auditLog.Calls.Should().ContainSingle("both webhook branches audit the change").Which;
+        call.Action.Should().Be("ETMF_COMPLIANCE_UPDATE");
+        call.RecordId.Should().Be(row.Id.ToString());
+        call.UserId.Should().Be("user-compliance-1");
     }
 
     [Fact]
