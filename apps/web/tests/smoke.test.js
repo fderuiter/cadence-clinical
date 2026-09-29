@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
@@ -100,6 +100,8 @@ describe("Vue SPA Smoke Tests", () => {
   });
 
   it("mounts RulesView and renders Interactive Rules Designer", () => {
+    // Editing needs a designer role; the demo build supplies one (#4523).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
 

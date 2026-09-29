@@ -9,11 +9,12 @@ import StudyDocumentsTab from "../src/components/fileshare/StudyDocumentsTab.vue
 import { useFileshareStore, SEED_FILES } from "../src/stores/fileshare";
 import { useAuthStore } from "../src/stores/auth";
 import { router } from "../src/router";
+import { fileshareService } from "../src/api/fileshare";
 
 // Mock fileshare API client
 vi.mock("../src/api/fileshare", () => ({
   fileshareService: {
-    listFiles: vi.fn(() => Promise.resolve([])),
+    listFiles: vi.fn(),
     getFileRecord: vi.fn((fileId) => Promise.resolve({ id: fileId })),
     getDownloadUrl: vi.fn((fileId) =>
       Promise.resolve({
@@ -94,6 +95,31 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       "CRC",
       "Auditor",
     ];
+    // Outside a demo build the store starts empty (#4523): load the sample records as if the server returned them.
+    const cloneSeed = () => SEED_FILES.map((f) => ({ ...f }));
+    fileshareService.listFiles.mockImplementation(() =>
+      Promise.resolve(cloneSeed())
+    );
+    const fileshareStore = useFileshareStore();
+    fileshareStore.files = cloneSeed();
+    fileshareStore.activeGrants = {
+      [SEED_FILES[0].id]: [
+        {
+          id: "grant-001",
+          file_record_id: SEED_FILES[0].id,
+          granted_to_user_id: "cra_fderuiter",
+          granted_by_user_id: "sponsor_designer_01",
+          scope: "individual",
+          permission_level: "download",
+          expires_at: "2026-12-31T23:59:59Z",
+          revoked_at: null,
+          is_active: true,
+          created_at: "2026-08-10T14:35:00Z",
+          created_by: "sponsor_designer_01",
+          reason_for_change: "Lead CRA monitoring assignment delegation",
+        },
+      ],
+    };
   });
 
   describe("DocumentsHubView.vue Component", () => {

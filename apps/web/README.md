@@ -118,6 +118,16 @@ This ensures that calling `/api/v1/...` relative paths in local components route
 
 ---
 
+### Demo mode and API failures
+
+Demo mode is opt-in at build time: `pnpm --filter web dev --mode demo`, `pnpm build:demo`, or
+`VITE_DEMO_MODE=true` (`src/utils/demoMode.js`). Only a demo build signs in with the offline demo identity,
+starts the MSW mock API and loads sample data. Every other build talks to the gateway: when Keycloak is
+unreachable the app opens the login page and sign-in reports the problem, and a failed API call shows an error
+alert (`useToastStore().apiError(title, err)` from `src/stores/toasts.js`) and leaves the screen as it was. Never
+substitute sample data or report success when a call fails. Tests opt into a demo build with
+`vi.stubEnv("VITE_DEMO_MODE", "true")`.
+
 ### 🧪 Testing
 
 Run frontend unit and integration tests using Vitest:

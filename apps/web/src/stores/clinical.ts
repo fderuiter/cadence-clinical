@@ -10,6 +10,7 @@ declare module "pinia" {
 }
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
+import { useToastStore } from "./toasts.js";
 import { soaClient } from "../api/soaClient.js";
 import {
   executionService,
@@ -1134,6 +1135,7 @@ const useClinicalStoreInner = defineStore("clinical", {
      * @param body - Optional screening payload including study_id.
      * @param reason - Reason for audit ledger entry.
      * @returns The screening evaluation response or null if invalid subject ID.
+     * @throws The API error when screening fails; it is reported as a toast and no state is changed.
      */
     async screenSubject(
       subjectId: string,
@@ -1142,6 +1144,23 @@ const useClinicalStoreInner = defineStore("clinical", {
     ): Promise<SubjectScreeningResponse | null> {
       const trimmedId = (subjectId || "").trim();
       if (!trimmedId) return null;
+
+      // Screening outcomes are regulatory records: never fabricate an eligibility result when the backend call
+      // fails (#4523). Report the failure and leave the subject, the ledger and localStorage untouched.
+      let result: SubjectScreeningResponse;
+      try {
+        const res = await executionService.screenSubject(
+          trimmedId,
+          body ?? undefined
+        );
+        if (!res) {
+          throw new Error("Screening service returned an empty response");
+        }
+        result = res;
+      } catch (err) {
+        useToastStore().apiError("Subject screening failed", err);
+        throw err;
+      }
 
       let sub = this.subjects.find((s) => s.id === trimmedId);
       if (!sub) {
@@ -1157,28 +1176,6 @@ const useClinicalStoreInner = defineStore("clinical", {
           label: `${trimmedId} (Screening)`,
         };
         this.subjects.push(sub);
-      }
-
-      let result: SubjectScreeningResponse = {
-        eligible: true,
-        failed_criteria: [],
-        indeterminate_criteria: [],
-        criterion_evaluations: [],
-      };
-
-      try {
-        const res = await executionService.screenSubject(
-          trimmedId,
-          body ?? undefined
-        );
-        if (res) {
-          result = res;
-        }
-      } catch (err) {
-        console.warn(
-          "Screening API call failed, falling back to local evaluation:",
-          err
-        );
       }
 
       if ((result as any).status === "ENROLLED") {
