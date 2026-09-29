@@ -4,8 +4,10 @@ using System.Text;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Persistence.Bitemporal;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Kernel.Persistence;
 
@@ -34,6 +36,14 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // TimeRange members translate to range operators however the context was built (DI, design time, tests).
+        ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new KernelQueryTranslationOptionsExtension());
+    }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
@@ -45,6 +55,9 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.HasDefaultSchema(Schema);
+
+        // btree_gist lets the K-TIME-2 exclusion constraints combine equality on keys with range overlap (ADR-2246).
+        modelBuilder.HasPostgresExtension("btree_gist");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KernelDbContext).Assembly);
 
         // Interim: the shared per-entity-type audit chain written by GxPAuditInterceptor. Replaced by the kernel

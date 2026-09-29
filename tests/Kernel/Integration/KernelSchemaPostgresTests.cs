@@ -3,8 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -47,6 +49,30 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
         tables.Should().BeEquivalentTo(
             "__ef_migrations_history", "tenants", "organizations", "people", "sites", "studies", "study_sites",
             "audit_log_entries");
+    }
+
+    /// <summary>
+    /// Validates that every bitemporal table the kernel maps carries the K-TIME-2 exclusion constraint and the K-TIME-1
+    /// append-only triggers, so a migration that forgets <c>CreateBitemporalGuards</c> fails here.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "KernelBitemporalTables_AllCarryExclusionConstraint_AndAppendOnlyTriggers")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task KernelBitemporalTablesAllCarryExclusionConstraintAndAppendOnlyTriggers()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        await using var context = fixture.CreateContext();
+
+        var bitemporalTables = context.Model.GetEntityTypes()
+            .Where(e => typeof(IBitemporalEntity).IsAssignableFrom(e.ClrType))
+            .Select(e => e.GetTableName()!)
+            .ToList();
+
+        foreach (var table in bitemporalTables)
+        {
+            await BitemporalGuardAssertions.AssertGuardedAsync(context, table, ct);
+        }
     }
 
     /// <summary>
