@@ -14,7 +14,7 @@
     "@types/node": "^26.4.1",
     "reflect-metadata": "^0.2.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.2"
   },
   "dependencies": {
     "pino": "^10.3.1",
