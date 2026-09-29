@@ -1,42 +1,27 @@
-# Usdm Schemas Package
+# usdm-schemas
 
-## Overview
+TypeScript Zod schemas for the CDISC USDM study structure and ePRO payloads, plus a graph validator for rule expressions. Consumed as TypeScript source by the frontends.
 
-Shared domain and infrastructure component `usdm-schemas` within the Cadence Clinical research software platform.
+## Contents
 
----
+- `src/index.ts`: Zod schemas and inferred types for `Code`, `SyntaxTemplate`, `EligibilityCriterion`, `BiomedicalConcept` and its properties, `Activity`, `Encounter`, `StudyArm`, `StudyEpoch`, `StudyDesign`, `StudyVersion` and `USDMStudy`; `EPROAnswersSchema`, `EPROSubmissionSchema` and `validateEproPayload`.
+- `src/graph-validator.ts`: `ALLOWED_OPERATORS`, `inspectExpressionAST`, `detectCycles` and `validateUsdmGraph` for dependency and expression checks.
+- `tests/graph-validator.test.ts`: Vitest tests.
 
-## Architectural Boundaries
+## Scripts
 
-The `usdm-schemas` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/usdm-schemas/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+| Command                            | Purpose                                                                                                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter usdm-schemas test`  | Vitest.                                                                                                                                                          |
+| `pnpm --filter usdm-schemas build` | Runs `cadence cdisc export` through `dotnet run`; that CLI command is currently a placeholder that only prints a message (see [packages/cli](../cli/README.md)). |
 
----
-
-## Public APIs / Exports
-
-Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
-
-#### Exposed CLI Commands
-- `build`: `uv run python3 ../../scripts/generate_schemas.py`
-- `test`: `vitest run`
-
----
+The package's `main` and `types` point at `src/index.ts`, so no build output is needed to consume it.
 
 ## Dependencies
 
-This package relies on the following standard dependencies:
-- `vitest`
-- `zod`
+- Runtime: `zod`.
+- Development: `vitest`.
 
----
+## Used by
 
-## Local Development & Testing
-
-Run unit and contract tests for this package:
-
-```bash
-pnpm --filter usdm-schemas test
-```
+[apps/web](../../apps/web/README.md), [apps/subject-portal](../../apps/subject-portal/README.md) and [packages/gateway-rewrite](../gateway-rewrite/README.md) (`"usdm-schemas": "workspace:*"`).

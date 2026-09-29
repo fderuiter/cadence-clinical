@@ -1,52 +1,32 @@
-# Ui Package
+# ui
 
-## Overview
+Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used by the web client and the subject portal.
 
-Shared domain and infrastructure component `ui` within the Cadence Clinical research software platform.
+## Contents
 
----
+- `index.js` (main entry, built to `dist/` as an ES and CJS library): helpers such as `debounce`, HTML builders for lookup inputs, rule editors and schedule-of-activities matrices, condition-tree serialisation, `initHoverDetection`, and re-exports of the modules and components below.
+- `signing.js`: browser-side hashing, canonical serialisation and AES-GCM helpers (`sha256`, `canonicalSerialize`, `encryptAESGCM`, `deriveKeyFromPIN`, and others).
+- `mockGateway.js`: gateway path and signature helpers for mocks and tests (`validateGatewayRequest`, `isPathSignatureGated`, a test `GATEWAY_SECRET`). It is not used for real authentication, which happens in [apps/gateway](../../apps/gateway/README.md).
+- `econsent.js`: consent normalisation and comprehension-check helpers.
+- `accessibility-matcher.js`: `toBeAccessible` Vitest matcher built on `axe-core`.
+- `src/components/`: Vue components (`FileUploadModal`, `MediaPlayer`, and `clinical/` components such as `ClinicalFormField`, `ClinicalDataTable`, `ClinicalQueryPanel`, `AuditLogViewer`, `PersonaSwitcher`).
+- `src/composables/`: `useFocusTrap`, `useEscapeClose`. `src/types/cdash.ts`: CDASH types.
+- `tokens.css`, `responsive.css`: design tokens and responsive utilities (exported as `ui/tokens.css`, `ui/responsive.css`).
+- `index.d.ts`: type declarations; `scripts/generate-types.js` runs before the build.
 
-## Architectural Boundaries
+## Scripts
 
-The `ui` package operates as a modular shared library within the Cadence Clinical ecosystem:
-
-- **Code-Adjacent Domain:** Located strictly within `packages/ui/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
-
----
-
-## Public APIs / Exports
-
-Exports shared utilities, domain interfaces, and models for `ui`.
-
-#### Exposed CLI Commands
-
-- `build`: `node apps/web/src/types/generate-types.js && vite build`
-- `test`: `vitest run --testTimeout=30000`
-- `lint`: `eslint .`
-- `format`: `prettier --write .`
-
----
+| Command                  | Purpose                                             |
+| ------------------------ | --------------------------------------------------- |
+| `pnpm --filter ui build` | Generates types, then builds the library with Vite. |
+| `pnpm --filter ui test`  | Vitest (`tests/`).                                  |
+| `pnpm --filter ui lint`  | ESLint.                                             |
 
 ## Dependencies
 
-This package relies on the following standard dependencies:
+- Runtime: `axe-core`; peer dependency `vue`.
+- Development: Vite, Vitest, TypeScript, `pinia`.
 
-- `@vitejs/plugin-vue`
-- `axe-core`
-- `pinia`
-- `typescript`
-- `vite`
-- `vitest`
-- `vue`
+## Used by
 
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
-
-```bash
-pnpm --filter ui test
-```
+[apps/web](../../apps/web/README.md) and [apps/subject-portal](../../apps/subject-portal/README.md) (`"ui": "workspace:*"`). Both apps build it before their own build and test runs.

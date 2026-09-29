@@ -1,49 +1,50 @@
-# Safety Microservice
+# Safety service
 
-## Overview
+Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting evaluation, SAE reconciliation, narrative, signal detection, periodic report and device investigation model, and renders ICSR E2B(R3) XML from a Liquid template.
 
-Safety microservice
+**Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
----
+## Project
 
-## Architectural Boundaries
+- Project: `apps/safety/src/Cadence.Apps.Safety.csproj` (assembly `Cadence.Apps.Safety`).
+- `Program.cs`: composition root and route mapping.
+- `Domain/`: EF Core entity classes (safety cases, reporting evaluations, SAE reconciliation runs and discrepancies, narratives, signal detection, periodic reports, device investigations, AS2 transmissions, audit log).
+- `Infrastructure/Persistence/`: `SafetyDbContext`, a design-time `SafetyDbContextFactory`, and `Configurations/` (Fluent API mappings).
+- `Infrastructure/Persistence/Migrations/`: `20260924145528_InitialCreate`.
+- `../Templates/e2b_r3_icsr.xml.liquid`: ICSR template embedded into the assembly.
 
+## HTTP surface
 
-Conforms strictly to Enterprise Hexagonal standards with clean decoupling:
-- `ports/`: Port interfaces defining driving and driven contracts.
-- `adapters/`: Database, S3/blob, and HTTP adapter implementations.
-- `domain/`: Pure business entity domain models and core domain logic.
-- `application/`: Business use case drivers coordinating ports and entities.
-- `presentation/`: FastAPI / Minimal API router wrappers.
+- `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `SafetyDbContext`.
+- `GET /api/v1/safety/status` (anonymous status payload).
+- `POST /api/v1/safety/icsr/render`: renders an `IcsrReport` through `e2b_r3_icsr.xml.liquid` and returns `application/xml`.
+- OpenAPI and the Scalar reference UI are mapped in the Development environment only.
+- The gateway forwards `/api/v1/safety/**` to this service. Compose publishes host port 8008 (container port 8000).
 
-- **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
-- **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
+## Security
 
----
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-## Public APIs / Exports
+## Persistence
 
-Service routes and contract interfaces:
-- `HTTP` endpoints under `/api/v1/safety`
+`AddCadencePostgresDbContext<SafetyDbContext>()` from [packages/database](../../packages/database/README.md) resolves the connection string from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`. Only the Development environment falls back to a local `cadence_edc` database on `localhost:5432`; other environments fail at startup. In `docker/docker-compose.yml` this service only receives a legacy `SAFETY_DATABASE_URL` (SQLite URL from the Python era), which the .NET service does not read.
 
----
+## Key dependencies
 
-## Dependencies
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
+- Packages: `Fluid.Core`, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
-This microservice includes the following module dependencies:
-- `asyncpg>=0.29.0`
-- `defusedxml>=0.7.1,<0.8.0`
-- `fastapi>=0.139.2,<0.140.0`
-- `pydantic>=2.6.0`
-- `sqlalchemy>=2.0.28`
-- `sqlmodel>=0.0.39`
+## Tests
 
----
+- No service-specific tests exist yet.
+- Architecture rules (`tests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
 
-## Local Development & Testing
-
-Run microservice unit and integration tests:
+## Run locally
 
 ```bash
-uv run pytest apps/safety/tests
+export GATEWAY_SECRET="<at least 32 characters>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+dotnet run --project apps/safety/src/Cadence.Apps.Safety.csproj
 ```
+
+This service is not wired into the Aspire AppHost ([apps/apphost](../apphost/README.md)).

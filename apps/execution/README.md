@@ -1,36 +1,54 @@
-# Execution Microservice
+# Execution service (EDC)
 
-## Overview
+Electronic data capture runtime. It manages subjects (enrolment state, consent, demographics), site compliance status, clinical observations with source data verification, form submissions and clinical queries, and runs edit checks and lab-range normalisation.
 
-Clinical application microservice for `execution` within the Cadence Clinical platform.
+**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on kernel concepts. The type-by-type plan is in [EXECUTION_MIGRATION_INVENTORY.md](../../docs/kernel/EXECUTION_MIGRATION_INVENTORY.md).
 
----
+## Project
 
-## Architectural Boundaries
+- Project: `apps/execution/src/Cadence.Apps.Execution.csproj` (assembly `Cadence.Apps.Execution`).
+- `Program.cs`: composition root (DI registrations, ProblemDetails mapping, MassTransit, route groups).
+- `Domain/`: subjects, observations, forms, queries and compliance models, domain errors, and repository ports (`Domain/Ports/`).
+- `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
+- `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
+- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
+- `Infrastructure/EditChecks/`, `Infrastructure/Normalization/`, `Infrastructure/Security/`: AST edit-check engine, UCUM/lab-range/outlier services, AES-GCM demographics encryption.
+- `Endpoints/`: Minimal API route groups and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
-Implements clinical domain services and application workflows within `apps/execution/`.
-- **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
-- **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
+## HTTP surface
 
----
+- `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `ExecutionDbContext`.
+- `/api/v1/execution/subjects`, `/api/v1/execution/observations`, `/api/v1/execution/forms`, `/api/v1/execution/queries` (route groups).
+- `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
+- Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`.
+- OpenAPI and the Scalar reference UI are mapped in the Development environment only.
+- The gateway forwards `/api/v1/execution/**`, `/api/v1/observations/**`, `/api/v1/forms/**`, `/api/v1/queries/**`, `/api/v1/subjects/**` and `/api/v1/compliance/**` here; the last two have no matching routes. Compose publishes port 8002.
 
-## Public APIs / Exports
+## Security
 
-Service routes and contract interfaces:
-- `HTTP` endpoints under `/api/v1/execution`
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity; selected mutating routes (for example form unlock, query reopen/cancel, subject state change) also require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2250](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The demographics key is bound from the `DemographicsEncryption` configuration section (`KeyBase64`).
 
----
+## Persistence
 
-## Dependencies
+`ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence_edc` on `localhost:5432`. The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
 
-Interacts with core platform capabilities and shared libraries in `packages/`.
+## Key dependencies
 
----
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
+- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+ `DependencyInjectionExtensions`), `Polly`, `MassTransit`, `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`; `Microsoft.EntityFrameworkCore.Design` at design time only.
 
-## Local Development & Testing
+## Tests
 
-Run microservice unit and integration tests:
+- Unit and endpoint tests in `tests/Execution/`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"`. Tests under `tests/Execution/Integration/` use Testcontainers PostgreSQL and need Docker.
+- End-to-end tests in `tests/E2E/`: `dotnet test tests/Cadence.E2ETests.csproj --filter "FullyQualifiedName~Cadence.E2ETests.E2E"`.
+- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
+
+## Run locally
 
 ```bash
-uv run pytest apps/execution/tests
+export GATEWAY_SECRET="<at least 32 characters>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=<password>"
+dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 ```
+
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service with a reference to its `cadence` PostgreSQL database.

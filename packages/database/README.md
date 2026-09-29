@@ -1,51 +1,29 @@
-# Database Package
+# Cadence.Database
 
-## Overview
+Shared EF Core 10 and PostgreSQL plumbing for the services: DbContext registration, connection-string resolution, readiness health checks, and the GxP audit interceptor.
 
-Database utilities package
+## Project
 
----
+- Project: `packages/database/src/Cadence.Database.csproj` (assembly `Cadence.Database`).
+- `CadenceDatabaseExtensions`: `AddCadencePostgresDbContext<TDbContext>()` registers the context with Npgsql retry-on-failure and a `ready`-tagged health check (used by `/healthz/ready`). `ResolvePostgresConnectionString` reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to a local docker-compose database, and any other environment throws at startup.
+- `CadenceDbContextExtensions`: `AddCadenceDbContext<TContext>()` binds a pre-compiled EF model when one exists.
+- `GxPAuditInterceptor`: `SaveChangesInterceptor` that stamps audit fields and appends hash-chained `AuditLogEntry` rows.
+- `Configurations/AuditLogEntryConfiguration`: Fluent API mapping for `AuditLogEntry`.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `audit.py`, `graph.py`, `mock_graph.py`, `datetime_helpers.py`, `tests/`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `database` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/database/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+- Project reference: `Cadence.Core.Domain`; framework reference `Microsoft.AspNetCore.App`.
+- Packages: `Microsoft.EntityFrameworkCore`, `Microsoft.EntityFrameworkCore.Design`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore`.
 
----
+## Referenced by
 
-## Public APIs / Exports
+Every .NET service except `designer` and `gateway`, plus `packages/cli` and all three test projects.
 
-Key exported interfaces and components:
-- class `UTCDateTime`
-- class `AIReviewStatus`
-- class `AIAssistedRecordMixin`
-- class `Part11AuditMixin`
-- class `AIGenerationManifest`
-- class `AuditFields`
-- class `WrappedGraphTransaction`
-- class `WrappedGraphSession`
-
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `alembic>=1.13.0`
-- `asyncpg>=0.29.0`
-- `fastapi>=0.139.2,<0.140.0`
-- `packages-hexagonal`
-- `packages-security`
-- `pydantic>=2.6.0`
-- `sqlalchemy>=2.0.28`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+## Tests
 
 ```bash
-uv run pytest packages/database
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DatabaseUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.CadenceDbContextExtensionsTests"
 ```
+
+`tests/Audit/GxPAuditTrailGenerationTests.cs` exercises the interceptor through four service contexts (`--filter "FullyQualifiedName~Cadence.UnitTests.Audit"`).
