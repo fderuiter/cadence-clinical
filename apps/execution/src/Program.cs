@@ -131,10 +131,13 @@ builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 // scope rather than once globally -- the ambient scope's own accessor (HttpCurrentAuditContextAccessor
 // inside an HTTP request) is what actually stamps AuditLogEntry.UserId, not a fixed value captured once at
 // startup.
-string executionDbConnectionString = builder.Configuration["POSTGRES_CONNECTION_STRING"]
-    is { Length: > 0 } configuredConnectionString
-        ? configuredConnectionString
-        : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+//
+// The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; only the Development
+// environment falls back to the local docker-compose database, so a misconfigured deployment fails at startup.
+string executionDbConnectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionString(
+    builder.Configuration,
+    builder.Environment,
+    "cadence_edc");
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
 builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 {
@@ -143,6 +146,9 @@ builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
         concurrencyTokenIncrementInterceptor,
         new Cadence.Database.GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
 });
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();

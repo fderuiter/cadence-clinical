@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -10,7 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using OpenTelemetry;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 using Scalar.AspNetCore;
@@ -55,25 +58,68 @@ public static partial class CadenceTelemetryExtensions
         return builder;
     }
 
-    public static IServiceCollection AddCadenceTelemetry(this IServiceCollection services)
+    /// <summary>Configuration key that switches on OTLP export for traces, metrics and logs.</summary>
+    public const string OtlpEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT";
+
+    /// <summary>Health check tag for dependencies that must be reachable before a service takes traffic.</summary>
+    public const string ReadinessTag = "ready";
+
+    public static IServiceCollection AddCadenceTelemetry(
+        this IServiceCollection services,
+        string? serviceName = null,
+        bool exportOtlp = false)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddOpenTelemetry()
+        var telemetry = services.AddOpenTelemetry()
             .WithTracing(tracing =>
             {
                 tracing
-                    .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation();
+                    .AddAspNetCoreInstrumentation(options =>
+                        options.Filter = context => !context.Request.Path.StartsWithSegments("/healthz"))
+                    .AddHttpClientInstrumentation()
+                    .AddSource("Npgsql");
             })
             .WithMetrics(metrics =>
             {
                 metrics
                     .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation();
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddMeter("Npgsql");
             });
 
+        if (!string.IsNullOrWhiteSpace(serviceName))
+        {
+            telemetry.ConfigureResource(resource => resource.AddService(serviceName));
+        }
+
+        if (exportOtlp)
+        {
+            telemetry.WithLogging().UseOtlpExporter();
+        }
+
         return services;
+    }
+
+    /// <summary>
+    /// Registers tracing, metrics and runtime instrumentation named after the service. When
+    /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is configured (the Aspire AppHost sets it), traces, metrics and
+    /// logs are exported over OTLP; otherwise nothing is exported.
+    /// </summary>
+    public static WebApplicationBuilder AddCadenceTelemetry(this WebApplicationBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        string serviceName = builder.Configuration["OTEL_SERVICE_NAME"] is { Length: > 0 } configured
+            ? configured
+            : builder.Environment.ApplicationName;
+
+        builder.Services.AddCadenceTelemetry(
+            serviceName,
+            exportOtlp: !string.IsNullOrWhiteSpace(builder.Configuration[OtlpEndpointKey]));
+
+        return builder;
     }
 
     public static WebApplicationBuilder AddCadenceWebDefaults(
@@ -83,7 +129,8 @@ public static partial class CadenceTelemetryExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.AddCadenceLogging();
-        builder.Services.AddCadenceTelemetry();
+        builder.AddCadenceTelemetry();
+        builder.Services.AddHealthChecks();
         if (configureProblemDetails != null)
         {
             builder.Services.AddProblemDetails(configureProblemDetails);
@@ -141,8 +188,27 @@ public static partial class CadenceTelemetryExtensions
         app.UseExceptionHandler();
         app.UseCadenceTraceparent();
         app.MapCadenceApiDocumentation(app.Environment);
+        app.MapCadenceProbeEndpoints();
 
         return app;
+    }
+
+    /// <summary>
+    /// Maps <c>/healthz/live</c> (process is up; runs no checks) and <c>/healthz/ready</c> (every check
+    /// tagged <see cref="ReadinessTag"/>, e.g. the service's database, must pass). Orchestrators should use
+    /// these rather than the static <c>/healthz</c> payload.
+    /// </summary>
+    public static IEndpointRouteBuilder MapCadenceProbeEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapHealthChecks("/healthz/live", new HealthCheckOptions { Predicate = _ => false });
+        endpoints.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains(ReadinessTag)
+        });
+
+        return endpoints;
     }
 
     public static WebApplication MapCadenceHealthAndStatusEndpoints(
