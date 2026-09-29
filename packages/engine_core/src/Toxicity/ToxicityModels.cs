@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Cadence.Core.Domain.Toxicity;
@@ -55,14 +56,21 @@ public class ToxicityRuleDefinition
     {
         if (string.IsNullOrEmpty(Sha256Checksum))
         {
-            var payload = new
+            var payload = new JsonObject
             {
-                test_code = TestCode,
-                scale = Scale,
-                version_index = VersionIndex,
-                grades = Grades
+                ["test_code"] = TestCode,
+                ["scale"] = Scale,
+                ["version_index"] = VersionIndex,
+                ["grades"] = new JsonArray(Grades.Select(g => (JsonNode)new JsonObject
+                {
+                    ["grade"] = g.Grade.ToString(),
+                    ["min_multiplier"] = g.MinMultiplier,
+                    ["max_multiplier"] = g.MaxMultiplier,
+                    ["min_value"] = g.MinValue,
+                    ["max_value"] = g.MaxValue
+                }).ToArray())
             };
-            string raw = JsonSerializer.Serialize(payload);
+            string raw = payload.ToJsonString();
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
             Sha256Checksum = Convert.ToHexString(hash).ToLowerInvariant();
         }

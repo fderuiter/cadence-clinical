@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 using Spectre.Console;
@@ -206,20 +207,20 @@ public static class CodeDuplicationService
             }
         }
 
-        var summary = new
+        var summary = new JsonObject
         {
-            duplicates = duplicatesFound.Select(d => new
+            ["duplicates"] = new JsonArray(duplicatesFound.Select(d => (JsonNode)new JsonObject
             {
-                loc1 = new { file = d.Loc1.File, start = d.Loc1.Start, end = d.Loc1.End },
-                loc2 = new { file = d.Loc2.File, start = d.Loc2.Start, end = d.Loc2.End },
-                preview = d.Loc1.Preview
-            }).ToList()
+                ["loc1"] = new JsonObject { ["file"] = d.Loc1.File, ["start"] = d.Loc1.Start, ["end"] = d.Loc1.End },
+                ["loc2"] = new JsonObject { ["file"] = d.Loc2.File, ["start"] = d.Loc2.Start, ["end"] = d.Loc2.End },
+                ["preview"] = d.Loc1.Preview
+            }).ToArray())
         };
 
         try
         {
             string summaryPath = Path.Combine(repoRoot, "duplication_summary.json");
-            File.WriteAllText(summaryPath, JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }) + "\n");
+            File.WriteAllText(summaryPath, summary.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         }
         catch (Exception ex)
         {
