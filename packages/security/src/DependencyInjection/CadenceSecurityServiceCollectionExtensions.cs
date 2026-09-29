@@ -1,7 +1,9 @@
 using System;
+
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;

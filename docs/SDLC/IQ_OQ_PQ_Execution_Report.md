@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 740
-- **Passed:** 740 🟢
+- **Total Automated Test Cases Run:** 744
+- **Passed:** 744 🟢
 - **Failed/Errors:** 0 🔴
 - **Overall Operational Pass Rate:** 100.00%
 
@@ -103,6 +103,8 @@ The Installation Qualification verifies that the software execution environment 
 | `Cadence.UnitTests.Execution.Consumers.EConsentCompletedConsumerTests.Consume_GivenTheSameEventDeliveredTwice_ResultsInExactlyOneClinicalSubjectNotTwo` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_ArithmeticExpressions_EvaluatesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_Comparisons_EvaluatesInequalities` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_IndexedRepeat_ResolvesNestedArrayReference` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_KleeneLogic_EvaluatesThreeValuedTruthTables` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests.EvaluateAst_MixedTypeComparisons_HandlesIntDoubleAndNullSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -535,6 +537,8 @@ The Installation Qualification verifies that the software execution environment 
 | `EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EvaluateAst_ArithmeticExpressions_EvaluatesCorrectly` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EvaluateAst_Comparisons_EvaluatesInequalities` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EvaluateAst_IndexedRepeat_ResolvesNestedArrayReference` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EvaluateAst_KleeneLogic_EvaluatesThreeValuedTruthTables` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `EvaluateAst_MixedTypeComparisons_HandlesIntDoubleAndNullSafely` | `Cadence.UnitTests` | PRD-SYS-053 | 🟢 PASSED | < 1s |
@@ -785,11 +789,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** a94006eff494ad7075739e1c45f39f2ff5925e4ed8a85520bdb18425e2f7afee
-
+- **Cryptographic Hash (SHA-256):** 58deb6b96945e78e94bafa4be0afb028152e8f54b5668b76995483e870c514a9
 -----BEGIN CERTIFICATE-----
-MIIC...DUMMY
+MIIDxDCCAnygAwIBAgIILv8eU59VNj8wPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
+ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
+eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
+MB4XDTI2MDkyODA2NDIzM1oXDTI3MDkyOTA2NDIzM1owaDEiMCAGA1UEChMZQ2Fk
+ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
+aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqX0GAB6gITDMatK4P5lue4CwYgEP
+K/ALHjyopU63rr68EJgDX4XJHq3kQHM/WmtMC/WLZC3o/w6Sv2nIL4+eALDum8XB
+dn1ZSpX1umw8W7qjAKklD6R3ss+wIGP++FK4+oDbcl7aGkcULOHy5wbKsZNjx4eK
+O322owhXPrTnvAyQQMyelfm1qPB22v+bmSZ2iZ3ULO74y/tzhb0I65LJio6fKKwB
+0R9UpNAGKm2dh+7e+FYRlS8G9xJv6AJif9VMucD/fs3lE9dY3bDmdjkXUzHGt7w8
+TR09l6Ale6uRJXXuJ6ZU9qnpV9S+yUp1TytM18zbJdjOs3Bi9F0LzyXBDwIDAQAB
+oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAJm6da0IPuqt
+wx1lAK5qjHKUG3rzAlY/msw8rBpT6TSHDKY9E9MrbZnhbwT+IatgRN9N2jpFJJnN
+OyZqGeamS1K7Crn8DrL27ziGmuW2x9IPPLSZcPQcyAVRY67PeFCDXHxRoTv0u0Dv
+mfjUcq0nXaZN8QKwxYL36UR0lfXA3RrIHurvm9WgpxUD4ZA0dITq/ztp20b8BpZ3
+Ce7nkvh7eJUauqfWhy82Wvz0AhPKfOysmgNUGWuyHjtyWkS/j4zBpsvmkl8kHAOu
+Kt1csvvRMGK01TRH62GSeMRamqEnfO1ACBcWQK/gmHC9UEiT6JfzbryWwUsiOO8n
+WPgto9sV/ME=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-YTk0MDA2ZWZmNDk0YWQ3MDc1NzM5ZTFjNDVmMzlmMmZmNTkyNWU0ZWQ4YTg1NTIwYmRiMTg0MjVlMmY3YWZlZQ==
+EKOpsuWQL0a0zMOoYVdFIgLT8VbAWJcL0S9oycYOJBIqTQ08wnlbgyDi16KFho9j+27p2eeYS4wxTCgvgPbGFtPr49oivqeS9eiaKgVKr/mxk7AAc8h0PKjsCITJSfMJrd974YaMis+W8yerigKe/Zi2rnXYdGSLsyFTlAYZ7j3N2KvcGgduRjB7YAA+uoqVDA31yx0tSgqhgdd7Ozq1FtSiaFyJYwwECnNpJm726EijxnuHkAlAuApxFkuZzRQIG3vdj5lZSZAfESxaWEgSjievUjhGelZidGtD/qx88mSimhvv2S+TlHWlu8BLPOo/PA1uvF2J92DhBUeiBvJHog==
 -----END SIGNATURE-----

@@ -2394,6 +2394,45 @@
     },
     {
       "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1969,
+        "end": 1983
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1576,
+        "end": 1590
+      },
+      "preview": "        if (\n          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1970,
+        "end": 1984
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1577,
+        "end": 1591
+      },
+      "preview": "          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1971,
+        "end": 1985
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1578,
+        "end": 1592
+      },
+      "preview": "          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n            state.syncRetryInfo.sequenceNumber === undefined ||\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/subject-portal/src/mocks/handlers.js",
         "start": 6,
         "end": 22
@@ -2612,6 +2651,110 @@
         "end": 45
       },
       "preview": "      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n      url.pathname.startsWith(\u0022/terminology/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 472,
+        "end": 486
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 73,
+        "end": 87
+      },
+      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 473,
+        "end": 487
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 74,
+        "end": 88
+      },
+      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 508,
+        "end": 522
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 155,
+        "end": 169
+      },
+      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 509,
+        "end": 523
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 156,
+        "end": 170
+      },
+      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 510,
+        "end": 524
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 157,
+        "end": 171
+      },
+      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 511,
+        "end": 525
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 158,
+        "end": 172
+      },
+      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 512,
+        "end": 526
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 159,
+        "end": 173
+      },
+      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 513,
+        "end": 527
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 160,
+        "end": 174
+      },
+      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
     },
     {
       "loc1": {
@@ -2966,107 +3109,68 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 472,
-        "end": 486
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 20,
+        "end": 34
       },
       "loc2": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 73,
-        "end": 87
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 109,
+        "end": 123
       },
-      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
+      "preview": "  },\n  username: {\n    type: String,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 473,
-        "end": 487
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 21,
+        "end": 35
       },
       "loc2": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 74,
-        "end": 88
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 110,
+        "end": 124
       },
-      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
+      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 508,
-        "end": 522
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 22,
+        "end": 36
       },
       "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 155,
-        "end": 169
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 111,
+        "end": 125
       },
-      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
+      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 509,
-        "end": 523
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 23,
+        "end": 37
       },
       "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 156,
-        "end": 170
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 112,
+        "end": 126
       },
-      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
+      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 510,
-        "end": 524
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 24,
+        "end": 38
       },
       "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 157,
-        "end": 171
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 113,
+        "end": 127
       },
-      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 511,
-        "end": 525
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 158,
-        "end": 172
-      },
-      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 512,
-        "end": 526
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 159,
-        "end": 173
-      },
-      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 513,
-        "end": 527
-      },
-      "loc2": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 160,
-        "end": 174
-      },
-      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
+      "preview": "  },\n  signerName: {\n    type: String,\n..."
     },
     {
       "loc1": {
@@ -3681,68 +3785,94 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 20,
-        "end": 34
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1482,
+        "end": 1501
       },
       "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 109,
-        "end": 123
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1215,
+        "end": 1234
       },
-      "preview": "  },\n  username: {\n    type: String,\n..."
+      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 21,
-        "end": 35
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1483,
+        "end": 1502
       },
       "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 110,
-        "end": 124
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1216,
+        "end": 1235
       },
-      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 22,
-        "end": 36
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1484,
+        "end": 1505
       },
       "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 111,
-        "end": 125
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1217,
+        "end": 1238
       },
-      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
+      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 23,
-        "end": 37
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1485,
+        "end": 1506
       },
       "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 112,
-        "end": 126
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1218,
+        "end": 1239
       },
-      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
+      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 24,
-        "end": 38
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1486,
+        "end": 1507
       },
       "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 113,
-        "end": 127
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1219,
+        "end": 1240
       },
-      "preview": "  },\n  signerName: {\n    type: String,\n..."
+      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1487,
+        "end": 1510
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1220,
+        "end": 1243
+      },
+      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1488,
+        "end": 1511
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1221,
+        "end": 1244
+      },
+      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
     },
     {
       "loc1": {
@@ -3785,144 +3915,183 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 30,
-        "end": 45
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
       },
       "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 6,
         "end": 21
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 30,
+        "end": 45
       },
       "preview": "    \u003C/div\u003E\n    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 32,
-        "end": 46
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 8,
         "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 32,
+        "end": 46
       },
       "preview": "    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 33,
-        "end": 47
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 9,
         "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 33,
+        "end": 47
       },
       "preview": "    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 34,
-        "end": 48
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 10,
         "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 34,
+        "end": 48
       },
       "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 35,
-        "end": 49
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 11,
         "end": 25
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 35,
+        "end": 49
       },
       "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 36,
-        "end": 50
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 12,
         "end": 26
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 36,
+        "end": 50
       },
       "preview": "        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 37,
-        "end": 51
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 13,
         "end": 27
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 37,
+        "end": 51
       },
       "preview": "        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 38,
-        "end": 52
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 14,
         "end": 28
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 38,
+        "end": 52
       },
       "preview": "        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n        \u003Cstrong\u003EB\u003C/strong\u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 49,
-        "end": 63
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 41,
         "end": 55
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 49,
+        "end": 63
       },
       "preview": "      \u003C/button\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 50,
-        "end": 64
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 42,
         "end": 56
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 50,
+        "end": 64
       },
       "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 51,
-        "end": 65
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 43,
         "end": 57
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 51,
+        "end": 65
       },
       "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
     },
@@ -4084,172 +4253,42 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 210,
-        "end": 226
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 109,
-        "end": 125
-      },
-      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 211,
-        "end": 227
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 110,
-        "end": 126
-      },
-      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 213,
-        "end": 228
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 112,
-        "end": 127
-      },
-      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 756,
-        "end": 776
-      },
-      "loc2": {
         "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
         "start": 1424,
         "end": 1444
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
       },
       "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 759,
-        "end": 777
-      },
-      "loc2": {
         "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
         "start": 1427,
         "end": 1445
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
       },
       "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 760,
-        "end": 778
-      },
-      "loc2": {
         "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
         "start": 1428,
         "end": 1446
       },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
+      },
       "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1482,
-        "end": 1501
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1215,
-        "end": 1234
-      },
-      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1483,
-        "end": 1502
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1216,
-        "end": 1235
-      },
-      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1484,
-        "end": 1505
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1217,
-        "end": 1238
-      },
-      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1485,
-        "end": 1506
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1218,
-        "end": 1239
-      },
-      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1486,
-        "end": 1507
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1219,
-        "end": 1240
-      },
-      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1487,
-        "end": 1510
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1220,
-        "end": 1243
-      },
-      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1488,
-        "end": 1511
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1221,
-        "end": 1244
-      },
-      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
     },
     {
       "loc1": {
