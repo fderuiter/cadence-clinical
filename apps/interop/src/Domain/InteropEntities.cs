@@ -229,31 +229,31 @@ public class SensorDailySummaryRecord
     public string DeviceToken { get; set; } = string.Empty;
     public int ReadingsCount { get; set; }
     public double ActiveWearHours { get; set; }
-    public double? TirPercentage { get; set; }
-    public double? TbrLevel1Percentage { get; set; }
-    public double? TbrLevel2Percentage { get; set; }
-    public double? TarLevel1Percentage { get; set; }
-    public double? TarLevel2Percentage { get; set; }
-    public double? MeanGlucoseMgDl { get; set; }
-    public double? GlucoseSd { get; set; }
-    public double? GlucoseCvPercent { get; set; }
-    public double? GlucoseManagementIndicator { get; set; }
+    public decimal? TirPercentage { get; set; }
+    public decimal? TbrLevel1Percentage { get; set; }
+    public decimal? TbrLevel2Percentage { get; set; }
+    public decimal? TarLevel1Percentage { get; set; }
+    public decimal? TarLevel2Percentage { get; set; }
+    public decimal? MeanGlucoseMgDl { get; set; }
+    public decimal? GlucoseSd { get; set; }
+    public decimal? GlucoseCvPercent { get; set; }
+    public decimal? GlucoseManagementIndicator { get; set; }
     public int? TotalSteps { get; set; }
-    public double? MeanCadenceSpm { get; set; }
-    public double? PeakCadenceSpm { get; set; }
-    public double? ActiveMinutes { get; set; }
-    public double? SedentaryMinutes { get; set; }
-    public double? SleepDurationMinutes { get; set; }
-    public double? SleepEfficiencyPercent { get; set; }
-    public double? RestingHeartRateBpm { get; set; }
-    public double? BestFev1Liters { get; set; }
-    public double? BestFvcLiters { get; set; }
-    public double? Fev1FvcRatio { get; set; }
-    public double? Fev1PercentPredicted { get; set; }
-    public double? PeakExpiratoryFlowLMin { get; set; }
-    public double? MeanSystolicMmhg { get; set; }
-    public double? MeanDiastolicMmhg { get; set; }
-    public double? MeanArterialPressureMmhg { get; set; }
+    public decimal? MeanCadenceSpm { get; set; }
+    public decimal? PeakCadenceSpm { get; set; }
+    public decimal? ActiveMinutes { get; set; }
+    public decimal? SedentaryMinutes { get; set; }
+    public decimal? SleepDurationMinutes { get; set; }
+    public decimal? SleepEfficiencyPercent { get; set; }
+    public decimal? RestingHeartRateBpm { get; set; }
+    public decimal? BestFev1Liters { get; set; }
+    public decimal? BestFvcLiters { get; set; }
+    public decimal? Fev1FvcRatio { get; set; }
+    public decimal? Fev1PercentPredicted { get; set; }
+    public decimal? PeakExpiratoryFlowLMin { get; set; }
+    public decimal? MeanSystolicMmhg { get; set; }
+    public decimal? MeanDiastolicMmhg { get; set; }
+    public decimal? MeanArterialPressureMmhg { get; set; }
     public string SummaryManifestJson { get; set; } = "{}";
     public string? LakehouseRecordId { get; set; }
     public string Sha256Hash { get; set; } = string.Empty;
@@ -272,8 +272,8 @@ public class SensorSafetyAlertRecord
     public string AlertType { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
     public string ParameterName { get; set; } = string.Empty;
-    public double ObservedValue { get; set; }
-    public double ThresholdValue { get; set; }
+    public decimal ObservedValue { get; set; }
+    public decimal ThresholdValue { get; set; }
     public string Unit { get; set; } = string.Empty;
     public DateTime TriggeredAt { get; set; }
     public bool IsAcknowledged { get; set; }

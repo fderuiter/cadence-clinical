@@ -206,6 +206,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md)
 - [2026-08-11: Chronological Date Validation and Visit Date Constraints in SDTM Models](2026-08-11-chronological-sdtm-date-validation.md)
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
+- [2026-09-29: Interop Observation Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](2026-09-29-interop-observation-decimal-precision.md)
 
 ### 4. Clinical Operations & Business Modules
 
