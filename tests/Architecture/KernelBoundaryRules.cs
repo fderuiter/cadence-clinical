@@ -98,7 +98,8 @@ public static class KernelBoundaryRules
                     .Where(p => p.PropertyType == typeof(string))
                     .Select(p => p.Name)
                     .Concat(type.GetFields(publicDeclared)
-                        .Where(f => f.FieldType == typeof(string))
+                        // A const string is a name (header, claim type, route key), never an ID value.
+                        .Where(f => f.FieldType == typeof(string) && !f.IsLiteral)
                         .Select(f => f.Name))
                     .Where(IsKernelIdMemberName);
 

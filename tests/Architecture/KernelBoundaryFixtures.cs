@@ -39,6 +39,9 @@ public sealed class SyntheticSiteRegistration
 
     /// <summary>Public string field, also forbidden.</summary>
     public string ParticipantId = string.Empty;
+
+    /// <summary>A const is a name (e.g. a header), not an ID value, so it is allowed.</summary>
+    public const string HeaderSiteId = "X-Site-Id";
 }
 
 /// <summary>Synthetic module DbContext mapping the fixtures above (K-MOD-1).</summary>

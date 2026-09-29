@@ -122,6 +122,8 @@ public class KernelBoundaryTests
             "a kernel-typed ID member is the compliant form");
         violations.Should().NotContain(v => v.EndsWith(".InternalStudyId", StringComparison.Ordinal),
             "only public members are in scope for K-XS-1");
+        violations.Should().NotContain(v => v.EndsWith(".HeaderSiteId", StringComparison.Ordinal),
+            "a const string holds a name such as a header, not an ID value");
 
         var ratchet = KernelBoundaryBaseline.Compare(violations, KernelBoundaryBaseline.Read(KernelBoundaryRules.KXs1));
         ratchet.IsClean.Should().BeFalse();
