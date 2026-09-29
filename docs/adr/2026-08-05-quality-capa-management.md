@@ -1,4 +1,4 @@
-# ADR-2339: Quality & CAPA Management, Platform Placement, and Traceability
+# ADR-2342: Quality & CAPA Management, Platform Placement, and Traceability
 
 Also known as: ADR-056 (former number)
 

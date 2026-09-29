@@ -1,4 +1,4 @@
-# ADR-2281: Code Formatting and Style Standardization
+# ADR-2284: Code Formatting and Style Standardization
 
 ## Status
 

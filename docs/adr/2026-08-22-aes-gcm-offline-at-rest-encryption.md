@@ -1,4 +1,4 @@
-# ADR-2386: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract
+# ADR-2389: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract
 
 Also known as: ADR-099 (former number)
 

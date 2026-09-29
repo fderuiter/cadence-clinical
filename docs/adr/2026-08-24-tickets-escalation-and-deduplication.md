@@ -1,4 +1,4 @@
-# ADR-2396: Support Tickets SLA/Overdue Escalation and Notification De-Duplication
+# ADR-2399: Support Tickets SLA/Overdue Escalation and Notification De-Duplication
 
 Also known as: ADR-101 (former number)
 

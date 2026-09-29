@@ -1,4 +1,4 @@
-# ADR-2435: RSA Signature Verification Fallback to PKCS1v15
+# ADR-2438: RSA Signature Verification Fallback to PKCS1v15
 
 Also known as: ADR-2158 (former number)
 

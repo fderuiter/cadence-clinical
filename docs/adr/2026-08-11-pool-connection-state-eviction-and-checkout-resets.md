@@ -1,4 +1,4 @@
-# ADR-2358: Pool Connection State Eviction and Checkout Resets
+# ADR-2361: Pool Connection State Eviction and Checkout Resets
 
 Also known as: ADR-2169 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2430: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions
+# ADR-2433: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions
 
 Also known as: ADR-120 (former number)
 

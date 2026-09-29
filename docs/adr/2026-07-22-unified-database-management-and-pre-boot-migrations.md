@@ -1,4 +1,4 @@
-# ADR-2276: Unified Database Management and Pre-Boot Migrations
+# ADR-2279: Unified Database Management and Pre-Boot Migrations
 
 ## Status
 

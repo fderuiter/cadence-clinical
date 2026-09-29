@@ -1,4 +1,4 @@
-# ADR-2408: Site-Aware Synchronized Document Deduplication
+# ADR-2411: Site-Aware Synchronized Document Deduplication
 
 Also known as: ADR-112 (former number)
 

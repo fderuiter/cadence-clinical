@@ -1,4 +1,4 @@
-# ADR-2267: Centralized API Gateway Authentication and Header Propagation
+# ADR-2270: Centralized API Gateway Authentication and Header Propagation
 
 ## Status
 

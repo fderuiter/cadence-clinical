@@ -1,4 +1,4 @@
-# ADR-2394: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails
+# ADR-2397: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails
 
 Also known as: ADR-2192 (former number)
 

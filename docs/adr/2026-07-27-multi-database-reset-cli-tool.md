@@ -1,4 +1,4 @@
-# ADR-2287: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails
+# ADR-2290: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails
 
 Also known as: ADR-096 (former number)
 

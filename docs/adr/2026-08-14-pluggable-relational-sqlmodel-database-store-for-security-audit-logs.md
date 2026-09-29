@@ -1,4 +1,4 @@
-# ADR-2374: Pluggable Relational SQLModel Database Store for Security Audit Logs
+# ADR-2377: Pluggable Relational SQLModel Database Store for Security Audit Logs
 
 Also known as: ADR-2173 (former number)
 

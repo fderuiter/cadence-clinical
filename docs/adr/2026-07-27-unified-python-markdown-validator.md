@@ -1,4 +1,4 @@
-# ADR-2289: Unified Python-based Documentation Validator
+# ADR-2292: Unified Python-based Documentation Validator
 
 Also known as: ADR-104 (former number)
 

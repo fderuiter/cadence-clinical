@@ -1,4 +1,4 @@
-# ADR-2421: Vue SPA Foundation and Tooling Setup
+# ADR-2424: Vue SPA Foundation and Tooling Setup
 
 Also known as: ADR-132 (former number)
 

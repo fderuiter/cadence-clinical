@@ -1,4 +1,4 @@
-# ADR-2397: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine
+# ADR-2400: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine
 
 Also known as: ADR-2218 (former number)
 

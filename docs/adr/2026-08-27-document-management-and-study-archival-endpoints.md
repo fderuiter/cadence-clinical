@@ -1,4 +1,4 @@
-# ADR-2411: Exposing Document Storage and Study Archival REST Endpoints
+# ADR-2414: Exposing Document Storage and Study Archival REST Endpoints
 
 Also known as: ADR-118 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2417: SDV Sign-Off Workflow & Automatic Verification Drop
+# ADR-2420: SDV Sign-Off Workflow & Automatic Verification Drop
 
 Also known as: ADR-119 (former number)
 

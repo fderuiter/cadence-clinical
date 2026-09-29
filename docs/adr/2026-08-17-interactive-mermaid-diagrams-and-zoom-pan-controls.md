@@ -1,4 +1,4 @@
-# ADR-2380: Interactive Mermaid Diagrams and Responsive Layout Controls
+# ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls
 
 Also known as: ADR-097 (former number)
 

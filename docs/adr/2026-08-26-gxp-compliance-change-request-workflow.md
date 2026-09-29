@@ -1,4 +1,4 @@
-# ADR-2405: GxP Compliance Change Request Workflow
+# ADR-2408: GxP Compliance Change Request Workflow
 
 Also known as: ADR-117 (former number)
 

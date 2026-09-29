@@ -1,4 +1,4 @@
-# ADR-2383: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate
+# ADR-2386: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate
 
 Also known as: ADR-097 (former number)
 

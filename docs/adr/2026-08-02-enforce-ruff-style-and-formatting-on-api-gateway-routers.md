@@ -1,4 +1,4 @@
-# ADR-2304: Enforce Ruff Style and Formatting on API Gateway Routers
+# ADR-2307: Enforce Ruff Style and Formatting on API Gateway Routers
 
 Also known as: ADR-251 (former number)
 

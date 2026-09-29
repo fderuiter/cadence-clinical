@@ -1,4 +1,4 @@
-# ADR-2295: Resolve Vitest Peer Dependency Conflict in Shared UI Package
+# ADR-2298: Resolve Vitest Peer Dependency Conflict in Shared UI Package
 
 Also known as: ADR-121 (former number)
 

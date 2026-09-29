@@ -1,4 +1,4 @@
-# ADR-2437: Site Compliance Cache and Transition Gating
+# ADR-2440: Site Compliance Cache and Transition Gating
 
 Also known as: ADR-2162 (former number)
 

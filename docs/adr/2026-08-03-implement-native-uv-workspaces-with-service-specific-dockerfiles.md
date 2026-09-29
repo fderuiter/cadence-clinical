@@ -1,4 +1,4 @@
-# ADR-2319: Implement native uv workspaces with service-specific Dockerfiles
+# ADR-2322: Implement native uv workspaces with service-specific Dockerfiles
 
 Also known as: ADR-255 (former number)
 

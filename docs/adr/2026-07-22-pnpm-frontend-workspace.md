@@ -1,4 +1,4 @@
-# ADR-2271: Modular pnpm Workspace for Frontend Development
+# ADR-2274: Modular pnpm Workspace for Frontend Development
 
 ## Status
 

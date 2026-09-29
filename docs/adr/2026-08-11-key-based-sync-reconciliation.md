@@ -1,4 +1,4 @@
-# ADR-2356: Key-Based Sync Reconciliation
+# ADR-2359: Key-Based Sync Reconciliation
 
 Also known as: ADR-2167 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2292: Rule Authoring, Validation, and DDF Delivery
+# ADR-2295: Rule Authoring, Validation, and DDF Delivery
 
 ## Status
 

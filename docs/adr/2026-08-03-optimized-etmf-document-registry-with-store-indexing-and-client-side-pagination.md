@@ -1,4 +1,4 @@
-# ADR-2321: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination
+# ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination
 
 Also known as: ADR-254 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2310: RTSM Architecture and Randomization Persistence
+# ADR-2313: RTSM Architecture and Randomization Persistence
 
 Also known as: ADR-053 (former number)
 

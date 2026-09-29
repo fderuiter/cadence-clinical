@@ -1,4 +1,4 @@
-# ADR-2427: Centralized Study Scope and Lab Range Permissions
+# ADR-2430: Centralized Study Scope and Lab Range Permissions
 
 Also known as: ADR-145 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2273: Signature Re-Authentication
+# ADR-2276: Signature Re-Authentication
 
 ## Status
 

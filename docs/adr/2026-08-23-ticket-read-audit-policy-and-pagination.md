@@ -1,4 +1,4 @@
-# ADR-2393: Ticket Read Audit Policy and Paginated Audit Log Retrieval
+# ADR-2396: Ticket Read Audit Policy and Paginated Audit Log Retrieval
 
 Also known as: ADR-099 (former number)
 

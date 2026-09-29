@@ -1,4 +1,4 @@
-# ADR-2260: PostgreSQL Relational Database for Execution
+# ADR-2263: PostgreSQL Relational Database for Execution
 
 ## Status
 

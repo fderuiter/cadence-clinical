@@ -1,4 +1,4 @@
-# ADR-2285: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking
+# ADR-2288: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking
 
 ## Status
 

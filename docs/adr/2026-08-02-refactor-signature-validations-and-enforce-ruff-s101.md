@@ -1,4 +1,4 @@
-# ADR-2309: Refactor Signature Validations and Enforce Ruff S101
+# ADR-2312: Refactor Signature Validations and Enforce Ruff S101
 
 Also known as: ADR-120 (former number)
 

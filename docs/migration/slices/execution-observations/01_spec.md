@@ -20,7 +20,7 @@
 - ICH GCP E6(R2) §4.9 (Accurate, Complete, and Verifiable Source Data / eCRF Entries)
 - CDISC ODM v1.3.2 / v2.0 & USDM v3.0 / v4.0 (Clinical Observation and Biomedical Concept Domains)
 - PRD-SYS-001, PRD-SYS-002, PRD-SYS-004, PRD-SYS-042, PRD-SYS-053, PRD-SYS-121, PRD-SUB-001, PRD-TRN-002
-- ADR-2329 (Dynamic JSONB Property Mapping for Observations), ADR-2202 (21 CFR Part 11 Signatures & Audit Logs), ADR-2233 / ADR-2425 (Single-Assembly Clean Architecture)
+- ADR-2332 (Dynamic JSONB Property Mapping for Observations), ADR-2202 (21 CFR Part 11 Signatures & Audit Logs), ADR-2233 / ADR-2428 (Single-Assembly Clean Architecture)
 
 ---
 
@@ -58,7 +58,7 @@ The `execution-observations` slice encompasses the core electronic data capture 
   | `protocol_version_index` | `int` | No | `null` | Monotonic protocol version sequence index. |
   | `additional_properties` | `dictionary` | No | `{}` | Dynamic JSONB bag for laboratory bounds, device metadata, and custom flags. |
 
-### 2.2 Dynamic JSONB Projection (ADR-2329)
+### 2.2 Dynamic JSONB Projection (ADR-2332)
 To avoid wide, sparse relational schemas across heterogeneous clinical domains while preserving zero-allocation query capabilities, laboratory and domain-specific attributes are projected into a JSONB `additional_properties` column with typed accessors:
 | Dynamic Property | JSON Type | Strongly Typed Accessor | Description / Invariant |
 | :--- | :--- | :--- | :--- |
@@ -139,7 +139,7 @@ stateDiagram-v2
 
 ## 4. Business Rules & Regulatory Invariants
 
-### Rule 1: Dynamic Property Projection & Storage (ADR-2329)
+### Rule 1: Dynamic Property Projection & Storage (ADR-2332)
 - `ClinicalObservation.additional_properties` is backed by PostgreSQL `jsonb` with GIN indexing for fast querying by dynamic criteria (e.g. `additional_properties ->> 'lab_source' = 'CENTRAL'`).
 - The domain model provides strongly-typed getters and setters that mutate the underlying dictionary and emit property-changed events for change-tracking interceptors.
 

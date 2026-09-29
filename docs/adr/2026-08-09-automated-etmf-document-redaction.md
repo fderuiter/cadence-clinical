@@ -1,4 +1,4 @@
-# ADR-2346: Automated eTMF Document Redaction
+# ADR-2349: Automated eTMF Document Redaction
 
 Also known as: ADR-065 (former number)
 

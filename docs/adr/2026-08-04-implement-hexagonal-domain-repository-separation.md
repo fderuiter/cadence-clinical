@@ -1,4 +1,4 @@
-# ADR-2327: Implement Hexagonal Domain Repository Separation
+# ADR-2330: Implement Hexagonal Domain Repository Separation
 
 Also known as: ADR-2156 (former number)
 

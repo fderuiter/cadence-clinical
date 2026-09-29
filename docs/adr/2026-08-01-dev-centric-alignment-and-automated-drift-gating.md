@@ -1,4 +1,4 @@
-# ADR-2298: Developer-Centric Architecture Alignment and Automated Drift Gating
+# ADR-2301: Developer-Centric Architecture Alignment and Automated Drift Gating
 
 Also known as: ADR-112 (former number)
 

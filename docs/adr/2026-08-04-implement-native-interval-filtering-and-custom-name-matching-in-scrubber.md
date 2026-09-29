@@ -1,4 +1,4 @@
-# ADR-2328: Implement Native Interval Filtering and Custom Name Matching in Scrubber
+# ADR-2331: Implement Native Interval Filtering and Custom Name Matching in Scrubber
 
 Also known as: ADR-256 (former number)
 

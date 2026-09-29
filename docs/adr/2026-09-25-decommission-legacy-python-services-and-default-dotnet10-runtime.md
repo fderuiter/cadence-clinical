@@ -1,4 +1,4 @@
-# ADR-2440: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime
+# ADR-2443: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime
 
 Also known as: ADR-2240 (former number)
 

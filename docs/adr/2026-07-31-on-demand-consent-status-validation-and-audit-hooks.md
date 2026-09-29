@@ -1,4 +1,4 @@
-# ADR-2293: On-Demand Consent Status Validation and Audit Hooks
+# ADR-2296: On-Demand Consent Status Validation and Audit Hooks
 
 Also known as: ADR-121 (former number)
 

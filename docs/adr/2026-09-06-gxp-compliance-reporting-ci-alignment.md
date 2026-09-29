@@ -1,4 +1,4 @@
-# ADR-2431: GxP Compliance Reporting CI Alignment and Local Dependency Configuration
+# ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration
 
 Also known as: ADR-252 (former number)
 

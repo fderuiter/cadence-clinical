@@ -1,4 +1,4 @@
-# ADR-2347: eISF Browse, RBAC, Downloads, and Completeness
+# ADR-2350: eISF Browse, RBAC, Downloads, and Completeness
 
 Also known as: ADR-065 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2401: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring
+# ADR-2404: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring
 
 Also known as: ADR-2217 (former number)
 

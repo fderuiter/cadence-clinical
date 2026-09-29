@@ -1,4 +1,4 @@
-# ADR-2442: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping
+# ADR-2445: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping
 
 Also known as: ADR-2241 (former number)
 

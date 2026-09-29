@@ -1,4 +1,4 @@
-# ADR-2263: USDM Pydantic Models
+# ADR-2266: USDM Pydantic Models
 
 ## Status
 

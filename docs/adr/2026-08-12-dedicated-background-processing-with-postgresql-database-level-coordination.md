@@ -1,4 +1,4 @@
-# ADR-2363: Dedicated Background Processing with PostgreSQL Database-level Coordination
+# ADR-2366: Dedicated Background Processing with PostgreSQL Database-level Coordination
 
 Also known as: ADR-2171 (former number)
 

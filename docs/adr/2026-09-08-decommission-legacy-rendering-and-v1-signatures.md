@@ -1,4 +1,4 @@
-# ADR-2433: Decommission legacy rendering and v1 signatures
+# ADR-2436: Decommission legacy rendering and v1 signatures
 
 Also known as: ADR-252 (former number)
 

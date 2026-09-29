@@ -1,4 +1,4 @@
-# ADR-2269: Merkle Root Sealing
+# ADR-2272: Merkle Root Sealing
 
 ## Status
 

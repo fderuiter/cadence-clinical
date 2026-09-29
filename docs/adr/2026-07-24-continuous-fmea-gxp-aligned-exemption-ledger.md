@@ -1,4 +1,4 @@
-# ADR-2282: Continuous FMEA GxP-Aligned Exemption Ledger
+# ADR-2285: Continuous FMEA GxP-Aligned Exemption Ledger
 
 ## Status
 

@@ -1,4 +1,4 @@
-# ADR-2432: Extend Centralized Permission Matrix for eCOA Diary Alert Actions
+# ADR-2435: Extend Centralized Permission Matrix for eCOA Diary Alert Actions
 
 Also known as: ADR-251 (former number)
 

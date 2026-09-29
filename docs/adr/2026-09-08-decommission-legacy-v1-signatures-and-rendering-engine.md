@@ -1,4 +1,4 @@
-# ADR-2434: Decommission Legacy V1 Signatures and Standalone Rendering Engine
+# ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine
 
 Also known as: ADR-252 (former number)
 

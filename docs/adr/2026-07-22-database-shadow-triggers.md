@@ -1,4 +1,4 @@
-# ADR-2266: Database Shadow Triggers
+# ADR-2269: Database Shadow Triggers
 
 ## Status
 

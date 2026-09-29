@@ -1,4 +1,4 @@
-# ADR-2398: CTMS Offline Sync Reconciliation and Structural Clinical Queries
+# ADR-2401: CTMS Offline Sync Reconciliation and Structural Clinical Queries
 
 Also known as: ADR-107 (former number)
 

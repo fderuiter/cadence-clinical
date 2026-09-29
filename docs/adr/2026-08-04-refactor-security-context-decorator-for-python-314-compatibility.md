@@ -1,4 +1,4 @@
-# ADR-2332: Refactor security context decorator for Python 3.14 compatibility
+# ADR-2335: Refactor security context decorator for Python 3.14 compatibility
 
 Also known as: ADR-256 (former number)
 

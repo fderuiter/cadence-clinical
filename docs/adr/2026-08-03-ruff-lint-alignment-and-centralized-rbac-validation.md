@@ -1,4 +1,4 @@
-# ADR-2322: Ruff Lint Alignment and Centralized RBAC Validation
+# ADR-2325: Ruff Lint Alignment and Centralized RBAC Validation
 
 Also known as: ADR-255 (former number)
 

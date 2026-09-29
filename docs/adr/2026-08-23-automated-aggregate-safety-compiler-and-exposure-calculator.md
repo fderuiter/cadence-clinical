@@ -1,4 +1,4 @@
-# ADR-2389: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator
+# ADR-2392: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator
 
 Also known as: ADR-2199 (former number)
 

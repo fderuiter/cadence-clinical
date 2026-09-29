@@ -1,4 +1,4 @@
-# ADR-2308: Protocol Document Rendering Architecture and Content Contract
+# ADR-2311: Protocol Document Rendering Architecture and Content Contract
 
 Also known as: ADR-053 (former number)
 

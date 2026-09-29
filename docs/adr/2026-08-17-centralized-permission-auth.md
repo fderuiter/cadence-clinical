@@ -1,4 +1,4 @@
-# ADR-2377: Centralized Permission-Based Authorization and Dynamic Mappings
+# ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings
 
 Also known as: ADR-097 (former number)
 

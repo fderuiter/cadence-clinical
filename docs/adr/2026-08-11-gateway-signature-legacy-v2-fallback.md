@@ -1,4 +1,4 @@
-# ADR-2355: Gateway Signature Legacy V2 Fallback
+# ADR-2358: Gateway Signature Legacy V2 Fallback
 
 Also known as: ADR-85 (former number)
 

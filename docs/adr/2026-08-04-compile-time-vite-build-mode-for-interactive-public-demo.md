@@ -1,4 +1,4 @@
-# ADR-2326: Compile-Time Vite Build Mode for Interactive Public Demo
+# ADR-2329: Compile-Time Vite Build Mode for Interactive Public Demo
 
 Also known as: ADR-253 (former number)
 

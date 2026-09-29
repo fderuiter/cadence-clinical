@@ -1,4 +1,4 @@
-# ADR-2418: Shared Domain Vocabulary and Authorization Foundation
+# ADR-2421: Shared Domain Vocabulary and Authorization Foundation
 
 Also known as: ADR-120 (former number)
 

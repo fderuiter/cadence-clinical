@@ -1,4 +1,4 @@
-# ADR-2368: Unified Cryptographic Fingerprint Verification API
+# ADR-2371: Unified Cryptographic Fingerprint Verification API
 
 Also known as: ADR-2170 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2399: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate
+# ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate
 
 Also known as: ADR-2217 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2306: Implement WCAG compliance in shared clinical UI primitives
+# ADR-2309: Implement WCAG compliance in shared clinical UI primitives
 
 Also known as: ADR-251 (former number)
 

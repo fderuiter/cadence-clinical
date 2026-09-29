@@ -1,4 +1,4 @@
-# ADR-2371: Standalone In-Application Ticketing Service and Platform Integration
+# ADR-2374: Standalone In-Application Ticketing Service and Platform Integration
 
 Also known as: ADR-067 (former number)
 

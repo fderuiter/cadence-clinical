@@ -1,4 +1,4 @@
-# ADR-2305: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions
+# ADR-2308: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

@@ -1,4 +1,4 @@
-# ADR-2300: SDV and TSDV Data Model Foundations
+# ADR-2303: SDV and TSDV Data Model Foundations
 
 Also known as: ADR-189 (former number)
 

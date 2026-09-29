@@ -1,4 +1,4 @@
-# ADR-2259: Neo4j Graph Database for Clinical Metadata
+# ADR-2262: Neo4j Graph Database for Clinical Metadata
 
 ## Status
 

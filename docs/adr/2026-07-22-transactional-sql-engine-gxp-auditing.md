@@ -1,4 +1,4 @@
-# ADR-2274: Transactional SQL Engine with Standard GxP Auditing
+# ADR-2277: Transactional SQL Engine with Standard GxP Auditing
 
 ## Status
 

@@ -1,4 +1,4 @@
-# ADR-2357: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption
+# ADR-2360: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

@@ -1,4 +1,4 @@
-# ADR-2354: Declarative Route Dependencies and Fallback Signature Verification
+# ADR-2357: Declarative Route Dependencies and Fallback Signature Verification
 
 Also known as: ADR-085 (former number)
 

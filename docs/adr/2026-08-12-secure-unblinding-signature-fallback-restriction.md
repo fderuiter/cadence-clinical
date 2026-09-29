@@ -1,4 +1,4 @@
-# ADR-2366: Secure Unblinding Signature Fallback Restriction & Scope Normalization
+# ADR-2369: Secure Unblinding Signature Fallback Restriction & Scope Normalization
 
 Also known as: ADR-86 (former number)
 

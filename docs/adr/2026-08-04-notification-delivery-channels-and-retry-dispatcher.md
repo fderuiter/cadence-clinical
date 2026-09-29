@@ -1,4 +1,4 @@
-# ADR-2331: Notification Delivery Channels and Retry Dispatcher
+# ADR-2334: Notification Delivery Channels and Retry Dispatcher
 
 Also known as: ADR-054 (former number)
 

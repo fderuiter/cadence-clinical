@@ -1,4 +1,4 @@
-# ADR-2265: Audit Log Design
+# ADR-2268: Audit Log Design
 
 ## Status
 

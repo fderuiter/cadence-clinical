@@ -1,6 +1,6 @@
 # ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox
 
-- **Status:** Superseded by [ADR-2425](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+- **Status:** Superseded by [ADR-2428](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 - **Date:** 2026-08-22
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
@@ -8,7 +8,7 @@
 ---
 
 > [!NOTE]
-> **Superseded Notice (2026-09-02):** This record documented the legacy custom PostgreSQL polling worker outbox. It is formally superseded for .NET 10 by [ADR-2425](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md) (MassTransit + EF Core PostgreSQL Transactional Outbox). Refer to `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
+> **Superseded Notice (2026-09-02):** This record documented the legacy custom PostgreSQL polling worker outbox. It is formally superseded for .NET 10 by [ADR-2428](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md) (MassTransit + EF Core PostgreSQL Transactional Outbox). Refer to `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
 
 ---
 

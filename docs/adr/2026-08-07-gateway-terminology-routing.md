@@ -1,4 +1,4 @@
-# ADR-2343: Route terminology APIs through the gateway
+# ADR-2346: Route terminology APIs through the gateway
 
 Also known as: ADR-058 (former number)
 

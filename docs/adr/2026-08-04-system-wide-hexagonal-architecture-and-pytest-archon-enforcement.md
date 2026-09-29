@@ -1,4 +1,4 @@
-# ADR-2335: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement
+# ADR-2338: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement
 
 Also known as: ADR-2156 (former number)
 

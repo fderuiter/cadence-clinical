@@ -1,4 +1,4 @@
-# ADR-2422: Randomization and Trial Supply Management
+# ADR-2425: Randomization and Trial Supply Management
 
 Also known as: ADR-132 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2344: Organization Directory Service and Persistence Models Scaffold
+# ADR-2347: Organization Directory Service and Persistence Models Scaffold
 
 Also known as: ADR-058 (former number)
 

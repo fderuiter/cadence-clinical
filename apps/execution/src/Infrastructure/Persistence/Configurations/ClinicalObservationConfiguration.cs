@@ -12,7 +12,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// EF Core 10 entity mapping for the <c>clinical_observations</c> table.
-/// Configures strongly-typed value objects, ADR-2329 JSONB additional properties with GIN index,
+/// Configures strongly-typed value objects, ADR-2332 JSONB additional properties with GIN index,
 /// and lookup coordinates index on (study_id, subject_id, visit_id, domain, test_code).
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-042
@@ -80,7 +80,7 @@ public sealed class ClinicalObservationConfiguration : IEntityTypeConfiguration<
         builder.Property(o => o.ProtocolVersionTag)
             .HasMaxLength(50);
 
-        // ADR-2329 dynamic property bag mapped to PostgreSQL jsonb
+        // ADR-2332 dynamic property bag mapped to PostgreSQL jsonb
         var additionalPropertiesComparer = new ValueComparer<ObservationAdditionalProperties>(
             (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
             v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),

@@ -1,4 +1,4 @@
-# ADR-2264: API-First Validation and USDM Integration
+# ADR-2267: API-First Validation and USDM Integration
 
 ## Status
 

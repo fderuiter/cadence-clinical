@@ -1,4 +1,4 @@
-# ADR-2272: Schema Mapping Design
+# ADR-2275: Schema Mapping Design
 
 ## Status
 

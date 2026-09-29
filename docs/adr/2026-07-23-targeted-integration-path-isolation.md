@@ -1,4 +1,4 @@
-# ADR-2280: Targeted Integration with Path Isolation
+# ADR-2283: Targeted Integration with Path Isolation
 
 ## Status
 

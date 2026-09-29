@@ -1,4 +1,4 @@
-# ADR-2307: Standalone Notifications Service Foundation
+# ADR-2310: Standalone Notifications Service Foundation
 
 Also known as: ADR-053 (former number)
 

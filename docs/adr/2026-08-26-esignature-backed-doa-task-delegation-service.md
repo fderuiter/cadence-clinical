@@ -1,4 +1,4 @@
-# ADR-2404: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service
+# ADR-2407: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service
 
 Also known as: ADR-114 (former number)
 

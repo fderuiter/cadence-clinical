@@ -1,4 +1,4 @@
-# ADR-2345: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints
+# ADR-2348: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints
 
 Also known as: ADR-059 (former number)
 

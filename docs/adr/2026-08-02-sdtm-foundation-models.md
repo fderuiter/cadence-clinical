@@ -1,4 +1,4 @@
-# ADR-2311: Shared SDTM Foundation Models & Terminology
+# ADR-2314: Shared SDTM Foundation Models & Terminology
 
 Also known as: ADR-053 (former number)
 

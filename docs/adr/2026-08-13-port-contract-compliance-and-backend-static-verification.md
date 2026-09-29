@@ -1,4 +1,4 @@
-# ADR-2370: Port Contract Compliance & Backend Static Verification
+# ADR-2373: Port Contract Compliance & Backend Static Verification
 
 - **Status:** Accepted
 - **Date:** 2026-08-13

@@ -1,4 +1,4 @@
-# ADR-2297: Viewport-Aware Grid Inspector for eCRF designer
+# ADR-2300: Viewport-Aware Grid Inspector for eCRF designer
 
 ## Status
 

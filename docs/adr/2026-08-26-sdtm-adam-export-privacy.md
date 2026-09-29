@@ -1,4 +1,4 @@
-# ADR-2407: SDTM/ADaM Export Privacy: Deterministic Pseudonymization and Date De-identification
+# ADR-2410: SDTM/ADaM Export Privacy: Deterministic Pseudonymization and Date De-identification
 
 Also known as: ADR-108 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2336: Transition to PSS Padding for RSA Signatures and Verifications
+# ADR-2339: Transition to PSS Padding for RSA Signatures and Verifications
 
 Also known as: ADR-2157 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2381: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers
+# ADR-2384: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers
 
 - **Status:** Accepted
 - **Date:** 2026-08-17

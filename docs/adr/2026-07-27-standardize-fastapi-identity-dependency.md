@@ -1,4 +1,4 @@
-# ADR-2288: Standardize FastAPI Identity Dependency and Site Access Migration
+# ADR-2291: Standardize FastAPI Identity Dependency and Site Access Migration
 
 - **Status:** Accepted
 - **Date:** 2026-07-27

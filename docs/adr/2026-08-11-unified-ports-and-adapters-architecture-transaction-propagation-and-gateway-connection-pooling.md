@@ -1,4 +1,4 @@
-# ADR-2362: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling
+# ADR-2365: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling
 
 Also known as: ADR-2167 (former number)
 

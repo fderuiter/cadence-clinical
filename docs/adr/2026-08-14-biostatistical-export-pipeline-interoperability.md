@@ -1,4 +1,4 @@
-# ADR-2373: Biostatistical Export Pipeline Interoperability and Architecture
+# ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture
 
 Also known as: ADR-094 (former number)
 
@@ -65,7 +65,7 @@ This decision implements requirements under Trace-8.
   - Robust, strict schema validation.
   - Accurate historical audit logging of statistical exports for FDA inspections.
   - **Unified Lifecycle & API Contract Integration**: Technical mappings and extraction flows are completely aligned with the new **SDTM/ADaM Export Lifecycle** and API specifications documented in `docs/DATA_LIFECYCLE.md`.
-  - **Explicit Privacy Alignment**: Technical boundaries are integrated with the deterministic privacy rules governed by **ADR-2407** (such as per-subject date-shifting and age capping).
+  - **Explicit Privacy Alignment**: Technical boundaries are integrated with the deterministic privacy rules governed by **ADR-2410** (such as per-subject date-shifting and age capping).
 - **Negative Impact / Technical Debt:**
   - Complex statistical procedures must be explicitly programmed in Python rather than written in SQL or loaded through Pandas dataframes.
 - **Mitigation Strategy:**

@@ -54,7 +54,7 @@ Note: A pre-existing numbering collision exists in the codebase where multiple d
 ### Trust Boundary & Integration Verification
 
 - **Gateway Authentication:** All incoming client requests must cross the gateway boundary, where JWT claims are converted to signature-injected header context variables. Any direct microservice request omitting or tampering with these signature headers gets rejected by the `GatewayAuthMiddleware` with a `401 Unauthorized` or `403 Forbidden` response. For technical details on the gateway authentication propagation, refer to [ADR 2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md).
-- **RBAC Normalization:** Route-level authorization relies entirely on [ADR-059: Centralized RBAC Toolkit](2026-08-08-centralized-rbac-toolkit.md) and [ADR-2377: Centralized Permission-Based Authorization](2026-08-17-centralized-permission-auth.md) to parse canonical roles.
+- **RBAC Normalization:** Route-level authorization relies entirely on [ADR-059: Centralized RBAC Toolkit](2026-08-08-centralized-rbac-toolkit.md) and [ADR-2380: Centralized Permission-Based Authorization](2026-08-17-centralized-permission-auth.md) to parse canonical roles.
 - **Service Integrations:** Internal cross-boundary requests (such as automatic locks originating from the eTMF service) are propagated securely as a synthetic `"Data Manager"` principal to allow programmatic execution without sacrificing audit trails.
 
 ## 5. Consequences & Trade-offs

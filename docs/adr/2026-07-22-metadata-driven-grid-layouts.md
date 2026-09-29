@@ -1,4 +1,4 @@
-# ADR-2270: Metadata-Driven Grid Layouts via Jinja2 Templating
+# ADR-2273: Metadata-Driven Grid Layouts via Jinja2 Templating
 
 ## Status
 

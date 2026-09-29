@@ -1,4 +1,4 @@
-# ADR-2296: SDV & TSDV Metadata and Database Migrations
+# ADR-2299: SDV & TSDV Metadata and Database Migrations
 
 Also known as: ADR-049 (former number)
 

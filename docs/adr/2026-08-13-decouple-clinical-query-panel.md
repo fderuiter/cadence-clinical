@@ -1,4 +1,4 @@
-# ADR-2369: Decouple ClinicalQueryPanel from Pinia and Auth store
+# ADR-2372: Decouple ClinicalQueryPanel from Pinia and Auth store
 
 Also known as: ADR-068 (former number)
 

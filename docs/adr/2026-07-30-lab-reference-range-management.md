@@ -1,4 +1,4 @@
-# ADR-2291: Lab Reference Range Management
+# ADR-2294: Lab Reference Range Management
 
 Also known as: ADR-050 (former number)
 

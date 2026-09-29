@@ -1,4 +1,4 @@
-# ADR-2378: Fast Version-Check with Immediate Quarantine and Client Alerting
+# ADR-2381: Fast Version-Check with Immediate Quarantine and Client Alerting
 
 Also known as: ADR-2179 (former number)
 

@@ -1,4 +1,4 @@
-# ADR-2286: eTMF Quality Control Review Lifecycle & Validated State Machine
+# ADR-2289: eTMF Quality Control Review Lifecycle & Validated State Machine
 
 ## Status
 
