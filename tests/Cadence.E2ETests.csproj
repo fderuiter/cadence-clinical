@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Compile Remove="Payments/**" />
+    <Compile Remove="Econsent/**" />
     <Compile Remove="Execution/**" />
     <Compile Remove="Audit/**" />
     <Compile Remove="Packages/**" />

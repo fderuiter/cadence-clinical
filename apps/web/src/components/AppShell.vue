@@ -858,10 +858,14 @@ function onPersonaSelect() {
 watch(
   () => authStore.currentPersona,
   (newVal) => {
-    if (newVal && newVal !== activePersonaKey.value) {
-      activePersonaKey.value = newVal;
+    if (newVal) {
+      if (newVal !== activePersonaKey.value) {
+        activePersonaKey.value = newVal;
+      }
+      onboardingStore.loadPersonaState(newVal);
     }
-  }
+  },
+  { immediate: true }
 );
 
 const screenReaderAnnouncement = ref("");
