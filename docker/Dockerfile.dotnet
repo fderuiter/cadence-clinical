@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # 1. Base Development & SDK Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-bookworm-slim AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dev
 
 # Install curl, git, procps for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -56,7 +56,7 @@ RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=fals
 # ------------------------------------------------------------------------------
 # 3. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-bookworm-slim AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 # Install curl for container health check parity
 RUN apt-get update && apt-get install -y --no-install-recommends \
