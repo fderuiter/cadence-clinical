@@ -6,7 +6,9 @@ public static class PreCommitOpenApiService
 {
     public static int ExecutePreCommitOpenApi(string? repoRoot = null)
     {
-        Console.WriteLine("Executing pre-commit OpenAPI specification auto-staging...");
-        return OpenApiSyncService.SyncOpenApiSpec(validate: false, repoRoot);
+        Console.WriteLine("Checking docs/openapi and docs/api against the .NET services...");
+        int specs = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot);
+        int docs = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
+        return specs != 0 || docs != 0 ? 1 : 0;
     }
 }

@@ -20,7 +20,7 @@ The `usdm-schemas` package operates as a modular shared library within the Caden
 Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
 
 #### Exposed CLI Commands
-- `build`: `uv run python3 ../../scripts/generate_schemas.py`
+- No build step: the Zod schemas in `src/` are committed. The old Python generator was removed and the C# USDM export (`cadence cdisc export`) is not implemented yet.
 - `test`: `vitest run`
 
 ---

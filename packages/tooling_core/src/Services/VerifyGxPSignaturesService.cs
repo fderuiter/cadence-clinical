@@ -6,8 +6,7 @@ public static class VerifyGxPSignaturesService
 {
     public static int VerifySignatures(string? repoRoot = null)
     {
-        Console.WriteLine("Verifying 21 CFR Part 11 cryptographic signatures on GxP artifacts...");
-        Console.WriteLine("✔ All GxP electronic signatures verified cleanly.");
-        return 0;
+        Console.WriteLine("[ERROR] GxP signature verification is not implemented yet; no signatures were checked.");
+        return 1;
     }
 }

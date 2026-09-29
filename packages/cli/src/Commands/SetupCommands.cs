@@ -7,7 +7,7 @@ public class SetupCredentialsCommand : Command
 {
     public override int Execute(CommandContext context)
     {
-        AnsiConsole.MarkupLine("[cyan]Configuring local development credentials and secrets...[/]");
-        return 0;
+        AnsiConsole.MarkupLine("[red]'setup credentials' is not implemented yet. Copy .env.example to .env and fill in the values described in docs/ENVIRONMENT_VARIABLES.md.[/]");
+        return 1;
     }
 }

@@ -9,13 +9,11 @@ export const soaClient = {
   async getSignedHeaders(changeReason = "") {
     const timestamp = String(Math.floor(Date.now() / 1000));
     const signature = await generateGatewaySignature(
-      {
-        user_id: "usr_dm_fderuiter",
-        role: "data_manager",
-        timestamp,
-        version: "2",
-        change_reason: changeReason,
-      },
+      "usr_dm_fderuiter",
+      "data_manager",
+      timestamp,
+      "2",
+      changeReason,
       "internal-gateway-secret-12345"
     );
     return {

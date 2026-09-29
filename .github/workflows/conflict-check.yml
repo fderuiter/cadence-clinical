@@ -56,10 +56,3 @@ jobs:
             exit 1
           fi
 
-      - name: Post PR Quality Checklist Comment on Conflict Fallback
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          CONFLICT_OUTCOME: "failure"
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment

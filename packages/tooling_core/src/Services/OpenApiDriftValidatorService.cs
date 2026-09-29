@@ -8,10 +8,10 @@ public static class OpenApiDriftValidatorService
     {
         Console.WriteLine("--- Running Native OpenAPI Specification & Documentation Drift Sentinel ---");
 
-        Console.WriteLine("\n[GATE 1/2] Checking docs/SDLC/03_API_Integration_Specification.md...");
+        Console.WriteLine("\n[GATE 1/2] Checking docs/openapi against the .NET services...");
         int resSpec = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot);
 
-        Console.WriteLine("\n[GATE 2/2] Checking docs/api/*.md documentation parity...");
+        Console.WriteLine("\n[GATE 2/2] Checking docs/api against docs/openapi...");
         int resDocs = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
 
         if (resSpec != 0 || resDocs != 0)

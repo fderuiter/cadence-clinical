@@ -1,500 +1,260 @@
 # Cadence Unified Developer CLI Reference
 
-The `cadence` CLI (`packages/cli`) provides a unified developer and AI agent interface for local microservice orchestration, quality sentinel validation, GxP compliance synchronization, multi-engine database management, code scaffolding, and Model Context Protocol (MCP) integrations.
+`cadence` is the developer CLI for this repository. It is a .NET 10 console app built with Spectre.Console. The source is in `packages/cli/src`. Commands are registered in `packages/cli/src/Program.cs`.
 
-## Global Options
+## Running the CLI
 
-All `cadence` commands support the following global flags:
-
-| Option | Short | Description | Default |
-| --- | --- | --- | --- |
-| `--json` | `-j` | Emit output in structured, machine-readable JSON for agents | `false` |
-| `--verbose` | `-v` | Enable verbose output | `false` |
+Run it through the root `package.json` script. Run it from the repository root.
 
 ```bash
-cadence --json <command>
-cadence --verbose <command>
+pnpm cadence <command> [arguments] [options]
 ```
 
-## Command Reference
+The script runs `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`, so it builds the CLI first when needed. Examples:
+
+```bash
+pnpm cadence doctor
+pnpm cadence check duplication
+pnpm cadence gxp sync --dry-run
+```
+
+Some commands also have a `make` target. The Makefile publishes the CLI to `./bin/cadence` the first time and reuses that binary afterwards. Delete `./bin` to pick up CLI changes.
+
+| `make` target                            | Runs                                      |
+| ---------------------------------------- | ----------------------------------------- |
+| `make doctor`                            | `cadence doctor --auto-fix`               |
+| `make ports`                             | `cadence check-ports`                     |
+| `make dev`                               | `cadence dev`                             |
+| `make fix`                               | `cadence fix`                             |
+| `make check`                             | `cadence check`                           |
+| `make test`                              | `cadence test`                            |
+| `make verify`                            | `cadence check`, then `cadence test`      |
+| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                        |
+| `make rtm`                               | `cadence gxp validate`                    |
+| `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`          |
+| `make db-reset`, `make db-reset-offline` | `cadence db reset`                        |
+| `make db-seed`                           | `cadence db seed` (not implemented yet)   |
+| `make db-status`                         | `cadence db status` (not implemented yet) |
+
+`make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
+
+There are no global options. Spectre.Console adds `-h|--help` to every command, for example `pnpm cadence check --help`. Every run prints a "Cadence" banner first.
+
+Exit code `0` means success. Any other exit code means failure. Some commands always exit `0`; the sections below say which.
+
+## Commands
 
 ### `cadence doctor`
 
-Run system diagnostics and auto-heal development environment issues.
+Checks the local environment. It reports:
 
-#### Options & Arguments
+- the .NET SDK version (from `dotnet --version`)
+- whether `Directory.Packages.props` exists in the current directory
+- whether PostgreSQL answers on `127.0.0.1:5432`
+- whether Neo4j Bolt answers on `127.0.0.1:7687`
 
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--auto-fix`, `-f` | boolean | Automatically remediate missing databases and recoverable environment issues | `false` |
+It always exits `0`.
 
-#### Usage Examples
-
-```bash
-cadence doctor
-cadence doctor --auto-fix
-cadence doctor --json
-```
-
-### `cadence dev`
-
-Start and orchestrate local microservices with live reloading and interactive TUI.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<services>` | str | Names of services to start (default: start core services) | - |
-| `--host`, `-h` | str | Host interface to bind | `127.0.0.1` |
-| `--reload`, `--no-reload` | boolean | Enable live auto-reloading on file change | `true` |
-| `--service`, `-s` | str | Start a single specific microservice in foreground | - |
-| `--tui`, `-t` | boolean | Launch interactive Rich terminal cockpit UI with live logs and hotkeys | `false` |
-
-#### Usage Examples
-
-```bash
-cadence dev
-cadence dev --service designer
-cadence dev --tui
-cadence dev --host 0.0.0.0 --no-reload
-```
-
-### `cadence test`
-
-Run backend and frontend test suites with filtering, coverage, and watch mode.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<target>` | str | Target test directory or test file | - |
-| `--service`, `-s` | str | Filter tests by service name (e.g. execution, ctms) | - |
-| `--unit` | boolean | Run unit tests only | `false` |
-| `--integration` | boolean | Run integration tests only | `false` |
-| `--frontend` | boolean | Run frontend Vitest suites | `false` |
-| `--e2e` | boolean | Run decoupled HTTP E2E test suite | `false` |
-| `--dotnet` | boolean | Run .NET 10 xUnit integration tests (Cadence.E2ETests) | `false` |
-| `--failed-first`, `--lf` | boolean | Run failed tests first | `false` |
-| `--cov`, `--no-cov` | boolean | Enable coverage checking | `true` |
-| `--filter`, `-f` | str | Filter .NET tests using xUnit expression (e.g. 'Category=Unit') | - |
-| `--verbosity` | str | Set .NET test verbosity level (quiet, minimal, normal, detailed, diagnostic) | - |
-| `--verbose`, `-v` | boolean | Verbose .NET test output | `false` |
-| `--watch`, `-w` | boolean | Watch file system and automatically rerun relevant tests on change | `false` |
-| `--fast` | boolean | Fast authoring mode: disable coverage overhead and run unit tests only | `false` |
-
-#### Usage Examples
-
-```bash
-cadence test
-cadence test --service execution
-cadence test --unit
-cadence test --frontend
-cadence test --watch
-cadence test --fast
-cadence test --failed-first
-```
+| Option           | Description                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| `-f\|--auto-fix` | Declared as "remediate missing databases and recoverable issues". Currently ignored. |
 
 ### `cadence check`
 
-Run all pre-commit and pre-push quality gates.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--gate`, `-g` | str | Run a specific gate only (e.g. lint, security, imports) | - |
-| `--parallel`, `--sequential` | boolean | Run quality gates concurrently | `true` |
-
-#### Usage Examples
+Runs the quality gates.
 
 ```bash
-cadence check
-cadence check --gate ruff-lint
-cadence check --sequential
+pnpm cadence check                 # all 21 gates
+pnpm cadence check <gate>          # one gate
+pnpm cadence check <gate> <files>  # one gate, limited to these files
 ```
+
+| Argument  | Description                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`  | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens. |
+| `[files]` | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).        |
+
+With no gate, all 21 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
+
+An unknown gate name prints an error and exits `1`. Two extra names are accepted:
+
+- `rtm` (or `gxp-rtm-validate`) validates the traceability matrix without writing it. It is not one of the 21.
+- `prettier-check` always passes. It runs nothing.
+
+See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
+
+### `cadence test`
+
+Runs `dotnet test Cadence.sln` from the repository root.
+
+| Option              | Description                              |
+| ------------------- | ---------------------------------------- |
+| `-f\|--fast`        | Adds `--filter "Category!=Integration"`. |
+| `-i\|--integration` | Adds `--filter "Category=Integration"`.  |
+
+With no option, all tests run. If both options are given, `--fast` wins.
+
+### `cadence dev`
+
+Starts the .NET Aspire AppHost: `dotnet run --project apps/apphost/src/Cadence.AppHost.csproj`. The AppHost starts the services, the datastores and the Aspire dashboard. The command waits until the AppHost exits and returns its exit code. It has no options.
 
 ### `cadence fix`
 
-Auto-fix lint errors, format code, index ADRs, and synchronize schemas.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--all`, `-a` | boolean | Execute all self-healing, schema synchronization, and formatting steps | `false` |
-| `--sync-gxp` | boolean | Also synchronize GxP compliance and RTM documentation | `false` |
-
-#### Usage Examples
-
-```bash
-cadence fix
-cadence fix --all
-cadence fix --sync-gxp
-```
-
-### `cadence db`
-
-Manage multi-engine databases, migrations, clinical seeding, and snapshots.
-
-#### Subcommands
-
-##### `cadence db reset`
-
-Reset all database instances (PostgreSQL, Neo4j, SQLite) to clean state.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--allow-offline` | boolean | Allow offline reset if remote databases are unreachable | `false` |
-
-##### `cadence db migrate`
-
-Execute pre-boot migrations across all relational microservices.
-
-##### `cadence db seed`
-
-Populate multi-engine databases with realistic end-to-end clinical trial datasets.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--tier`, `-t` | str | Seeding tier: protocol, subjects, operations, full | `full` |
-| `--scenario`, `-s` | str | Named clinical scenario (e.g. CADENCE-101, oncology-phase3) | `CADENCE-101` |
-
-##### `cadence db snapshot`
-
-Capture a portable snapshot archive of all local SQLite databases.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<name>` | str | Name for the snapshot (e.g. baseline-clean, post-enrollment) | - |
-
-##### `cadence db restore`
-
-Restore local databases from a saved snapshot archive.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<name>` | str | Name of the snapshot to restore | - |
-
-##### `cadence db status`
-
-Display multi-engine database sizes and available snapshots.
-
-#### Usage Examples
-
-```bash
-cadence db reset
-cadence db migrate
-cadence db seed --scenario CADENCE-101 --tier full
-cadence db snapshot baseline-clean
-cadence db restore baseline-clean
-cadence db status
-```
-
-### `cadence scaffold`
-
-Scaffold new hexagonal microservices, ports, adapters, or ADRs.
-
-#### Subcommands
-
-##### `cadence scaffold service`
-
-Scaffold a new enterprise hexagonal microservice.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<name>` | str | Name of the microservice to scaffold (e.g. analytics, billing) | - |
-| `--features`, `-f` | str | Comma-separated optional features | `""` |
-
-##### `cadence scaffold adr`
-
-Scaffold a new Architecture Decision Record (ADR).
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `<title>` | str | Title for the Architecture Decision Record | - |
-| `--domain`, `-d` | str | Domain category | `core-platform` |
-| `--req`, `-r` | str | Traceable requirement ID | `PRD-SYS-001` |
-
-#### Usage Examples
-
-```bash
-cadence scaffold service analytics
-cadence scaffold adr "Use Event Driven Architecture" --domain core-platform --req PRD-SYS-001
-```
-
-### `cadence settings`
-
-Manage microservice configuration settings models and template exports.
-
-#### Subcommands
-
-##### `cadence settings export`
-
-Export Pydantic settings models into .env.example and docs/ENVIRONMENT_VARIABLES.md.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--check` | boolean | Check for configuration drift without modifying files | `false` |
-| `--json` | boolean | Emit output in structured JSON format | `false` |
-
-### `cadence setup`
-
-Environment setup, cryptographic key generation, and cloud credential bootstrapping.
-
-#### Options & Arguments
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--dev`, `-d` | boolean | Run in automated local development mode (auto-generate all cryptographic keys) | `false` |
-| `--env-file`, `-e` | str | Target environment file path | `.env` |
-
-#### Subcommands
-
-##### `cadence setup credentials`
-
-Launch the interactive credential bootstrapping wizard (/wizard standard).
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--dev`, `-d` | boolean | Run in automated local development mode (auto-generate all cryptographic keys) | `false` |
-| `--env-file`, `-e` | str | Target environment file path | `.env` |
-
-#### Usage Examples
-
-```bash
-cadence setup
-cadence setup credentials --dev
-```
-
-### `cadence record`
-
-Capture high-definition UI video recordings across clinical personas and sync to Google Drive.
-
-#### Subcommands
-
-##### `cadence record setup-gdrive`
-
-Validate Google Drive Service Account credentials and target folder permissions.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--credentials-path`, `-c` | str | Path to Google Cloud Service Account JSON key file | - |
-| `--folder-id`, `-f` | str | Target Google Drive Folder ID | - |
-
-##### `cadence record list`
-
-List historical local UI video recording runs and manifests.
-
-##### `cadence record run`
-
-Execute end-to-end persona golden paths, record 1080p videos, and sync to Google Drive.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--suite`, `-s` | str | Target persona suite: 'designer', 'crc', 'cra', 'data_manager', 'safety', 'compliance', 'all' | `all` |
-| `--upload-drive`, `--upload` | boolean | Upload recorded video artifacts to Google Drive upon completion | `false` |
-| `--local-only` | boolean | Skip Google Drive upload and preserve artifacts locally only | `false` |
-| `--demo`, `--fast` | boolean | Run in demonstration pacing mode with smooth pauses vs high-speed headless | `true` |
-| `--headed` | boolean | Display browser window during test execution | `false` |
-| `--mp4` | boolean | Transcode WebM recordings to MP4 if ffmpeg is installed | `false` |
-
-#### Usage Examples
-
-```bash
-cadence record run --suite designer
-cadence record list
-cadence record setup-gdrive --credentials-path credentials.json
-```
+Runs these steps in order:
+
+1. `dotnet format Cadence.sln` in the current directory.
+2. ADR validation (same check as the `adrs` gate, without the git diff check). It does not change ADR files.
+3. `sync-openapi-spec` and `generate-api-docs` (see the tool table below).
+
+It exits `1` if any step fails. It has no options.
+
+### Tool commands
+
+Single-purpose commands. Most are also run as gates by `cadence check`. None of them take arguments. Options are listed in the table.
+
+Paths are relative to the repository root. "Calls" is the method the command runs, in `packages/tooling_core/src/Services` unless noted.
+
+| Command                       | What it does                                                                                                                                                                                                                                                                                                                                          | Calls                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `detect-duplication`          | Finds duplicated blocks (over 15 normalized lines) in `.cs`, `.py`, `.js`, `.vue` and `.css` files under `apps/` and `packages/`. Writes `duplication_summary.json`. Fails only when a duplicate involves a `.cs` file.                                                                                                                               | `DuplicationDetectorService.DetectDuplication`                |
+| `validate-imports`            | Fails when a `.cs` file in one `apps/<service>` has `using Cadence.Apps.<other service>`.                                                                                                                                                                                                                                                             | `ImportValidatorService.ValidateImports`                      |
+| `validate-dependencies`       | Fails when `apps/web/package.json` lists `node-forge`, `elliptic` or `jose`. Passes if the file is missing.                                                                                                                                                                                                                                           | `DependencyValidatorService.ValidateDependencies`             |
+| `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/` and `packages/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                   | `PathPatternValidatorService.ValidatePathPatterns`            |
+| `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                       | `ReadmeValidatorService.ValidateReadmes`                      |
+| `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`               |
+| `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                     | `MarkdownValidatorService.ValidateMarkdown`                   |
+| `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                | `QueryLinterService.LintQueries`                              |
+| `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails only if `.env.example` is missing. With `--check`, warns about variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md`. It never writes files.                                                                                                                      | `EnvVarExtractorService.ExtractAndValidateEnvVars`            |
+| `verify-contracts`            | Checks hexagonal port and contract definitions. The rules are in `packages/tooling_core/src/Contracts/ContractVerifier.cs`.                                                                                                                                                                                                                           | `ContractVerifierService.VerifyContracts`                     |
+| `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                               | `SecurityAuditorService.AuditSecurity`                        |
+| `validate-vulnerabilities`    | Runs `dotnet list package --vulnerable --no-restore`. Fails if a vulnerable NuGet package is listed. It does not check npm packages.                                                                                                                                                                                                                  | `VulnerabilityAuditorService.AuditVulnerabilities`            |
+| `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                              | `SecretsBaselineCleanerService.CleanSecretsBaseline`          |
+| `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                 | `ArchitectureDriftValidatorService.ValidateArchitectureDrift` |
+| `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).              | `OpenApiSyncService.SyncOpenApiSpec`                          |
+| `validate-openapi-drift`      | Runs `sync-openapi-spec --validate` and `generate-api-docs --validate`. Exits `1` if either finds drift.                                                                                                                                                                                                                                              | `OpenApiDriftValidatorService.ValidateDrift`                  |
+| `generate-api-docs`           | Writes `docs/api/<service>.md` (one table of operations per service) and `docs/api/index.md` from `docs/openapi/*_openapi.json`, and deletes pages with no spec. Option: `--validate` (compare only; exits `1` on drift).                                                                                                                             | `ApiDocsGeneratorService.GenerateApiDocs`                     |
+| `generate-schema-doc`         | Creates placeholder `docs/schema_visualizer.html`, `docs/schema/index.html` and `docs/CDISC/cdisc_usdm_compliance.json` if they are missing.                                                                                                                                                                                                          | `SchemaDocGeneratorService.GenerateSchemaDocumentation`       |
+| `pre-commit-openapi`          | Same as `validate-openapi-drift`. This is the `openapi` gate. It does not stage anything.                                                                                                                                                                                                                                                             | `PreCommitOpenApiService.ExecutePreCommitOpenApi`             |
+| `pre-commit-schema-doc`       | Same as `generate-schema-doc`. It does not stage anything.                                                                                                                                                                                                                                                                                            | `PreCommitSchemaDocService.ExecutePreCommitSchemaDoc`         |
+| `validate-api-clients`        | Runs `pnpm exec tsc --noEmit` in `apps/web`, which typechecks the `apps/web/src/api` clients against their generated OpenAPI types. Exits `1` on a type error. This is the `api-clients` gate.                                                                                                                                                        | `ApiClientValidatorService.ValidateApiClients`                |
+| `generate-cli-docs`           | Without options, creates a stub `docs/cli.md` only if it is missing. With `--check`, fails when this file lacks the required headings or a command registered in `Program.cs`.                                                                                                                                                                        | `CliDocsGeneratorService.GenerateCliDocs`                     |
+| `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing). | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`) |
+| `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                           | `ComplianceUtilityService.ExecuteComplianceUtility`           |
+| `verify-gxp-signatures`       | Not implemented yet. Exits `1` without checking any signature.                                                                                                                                                                                                                                                                                        | `VerifyGxPSignaturesService.VerifySignatures`                 |
+| `clean-test-dbs`              | Deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.                                                                                                                                                                                                                                  | `CleanTestDbsService.CleanTestDatabases`                      |
+| `check-ports`                 | Reports whether ports 8000-8002, 8004-8019, 5432, 7687 and 8080 are in use on `127.0.0.1`. Always exits `0`.                                                                                                                                                                                                                                          | `PortCheckerService.CheckPorts`                               |
+| `run-gating-pipeline`         | Runs `detect-duplication`, `validate-imports` and `validate-openapi-drift`. Stops at the first failure.                                                                                                                                                                                                                                               | `GatingPipelineService.RunGatingPipeline`                     |
+
+These commands always exit `0`: `generate-schema-doc`, `pre-commit-schema-doc`, `compliance-utility`, `clean-test-dbs` and `check-ports`.
 
 ### `cadence gxp`
 
-GxP compliance, RTM synchronization, and qualification report automation.
+GxP compliance documents. `docs/SDLC/` must only be changed through these commands.
 
-#### Subcommands
+#### `cadence gxp sync`
 
-##### `cadence gxp sync`
+1. Runs `dotnet test Cadence.sln --no-restore --configuration Release` and writes `report_dotnet.trx`. Stops if tests fail.
+2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` (see `generate-rtm`).
+3. Stages those files and `docs/SDLC/runs` with `git add`.
 
-Run tests, regenerate RTM documentation, and stage compliance reports.
+| Option      | Description                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run` | Skips the tests, writes nothing and stages nothing. Fails if a mapped test failed in the existing `report_dotnet.trx`. |
+| `--commit`  | After staging, runs `git commit -m "docs(rtm): sync GxP compliance docs with current test state"`.                     |
 
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--dry-run` | boolean | Validate only without staging changes | `false` |
-| `--full` | boolean | Force full test suite execution bypassing incremental cache | `false` |
+#### `cadence gxp validate`
 
-##### `cadence gxp validate`
+Same as `cadence gxp sync --dry-run`. It does not compare the checked-in documents with freshly generated ones.
 
-Validate that checked-in RTM documentation is strictly up-to-date.
+#### `cadence gxp verify`
 
-##### `cadence gxp verify`
+Not implemented yet. Same as the `verify-gxp-signatures` tool command: it exits `1` without checking any signature.
 
-Verify electronic signatures and document integrity of signed GxP reports.
+### `cadence db`
 
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--path`, `-p` | str | Target Markdown file or directory to verify | `docs/SDLC` |
+Local database commands.
 
-##### `cadence gxp export-cdisc`
+#### `cadence db reset`
 
-Generate a validated CDISC USDM compliance document from local database models.
+Resets the local datastores:
 
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--output`, `-o` | str | Path to save generated CDISC USDM compliance JSON document | `docs/CDISC/cdisc_usdm_compliance.json` |
-| `--validate`, `--no-validate` | boolean | Validate generated document against CDISC USDM Pydantic schema | `true` |
+1. PostgreSQL: drops and re-creates the schemas. The connection string comes from `POSTGRES_CONNECTION_STRING`, then `DATABASE_URL`, then a localhost default.
+2. SQLite: deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.
+3. Neo4j: clears the graph and loads six sample studies. Uses `NEO4J_URI`, `NEO4J_USER` and `NEO4J_PASSWORD`, with localhost defaults.
 
-#### Usage Examples
+It refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` is `Production` or `Prod`. It also refuses connection strings that look remote (for example containing `prod`, `aws` or `azure`, or a non-local host). If a datastore cannot be reached, it prints a warning and continues. It exits `0` even when a reset step fails.
 
-```bash
-cadence gxp sync
-cadence gxp validate
-cadence gxp verify --path docs/SDLC
-cadence gxp export-cdisc --output docs/CDISC/cdisc_usdm_compliance.json
-```
+#### `cadence db migrate`
+
+Runs `dotnet ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj` in the current directory. Only the execution service is migrated. Use `scripts/manage_migrations.ps1` to add migrations.
+
+#### `cadence db status`
+
+Not implemented yet. Use `cadence doctor` to check datastore connectivity.
+
+#### `cadence db seed`
+
+Not implemented yet.
+
+### `cadence settings`
+
+#### `cadence settings export`
+
+Same as the `extract-env-vars` tool command, including the `--check` option. It does not write `.env.example` or any docs.
+
+### `cadence scaffold`
+
+#### `cadence scaffold service <name>`
+
+Runs `bash scripts/migrate_service_wizard.sh -ServiceName <name>` in the current directory. The script reads its first argument as the service name, so it receives `-ServiceName` instead of `<name>`. Use `cadence wizard migrate` instead. Needs `bash`, so it does not work on plain Windows.
+
+#### `cadence scaffold adr <title>`
+
+Creates `docs/adr/<yyyy-mm-dd>-<slug>.md` from a built-in template. The ADR number is one more than the highest `ADR-<n>:` found on the first line of existing ADRs, or 100 if there are none. Fails if the file already exists. Appends a link to `docs/adr/index.md` if that file exists.
+
+The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
+
+### `cadence setup`
+
+#### `cadence setup credentials`
+
+Not implemented yet. Copy `.env.example` to `.env` and fill in the values described in [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md).
+
+### `cadence record`
+
+#### `cadence record setup-gdrive`
+
+Not implemented yet.
+
+#### `cadence record list`
+
+Not implemented yet.
+
+#### `cadence record run`
+
+Not implemented yet.
 
 ### `cadence cdisc`
 
-CDISC USDM standards and schema documentation exporter tools.
+#### `cadence cdisc export`
 
-#### Subcommands
-
-##### `cadence cdisc export`
-
-Generate a validated CDISC USDM compliance document from local database models.
-
-| Option / Argument | Type | Description | Default |
-| --- | --- | --- | --- |
-| `--output`, `-o` | str | Path to save generated CDISC USDM compliance JSON document | `docs/CDISC/cdisc_usdm_compliance.json` |
-| `--validate`, `--no-validate` | boolean | Validate generated document against CDISC USDM Pydantic schema | `true` |
-
-#### Usage Examples
-
-```bash
-cadence cdisc export --output docs/CDISC/cdisc_usdm_compliance.json
-```
+Not implemented yet. The USDM JSON schemas in `packages/usdm-schemas/src` are maintained by hand.
 
 ### `cadence mcp`
 
-Run native JSON-RPC Model Context Protocol (MCP) Stdio server for AI agents.
+#### `cadence mcp server`
 
-#### Native JSON-RPC MCP Tools
+Not implemented yet.
 
-The `mcp` command launches the `CadenceMcpServer` over stdio using the JSON-RPC 2.0 protocol (Model Context Protocol specification). It exposes the following 11 native MCP tools:
+### `cadence wizard`
 
-##### `doctor_diagnose`
+Interactive wizards. Each one runs a script in `scripts/` from the repository root: the `.sh` script with `bash`, or the `.ps1` script with PowerShell on Windows. The command returns the script's exit code, or `1` if the script is missing.
 
-Validates Python 3.14+ runtime, port allocations, and database connectivity.
+| Command                                 | Script                        | Arguments                                   |
+| --------------------------------------- | ----------------------------- | ------------------------------------------- |
+| `cadence wizard onboarding`             | `setup_wizard`                | None                                        |
+| `cadence wizard dotnet`                 | `setup_dotnet_wizard`         | None                                        |
+| `cadence wizard migrate`                | `migrate_service_wizard`      | None. The script prompts for the service.   |
+| `cadence wizard decommission [service]` | `decommission_service_wizard` | Optional service name, passed to the script |
 
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `auto_heal` | boolean | `no` | Auto-initialize missing SQLite schemas or configs | `False` |
-| `summary` | boolean | `no` | Return concise summary instead of full logs | `True` |
-
-##### `run_sentinels`
-
-Concurrently executes repository architecture sentinels and quality gates.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `gate` | string | `no` | Optional single gate to execute | - |
-| `parallel` | boolean | `no` | Run gates concurrently | `True` |
-| `summary` | boolean | `no` | Return concise summary output | `True` |
-
-##### `run_fast_tests`
-
-Runs sub-second unit and contract tests.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `subsystem` | string | `no` | Optional subsystem path filter | - |
-| `summary` | boolean | `no` | Return concise summary metrics | `True` |
-
-##### `seed_clinical_scenario`
-
-Seeds multi-engine clinical test scenarios across databases.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `tier` | string | `no` | Seed tier ('smoke', 'standard', 'full') | `standard` |
-| `scenario` | string | `no` | Scenario name preset | `default` |
-| `dry_run` | boolean | `no` | Preview seeding plan without writing | `False` |
-
-##### `sync_gxp_compliance`
-
-Regenerates RTM traceability matrix and IQ/OQ/PQ docs.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `dry_run` | boolean | `no` | Verify synchronization without modifying files | `False` |
-
-##### `introspect_service_contracts`
-
-Returns OpenAPI specifications and inter-service boundary schemas.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `service` | string | `no` | Target microservice name (or None for all) | - |
-
-##### `usdm_graph_inspect`
-
-Inspects CDISC USDM v3/v4 protocol graph metadata from Neo4j (Study, StudyArm, StudyEpoch, Activity, ScheduleTimeline) with depth and entity filtering.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `protocol_id` | string | `no` | Optional study protocol identifier | - |
-| `entity_type` | string | `no` | Optional entity label filter (Study, StudyArm, StudyEpoch, Activity, ScheduleTimeline) | - |
-| `depth` | integer | `no` | Traversal depth limit from root study node | `2` |
-| `summary` | boolean | `no` | Return concise entity counts and structure summary | `True` |
-
-##### `sdtm_pipeline_validate`
-
-Validates eCRF-to-SDTM domain mapping rules against CDISC Conformance Rules.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `domain` | string | `no` | Optional SDTM domain code filter (DM, AE, LB, VS, CM) | - |
-| `strict_cdisc` | boolean | `no` | Enforce strict CDISC Conformance Rules | `True` |
-| `summary` | boolean | `no` | Return concise conformance metric summary | `True` |
-
-##### `clinical_event_stream`
-
-Inspects and optionally replays reactive outbox clinical events across decoupled microservice boundaries.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `event_type` | string | `no` | Optional clinical event filter (SubjectStateChanged, FormSubmitted, LabValueIngested, PaymentTriggered) | - |
-| `limit` | integer | `no` | Maximum number of recent events to retrieve | `20` |
-| `replay` | boolean | `no` | Replay queried events through registered mock listeners | `False` |
-
-##### `synthetic_patient_generate`
-
-Generates GxP-compliant synthetic clinical trial participants with longitudinal activities and lab profiles.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `protocol_id` | string | `no` | Study protocol context for participant schedule | `default` |
-| `scenario` | string | `no` | Clinical scenario (standard, oncology_dlt, gene_therapy_coc, cardiac_cec) | `standard` |
-| `count` | integer | `no` | Number of synthetic subjects to synthesize | `1` |
-| `dry_run` | boolean | `no` | Simulate generation without writing to database fixtures | `False` |
-
-##### `inspect_zoom_target`
-
-Progressively inspects granular logs, error traces, or test outputs for a given zoom token.
-
-| Input Parameter | Type | Required | Description | Default |
-| --- | --- | --- | --- | --- |
-| `zoom_token` | string | `yes` | Zoom token returned in previous tool summary envelope | - |
-| `offset` | integer | `no` | Starting line offset for pagination | `0` |
-| `limit` | integer | `no` | Number of lines to retrieve | `100` |
-
-##### JSON-RPC Stdio Protocol Specification
-
-The MCP server reads JSON-RPC 2.0 requests from `sys.stdin` and writes JSON-RPC 2.0 responses to `sys.stdout`. Supported JSON-RPC methods:
-- `initialize`: Handshakes and exchanges capabilities and server metadata.
-- `tools/list`: Returns array of available tools and input schemas.
-- `tools/call`: Executes specified tool with input arguments and returns JSON output envelope.
-
-#### Usage Examples
-
-```bash
-cadence mcp
-```
+What each wizard does is defined by its script, not by the CLI.

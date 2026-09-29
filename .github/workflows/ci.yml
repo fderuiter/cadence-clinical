@@ -474,50 +474,6 @@ jobs:
             exit 1
           }
 
-  comment:
-    name: Post PR Quality Checklist Comment
-    if: always() && github.event_name == 'pull_request'
-    needs: [style, security, unit-tests, dotnet-tests]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Download Duplication Summary
-        if: always()
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: duplication-summary
-          path: .
-          merge-multiple: true
-
-      - name: Post PR Comment
-        env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          CADENCE_OUTCOME: ${{ needs.style.outputs.cadence_outcome }}
-          CONTRACTS_OUTCOME: ${{ needs.style.outputs.contracts_outcome }}
-          LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
-          DOTNET_TEST_OUTCOME: ${{ needs.dotnet-tests.outputs.test_outcome }}
-          TEST_OUTCOME: ${{ needs.unit-tests.outputs.test_outcome }}
-          FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
-          ADR_OUTCOME: ${{ needs.style.outputs.adr_outcome }}
-          AUDIT_OUTCOME: ${{ needs.security.outputs.audit_outcome }}
-          STATIC_OUTCOME: ${{ needs.security.outputs.static_outcome }}
-          SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
-          DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
-          DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
-          TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
-          MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
-          ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- post-pr-comment
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'
@@ -597,22 +553,6 @@ jobs:
             --repo "${{ github.repository }}" \
             --auto \
             --squash || echo "::warning::Automerge enablement skipped or failed."
-
-  sync-ruleset:
-    name: Sync Branch Ruleset
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Sync Ruleset
-        env:
-          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
-        run: |
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-ruleset
 
   release-and-archive:
     name: Call Production Pipeline
