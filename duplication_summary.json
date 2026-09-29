@@ -2,12 +2,12 @@
   "duplicates": [
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 9,
         "end": 29
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 9,
         "end": 29
       },
@@ -15,12 +15,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 10,
         "end": 31
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 10,
         "end": 31
       },
@@ -28,12 +28,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 11,
         "end": 32
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 11,
         "end": 32
       },
@@ -41,12 +41,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 12,
         "end": 35
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 12,
         "end": 35
       },
@@ -54,12 +54,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 14,
         "end": 36
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 14,
         "end": 36
       },
@@ -67,12 +67,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 15,
         "end": 37
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 15,
         "end": 37
       },
@@ -80,12 +80,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 16,
         "end": 39
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 16,
         "end": 39
       },
@@ -93,12 +93,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 18,
         "end": 40
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 18,
         "end": 40
       },
@@ -106,12 +106,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 19,
         "end": 41
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 19,
         "end": 41
       },
@@ -119,12 +119,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 20,
         "end": 42
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 20,
         "end": 42
       },
@@ -132,12 +132,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 22,
         "end": 43
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 22,
         "end": 43
       },
@@ -145,12 +145,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 23,
         "end": 44
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 23,
         "end": 44
       },
@@ -158,12 +158,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 25,
         "end": 47
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 25,
         "end": 47
       },
@@ -171,12 +171,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 26,
         "end": 48
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 26,
         "end": 48
       },
@@ -184,12 +184,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 29,
         "end": 49
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 29,
         "end": 49
       },
@@ -197,12 +197,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 31,
         "end": 50
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 31,
         "end": 50
       },
@@ -210,12 +210,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 32,
         "end": 51
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 32,
         "end": 51
       },
@@ -223,12 +223,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 35,
         "end": 52
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 35,
         "end": 52
       },
@@ -236,12 +236,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 36,
         "end": 53
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 36,
         "end": 53
       },
@@ -249,12 +249,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 37,
         "end": 54
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 37,
         "end": 54
       },
@@ -262,12 +262,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 39,
         "end": 55
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 39,
         "end": 55
       },
@@ -275,12 +275,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 40,
         "end": 58
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 40,
         "end": 58
       },
@@ -288,12 +288,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 41,
         "end": 59
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 41,
         "end": 59
       },
@@ -301,12 +301,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 42,
         "end": 61
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 42,
         "end": 61
       },
@@ -314,12 +314,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 43,
         "end": 62
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 43,
         "end": 62
       },
@@ -327,12 +327,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 44,
         "end": 63
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 44,
         "end": 63
       },
@@ -340,12 +340,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 47,
         "end": 64
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 47,
         "end": 64
       },
@@ -353,12 +353,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 48,
         "end": 65
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 48,
         "end": 65
       },
@@ -366,12 +366,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 49,
         "end": 66
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 49,
         "end": 66
       },
@@ -379,12 +379,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 50,
         "end": 67
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 50,
         "end": 67
       },
@@ -392,12 +392,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 51,
         "end": 68
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 51,
         "end": 68
       },
@@ -405,12 +405,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 52,
         "end": 69
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 52,
         "end": 69
       },
@@ -418,12 +418,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 53,
         "end": 70
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 53,
         "end": 70
       },
@@ -431,12 +431,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 54,
         "end": 73
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 54,
         "end": 73
       },
@@ -444,12 +444,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 55,
         "end": 74
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 55,
         "end": 74
       },
@@ -457,12 +457,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 58,
         "end": 76
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 58,
         "end": 76
       },
@@ -470,12 +470,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 59,
         "end": 77
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 59,
         "end": 77
       },
@@ -483,12 +483,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 61,
         "end": 78
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 61,
         "end": 78
       },
@@ -496,12 +496,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 62,
         "end": 81
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 62,
         "end": 81
       },
@@ -509,12 +509,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 63,
         "end": 82
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 63,
         "end": 82
       },
@@ -522,12 +522,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 64,
         "end": 85
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 64,
         "end": 85
       },
@@ -535,12 +535,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 65,
         "end": 88
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 65,
         "end": 88
       },
@@ -548,12 +548,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 66,
         "end": 90
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 66,
         "end": 90
       },
@@ -561,12 +561,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 67,
         "end": 91
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 67,
         "end": 91
       },
@@ -574,12 +574,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 68,
         "end": 94
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 68,
         "end": 94
       },
@@ -587,12 +587,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 69,
         "end": 95
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 69,
         "end": 95
       },
@@ -600,12 +600,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 70,
         "end": 100
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 70,
         "end": 100
       },
@@ -613,12 +613,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 73,
         "end": 101
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 73,
         "end": 101
       },
@@ -626,12 +626,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 74,
         "end": 102
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 74,
         "end": 102
       },
@@ -639,12 +639,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 76,
         "end": 103
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 76,
         "end": 103
       },
@@ -652,12 +652,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 77,
         "end": 104
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 77,
         "end": 104
       },
@@ -665,12 +665,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 78,
         "end": 110
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 78,
         "end": 110
       },
@@ -678,12 +678,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 81,
         "end": 111
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 81,
         "end": 111
       },
@@ -691,12 +691,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 82,
         "end": 114
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 82,
         "end": 114
       },
@@ -704,12 +704,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 85,
         "end": 115
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 85,
         "end": 115
       },
@@ -717,12 +717,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 88,
         "end": 116
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 88,
         "end": 116
       },
@@ -730,12 +730,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 90,
         "end": 123
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 90,
         "end": 123
       },
@@ -743,12 +743,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 91,
         "end": 124
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 91,
         "end": 124
       },
@@ -756,12 +756,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 94,
         "end": 125
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 94,
         "end": 125
       },
@@ -769,12 +769,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 95,
         "end": 126
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 95,
         "end": 126
       },
@@ -782,12 +782,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 100,
         "end": 127
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 100,
         "end": 127
       },
@@ -795,12 +795,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 101,
         "end": 128
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 101,
         "end": 128
       },
@@ -808,12 +808,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 102,
         "end": 129
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 102,
         "end": 129
       },
@@ -821,12 +821,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 103,
         "end": 130
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 103,
         "end": 130
       },
@@ -834,12 +834,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 104,
         "end": 131
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 104,
         "end": 131
       },
@@ -847,12 +847,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 110,
         "end": 136
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 110,
         "end": 136
       },
@@ -860,12 +860,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 111,
         "end": 137
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 111,
         "end": 137
       },
@@ -873,12 +873,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 114,
         "end": 144
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 114,
         "end": 144
       },
@@ -886,12 +886,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 115,
         "end": 145
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 115,
         "end": 145
       },
@@ -899,12 +899,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 116,
         "end": 146
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 116,
         "end": 146
       },
@@ -912,12 +912,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 123,
         "end": 147
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 123,
         "end": 147
       },
@@ -925,12 +925,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 124,
         "end": 150
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 124,
         "end": 150
       },
@@ -938,12 +938,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 125,
         "end": 152
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 125,
         "end": 152
       },
@@ -951,12 +951,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 126,
         "end": 153
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 126,
         "end": 153
       },
@@ -964,12 +964,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 127,
         "end": 155
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 127,
         "end": 155
       },
@@ -977,12 +977,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 128,
         "end": 156
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 128,
         "end": 156
       },
@@ -990,12 +990,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 129,
         "end": 157
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 129,
         "end": 157
       },
@@ -1003,12 +1003,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 130,
         "end": 158
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 130,
         "end": 158
       },
@@ -1016,12 +1016,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 131,
         "end": 159
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 131,
         "end": 159
       },
@@ -1029,12 +1029,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 136,
         "end": 160
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 136,
         "end": 160
       },
@@ -1042,12 +1042,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 137,
         "end": 161
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 137,
         "end": 161
       },
@@ -1055,12 +1055,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 144,
         "end": 162
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 144,
         "end": 162
       },
@@ -1068,12 +1068,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 145,
         "end": 163
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 145,
         "end": 163
       },
@@ -1081,12 +1081,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 146,
         "end": 164
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 146,
         "end": 164
       },
@@ -1094,12 +1094,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 147,
         "end": 165
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 147,
         "end": 165
       },
@@ -1107,12 +1107,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 150,
         "end": 166
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 150,
         "end": 166
       },
@@ -1120,12 +1120,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 152,
         "end": 167
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 152,
         "end": 167
       },
@@ -1133,12 +1133,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 153,
         "end": 168
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 153,
         "end": 168
       },
@@ -1146,12 +1146,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 155,
         "end": 169
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 155,
         "end": 169
       },
@@ -1159,12 +1159,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 156,
         "end": 170
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 156,
         "end": 170
       },
@@ -1172,12 +1172,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 157,
         "end": 171
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 157,
         "end": 171
       },
@@ -1185,12 +1185,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 158,
         "end": 172
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 158,
         "end": 172
       },
@@ -1198,12 +1198,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 159,
         "end": 173
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 159,
         "end": 173
       },
@@ -1211,12 +1211,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 160,
         "end": 174
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 160,
         "end": 174
       },
@@ -1224,12 +1224,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 161,
         "end": 177
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 161,
         "end": 177
       },
@@ -1237,12 +1237,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 162,
         "end": 188
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 162,
         "end": 188
       },
@@ -1250,12 +1250,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 163,
         "end": 189
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 163,
         "end": 189
       },
@@ -1263,12 +1263,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 164,
         "end": 191
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 164,
         "end": 191
       },
@@ -1276,12 +1276,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 165,
         "end": 192
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 165,
         "end": 192
       },
@@ -1289,12 +1289,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 166,
         "end": 195
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 166,
         "end": 195
       },
@@ -1302,12 +1302,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 167,
         "end": 196
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 167,
         "end": 196
       },
@@ -1315,12 +1315,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 168,
         "end": 199
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 168,
         "end": 199
       },
@@ -1328,12 +1328,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 169,
         "end": 200
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 169,
         "end": 200
       },
@@ -1341,12 +1341,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 170,
         "end": 201
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 170,
         "end": 201
       },
@@ -1354,12 +1354,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 171,
         "end": 203
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 171,
         "end": 203
       },
@@ -1367,12 +1367,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 172,
         "end": 204
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 172,
         "end": 204
       },
@@ -1380,12 +1380,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 173,
         "end": 206
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 173,
         "end": 206
       },
@@ -1393,12 +1393,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 174,
         "end": 207
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 174,
         "end": 207
       },
@@ -1406,12 +1406,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 177,
         "end": 208
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 177,
         "end": 208
       },
@@ -1419,12 +1419,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 188,
         "end": 211
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 188,
         "end": 211
       },
@@ -1432,12 +1432,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 189,
         "end": 212
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 189,
         "end": 212
       },
@@ -1445,12 +1445,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 191,
         "end": 222
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 191,
         "end": 222
       },
@@ -1458,12 +1458,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 192,
         "end": 225
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 192,
         "end": 225
       },
@@ -1471,12 +1471,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 195,
         "end": 227
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 195,
         "end": 227
       },
@@ -1484,12 +1484,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 196,
         "end": 230
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 196,
         "end": 230
       },
@@ -1497,12 +1497,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 199,
         "end": 235
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 199,
         "end": 235
       },
@@ -1510,12 +1510,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 200,
         "end": 236
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 200,
         "end": 236
       },
@@ -1523,12 +1523,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 201,
         "end": 237
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 201,
         "end": 237
       },
@@ -1536,12 +1536,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 203,
         "end": 238
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 203,
         "end": 238
       },
@@ -1549,12 +1549,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 204,
         "end": 239
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 204,
         "end": 239
       },
@@ -1562,12 +1562,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 206,
         "end": 240
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 206,
         "end": 240
       },
@@ -1575,12 +1575,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 207,
         "end": 242
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 207,
         "end": 242
       },
@@ -1588,12 +1588,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 208,
         "end": 243
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 208,
         "end": 243
       },
@@ -1601,12 +1601,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 211,
         "end": 244
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 211,
         "end": 244
       },
@@ -1614,12 +1614,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 212,
         "end": 245
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 212,
         "end": 245
       },
@@ -1627,12 +1627,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 222,
         "end": 249
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 222,
         "end": 249
       },
@@ -1640,12 +1640,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 225,
         "end": 253
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 225,
         "end": 253
       },
@@ -1653,12 +1653,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 227,
         "end": 254
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 227,
         "end": 254
       },
@@ -1666,12 +1666,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 230,
         "end": 261
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 230,
         "end": 261
       },
@@ -1679,12 +1679,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 235,
         "end": 262
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 235,
         "end": 262
       },
@@ -1692,12 +1692,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 236,
         "end": 266
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 236,
         "end": 266
       },
@@ -1705,12 +1705,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 237,
         "end": 267
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 237,
         "end": 267
       },
@@ -1718,12 +1718,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 238,
         "end": 268
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 238,
         "end": 268
       },
@@ -1731,12 +1731,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 239,
         "end": 270
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 239,
         "end": 270
       },
@@ -1744,12 +1744,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 240,
         "end": 271
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 240,
         "end": 271
       },
@@ -1757,12 +1757,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 242,
         "end": 272
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 242,
         "end": 272
       },
@@ -1770,12 +1770,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 243,
         "end": 273
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 243,
         "end": 273
       },
@@ -1783,12 +1783,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 244,
         "end": 274
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 244,
         "end": 274
       },
@@ -1796,12 +1796,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 245,
         "end": 275
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 245,
         "end": 275
       },
@@ -1809,12 +1809,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 249,
         "end": 276
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 249,
         "end": 276
       },
@@ -1822,12 +1822,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 253,
         "end": 277
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 253,
         "end": 277
       },
@@ -1835,12 +1835,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 254,
         "end": 278
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 254,
         "end": 278
       },
@@ -1848,12 +1848,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 261,
         "end": 280
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 261,
         "end": 280
       },
@@ -1861,12 +1861,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 262,
         "end": 281
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 262,
         "end": 281
       },
@@ -1874,12 +1874,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 266,
         "end": 282
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 266,
         "end": 282
       },
@@ -1887,12 +1887,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 267,
         "end": 285
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 267,
         "end": 285
       },
@@ -1900,12 +1900,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 268,
         "end": 286
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 268,
         "end": 286
       },
@@ -1913,12 +1913,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 270,
         "end": 290
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 270,
         "end": 290
       },
@@ -1926,12 +1926,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 271,
         "end": 299
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 271,
         "end": 299
       },
@@ -1939,12 +1939,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 272,
         "end": 300
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 272,
         "end": 300
       },
@@ -1952,12 +1952,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 273,
         "end": 301
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 273,
         "end": 301
       },
@@ -1965,12 +1965,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 274,
         "end": 303
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 274,
         "end": 303
       },
@@ -1978,12 +1978,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 275,
         "end": 304
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 275,
         "end": 304
       },
@@ -1991,12 +1991,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 276,
         "end": 305
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 276,
         "end": 305
       },
@@ -2004,12 +2004,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 277,
         "end": 308
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 277,
         "end": 308
       },
@@ -2017,12 +2017,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 278,
         "end": 311
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 278,
         "end": 311
       },
@@ -2030,12 +2030,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 280,
         "end": 312
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 280,
         "end": 312
       },
@@ -2043,12 +2043,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 281,
         "end": 313
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 281,
         "end": 313
       },
@@ -2056,12 +2056,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 282,
         "end": 314
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 282,
         "end": 314
       },
@@ -2069,12 +2069,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 285,
         "end": 315
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 285,
         "end": 315
       },
@@ -2082,12 +2082,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 286,
         "end": 322
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 286,
         "end": 322
       },
@@ -2095,12 +2095,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 290,
         "end": 327
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 290,
         "end": 327
       },
@@ -2108,12 +2108,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 299,
         "end": 328
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 299,
         "end": 328
       },
@@ -2121,12 +2121,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 300,
         "end": 331
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 300,
         "end": 331
       },
@@ -2134,12 +2134,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 301,
         "end": 333
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 301,
         "end": 333
       },
@@ -2147,12 +2147,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 303,
         "end": 334
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 303,
         "end": 334
       },
@@ -2160,12 +2160,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 304,
         "end": 335
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 304,
         "end": 335
       },
@@ -2173,12 +2173,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 305,
         "end": 336
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 305,
         "end": 336
       },
@@ -2186,12 +2186,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 308,
         "end": 338
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 308,
         "end": 338
       },
@@ -2199,12 +2199,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 311,
         "end": 344
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 311,
         "end": 344
       },
@@ -2212,12 +2212,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 312,
         "end": 345
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 312,
         "end": 345
       },
@@ -2225,12 +2225,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 313,
         "end": 346
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 313,
         "end": 346
       },
@@ -2238,12 +2238,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 314,
         "end": 347
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 314,
         "end": 347
       },
@@ -2251,12 +2251,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 315,
         "end": 348
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 315,
         "end": 348
       },
@@ -2264,12 +2264,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 322,
         "end": 349
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 322,
         "end": 349
       },
@@ -2277,12 +2277,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 327,
         "end": 350
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 327,
         "end": 350
       },
@@ -2290,12 +2290,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 328,
         "end": 351
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 328,
         "end": 351
       },
@@ -2303,12 +2303,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 331,
         "end": 352
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 331,
         "end": 352
       },
@@ -2316,12 +2316,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 333,
         "end": 353
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 333,
         "end": 353
       },
@@ -2329,12 +2329,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 334,
         "end": 354
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 334,
         "end": 354
       },
@@ -2342,12 +2342,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 335,
         "end": 355
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 335,
         "end": 355
       },
@@ -2355,12 +2355,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 336,
         "end": 356
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 336,
         "end": 356
       },
@@ -2368,12 +2368,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 338,
         "end": 357
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 338,
         "end": 357
       },
@@ -2381,12 +2381,12 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/public/mockServiceWorker.js",
+        "file": "apps/web/public/mockServiceWorker.js",
         "start": 344,
         "end": 358
       },
       "loc2": {
-        "file": "apps/web/public/mockServiceWorker.js",
+        "file": "apps/subject-portal/public/mockServiceWorker.js",
         "start": 344,
         "end": 358
       },
@@ -2394,679 +2394,146 @@
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 6,
-        "end": 22
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1969,
+        "end": 1983
       },
       "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 6,
-        "end": 22
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1576,
+        "end": 1590
       },
-      "preview": "  http.all(\u0022*\u0022, async ({ request }) =\u003E {\n    const url = new URL(request.url);\n    const isApiCall =\n..."
+      "preview": "        if (\n          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n..."
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 7,
-        "end": 23
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1970,
+        "end": 1984
       },
       "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 7,
-        "end": 23
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1577,
+        "end": 1591
       },
-      "preview": "    const url = new URL(request.url);\n    const isApiCall =\n      url.port === \u00228000\u0022 ||\n..."
+      "preview": "          state.syncRetryInfo \u0026\u0026\n          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n..."
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 10,
-        "end": 24
+        "file": "apps/subject-portal/src/index.js",
+        "start": 1971,
+        "end": 1985
       },
       "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 10,
-        "end": 24
+        "file": "apps/subject-portal/src/App.vue",
+        "start": 1578,
+        "end": 1592
       },
-      "preview": "    const isApiCall =\n      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n..."
+      "preview": "          state.syncRetryInfo.isRetrying \u0026\u0026\n          (state.syncRetryInfo.sequenceNumber === null ||\n            state.syncRetryInfo.sequenceNumber === undefined ||\n..."
     },
     {
       "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 11,
-        "end": 25
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 11,
-        "end": 25
-      },
-      "preview": "      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 12,
-        "end": 26
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 12,
-        "end": 26
-      },
-      "preview": "      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 13,
-        "end": 27
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 13,
-        "end": 27
-      },
-      "preview": "      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 14,
-        "end": 29
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 14,
-        "end": 29
-      },
-      "preview": "      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 15,
-        "end": 30
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 15,
-        "end": 30
-      },
-      "preview": "      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 16,
-        "end": 33
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 16,
-        "end": 33
-      },
-      "preview": "      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 17,
-        "end": 35
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 17,
-        "end": 35
-      },
-      "preview": "      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 18,
-        "end": 36
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 18,
-        "end": 36
-      },
-      "preview": "      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 19,
-        "end": 37
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 19,
-        "end": 37
-      },
-      "preview": "      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 20,
-        "end": 38
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 20,
-        "end": 38
-      },
-      "preview": "      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 21,
-        "end": 39
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 21,
-        "end": 39
-      },
-      "preview": "      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 22,
-        "end": 43
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 22,
-        "end": 43
-      },
-      "preview": "      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 23,
-        "end": 44
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 23,
-        "end": 44
-      },
-      "preview": "      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/subject-portal/src/mocks/handlers.js",
-        "start": 24,
-        "end": 45
-      },
-      "loc2": {
-        "file": "apps/web/src/mocks/handlers.js",
-        "start": 24,
-        "end": 45
-      },
-      "preview": "      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n      url.pathname.startsWith(\u0022/terminology/\u0022) ||\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3349,
-        "end": 3367
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 345,
-        "end": 362
-      },
-      "preview": "  });\n\u003C/script\u003E\n\u003Cstyle scoped\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3351,
-        "end": 3368
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 837,
-        "end": 854
-      },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3351,
-        "end": 3368
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 346,
-        "end": 363
-      },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 837,
-        "end": 854
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 346,
-        "end": 363
-      },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3353,
-        "end": 3369
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 839,
-        "end": 855
-      },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3353,
-        "end": 3369
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 348,
-        "end": 364
-      },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 839,
-        "end": 855
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 348,
-        "end": 364
-      },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3354,
-        "end": 3370
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 840,
-        "end": 856
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3354,
-        "end": 3370
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 349,
-        "end": 365
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 840,
-        "end": 856
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 349,
-        "end": 365
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3355,
-        "end": 3371
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 841,
-        "end": 857
-      },
-      "preview": "  display: flex;\n  position: fixed;\n  top: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3356,
-        "end": 3372
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 842,
-        "end": 858
-      },
-      "preview": "  position: fixed;\n  top: 0;\n  left: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3357,
-        "end": 3373
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 843,
-        "end": 859
-      },
-      "preview": "  top: 0;\n  left: 0;\n  right: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3358,
-        "end": 3374
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 844,
-        "end": 860
-      },
-      "preview": "  left: 0;\n  right: 0;\n  bottom: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3359,
-        "end": 3377
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 845,
-        "end": 863
-      },
-      "preview": "  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3421,
-        "end": 3439
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 307,
-        "end": 325
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3421,
-        "end": 3439
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 417,
-        "end": 435
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 307,
-        "end": 325
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 417,
-        "end": 435
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3422,
-        "end": 3440
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 308,
-        "end": 326
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3422,
-        "end": 3440
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 418,
-        "end": 436
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 308,
-        "end": 326
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 418,
-        "end": 436
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3423,
-        "end": 3441
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 309,
-        "end": 327
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3423,
-        "end": 3441
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 419,
-        "end": 437
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 309,
-        "end": 327
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 419,
-        "end": 437
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3424,
-        "end": 3442
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 310,
-        "end": 328
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3424,
-        "end": 3442
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 420,
-        "end": 438
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 310,
-        "end": 328
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 420,
-        "end": 438
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 472,
-        "end": 486
-      },
-      "loc2": {
         "file": "apps/web/src/composables/usePiSignoff.js",
         "start": 73,
         "end": 87
       },
-      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 472,
+        "end": 486
+      },
+      "preview": "    signoffTargetType,\n    signoffTargetId,\n    customTargetId,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 473,
-        "end": 487
-      },
-      "loc2": {
         "file": "apps/web/src/composables/usePiSignoff.js",
         "start": 74,
         "end": 88
       },
-      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 473,
+        "end": 487
+      },
+      "preview": "    signoffTargetId,\n    customTargetId,\n    signoffReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 508,
-        "end": 522
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 155,
         "end": 169
       },
-      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 508,
+        "end": 522
+      },
+      "preview": "    selectedFileName,\n    editingItemId,\n    editItemValue,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 509,
-        "end": 523
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 156,
         "end": 170
       },
-      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 509,
+        "end": 523
+      },
+      "preview": "    editingItemId,\n    editItemValue,\n    editItemReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 510,
-        "end": 524
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 157,
         "end": 171
       },
-      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 510,
+        "end": 524
+      },
+      "preview": "    editItemValue,\n    editItemReason,\n    rejectingItemId,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 511,
-        "end": 525
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 158,
         "end": 172
       },
-      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 511,
+        "end": 525
+      },
+      "preview": "    editItemReason,\n    rejectingItemId,\n    rejectItemReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 512,
-        "end": 526
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 159,
         "end": 173
       },
-      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 512,
+        "end": 526
+      },
+      "preview": "    rejectingItemId,\n    rejectItemReason,\n    promoteChangeReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 513,
-        "end": 527
-      },
-      "loc2": {
         "file": "apps/web/src/composables/useSchemaIngestion.js",
         "start": 160,
         "end": 174
       },
-      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
+      "loc2": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 513,
+        "end": 527
+      },
+      "preview": "    rejectItemReason,\n    promoteChangeReason,\n    unreviewedCount,\n..."
     },
     {
       "loc1": {
@@ -3681,6 +3148,227 @@
     },
     {
       "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 6,
+        "end": 22
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 6,
+        "end": 22
+      },
+      "preview": "  http.all(\u0022*\u0022, async ({ request }) =\u003E {\n    const url = new URL(request.url);\n    const isApiCall =\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 7,
+        "end": 23
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 7,
+        "end": 23
+      },
+      "preview": "    const url = new URL(request.url);\n    const isApiCall =\n      url.port === \u00228000\u0022 ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 10,
+        "end": 24
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 10,
+        "end": 24
+      },
+      "preview": "    const isApiCall =\n      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 11,
+        "end": 25
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 11,
+        "end": 25
+      },
+      "preview": "      url.port === \u00228000\u0022 ||\n      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 12,
+        "end": 26
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 12,
+        "end": 26
+      },
+      "preview": "      url.host.includes(\u0022localhost:8000\u0022) ||\n      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 13,
+        "end": 27
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 13,
+        "end": 27
+      },
+      "preview": "      url.pathname.startsWith(\u0022/api/\u0022) ||\n      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 14,
+        "end": 29
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 14,
+        "end": 29
+      },
+      "preview": "      url.pathname.startsWith(\u0022/designer/\u0022) ||\n      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 15,
+        "end": 30
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 15,
+        "end": 30
+      },
+      "preview": "      url.pathname.startsWith(\u0022/execution/\u0022) ||\n      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 16,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 16,
+        "end": 33
+      },
+      "preview": "      url.pathname.startsWith(\u0022/etmf/\u0022) ||\n      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 17,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 17,
+        "end": 35
+      },
+      "preview": "      url.pathname.startsWith(\u0022/interop/\u0022) ||\n      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 18,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 18,
+        "end": 36
+      },
+      "preview": "      url.pathname.startsWith(\u0022/ctms/\u0022) ||\n      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 19,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 19,
+        "end": 37
+      },
+      "preview": "      url.pathname.startsWith(\u0022/notifications/\u0022) ||\n      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 20,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 20,
+        "end": 38
+      },
+      "preview": "      url.pathname.startsWith(\u0022/quality/\u0022) ||\n      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 21,
+        "end": 39
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 21,
+        "end": 39
+      },
+      "preview": "      url.pathname.startsWith(\u0022/safety/\u0022) ||\n      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 22,
+        "end": 43
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 22,
+        "end": 43
+      },
+      "preview": "      url.pathname.startsWith(\u0022/tickets/\u0022) ||\n      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 23,
+        "end": 44
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 23,
+        "end": 44
+      },
+      "preview": "      url.pathname.startsWith(\u0022/eisf/\u0022) ||\n      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/mocks/handlers.js",
+        "start": 24,
+        "end": 45
+      },
+      "loc2": {
+        "file": "apps/subject-portal/src/mocks/handlers.js",
+        "start": 24,
+        "end": 45
+      },
+      "preview": "      url.pathname.startsWith(\u0022/org/\u0022) ||\n      url.pathname.startsWith(\u0022/econsent/\u0022) ||\n      url.pathname.startsWith(\u0022/terminology/\u0022) ||\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/web/src/components/SignatureCaptureModal.vue",
         "start": 20,
         "end": 34
@@ -3746,183 +3434,612 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1094,
-        "end": 1117
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3349,
+        "end": 3367
       },
       "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 345,
+        "end": 362
+      },
+      "preview": "  });\n\u003C/script\u003E\n\u003Cstyle scoped\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 346,
+        "end": 363
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 346,
+        "end": 363
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 348,
+        "end": 364
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 348,
+        "end": 364
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3355,
+        "end": 3371
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 841,
+        "end": 857
+      },
+      "preview": "  display: flex;\n  position: fixed;\n  top: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3356,
+        "end": 3372
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 842,
+        "end": 858
+      },
+      "preview": "  position: fixed;\n  top: 0;\n  left: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3357,
+        "end": 3373
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 843,
+        "end": 859
+      },
+      "preview": "  top: 0;\n  left: 0;\n  right: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3358,
+        "end": 3374
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 844,
+        "end": 860
+      },
+      "preview": "  left: 0;\n  right: 0;\n  bottom: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3359,
+        "end": 3377
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 845,
+        "end": 863
+      },
+      "preview": "  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1424,
+        "end": 1444
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
+      },
+      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1427,
+        "end": 1445
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
+      },
+      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1428,
+        "end": 1446
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
+      },
+      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
         "start": 446,
         "end": 470
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1094,
+        "end": 1117
       },
       "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1254,
-        "end": 1272
-      },
-      "loc2": {
         "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
         "start": 566,
         "end": 584
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1254,
+        "end": 1272
       },
       "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1255,
-        "end": 1273
-      },
-      "loc2": {
         "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
         "start": 567,
         "end": 585
+      },
+      "loc2": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1255,
+        "end": 1273
       },
       "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 30,
-        "end": 45
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 6,
         "end": 21
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 30,
+        "end": 45
       },
       "preview": "    \u003C/div\u003E\n    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 32,
-        "end": 46
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 8,
         "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 32,
+        "end": 46
       },
       "preview": "    \u003C!-- Formatting Toolbar --\u003E\n    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 33,
-        "end": 47
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 9,
         "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 33,
+        "end": 47
       },
       "preview": "    \u003Cdiv class=\u0022editor-toolbar\u0022\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 34,
-        "end": 48
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 10,
         "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 34,
+        "end": 48
       },
       "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 35,
-        "end": 49
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 11,
         "end": 25
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 35,
+        "end": 49
       },
       "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 36,
-        "end": 50
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 12,
         "end": 26
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 36,
+        "end": 50
       },
       "preview": "        class=\u0022toolbar-btn\u0022\n        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 37,
-        "end": 51
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 13,
         "end": 27
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 37,
+        "end": 51
       },
       "preview": "        title=\u0022Bold\u0022\n        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 38,
-        "end": 52
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 14,
         "end": 28
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 38,
+        "end": 52
       },
       "preview": "        @click=\u0022formatDoc(\u0027bold\u0027)\u0022\n      \u003E\n        \u003Cstrong\u003EB\u003C/strong\u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 49,
-        "end": 63
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 41,
         "end": 55
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 49,
+        "end": 63
       },
       "preview": "      \u003C/button\u003E\n      \u003Cbutton\n        type=\u0022button\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 50,
-        "end": 64
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 42,
         "end": 56
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 50,
+        "end": 64
       },
       "preview": "      \u003Cbutton\n        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
-        "start": 51,
-        "end": 65
-      },
-      "loc2": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 43,
         "end": 57
+      },
+      "loc2": {
+        "file": "apps/web/src/components/econsent/eConsentEditor.vue",
+        "start": 51,
+        "end": 65
       },
       "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
     },
@@ -4084,170 +4201,92 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 210,
-        "end": 226
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 109,
-        "end": 125
-      },
-      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 211,
-        "end": 227
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 110,
-        "end": 126
-      },
-      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 213,
-        "end": 228
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 112,
-        "end": 127
-      },
-      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 756,
-        "end": 776
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1424,
-        "end": 1444
-      },
-      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 759,
-        "end": 777
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1427,
-        "end": 1445
-      },
-      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 760,
-        "end": 778
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1428,
-        "end": 1446
-      },
-      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1482,
-        "end": 1501
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1215,
         "end": 1234
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1482,
+        "end": 1501
       },
       "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1483,
-        "end": 1502
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1216,
         "end": 1235
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1483,
+        "end": 1502
       },
       "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1484,
-        "end": 1505
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1217,
         "end": 1238
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1484,
+        "end": 1505
       },
       "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1485,
-        "end": 1506
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1218,
         "end": 1239
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1485,
+        "end": 1506
       },
       "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1486,
-        "end": 1507
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1219,
         "end": 1240
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1486,
+        "end": 1507
       },
       "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1487,
-        "end": 1510
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1220,
         "end": 1243
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1487,
+        "end": 1510
       },
       "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1488,
-        "end": 1511
-      },
-      "loc2": {
         "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
         "start": 1221,
         "end": 1244
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1488,
+        "end": 1511
       },
       "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
     },
@@ -4526,79 +4565,79 @@
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 39,
-        "end": 53
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 53,
         "end": 67
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 53
       },
       "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 40,
-        "end": 54
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 54,
         "end": 68
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 54
       },
       "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 41,
-        "end": 55
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
         "start": 55,
         "end": 69
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 55
       },
       "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 43,
-        "end": 57
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 80,
         "end": 94
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 43,
+        "end": 57
       },
       "preview": "  },\n  query: {\n    type: Object,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 44,
-        "end": 58
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 81,
         "end": 95
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 44,
+        "end": 58
       },
       "preview": "  query: {\n    type: Object,\n    default: null,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
-        "start": 45,
-        "end": 59
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
         "start": 82,
         "end": 96
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 45,
+        "end": 59
       },
       "preview": "    type: Object,\n    default: null,\n  },\n..."
     }
