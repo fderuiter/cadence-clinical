@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+
 using Cadence.Security.Rbac;
 
 namespace Cadence.Security.Blinding;
@@ -62,7 +63,7 @@ public static class FieldMasker
     public static object? MaskPayload(object? payload, Principal? principal)
     {
         if (payload == null) return null;
-        if (principal?.UnblindedAccess == true) return payload;
+        if (principal?.UnblindedAccess ?? false) return payload;
 
         var unmaskedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (principal != null)
