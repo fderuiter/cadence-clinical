@@ -225,7 +225,7 @@ Never re-add Python code, Python tooling or compatibility shims.
 - ADR numbers are unique; `pnpm cadence check adrs` fails on duplicates, missing `# ADR-NNNN:` headings
   and broken index links.
 - When a decision is superseded: set the old ADR's status to
-  `Superseded by [ADR-XXXX](…)`, add a `> [!NOTE]` callout at the top, annotate its index entry with
+  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, annotate its index entry with
   `*(Superseded by ADR-XXXX)*`, and update [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT.md](CONTEXT.md).
 
 ## Documentation is part of the change
