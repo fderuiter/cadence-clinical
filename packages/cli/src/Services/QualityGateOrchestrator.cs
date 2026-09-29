@@ -2,8 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+using Cadence.Compliance;
 using Cadence.ToolingCore.OpenApi;
-
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
@@ -21,7 +21,7 @@ public static class QualityGateOrchestrator
             return RunSingleGate(gateName, targetFiles);
         }
 
-        // Run all 21 pre-commit quality gates natively in C#
+        // Run all 21 pre-commit quality gates natively in C# via ToolingCore services
         bool allPassed = true;
 
         // 1. Formatting
@@ -42,7 +42,7 @@ public static class QualityGateOrchestrator
 
         // 3. Clean Secrets Baseline
         AnsiConsole.MarkupLine("\n3/21 Cleaning Secrets Baseline...");
-        if (!SecretsBaselineService.CleanBaseline())
+        if (SecretsBaselineCleanerService.CleanSecretsBaseline() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 3 (clean-secrets-baseline) failed![/]");
             allPassed = false;
@@ -50,7 +50,7 @@ public static class QualityGateOrchestrator
 
         // 4. Code Duplication
         AnsiConsole.MarkupLine("\n4/21 Detecting Code Duplication...");
-        if (!CodeDuplicationService.DetectDuplication(targetFiles))
+        if (DuplicationDetectorService.DetectDuplication(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 4 (detect-code-duplication) failed![/]");
             allPassed = false;
@@ -58,7 +58,7 @@ public static class QualityGateOrchestrator
 
         // 5. CLI Docs
         AnsiConsole.MarkupLine("\n5/21 Validating CLI Docs Parity...");
-        if (!CliDocsValidatorService.ValidateCliDocs())
+        if (CliDocsGeneratorService.GenerateCliDocs(check: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 5 (validate-cli-docs) failed![/]");
             allPassed = false;
@@ -66,7 +66,7 @@ public static class QualityGateOrchestrator
 
         // 6. ADRs
         AnsiConsole.MarkupLine("\n6/21 Validating ADR Integrity...");
-        if (!AdrValidatorService.ValidateAdrs(checkGitDiff: true))
+        if (!Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true))
         {
             AnsiConsole.MarkupLine("[red]Gate 6 (validate-adrs) failed![/]");
             allPassed = false;
@@ -74,7 +74,7 @@ public static class QualityGateOrchestrator
 
         // 7. Architecture Drift
         AnsiConsole.MarkupLine("\n7/21 Validating Architecture Drift...");
-        if (!ArchitectureDriftValidatorService.ValidateArchitectureDrift())
+        if (Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 7 (validate-architecture-drift) failed![/]");
             allPassed = false;
@@ -82,7 +82,7 @@ public static class QualityGateOrchestrator
 
         // 8. Path Requirement Sanitizer
         AnsiConsole.MarkupLine("\n8/21 Sanitizing Requirement Tag Prefixes...");
-        if (!ComplianceSanitizerService.SanitizeComplianceTags(targetFiles))
+        if (ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 8 (path-requirement-sanitizer) failed![/]");
             allPassed = false;
@@ -90,7 +90,7 @@ public static class QualityGateOrchestrator
 
         // 9. Markdown Validation
         AnsiConsole.MarkupLine("\n9/21 Validating Markdown Workspaces & Links...");
-        if (!MarkdownValidatorService.ValidateMarkdown(targetFiles))
+        if (Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 9 (validate-markdown) failed![/]");
             allPassed = false;
@@ -98,7 +98,7 @@ public static class QualityGateOrchestrator
 
         // 10. Environment Variables
         AnsiConsole.MarkupLine("\n10/21 Validating Environment Variables Synchronization...");
-        if (!EnvironmentVariablesValidatorService.ValidateEnvironmentVariables())
+        if (EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 10 (validate-environment-variables) failed![/]");
             allPassed = false;
@@ -106,7 +106,7 @@ public static class QualityGateOrchestrator
 
         // 11. Readmes
         AnsiConsole.MarkupLine("\n11/21 Validating README Coverage...");
-        if (!ReadmesValidatorService.ValidateReadmes())
+        if (ReadmeValidatorService.ValidateReadmes() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 11 (validate-readmes) failed![/]");
             allPassed = false;
@@ -114,7 +114,7 @@ public static class QualityGateOrchestrator
 
         // 12. Imports
         AnsiConsole.MarkupLine("\n12/21 Validating Cross-Service Imports...");
-        if (!ImportsValidatorService.ValidateImports())
+        if (ImportValidatorService.ValidateImports() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 12 (validate-imports) failed![/]");
             allPassed = false;
@@ -122,7 +122,7 @@ public static class QualityGateOrchestrator
 
         // 13. Audit Security
         AnsiConsole.MarkupLine("\n13/21 Executing Security Audit & Secret Scanner...");
-        if (!SecurityAuditService.AuditSecurity(targetFiles))
+        if (SecurityAuditorService.AuditSecurity(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 13 (audit-security) failed![/]");
             allPassed = false;
@@ -130,7 +130,7 @@ public static class QualityGateOrchestrator
 
         // 14. DEID Scan
         AnsiConsole.MarkupLine("\n14/21 Executing DEID Compliance Scan...");
-        if (!DeidComplianceService.ScanDeidCompliance(targetFiles))
+        if (Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 14 (deid-compliance-scan) failed![/]");
             allPassed = false;
@@ -138,7 +138,7 @@ public static class QualityGateOrchestrator
 
         // 15. Auto-stage OpenAPI
         AnsiConsole.MarkupLine("\n15/21 Staging & Validating OpenAPI Schemas...");
-        if (!OpenApiStageService.StageAndValidateOpenApi())
+        if (PreCommitOpenApiService.ExecutePreCommitOpenApi() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 15 (auto-stage-openapi) failed![/]");
             allPassed = false;
@@ -146,7 +146,7 @@ public static class QualityGateOrchestrator
 
         // 16. API Clients
         AnsiConsole.MarkupLine("\n16/21 Validating Frontend API Clients AST Contract...");
-        if (!ApiClientsValidatorService.ValidateApiClients())
+        if (ApiClientValidatorService.ValidateApiClients() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 16 (validate-api-clients) failed![/]");
             allPassed = false;
@@ -154,7 +154,7 @@ public static class QualityGateOrchestrator
 
         // 17. Schema Doc
         AnsiConsole.MarkupLine("\n17/21 Staging Schema Documentation...");
-        if (!SchemaDocStageService.StageSchemaDoc())
+        if (PreCommitSchemaDocService.ExecutePreCommitSchemaDoc() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 17 (auto-stage-schema-doc) failed![/]");
             allPassed = false;
@@ -162,7 +162,7 @@ public static class QualityGateOrchestrator
 
         // 18. Path Patterns
         AnsiConsole.MarkupLine("\n18/21 Validating Path Patterns...");
-        if (!PathPatternsValidatorService.ValidatePathPatterns(targetFiles))
+        if (PathPatternValidatorService.ValidatePathPatterns(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 18 (validate-path-patterns) failed![/]");
             allPassed = false;
@@ -170,7 +170,7 @@ public static class QualityGateOrchestrator
 
         // 19. Backend Static Verify
         AnsiConsole.MarkupLine("\n19/21 Verifying Backend Contracts...");
-        if (!ContractsVerifierService.VerifyContracts())
+        if (ContractVerifierService.VerifyContracts() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 19 (backend-static-verify) failed![/]");
             allPassed = false;
@@ -178,7 +178,7 @@ public static class QualityGateOrchestrator
 
         // 20. Query Style Linter
         AnsiConsole.MarkupLine("\n20/21 Executing Query Style Linter...");
-        if (!QueryStyleLinterService.LintQueryStyle(targetFiles))
+        if (QueryLinterService.LintQueries(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 20 (query-style-linter) failed![/]");
             allPassed = false;
@@ -186,12 +186,12 @@ public static class QualityGateOrchestrator
 
         // 21. Vulnerabilities & Dependencies
         AnsiConsole.MarkupLine("\n21/21 Validating Dependencies & Vulnerabilities...");
-        if (!VulnerabilitiesValidatorService.ValidateVulnerabilities())
+        if (VulnerabilityAuditorService.AuditVulnerabilities() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 21a (validate-vulnerabilities) failed![/]");
             allPassed = false;
         }
-        if (!DependenciesValidatorService.ValidateDependencies())
+        if (DependencyValidatorService.ValidateDependencies() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 21b (validate-dependencies) failed![/]");
             allPassed = false;
@@ -215,27 +215,27 @@ public static class QualityGateOrchestrator
             "prettier-check" => true,
             "dotnet-format" => RunProcess("dotnet", "format whitespace Cadence.sln --verify-no-changes --no-restore") == 0,
             "dotnet-format-style" => RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") == 0,
-            "clean-secrets-baseline" or "clean-secrets" => SecretsBaselineService.CleanBaseline(),
-            "detect-code-duplication" or "duplication" => CodeDuplicationService.DetectDuplication(targetFiles),
-            "validate-cli-docs" or "cli-docs" => CliDocsValidatorService.ValidateCliDocs(),
-            "validate-adrs" or "adrs" => AdrValidatorService.ValidateAdrs(checkGitDiff: true),
-            "validate-architecture-drift" or "arch-drift" => ArchitectureDriftValidatorService.ValidateArchitectureDrift(),
-            "path-requirement-sanitizer" or "sanitizer" => ComplianceSanitizerService.SanitizeComplianceTags(targetFiles),
-            "validate-markdown" or "markdown" => MarkdownValidatorService.ValidateMarkdown(targetFiles),
-            "validate-environment-variables" or "env-vars" => EnvironmentVariablesValidatorService.ValidateEnvironmentVariables(),
-            "validate-readmes" or "readmes" => ReadmesValidatorService.ValidateReadmes(),
-            "validate-imports" or "imports" => ImportsValidatorService.ValidateImports(),
-            "audit-security" or "security" => SecurityAuditService.AuditSecurity(targetFiles),
-            "deid-compliance-scan" or "deid" => DeidComplianceService.ScanDeidCompliance(targetFiles),
-            "auto-stage-openapi" or "openapi" => OpenApiStageService.StageAndValidateOpenApi(),
-            "validate-api-clients" or "api-clients" => ApiClientsValidatorService.ValidateApiClients(),
-            "auto-stage-schema-doc" or "schema-doc" => SchemaDocStageService.StageSchemaDoc(),
-            "validate-path-patterns" or "path-patterns" => PathPatternsValidatorService.ValidatePathPatterns(targetFiles),
-            "backend-static-verify" or "contracts" => ContractsVerifierService.VerifyContracts(),
-            "query-style-linter" or "query-linter" => QueryStyleLinterService.LintQueryStyle(targetFiles),
-            "validate-vulnerabilities" or "vulnerabilities" => VulnerabilitiesValidatorService.ValidateVulnerabilities(),
-            "validate-dependencies" or "dependencies" => DependenciesValidatorService.ValidateDependencies(),
-            "gxp-rtm-validate" or "rtm" => GxpRtmValidatorService.ValidateGxpRtm(),
+            "clean-secrets-baseline" or "clean-secrets" => SecretsBaselineCleanerService.CleanSecretsBaseline() == 0,
+            "detect-code-duplication" or "duplication" => DuplicationDetectorService.DetectDuplication(targetFiles) == 0,
+            "validate-cli-docs" or "cli-docs" => CliDocsGeneratorService.GenerateCliDocs(check: true) == 0,
+            "validate-adrs" or "adrs" => Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true),
+            "validate-architecture-drift" or "arch-drift" => Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() == 0,
+            "path-requirement-sanitizer" or "sanitizer" => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) == 0,
+            "validate-markdown" or "markdown" => Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) == 0,
+            "validate-environment-variables" or "env-vars" => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) == 0,
+            "validate-readmes" or "readmes" => ReadmeValidatorService.ValidateReadmes() == 0,
+            "validate-imports" or "imports" => ImportValidatorService.ValidateImports() == 0,
+            "audit-security" or "security" => SecurityAuditorService.AuditSecurity(targetFiles) == 0,
+            "deid-compliance-scan" or "deid" => Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) == 0,
+            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi() == 0,
+            "validate-api-clients" or "api-clients" => ApiClientValidatorService.ValidateApiClients() == 0,
+            "auto-stage-schema-doc" or "schema-doc" => PreCommitSchemaDocService.ExecutePreCommitSchemaDoc() == 0,
+            "validate-path-patterns" or "path-patterns" => PathPatternValidatorService.ValidatePathPatterns(targetFiles) == 0,
+            "backend-static-verify" or "contracts" => ContractVerifierService.VerifyContracts() == 0,
+            "query-style-linter" or "query-linter" => QueryLinterService.LintQueries(targetFiles) == 0,
+            "validate-vulnerabilities" or "vulnerabilities" => VulnerabilityAuditorService.AuditVulnerabilities() == 0,
+            "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
+            "gxp-rtm-validate" or "rtm" => RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true) == 0,
             _ => true
         };
 

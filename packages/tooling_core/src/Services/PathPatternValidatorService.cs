@@ -14,22 +14,44 @@ public static class PathPatternValidatorService
         int violations = 0;
         string[] forbiddenSubdirs = ["tmp", "temp", "scratch", "old_src"];
 
+        // Rule 1: Check forbidden subdirectories across all files
         var allFiles = files != null && files.Length > 0
-            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists)
+            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
             : Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
                 .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
                             !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
                             !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"));
+                            !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+                .ToList();
 
         foreach (var file in allFiles)
         {
-            string rel = Path.GetRelativePath(repoRoot, file);
-            var parts = rel.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            var parts = rel.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var part in parts.Where(p => forbiddenSubdirs.Contains(p.ToLowerInvariant())))
             {
                 Console.WriteLine($"[PATH VIOLATION] Invalid directory name '{part}' in path: {rel}");
+                violations++;
+            }
+        }
+
+        // Rule 2: Check Vue and Shell script boundaries
+        string[] boundaryCheckFiles = files != null && files.Length > 0
+            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToArray()
+            : Directory.GetFiles(repoRoot, "*.*", SearchOption.TopDirectoryOnly);
+
+        foreach (var file in boundaryCheckFiles)
+        {
+            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) && !rel.StartsWith("apps/", StringComparison.Ordinal) && !rel.StartsWith("packages/", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[PATH VIOLATION] Vue file outside frontend boundary: {rel}");
+                violations++;
+            }
+            if (rel.EndsWith(".sh", StringComparison.OrdinalIgnoreCase) && !rel.StartsWith("scripts/", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[PATH VIOLATION] Shell script outside scripts/ boundary: {rel}");
                 violations++;
             }
         }

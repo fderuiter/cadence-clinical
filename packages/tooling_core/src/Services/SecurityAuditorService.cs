@@ -1,54 +1,43 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
+using Cadence.ToolingCore.Security;
 
 namespace Cadence.ToolingCore.Services;
 
 public static class SecurityAuditorService
 {
-    private static readonly string[] BinaryExtensions = [".dll", ".exe", ".pdb", ".so", ".dylib", ".o", ".a"];
-
     public static int AuditSecurity(string[]? files = null, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Executing hardcoded secret scanner and security audit...");
 
-        var candidateFiles = (files != null && files.Length > 0
-            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists)
-            : Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories))
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}") &&
-                            !f.EndsWith("SecurityAuditorService.cs"));
-
-        int findings = 0;
-        string[] secretPatterns = ["AKIA[0-9A-Z]{16}", "-----BEGIN PRIVATE KEY-----", "-----BEGIN RSA PRIVATE KEY-----"];
-
-        foreach (var file in candidateFiles)
+        IEnumerable<string> filesToScan;
+        if (files != null && files.Length > 0)
         {
-            if (file.EndsWith("SecurityAuditorService.cs", StringComparison.OrdinalIgnoreCase)) continue;
-
-            string ext = Path.GetExtension(file).ToLowerInvariant();
-            if (BinaryExtensions.Contains(ext)) continue;
-
-            string content;
-            try { content = File.ReadAllText(file); } catch { continue; }
-
-            foreach (var pattern in secretPatterns.Where(p => System.Text.RegularExpressions.Regex.IsMatch(content, p)))
-            {
-                string relPath = Path.GetRelativePath(repoRoot, file);
-                Console.WriteLine($"[SECURITY FINDING] {relPath} - Potential hardcoded secret detected matching '{pattern}'");
-                findings++;
-            }
+            filesToScan = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists);
+        }
+        else
+        {
+            filesToScan = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories);
         }
 
-        if (findings > 0)
+        var findings = SecretScanner.ScanFiles(repoRoot, filesToScan);
+
+        foreach (var finding in findings)
         {
-            Console.WriteLine($"\n[ERROR] Found {findings} security findings.");
+            Console.WriteLine($"[SECURITY FINDING] Security Risk ({finding.PatternName}) in '{finding.FilePath}:{finding.LineNumber}'");
+        }
+
+        if (findings.Count > 0)
+        {
+            Console.WriteLine($"\n[ERROR] Found {findings.Count} security findings.");
             return 1;
         }
 
-        Console.WriteLine("✔ Hardcoded secret scanner audit passed cleanly.");
+        Console.WriteLine("✔ Security audit passed cleanly. Zero high-entropy secrets detected.");
         return 0;
     }
 
