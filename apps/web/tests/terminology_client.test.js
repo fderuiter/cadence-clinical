@@ -76,9 +76,7 @@ describe("Terminology API Client Unit Tests", () => {
       expect(url).toBe(
         "http://localhost:8000/api/v1/terminology/validate/C12345"
       );
-      expect(getHeader("Authorization")).toBe(
-        "Bearer mock-keycloak-jwt-token"
-      );
+      expect(getHeader("Authorization")).toBe("Bearer mock-keycloak-jwt-token");
       expect(getHeader("X-Change-Reason")).toBe("Testing signed client");
       expect(getHeader("X-User-Id")).toBeNull();
       expect(getHeader("X-Gateway-Signature")).toBeNull();

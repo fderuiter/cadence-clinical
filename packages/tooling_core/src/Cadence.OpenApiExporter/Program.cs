@@ -1,12 +1,12 @@
 extern alias designer;
 extern alias execution;
-extern alias gateway;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -31,19 +31,10 @@ public static class Program
             outputDir = args[outputFlagIndex + 1];
         }
 
+        string repoRoot = FindRepoRoot();
         if (string.IsNullOrWhiteSpace(outputDir))
         {
-            string current = Directory.GetCurrentDirectory();
-            while (!string.IsNullOrEmpty(current) &&
-                   !File.Exists(Path.Combine(current, "Cadence.sln")) &&
-                   !File.Exists(Path.Combine(current, "pyproject.toml")))
-            {
-                var parent = Directory.GetParent(current);
-                if (parent == null) break;
-                current = parent.FullName;
-            }
-
-            outputDir = Path.Combine(current, "docs", "openapi");
+            outputDir = Path.Combine(repoRoot, "docs", "openapi");
         }
 
         Directory.CreateDirectory(outputDir);
@@ -51,9 +42,9 @@ public static class Program
 
         var services = new List<DotnetServiceRegistration>
         {
-            new("execution", "Execution_", typeof(execution::Cadence.Apps.Execution.Program)),
-            new("designer", "Designer_", typeof(designer::Cadence.Apps.Designer.Program)),
-            new("gateway", "Gateway_", typeof(gateway::Cadence.Apps.Gateway.Program))
+            new("execution", "Execution_", typeof(execution::Cadence.Apps.Execution.Program), Path.Combine(repoRoot, "apps", "execution", "src")),
+            new("designer", "Designer_", typeof(designer::Cadence.Apps.Designer.Program), Path.Combine(repoRoot, "apps", "designer", "src")),
+            // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
         };
 
         var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
@@ -80,7 +71,7 @@ public static class Program
             }
             catch (Exception ex)
             {
-                await Console.Error.WriteLineAsync($"[ERROR] Exception compiling '{svc.Name}': {ex.Message}");
+                await Console.Error.WriteLineAsync($"[ERROR] Exception compiling '{svc.Name}': {ex.GetBaseException().Message}");
                 success = false;
             }
         }
@@ -119,7 +110,15 @@ public static class Program
 
         // Configure WebHost environment to "Development" so app.MapOpenApi() routes are enabled
         var withHostBuilderMethod = factoryType.GetMethod("WithWebHostBuilder");
-        Action<IWebHostBuilder> configureHostBuilder = builder => builder.UseEnvironment("Development");
+        // WebApplicationFactory guesses the content root from the assembly name, which does not match
+        // the apps/<service>/src layout, so set it explicitly.
+        // The services refuse to start without auth settings. Export only reads route metadata,
+        // so a throwaway secret and an unreachable authority are enough.
+        Action<IWebHostBuilder> configureHostBuilder = builder => builder
+            .UseEnvironment("Development")
+            .UseContentRoot(svc.ContentRoot)
+            .UseSetting("GATEWAY_SECRET", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export");
         var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);
@@ -307,5 +306,18 @@ public static class Program
         await File.WriteAllTextAsync(filePath, json);
     }
 
-    private sealed record DotnetServiceRegistration(string Name, string Prefix, Type ProgramType);
+    private static string FindRepoRoot()
+    {
+        string current = Directory.GetCurrentDirectory();
+        while (!File.Exists(Path.Combine(current, "Cadence.sln")))
+        {
+            var parent = Directory.GetParent(current);
+            if (parent == null) return Directory.GetCurrentDirectory();
+            current = parent.FullName;
+        }
+
+        return current;
+    }
+
+    private sealed record DotnetServiceRegistration(string Name, string Prefix, Type ProgramType, string ContentRoot);
 }

@@ -90,16 +90,16 @@ public static class Program
                 db.AddCommand<DbMigrateCommand>("migrate")
                     .WithDescription("Runs pre-boot EF Core database migrations");
                 db.AddCommand<DbStatusCommand>("status")
-                    .WithDescription("Checks status of local databases");
+                    .WithDescription("Not implemented yet: checks status of local databases");
                 db.AddCommand<DbSeedCommand>("seed")
-                    .WithDescription("Populates multi-engine databases with trial datasets");
+                    .WithDescription("Not implemented yet: populates databases with trial datasets");
             });
 
             config.AddBranch("settings", settings =>
             {
                 settings.SetDescription("Manage microservice configuration settings models and template exports");
                 settings.AddCommand<ExtractEnvVarsCommand>("export")
-                    .WithDescription("Export Pydantic settings models into .env.example and docs");
+                    .WithDescription("Checks that environment variables read in code are listed in .env.example and docs");
             });
 
             config.AddBranch("scaffold", scaffold =>
@@ -115,32 +115,32 @@ public static class Program
             {
                 setup.SetDescription("Environment and credentials setup");
                 setup.AddCommand<SetupCredentialsCommand>("credentials")
-                    .WithDescription("Configures local development credentials and secrets");
+                    .WithDescription("Not implemented yet: configures local development credentials");
             });
 
             config.AddBranch("record", record =>
             {
                 record.SetDescription("E2E recording and media tools");
                 record.AddCommand<RecordSetupGDriveCommand>("setup-gdrive")
-                    .WithDescription("Configures Google Drive integration for session recordings");
+                    .WithDescription("Not implemented yet: configures Google Drive for session recordings");
                 record.AddCommand<RecordListCommand>("list")
-                    .WithDescription("Lists recorded session videos");
+                    .WithDescription("Not implemented yet: lists recorded session videos");
                 record.AddCommand<RecordRunCommand>("run")
-                    .WithDescription("Runs Playwright E2E recording session");
+                    .WithDescription("Not implemented yet: runs a Playwright E2E recording session");
             });
 
             config.AddBranch("cdisc", cdisc =>
             {
                 cdisc.SetDescription("CDISC / USDM data standards tools");
                 cdisc.AddCommand<CdiscExportCommand>("export")
-                    .WithDescription("Exports USDM / CDISC compliance artifacts");
+                    .WithDescription("Not implemented yet: exports USDM / CDISC artifacts");
             });
 
             config.AddBranch("mcp", mcp =>
             {
                 mcp.SetDescription("Model Context Protocol (MCP) AI integration server");
                 mcp.AddCommand<McpServerCommand>("server")
-                    .WithDescription("Starts Model Context Protocol stdio JSON-RPC server");
+                    .WithDescription("Not implemented yet: starts an MCP stdio JSON-RPC server");
             });
 
             config.AddBranch("wizard", wizard =>

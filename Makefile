@@ -37,7 +37,7 @@ build: $(CADENCE_CLI) ## Compile the Cadence solution (.NET 10)
 doctor: $(CADENCE_CLI) ## Run system diagnostics and auto-heal development environment health (dotnet cadence doctor --auto-fix)
 	$(CADENCE_CLI) doctor --auto-fix
 
-dev: $(CADENCE_CLI) ## Orchestrate local microservices with live reloading
+dev: $(CADENCE_CLI) ## Start all local services and datastores via the .NET Aspire AppHost
 	$(CADENCE_CLI) dev
 
 ##@ Code Quality
@@ -79,8 +79,9 @@ rtm: $(CADENCE_CLI) ## Validate that checked-in RTM docs are up to date (dotnet 
 
 ##@ Architecture & Documentation
 
-adr: $(CADENCE_CLI) ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
-	$(CADENCE_CLI) scaffold adr
+adr: $(CADENCE_CLI) ## Scaffold a new Architecture Decision Record (make adr TITLE="Use X for Y")
+	@test -n "$(TITLE)" || { echo "Usage: make adr TITLE=\"Use X for Y\""; exit 1; }
+	$(CADENCE_CLI) scaffold adr "$(TITLE)"
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev
@@ -99,8 +100,8 @@ db-seed: $(CADENCE_CLI) ## Populate multi-engine databases with realistic end-to
 db-status: $(CADENCE_CLI) ## Display multi-engine database sizes and available snapshots
 	$(CADENCE_CLI) db status
 
-ports: $(CADENCE_CLI) ## Check that all required service ports are free (dotnet cadence doctor)
-	$(CADENCE_CLI) doctor
+ports: $(CADENCE_CLI) ## Check that all required service ports are free (cadence check-ports)
+	$(CADENCE_CLI) check-ports
 
 ##@ Help
 

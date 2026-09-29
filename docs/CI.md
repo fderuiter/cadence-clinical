@@ -48,7 +48,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `path-patterns`       | Files live in allowed directories                                   |
 | `contracts`           | Hexagonal port/adapter contracts                                    |
 | `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`) |
-| `vulnerabilities`     | NuGet and npm dependency vulnerabilities                            |
+| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)           |
 
 `pnpm cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
 
