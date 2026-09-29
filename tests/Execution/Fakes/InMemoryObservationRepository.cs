@@ -19,6 +19,9 @@ public sealed class InMemoryObservationRepository : IObservationRepository
 {
     private readonly ConcurrentDictionary<ObservationId, ClinicalObservation> _store = new();
 
+    public Task<ClinicalObservation?> GetForUpdateAsync(ObservationId id, CancellationToken cancellationToken) =>
+        GetByIdAsync(id, cancellationToken);
+
     public Task<ClinicalObservation?> GetByIdAsync(ObservationId id, CancellationToken cancellationToken)
     {
         _store.TryGetValue(id, out var observation);

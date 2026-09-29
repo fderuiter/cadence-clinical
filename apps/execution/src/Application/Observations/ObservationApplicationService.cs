@@ -207,7 +207,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.NotFound(id);
         }
 
-        var observation = await observationRepository.GetByIdAsync(observationId, cancellationToken).ConfigureAwait(false);
+        var observation = await observationRepository.GetForUpdateAsync(observationId, cancellationToken).ConfigureAwait(false);
         if (observation is null)
         {
             return ObservationErrors.NotFound(id);
@@ -232,7 +232,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.NotFound(id);
         }
 
-        var observation = await observationRepository.GetByIdAsync(observationId, cancellationToken).ConfigureAwait(false);
+        var observation = await observationRepository.GetForUpdateAsync(observationId, cancellationToken).ConfigureAwait(false);
         if (observation is null)
         {
             return ObservationErrors.NotFound(id);

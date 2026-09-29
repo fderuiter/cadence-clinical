@@ -29,6 +29,11 @@ public sealed class FormSubmissionRepository(ExecutionDbContext context, Resilie
             .FirstOrDefaultAsync(f => f.Id == id && f.IsActive, cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<FormSubmission?> GetForUpdateAsync(FormSubmissionId id, CancellationToken cancellationToken) =>
+        await Context.FormSubmissions
+            .FirstOrDefaultAsync(f => f.Id == id && f.IsActive, cancellationToken)
+            .ConfigureAwait(false);
+
     public async Task<FormSubmission?> GetByCoordinatesAsync(
         StudyCode studyId,
         SubjectCode subjectId,
