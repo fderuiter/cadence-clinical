@@ -152,16 +152,16 @@ public class EConsentCompletedConsumerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken) => unitOfWork.SaveChangesAsync();
     }
 
-    private sealed record AuditWriteCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditWriteCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class FakeAuditLogWriter : IAuditLogWriter
     {
         public List<AuditWriteCall> Calls { get; } = [];
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditWriteCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditWriteCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -257,13 +257,13 @@ public class EConsentCompletedConsumerTests
             consent.IcfSignedDate.Should().Be(clock.UtcNow);
 
             auditWriter.Calls.Should().HaveCount(2);
-            var subjectAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "clinical_subjects").Which;
+            var subjectAudit = auditWriter.Calls.Should().ContainSingle(c => c.EntityName == "ClinicalSubject").Which;
             subjectAudit.Action.Should().Be("INSERT");
             subjectAudit.RecordId.Should().Be(subject.Id.ToString());
             subjectAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
             subjectAudit.ChangeReason.Should().Be(ServiceAccounts.EConsentConsumer.ChangeReason);
 
-            var consentAudit = auditWriter.Calls.Should().ContainSingle(c => c.TableName == "subject_consents").Which;
+            var consentAudit = auditWriter.Calls.Should().ContainSingle(c => c.EntityName == "SubjectConsent").Which;
             consentAudit.Action.Should().Be("INSERT");
             consentAudit.RecordId.Should().Be(consent.Id.ToString());
             consentAudit.UserId.Should().Be(ServiceAccounts.EConsentConsumer.UserId);
@@ -427,7 +427,7 @@ public class EConsentCompletedConsumerTests
             consent.IcfSignedDate.Should().Be(clock.UtcNow);
 
             auditWriter.Calls.Should().ContainSingle("only the independent consent backfill is audited -- no subject INSERT audit entry is written")
-                .Which.TableName.Should().Be("subject_consents");
+                .Which.EntityName.Should().Be("SubjectConsent");
         }
         finally
         {

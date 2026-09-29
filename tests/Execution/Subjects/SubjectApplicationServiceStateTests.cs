@@ -27,16 +27,16 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceStateTests
 {
-    private sealed record AuditCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class RecordingAuditLogWriter : IAuditLogWriter
     {
         public List<AuditCall> Calls { get; } = new();
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -211,7 +211,7 @@ public class SubjectApplicationServiceStateTests
 
         harness.AuditLog.Calls.Should().ContainSingle();
         var call = harness.AuditLog.Calls[0];
-        call.TableName.Should().Be("clinical_subjects");
+        call.EntityName.Should().Be("ClinicalSubject");
         call.Action.Should().Be("TRANSITION_SCREEN_FAILED");
         call.RecordId.Should().Be(subject.Id.ToString());
         call.ChangeReason.Should().Be("Failed eligibility");
@@ -258,7 +258,7 @@ public class SubjectApplicationServiceStateTests
         result.Error!.Code.Should().Be("BLOCKED_ENROLLMENT");
         harness.AuditLog.Calls.Should().ContainSingle();
         harness.AuditLog.Calls[0].Action.Should().Be("BLOCKED_ENROLLMENT");
-        harness.AuditLog.Calls[0].TableName.Should().Be("clinical_subjects");
+        harness.AuditLog.Calls[0].EntityName.Should().Be("ClinicalSubject");
 
         var persisted = await harness.Subjects.GetByCodeAsync("SUBJ-001", TestContext.Current.CancellationToken);
         persisted!.Status.Should().Be(SubjectState.Screening, "a blocked enrollment must never mutate status");

@@ -26,16 +26,16 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceConsentTests
 {
-    private sealed record AuditCall(string TableName, string RecordId, string Action, string UserId, string ChangeReason);
+    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
 
     private sealed class RecordingAuditLogWriter : IAuditLogWriter
     {
         public List<AuditCall> Calls { get; } = new();
 
-        public Task WriteAsync(string tableName, string recordId, string action, string userId, string changeReason,
+        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
             IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
         {
-            Calls.Add(new AuditCall(tableName, recordId, action, userId, changeReason));
+            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
     }
@@ -260,7 +260,7 @@ public class SubjectApplicationServiceConsentTests
 
         harness.AuditLog.Calls.Should().ContainSingle();
         var call = harness.AuditLog.Calls[0];
-        call.TableName.Should().Be("subject_consents");
+        call.EntityName.Should().Be("SubjectConsent");
         call.Action.Should().Be("RECORD_CONSENT");
         call.RecordId.Should().Be(result.Value!.Id.ToString());
     }

@@ -6,21 +6,18 @@ namespace Cadence.Apps.Execution.Application.Abstractions;
 /// application-initiated, semantically-named mutation (`ENROLL_SUBJECT`, `RECORD_CONSENT`,
 /// `TRANSITION_&lt;STATE&gt;`, `UPDATE_DEMOGRAPHICS`, `BLOCKED_ENROLLMENT`) — the ones MIG-SUBJ-007's
 /// automatic `GxPAuditInterceptor` cannot label on its own, since a bare `EntityState.Modified` cannot
-/// distinguish "consent recorded" from "state transitioned". Implementations append the resulting
-/// <see cref="Cadence.Core.Domain.Audit.AuditLogEntry"/> to the caller's own, already-scoped unit of
-/// work, so it commits inside the identical `SaveChangesAsync` transaction as the entity mutation being
-/// audited — operating alongside the interceptor's own field-stamping, not instead of it.
+/// distinguish "consent recorded" from "state transitioned". The action labels the interceptor's own entry for
+/// that change, so each change has exactly one audit entry committed in the same `SaveChangesAsync` (#4768).
 /// @req:PRD-SYS-053
 /// </summary>
 public interface IAuditLogWriter
 {
     /// <summary>
-    /// Appends a Merkle-chained <see cref="Cadence.Core.Domain.Audit.AuditLogEntry"/> — chained per
-    /// <paramref name="tableName"/>, exactly as `GxPAuditInterceptor`'s own per-`EntityName` chain is —
-    /// to the caller's current unit of work. Does not itself call `SaveChangesAsync`; the entry commits
-    /// alongside whatever mutation the caller persists next.
+    /// Labels the caller's next save with a semantic action. The GxP interceptor, the only audit writer, puts it
+    /// on the changed entity's own entry (one entry per change, #4768), or writes it as an action-only entry on
+    /// the same chain when the save changes nothing. Does not itself call `SaveChangesAsync`.
     /// </summary>
-    /// <param name="tableName">The audited table/entity name — also the chain's scoping key (e.g. `"clinical_subjects"`).</param>
+    /// <param name="entityName">The aggregate's CLR type name, which is also the chain key (e.g. <c>nameof(ClinicalSubject)</c>).</param>
     /// <param name="recordId">The audited record's identifier.</param>
     /// <param name="action">The caller-supplied semantic action (e.g. `"ENROLL_SUBJECT"`, `"TRANSITION_SCREENING"`).</param>
     /// <param name="userId">The acting user, typically <see cref="ICurrentAuditContextAccessor.UserId"/>.</param>
@@ -29,7 +26,7 @@ public interface IAuditLogWriter
     /// <param name="newValues">The record's field values after the change, or <see langword="null"/> when not applicable.</param>
     /// <param name="ct">Cancellation token.</param>
     Task WriteAsync(
-        string tableName,
+        string entityName,
         string recordId,
         string action,
         string userId,

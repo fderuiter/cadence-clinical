@@ -58,7 +58,7 @@ A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial a
 
 ### Canonical Timestamp Normalization Invariant
 
-A cryptographic integrity invariant governing 21 CFR Part 11 immutable audit trail hashing and Merkle block sealing. All audit event timestamps across .NET 10 microservices, background outbox workers, and external signing APIs must be strictly normalized to UTC Unix Epoch Milliseconds (`long`) or canonical ISO 8601 millisecond strings (`yyyy-MM-ddTHH:mm:ss.fffZ`) prior to computing SHA-256 digest chains, preventing cross-runtime timestamp serialization mismatches between Python 6-digit microsecond strings and .NET 7-digit tick strings.
+A cryptographic integrity invariant governing 21 CFR Part 11 audit trail hashing. Before an `AuditLogEntry` is hashed, `AuditLogEntry.NormalizeTimestamp` converts its timestamp to UTC and truncates it to whole microseconds, the precision PostgreSQL `timestamptz` stores, so a chain read back from the database recomputes to the same hashes. `AuditLogChainVerifier` normalises the same way (ADR-2446).
 
 ### PostgreSQL Advisory Lock Concurrency Gate
 
@@ -114,7 +114,7 @@ An error-handling architecture where domain operations return strongly-typed `Re
 
 ### Merkle-Chained Audit Interceptor
 
-A persistence-level cryptographic audit pattern implemented via EF Core `ISaveChangesInterceptor` that computes monotonic SHA-256 digests over entity mutation property deltas, chaining each audit entry to the predecessor hash block and writing synchronously to an immutable `AuditLogEntry` ledger table within the active database transaction.
+A persistence-level cryptographic audit pattern implemented via EF Core `ISaveChangesInterceptor`. `GxPAuditInterceptor` is the only writer of `AuditLogEntry` rows: it writes one entry per changed entity inside the save's transaction, chained by SHA-256 to its predecessor on one chain per aggregate type (the CLR type name). Application services label a change through `IAuditLogWriter`/`AuditActions`, which only attach the semantic action, actor and reason to that entry. `AuditLogChainVerifier` checks each chain end to end (ADR-2446).
 
 ### Hybrid CQRS & Query Services Pattern
 

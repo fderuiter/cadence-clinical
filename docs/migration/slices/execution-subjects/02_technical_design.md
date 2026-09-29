@@ -638,7 +638,7 @@ public sealed class SubjectApplicationService(
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct);
             if (gate is not { IsComplete: true })
             {
-                await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), "BLOCKED_ENROLLMENT",
+                await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "BLOCKED_ENROLLMENT",
                     auditContext.UserId, changeReason, oldValues: null, newValues: null, ct);
                 return SubjectErrors.BlockedEnrollment(subject.SiteCode);
             }
@@ -648,7 +648,7 @@ public sealed class SubjectApplicationService(
         if (transition.IsFailure) return Result<SubjectResponse>.Failure(transition.Error!);
 
         subject.ReasonForChange = changeReason;
-        await auditLog.WriteAsync("clinical_subjects", subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
+        await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
             auditContext.UserId, changeReason, oldValues: null, newValues: null, ct);
         await subjects.SaveChangesAsync(ct);
 
@@ -957,6 +957,9 @@ For the `EConsentCompletedConsumer` (no `HttpContext`), a second implementation 
 > [!NOTE]
 > **Superseded by #4767 / ADR-2257 (2026-09-29).** The `"system"` and `"system-pubsub"` defaults above are gone. `AmbientAuditContextAccessor` implements both `ICurrentAuditContextAccessor` and `IAuditActorScope`. `UserId` is the caller's `sub`, or the `svc:` service account declared with `RunAs`. With neither, it throws `AuditActorUnresolvedException`. The consumer calls `RunAs(ServiceAccounts.EConsentConsumer)` and is recorded as `svc:econsent-consumer`. The eTMF webhook (`ETMF_COMPLIANCE_UPDATE`) and demographics deletion (`DELETE_DEMOGRAPHICS`) now write semantic audit entries.
 
+> [!NOTE]
+> **Item 2 implemented by #4768 / ADR-2446 (2026-09-29).** `GxPAuditInterceptor` is the only audit writer. `IAuditLogWriter.WriteAsync` records a semantic action through `Cadence.Database.AuditActions` instead of writing its own row, and the interceptor puts that action on the changed entity's entry. Chains are keyed by CLR type name (`ClinicalSubject`, `SubjectConsent`, `SiteComplianceCache`), not table name, so the `table_name` values in the golden-master fixtures are CLR names. An action with no changed row (`BLOCKED_ENROLLMENT`, `BLOCKED_ACTIVATION`, `SITE_ACTIVATION`) is written as an action-only entry with version index 0. `AuditLogChainVerifier` verifies each chain. Earlier table-name-keyed entries stay as their own read-only chains.
+
 ---
 
 ## 5. Resilience & External Integrations
@@ -1046,7 +1049,7 @@ public sealed class EConsentCompletedConsumer(
                 encryptedDemographics: null, stratFactors: null);
             created.ReasonForChange = "Automated consent-completion enrollment";
             await subjects.AddAsync(created, context.CancellationToken);
-            await auditLog.WriteAsync("clinical_subjects", created.Id.ToString(), "INSERT",
+            await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
                 "system-pubsub", created.ReasonForChange, oldValues: null, newValues: null, context.CancellationToken);
         }
 

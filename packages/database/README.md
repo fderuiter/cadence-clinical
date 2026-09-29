@@ -19,7 +19,11 @@ migration application.
   Only the Development environment falls back to the local compose database; elsewhere a missing value fails startup.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
 - `AddCadenceDbContext<TContext>()`: `AddDbContext` plus the compiled EF model when one exists.
-- `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11).
+- `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11), and is
+  the only writer of audit entries: one Merkle-chained `AuditLogEntry` per changed entity, one chain per aggregate type
+  (ADR-2446). Audited changes must be saved with `SaveChangesAsync`; a synchronous save of them throws.
+- `AuditActions`: lets application code label the next save with a semantic action, actor and reason; the interceptor
+  puts it on the matching entry, or writes an action-only entry when no row changed.
 
 ---
 

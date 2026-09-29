@@ -220,4 +220,17 @@ public class GxPAuditInterceptorMerkleChainTests
             e.BlockHash.Should().Be(computedHash);
         }
     }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public void SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString());
+        context.GuidAggregates.Add(new GuidKeyedAggregate(Guid.NewGuid(), "sync"));
+
+        Action save = () => context.SaveChanges();
+
+        save.Should().Throw<InvalidOperationException>().WithMessage("*SaveChangesAsync*");
+        context.AuditLogEntries.Should().BeEmpty();
+    }
 }
