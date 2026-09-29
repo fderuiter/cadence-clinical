@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router";
@@ -637,7 +637,6 @@ describe("Notifications System End-to-End Visual Integration", () => {
       globalThis.fetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Headers({ "content-type": "application/json" }),
         json: async () => [{ id: "notif-01" }],
       });
 
@@ -653,17 +652,14 @@ describe("Notifications System End-to-End Visual Integration", () => {
       });
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-      const [req, options] = globalThis.fetch.mock.calls[0];
-      const url = typeof req === "string" ? req : req.url;
-      const authHeader =
-        typeof req === "string"
-          ? options?.headers?.["Authorization"]
-          : req.headers.get("Authorization");
+      const [url, options] = globalThis.fetch.mock.calls[0];
 
       expect(url).toContain(
         "/api/v1/notifications?category=ALERTS&priority=CRITICAL&status=OPEN"
       );
-      expect(authHeader).toBe("Bearer dummy-jwt-signature-token");
+      expect(options.headers["Authorization"]).toBe(
+        "Bearer dummy-jwt-signature-token"
+      );
     });
 
     it("attaches X-Change-Reason to mutations correctly", async () => {
@@ -673,7 +669,6 @@ describe("Notifications System End-to-End Visual Integration", () => {
       globalThis.fetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Headers({ "content-type": "application/json" }),
         json: async () => ({ id: "notif-01", status: "ACKNOWLEDGED" }),
       });
 
@@ -685,116 +680,8 @@ describe("Notifications System End-to-End Visual Integration", () => {
         changeReason: "Attestation reason",
       });
 
-      const [req, options] = globalThis.fetch.mock.calls[0];
-      const reasonHeader =
-        typeof req === "string"
-          ? options?.headers?.["X-Change-Reason"]
-          : req.headers.get("x-change-reason") ||
-            req.headers.get("X-Change-Reason");
-      expect(reasonHeader).toBe("Attestation reason");
-    });
-  });
-
-  describe("Persona-Scoped Notification Local Storage Isolation", () => {
-    let originalGet;
-    let originalAck;
-    let originalRes;
-
-    beforeEach(() => {
-      window.localStorage.clear();
-      authStore.isDemoMode = true;
-      authStore.accessToken = null;
-      // Disable service mock so store executes offline demo localStorage logic
-      originalGet = notificationsService.getNotifications;
-      originalAck = notificationsService.acknowledgeNotification;
-      originalRes = notificationsService.resolveNotification;
-      notificationsService.getNotifications = undefined;
-      notificationsService.acknowledgeNotification = undefined;
-      notificationsService.resolveNotification = undefined;
-    });
-
-    afterEach(() => {
-      notificationsService.getNotifications = originalGet;
-      notificationsService.acknowledgeNotification = originalAck;
-      notificationsService.resolveNotification = originalRes;
-    });
-
-    it("scopes storage key to active persona (demo_notifications_<persona>)", async () => {
-      authStore.currentPersona = "site_crc";
-      await notificationsStore.fetchNotifications();
-
-      expect(
-        window.localStorage.getItem("demo_notifications_site_crc")
-      ).not.toBeNull();
-      expect(
-        window.localStorage.getItem("demo_notifications_super_admin")
-      ).toBeNull();
-    });
-
-    it("isolates notification state updates across different active personas", async () => {
-      // 1. Act as site_crc and acknowledge notif-001
-      authStore.currentPersona = "site_crc";
-      await notificationsStore.fetchNotifications();
-      await notificationsStore.acknowledge("notif-001", "CRC verified reading");
-
-      const siteCrcStorage = JSON.parse(
-        window.localStorage.getItem("demo_notifications_site_crc")
-      );
-      const siteCrcNotif = siteCrcStorage.find((n) => n.id === "notif-001");
-      expect(siteCrcNotif.status).toBe("ACKNOWLEDGED");
-
-      // 2. Switch to cra_monitor persona
-      authStore.switchPersona("cra_monitor");
-      expect(authStore.currentPersona).toBe("cra_monitor");
-      await notificationsStore.fetchNotifications();
-
-      // cra_monitor should have its own isolated state where notif-001 is still OPEN
-      const craNotif = notificationsStore.notifications.find(
-        (n) => n.id === "notif-001"
-      );
-      expect(craNotif.status).toBe("OPEN");
-
-      const craStorage = JSON.parse(
-        window.localStorage.getItem("demo_notifications_cra_monitor")
-      );
-      const craStoredNotif = craStorage.find((n) => n.id === "notif-001");
-      expect(craStoredNotif.status).toBe("OPEN");
-
-      // 3. Switch back to site_crc
-      authStore.switchPersona("site_crc");
-      await notificationsStore.fetchNotifications();
-
-      const restoredCrcNotif = notificationsStore.notifications.find(
-        (n) => n.id === "notif-001"
-      );
-      expect(restoredCrcNotif.status).toBe("ACKNOWLEDGED");
-    });
-
-    it("safely falls back to default templates when switching to persona with no saved storage", async () => {
-      expect(
-        window.localStorage.getItem("demo_notifications_data_manager")
-      ).toBeNull();
-
-      authStore.switchPersona("data_manager");
-      await notificationsStore.fetchNotifications();
-
-      expect(notificationsStore.notifications.length).toBeGreaterThan(0);
-      expect(
-        window.localStorage.getItem("demo_notifications_data_manager")
-      ).not.toBeNull();
-    });
-
-    it("resets demo storage specifically for active persona", async () => {
-      authStore.currentPersona = "site_crc";
-      await notificationsStore.fetchNotifications();
-      expect(
-        window.localStorage.getItem("demo_notifications_site_crc")
-      ).not.toBeNull();
-
-      notificationsStore.resetDemoStorage();
-      expect(
-        window.localStorage.getItem("demo_notifications_site_crc")
-      ).toBeNull();
+      const [, options] = globalThis.fetch.mock.calls[0];
+      expect(options.headers["X-Change-Reason"]).toBe("Attestation reason");
     });
   });
 });

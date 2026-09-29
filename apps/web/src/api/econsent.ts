@@ -25,11 +25,7 @@ export const econsentService = {
     );
   },
 
-  updateClause(
-    clauseId: string,
-    body: ClauseUpdateBody,
-    options: Record<string, unknown> = {}
-  ) {
+  updateClause(clauseId: string, body: ClauseUpdateBody, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.PUT("/api/v1/econsent/clauses/{clause_id}", {
         params: { path: { clause_id: clauseId } },
@@ -39,14 +35,7 @@ export const econsentService = {
     );
   },
 
-  listClauses(
-    params: {
-      study_id?: string;
-      clause_id?: string;
-      all_versions?: boolean;
-    } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listClauses(params: { study_id?: string; clause_id?: string; all_versions?: boolean } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/clauses", {
         params: {
@@ -61,11 +50,7 @@ export const econsentService = {
     );
   },
 
-  getClause(
-    clauseId: string,
-    params: { version_index?: number } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getClause(clauseId: string, params: { version_index?: number } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/clauses/{clause_id}", {
         params: {
@@ -78,10 +63,7 @@ export const econsentService = {
   },
 
   // --- Templates ---
-  createTemplate(
-    body: TemplateCreateBody,
-    options: Record<string, unknown> = {}
-  ) {
+  createTemplate(body: TemplateCreateBody, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/econsent/templates", {
         body,
@@ -90,11 +72,7 @@ export const econsentService = {
     );
   },
 
-  updateTemplate(
-    templateId: string,
-    body: TemplateUpdateBody,
-    options: Record<string, unknown> = {}
-  ) {
+  updateTemplate(templateId: string, body: TemplateUpdateBody, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.PUT("/api/v1/econsent/templates/{template_id}", {
         params: { path: { template_id: templateId } },
@@ -104,14 +82,7 @@ export const econsentService = {
     );
   },
 
-  listTemplates(
-    params: {
-      study_id?: string;
-      template_id?: string;
-      all_versions?: boolean;
-    } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listTemplates(params: { study_id?: string; template_id?: string; all_versions?: boolean } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/templates", {
         params: {
@@ -126,11 +97,7 @@ export const econsentService = {
     );
   },
 
-  getTemplate(
-    templateId: string,
-    params: { version_index?: number } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getTemplate(templateId: string, params: { version_index?: number } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/templates/{template_id}", {
         params: {
@@ -142,11 +109,7 @@ export const econsentService = {
     );
   },
 
-  composeTemplate(
-    templateId: string,
-    params: { version_index?: number } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  composeTemplate(templateId: string, params: { version_index?: number } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/templates/{template_id}/compose", {
         params: {
@@ -168,12 +131,7 @@ export const econsentService = {
   },
 
   // --- Comprehension Checks ---
-  defineComprehensionCheck(
-    templateId: string,
-    versionIndex: number,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  defineComprehensionCheck(templateId: string, versionIndex: number, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks",
@@ -191,11 +149,7 @@ export const econsentService = {
     );
   },
 
-  getComprehensionCheck(
-    templateId: string,
-    versionIndex: number,
-    options: Record<string, unknown> = {}
-  ) {
+  getComprehensionCheck(templateId: string, versionIndex: number, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks",
@@ -213,10 +167,7 @@ export const econsentService = {
   },
 
   // --- Translations ---
-  createTranslation(
-    body: TranslationCreateBody,
-    options: Record<string, unknown> = {}
-  ) {
+  createTranslation(body: TranslationCreateBody, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/econsent/translations", {
         body,
@@ -225,11 +176,7 @@ export const econsentService = {
     );
   },
 
-  updateTranslation(
-    translationId: string,
-    body: TranslationUpdateBody,
-    options: Record<string, unknown> = {}
-  ) {
+  updateTranslation(translationId: string, body: TranslationUpdateBody, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.PUT("/api/v1/econsent/translations/{translation_id}", {
         params: { path: { translation_id: translationId } },
@@ -239,16 +186,7 @@ export const econsentService = {
     );
   },
 
-  listTranslations(
-    params: {
-      source_id?: string;
-      source_type?: string;
-      language_code?: string;
-      status?: string;
-      all_versions?: boolean;
-    } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listTranslations(params: { source_id?: string; source_type?: string; language_code?: string; status?: string; all_versions?: boolean } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/translations", {
         params: {
@@ -265,11 +203,7 @@ export const econsentService = {
     );
   },
 
-  getTranslation(
-    translationId: string,
-    params: { version_index?: number } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getTranslation(translationId: string, params: { version_index?: number } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/econsent/translations/{translation_id}", {
         params: {
@@ -281,11 +215,7 @@ export const econsentService = {
     );
   },
 
-  transitionTranslation(
-    translationId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  transitionTranslation(translationId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/translations/{translation_id}/transition",
@@ -299,35 +229,23 @@ export const econsentService = {
   },
 
   // --- Approved Composed Content (Participant) ---
-  getApprovedContent(
-    templateId: string,
-    params: { language_code?: string; version_index?: number } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getApprovedContent(templateId: string, params: { language_code?: string; version_index?: number } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/econsent/templates/{template_id}/approved-content",
-        {
-          params: {
-            path: { template_id: templateId },
-            query: {
-              language_code: params.language_code || "en",
-              version_index: params.version_index ?? null,
-            },
+      openApiClient.GET("/api/v1/econsent/templates/{template_id}/approved-content", {
+        params: {
+          path: { template_id: templateId },
+          query: {
+            language_code: params.language_code || "en",
+            version_index: params.version_index ?? null,
           },
-          ...options,
-        }
-      )
+        },
+        ...options,
+      })
     );
   },
 
   // --- Comprehension Evaluation & Signature Capture ---
-  submitAnswers(
-    templateId: string,
-    versionIndex: number,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  submitAnswers(templateId: string, versionIndex: number, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers",
@@ -345,12 +263,7 @@ export const econsentService = {
     );
   },
 
-  signTemplate(
-    templateId: string,
-    versionIndex: number,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  signTemplate(templateId: string, versionIndex: number, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/sign",
@@ -368,12 +281,7 @@ export const econsentService = {
     );
   },
 
-  captureConsent(
-    templateId: string,
-    versionIndex: number,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  captureConsent(templateId: string, versionIndex: number, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent",
@@ -391,11 +299,7 @@ export const econsentService = {
     );
   },
 
-  getSubjectConsentStatus(
-    subjectPseudonym: string,
-    params: { study_id?: string } = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getSubjectConsentStatus(subjectPseudonym: string, params: { study_id?: string } = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET(
         "/api/v1/econsent/subjects/{subject_pseudonym}/consent-status",
@@ -410,12 +314,7 @@ export const econsentService = {
     );
   },
 
-  diffTemplateVersions(
-    templateId: string,
-    baseVersion: number,
-    targetVersion: number,
-    options: Record<string, unknown> = {}
-  ) {
+  diffTemplateVersions(templateId: string, baseVersion: number, targetVersion: number, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET(
         "/api/v1/econsent/templates/{template_id}/diff/{base_version}/{target_version}",
@@ -452,11 +351,7 @@ export const econsentService = {
     );
   },
 
-  harmonizeClause(
-    clauseId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  harmonizeClause(clauseId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/econsent/clauses/{clause_id}/harmonize", {
         params: { path: { clause_id: clauseId } },

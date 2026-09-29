@@ -32,7 +32,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
                 return Task.CompletedTask;
             }
         }
-        else if (context.User.Identity is { IsAuthenticated: true })
+        else if (context.User.Identity?.IsAuthenticated is true)
         {
             // Fallback from ClaimsPrincipal if HttpContext is not direct resource
             var roles = context.User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role)
@@ -74,7 +74,7 @@ public class RoleAuthorizationHandler : AuthorizationHandler<RoleRequirement>
             principal = httpContext.Items["Principal"] as Principal;
         }
 
-        if (principal == null && context.User.Identity is { IsAuthenticated: true })
+        if (principal == null && context.User.Identity?.IsAuthenticated is true)
         {
             var roles = context.User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role)
                 .Select(c => c.Value).ToList();

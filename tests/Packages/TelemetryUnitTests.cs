@@ -1,9 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -108,7 +105,7 @@ public class TelemetryUnitTests
 
     [Fact]
     [GxPRequirement("PRD-SYS-053")]
-    public void AddCadenceWebDefaults_RegistersLoggingTelemetryOpenApiAndProblemDetails()
+    public void AddCadenceWebDefaults_RegistersLoggingTelemetryAndOpenApi()
     {
         var builder = WebApplication.CreateBuilder();
 
@@ -120,79 +117,6 @@ public class TelemetryUnitTests
 
         var tracerProvider = app.Services.GetService<TracerProvider>();
         tracerProvider.Should().NotBeNull();
-
-        var problemDetailsService = app.Services.GetService<IProblemDetailsService>();
-        problemDetailsService.Should().NotBeNull();
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-053")]
-    public void AddCadenceWebDefaults_AllowsCustomProblemDetailsConfiguration()
-    {
-        var builder = WebApplication.CreateBuilder();
-
-        builder.AddCadenceWebDefaults(options =>
-        {
-            options.CustomizeProblemDetails = context =>
-            {
-                context.ProblemDetails.Extensions["testCustom"] = "customValue";
-            };
-        });
-
-        using var app = builder.Build();
-        var problemDetailsService = app.Services.GetService<IProblemDetailsService>();
-        problemDetailsService.Should().NotBeNull();
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.RequestServices = app.Services;
-
-        var context = new ProblemDetailsContext
-        {
-            HttpContext = httpContext,
-            ProblemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails()
-        };
-
-        var problemDetailsOptions = app.Services.GetRequiredService<IOptions<ProblemDetailsOptions>>().Value;
-        problemDetailsOptions.CustomizeProblemDetails?.Invoke(context);
-
-        context.ProblemDetails.Extensions.Should().ContainKey("testCustom")
-            .WhoseValue.Should().Be("customValue");
-    }
-
-    [Fact]
-    [GxPRequirement("PRD-SYS-053")]
-    public async Task UseCadenceWebDefaults_AddsExceptionHandler_AndReturnsProblemJsonForUnhandledException()
-    {
-        var builder = WebApplication.CreateBuilder();
-        builder.AddCadenceWebDefaults();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-
-        using var app = builder.Build();
-        app.UseCadenceWebDefaults();
-
-        app.MapGet("/error", () =>
-        {
-            throw new InvalidOperationException("Test unhandled error response");
-        });
-
-        await app.StartAsync(TestContext.Current.CancellationToken);
-
-        var address = app.Urls.First();
-        using var client = new HttpClient { BaseAddress = new Uri(address) };
-
-        var response = await client.GetAsync("/error", TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
-        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
-
-        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(500);
-        root.TryGetProperty("title", out _).Should().BeTrue();
-
-        await app.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

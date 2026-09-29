@@ -1,4 +1,5 @@
 import { openApiClient, unwrapResponse } from "./client";
+import type { paths } from "./types";
 
 export interface NotificationFilterOptions {
   category?: "ALERTS" | "SYSTEM" | "ACTION_ITEMS" | null;
@@ -14,10 +15,7 @@ export const notificationsService = {
   /**
    * Retrieves notifications matching filters.
    */
-  getNotifications(
-    options: NotificationFilterOptions = {},
-    restOptions: Record<string, unknown> = {}
-  ) {
+  getNotifications(options: NotificationFilterOptions = {}, restOptions: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/notifications", {
         params: {
@@ -47,20 +45,11 @@ export const notificationsService = {
   /**
    * Acknowledges a notification (transition from OPEN to ACKNOWLEDGED).
    */
-  acknowledgeNotification(
-    id: string,
-    options: { changeReason?: string; [key: string]: unknown } = {}
-  ) {
-    const { changeReason, headers, ...rest } = options;
+  acknowledgeNotification(id: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/notifications/{id}/acknowledge", {
         params: { path: { id } },
-        headers: {
-          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
-          ...((headers as Record<string, string>) || {}),
-        },
-        changeReason,
-        ...rest,
+        ...options,
       })
     );
   },
@@ -68,20 +57,11 @@ export const notificationsService = {
   /**
    * Resolves a notification (transition from OPEN or ACKNOWLEDGED to RESOLVED).
    */
-  resolveNotification(
-    id: string,
-    options: { changeReason?: string; [key: string]: unknown } = {}
-  ) {
-    const { changeReason, headers, ...rest } = options;
+  resolveNotification(id: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/notifications/{id}/resolve", {
         params: { path: { id } },
-        headers: {
-          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
-          ...((headers as Record<string, string>) || {}),
-        },
-        changeReason,
-        ...rest,
+        ...options,
       })
     );
   },

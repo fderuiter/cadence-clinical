@@ -177,11 +177,7 @@ describe("cross-language parity", () => {
     const cwd = process.cwd();
     let repoRoot = cwd;
     for (let i = 0; i < 5; i++) {
-      if (
-        fs.existsSync(path.join(repoRoot, "Cadence.sln")) ||
-        fs.existsSync(path.join(repoRoot, "pnpm-workspace.yaml")) ||
-        fs.existsSync(path.join(repoRoot, "pyproject.toml"))
-      ) {
+      if (fs.existsSync(path.join(repoRoot, "pyproject.toml"))) {
         break;
       }
       repoRoot = path.dirname(repoRoot);

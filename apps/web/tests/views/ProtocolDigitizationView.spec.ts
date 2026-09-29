@@ -216,8 +216,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     wrapper.vm.currentStep = 2;
     wrapper.vm.triggerEscalation({
       current_stage: "SOA_EXTRACTION",
-      error_message:
-        "Validation failed at stage gate 'SOA_EXTRACTION' after 2 automated self-healing attempts.",
+      error_message: "Validation failed at stage gate 'SOA_EXTRACTION' after 2 automated self-healing attempts.",
     });
     await wrapper.vm.$nextTick();
 
@@ -248,14 +247,11 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     await wrapper.find(".btn-submit-correction").trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.text()).toContain(
-      "Part 11 Electronic Signature Username is required."
-    );
+    expect(wrapper.text()).toContain("Part 11 Electronic Signature Username is required.");
 
     // Fill in signature username and reason
     wrapper.vm.signatureUsername = "qa_lead_01";
-    wrapper.vm.signatureReason =
-      "Corrected missing protocol metadata for Part 11 compliance";
+    wrapper.vm.signatureReason = "Corrected missing protocol metadata for Part 11 compliance";
     await wrapper.find(".btn-submit-correction").trigger("click");
     await flushPromises();
 

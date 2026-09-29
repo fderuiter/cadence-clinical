@@ -42,10 +42,7 @@ export const ingestionClient = {
     });
 
     if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as Record<
-        string,
-        unknown
-      >;
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       throw new Error((data?.detail as string) || "Upload failed");
     }
     return response.json();
@@ -70,13 +67,10 @@ export const ingestionClient = {
   getCandidate(candidateId: string, options: IngestionOptions = {}) {
     const { changeReason = "Get candidate draft" } = options;
     return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/designer/ingestion/candidates/{candidate_id}",
-        {
-          params: { path: { candidate_id: candidateId } },
-          headers: { "X-Change-Reason": changeReason },
-        }
-      )
+      openApiClient.GET("/api/v1/designer/ingestion/candidates/{candidate_id}", {
+        params: { path: { candidate_id: candidateId } },
+        headers: { "X-Change-Reason": changeReason },
+      })
     );
   },
 

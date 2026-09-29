@@ -1,17 +1,12 @@
 <template>
   <div class="medical-autocode-container">
-    <label class="widget-label" :for="inputId"
-      >{{ label }} <span v-if="required" class="required-star">*</span></label
-    >
+    <label class="widget-label">{{ label }} <span v-if="required" class="required-star">*</span></label>
     <div class="input-wrapper">
       <input
-        :id="inputId"
         type="text"
         class="autocode-input"
         :value="modelValue"
-        :placeholder="
-          placeholder || 'Type verbatim medical term (e.g. Headache)...'
-        "
+        :placeholder="placeholder || 'Type verbatim medical term (e.g. Headache)...'"
         @input="onInput"
         @focus="isOpen = true"
       />
@@ -24,91 +19,67 @@
         v-for="term in suggestions"
         :key="term.code"
         class="suggestion-item"
-        role="option"
-        :aria-selected="selectedCoding?.code === term.code"
-        tabindex="0"
         @click="selectTerm(term)"
-        @keydown.enter="selectTerm(term)"
       >
         <span class="term-name">{{ term.name }}</span>
-        <span class="term-badge"
-          >{{ term.dictionary }}: {{ term.code }} (PT: {{ term.pt }})</span
-        >
+        <span class="term-badge">{{ term.dictionary }}: {{ term.code }} (PT: {{ term.pt }})</span>
       </li>
     </ul>
 
     <div v-if="selectedCoding" class="selected-coding-badge">
-      <span
-        >Auto-Coded: <strong>{{ selectedCoding.name }}</strong> [{{
-          selectedCoding.dictionary
-        }}
-        PT: {{ selectedCoding.pt }}, SOC: {{ selectedCoding.soc }}]</span
-      >
+      <span>Auto-Coded: <strong>{{ selectedCoding.name }}</strong> [{{ selectedCoding.dictionary }} PT: {{ selectedCoding.pt }}, SOC: {{ selectedCoding.soc }}]</span>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: String, default: "" },
-  label: { type: String, default: "Medical Term" },
+  modelValue: { type: String, default: '' },
+  label: { type: String, default: 'Medical Term' },
   required: { type: Boolean, default: false },
-  placeholder: { type: String, default: "" },
-  dictionary: { type: String, default: "MedDRA" },
-});
+  placeholder: { type: String, default: '' },
+  dictionary: { type: String, default: 'MedDRA' }
+})
 
-const emit = defineEmits(["update:modelValue", "code-selected"]);
+const emit = defineEmits(['update:modelValue', 'code-selected'])
 
-const inputId = `autocode-input-${Math.random().toString(36).substring(2, 9)}`;
-const isOpen = ref(false);
-const loading = ref(false);
-const suggestions = ref([]);
-const selectedCoding = ref(null);
+const isOpen = ref(false)
+const loading = ref(false)
+const suggestions = ref([])
+const selectedCoding = ref(null)
 
-let debounceTimer = null;
+let debounceTimer = null
 
 const onInput = (e) => {
-  const query = e.target.value;
-  emit("update:modelValue", query);
-
-  clearTimeout(debounceTimer);
+  const query = e.target.value
+  emit('update:modelValue', query)
+  
+  clearTimeout(debounceTimer)
   if (!query || query.length < 2) {
-    suggestions.value = [];
-    return;
+    suggestions.value = []
+    return
   }
 
-  loading.value = true;
+  loading.value = true
   debounceTimer = setTimeout(() => {
     // Simulated MedDRA / WHODrug Auto-Coding suggestion engine
     suggestions.value = [
-      {
-        name: query,
-        code: "10019211",
-        pt: query.toUpperCase(),
-        soc: "Nervous system disorders",
-        dictionary: props.dictionary,
-      },
-      {
-        name: `${query} (acute)`,
-        code: "10019212",
-        pt: `${query.toUpperCase()} ACUTE`,
-        soc: "General disorders",
-        dictionary: props.dictionary,
-      },
-    ];
-    loading.value = false;
-    isOpen.value = true;
-  }, 250);
-};
+      { name: query, code: '10019211', pt: query.toUpperCase(), soc: 'Nervous system disorders', dictionary: props.dictionary },
+      { name: `${query} (acute)`, code: '10019212', pt: `${query.toUpperCase()} ACUTE`, soc: 'General disorders', dictionary: props.dictionary }
+    ]
+    loading.value = false
+    isOpen.value = true
+  }, 250)
+}
 
 const selectTerm = (term) => {
-  selectedCoding.value = term;
-  emit("update:modelValue", term.name);
-  emit("code-selected", term);
-  isOpen.value = false;
-};
+  selectedCoding.value = term
+  emit('update:modelValue', term.name)
+  emit('code-selected', term)
+  isOpen.value = false
+}
 </script>
 
 <style scoped>

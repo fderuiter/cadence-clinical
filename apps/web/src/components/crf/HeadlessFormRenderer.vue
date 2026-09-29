@@ -46,37 +46,22 @@
         >
           <h4 class="section-title">{{ section.title }}</h4>
 
-          <div
-            class="section-grid"
-            :style="{
-              gridTemplateColumns: `repeat(${currentViewport === 'mobile_epro' ? 1 : section.columns}, 1fr)`,
-            }"
-          >
+          <div class="section-grid" :style="{ gridTemplateColumns: `repeat(${currentViewport === 'mobile_epro' ? 1 : section.columns}, 1fr)` }">
             <div
               v-for="widget in section.widgets"
               :key="widget.variable_id"
               class="grid-field-cell"
-              :style="{
-                gridColumn:
-                  currentViewport === 'mobile_epro'
-                    ? 'span 1'
-                    : `span ${widget.grid_column_span || 12}`,
-              }"
+              :style="{ gridColumn: currentViewport === 'mobile_epro' ? 'span 1' : `span ${widget.grid_column_span || 12}` }"
             >
               <!-- Field Label & Constraints -->
-              <label class="field-label" :for="'widget-' + widget.variable_id">
+              <label class="field-label">
                 {{ getVariable(widget.variable_id)?.name }}
-                <span
-                  v-if="getVariable(widget.variable_id)?.constraints?.required"
-                  class="required-star"
-                  >*</span
-                >
+                <span v-if="getVariable(widget.variable_id)?.constraints?.required" class="required-star">*</span>
               </label>
 
               <!-- Widget Rendering -->
               <template v-if="widget.widget === 'number_input'">
                 <input
-                  :id="'widget-' + widget.variable_id"
                   type="number"
                   class="form-input"
                   v-model.number="formData[widget.variable_id]"
@@ -109,7 +94,6 @@
 
               <template v-else>
                 <input
-                  :id="'widget-' + widget.variable_id"
                   type="text"
                   class="form-input"
                   v-model="formData[widget.variable_id]"
@@ -119,10 +103,7 @@
               </template>
 
               <!-- Inline AST Validation Queries / Errors -->
-              <div
-                v-if="fieldErrors[widget.variable_id]"
-                class="field-error-message"
-              >
+              <div v-if="fieldErrors[widget.variable_id]" class="field-error-message">
                 ⚠️ {{ fieldErrors[widget.variable_id] }}
               </div>
             </div>
@@ -141,70 +122,63 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive } from "vue";
-import { ClientRulesEvaluator } from "../../engine/rulesEvaluator.js";
-import MedicalAutocodeWidget from "./widgets/MedicalAutocodeWidget.vue";
-import BodyMapWidget from "./widgets/BodyMapWidget.vue";
-import RepeatingLogGridWidget from "./widgets/RepeatingLogGridWidget.vue";
+import { computed, ref, reactive } from 'vue'
+import { ClientRulesEvaluator } from '../../engine/rulesEvaluator.js'
+import MedicalAutocodeWidget from './widgets/MedicalAutocodeWidget.vue'
+import BodyMapWidget from './widgets/BodyMapWidget.vue'
+import RepeatingLogGridWidget from './widgets/RepeatingLogGridWidget.vue'
 
 const props = defineProps({
   formDefinition: {
     type: Object,
-    required: true,
-  },
-});
+    required: true
+  }
+})
 
-const emit = defineEmits(["form-submitted"]);
+const emit = defineEmits(['form-submitted'])
 
-const currentViewport = ref(
-  props.formDefinition.ui_schema?.default_viewport || "desktop_edc"
-);
-const formData = reactive({});
-const fieldErrors = reactive({});
+const currentViewport = ref(props.formDefinition.ui_schema?.default_viewport || 'desktop_edc')
+const formData = reactive({})
+const fieldErrors = reactive({})
 
 // Initialize form data model
-props.formDefinition.data_schema?.variables?.forEach((v) => {
-  formData[v.id] = v.data_type === "repeat_log" ? [] : "";
-});
+props.formDefinition.data_schema?.variables?.forEach(v => {
+  formData[v.id] = v.data_type === 'repeat_log' ? [] : ''
+})
 
 const getVariable = (varId) => {
-  return props.formDefinition.data_schema?.variables?.find(
-    (v) => v.id === varId
-  );
-};
+  return props.formDefinition.data_schema?.variables?.find(v => v.id === varId)
+}
 
 const evaluateRules = () => {
   // Clear previous errors
-  Object.keys(fieldErrors).forEach((key) => delete fieldErrors[key]);
+  Object.keys(fieldErrors).forEach(key => delete fieldErrors[key])
 
   // 1. Evaluate AST Edit Checks
-  props.formDefinition.logic_schema?.edit_checks?.forEach((check) => {
-    const passed = ClientRulesEvaluator.evaluate(
-      check.ast_expression,
-      formData
-    );
+  props.formDefinition.logic_schema?.edit_checks?.forEach(check => {
+    const passed = ClientRulesEvaluator.evaluate(check.ast_expression, formData)
     if (!passed) {
-      check.target_variable_ids.forEach((varId) => {
-        fieldErrors[varId] = check.query_message;
-      });
+      check.target_variable_ids.forEach(varId => {
+        fieldErrors[varId] = check.query_message
+      })
     }
-  });
-};
+  })
+}
 
 const hasHardErrors = computed(() => {
-  return Object.keys(fieldErrors).length > 0;
-});
+  return Object.keys(fieldErrors).length > 0
+})
 
 const handleSubmit = () => {
-  evaluateRules();
+  evaluateRules()
   if (!hasHardErrors.value) {
-    emit("form-submitted", {
+    emit('form-submitted', {
       form_id: props.formDefinition.form_id,
       version_tag: props.formDefinition.version_tag,
-      data: { ...formData },
-    });
+      data: { ...formData }
+    })
   }
-};
+}
 </script>
 
 <style scoped>

@@ -35,10 +35,7 @@ export interface SignOptions {
 }
 
 export const etmfService = {
-  getDocuments(
-    params: EtmfDocumentParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getDocuments(params: EtmfDocumentParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/etmf/documents", {
         params: {
@@ -70,10 +67,7 @@ export const etmfService = {
     );
   },
 
-  getCompleteness(
-    params: EtmfCompletenessParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getCompleteness(params: EtmfCompletenessParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/etmf/completeness", {
         params: {
@@ -88,10 +82,7 @@ export const etmfService = {
     );
   },
 
-  verifySignature(
-    { username, password, totp = null, action }: SignatureVerificationPayload,
-    options: Record<string, unknown> = {}
-  ) {
+  verifySignature({ username, password, totp = null, action }: SignatureVerificationPayload, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/execution/signatures/verify", {
         body: {
@@ -127,11 +118,7 @@ export const etmfService = {
     );
   },
 
-  getArchivalStatus(
-    correlationId?: string,
-    params: ArchivalStatusParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  getArchivalStatus(correlationId?: string, params: ArchivalStatusParams = {}, options: Record<string, unknown> = {}) {
     if (correlationId) {
       return unwrapResponse(
         openApiClient.GET("/api/v1/econsent/archival-status/{correlation_id}", {
@@ -146,8 +133,7 @@ export const etmfService = {
           query: {
             template_id: (params.template_id ?? null) as unknown as string,
             version_index: params.version_index ?? null,
-            subject_pseudonym: (params.subject_pseudonym ??
-              null) as unknown as string,
+            subject_pseudonym: (params.subject_pseudonym ?? null) as unknown as string,
           },
         },
         ...options,
@@ -177,11 +163,7 @@ export const etmfService = {
     );
   },
 
-  tagDocument(
-    documentId: string,
-    payload: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  tagDocument(documentId: string, payload: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/etmf/classify", {
         body: { document_id: documentId, ...(payload as object) } as never,
@@ -190,25 +172,16 @@ export const etmfService = {
     );
   },
 
-  getInspectionReadiness(
-    studyId: string,
-    options: Record<string, unknown> = {}
-  ) {
+  getInspectionReadiness(studyId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/etmf/studies/{study_id}/inspection-readiness",
-        {
-          params: { path: { study_id: studyId } },
-          ...options,
-        }
-      )
+      openApiClient.GET("/api/v1/etmf/studies/{study_id}/inspection-readiness", {
+        params: { path: { study_id: studyId } },
+        ...options,
+      })
     );
   },
 
-  getEmsExportUrl(
-    studyId: string,
-    params: { study_title?: string } = {}
-  ): string {
+  getEmsExportUrl(studyId: string, params: { study_title?: string } = {}): string {
     const query = new URLSearchParams();
     if (params.study_title) query.append("study_title", params.study_title);
     const queryString = query.toString();
@@ -225,18 +198,12 @@ export const etmfService = {
     );
   },
 
-  verifyDocumentSignature(
-    documentId: string,
-    options: Record<string, unknown> = {}
-  ) {
+  verifyDocumentSignature(documentId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/etmf/documents/{document_id}/verify-signature",
-        {
-          params: { path: { document_id: documentId } },
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/etmf/documents/{document_id}/verify-signature", {
+        params: { path: { document_id: documentId } },
+        ...options,
+      })
     );
   },
 };

@@ -1,17 +1,9 @@
 <template>
   <div class="body-map-widget-container">
-    <span class="widget-label">{{ label }}</span>
-    <p class="widget-hint">
-      Click on the anatomical map to record pain/symptom location coordinates.
-    </p>
-
-    <div
-      class="canvas-wrapper"
-      role="button"
-      tabindex="0"
-      @click="onCanvasClick"
-      @keydown.enter="onCanvasClick"
-    >
+    <label class="widget-label">{{ label }}</label>
+    <p class="widget-hint">Click on the anatomical map to record pain/symptom location coordinates.</p>
+    
+    <div class="canvas-wrapper" @click="onCanvasClick">
       <div class="anatomical-silhouette">
         <div class="head-region" title="Head / Neck"></div>
         <div class="torso-region" title="Chest / Abdomen"></div>
@@ -32,45 +24,40 @@
 
     <div v-if="pins.length > 0" class="pins-summary">
       <span class="pins-count">{{ pins.length }} location(s) recorded.</span>
-      <button type="button" class="btn-clear" @click="clearPins">
-        Clear Pins
-      </button>
+      <button type="button" class="btn-clear" @click="clearPins">Clear Pins</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
-  label: { type: String, default: "Interactive Body Map" },
-});
+  label: { type: String, default: 'Interactive Body Map' }
+})
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(['update:modelValue'])
 
-const pins = ref([...props.modelValue]);
+const pins = ref([...props.modelValue])
 
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    pins.value = [...newVal];
-  }
-);
+watch(() => props.modelValue, (newVal) => {
+  pins.value = [...newVal]
+})
 
 const onCanvasClick = (e) => {
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = ((e.clientX - rect.left) / rect.width) * 100;
-  const y = ((e.clientY - rect.top) / rect.height) * 100;
+  const rect = e.currentTarget.getBoundingClientRect()
+  const x = ((e.clientX - rect.left) / rect.width) * 100
+  const y = ((e.clientY - rect.top) / rect.height) * 100
 
-  pins.value.push({ x, y });
-  emit("update:modelValue", pins.value);
-};
+  pins.value.push({ x, y })
+  emit('update:modelValue', pins.value)
+}
 
 const clearPins = () => {
-  pins.value = [];
-  emit("update:modelValue", []);
-};
+  pins.value = []
+  emit('update:modelValue', [])
+}
 </script>
 
 <style scoped>

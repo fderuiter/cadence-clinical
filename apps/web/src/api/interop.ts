@@ -107,20 +107,13 @@ export const interopService = {
     );
   },
 
-  acknowledgeSafetyAlert(
-    alertId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  acknowledgeSafetyAlert(alertId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge",
-        {
-          params: { path: { alert_id: alertId } },
-          body: body as paths["/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge", {
+        params: { path: { alert_id: alertId } },
+        body: body as paths["/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
@@ -151,10 +144,7 @@ export const interopService = {
     );
   },
 
-  generateClientAssertion(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  generateClientAssertion(body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/smart/assertion", {
         body: body as paths["/api/v1/interop/esource/smart/assertion"]["post"]["requestBody"]["content"]["application/json"],
@@ -190,10 +180,7 @@ export const interopService = {
     );
   },
 
-  listEhrCandidates(
-    params: CandidateListParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listEhrCandidates(params: CandidateListParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/esource/candidates", {
         params: {
@@ -258,10 +245,7 @@ export const interopService = {
   },
 
   // Telehealth & DCT Methods
-  scheduleTelehealthSession(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  scheduleTelehealthSession(body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/dct/telehealth/sessions", {
         body: body as paths["/api/v1/interop/dct/telehealth/sessions"]["post"]["requestBody"]["content"]["application/json"],
@@ -270,10 +254,7 @@ export const interopService = {
     );
   },
 
-  listTelehealthSessions(
-    params: TelehealthSessionParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listTelehealthSessions(params: TelehealthSessionParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/dct/telehealth/sessions", {
         params: {
@@ -287,86 +268,52 @@ export const interopService = {
     );
   },
 
-  getTelehealthSession(
-    sessionId: string,
-    options: Record<string, unknown> = {}
-  ) {
+  getTelehealthSession(sessionId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/interop/dct/telehealth/sessions/{session_id}",
-        {
-          params: { path: { session_id: sessionId } },
-          ...options,
-        }
-      )
+      openApiClient.GET("/api/v1/interop/dct/telehealth/sessions/{session_id}", {
+        params: { path: { session_id: sessionId } },
+        ...options,
+      })
     );
   },
 
-  generateRoomToken(
-    sessionId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  generateRoomToken(sessionId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/telehealth/sessions/{session_id}/token",
-        {
-          params: { path: { session_id: sessionId } },
-          body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/token"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/telehealth/sessions/{session_id}/token", {
+        params: { path: { session_id: sessionId } },
+        body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/token"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  sendWebRTCSignaling(
-    sessionId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  sendWebRTCSignaling(sessionId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling",
-        {
-          params: { path: { session_id: sessionId } },
-          body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling", {
+        params: { path: { session_id: sessionId } },
+        body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  syncCoViewState(
-    sessionId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  syncCoViewState(sessionId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view",
-        {
-          params: { path: { session_id: sessionId } },
-          body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view", {
+        params: { path: { session_id: sessionId } },
+        body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  archiveTelehealthRecording(
-    sessionId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  archiveTelehealthRecording(sessionId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording",
-        {
-          params: { path: { session_id: sessionId } },
-          body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording", {
+        params: { path: { session_id: sessionId } },
+        body: body as paths["/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
@@ -379,10 +326,7 @@ export const interopService = {
     );
   },
 
-  listPediatricAssents(
-    params: PediatricAssentParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listPediatricAssents(params: PediatricAssentParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/dct/econsent/pediatric-assent", {
         params: {
@@ -396,18 +340,12 @@ export const interopService = {
     );
   },
 
-  verifyPediatricAssent(
-    assentId: string,
-    options: Record<string, unknown> = {}
-  ) {
+  verifyPediatricAssent(assentId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/interop/dct/econsent/pediatric-assent/{assent_id}/verify",
-        {
-          params: { path: { assent_id: assentId } },
-          ...options,
-        }
-      )
+      openApiClient.GET("/api/v1/interop/dct/econsent/pediatric-assent/{assent_id}/verify", {
+        params: { path: { assent_id: assentId } },
+        ...options,
+      })
     );
   },
 
@@ -420,10 +358,7 @@ export const interopService = {
     );
   },
 
-  listDtpShipments(
-    params: DtpShipmentParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listDtpShipments(params: DtpShipmentParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/dct/dtp/shipments", {
         params: {
@@ -438,10 +373,7 @@ export const interopService = {
     );
   },
 
-  getDtpShipment(
-    trackingNumber: string,
-    options: Record<string, unknown> = {}
-  ) {
+  getDtpShipment(trackingNumber: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/dct/dtp/shipments/{tracking_number}", {
         params: { path: { tracking_number: trackingNumber } },
@@ -450,54 +382,33 @@ export const interopService = {
     );
   },
 
-  ingestDtpTemperature(
-    trackingNumber: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  ingestDtpTemperature(trackingNumber: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature",
-        {
-          params: { path: { tracking_number: trackingNumber } },
-          body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature", {
+        params: { path: { tracking_number: trackingNumber } },
+        body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  recordDtpCustodyHandoff(
-    trackingNumber: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  recordDtpCustodyHandoff(trackingNumber: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff",
-        {
-          params: { path: { tracking_number: trackingNumber } },
-          body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff", {
+        params: { path: { tracking_number: trackingNumber } },
+        body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  confirmDtpDelivery(
-    trackingNumber: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  confirmDtpDelivery(trackingNumber: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery",
-        {
-          params: { path: { tracking_number: trackingNumber } },
-          body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery", {
+        params: { path: { tracking_number: trackingNumber } },
+        body: body as paths["/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
@@ -510,10 +421,7 @@ export const interopService = {
     );
   },
 
-  listInHomeVisits(
-    params: InHomeVisitParams = {},
-    options: Record<string, unknown> = {}
-  ) {
+  listInHomeVisits(params: InHomeVisitParams = {}, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/interop/dct/home-health/visits", {
         params: {
@@ -538,37 +446,23 @@ export const interopService = {
     );
   },
 
-  updateInHomeVisitStatus(
-    visitId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  updateInHomeVisitStatus(visitId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/home-health/visits/{visit_id}/status",
-        {
-          params: { path: { visit_id: visitId } },
-          body: body as paths["/api/v1/interop/dct/home-health/visits/{visit_id}/status"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/home-health/visits/{visit_id}/status", {
+        params: { path: { visit_id: visitId } },
+        body: body as paths["/api/v1/interop/dct/home-health/visits/{visit_id}/status"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
-  syncMobileECRF(
-    visitId: string,
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  syncMobileECRF(visitId: string, body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf",
-        {
-          params: { path: { visit_id: visitId } },
-          body: body as paths["/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf"]["post"]["requestBody"]["content"]["application/json"],
-          ...options,
-        }
-      )
+      openApiClient.POST("/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf", {
+        params: { path: { visit_id: visitId } },
+        body: body as paths["/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
     );
   },
 
