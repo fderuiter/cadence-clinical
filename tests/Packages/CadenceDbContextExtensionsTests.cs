@@ -12,9 +12,9 @@ using Xunit;
 
 namespace Cadence.UnitTests.Packages;
 
-public class TestDbContext : DbContext
+public class ExtensionsTestDbContext : DbContext
 {
-    public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
+    public ExtensionsTestDbContext(DbContextOptions<ExtensionsTestDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,7 +38,7 @@ public class CadenceDbContextExtensionsTests
     [GxPRequirement("PRD-SYS-053")]
     public void GetCompiledModel_ReturnsNull_WhenNoCompiledModelExists()
     {
-        var model = CadenceDbContextExtensions.GetCompiledModel<TestDbContext>();
+        var model = CadenceDbContextExtensions.GetCompiledModel<ExtensionsTestDbContext>();
         model.Should().BeNull();
     }
 
@@ -47,11 +47,11 @@ public class CadenceDbContextExtensionsTests
     public void AddCadenceDbContext_RegistersDbContextInServiceCollection()
     {
         var services = new ServiceCollection();
-        services.AddCadenceDbContext<TestDbContext>(options => options.UseInMemoryDatabase("TestDb"));
+        services.AddCadenceDbContext<ExtensionsTestDbContext>(options => options.UseInMemoryDatabase("TestDb"));
 
         var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<TestDbContext>();
+        var dbContext = scope.ServiceProvider.GetService<ExtensionsTestDbContext>();
 
         dbContext.Should().NotBeNull();
     }
@@ -63,7 +63,7 @@ public class CadenceDbContextExtensionsTests
         var services = new ServiceCollection();
         var optionsExecuted = false;
 
-        services.AddCadenceDbContext<TestDbContext>((sp, options) =>
+        services.AddCadenceDbContext<ExtensionsTestDbContext>((sp, options) =>
         {
             optionsExecuted = true;
             options.UseInMemoryDatabase("TestDbProvider");
@@ -71,7 +71,7 @@ public class CadenceDbContextExtensionsTests
 
         var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<TestDbContext>();
+        var dbContext = scope.ServiceProvider.GetService<ExtensionsTestDbContext>();
 
         dbContext.Should().NotBeNull();
         optionsExecuted.Should().BeTrue();
