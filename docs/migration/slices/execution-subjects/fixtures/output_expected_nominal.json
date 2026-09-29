@@ -16,7 +16,7 @@
       },
       "db_assertions": { "enrollment_index": 0 },
       "audit_assertions": [
-        { "table_name": "clinical_subjects", "action": "ENROLL_SUBJECT" }
+        { "table_name": "ClinicalSubject", "action": "ENROLL_SUBJECT" }
       ]
     },
     {
@@ -128,7 +128,7 @@
         "message": "Site SITE-COMPLIANT-01 activated successfully."
       },
       "audit_assertions": [
-        { "table_name": "site_compliance_caches", "action": "SITE_ACTIVATION" }
+        { "table_name": "SiteComplianceCache", "action": "SITE_ACTIVATION" }
       ]
     },
     {
@@ -165,7 +165,7 @@
         "encrypted_demographics": "<opaque-non-null-differs-from-precondition>"
       },
       "audit_assertions": [
-        { "table_name": "clinical_subjects", "action": "UPDATE_DEMOGRAPHICS" }
+        { "table_name": "ClinicalSubject", "action": "UPDATE_DEMOGRAPHICS" }
       ]
     },
     {
@@ -221,12 +221,12 @@
       },
       "audit_assertions": [
         {
-          "table_name": "clinical_subjects",
+          "table_name": "ClinicalSubject",
           "action": "INSERT",
           "user_id": "svc:econsent-consumer"
         },
         {
-          "table_name": "subject_consents",
+          "table_name": "SubjectConsent",
           "action": "INSERT",
           "user_id": "svc:econsent-consumer"
         }

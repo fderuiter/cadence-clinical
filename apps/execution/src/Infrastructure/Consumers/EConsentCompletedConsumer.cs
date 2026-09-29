@@ -114,7 +114,7 @@ public sealed class EConsentCompletedConsumer(
                 encryptedDemographics: null, stratFactors: null);
             created.ReasonForChange = account.ChangeReason;
             await subjects.AddAsync(created, context.CancellationToken).ConfigureAwait(false);
-            await auditLog.WriteAsync("clinical_subjects", created.Id.ToString(), "INSERT",
+            await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
                 account.UserId, created.ReasonForChange,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
 
@@ -136,7 +136,7 @@ public sealed class EConsentCompletedConsumer(
             var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: clock.UtcNow,
                 requiresReconsent: false, isPaperOverride: false, clock);
             await consents.AddAsync(consent, context.CancellationToken).ConfigureAwait(false);
-            await auditLog.WriteAsync("subject_consents", consent.Id.ToString(), "INSERT",
+            await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "INSERT",
                 account.UserId, account.ChangeReason,
                 oldValues: null, newValues: null, context.CancellationToken).ConfigureAwait(false);
 

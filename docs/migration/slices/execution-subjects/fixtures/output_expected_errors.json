@@ -88,7 +88,7 @@
       },
       "audit_assertions": [
         {
-          "table_name": "site_compliance_caches",
+          "table_name": "SiteComplianceCache",
           "action": "BLOCKED_ACTIVATION"
         }
       ]
@@ -100,7 +100,7 @@
         "detail": "Subject enrollment blocked: Site SITE-NONCOMPLIANT-01 is not compliant."
       },
       "audit_assertions": [
-        { "table_name": "clinical_subjects", "action": "BLOCKED_ENROLLMENT" }
+        { "table_name": "ClinicalSubject", "action": "BLOCKED_ENROLLMENT" }
       ]
     },
     {
@@ -111,7 +111,7 @@
         "detail": "Subject enrollment blocked: Site SITE-NONCOMPLIANT-01 is not compliant."
       },
       "audit_assertions": [
-        { "table_name": "clinical_subjects", "action": "BLOCKED_ENROLLMENT" }
+        { "table_name": "ClinicalSubject", "action": "BLOCKED_ENROLLMENT" }
       ]
     },
     {
