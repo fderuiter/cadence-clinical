@@ -455,3 +455,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: Clinical Kernel Single Database Schema and Architecture Sentinel Hardening](2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md)
 
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
+
+- [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
