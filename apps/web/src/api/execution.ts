@@ -23,10 +23,7 @@ export const executionService = {
   /**
    * Enrolls/creates a new subject in the study.
    */
-  createSubject(
-    body: SubjectCreate,
-    options: Record<string, unknown> = {}
-  ) {
+  createSubject(body: SubjectCreate, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/execution/subjects", {
         body,
@@ -66,7 +63,10 @@ export const executionService = {
   /**
    * Lists real-time lab alerts matching filters.
    */
-  listLabAlerts(params: LabAlertParams = {}, options: Record<string, unknown> = {}) {
+  listLabAlerts(
+    params: LabAlertParams = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/execution/labs/toxicity/review-queue", {
         params: {
@@ -95,12 +95,18 @@ export const executionService = {
   /**
    * Submits/creates a form submission.
    */
-  submitForm(body: Record<string, unknown>, options: Record<string, unknown> = {}) {
+  submitForm(
+    body: Record<string, unknown>,
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
-      (openApiClient as unknown as { POST: Function }).POST("/api/v1/execution/form-submissions", {
-        body,
-        ...options,
-      })
+      (openApiClient as unknown as { POST: Function }).POST(
+        "/api/v1/execution/form-submissions",
+        {
+          body,
+          ...options,
+        }
+      )
     );
   },
 
@@ -119,7 +125,10 @@ export const executionService = {
   /**
    * Lists staged CANDIDATE clinical queries flagged by the anomaly detector.
    */
-  getAnomalyCandidates(params: Record<string, string | undefined> = {}, options: Record<string, unknown> = {}) {
+  getAnomalyCandidates(
+    params: Record<string, string | undefined> = {},
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/execution/anomalies/candidates", {
         params: {
@@ -137,7 +146,10 @@ export const executionService = {
   /**
    * Triggers on-demand cross-domain anomaly evaluation for a subject.
    */
-  evaluateAnomalies(body: Record<string, unknown>, options: Record<string, unknown> = {}) {
+  evaluateAnomalies(
+    body: Record<string, unknown>,
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/execution/anomalies/evaluate", {
         body: body as never,

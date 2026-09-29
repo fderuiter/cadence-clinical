@@ -1,22 +1,26 @@
 <template>
   <div class="repeating-log-grid-container">
     <div class="grid-header">
-      <label class="widget-label">{{ label }}</label>
-      <button type="button" class="btn-add-row" @click="addRow">+ Add Row</button>
+      <span class="widget-label">{{ label }}</span>
+      <button type="button" class="btn-add-row" @click="addRow">
+        + Add Row
+      </button>
     </div>
 
     <div class="table-wrapper">
       <table class="log-table">
         <thead>
           <tr>
-            <th style="width: 40px;">#</th>
+            <th style="width: 40px">#</th>
             <th v-for="col in columns" :key="col.id">{{ col.label }}</th>
-            <th style="width: 50px;">Action</th>
+            <th style="width: 50px">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="rows.length === 0">
-            <td :colspan="columns.length + 2" class="empty-cell">No log records captured. Click "+ Add Row" to begin.</td>
+            <td :colspan="columns.length + 2" class="empty-cell">
+              No log records captured. Click "+ Add Row" to begin.
+            </td>
           </tr>
           <tr v-for="(row, rIdx) in rows" :key="rIdx">
             <td class="row-num">{{ rIdx + 1 }}</td>
@@ -25,6 +29,7 @@
                 v-if="col.type === 'number'"
                 type="number"
                 class="cell-input"
+                :aria-label="col.label"
                 :value="row[col.id]"
                 @input="updateCell(rIdx, col.id, $event.target.value)"
               />
@@ -32,16 +37,26 @@
                 v-else
                 type="text"
                 class="cell-input"
+                :aria-label="col.label"
                 :value="row[col.id]"
                 @input="updateCell(rIdx, col.id, $event.target.value)"
               />
             </td>
             <td class="action-cell">
-              <button type="button" class="btn-delete-row" @click="deleteRow(rIdx)" title="Delete Row">×</button>
+              <button
+                type="button"
+                class="btn-delete-row"
+                @click="deleteRow(rIdx)"
+                title="Delete Row"
+              >
+                ×
+              </button>
             </td>
           </tr>
         </tbody>
-        <tfoot v-if="columns.some(c => c.aggregate === 'sum') && rows.length > 0">
+        <tfoot
+          v-if="columns.some((c) => c.aggregate === 'sum') && rows.length > 0"
+        >
           <tr class="summary-row">
             <td colspan="1">Total:</td>
             <td v-for="col in columns" :key="col.id">
@@ -58,51 +73,54 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch } from "vue";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
-  label: { type: String, default: 'Repeating Log Grid' },
+  label: { type: String, default: "Repeating Log Grid" },
   columns: {
     type: Array,
     default: () => [
-      { id: 'medication', label: 'Medication Name', type: 'text' },
-      { id: 'dose_mg', label: 'Dose (mg)', type: 'number', aggregate: 'sum' },
-      { id: 'frequency', label: 'Frequency', type: 'text' }
-    ]
+      { id: "medication", label: "Medication Name", type: "text" },
+      { id: "dose_mg", label: "Dose (mg)", type: "number", aggregate: "sum" },
+      { id: "frequency", label: "Frequency", type: "text" },
+    ],
+  },
+});
+
+const emit = defineEmits(["update:modelValue"]);
+
+const rows = ref([...props.modelValue]);
+
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    rows.value = [...newVal];
   }
-})
-
-const emit = defineEmits(['update:modelValue'])
-
-const rows = ref([...props.modelValue])
-
-watch(() => props.modelValue, (newVal) => {
-  rows.value = [...newVal]
-})
+);
 
 const addRow = () => {
-  const newRow = {}
-  props.columns.forEach(col => {
-    newRow[col.id] = col.type === 'number' ? 0 : ''
-  })
-  rows.value.push(newRow)
-  emit('update:modelValue', rows.value)
-}
+  const newRow = {};
+  props.columns.forEach((col) => {
+    newRow[col.id] = col.type === "number" ? 0 : "";
+  });
+  rows.value.push(newRow);
+  emit("update:modelValue", rows.value);
+};
 
 const deleteRow = (index) => {
-  rows.value.splice(index, 1)
-  emit('update:modelValue', rows.value)
-}
+  rows.value.splice(index, 1);
+  emit("update:modelValue", rows.value);
+};
 
 const updateCell = (rowIndex, columnId, value) => {
-  rows.value[rowIndex][columnId] = value
-  emit('update:modelValue', rows.value)
-}
+  rows.value[rowIndex][columnId] = value;
+  emit("update:modelValue", rows.value);
+};
 
 const calculateSum = (columnId) => {
-  return rows.value.reduce((acc, row) => acc + (Number(row[columnId]) || 0), 0)
-}
+  return rows.value.reduce((acc, row) => acc + (Number(row[columnId]) || 0), 0);
+};
 </script>
 
 <style scoped>

@@ -63,7 +63,7 @@ public static class FieldMasker
     public static object? MaskPayload(object? payload, Principal? principal)
     {
         if (payload == null) return null;
-        if (principal?.UnblindedAccess ?? false) return payload;
+        if (principal is { UnblindedAccess: true }) return payload;
 
         var unmaskedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (principal != null)

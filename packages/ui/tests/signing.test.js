@@ -179,6 +179,7 @@ describe("cross-language parity", () => {
     for (let i = 0; i < 5; i++) {
       if (
         fs.existsSync(path.join(repoRoot, "Cadence.sln")) ||
+        fs.existsSync(path.join(repoRoot, "pnpm-workspace.yaml")) ||
         fs.existsSync(path.join(repoRoot, "pyproject.toml"))
       ) {
         break;
