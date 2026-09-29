@@ -23,7 +23,7 @@ namespace Cadence.UnitTests.Kernel.Integration;
 /// stand-in. Once opted in, any startup failure is rethrown.
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class KernelPostgresFixture : IAsyncLifetime
+public class KernelPostgresFixture : IAsyncLifetime
 {
     public const string Actor = "kernel-it@cadence.test";
 
@@ -64,9 +64,16 @@ public sealed class KernelPostgresFixture : IAsyncLifetime
             .AddKernelPersistence(ConnectionString, _ => Actor)
             .BuildServiceProvider();
 
-        await using var context = CreateContext();
-        await context.Database.MigrateAsync().ConfigureAwait(false);
+        await using (var context = CreateContext())
+        {
+            await context.Database.MigrateAsync().ConfigureAwait(false);
+        }
+
+        await OnMigratedAsync(ConnectionString).ConfigureAwait(false);
     }
+
+    /// <summary>Runs once after the kernel migrations are applied, for fixtures that add test-only objects.</summary>
+    protected virtual ValueTask OnMigratedAsync(string connectionString) => ValueTask.CompletedTask;
 
     /// <summary>Creates a context wired exactly as the kernel host wires it (audit interceptor, kernel clock).</summary>
     internal KernelDbContext CreateContext()

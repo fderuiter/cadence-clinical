@@ -230,9 +230,12 @@ reconstruction uses `(t_clinical, t_inspection_cutoff)`.
 | --- | --- | --- |
 | Effectivity, Enrollment, Applicability, ConsentStatus, Grant, Delegation, Qualification, OrganizationRelationship, StudySite lifecycle, Observation, Assertion, Specimen custody state | DomainEvent, AuditEntry, Attestation, ProvenanceActivity, LineageEdge, ArtifactVersion, ValidationRun | Reference/config data without dispute semantics |
 
-- **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`.
+- **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`. They are never deleted or truncated.
+  Enforced by a trigger (SQLSTATE `KT001`).
 - **K-TIME-2** An exclusion constraint (`EXCLUDE USING gist`) prevents overlapping `(tenant, entity, valid,
-  recorded)` rectangles where a single truth is required (ADR-2246).
+  recorded)` rectangles where a single truth is required (ADR-2246). The constraint is deferred to commit, so a correction
+  can close the old row and insert its replacement in one transaction. How to apply both guards to a table:
+  [`packages/kernel/README.md`](../../packages/kernel/README.md#bitemporal-tables-adr-2246).
 - **K-TIME-3** All timestamps are `timestamptz`; the kernel takes time only from `IClock`; `DateTime.Now`
   and `DateTime.UtcNow` are banned in kernel and domain code (#4784).
 - **K-TIME-9** Client-supplied valid time (offline capture, device time) is preserved as captured; the server
