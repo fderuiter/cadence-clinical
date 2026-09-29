@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<h:html xmlns="http://www.w3.org/2002/xforms"
+        xmlns:h="http://www.w3.org/1999/xhtml"
+        xmlns:ev="http://www.w3.org/2001/xml-events"
+        xmlns:or="http://openrosa.org/xforms"
+        xmlns:orx="http://openrosa.org/xforms"
+        xmlns:odk="http://www.opendatakit.org/xforms"
+        xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>{{ name }}</h:title>
+    <model>
+      <instance>
+        <data id="{{ study_id }}">
+          {% for item in items %}
+          <{{ item.name }} />
+          {% endfor %}
+        </data>
+      </instance>
+      {% for item in items %}
+      <bind nodeset="/data/{{ item.name }}" type="{{ item.type }}"{% if item.relevant != null and item.relevant != "" %} relevant="{{ item.relevant }}"{% endif %}{% if item.constraint != null and item.constraint != "" %} constraint="{{ item.constraint }}"{% endif %}{% if item.constraint_message != null and item.constraint_message != "" %} jr:constraintMsg="{{ item.constraint_message }}"{% endif %}/>
+      {% endfor %}
+    </model>
+  </h:head>
+  <h:body>
+    {% for item in items %}
+    <input ref="/data/{{ item.name }}"{% if item.appearance != null and item.appearance != "" %} appearance="{{ item.appearance }}"{% endif %}>
+      {% if item.localizations != null and item.localizations.size > 0 %}
+      {% for loc in item.localizations %}
+      {% if loc.value.label != null and loc.value.label != "" %}
+      <label xml:lang="{{ loc.key }}">{{ loc.value.label }}</label>
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      <label>{{ item.name }}</label>
+      {% endif %}
+      {% if item.localizations != null and item.localizations.size > 0 %}
+      {% for loc in item.localizations %}
+      {% if loc.value.hint != null and loc.value.hint != "" %}
+      <hint xml:lang="{{ loc.key }}">{{ loc.value.hint }}</hint>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+    </input>
+    {% endfor %}
+  </h:body>
+</h:html>

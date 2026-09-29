@@ -33,7 +33,6 @@ Key exported interfaces and components:
 
 This package relies on the following standard dependencies:
 - `defusedxml>=0.7.1,<0.8.0`
-- `jinja2>=3.1.6,<4.0.0`
 - `pydantic>=2.6.0`
 
 ---
