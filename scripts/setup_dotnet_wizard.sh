@@ -12,9 +12,9 @@ _STAGE_INDEX=0
 # Formatting
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
   BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
-  BLUE=$(tput setaf 4); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6)
+  GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6)
 else
-  BOLD=""; DIM=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""; CYAN=""
+  BOLD=""; DIM=""; RESET=""; GREEN=""; YELLOW=""; CYAN=""
 fi
 
 _clear() {
@@ -36,7 +36,7 @@ printf '%s%s====================================================================
 printf '%s  Target Architecture: .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)%s\n' "$DIM" "$RESET"
 printf '%s  Regulatory Standard: 21 CFR Part 11 / ICH GCP E6 (PRD-SYS-053)%s\n\n' "$DIM" "$RESET"
 
-read -p "Ready to begin setup? [Y/n]: " START_PROMPT || true
+read -r -p "Ready to begin setup? [Y/n]: " START_PROMPT || true
 if [[ "$START_PROMPT" =~ ^[nN] ]]; then
   echo "Onboarding paused. Re-run anytime."
   exit 0
@@ -54,7 +54,7 @@ if command -v dotnet >/dev/null 2>&1; then
 fi
 
 if [ "$SDK_FOUND" = false ]; then
-  read -p "  Download and install .NET 10 SDK automatically? [Y/n]: " INSTALL_SDK || true
+  read -r -p "  Download and install .NET 10 SDK automatically? [Y/n]: " INSTALL_SDK || true
   if [[ ! "$INSTALL_SDK" =~ ^[nN] ]]; then
     bash "$(dirname "$0")/setup_dotnet_env.sh"
   fi
