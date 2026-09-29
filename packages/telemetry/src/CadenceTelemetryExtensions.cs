@@ -17,8 +17,26 @@ using Scalar.AspNetCore;
 
 namespace Cadence.Telemetry;
 
-public static class CadenceTelemetryExtensions
+public static partial class CadenceTelemetryExtensions
 {
+    [LoggerMessage(
+        EventId = 1001,
+        Level = LogLevel.Debug,
+        Message = "Traceparent header '{TraceParent}' attached to response for request path '{Path}'")]
+    public static partial void LogTraceparentHeaderInjected(this ILogger logger, string traceParent, string? path);
+
+    [LoggerMessage(
+        EventId = 1002,
+        Level = LogLevel.Information,
+        Message = "Cadence telemetry and logging initialized for service '{ServiceName}'")]
+    public static partial void LogTelemetryInitialized(this ILogger logger, string serviceName);
+
+    [LoggerMessage(
+        EventId = 1003,
+        Level = LogLevel.Trace,
+        Message = "Tracing request '{Method}' '{Path}' with ActivityId '{ActivityId}'")]
+    public static partial void LogRequestTracingEvent(this ILogger logger, string method, string? path, string? activityId);
+
     public static WebApplicationBuilder AddCadenceLogging(this WebApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -80,6 +98,12 @@ public static class CadenceTelemetryExtensions
             {
                 var traceParent = $"00-{activity.TraceId}-{activity.SpanId}-{(activity.Recorded ? "01" : "00")}";
                 context.Response.Headers["traceparent"] = traceParent;
+
+                var logger = context.RequestServices?.GetService<ILogger<IApplicationBuilder>>();
+                if (logger != null)
+                {
+                    logger.LogTraceparentHeaderInjected(traceParent, context.Request.Path.Value);
+                }
             }
 
             await next(context);
@@ -106,6 +130,35 @@ public static class CadenceTelemetryExtensions
 
         app.UseCadenceTraceparent();
         app.MapCadenceApiDocumentation(app.Environment);
+
+        return app;
+    }
+
+    public static WebApplication MapCadenceHealthAndStatusEndpoints(
+        this WebApplication app,
+        string serviceName,
+        string routePrefix,
+        string healthSummary,
+        string statusSummary)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(serviceName);
+        ArgumentNullException.ThrowIfNull(routePrefix);
+        ArgumentNullException.ThrowIfNull(healthSummary);
+        ArgumentNullException.ThrowIfNull(statusSummary);
+
+        string pascalRoutePrefix = routePrefix.Length > 0
+            ? char.ToUpper(routePrefix[0]) + routePrefix[1..]
+            : routePrefix;
+
+        app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = serviceName }))
+            .WithName($"{pascalRoutePrefix}HealthCheck")
+            .WithSummary(healthSummary);
+
+        var api = app.MapGroup($"/api/v1/{routePrefix}");
+        api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", service = serviceName }))
+            .WithName($"{pascalRoutePrefix}Status")
+            .WithSummary(statusSummary);
 
         return app;
     }

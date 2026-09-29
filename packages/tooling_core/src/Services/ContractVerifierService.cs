@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 
+using Cadence.ToolingCore.Contracts;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ContractVerifierService
@@ -10,14 +12,19 @@ public static class ContractVerifierService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Verifying backend hexagonal port definitions and contracts...");
 
-        string contractsProj = Path.Combine(repoRoot, "packages", "contracts", "src", "Cadence.Contracts.csproj");
-        if (!File.Exists(contractsProj))
+        var result = ContractVerifier.VerifyBackendContracts(repoRoot);
+
+        foreach (var err in result.Errors)
         {
-            Console.WriteLine("[ERROR] Cadence.Contracts.csproj not found.");
+            Console.WriteLine($"[ERROR] {err}");
+        }
+
+        if (!result.IsValid)
+        {
             return 1;
         }
 
-        Console.WriteLine("✔ Hexagonal contract verification passed cleanly.");
+        Console.WriteLine("✔ Hexagonal contract static verification passed cleanly.");
         return 0;
     }
 

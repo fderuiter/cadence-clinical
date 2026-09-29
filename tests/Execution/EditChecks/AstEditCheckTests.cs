@@ -42,17 +42,17 @@ public sealed class AstEditCheckTests
         // Addition: 70 + 10 = 80
         var addJson = "{\"op\": \"+\", \"args\": [{\"var\": \"weight_kg\"}, 10]}";
         var addNode = JsonSerializer.Deserialize<JsonElement>(addJson);
-        engine.EvaluateAst(addNode, context).Should().Be(80.0);
+        engine.EvaluateAst(addNode, context).Should().BeOfType<decimal>().And.Be(80m);
 
         // Multiplication: 1.75 * 1.75 = 3.0625
         var mulJson = "{\"op\": \"*\", \"args\": [{\"var\": \"height_m\"}, {\"var\": \"height_m\"}]}";
         var mulNode = JsonSerializer.Deserialize<JsonElement>(mulJson);
-        engine.EvaluateAst(mulNode, context).Should().Be(3.0625);
+        engine.EvaluateAst(mulNode, context).Should().BeOfType<decimal>().And.Be(3.0625m);
 
         // Division: 70 / 2 = 35
         var divJson = "{\"op\": \"/\", \"args\": [{\"var\": \"weight_kg\"}, 2]}";
         var divNode = JsonSerializer.Deserialize<JsonElement>(divJson);
-        engine.EvaluateAst(divNode, context).Should().Be(35.0);
+        engine.EvaluateAst(divNode, context).Should().BeOfType<decimal>().And.Be(35m);
 
         // Division by zero: safe null
         var divZeroJson = "{\"op\": \"/\", \"args\": [{\"var\": \"weight_kg\"}, 0]}";
@@ -305,5 +305,60 @@ public sealed class AstEditCheckTests
         // Should return null due to depth > 64 guard
         var result = engine.EvaluateAst(current, context);
         result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that fixed-point decimal arithmetic avoids binary floating point representation errors and evaluates exact decimal equality.
+    /// @req:PRD-SYS-004
+    /// @req:SRS-EDC-005
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-004")]
+    public void EvaluateAst_DecimalPrecisionAndExactEquality_EvaluatesWithoutEpsilonDrift()
+    {
+        var engine = new AstEditCheckEngine();
+        var context = new Dictionary<string, object?>();
+
+        // 0.1 + 0.2 == 0.3 (in binary floating point 0.1 + 0.2 is 0.30000000000000004)
+        var exactAddJson = "{\"op\": \"==\", \"args\": [{\"op\": \"+\", \"args\": [0.1, 0.2]}, 0.3]}";
+        var node = JsonSerializer.Deserialize<JsonElement>(exactAddJson);
+        engine.EvaluateAst(node, context).Should().Be(true);
+
+        // Exact comparison boundary: 100.0000000001 == 100.0000000002 should be false without epsilon masking
+        var boundaryJson = "{\"op\": \"==\", \"args\": [100.0000000001, 100.0000000002]}";
+        var boundaryNode = JsonSerializer.Deserialize<JsonElement>(boundaryJson);
+        engine.EvaluateAst(boundaryNode, context).Should().Be(false);
+
+        // Exact comparison boundary: 100.0000000001 != 100.0000000002 should be true
+        var boundaryNeJson = "{\"op\": \"!=\", \"args\": [100.0000000001, 100.0000000002]}";
+        var boundaryNeNode = JsonSerializer.Deserialize<JsonElement>(boundaryNeJson);
+        engine.EvaluateAst(boundaryNeNode, context).Should().Be(true);
+    }
+
+    /// <summary>
+    /// Validates that values outside decimal range or invalid operations return null safely.
+    /// @req:PRD-SYS-004
+    /// @req:SRS-EDC-005
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-004")]
+    public void EvaluateAst_DecimalEdgeCases_HandlesOverflowAndInvalidValuesSafely()
+    {
+        var engine = new AstEditCheckEngine();
+        var context = new Dictionary<string, object?>
+        {
+            ["huge_val"] = 1e308,
+            ["nan_val"] = double.NaN
+        };
+
+        // Arithmetic with value outside decimal range returns null
+        var overflowJson = "{\"op\": \"+\", \"args\": [{\"var\": \"huge_val\"}, 10]}";
+        var overflowNode = JsonSerializer.Deserialize<JsonElement>(overflowJson);
+        engine.EvaluateAst(overflowNode, context).Should().BeNull();
+
+        // Arithmetic with NaN returns null
+        var nanJson = "{\"op\": \"+\", \"args\": [{\"var\": \"nan_val\"}, 5]}";
+        var nanNode = JsonSerializer.Deserialize<JsonElement>(nanJson);
+        engine.EvaluateAst(nanNode, context).Should().BeNull();
     }
 }
