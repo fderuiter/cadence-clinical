@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -110,8 +111,10 @@ public static class AdrValidatorService
     };
 
     private static readonly Regex FilenamePattern = new(@"^\d{4}-\d{2}-\d{2}-.+\.md$", RegexOptions.Compiled);
-    private static readonly Regex TitlePatternOld = new(@"^# .*\d{4}-\d{2}-\d{2}.*$", RegexOptions.Compiled);
-    private static readonly Regex TitlePatternNew = new(@"^# ADR-(?:\d+|\[NUMBER\]): .*$", RegexOptions.Compiled);
+    // Line 1 of every ADR: "# ADR-NNNN: Title" (at least three digits, e.g. ADR-049 or ADR-2250).
+    private static readonly Regex AdrHeadingPattern = new(@"^# ADR-(\d{3,}): \S.*$", RegexOptions.Compiled);
+    private static readonly Regex IndexEntryPattern = new(@"^\s*[-*]\s+\[[^\]]*\]\(([^)\s]+)\)", RegexOptions.Compiled);
+    private static readonly Regex MarkdownLinkPattern = new(@"\]\(([^)\s]+)\)", RegexOptions.Compiled);
 
     private static readonly string[] RequiredSectionsOld =
     [
@@ -152,32 +155,23 @@ public static class AdrValidatorService
     {
         string repoRoot = FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
-        string indexFile = Path.Combine(adrDir, "index.md");
-
         AnsiConsole.MarkupLine("[cyan]Validating Architectural Decision Records (ADRs)...[/]");
 
         if (!Directory.Exists(adrDir))
         {
-            AnsiConsole.MarkupLine($"[red]Error: Directory {adrDir} not found.[/]");
-            return false;
-        }
-
-        string indexContent = "";
-        try
-        {
-            if (File.Exists(indexFile))
-            {
-                indexContent = File.ReadAllText(indexFile);
-            }
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Error reading {indexFile}: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[red]Error: Directory {Markup.Escape(adrDir)} not found.[/]");
             return false;
         }
 
         var validReqs = GetValidRequirements();
         bool allPassed = true;
+
+        // 1. Directory-wide integrity: unique numbers, "# ADR-NNNN:" headings, index coverage and links.
+        foreach (var error in FindIntegrityErrors(adrDir))
+        {
+            AnsiConsole.MarkupLine($"[red]Error: {Markup.Escape(error)}[/]");
+            allPassed = false;
+        }
 
         var filesToValidate = targets != null && targets.Length > 0
             ? targets.Where(File.Exists).ToList()
@@ -188,17 +182,10 @@ public static class AdrValidatorService
             string filename = Path.GetFileName(filepath);
             if (IgnoreFiles.Contains(filename)) continue;
 
-            // 1. Check filename pattern
+            // 2. Check filename pattern
             if (!FilenamePattern.IsMatch(filename))
             {
-                AnsiConsole.MarkupLine($"[red]Error: File '{filename}' does not follow the standard date pattern (YYYY-MM-DD-...).[/]");
-                allPassed = false;
-            }
-
-            // 2. Check if in index
-            if (!indexContent.Contains($"({filename})"))
-            {
-                AnsiConsole.MarkupLine($"[red]Error: File '{filename}' is missing from index ({indexFile}).[/]");
+                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(filename)}' does not follow the standard date pattern (YYYY-MM-DD-...).[/]");
                 allPassed = false;
             }
 
@@ -210,28 +197,19 @@ public static class AdrValidatorService
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[red]Error reading '{filepath}': {ex.Message}[/]");
+                AnsiConsole.MarkupLine($"[red]Error reading '{Markup.Escape(filepath)}': {Markup.Escape(ex.Message)}[/]");
                 allPassed = false;
                 continue;
             }
 
-            var lines = content.Split('\n');
-            bool isNewFormat = false;
-            if (lines.Length > 0 && TitlePatternNew.IsMatch(lines[0]))
-            {
-                isNewFormat = true;
-            }
-            else if (lines.Length == 0 || !TitlePatternOld.IsMatch(lines[0]))
-            {
-                AnsiConsole.MarkupLine($"[red]Error: File '{filename}' title (line 1) does not match required format.[/]");
-                allPassed = false;
-            }
-
-            var requiredSections = isNewFormat ? RequiredSectionsNew : RequiredSectionsOld;
+            // Legacy ADRs use the "## Status / ## Context / ..." template; all others use the numbered template.
+            bool isLegacyTemplate = !content.Contains(RequiredSectionsNew[0]) &&
+                content.Split('\n').Any(l => l.TrimEnd() == "## Status");
+            var requiredSections = isLegacyTemplate ? RequiredSectionsOld : RequiredSectionsNew;
             var missingSections = requiredSections.Where(s => !content.Contains(s)).ToList();
             if (missingSections.Count > 0)
             {
-                AnsiConsole.MarkupLine($"[red]Error: File '{filename}' missing required sections: {string.Join(", ", missingSections)}[/]");
+                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(filename)}' missing required sections: {Markup.Escape(string.Join(", ", missingSections))}[/]");
                 allPassed = false;
             }
 
@@ -267,6 +245,114 @@ public static class AdrValidatorService
         }
 
         return allPassed;
+    }
+
+    /// <summary>
+    /// Parses the ADR number from an ADR's first line (<c># ADR-NNNN: Title</c>).
+    /// Returns <c>null</c> when the line is not a numbered ADR heading.
+    /// </summary>
+    public static int? ParseAdrNumber(string headingLine)
+    {
+        var match = AdrHeadingPattern.Match(headingLine.TrimEnd('\r'));
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        return int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int number)
+            ? number
+            : null;
+    }
+
+    /// <summary>
+    /// Checks the ADR directory as a whole: every ADR opens with a <c># ADR-NNNN: Title</c> heading,
+    /// no two ADRs share a number, every ADR is listed exactly once in <c>index.md</c>, and every
+    /// relative link in <c>index.md</c> resolves to an existing file.
+    /// </summary>
+    /// <returns>One message per problem found; empty when the directory is consistent.</returns>
+    public static IReadOnlyList<string> FindIntegrityErrors(string adrDir)
+    {
+        var errors = new List<string>();
+        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => !IgnoreFiles.Contains(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        var filesByNumber = new SortedDictionary<int, List<string>>();
+        foreach (var name in adrFiles)
+        {
+            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault() ?? "";
+            int? number = ParseAdrNumber(firstLine);
+            if (number is null)
+            {
+                errors.Add($"File '{name}' has no '# ADR-NNNN: Title' heading on line 1 (found '{firstLine.TrimEnd('\r')}').");
+                continue;
+            }
+
+            if (!filesByNumber.TryGetValue(number.Value, out var holders))
+            {
+                holders = [];
+                filesByNumber[number.Value] = holders;
+            }
+            holders.Add(name);
+        }
+
+        foreach (var (number, holders) in filesByNumber.Where(kv => kv.Value.Count > 1))
+        {
+            errors.Add($"ADR-{number:D3} is used by {holders.Count} files: {string.Join(", ", holders)}.");
+        }
+
+        string indexFile = Path.Combine(adrDir, "index.md");
+        if (!File.Exists(indexFile))
+        {
+            errors.Add($"ADR index '{indexFile}' not found.");
+            return errors;
+        }
+
+        var listedCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        string[] indexLines = File.ReadAllLines(indexFile);
+        for (int i = 0; i < indexLines.Length; i++)
+        {
+            foreach (Match link in MarkdownLinkPattern.Matches(indexLines[i]))
+            {
+                string target = link.Groups[1].Value;
+                if (target.Contains("://", StringComparison.Ordinal) || target.StartsWith('#') ||
+                    target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string path = target.Split('#')[0];
+                if (!File.Exists(Path.GetFullPath(Path.Combine(adrDir, path))))
+                {
+                    errors.Add($"index.md line {i + 1} links to '{target}', which does not exist.");
+                }
+            }
+
+            var entry = IndexEntryPattern.Match(indexLines[i]);
+            if (entry.Success)
+            {
+                string listed = entry.Groups[1].Value.Split('#')[0];
+                listedCounts[listed] = listedCounts.GetValueOrDefault(listed) + 1;
+            }
+        }
+
+        foreach (var name in adrFiles)
+        {
+            int count = listedCounts.GetValueOrDefault(name);
+            if (count == 0)
+            {
+                errors.Add($"File '{name}' is missing from index.md.");
+            }
+            else if (count > 1)
+            {
+                errors.Add($"File '{name}' is listed {count} times in index.md; list each ADR exactly once.");
+            }
+        }
+
+        return errors;
     }
 
     private static bool CheckArchitecturalChangesRequireAdr()
