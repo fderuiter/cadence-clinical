@@ -1,4 +1,6 @@
-# ADR-053: Shared SDTM Foundation Models & Terminology
+# ADR-2311: Shared SDTM Foundation Models & Terminology
+
+Also known as: ADR-053 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

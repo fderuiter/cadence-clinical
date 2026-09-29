@@ -1,4 +1,4 @@
-# ADR 2026-07-31: Viewport-Aware Grid Inspector for eCRF designer
+# ADR-2297: Viewport-Aware Grid Inspector for eCRF designer
 
 ## Status
 

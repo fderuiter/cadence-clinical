@@ -1,4 +1,6 @@
-# ADR-2167: Browser-Native Layout-Skipping for eCRF Virtualization
+# ADR-2352: Browser-Native Layout-Skipping for eCRF Virtualization
+
+Also known as: ADR-2167 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11
@@ -9,7 +11,7 @@
 
 ## 1. Context & Problem Statement
 
-In large-scale clinical trials, Electronic Case Report Forms (eCRFs) can contain hundreds of fields. In ADR-256, we introduced a viewport-driven DOM recycler that dynamically mounts and unmounts child inputs of offscreen fields to limit memory overhead and prevent Out-Of-Memory (OOM) browser crashes on tablets and iPads.
+In large-scale clinical trials, Electronic Case Report Forms (eCRFs) can contain hundreds of fields. In ADR-2337, we introduced a viewport-driven DOM recycler that dynamically mounts and unmounts child inputs of offscreen fields to limit memory overhead and prevent Out-Of-Memory (OOM) browser crashes on tablets and iPads.
 
 However, unmounting offscreen input elements completely from the DOM has several serious downsides:
 

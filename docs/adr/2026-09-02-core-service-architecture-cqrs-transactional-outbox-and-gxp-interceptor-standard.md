@@ -1,4 +1,6 @@
-# ADR-2234: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard
+# ADR-2425: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard
+
+Also known as: ADR-2234 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-02

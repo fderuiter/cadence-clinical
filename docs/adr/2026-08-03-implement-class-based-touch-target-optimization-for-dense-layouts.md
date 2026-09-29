@@ -1,4 +1,6 @@
-# ADR-254: Implement class-based touch target optimization for dense layouts
+# ADR-2318: Implement class-based touch target optimization for dense layouts
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

@@ -1,4 +1,6 @@
-# ADR-254: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards
+# ADR-2317: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

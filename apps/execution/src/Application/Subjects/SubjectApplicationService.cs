@@ -12,7 +12,7 @@ using Cadence.Kernel.Time;
 namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
-/// Direct typed implementation of <see cref="ISubjectApplicationService"/> (ADR-2234 §3.2, no MediatR),
+/// Direct typed implementation of <see cref="ISubjectApplicationService"/> (ADR-2425 §3.2, no MediatR),
 /// per <c>02_technical_design.md</c> §3.1/§3.3. `MIG-SUBJ-018` implemented <see cref="CreateAsync"/> and
 /// <see cref="RecordConsentAsync"/> — the two "creation-shaped" use cases (SCN-001/SCN-002). `MIG-SUBJ-019`
 /// (this ticket) adds the remaining 5 interface members

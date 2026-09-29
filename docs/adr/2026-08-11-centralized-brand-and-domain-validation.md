@@ -1,4 +1,6 @@
-# ADR-189: Centralized Brand and Domain Validation Guardrail
+# ADR-2353: Centralized Brand and Domain Validation Guardrail
+
+Also known as: ADR-189 (former number)
 
 - **Status:** Accepted
 - Date: 2026-08-11

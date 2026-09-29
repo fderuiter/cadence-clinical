@@ -1,4 +1,6 @@
-# ADR-096: Parallel Continuous Integration Workflows and Local Concurrent Verification
+# ADR-2376: Parallel Continuous Integration Workflows and Local Concurrent Verification
+
+Also known as: ADR-096 (former number)
 
 - **Status:** Accepted
 - Date: 2026-08-16

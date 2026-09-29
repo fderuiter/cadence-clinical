@@ -1,4 +1,6 @@
-# ADR-099: Delegation of Authority Log Archive Destination and Taxonomy Mapping Decisions
+# ADR-2391: Delegation of Authority Log Archive Destination and Taxonomy Mapping Decisions
+
+Also known as: ADR-099 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-23

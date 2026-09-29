@@ -1,4 +1,6 @@
-# ADR-253: Compile-Time Vite Build Mode for Interactive Public Demo
+# ADR-2326: Compile-Time Vite Build Mode for Interactive Public Demo
+
+Also known as: ADR-253 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

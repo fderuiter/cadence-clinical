@@ -5,7 +5,7 @@
 
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-053
-- **ADR Reference:** [ADR-2192](../adr/2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
+- **ADR Reference:** [ADR-2394](../adr/2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
 - **Triage Label:** `ready-for-agent`
 
 ---

@@ -1,4 +1,6 @@
-# ADR-2172: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions
+# ADR-2372: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions
+
+Also known as: ADR-2172 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-13

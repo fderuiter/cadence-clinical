@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: Reference Range Data Model and Persistence Updates
+# ADR-2294: Reference Range Data Model and Persistence Updates
 
 - **Status:** Accepted
 - **Date:** 2026-07-31

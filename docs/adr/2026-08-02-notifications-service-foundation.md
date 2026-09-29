@@ -1,4 +1,6 @@
-# ADR-053: Standalone Notifications Service Foundation
+# ADR-2307: Standalone Notifications Service Foundation
+
+Also known as: ADR-053 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

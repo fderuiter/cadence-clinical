@@ -1,4 +1,6 @@
-# ADR-255: Decommission legacy V1 signatures and standalone rendering engine
+# ADR-2314: Decommission legacy V1 signatures and standalone rendering engine
+
+Also known as: ADR-255 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

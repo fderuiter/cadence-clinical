@@ -1,4 +1,6 @@
-# ADR-111: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology
+# ADR-2403: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology
+
+Also known as: ADR-111 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
@@ -13,7 +15,7 @@ The electronic Investigator Site File (eISF) service (`apps/eisf`) has been succ
 
 Additionally, the architectural boundaries and synchronization mechanism between eISF (the site-level archive) and eTMF (the sponsor-level master archive) need clear topological definition, establishing trust boundaries and security controls.
 
-_Scope Note:_ This ADR specifically covers gateway/compose topology, network ports, and the service-to-service synchronization topology. [ADR-065](2026-08-09-eisf-maintenance-and-formatting.md) remains the authoritative decision record for eISF-local browse, view, downloads, RBAC, and binder completeness workflows.
+_Scope Note:_ This ADR specifically covers gateway/compose topology, network ports, and the service-to-service synchronization topology. [ADR-2347](2026-08-09-eisf-maintenance-and-formatting.md) remains the authoritative decision record for eISF-local browse, view, downloads, RBAC, and binder completeness workflows.
 
 This decision implements requirements under **Trace-16**.
 

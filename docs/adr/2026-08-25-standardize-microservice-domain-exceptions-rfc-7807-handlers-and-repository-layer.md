@@ -1,4 +1,6 @@
-# ADR-2217: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer
+# ADR-2400: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer
+
+Also known as: ADR-2217 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-25

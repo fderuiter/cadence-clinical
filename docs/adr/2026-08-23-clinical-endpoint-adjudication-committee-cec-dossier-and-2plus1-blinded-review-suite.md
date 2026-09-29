@@ -1,4 +1,6 @@
-# ADR-2199: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite
+# ADR-2390: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite
+
+Also known as: ADR-2199 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-23

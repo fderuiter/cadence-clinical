@@ -1,4 +1,6 @@
-# ADR-099: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication
+# ADR-2388: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication
+
+Also known as: ADR-099 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-22

@@ -1,4 +1,6 @@
-# ADR-254: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures
+# ADR-2313: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

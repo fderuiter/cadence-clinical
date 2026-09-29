@@ -921,7 +921,7 @@ ROLE_UNMASKED_FIELDS: dict[str, set[str]] = {
 }
 
 
-# Traceability Note: Principal now captures sponsor scope (sponsor_id) as a contract change per ADR-86.
+# Traceability Note: Principal now captures sponsor scope (sponsor_id) as a contract change per ADR-2366.
 class Principal(BaseModel):
     user_id: str
     roles: list[str]  # Normalized canonical roles

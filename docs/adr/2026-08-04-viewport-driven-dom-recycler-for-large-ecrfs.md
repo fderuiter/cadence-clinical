@@ -1,4 +1,6 @@
-# ADR-256: Viewport-Driven DOM Recycler for Large eCRFs
+# ADR-2337: Viewport-Driven DOM Recycler for Large eCRFs
+
+Also known as: ADR-256 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - Interactive Microservice Migration Wizard (POSIX)
-# Requirements: PRD-SYS-053, ADR-2233, ADR-2234
+# Requirements: PRD-SYS-053, ADR-2233, ADR-2425
 # ==============================================================================
 
 set -euo pipefail

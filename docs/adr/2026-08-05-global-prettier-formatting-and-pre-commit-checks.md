@@ -1,4 +1,4 @@
-# ADR 2026-08-05: Global Prettier Formatting and Pre-commit Checks
+# ADR-2338: Global Prettier Formatting and Pre-commit Checks
 
 ## Status
 

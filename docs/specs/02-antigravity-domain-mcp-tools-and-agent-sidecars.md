@@ -5,7 +5,7 @@
 
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-054
-- **ADR Reference:** [ADR-2193](../adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
+- **ADR Reference:** [ADR-2395](../adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
 - **Triage Label:** `ready-for-agent`
 
 ---

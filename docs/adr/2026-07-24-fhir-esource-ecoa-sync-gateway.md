@@ -1,4 +1,4 @@
-# ADR 2026-07-24: FHIR / eSource & eCOA Sync Gateway
+# ADR-2283: FHIR / eSource & eCOA Sync Gateway
 
 ## Status
 

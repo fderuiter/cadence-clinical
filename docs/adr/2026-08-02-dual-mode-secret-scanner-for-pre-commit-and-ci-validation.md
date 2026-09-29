@@ -1,4 +1,6 @@
-# ADR-251: Dual-Mode Secret Scanner for Pre-Commit and CI Validation
+# ADR-2302: Dual-Mode Secret Scanner for Pre-Commit and CI Validation
+
+Also known as: ADR-251 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

@@ -1,4 +1,6 @@
-# ADR-2218: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine
+# ADR-2397: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine
+
+Also known as: ADR-2218 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-25

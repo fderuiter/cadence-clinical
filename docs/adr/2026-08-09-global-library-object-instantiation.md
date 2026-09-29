@@ -1,4 +1,6 @@
-# ADR-062: Global Library Object Instantiation in Clinical Studies
+# ADR-2349: Global Library Object Instantiation in Clinical Studies
+
+Also known as: ADR-062 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-09

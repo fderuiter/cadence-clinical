@@ -1,4 +1,6 @@
-# ADR-049: SDV & TSDV Metadata and Database Migrations
+# ADR-2296: SDV & TSDV Metadata and Database Migrations
+
+Also known as: ADR-049 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-07-31

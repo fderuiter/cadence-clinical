@@ -1,4 +1,6 @@
-# ADR-120: Targeted E2E Contrast Enforcement and Style Token Upgrades
+# ADR-2385: Targeted E2E Contrast Enforcement and Style Token Upgrades
+
+Also known as: ADR-120 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-20

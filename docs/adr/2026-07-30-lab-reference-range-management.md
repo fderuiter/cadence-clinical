@@ -1,4 +1,6 @@
-# ADR-050: Lab Reference Range Management
+# ADR-2291: Lab Reference Range Management
+
+Also known as: ADR-050 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-07-30

@@ -1,4 +1,6 @@
-# ADR-256: Scope CSS hover to can hover and add touch tap fallbacks
+# ADR-2334: Scope CSS hover to can hover and add touch tap fallbacks
+
+Also known as: ADR-256 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

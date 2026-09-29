@@ -1,4 +1,6 @@
-# ADR-255: Ruff Lint Alignment and Centralized RBAC Validation
+# ADR-2322: Ruff Lint Alignment and Centralized RBAC Validation
+
+Also known as: ADR-255 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

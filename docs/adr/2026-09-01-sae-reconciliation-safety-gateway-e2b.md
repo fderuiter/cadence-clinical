@@ -1,4 +1,4 @@
-# ADR 2026-09-01: SAE Reconciliation & Safety Gateway (E2B)
+# ADR-2423: SAE Reconciliation & Safety Gateway (E2B)
 
 ## Status
 

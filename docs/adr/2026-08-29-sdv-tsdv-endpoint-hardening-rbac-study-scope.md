@@ -1,4 +1,6 @@
-# ADR-120: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement
+# ADR-2419: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement
+
+Also known as: ADR-120 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-29

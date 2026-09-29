@@ -1,4 +1,4 @@
-# ADR 2026-07-24: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts
+# ADR-2284: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts
 
 ## Status
 

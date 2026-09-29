@@ -1,4 +1,6 @@
-# ADR-254: Migrate Clinical Forms to Pre-Compiled Shared UI Library
+# ADR-2320: Migrate Clinical Forms to Pre-Compiled Shared UI Library
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03
@@ -11,7 +13,7 @@
 
 Historically, the core clinical form engine and input fields were implemented directly inside the primary clinical execution dashboard (`apps/web/src/components/clinical`). As the Cadence Clinical platform expands to support additional consumer applications and patient-facing portals (such as `apps/subject-portal` and offline single-page apps), duplicating form-rendering logic across app boundaries introduces maintenance overhead, risks validation drift, and violates standard design system consistency.
 
-Furthermore, a previous architectural decision (ADR-251) rejected migrating shared primitives to standard SPA frameworks like Vue due to concerns over bundler compatibility, raw source imports, and local compiler configuration drift. To resolve these challenges and enable standardized, accessible clinical interfaces across different applications, we need a robust approach to migrate clinical forms into a reusable, pre-compiled shared UI library (`packages/ui`) with full Vue support and modern tooling.
+Furthermore, a previous architectural decision (ADR-2306) rejected migrating shared primitives to standard SPA frameworks like Vue due to concerns over bundler compatibility, raw source imports, and local compiler configuration drift. To resolve these challenges and enable standardized, accessible clinical interfaces across different applications, we need a robust approach to migrate clinical forms into a reusable, pre-compiled shared UI library (`packages/ui`) with full Vue support and modern tooling.
 
 This decision supports compliance tracing and standardized trial audits under **PRD-SYS-001** and accessibility requirements under **PRD-CRF-015**.
 

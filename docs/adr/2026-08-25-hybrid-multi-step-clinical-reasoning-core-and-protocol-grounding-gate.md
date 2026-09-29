@@ -1,4 +1,6 @@
-# ADR-2217: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate
+# ADR-2399: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate
+
+Also known as: ADR-2217 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-25

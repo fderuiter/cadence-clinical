@@ -1,4 +1,6 @@
-# ADR-058: Route terminology APIs through the gateway
+# ADR-2343: Route terminology APIs through the gateway
+
+Also known as: ADR-058 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-07

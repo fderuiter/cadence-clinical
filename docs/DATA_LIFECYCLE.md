@@ -597,7 +597,7 @@ The Part 11 eSignature workflow is fully realized and integrated across the foll
 
 To support regulatory clinical trial submissions (such as FDA or EMA), clinical data captured in downstream EDC/execution transaction databases must be transformed, validated, and serialized into CDISC-compliant formats. Specifically, the system extracts **SDTM** (Study Data Tabulation Model) domains, derives **ADaM** (Analysis Data Model) datasets, and bundles them into the standardized **CDISC Dataset-JSON 1.0.0** schema format.
 
-The primary objective of the SDTM/ADaM Export Pipeline is to deliver clean, de-identified, submission-ready datasets synchronously while enforcing strict regulatory compliance, patient privacy preservation (via deterministic transformations), and robust GxP audit tracking (under **FDA 21 CFR Part 11**, **ADR-094**, and **ADR-108**).
+The primary objective of the SDTM/ADaM Export Pipeline is to deliver clean, de-identified, submission-ready datasets synchronously while enforcing strict regulatory compliance, patient privacy preservation (via deterministic transformations), and robust GxP audit tracking (under **FDA 21 CFR Part 11**, **ADR-2373**, and **ADR-2407**).
 
 ---
 
@@ -729,9 +729,9 @@ The biostatistical pipeline defines a strict data-quality and propagation bounda
 
 ---
 
-## 5. SDTM/ADaM-Specific Privacy Policy (ADR-108)
+## 5. SDTM/ADaM-Specific Privacy Policy (ADR-2407)
 
-Unlike generic, document-level redaction rules (which default to flat 365-day shifts or random ±30-day narrative text deltas, potentially breaking cross-document patterns), the biostatistical pipeline enforces a highly specialized, **deterministic SDTM/ADaM Privacy Policy** governed by **ADR-108**. This policy ensures absolute longitudinal and referential consistency across separate domains, datasets, and successive export calls.
+Unlike generic, document-level redaction rules (which default to flat 365-day shifts or random ±30-day narrative text deltas, potentially breaking cross-document patterns), the biostatistical pipeline enforces a highly specialized, **deterministic SDTM/ADaM Privacy Policy** governed by **ADR-2407**. This policy ensures absolute longitudinal and referential consistency across separate domains, datasets, and successive export calls.
 
 ### 1. Deterministic Pseudonymization
 
@@ -763,11 +763,11 @@ To preserve platform compliance and verify requirements across the biostatistica
 | Requirement / Issue ID | Description                                                                          | Target Module / Verification Pathway                                        | Status    |
 | :--------------------- | :----------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- | :-------- |
 | **#402**               | SDTM export data quality: null flavors and coding-assignment integration.            | `apps/execution/biostat/terminology.py` & `extractors.py`                   | Supported |
-| **#403** (ADR-108)     | SDTM/ADaM export privacy: deterministic pseudonymization and date de-identification. | `apps/execution/biostat/deid.py` & `tests/test_biostat_deidentification.py` | Supported |
+| **#403** (ADR-2407)    | SDTM/ADaM export privacy: deterministic pseudonymization and date de-identification. | `apps/execution/biostat/deid.py` & `tests/test_biostat_deidentification.py` | Supported |
 | **#405**               | Expose authenticated SDTM/ADaM Dataset-JSON export endpoints.                        | `apps/execution/main.py` & `tests/test_biostat_exports.py`                  | Supported |
 | **#407**               | SDTM foundation models (Dataset-JSON structure and Pydantic v2 schemas).             | `apps/execution/biostat/models.py` & `tests/test_biostat_export.py`         | Supported |
 | **#719**               | Propagate generated SDTM SUPP-- datasets through Dataset-JSON exports.               | `apps/execution/biostat/serializer.py` & `extractors.py`                    | Supported |
-| **ADR-094**            | Pure-Python Declarative Mapping Table & Pipeline architecture.                       | `apps/execution/biostat/mappings.py` & `tests/test_biostat_export.py`       | Supported |
+| **ADR-2373**           | Pure-Python Declarative Mapping Table & Pipeline architecture.                       | `apps/execution/biostat/mappings.py` & `tests/test_biostat_export.py`       | Supported |
 
 ---
 

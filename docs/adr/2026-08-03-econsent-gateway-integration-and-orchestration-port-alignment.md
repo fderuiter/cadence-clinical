@@ -1,4 +1,6 @@
-# ADR-254: eConsent Gateway Integration and Orchestration Port Alignment
+# ADR-2315: eConsent Gateway Integration and Orchestration Port Alignment
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

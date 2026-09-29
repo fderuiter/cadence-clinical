@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions
+# ADR-2341: Global Monorepo Security Scanning and Fail-Fast Startup Assertions
 
 - **Status:** Accepted
 - **Date:** 2026-08-06

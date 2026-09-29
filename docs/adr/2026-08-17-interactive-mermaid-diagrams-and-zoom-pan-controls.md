@@ -1,4 +1,6 @@
-# ADR-097: Interactive Mermaid Diagrams and Responsive Layout Controls
+# ADR-2380: Interactive Mermaid Diagrams and Responsive Layout Controls
+
+Also known as: ADR-097 (former number)
 
 - **Status:** Accepted
 - Date: 2026-08-17

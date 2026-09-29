@@ -1,4 +1,6 @@
-# ADR-085: Declarative Route Dependencies and Fallback Signature Verification
+# ADR-2354: Declarative Route Dependencies and Fallback Signature Verification
+
+Also known as: ADR-085 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

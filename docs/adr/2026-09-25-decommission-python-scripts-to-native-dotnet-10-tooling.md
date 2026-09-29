@@ -1,4 +1,4 @@
-# ADR 2026-09-25: Decommission Python Scripts to Native .NET 10 Tooling Services and Cadence.Cli Commands
+# ADR-2441: Decommission Python Scripts to Native .NET 10 Tooling Services and Cadence.Cli Commands
 
 - **Status:** Accepted
 - **Date:** 2026-09-25

@@ -1,4 +1,6 @@
-# ADR-104: Unified Python-based Documentation Validator
+# ADR-2289: Unified Python-based Documentation Validator
+
+Also known as: ADR-104 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-07-27

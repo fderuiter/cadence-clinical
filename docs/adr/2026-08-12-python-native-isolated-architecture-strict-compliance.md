@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: Python-Native Isolated Architecture (Strict Compliance)
+# ADR-2365: Python-Native Isolated Architecture (Strict Compliance)
 
 - **Status:** Accepted
 - **Date:** 2026-08-12

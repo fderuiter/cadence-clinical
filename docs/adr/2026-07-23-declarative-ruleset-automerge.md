@@ -1,4 +1,4 @@
-# ADR 2026-07-23: Declarative Ruleset and Automerge Integration
+# ADR-2279: Declarative Ruleset and Automerge Integration
 
 ## Status
 

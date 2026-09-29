@@ -1,4 +1,6 @@
-# ADR-2160: Shared Zod Schemas and Backend Immutability
+# ADR-2436: Shared Zod Schemas and Backend Immutability
+
+Also known as: ADR-2160 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-10

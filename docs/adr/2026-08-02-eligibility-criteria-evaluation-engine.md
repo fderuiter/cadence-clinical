@@ -1,4 +1,6 @@
-# ADR-053: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator
+# ADR-2303: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator
+
+Also known as: ADR-053 (former number)
 
 - **Status:** Accepted
 - Date: 2026-08-02

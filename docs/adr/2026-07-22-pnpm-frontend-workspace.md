@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Modular pnpm Workspace for Frontend Development
+# ADR-2271: Modular pnpm Workspace for Frontend Development
 
 ## Status
 

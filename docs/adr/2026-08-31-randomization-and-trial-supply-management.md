@@ -1,4 +1,6 @@
-# ADR-132: Randomization and Trial Supply Management
+# ADR-2422: Randomization and Trial Supply Management
+
+Also known as: ADR-132 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-31

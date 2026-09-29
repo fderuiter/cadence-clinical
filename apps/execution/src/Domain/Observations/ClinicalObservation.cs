@@ -8,7 +8,7 @@ namespace Cadence.Apps.Execution.Domain.Observations;
 
 /// <summary>
 /// Aggregate root representing a discrete clinical trial measurement or observation (e.g. vital sign, lab test).
-/// Supports dynamic JSONB extension attributes under ADR-0117 and 21 CFR Part 11 immutable audit trails.
+/// Supports dynamic JSONB extension attributes under ADR-2329 and 21 CFR Part 11 immutable audit trails.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-042
 /// @req:PRD-SYS-121
@@ -40,11 +40,11 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
     public int? ProtocolVersionIndex { get; private set; }
 
     /// <summary>
-    /// ADR-0117 dynamic property bag mapped to PostgreSQL jsonb.
+    /// ADR-2329 dynamic property bag mapped to PostgreSQL jsonb.
     /// </summary>
     public ObservationAdditionalProperties AdditionalProperties { get; private set; } = new();
 
-    // ADR-0117 strongly-typed accessor projections
+    // ADR-2329 strongly-typed accessor projections
     public string? LabSource
     {
         get => AdditionalProperties.LabSource;

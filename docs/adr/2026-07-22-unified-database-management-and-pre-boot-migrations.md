@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Unified Database Management and Pre-Boot Migrations
+# ADR-2276: Unified Database Management and Pre-Boot Migrations
 
 ## Status
 

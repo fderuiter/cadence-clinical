@@ -1,4 +1,6 @@
-# ADR-117: Metadata-driven Additional Properties JSON column for ClinicalObservation
+# ADR-2329: Metadata-driven Additional Properties JSON column for ClinicalObservation
+
+Also known as: ADR-117 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04
@@ -31,7 +33,7 @@ We need to purge these physical database columns and replace them with a dynamic
   - ❌ Schema migration overhead is high.
   - ❌ Tables become sparse and bloated.
 
-### Option 2: Metadata-driven JSON Column (ADR-117) - Selected
+### Option 2: Metadata-driven JSON Column (ADR-2329) - Selected
 
 - **Overview:** Introduce an `additional_properties` JSON column to store dynamic fields, and proxy the attributes via properties.
 - ***Pros:***

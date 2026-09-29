@@ -78,7 +78,7 @@ We chose Option 2 because it perfectly satisfies the requirement for a lightweig
 - **Mitigation Strategy:**
   - Maintain comprehensive unit tests checking all fields to catch any mismatch immediately.
 - **Cross-Reference:**
-  - This E2B export mechanism integrates with the broader SAE reconciliation architecture defined in [ADR-111](2026-08-26-sae-reconciliation-architecture.md).
+  - This E2B export mechanism integrates with the broader SAE reconciliation architecture defined in [ADR-2406](2026-08-26-sae-reconciliation-architecture.md).
 
 ---
 

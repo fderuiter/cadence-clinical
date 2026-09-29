@@ -1,4 +1,6 @@
-# ADR-053: Protocol Document Rendering Architecture and Content Contract
+# ADR-2308: Protocol Document Rendering Architecture and Content Contract
+
+Also known as: ADR-053 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

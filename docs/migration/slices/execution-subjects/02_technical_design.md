@@ -8,9 +8,9 @@
 
 ## 1. Architectural Overview & Component Boundaries
 
-### 1.1 Single-assembly layering (ADR-2233 / ADR-2234)
+### 1.1 Single-assembly layering (ADR-2233 / ADR-2425)
 
-Per ADR-2234, this slice ships inside the existing single-assembly `Cadence.Apps.Execution` project, organized by namespace, not by project boundary:
+Per ADR-2425, this slice ships inside the existing single-assembly `Cadence.Apps.Execution` project, organized by namespace, not by project boundary:
 
 ```
 apps/execution/src/
@@ -594,7 +594,7 @@ public sealed record SiteActivationRequest(string StudyId);
 
 ## 3. Request Handlers & Minimal API Surface
 
-### 3.1 Application service contracts (direct typed services — ADR-2234 §3.2, no MediatR)
+### 3.1 Application service contracts (direct typed services — ADR-2425 §3.2, no MediatR)
 
 ```csharp
 namespace Cadence.Apps.Execution.Application.Subjects;
@@ -925,12 +925,12 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
 
 ### 4.4 GxP Audit Trail — resolving the DB-trigger vs. `GxPAuditInterceptor` divergence (Rule 6)
 
-**Decision:** the DB-trigger mechanism (the `before_flush` listener in `apps/execution/database/audit.py`, plus `set_config` and a separately-deployed Postgres trigger) is **not ported**. `GxPAuditInterceptor` becomes the single, application-layer, authoritative audit-capture path for every entity this slice mutates, consistent with ADR-2234's platform-wide commitment to "tamper-evident audit records at the persistence boundary... without relying on fragile database triggers." This is a deliberate architecture simplification, not an oversight: the legacy system's two independent audit paths (explicit `AuditLog` writes in `SubjectLifecycleService` + the DB-trigger's separate ledger) never had a documented reconciliation story even in Python; carrying that duplication into .NET would import complexity with no compensating benefit once a single interceptor already guarantees the same commit-time guarantee without needing a second, database-native mechanism.
+**Decision:** the DB-trigger mechanism (the `before_flush` listener in `apps/execution/database/audit.py`, plus `set_config` and a separately-deployed Postgres trigger) is **not ported**. `GxPAuditInterceptor` becomes the single, application-layer, authoritative audit-capture path for every entity this slice mutates, consistent with ADR-2425's platform-wide commitment to "tamper-evident audit records at the persistence boundary... without relying on fragile database triggers." This is a deliberate architecture simplification, not an oversight: the legacy system's two independent audit paths (explicit `AuditLog` writes in `SubjectLifecycleService` + the DB-trigger's separate ledger) never had a documented reconciliation story even in Python; carrying that duplication into .NET would import complexity with no compensating benefit once a single interceptor already guarantees the same commit-time guarantee without needing a second, database-native mechanism.
 
 **Two concrete gaps this decision requires closing, both prerequisites for this slice, not speculative scope:**
 
 1. **`GxPAuditInterceptor` (`packages/database/src/GxPAuditInterceptor.cs`) only recognizes `AggregateRoot<string>`.** `ClinicalSubject : AggregateRoot<SubjectId>`, `SubjectConsent : AggregateRoot<SubjectConsentId>`, and `SiteComplianceCache : AggregateRoot<Guid>` all fail that type test today, silently skipping `CreatedAt`/`CreatedBy`/`VersionIndex` population for every entity in this slice. **Required fix:** introduce a non-generic `AggregateRootBase : IGxPAuditable` with the four settable audit properties, have `AggregateRoot<TId> : AggregateRootBase` inherit them instead of redeclaring them, and change the interceptor's pattern match from `entry.Entity is AggregateRoot<string> agg` to `entry.Entity is AggregateRootBase agg`. This is a shared-kernel change (not scoped to this slice alone) but is a direct, unavoidable precondition for Rule 6 to hold for any strongly-typed-ID aggregate — flagged here as a blocking dependency for implementation, to be raised as its own small PR before or alongside this slice's implementation ticket.
-2. **`GxPAuditInterceptor` does not yet write `AuditLogEntry` rows or compute the SHA-256 Merkle chain** ADR-2234 §3.5 commits to — it currently only stamps fields on the entity itself. **Required fix:** after the existing field-stamping loop, for each `IGxPAuditable` entry with `EntityState` `Added`/`Modified`/`Deleted`, append one `AuditLogEntry` (via `eventData.Context.Add(...)`, added to the _same_ `ChangeTracker` so it commits in the identical `SaveChangesAsync` transaction) using `AuditLogEntry.ComputeBlockHash(...)` chained to the previous entry's `BlockHash` for that `EntityName`. `ReasonForChange`/`UserId` are sourced from the scoped `ICurrentAuditContextAccessor` (below), and `Action` is the caller-supplied semantic action string (`ENROLL_SUBJECT`, `RECORD_CONSENT`, `TRANSITION_<STATE>`, `UPDATE_DEMOGRAPHICS`) rather than the raw EF `EntityState` — application services set this via a per-request `IAuditActionScope` (see `IAuditLogWriter.WriteAsync` in §3.2) rather than the interceptor inferring it generically, since `EntityState.Modified` alone cannot distinguish "consent recorded" from "state transitioned."
+2. **`GxPAuditInterceptor` does not yet write `AuditLogEntry` rows or compute the SHA-256 Merkle chain** ADR-2425 §3.5 commits to — it currently only stamps fields on the entity itself. **Required fix:** after the existing field-stamping loop, for each `IGxPAuditable` entry with `EntityState` `Added`/`Modified`/`Deleted`, append one `AuditLogEntry` (via `eventData.Context.Add(...)`, added to the _same_ `ChangeTracker` so it commits in the identical `SaveChangesAsync` transaction) using `AuditLogEntry.ComputeBlockHash(...)` chained to the previous entry's `BlockHash` for that `EntityName`. `ReasonForChange`/`UserId` are sourced from the scoped `ICurrentAuditContextAccessor` (below), and `Action` is the caller-supplied semantic action string (`ENROLL_SUBJECT`, `RECORD_CONSENT`, `TRANSITION_<STATE>`, `UPDATE_DEMOGRAPHICS`) rather than the raw EF `EntityState` — application services set this via a per-request `IAuditActionScope` (see `IAuditLogWriter.WriteAsync` in §3.2) rather than the interceptor inferring it generically, since `EntityState.Modified` alone cannot distinguish "consent recorded" from "state transitioned."
 
 ```csharp
 namespace Cadence.Apps.Execution.Infrastructure.Security;
@@ -1064,7 +1064,7 @@ public sealed class EConsentCompletedConsumer(
 }
 ```
 
-`MassTransit` is configured with `AddEntityFrameworkOutbox<ExecutionDbContext>()` so publishing `EConsentCompletedEvent` (from wherever eConsent-completion is actually detected upstream — out of this slice's scope, same boundary the spec itself draws around `econsent_client.py`) and consuming it here are both covered by the same transactional-outbox guarantee ADR-2234 mandates platform-wide, closing MIG-06's "no delivery durability" finding. At-least-once delivery is safe because every write above is already idempotent (existing-subject skip; consent-cache existence check) — re-delivery of the same event is a no-op, matching the legacy contract's own idempotency guarantee, not a new behavior.
+`MassTransit` is configured with `AddEntityFrameworkOutbox<ExecutionDbContext>()` so publishing `EConsentCompletedEvent` (from wherever eConsent-completion is actually detected upstream — out of this slice's scope, same boundary the spec itself draws around `econsent_client.py`) and consuming it here are both covered by the same transactional-outbox guarantee ADR-2425 mandates platform-wide, closing MIG-06's "no delivery durability" finding. At-least-once delivery is safe because every write above is already idempotent (existing-subject skip; consent-cache existence check) — re-delivery of the same event is a no-op, matching the legacy contract's own idempotency guarantee, not a new behavior.
 
 **Process-lifecycle equivalence.** The Python subscriber's three silent-no-start conditions (running under pytest, `TESTING=true`, unset `REDIS_HOST`) have no MassTransit analogue to preserve: a consumer is either registered in the bus configuration or it isn't, and test isolation is achieved via `ITestHarness`/in-memory transport (§6.2) rather than an environment-variable gate. This is a deliberate simplification, not a gap — the legacy conditions existed only to prevent a real Redis connection during unit tests, a problem the .NET test harness solves structurally instead.
 

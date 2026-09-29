@@ -9,7 +9,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Normalization;
 
 /// <summary>
 /// Statistical outlier detection engine using Interquartile Range (IQR) with 3.5 multiplier.
-/// Conforms to ADR-0117 and legacy Python <c>outliers.py</c>.
+/// Conforms to ADR-2329 and legacy Python <c>outliers.py</c>.
 /// @req:PRD-SYS-121
 /// @req:SRS-EDC-001
 /// </summary>

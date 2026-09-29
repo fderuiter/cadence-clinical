@@ -63,7 +63,7 @@ graph TD
   - `Domain/Observations/ObservationAdditionalProperties.cs`
   - `Domain/Observations/Errors/ObservationErrors.cs`
 - **Acceptance Criteria:**
-  - [x] ADR-0117 dynamic property mapping (lab source, bounds, out of range indicators).
+  - [x] ADR-2329 dynamic property mapping (lab source, bounds, out of range indicators).
   - [x] SDV verification and flagging state methods (`VerifySdv`, `FlagSdv`).
   - [x] Domain events emitted upon observation recording and verification.
 

@@ -1,4 +1,6 @@
-# ADR-057: Arm-Aware Schedule of Activities (SoA) Matrix Component
+# ADR-2340: Arm-Aware Schedule of Activities (SoA) Matrix Component
+
+Also known as: ADR-057 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-06

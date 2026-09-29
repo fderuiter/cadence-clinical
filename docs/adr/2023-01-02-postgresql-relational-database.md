@@ -1,4 +1,4 @@
-# ADR 2023-01-02: PostgreSQL Relational Database for Execution
+# ADR-2260: PostgreSQL Relational Database for Execution
 
 ## Status
 

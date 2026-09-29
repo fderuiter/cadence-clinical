@@ -1,4 +1,6 @@
-# ADR-112: Durable and Idempotent eTMF Expiration Scanning Service
+# ADR-2402: Durable and Idempotent eTMF Expiration Scanning Service
+
+Also known as: ADR-112 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-26

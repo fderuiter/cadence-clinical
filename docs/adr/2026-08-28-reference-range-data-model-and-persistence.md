@@ -1,4 +1,6 @@
-# ADR-061: Reference Range Data Model & Persistence
+# ADR-2416: Reference Range Data Model & Persistence
+
+Also known as: ADR-061 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-28

@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Audit Log Design
+# ADR-2265: Audit Log Design
 
 ## Status
 

@@ -1,4 +1,6 @@
-# ADR-065: Automated eTMF Document Redaction
+# ADR-2346: Automated eTMF Document Redaction
+
+Also known as: ADR-065 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-09

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Cadence.Apps.Execution.Domain.Observations;
 
 /// <summary>
-/// Dynamic JSONB property bag for laboratory and custom observation properties (ADR-0117).
+/// Dynamic JSONB property bag for laboratory and custom observation properties (ADR-2329).
 /// @req:PRD-SYS-001
 /// @req:SRS-EDC-001
 /// </summary>

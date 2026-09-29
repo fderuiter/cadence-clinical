@@ -1,4 +1,6 @@
-# ADR-2193: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars
+# ADR-2395: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars
+
+Also known as: ADR-2193 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-24

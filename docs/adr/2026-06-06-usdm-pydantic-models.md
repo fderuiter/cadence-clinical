@@ -1,4 +1,4 @@
-# ADR 2026-06-06: USDM Pydantic Models
+# ADR-2263: USDM Pydantic Models
 
 ## Status
 

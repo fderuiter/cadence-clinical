@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: Multi-Node Signature Replay Prevention with Redis Fallback
+# ADR-2330: Multi-Node Signature Replay Prevention with Redis Fallback
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

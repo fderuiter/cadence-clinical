@@ -1,4 +1,4 @@
-# ADR 2026-07-28: Native Vue 3 Rules Designer with GxP Ledger Sync
+# ADR-2290: Native Vue 3 Rules Designer with GxP Ledger Sync
 
 ## Status
 
