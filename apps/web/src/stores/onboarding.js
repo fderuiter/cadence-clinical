@@ -31,7 +31,8 @@ function migrateLegacyKeys() {
     ) {
       if (
         legacyStep !== null &&
-        window.localStorage.getItem("onboarding_super_admin_current_step") === null
+        window.localStorage.getItem("onboarding_super_admin_current_step") ===
+          null
       ) {
         window.localStorage.setItem(
           "onboarding_super_admin_current_step",
@@ -117,7 +118,10 @@ function readStorageForPersona(personaKey) {
             events = parsedEvents;
           }
         } catch (e) {
-          console.error("Failed to parse onboarding state from localStorage", e);
+          console.error(
+            "Failed to parse onboarding state from localStorage",
+            e
+          );
         }
       }
     } catch (e) {
