@@ -177,7 +177,10 @@ describe("cross-language parity", () => {
     const cwd = process.cwd();
     let repoRoot = cwd;
     for (let i = 0; i < 5; i++) {
-      if (fs.existsSync(path.join(repoRoot, "pyproject.toml"))) {
+      if (
+        fs.existsSync(path.join(repoRoot, "Cadence.sln")) ||
+        fs.existsSync(path.join(repoRoot, "pyproject.toml"))
+      ) {
         break;
       }
       repoRoot = path.dirname(repoRoot);
@@ -203,11 +206,11 @@ describe("cross-language parity", () => {
       .filter(Boolean)
       .join("; ");
     try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
+      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
+      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     }

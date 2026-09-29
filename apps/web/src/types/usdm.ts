@@ -1,5 +1,5 @@
-// Auto-generated from OpenAPI schema definitions in /Volumes/SanDisk External SSD/Code/cadence-clinical/docs/openapi
-// Generated on: 2026-09-29T04:09:30.356Z
+// Auto-generated from OpenAPI schema definitions in /app/cadence-clinical/docs/openapi
+// Generated on: 2026-09-29T07:08:41.847Z
 
 export interface ChatMessageDTO {
   role?: MessageRole | string;
