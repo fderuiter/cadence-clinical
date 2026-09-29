@@ -26,7 +26,7 @@ namespace Cadence.UnitTests.Packages;
 
 public class CadenceSecurityUnitTests
 {
-    private const string TestSecret = "test-secret-key-32-chars-long-1234567890";
+    private const string TestSecret = "test-secret-key-32-chars-long-1234567890"; // pragma: allowlist secret
 
     [Fact]
     [GxPRequirement("PRD-SYS-053")]
@@ -242,6 +242,52 @@ public class CadenceSecurityUnitTests
         replayAct.Should().Throw<UnauthorizedAccessException>();
     }
 
+    /// <summary>
+    /// Issue #4765: the audit HMAC key has no hardcoded fallback. Environment variables are process-wide, so
+    /// this test reads AUDIT_LOG_SECRET_KEY rather than mutating it.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void AuditSecretKey_WithoutExplicitKeyOrEnvironment_FailsClosed()
+    {
+        string? configured = Environment.GetEnvironmentVariable(AuditSecretKey.EnvironmentVariable);
+
+        Func<string> resolve = () => AuditSecretKey.Resolve();
+        Action construct = () => _ = new AuditDigestEngine(new InMemoryAuditStore());
+
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            resolve.Should().Throw<InvalidOperationException>().WithMessage("*AUDIT_LOG_SECRET_KEY*");
+            construct.Should().Throw<InvalidOperationException>().WithMessage("*AUDIT_LOG_SECRET_KEY*");
+        }
+        else
+        {
+            resolve().Should().Be(configured.Trim());
+        }
+
+        AuditSecretKey.Resolve("  explicit-key  ").Should().Be("explicit-key");
+    }
+
+    /// <summary>
+    /// Issue #4765: the security and compliance digest calculators share one key source and one canonical
+    /// payload, so a chain written by one verifies with the other.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void AuditDigestCalculators_InSecurityAndCompliance_ProduceIdenticalDigests()
+    {
+        string security = AuditDigestCalculator.ComputeAuditDigest(
+            "evt-1", "execution", "CREATE", "Subject", "S-1", "crc-01", "tenant-1", "Initial", "2026-09-29T00:00:00Z", AuditLogRecord.GENESIS_BLOCK, "shared-key");
+        string compliance = Cadence.Compliance.AuditDigestCalculator.ComputeAuditDigest(
+            "evt-1", "execution", "CREATE", "Subject", "S-1", "crc-01", "tenant-1", "Initial", "2026-09-29T00:00:00Z", AuditLogRecord.GENESIS_BLOCK, "shared-key");
+
+        compliance.Should().Be(security);
+    }
+
     [Fact]
     [GxPRequirement("PRD-SYS-053")]
     public void AuditDigestEngine_GeneratesMerkleChain_AndVerifiesIntegrity()
@@ -337,7 +383,11 @@ public class CadenceSecurityUnitTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddCadenceSecurity(opts => opts.GatewaySecret = TestSecret);
+        services.AddCadenceSecurity(opts =>
+        {
+            opts.GatewaySecret = TestSecret;
+            opts.AuditLogSecretKey = "audit-secret-for-di-test"; // pragma: allowlist secret
+        });
 
         var provider = services.BuildServiceProvider();
 

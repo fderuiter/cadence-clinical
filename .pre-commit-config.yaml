@@ -7,6 +7,15 @@ repos:
       - id: check-yaml
 
 
+  # Secret scanning against the committed baseline (issue #4765). New findings fail the commit; mark a
+  # reviewed false positive with an inline `pragma: allowlist secret` comment.
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: (pnpm-lock\.yaml|uv\.lock|docs/CDISC/|docs/NCI/)
+
   - repo: https://github.com/hadolint/hadolint
     rev: v2.12.0
     hooks:

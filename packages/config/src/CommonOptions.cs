@@ -15,22 +15,22 @@ public class CommonOptions
     public string BrandDomain { get; set; } = "ccrsoft.com";
 
     /// <summary>Shared internal gateway secret.</summary>
-    public string GatewaySecret { get; set; } = "internal-gateway-secret-12345";
+    public string? GatewaySecret { get; set; }
 
     /// <summary>Shared signing secret.</summary>
-    public string SigningSecret { get; set; } = "designer-amendment-secure-key-12345";
+    public string? SigningSecret { get; set; }
 
     /// <summary>GxP audit log secret key.</summary>
-    public string AuditLogSecretKey { get; set; } = "gxp-audit-secret-key-cadence-2026";
+    public string? AuditLogSecretKey { get; set; }
 
     /// <summary>Pseudonymization hashing salt.</summary>
-    public string PseudonymizationSalt { get; set; } = "secure-clinical-salt-98765";
+    public string? PseudonymizationSalt { get; set; }
 
     /// <summary>Safety salt key.</summary>
-    public string SafetySalt { get; set; } = "internal-safety-salt-12345";
+    public string? SafetySalt { get; set; }
 
     /// <summary>Inbound email HMAC secret key.</summary>
-    public string InboundEmailHmacSecret { get; set; } = "dev-default-secret-inbound-email-hmac";
+    public string? InboundEmailHmacSecret { get; set; }
 
     /// <summary>API Gateway base URL.</summary>
     public string GatewayUrl { get; set; } = "http://localhost:8000";
@@ -90,5 +90,5 @@ public class CommonOptions
     public string Neo4jUser { get; set; } = "neo4j";
 
     /// <summary>Neo4j database password.</summary>
-    public string Neo4jPassword { get; set; } = "cadence_password";
+    public string? Neo4jPassword { get; set; }
 }

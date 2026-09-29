@@ -18,19 +18,19 @@ public class ConfigAndCoreModelsUnitTests
 {
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public void Config_CommonOptions_HasDefaultValuesMatchingPython()
+    public void Config_CommonOptions_ShipsNoSecretDefaults()
     {
         var options = new CommonOptions();
 
         options.AppEnv.Should().Be("development");
         options.BrandName.Should().Be("Cadence Clinical");
         options.BrandDomain.Should().Be("ccrsoft.com");
-        options.GatewaySecret.Should().Be("internal-gateway-secret-12345");
-        options.SigningSecret.Should().Be("designer-amendment-secure-key-12345");
-        options.AuditLogSecretKey.Should().Be("gxp-audit-secret-key-cadence-2026");
-        options.PseudonymizationSalt.Should().Be("secure-clinical-salt-98765");
-        options.SafetySalt.Should().Be("internal-safety-salt-12345");
-        options.InboundEmailHmacSecret.Should().Be("dev-default-secret-inbound-email-hmac");
+        options.GatewaySecret.Should().BeNull();
+        options.SigningSecret.Should().BeNull();
+        options.AuditLogSecretKey.Should().BeNull();
+        options.PseudonymizationSalt.Should().BeNull();
+        options.SafetySalt.Should().BeNull();
+        options.InboundEmailHmacSecret.Should().BeNull();
         options.GatewayUrl.Should().Be("http://localhost:8000");
         options.AiGatewayUrl.Should().Be("http://localhost:8000");
         options.DesignerUrl.Should().Be("http://localhost:8001");
@@ -50,7 +50,7 @@ public class ConfigAndCoreModelsUnitTests
         options.RedisUrl.Should().BeNull();
         options.Neo4jUri.Should().Be("bolt://localhost:7687");
         options.Neo4jUser.Should().Be("neo4j");
-        options.Neo4jPassword.Should().Be("cadence_password");
+        options.Neo4jPassword.Should().BeNull();
     }
 
     [Fact]
@@ -96,15 +96,17 @@ public class ConfigAndCoreModelsUnitTests
         var execution = new ExecutionOptions();
         execution.OutboxBatchSize.Should().Be(20);
         execution.OutboxMaxConcurrency.Should().Be(10);
-        execution.RtsmMasterSecret.Should().Be("dev-rtsm-master-secret-placeholder");
+        execution.RtsmMasterSecret.Should().BeNull();
+        execution.BiostatExportSalt.Should().BeNull();
 
         new DesignerOptions().DesignerDatabaseUrl.Should().Be("sqlite+aiosqlite:///:memory:");
-        new GatewayOptions().GatewayInternalSecret.Should().Be("dev-gateway-internal-secret-placeholder");
+        new GatewayOptions().GatewayInternalSecret.Should().BeNull();
+        new SecurityOptions().JwtSecretKey.Should().BeNull();
 
         var security = new SecurityOptions();
         security.JwtAlgorithm.Should().Be("RS256");
 
-        new DeidOptions().DeidSalt.Should().Be("secure-clinical-salt-98765");
+        new DeidOptions().DeidSalt.Should().BeNull();
         new TelemetryOptions().LogLevel.Should().Be("INFO");
         new ComplianceOptions().GxpSignerId.Should().BeNull();
     }
@@ -116,7 +118,7 @@ public class ConfigAndCoreModelsUnitTests
         var dict = new Dictionary<string, string?>
         {
             ["AppEnv"] = "staging",
-            ["ExecutionDatabaseUrl"] = "postgresql://user:pass@localhost:5432/cadence_edc",
+            ["ExecutionDatabaseUrl"] = "postgresql://user:pass@localhost:5432/cadence_edc", // pragma: allowlist secret
             ["OutboxMaxConcurrency"] = "25",
             ["RtsmMasterSecret"] = "secure-rtsm-secret-999"
         };
@@ -132,7 +134,7 @@ public class ConfigAndCoreModelsUnitTests
         var options = sp.GetRequiredService<IOptions<ExecutionOptions>>().Value;
 
         options.AppEnv.Should().Be("staging");
-        options.ExecutionDatabaseUrl.Should().Be("postgresql://user:pass@localhost:5432/cadence_edc");
+        options.ExecutionDatabaseUrl.Should().Be("postgresql://user:pass@localhost:5432/cadence_edc"); // pragma: allowlist secret
         options.OutboxMaxConcurrency.Should().Be(25);
         options.RtsmMasterSecret.Should().Be("secure-rtsm-secret-999");
     }

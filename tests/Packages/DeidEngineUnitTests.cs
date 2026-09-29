@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 using Cadence.Deid;
 using Cadence.Testing;
-using Cadence.ToolingCore;
-using Cadence.ToolingCore.OpenApi;
 
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
@@ -267,8 +267,13 @@ public class DeidEngineUnitTests
         manifest.Signature.Should().NotBeNullOrWhiteSpace();
         RedactionManifestBuilder.VerifyManifestSymmetric(manifest, hmacKey).Should().BeTrue();
 
-        string privateKeyPem = File.ReadAllText(Path.Combine(OpenApiToolingService.FindRepoRoot(), "tests", "fixtures", "keys", "private_key.pem"));
-        string certPem = File.ReadAllText(Path.Combine(OpenApiToolingService.FindRepoRoot(), "tests", "fixtures", "keys", "certificate.crt"));
+        // Key material is generated per test run (issue #4765): no private key is committed to the repository.
+        using var rsa = RSA.Create(2048);
+        var certificateRequest = new CertificateRequest(
+            "CN=Cadence Deid Test Signer", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(1));
+        string privateKeyPem = rsa.ExportRSAPrivateKeyPem();
+        string certPem = certificate.ExportCertificatePem();
 
         RedactionManifestBuilder.SignManifestAsymmetric(manifest, privateKeyPem);
         manifest.Signature.Should().NotBeNullOrWhiteSpace();

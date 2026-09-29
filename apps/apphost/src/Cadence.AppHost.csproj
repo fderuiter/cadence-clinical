@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>Cadence.AppHost</RootNamespace>
     <AssemblyName>Cadence.AppHost</AssemblyName>
+    <UserSecretsId>6c1f4d2e-8b7a-4e39-9a51-3f0d2c7b4e18</UserSecretsId>
     <!-- Suppress ASPIRE010 when Aspire CLI bundle is not installed in the dev environment -->
     <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>

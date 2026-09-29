@@ -4,6 +4,7 @@ using System.Linq;
 
 using Cadence.Database;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 
 using FluentAssertions;
 
@@ -38,6 +39,10 @@ public class MigrationUnitTests
         typeof(Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContextFactory),
     ];
 
+    /// <summary>Design-time factories have no fallback credential; tests pass a dummy connection explicitly.</summary>
+    private static readonly string[] DesignTimeArgs =
+        [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString];
+
     public static IEnumerable<TheoryDataRow<string>> Factories() =>
         ServiceDbContextFactories.Select(t => new TheoryDataRow<string>(t.AssemblyQualifiedName!));
 
@@ -57,7 +62,7 @@ public class MigrationUnitTests
         object factory = Activator.CreateInstance(factoryType)!;
         var createDbContext = factoryType.GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext))!;
 
-        using var context = (DbContext)createDbContext.Invoke(factory, [Array.Empty<string>()])!;
+        using var context = (DbContext)createDbContext.Invoke(factory, [DesignTimeArgs])!;
 
         context.Database.HasPendingModelChanges().Should().BeFalse(
             $"{context.GetType().Name} has model changes without a migration; run scripts/manage_migrations.sh add <service> <Name>");
@@ -77,7 +82,7 @@ public class MigrationUnitTests
         string schema = (string)factoryType.GetField("Schema")!.GetRawConstantValue()!;
         object factory = Activator.CreateInstance(factoryType)!;
         var createDbContext = factoryType.GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext))!;
-        using var context = (DbContext)createDbContext.Invoke(factory, [Array.Empty<string>()])!;
+        using var context = (DbContext)createDbContext.Invoke(factory, [DesignTimeArgs])!;
 
         new Npgsql.NpgsqlConnectionStringBuilder(context.Database.GetConnectionString()).SearchPath
             .Should().Be($"{schema},public");
@@ -118,6 +123,7 @@ public class MigrationUnitTests
     public void AddCadencePostgresDbContext_WithoutMigrationFlags_RegistersNoMigrationService()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        builder.Configuration["ConnectionStrings:cadence"] = TestHostSettings.PostgresConnectionString;
 
         builder.AddCadencePostgresDbContext<TestDbContext>();
 
@@ -133,6 +139,7 @@ public class MigrationUnitTests
     public void AddCadencePostgresDbContext_WithMigrationFlag_RegistersMigrationService(string key)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        builder.Configuration["ConnectionStrings:cadence"] = TestHostSettings.PostgresConnectionString;
         builder.Configuration[key] = "true";
 
         builder.AddCadencePostgresDbContext<TestDbContext>();

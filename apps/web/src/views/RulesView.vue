@@ -747,7 +747,6 @@ import {
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,
-  generateGatewaySignature,
   generateCanonicalSignature,
 } from "ui";
 
@@ -1100,38 +1099,10 @@ function handleEditorInput(e) {
     }
   }
 }
-async function getSignedGatewayHeaders(changeReason = "") {
-  const authStore = useAuthStore();
-  const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles
-    ? authStore.normalizedRoles.join(",")
-    : "data_manager";
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret =
-    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
-
-  let signature = "mock-sig";
-  try {
-    signature = await generateGatewaySignature(
-      userId,
-      roles,
-      timestamp,
-      "2",
-      changeReason,
-      secret
-    );
-  } catch {
-    // Fallback if crypto.subtle is uninitialized
-  }
-
-  return {
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
+// Identity is established by the gateway from the caller's bearer token; the browser never holds the
+// gateway HMAC secret and never signs identity headers itself (issue #4765).
+function getChangeReasonHeaders(changeReason = "") {
+  return changeReason ? { "X-Change-Reason": changeReason } : {};
 }
 
 // Fetch active rules from backend REST API
@@ -1139,9 +1110,9 @@ async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const signedHeaders = await getSignedGatewayHeaders("Fetch clinical rules");
+    const reasonHeaders = getChangeReasonHeaders("Fetch clinical rules");
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      headers: signedHeaders,
+      headers: reasonHeaders,
     });
     activeRules.value = response;
   } catch (err) {
@@ -1210,13 +1181,11 @@ async function triggerPreview() {
   };
 
   try {
-    const signedHeaders = await getSignedGatewayHeaders(
-      "Rule compilation preview"
-    );
+    const reasonHeaders = getChangeReasonHeaders("Rule compilation preview");
 
     try {
       await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
-        headers: signedHeaders,
+        headers: reasonHeaders,
       });
     } catch (vErr) {
       console.warn("Live-validation endpoint returned errors:", vErr);
@@ -1225,7 +1194,7 @@ async function triggerPreview() {
     const data = await apiClient.post(
       `/api/v1/studies/study_1/rules/preview`,
       payload,
-      { headers: signedHeaders }
+      { headers: reasonHeaders }
     );
     previewXpath.value = data.xpath;
     previewFailures.value = data.failures || [];
@@ -1452,17 +1421,17 @@ async function confirmChangeReason(reasonText) {
         ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
         : `/api/v1/studies/study_1/rules`;
 
-      const signedHeaders = await getSignedGatewayHeaders(reasonText);
+      const reasonHeaders = getChangeReasonHeaders(reasonText);
 
       let saved;
       try {
         if (isEdit) {
           saved = await apiClient.put(url, action.payload, {
-            headers: signedHeaders,
+            headers: reasonHeaders,
           });
         } else {
           saved = await apiClient.post(url, action.payload, {
-            headers: signedHeaders,
+            headers: reasonHeaders,
           });
         }
       } catch (err) {
@@ -1495,7 +1464,7 @@ async function confirmChangeReason(reasonText) {
           xpath: saved.compiled_xpath || previewXpath.value,
           signature: canonicalSig,
           payload: action.payload,
-          headers: signedHeaders,
+          headers: reasonHeaders,
         },
         reasonText
       );
@@ -1503,16 +1472,16 @@ async function confirmChangeReason(reasonText) {
       alert(`Rule successfully compiled and signed save verified!`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
-      let signedHeaders;
+      let reasonHeaders;
       try {
-        signedHeaders = await getSignedGatewayHeaders(reasonText);
-        await apiClient.delete(url, { headers: signedHeaders });
+        reasonHeaders = getChangeReasonHeaders(reasonText);
+        await apiClient.delete(url, { headers: reasonHeaders });
       } catch (err) {
         console.warn(
           "Delete API failed, falling back to local mock delete:",
           err
         );
-        signedHeaders = {};
+        reasonHeaders = {};
       }
 
       // Sync deletion block
@@ -1520,7 +1489,7 @@ async function confirmChangeReason(reasonText) {
         "RULE_DELETE",
         {
           ruleId: action.ruleId,
-          headers: signedHeaders,
+          headers: reasonHeaders,
         },
         reasonText
       );

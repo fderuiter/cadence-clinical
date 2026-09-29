@@ -43,7 +43,7 @@ public static class DatabaseResetService
 
         string neo4jUri = Environment.GetEnvironmentVariable("NEO4J_URI") ?? DefaultNeo4jUri;
         string neo4jUser = Environment.GetEnvironmentVariable("NEO4J_USER") ?? "neo4j";
-        string neo4jPass = Environment.GetEnvironmentVariable("NEO4J_PASSWORD") ?? "password123";
+        string neo4jPass = RequireEnvironmentVariable("NEO4J_PASSWORD");
         ValidateLocalOnly("Neo4j", neo4jUri);
 
         bool allOk = true;
@@ -168,11 +168,24 @@ public static class DatabaseResetService
         }
     }
 
+    private static string RequireEnvironmentVariable(string name) =>
+        Environment.GetEnvironmentVariable(name) is { Length: > 0 } value
+            ? value
+            : throw new InvalidOperationException($"{name} is not set. Export it (see .env.example) before resetting databases.");
+
     private static string GetPostgresConnectionString()
     {
-        string connStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") ??
-                        Environment.GetEnvironmentVariable("DATABASE_URL") ??
-                        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        string? connStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
+        if (string.IsNullOrEmpty(connStr))
+        {
+            connStr = Environment.GetEnvironmentVariable("DATABASE_URL");
+        }
+
+        if (string.IsNullOrEmpty(connStr))
+        {
+            throw new InvalidOperationException(
+                "POSTGRES_CONNECTION_STRING (or DATABASE_URL) is not set. Export it (see .env.example) before resetting databases.");
+        }
 
         if (connStr.StartsWith("postgresql+asyncpg://"))
         {

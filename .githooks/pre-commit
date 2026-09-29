@@ -15,6 +15,20 @@ fi
 
 echo "[Pre-Commit] Executing Cadence Quality Sentinels & Policy Gates..."
 
+# Secret scanning of staged files against .secrets.baseline (issue #4765).
+if command -v detect-secrets-hook >/dev/null 2>&1; then
+    staged_files=()
+    while IFS= read -r -d '' file; do
+        staged_files+=("$file")
+    done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+    if [ "${#staged_files[@]}" -gt 0 ]; then
+        # File exclusions come from the baseline itself; passing extra flags would rewrite it.
+        detect-secrets-hook --baseline .secrets.baseline "${staged_files[@]}"
+    fi
+else
+    echo "::warning:: detect-secrets not installed (pip install detect-secrets==1.5.0); secret scan skipped."
+fi
+
 if command -v dotnet >/dev/null 2>&1; then
     # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
     mapfile -t staged_cs < <(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')

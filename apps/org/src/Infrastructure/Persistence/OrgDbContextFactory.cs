@@ -1,5 +1,3 @@
-using System;
-
 using Cadence.Database;
 
 using Microsoft.EntityFrameworkCore;
@@ -16,14 +14,9 @@ public sealed class OrgDbContextFactory : IDesignTimeDbContextFactory<OrgDbConte
     /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
     public const string Schema = "org";
 
-    private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
-
     public OrgDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") is { Length: > 0 } configured
-            ? configured
-            : DefaultDesignTimeConnectionString;
+        var connectionString = CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(args);
 
         var optionsBuilder = new DbContextOptionsBuilder<OrgDbContext>()
             .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));

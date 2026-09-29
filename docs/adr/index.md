@@ -467,3 +467,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
 - [2026-09-29: ADR-2257 Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md)
 - [2026-09-29: ADR-2446 Single Audit Writer and One Chain per Aggregate Type](2026-09-29-single-audit-writer-and-one-chain-per-aggregate.md)
+- [2026-09-29: ADR-2260 No Default Credentials and Fail-Closed Secret Resolution](2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)

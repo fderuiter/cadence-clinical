@@ -330,8 +330,12 @@ Open your browser to:
 - **Clinical Web Workspace**: [http://localhost:5173](http://localhost:5173)
 - **Subject Portal PWA**: [http://localhost:5174](http://localhost:5174)
 - **API Gateway Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Keycloak Admin Console**: [http://localhost:8080](http://localhost:8080) (`admin` / `admin`)
-- **Neo4j Browser**: [http://localhost:7474](http://localhost:7474) (`neo4j` / `password123`)
+- **Keycloak Admin Console**: [http://localhost:8080](http://localhost:8080) (sign in with the `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` values set in your environment)
+- **Neo4j Browser**: [http://localhost:7474](http://localhost:7474) (sign in with the `NEO4J_USER` / `NEO4J_PASSWORD` values set in your environment)
+
+Credentials are never hardcoded: copy `.env.example` to `.env`, choose your own values, and export them (or
+use `dotnet user-secrets`) before starting services. Services fail at startup with a message naming the missing
+variable instead of falling back to a default.
 - **Mailhog Email Sandbox**: [http://localhost:8025](http://localhost:8025)
 
 ---

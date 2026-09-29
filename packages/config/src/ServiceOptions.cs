@@ -312,10 +312,10 @@ public class ExecutionOptions : CommonOptions
     public double SealerIntervalSeconds { get; set; } = 60.0;
 
     /// <summary>RTSM randomization master secret key.</summary>
-    public string RtsmMasterSecret { get; set; } = "dev-rtsm-master-secret-placeholder";
+    public string? RtsmMasterSecret { get; set; }
 
     /// <summary>Biostat statistical export pseudonymization salt.</summary>
-    public string BiostatExportSalt { get; set; } = "dev-biostat-export-salt-placeholder";
+    public string? BiostatExportSalt { get; set; }
 
     /// <summary>Transactional outbox retry attempt cap.</summary>
     public int OutboxAttemptCap { get; set; } = 5;
@@ -345,7 +345,7 @@ public class DesignerOptions : CommonOptions
 public class GatewayOptions : CommonOptions
 {
     /// <summary>Gateway internal service authentication secret.</summary>
-    public string GatewayInternalSecret { get; set; } = "dev-gateway-internal-secret-placeholder";
+    public string? GatewayInternalSecret { get; set; }
 }
 
 /// <summary>
@@ -357,7 +357,7 @@ public class SecurityOptions : CommonOptions
     public string JwtAlgorithm { get; set; } = "RS256";
 
     /// <summary>JWT secret key for HMAC fallback validation.</summary>
-    public string JwtSecretKey { get; set; } = "dev-jwt-secret-key-12345";
+    public string? JwtSecretKey { get; set; }
 }
 
 /// <summary>
@@ -366,7 +366,7 @@ public class SecurityOptions : CommonOptions
 public class DeidOptions : CommonOptions
 {
     /// <summary>De-identification hashing salt.</summary>
-    public string DeidSalt { get; set; } = "secure-clinical-salt-98765";
+    public string? DeidSalt { get; set; }
 }
 
 /// <summary>

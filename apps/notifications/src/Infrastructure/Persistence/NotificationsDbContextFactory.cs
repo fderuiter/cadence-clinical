@@ -1,5 +1,3 @@
-using System;
-
 using Cadence.Database;
 
 using Microsoft.EntityFrameworkCore;
@@ -16,14 +14,9 @@ public sealed class NotificationsDbContextFactory : IDesignTimeDbContextFactory<
     /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
     public const string Schema = "notifications";
 
-    private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
-
     public NotificationsDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") is { Length: > 0 } configured
-            ? configured
-            : DefaultDesignTimeConnectionString;
+        var connectionString = CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(args);
 
         var optionsBuilder = new DbContextOptionsBuilder<NotificationsDbContext>()
             .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));
