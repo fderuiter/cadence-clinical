@@ -1,125 +1,180 @@
-from packages.security.audit_logger import (
-    AuditLoggerEngine,
-    AuditLogPayload,
-    AuditLogRecord,
-    AuditStoreAdapter,
-    CentralAuditLogger,
-    DbAuditLogRecord,
-    InMemoryAuditStore,
-    SQLModelAuditStore,
-    audit_logger_engine,
-)
-from packages.security.context import (
-    audit_context,
-    audit_context_decorator,
-    current_change_reason,
-    current_ip_address,
-    current_signature_context,
-    current_timestamp,
-    current_user_id,
-    service_audit_context,
-)
-from packages.security.crypto_verifier import (
-    SignatureVerificationRequest,
-    SignatureVerificationResult,
-    verify_electronic_signature,
-)
-from packages.security.datetime_helpers import (
-    AwareDatetime,
-    serialize_utc_z,
-    validate_timezone_aware_datetime,
-)
-from packages.security.delegation import (
-    DelegationChecker,
-    StaffRole,
-    normalize_and_validate_staff_role,
-    require_delegation,
-    validate_request_staff_roles,
-    verify_delegation_scope,
-)
-from packages.security.fail_fast import assert_secure_secrets, validate_branding
-from packages.security.gateway_client import (
-    GatewayBaseClient,
-    run_async,
-)
-from packages.security.middleware import (
-    GatewayAuthMiddleware,
-    require_gateway_permission,
-)
-from packages.security.notifications import (
-    GatewayNotificationDispatcher,
-    InMemoryNotificationDispatcher,
-    NotificationCategory,
-    NotificationDispatcherPort,
-    NotificationEvent,
-    NotificationPriority,
-    get_notification_dispatcher,
-    publish_notification,
-)
-from packages.security.permissions import (
-    PermissionEnum,
-    RoleEnum,
-    get_permissions_for_role,
-    get_permissions_for_roles,
-    normalize_role_name,
-)
-from packages.security.rbac import (
-    ROLE_ALIASES,
-    ROLE_AUDITOR,
-    ROLE_AUDITOR_CANONICAL,
-    ROLE_AUTHORIZED_ER_PHYSICIAN,
-    ROLE_CRA,
-    ROLE_CRA_CANONICAL,
-    ROLE_CRC,
-    ROLE_DATA_MANAGER,
-    ROLE_EMERGENCY_UNBLINDER,
-    ROLE_INVESTIGATOR,
-    ROLE_LEAD_INVESTIGATOR,
-    ROLE_PRINCIPAL_INVESTIGATOR,
-    ROLE_SITE_INVESTIGATOR,
-    ROLE_SPONSOR_ADMIN,
-    ROLE_SPONSOR_DESIGNER,
-    ROLE_SPONSOR_DM,
-    ROLE_SPONSOR_MM,
-    ROLE_SPONSOR_STATISTICIAN,
-    ROLE_SUBJECT,
-    ROLE_SYSADMIN,
-    Principal,
-    StudyScopeChecker,
-    can_access_site,
-    can_access_study,
-    get_normalized_roles,
-    get_principal,
-    has_permission,
-    mask_payload,
-    require_permission,
-    require_roles,
-    require_study_scope,
-    verify_is_auditor,
-    verify_not_auditor,
-)
-from packages.security.sig_token_verifier import (
-    TokenConsumptionCache,
-    token_consumption_cache,
-    verify_and_consume_sig_token,
-)
-from packages.security.signing import (
-    asymmetric_sign,
-    asymmetric_verify,
-    canonical_serialize,
-    capture_certificate_identifiers,
-    compute_sha256_hash,
-    generate_canonical_signature,
-    generate_greenlight_token,
-    verify_canonical_signature,
-    verify_greenlight_token,
-)
-from packages.security.trial_roles import (
-    ClinicalStaffRole,
-    TrialRole,
-    check_trial_role,
-    enforce_site_isolation,
-)
+try:
+    from packages.security.audit_logger import (
+        AuditLoggerEngine,
+        AuditLogPayload,
+        AuditLogRecord,
+        AuditStoreAdapter,
+        CentralAuditLogger,
+        DbAuditLogRecord,
+        InMemoryAuditStore,
+        SQLModelAuditStore,
+        audit_logger_engine,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.context import (
+        audit_context,
+        audit_context_decorator,
+        current_change_reason,
+        current_ip_address,
+        current_signature_context,
+        current_timestamp,
+        current_user_id,
+        service_audit_context,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.crypto_verifier import (
+        SignatureVerificationRequest,
+        SignatureVerificationResult,
+        verify_electronic_signature,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.datetime_helpers import (
+        AwareDatetime,
+        serialize_utc_z,
+        validate_timezone_aware_datetime,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.delegation import (
+        DelegationChecker,
+        StaffRole,
+        normalize_and_validate_staff_role,
+        require_delegation,
+        validate_request_staff_roles,
+        verify_delegation_scope,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.fail_fast import assert_secure_secrets, validate_branding
+except ImportError:
+    pass
+
+try:
+    from packages.security.gateway_client import (
+        GatewayBaseClient,
+        run_async,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.middleware import (
+        GatewayAuthMiddleware,
+        require_gateway_permission,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.notifications import (
+        GatewayNotificationDispatcher,
+        InMemoryNotificationDispatcher,
+        NotificationCategory,
+        NotificationDispatcherPort,
+        NotificationEvent,
+        NotificationPriority,
+        get_notification_dispatcher,
+        publish_notification,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.permissions import (
+        PermissionEnum,
+        RoleEnum,
+        get_permissions_for_role,
+        get_permissions_for_roles,
+        normalize_role_name,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.rbac import (
+        ROLE_ALIASES,
+        ROLE_AUDITOR,
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_CRA,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_DATA_MANAGER,
+        ROLE_EMERGENCY_UNBLINDER,
+        ROLE_INVESTIGATOR,
+        ROLE_LEAD_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_SITE_INVESTIGATOR,
+        ROLE_SPONSOR_ADMIN,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        ROLE_SPONSOR_MM,
+        ROLE_SPONSOR_STATISTICIAN,
+        ROLE_SUBJECT,
+        ROLE_SYSADMIN,
+        Principal,
+        StudyScopeChecker,
+        can_access_site,
+        can_access_study,
+        get_normalized_roles,
+        get_principal,
+        has_permission,
+        mask_payload,
+        require_permission,
+        require_roles,
+        require_study_scope,
+        verify_is_auditor,
+        verify_not_auditor,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.sig_token_verifier import (
+        TokenConsumptionCache,
+        token_consumption_cache,
+        verify_and_consume_sig_token,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.signing import (
+        asymmetric_sign,
+        asymmetric_verify,
+        canonical_serialize,
+        capture_certificate_identifiers,
+        compute_sha256_hash,
+        generate_canonical_signature,
+        generate_greenlight_token,
+        verify_canonical_signature,
+        verify_greenlight_token,
+    )
+except ImportError:
+    pass
+
+try:
+    from packages.security.trial_roles import (
+        ClinicalStaffRole,
+        TrialRole,
+        check_trial_role,
+        enforce_site_isolation,
+    )
+except ImportError:
+    pass
 
 __all__ = [
     "ClinicalStaffRole",
