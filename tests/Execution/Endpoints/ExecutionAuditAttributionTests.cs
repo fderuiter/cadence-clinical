@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -119,7 +120,11 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
             Ct)));
         await AuditedAsync(investigator, c => c.PutAsJsonAsync($"/api/v1/execution/forms/{form}", new { payload }, Ct));
         await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));
-        await AuditedAsync(investigator, c => c.PostAsJsonAsync(
+        var signer = investigator with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction),
+        };
+        await AuditedAsync(signer, c => c.PostAsJsonAsync(
             $"/api/v1/execution/forms/{form}/approve",
             new
             {

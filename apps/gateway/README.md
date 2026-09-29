@@ -17,9 +17,31 @@ caller's identity to backend services as HMAC-signed headers.
    every endpoint except health, status and development API docs. `ArchitectureSentinelTests` fails the
    build when a service's `Program.cs` skips this wiring.
 
-See ADR-2250 (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`).
+See ADR-2256 (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`).
 
 Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
+
+## Electronic signatures (step-up)
+
+21 CFR 11.200(a)(1) requires a signer to re-enter credentials when signing. Signature-gated endpoints (today:
+PI approval of a form, `POST /api/v1/execution/forms/{id}/approve`) need an `X-Sig-Token` next to the
+bearer token:
+
+1. The signed-in client sends `POST /api/v1/auth/signature-verification` with
+   `{ "password", "totp"?, "action", "semantic_action", "batch_id"? }`, where `action` is the path being signed
+   and `semantic_action` its meaning (`execution.form.approve`). `username`, if sent, must be the caller's own.
+2. The gateway checks the password (and one-time code) with a Keycloak direct-access grant on the
+   `OIDC_SIGNATURE_CLIENT_ID` client, ends the session that grant opened, and discards the password.
+   Auditors and inspectors get `403`; a wrong password `401`; more than five attempts a minute per signer
+   `429`, on top of the realm's brute-force lockout.
+3. It answers `{ "sig_token", "expires_in": 60 }` (`Cache-Control: no-store`): an HS256 JWT signed with
+   `GATEWAY_SECRET`, carrying the signer, their roles, the action, `sig_ver: v3` and a unique `jti`.
+4. The client repeats the request with `X-Sig-Token`. The gateway forwards it inside the signed identity, and
+   the service verifies it with `RequireElectronicSignature(...)` (`packages/security`): signature, 60-second
+   lifetime, signer, action and semantic action, then consumes it. Anything else is
+   `401 REAUTHENTICATION_REQUIRED` and nothing is written.
+
+The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptographic_Contract.md`.
 
 ## Configuration
 
@@ -30,6 +52,9 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 | `OIDC_AUDIENCE` | no | Expected `aud` claim; validated when set. |
 | `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
 | `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
+| `OIDC_SIGNATURE_CLIENT_ID` | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords. |
+| `OIDC_SIGNATURE_CLIENT_SECRET` | no | That client's secret, when it is confidential. |
+| `OIDC_TOKEN_ENDPOINT` | no | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`. |
 | `<SERVICE>_SERVICE_URL` | outside Development | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs. |
 | `GATEWAY_PROXY_TIMEOUT_SECONDS` | no (default `30`) | Idle time after which a proxied request fails with 504. |
 | `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`) | How often each service's `/healthz/ready` is probed. |

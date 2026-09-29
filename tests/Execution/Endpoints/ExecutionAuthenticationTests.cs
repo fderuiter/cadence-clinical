@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Forms;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -152,10 +153,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
         string formId = await CreateCompletedFormAsync(payload);
         using var cra = factory.CreateSignedClient(Cra);
 
-        var response = await cra.PostAsJsonAsync(
-            $"{FormsPath}{formId}/approve",
-            ApproveBody(signerId: "cra-01", signerRole: "Site Investigator", payload),
-            ct);
+        var response = await ApproveAsync(cra, "cra-01", formId, ApproveBody(signerId: "cra-01", signerRole: "Site Investigator", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync(ct));
     }
@@ -164,15 +162,11 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     [Trait("Category", "GxP_OQ")]
     public async Task ApproveForm_NamingAnotherSigner_Returns403()
     {
-        var ct = TestContext.Current.CancellationToken;
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 121}";
         string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 
-        var response = await investigator.PostAsJsonAsync(
-            $"{FormsPath}{formId}/approve",
-            ApproveBody(signerId: "someone-else", signerRole: "Site Investigator", payload),
-            ct);
+        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "someone-else", signerRole: "Site Investigator", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -186,16 +180,85 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
         string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 
-        var response = await investigator.PostAsJsonAsync(
-            $"{FormsPath}{formId}/approve",
-            ApproveBody(signerId: "", signerRole: "whatever the client says", payload),
-            ct);
+        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "", signerRole: "whatever the client says", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(ct));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var manifest = body.RootElement.GetProperty("signature_manifest");
         manifest.GetProperty("signer_id").GetString().Should().Be("pi-01");
         manifest.GetProperty("signer_role").GetString().Should().Be("investigator");
+    }
+
+    /// <summary>
+    /// A PI approval needs a fresh e-signature step-up token; without one nothing is written.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task ApproveForm_WithoutESignatureToken_Returns401AndLeavesTheFormUnsigned()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 123}";
+        string formId = await CreateCompletedFormAsync(payload);
+        using var investigator = factory.CreateSignedClient(Investigator);
+        string before = await investigator.GetStringAsync($"{FormsPath}{formId}", ct);
+
+        var response = await investigator.PostAsJsonAsync($"{FormsPath}{formId}/approve", ApproveBody("", "", payload), ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await response.Content.ReadAsStringAsync(ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        (await investigator.GetStringAsync($"{FormsPath}{formId}", ct)).Should().Be(before);
+    }
+
+    /// <summary>
+    /// A token signs one form, one action, for one signer: it cannot approve form B, stand in for another
+    /// action, or be used by someone else.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Theory]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    [InlineData("another-form")]
+    [InlineData("another-action")]
+    [InlineData("another-signer")]
+    public async Task ApproveForm_WithATokenIssuedForSomethingElse_Returns401(string mismatch)
+    {
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 124}";
+        string formId = await CreateCompletedFormAsync(payload);
+        using var investigator = factory.CreateSignedClient(Investigator);
+        string token = mismatch switch
+        {
+            "another-form" => TestSecurityContext.CreateSigToken("pi-01", FormEndpoints.ApproveAction("some-other-form"), FormEndpoints.ApproveSemanticAction),
+            "another-action" => TestSecurityContext.CreateSigToken("pi-01", FormEndpoints.ApproveAction(formId), "quality.capa.close"),
+            _ => TestSecurityContext.CreateSigToken("cra-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction),
+        };
+
+        var response = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", payload));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
+    /// Each e-signature token is single use, including across the legacy route alias.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task ApproveForm_ReplayingAUsedToken_Returns401()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}";
+        string formId = await CreateCompletedFormAsync(payload);
+        using var investigator = factory.CreateSignedClient(Investigator);
+        string token = TestSecurityContext.CreateSigToken("pi-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction);
+
+        var first = await SendApprovalAsync(investigator, $"/api/v1/forms/{formId}/approve", token, ApproveBody("", "", payload));
+        var replay = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", payload));
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK, await first.Content.ReadAsStringAsync(ct));
+        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -251,6 +314,20 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
         var completed = await investigator.PostAsync($"{FormsPath}{formId}/complete", content: null, ct);
         completed.StatusCode.Should().Be(HttpStatusCode.OK);
         return formId;
+    }
+
+    private static Task<HttpResponseMessage> ApproveAsync(HttpClient client, string signerId, string formId, object body) =>
+        SendApprovalAsync(
+            client,
+            $"{FormsPath}{formId}/approve",
+            TestSecurityContext.CreateSigToken(signerId, FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction),
+            body);
+
+    private static async Task<HttpResponseMessage> SendApprovalAsync(HttpClient client, string path, string sigToken, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        request.Headers.Add(GatewayHeaders.SigToken, sigToken);
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     private static object ApproveBody(string signerId, string signerRole, string payload) => new

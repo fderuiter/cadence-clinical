@@ -21,7 +21,7 @@ namespace Cadence.Testing.Security;
 public static class TestSecurityContext
 {
     /// <summary>Test-only gateway secret; long enough to pass the host's startup validation.</summary>
-    public const string GatewaySecret = "cadence-test-gateway-secret-0123456789abcdef";
+    public const string GatewaySecret = "cadence-test-gateway-secret-0123456789abcdef"; // pragma: allowlist secret
 
     /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
     public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
@@ -40,6 +40,22 @@ public static class TestSecurityContext
         DateTimeOffset? issuedAt = null,
         string secret = GatewaySecret) =>
         identity.ToSignedHeaders(issuedAt ?? DateTimeOffset.UtcNow, GatewayIdentity.EncodeSecret(secret));
+
+    /// <summary>
+    /// A fresh e-signature step-up token for <paramref name="userId"/>, bound to <paramref name="action"/> and
+    /// <paramref name="semanticAction"/>, as the gateway issues after re-authentication.
+    /// </summary>
+    public static string CreateSigToken(
+        string userId,
+        string action,
+        string semanticAction,
+        IReadOnlyList<string>? roles = null,
+        DateTimeOffset? issuedAt = null,
+        string secret = GatewaySecret) =>
+        SigTokenIssuer.Issue(
+            new SigTokenGrant(userId, userId, roles ?? [], action, semanticAction),
+            issuedAt ?? DateTimeOffset.UtcNow,
+            GatewayIdentity.EncodeSecret(secret));
 
     /// <summary>An authenticated principal carrying <c>sub</c> and role claims, as the gateway scheme emits.</summary>
     public static ClaimsPrincipal CreatePrincipal(string userId, params string[] roles)
