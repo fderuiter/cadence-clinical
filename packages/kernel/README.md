@@ -10,16 +10,16 @@ As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-mo
 - **Clinical Truth**: Observations, Assertions, Sources, Provenance
 - **Authority**: Actors, Capabilities, Delegations, Attestations (21 CFR Part 11 electronic signatures)
 - **Temporal Integrity**: PostgreSQL native bitemporal intervals (`valid_period`, `recorded_period`) via `tstzrange` and `gist` (ADR-2246)
-- **Audit Ledger**: Monotonic cryptographic Merkle chain
+- **Audit Ledger**: one SHA-256 hash chain per tenant over insert-only audit entries, written with provenance, events and outbox rows in each command's transaction (ADR-2449)
 
 ## Assemblies
 
 Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/KernelLayeringTests.cs`):
 
-- `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock` and serialization contexts. No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly (K-XS-2).
+- `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
-- `Cadence.Kernel.Application`: command pipeline, authorization and policy evaluation (#4779, #4781).
-- `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, GxP audit interceptor and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
+- `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers. Policy evaluation arrives with #4781.
+- `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`) and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to.
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
@@ -45,6 +45,46 @@ To persist one:
 
 `KernelSchemaPostgresTests` fails if a mapped bitemporal table is missing its guards.
 
+## Command pipeline (ADR-2449)
+
+Every change to kernel state is a command sent through `IKernelCommandSender` (spec §5.1). `KernelDbContext`
+refuses `SaveChanges` anywhere else (K-TX-2).
+
+```csharp
+var result = await sender.SendAsync(new ProvisionTenant(tenantId, "ACME", "Acme Pharma", idempotencyKey, reason), cancellationToken: ct);
+if (!result.IsSuccess) return result.Error;   // KernelError: stable code + HTTP status (K-ERR-1)
+```
+
+The pipeline validates the command (tenant, idempotency key, reason for change), resolves the actor from
+`ICurrentActor` (no actor, no write: K-TX-5), authorizes with `IAuthorizer` (a denial is itself audited), replays or
+rejects a used idempotency key (K-TX-3), runs the handler, and commits in one PostgreSQL transaction:
+
+| Written in the same transaction | Table | Mutable? |
+| --- | --- | --- |
+| The one changed aggregate, with `CreatedAt`/`CreatedBy`/`ReasonForChange`/`VersionIndex` stamped | its own table | per its rules |
+| One provenance activity (K-PROV-1) | `provenance_activities` | insert-only |
+| Its events in the §5.2 envelope | `domain_events` | insert-only |
+| One link of the tenant's hash chain | `audit_entries` (+ `audit_chain_heads`) | insert-only (head advances) |
+| One outbox row per event | `outbox_messages` | `dispatched_at` only |
+| The stored result for the key | `idempotency_records` | insert-only |
+
+Insert-only tables reject `UPDATE`, `DELETE` and `TRUNCATE` with SQLSTATE `KA001`. `KernelAuditChainVerifier`
+re-derives a tenant's chain and reports the first broken link.
+
+To add a command:
+
+1. Declare the command record in `Cadence.Kernel.Abstractions/Commands` implementing `ICommand<TResult>`, its events
+   with `[KernelEvent("Name", 1)]` in `Events/`, and any new errors as `public static readonly KernelError` fields
+   with a `K.<Area>.<Name>` code.
+2. Implement `ICommandHandler<TCommand, TResult>` in `Cadence.Kernel.Application/Commands`: load or add **one**
+   aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, return a `CommandResult`.
+   Never save.
+3. Register the handler in `AddKernelCommandPipeline()`.
+4. Test it through the pipeline in `tests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
+
+A host registers `AddKernelPersistence(connectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
+`ICurrentActor` and an `IAuthorizer`; the container fails to resolve the sender if any is missing.
+
 ## Migrations
 
 ```bash
@@ -61,5 +101,6 @@ CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Databa
 ```
 
 The fixture (`tests/Kernel/Integration/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel
-migrations through `AddKernelPersistence`, and drops it afterwards. Without `CADENCE_TEST_POSTGRES` these tests are
+migrations, wires the command pipeline as a host does (with a settable actor and authorizer), and drops the database
+afterwards. `SeedAsync` inserts rows directly for constraint tests; everything else goes through commands. Without `CADENCE_TEST_POSTGRES` these tests are
 reported as skipped, never as passed.

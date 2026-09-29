@@ -33,7 +33,9 @@ public class KernelDbContextModelTests
         var entityTypes = context.Model.GetEntityTypes().ToList();
 
         entityTypes.Select(e => e.GetTableName()).Should().BeEquivalentTo(
-            "tenants", "organizations", "people", "sites", "studies", "study_sites", "audit_log_entries");
+            "tenants", "organizations", "people", "sites", "studies", "study_sites",
+            "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
+            "idempotency_records");
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
             .Select(p => p.GetColumnName())

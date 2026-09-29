@@ -20,8 +20,8 @@ using Xunit;
 namespace Cadence.UnitTests.Kernel.Integration;
 
 /// <summary>
-/// Applies the kernel migrations to a real PostgreSQL server and exercises the identity tables through the
-/// production wiring (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/>).
+/// Applies the kernel migrations to a real PostgreSQL server and checks the schema itself: tables, bitemporal guards,
+/// database constraints and the K-TX-2 write guard. Commands are covered by <see cref="KernelCommandPipelinePostgresTests"/>.
 /// Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -48,7 +48,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             .ToListAsync(TestContext.Current.CancellationToken);
         tables.Should().BeEquivalentTo(
             "__ef_migrations_history", "tenants", "organizations", "people", "sites", "studies", "study_sites",
-            "audit_log_entries");
+            "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
+            "idempotency_records");
     }
 
     /// <summary>
@@ -76,42 +77,44 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     }
 
     /// <summary>
-    /// Validates that writing a tenant → organization → site → study → study-site graph stamps GxP audit fields
-    /// from the kernel clock and actor, round-trips strongly-typed IDs, and appends one audit entry per entity.
+    /// Validates that a tenant → organization → site → study → study-site graph round-trips strongly-typed IDs and
+    /// foreign keys through PostgreSQL.
     /// @req:PRD-SYS-053
     /// </summary>
-    [Fact(DisplayName = "KernelIdentityGraph_Persists_WithAuditFieldsFromKernelClock_AndAuditEntries")]
+    [Fact(DisplayName = "KernelIdentityGraph_Persists_WithTypedIdsAndForeignKeys")]
     [GxPRequirement("PRD-SYS-053")]
-    public async Task KernelIdentityGraphPersistsWithAuditFieldsFromKernelClockAndAuditEntries()
+    public async Task KernelIdentityGraphPersistsWithTypedIdsAndForeignKeys()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var graph = NewGraph();
 
-        await using (var write = fixture.CreateContext())
-        {
-            write.AddRange(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
-            await write.SaveChangesAsync(ct);
-        }
+        await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
 
         await using var read = fixture.CreateContext();
         var studySite = await read.StudySites.AsNoTracking().SingleAsync(s => s.Id == graph.StudySite.Id, ct);
         studySite.StudyId.Should().Be(graph.Study.Id);
         studySite.SiteId.Should().Be(graph.Site.Id);
         studySite.TenantId.Should().Be(graph.Tenant.Id);
-        studySite.VersionIndex.Should().Be(1);
-        studySite.CreatedBy.Should().Be(KernelPostgresFixture.Actor);
-        studySite.CreatedAt.Should().Be(fixture.Clock.UtcNow.UtcDateTime);
+        studySite.CreatedBy.Should().Be(KernelPostgresFixture.ActorId);
+    }
 
-        var entityIds = new[]
-        {
-            graph.Tenant.Id.ToString(), graph.Sponsor.Id.ToString(), graph.Institution.Id.ToString(),
-            graph.Site.Id.ToString(), graph.Study.Id.ToString(), graph.StudySite.Id.ToString(),
-        };
-        var audit = await read.AuditLogEntries.AsNoTracking()
-            .Where(a => entityIds.Contains(a.EntityId))
-            .ToListAsync(ct);
-        audit.Should().HaveCount(6).And.OnlyContain(a => a.Action == "Added" && a.UserId == KernelPostgresFixture.Actor);
+    /// <summary>
+    /// Validates the K-TX-2 write guard: a kernel context refuses <c>SaveChanges</c> outside the command pipeline, so
+    /// no code path can change kernel state without provenance, an event and an audit link.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "KernelDbContext_SaveOutsidePipeline_IsRefused")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task KernelDbContextSaveOutsidePipelineIsRefused()
+    {
+        fixture.SkipIfUnavailable();
+        await using var context = fixture.CreateContext();
+        context.Add(NewGraph().Tenant);
+
+        var act = () => context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage("K-TX-2*");
     }
 
     /// <summary>
@@ -123,71 +126,25 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     public async Task KernelConstraintsRejectDuplicateTenantCodeAndDanglingStudySite()
     {
         fixture.SkipIfUnavailable();
-        var ct = TestContext.Current.CancellationToken;
         var graph = NewGraph();
 
-        await using (var seed = fixture.CreateContext())
-        {
-            seed.Add(graph.Tenant);
-            await seed.SaveChangesAsync(ct);
-        }
+        await fixture.SeedAsync(graph.Tenant);
 
-        await using (var duplicate = fixture.CreateContext())
-        {
-            duplicate.Add(new Tenant(TenantId.New(), graph.Tenant.Code, "Duplicate", KernelPostgresFixture.Actor, Reason));
-            var act = () => duplicate.SaveChangesAsync(ct);
-            (await act.Should().ThrowAsync<DbUpdateException>())
-                .WithInnerException<PostgresException>().Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
-        }
+        var duplicate = () => fixture.SeedAsync(
+            new Tenant(TenantId.New(), graph.Tenant.Code, "Duplicate", KernelPostgresFixture.ActorId, Reason));
+        (await duplicate.Should().ThrowAsync<DbUpdateException>())
+            .WithInnerException<PostgresException>().Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
 
-        await using (var dangling = fixture.CreateContext())
-        {
-            dangling.Add(new StudySite(
-                StudySiteId.New(), graph.Tenant.Id, StudyId.New(), SiteId.New(), "Selected", KernelPostgresFixture.Actor, Reason));
-            var act = () => dangling.SaveChangesAsync(ct);
-            (await act.Should().ThrowAsync<DbUpdateException>())
-                .WithInnerException<PostgresException>().Which.SqlState.Should().Be(PostgresErrorCodes.ForeignKeyViolation);
-        }
+        var dangling = () => fixture.SeedAsync(new StudySite(
+            StudySiteId.New(), graph.Tenant.Id, StudyId.New(), SiteId.New(), "Selected", KernelPostgresFixture.ActorId, Reason));
+        (await dangling.Should().ThrowAsync<DbUpdateException>())
+            .WithInnerException<PostgresException>().Which.SqlState.Should().Be(PostgresErrorCodes.ForeignKeyViolation);
     }
 
-    /// <summary>
-    /// Validates optimistic concurrency on <c>VersionIndex</c>: one change advances the version by exactly one, and
-    /// of two writers holding the same version the second is rejected instead of silently overwriting the first.
-    /// @req:PRD-SYS-053
-    /// </summary>
-    [Fact(DisplayName = "KernelStudySite_ConcurrentUpdates_SecondWriterIsRejected")]
-    [GxPRequirement("PRD-SYS-053")]
-    public async Task KernelStudySiteConcurrentUpdatesSecondWriterIsRejected()
-    {
-        fixture.SkipIfUnavailable();
-        var ct = TestContext.Current.CancellationToken;
-        var graph = NewGraph();
-
-        await using (var seed = fixture.CreateContext())
-        {
-            seed.AddRange(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
-            await seed.SaveChangesAsync(ct);
-        }
-
-        await using var first = fixture.CreateContext();
-        await using var second = fixture.CreateContext();
-        var firstCopy = await first.StudySites.SingleAsync(s => s.Id == graph.StudySite.Id, ct);
-        var secondCopy = await second.StudySites.SingleAsync(s => s.Id == graph.StudySite.Id, ct);
-
-        firstCopy.Activate("Site initiation visit complete");
-        await first.SaveChangesAsync(ct);
-        firstCopy.VersionIndex.Should().Be(2, "one change is one version");
-        firstCopy.CreatedBy.Should().Be(KernelPostgresFixture.Actor, "an update never rewrites the creator");
-
-        secondCopy.Activate("Concurrent activation");
-        var act = () => second.SaveChangesAsync(ct);
-        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
-    }
-
-    private static (Tenant Tenant, Organization Sponsor, Organization Institution, Site Site, Study Study, StudySite StudySite) NewGraph()
+    internal static (Tenant Tenant, Organization Sponsor, Organization Institution, Site Site, Study Study, StudySite StudySite) NewGraph()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        const string actor = KernelPostgresFixture.Actor;
+        const string actor = KernelPostgresFixture.ActorId;
         var tenant = new Tenant(TenantId.New(), $"T-{suffix}", "Integration tenant", actor, Reason);
         var sponsor = new Organization(OrganizationId.New(), tenant.Id, $"SP-{suffix}", "Sponsor", OrganizationKind.Sponsor, actor, Reason);
         var institution = new Organization(OrganizationId.New(), tenant.Id, $"IN-{suffix}", "Hospital", OrganizationKind.SiteInstitution, actor, Reason);

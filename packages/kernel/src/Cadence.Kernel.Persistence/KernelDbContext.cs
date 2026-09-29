@@ -1,10 +1,11 @@
 using System;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
-using Cadence.Core.Domain.Audit;
-using Cadence.Database.Configurations;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence.Bitemporal;
+using Cadence.Kernel.Persistence.Commands;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -34,7 +35,51 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<StudySite> StudySites => Set<StudySite>();
 
-    public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
+
+    public DbSet<DomainEventRecord> DomainEvents => Set<DomainEventRecord>();
+
+    public DbSet<AuditEntryRecord> AuditEntries => Set<AuditEntryRecord>();
+
+    public DbSet<AuditChainHead> AuditChainHeads => Set<AuditChainHead>();
+
+    public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
+
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    private int _permittedWriters;
+
+    /// <summary>
+    /// Opens a window in which <c>SaveChanges</c> is allowed. Only the command pipeline's transaction (and test
+    /// seeding, through InternalsVisibleTo) opens one: every other write is refused, so no kernel state changes
+    /// without its provenance, event and audit link (K-TX-2).
+    /// </summary>
+    internal IDisposable PermitPipelineWrites()
+    {
+        Interlocked.Increment(ref _permittedWriters);
+        return new WriteWindow(this);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnsureWritesPermitted();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        EnsureWritesPermitted();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void EnsureWritesPermitted()
+    {
+        if (Volatile.Read(ref _permittedWriters) == 0)
+        {
+            throw new InvalidOperationException(
+                "K-TX-2: kernel state is written only through the command pipeline (IKernelCommandSender).");
+        }
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -59,10 +104,6 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
         // btree_gist lets the K-TIME-2 exclusion constraints combine equality on keys with range overlap (ADR-2246).
         modelBuilder.HasPostgresExtension("btree_gist");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KernelDbContext).Assembly);
-
-        // Interim: the shared per-entity-type audit chain written by GxPAuditInterceptor. Replaced by the kernel
-        // AuditEntry with one chain per tenant in the command-pipeline slice (#4779, spec §5.3).
-        modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
 
         ApplySnakeCaseColumnNames(modelBuilder);
     }
@@ -103,5 +144,18 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
         }
 
         return builder.ToString();
+    }
+
+    private sealed class WriteWindow(KernelDbContext context) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                Interlocked.Decrement(ref context._permittedWriters);
+            }
+        }
     }
 }
