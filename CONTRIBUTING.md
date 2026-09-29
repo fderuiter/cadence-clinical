@@ -79,8 +79,9 @@ Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`
 **PostgreSQL integration tests** are skipped unless you provide a database:
 `CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
 
-**CI** runs the same gates in `.github/workflows/ci.yml`. If CI cannot run, validate locally and say so
-in the PR description.
+**CI** runs the same gates in `.github/workflows/ci.yml`; [docs/CI.md](docs/CI.md) lists every job and
+gate and how to reproduce each failure locally. If CI cannot run, validate locally and say so in the PR
+description.
 
 ## 4. Tests and requirement traceability
 

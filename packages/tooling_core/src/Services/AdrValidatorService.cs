@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 using Spectre.Console;
@@ -382,12 +384,13 @@ public static class AdrValidatorService
         if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
             filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
             filepath.StartsWith(".github/") || filepath.EndsWith(".md") ||
-            filepath.EndsWith(".txt") || filepath.EndsWith(".gitignore"))
+            filepath.EndsWith(".txt") || filepath.EndsWith(".gitignore") ||
+            filepath.EndsWith(".d.ts"))
         {
             return false;
         }
 
-        if (filepath == "pyproject.toml" || filepath == "package.json") return true;
+        if (filepath == "package.json") return RootPackageJsonDependenciesChanged();
         if (filepath.StartsWith("apps/gateway/")) return true;
         if (filepath.StartsWith("packages/security/") || filepath.StartsWith("packages/ui/")) return true;
 
@@ -397,6 +400,64 @@ public static class AdrValidatorService
         }
 
         return false;
+    }
+
+    // Only dependency and toolchain sections of the root manifest count as architectural, so script edits need no ADR.
+    private static readonly string[] PackageJsonDependencySections =
+    [
+        "dependencies", "devDependencies", "peerDependencies", "optionalDependencies",
+        "overrides", "resolutions", "pnpm", "packageManager", "engines", "workspaces",
+    ];
+
+    public static bool PackageJsonDependenciesChanged(string? before, string? after)
+    {
+        if (before is null || after is null) return true;
+
+        try
+        {
+            JsonNode? beforeRoot = JsonNode.Parse(before);
+            JsonNode? afterRoot = JsonNode.Parse(after);
+            if (beforeRoot is not JsonObject beforeObject || afterRoot is not JsonObject afterObject) return true;
+
+            return PackageJsonDependencySections.Any(section =>
+                !JsonNode.DeepEquals(beforeObject[section], afterObject[section]));
+        }
+        catch (JsonException)
+        {
+            return true;
+        }
+    }
+
+    private static bool RootPackageJsonDependenciesChanged()
+    {
+        string repoRoot = FindRepoRoot();
+        string workingPath = Path.Combine(repoRoot, "package.json");
+        string? after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
+        return PackageJsonDependenciesChanged(ReadCommittedFile(repoRoot, "package.json"), after);
+    }
+
+    private static string? ReadCommittedFile(string repoRoot, string relativePath)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("git", $"show HEAD:{relativePath}")
+            {
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            using var proc = Process.Start(psi);
+            if (proc == null) return null;
+            string output = proc.StandardOutput.ReadToEnd();
+            proc.WaitForExit();
+            return proc.ExitCode == 0 ? output : null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to read committed {relativePath}: {ex.Message}");
+            return null;
+        }
     }
 
     private static HashSet<string> GetChangedFiles()

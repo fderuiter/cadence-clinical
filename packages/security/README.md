@@ -1,31 +1,55 @@
-# Cadence.Security
+# Security Package
 
-Caller authentication and authorization for the services, based on identity headers signed by the API gateway, plus signing utilities, RBAC, field blinding and audit helpers. The trust model is described in [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+## Overview
 
-## Project
+`Cadence.Security`: caller authentication behind the gateway, role/scope authorization, blinding,
+signatures and audit digests shared by every Cadence service.
 
-- Project: `packages/security/src/Cadence.Security.csproj` (assembly `Cadence.Security`).
-- `Cadence.Security.DependencyInjection`: `AddCadenceSecurity()` registers the `GatewayAuthenticationHandler` scheme, authorization handlers and a fallback policy that requires an authenticated caller on every endpoint not marked `AllowAnonymous()`. It validates at startup that `GATEWAY_SECRET` holds at least 32 characters. `UseCadenceSecurity()` adds authentication, authorization and `AuditorWriteGuardMiddleware`. Endpoint helpers: `RequirePermission`, `RequireRole`, `RequireStudyScope`, `RequireChangeJustification`.
-- `Cadence.Security.Authentication`: `GatewayAuthenticationHandler` (verifies `X-Gateway-Signature` and `X-Timestamp` over the `X-User-*`, `X-Site-Id`, `X-Tenant-Id` and related headers), `GatewayIdentity`, `GatewayHeaders`, `CadenceClaimTypes`, `SigTokenVerifier`, `ReplayCache`, `AuditorWriteGuardMiddleware`.
-- `Cadence.Security.Rbac`: `PermissionMatrix`, `Principal`, `RoleNormalization`, site and study access evaluators, authorization requirements and handlers.
-- `Cadence.Security.Blinding`: `BlindedFieldAttribute`, `FieldMasker`, `MaskingJsonConverter`.
-- `Cadence.Security.Audit`: `AuditDigestEngine`, `AuditLogRecord`, `AuditLogPayload`, `IAuditLogWriter` with `InMemoryAuditStore`, `GxPAuditInterceptor`.
-- `Cadence.Security`: `HmacSigner`, `CanonicalSigner`, `AsymmetricSigner`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): the top-level `*.py` modules and `pyproject.toml`. They are not the implementation.
+---
 
-## Key dependencies
+## Architectural Boundaries
 
-- Framework reference `Microsoft.AspNetCore.App`.
-- Packages: `Microsoft.EntityFrameworkCore`, `System.IdentityModel.Tokens.Jwt`, `Microsoft.IdentityModel.Tokens`.
+- Shared library; no database or cross-service runtime bindings of its own.
+- Services wire it with `builder.Services.AddCadenceSecurity()` and `app.UseCadenceSecurity()`.
+  `ArchitectureSentinelTests` fails the build when a service skips this.
+- Authentication, identity headers and required settings are described in ADR-2250
+  (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`) and
+  `apps/gateway/README.md`.
 
-## Referenced by
+---
 
-Every .NET service (the gateway uses its header, claim and option types; the others call `AddCadenceSecurity()`/`UseCadenceSecurity()`), `packages/deid`, `packages/testing`, `packages/cli`, and all three test projects.
+## Public APIs / Exports
 
-## Tests
+- **Authentication:** `GatewayAuthenticationHandler` (the `CadenceGateway` scheme: verifies the
+  gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
+  `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` + `ReplayCache` (single-use e-signature tokens),
+  `AuditorWriteGuardMiddleware`.
+- **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, site/study access evaluators
+  and the permission, role, study-scope, change-justification and auditor-read-only handlers.
+- **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
+- **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
+  used by `Cadence.Deid` for redaction manifests and de-identification certificates.
+- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `GxPAuditInterceptor`, `IAuditLogWriter`.
+
+### Canonical JSON (`CanonicalSigner`)
+
+Object keys sorted by ordinal (UTF-16 code unit) order, no whitespace, and only the escapes JSON
+requires (`"`, `\`, control characters). `<`, `>`, `&`, `'` and non-ASCII text are written literally.
+This is byte-for-byte `canonicalSerialize` in `packages/ui/signing.js`, so signatures verify across
+.NET and JavaScript; a known-answer vector in `tests/Packages/SignerUnitTests.cs` pins it.
+
+---
+
+## Dependencies
+
+- ASP.NET Core shared framework
+- `Microsoft.EntityFrameworkCore`
+- `System.IdentityModel.Tokens.Jwt`, `Microsoft.IdentityModel.Tokens`
+
+---
+
+## Local Development & Testing
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.CadenceSecurityUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.CanonicalSignerTests|FullyQualifiedName~Cadence.UnitTests.Packages.AsymmetricSignerTests"
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Security|FullyQualifiedName~Signer|FullyQualifiedName~Gateway"
 ```
-
-End-to-end gateway signing is covered by `--filter "FullyQualifiedName~Cadence.UnitTests.Gateway"`, and service-side authentication by `tests/Execution/Endpoints/ExecutionAuthenticationTests.cs`.

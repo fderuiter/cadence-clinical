@@ -171,6 +171,7 @@ public class KernelBoundaryTests
         [
             ("Cadence.Apps.Synthetic", offending),
             ("Cadence.Kernel.Api", offending),
+            ("Cadence.UnitTests", offending),
             ("Cadence.Apps.Clean", """<Project><ItemGroup><ProjectReference Include="Cadence.Kernel.Abstractions.csproj" /></ItemGroup></Project>"""),
         ]);
 

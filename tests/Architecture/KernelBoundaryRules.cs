@@ -116,12 +116,19 @@ public static class KernelBoundaryRules
     // ---------------------------------------------------------------- K-XS-2
 
     /// <summary>
+    /// K-XS-2 applies to product modules and packages. The kernel itself and the test projects (which verify the
+    /// kernel model and migrations) may reference Kernel.Persistence.
+    /// </summary>
+    private static bool IsExemptFromKXs2(string? name) =>
+        IsKernelAssembly(name) || TestAssemblyNames.Contains(name, StringComparer.Ordinal);
+
+    /// <summary>
     /// K-XS-2 (spec §2/§9), compiled form: no non-kernel assembly references <c>Cadence.Kernel.Persistence</c>.
     /// </summary>
     public static IReadOnlyList<string> EvaluateKXs2(IEnumerable<Assembly> assemblies)
     {
         return assemblies
-            .Where(a => !IsKernelAssembly(a.GetName().Name))
+            .Where(a => !IsExemptFromKXs2(a.GetName().Name))
             .Where(a => a.GetReferencedAssemblies().Any(r =>
                 string.Equals(r.Name, KernelPersistenceAssemblyName, StringComparison.OrdinalIgnoreCase)))
             .Select(a => Key(KXs2, a.GetName().Name!, KernelPersistenceAssemblyName))
@@ -141,7 +148,7 @@ public static class KernelBoundaryRules
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
         return projects
-            .Where(p => !IsKernelAssembly(p.ProjectName) && reference.IsMatch(p.CsprojContent))
+            .Where(p => !IsExemptFromKXs2(p.ProjectName) && reference.IsMatch(p.CsprojContent))
             .Select(p => Key(KXs2, p.ProjectName, KernelPersistenceAssemblyName))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)

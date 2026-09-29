@@ -197,4 +197,49 @@ public class GxPAuditTrailGenerationTests
         auditEntriesFileshare[0].UserId.Should().Be(TestUser);
         auditEntriesFileshare[0].BlockHash.Should().NotBeNullOrEmpty();
     }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting()
+    {
+        // #4767: a write whose actor cannot be resolved must fail, never be recorded against a default.
+        var dbName = Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<CtmsDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor")))
+            .Options;
+        await using var context = new CtmsDbContext(options);
+        context.CtmsSiteMilestones.Add(new CtmsSiteMilestone
+        {
+            SiteId = "SITE-101",
+            StudyId = "ST-1001",
+            MilestoneType = "INITIATION",
+            Status = "ACTIVE",
+            ReasonForChange = "Initial milestone creation"
+        });
+
+        Func<Task> save = () => context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await save.Should().ThrowAsync<InvalidOperationException>().WithMessage("no actor");
+        await using var verify = new CtmsDbContext(options);
+        (await verify.CtmsSiteMilestones.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task SaveChanges_WithNoAuditedChange_DoesNotNeedAnActor()
+    {
+        // Saves with nothing to audit (e.g. outbox bookkeeping in a background scope) must not demand an actor.
+        var options = new DbContextOptionsBuilder<CtmsDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor")))
+            .Options;
+        await using var context = new CtmsDbContext(options);
+
+        int written = await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        written.Should().Be(0);
+    }
 }

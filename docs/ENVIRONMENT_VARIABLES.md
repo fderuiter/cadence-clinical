@@ -21,10 +21,14 @@ command-line arguments all work; `__` in an environment variable name maps to `:
 
 ## Database
 
+All services share the `cadence` database, each in its own schema; see [OPERATIONAL_DATABASE.md](OPERATIONAL_DATABASE.md).
+
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
 | `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext | local compose database in Development only | yes (or `POSTGRES_CONNECTION_STRING`) |
 | `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every `apps/*/src/Infrastructure/Persistence/*DbContextFactory.cs` (design-time `dotnet ef`); `packages/cli/src/Services/DatabaseResetService.cs:173` | local compose database | yes (or `ConnectionStrings__cadence`) |
+| `Database__MigrateOnStartup` | `packages/database/src/CadenceMigrationHostedService.cs` (every service with a DbContext) | `false` | no; applies migrations before serving |
+| `Database__MigrateOnly` | same | `false` | no; applies migrations and exits 0 (deployment job) |
 | `DATABASE_URL` | `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts `postgresql+asyncpg://` URLs) | none | no |
 
 ## Execution service

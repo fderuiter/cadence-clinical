@@ -42,7 +42,7 @@ re-founded on the kernel. Both of these are true at once:
 | --- | --- |
 | 17 ASP.NET Core 10 services under `apps/`, each with its own schema, behind a YARP gateway | One modular monolith: kernel + engines in a single PostgreSQL schema, products as application modules ([ADR-2244](docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md)) |
 | `apps/execution` (EDC) is the most complete service | Execution is the first product moved onto the kernel ([migration inventory](docs/kernel/EXECUTION_MIGRATION_INVENTORY.md)) |
-| `packages/kernel` holds the first kernel projects (`Cadence.Kernel.Abstractions`, `Cadence.Kernel.Domain`, `IClock`) | Kernel phases 0–5 in [spec §15](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
+| `packages/kernel` holds the kernel projects (`Abstractions`, `Domain`, `Application`, `Persistence`, `Api`) with typed IDs, `IClock` and the `kernel` schema | Kernel phases 0–5 in [spec §15](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
 | Neo4j is still in `docker-compose.yml` | Neo4j retired; protocol versions stored in PostgreSQL ([ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [#4790](https://github.com/fderuiter/cadence-clinical/issues/4790)) |
 | Some `packages/` still contain Python reference sources | Deleted as each C# port is verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)) |
 
@@ -57,7 +57,7 @@ re-founded on the kernel. Both of these are true at once:
 | `apps/apphost/` | .NET Aspire AppHost for local orchestration |
 | `apps/web/`, `apps/subject-portal/` | Vue 3 web client and participant PWA |
 | `packages/kernel/` | Clinical kernel projects |
-| `packages/*` | Shared libraries: security, database, telemetry, contracts, DDF compiler, de-identification, testing, CLI |
+| `packages/*` | Shared libraries: security, database, telemetry, templating, contracts, DDF compiler, de-identification, testing, CLI |
 | `tests/` | `Cadence.UnitTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests` |
 | `docs/` | Specifications, ADRs, SDLC/GxP documents ([index](docs/DOCUMENTATION_INDEX.md)) |
 | `docker/` | Compose stack, Dockerfile, Keycloak realm |

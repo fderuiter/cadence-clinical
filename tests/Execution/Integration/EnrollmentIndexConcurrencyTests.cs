@@ -20,6 +20,7 @@ using FluentAssertions;
 
 using MassTransit;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 using NSubstitute;
@@ -134,7 +135,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
             var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
-            var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, clock);
+            var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()), clock);
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
             consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1));

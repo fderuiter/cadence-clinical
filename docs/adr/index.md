@@ -12,7 +12,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 Every ADR has exactly one unique number, given on its first line as `# ADR-NNNN: Title` (numbers below 1000 keep their historical three-digit form, such as `ADR-049`). When a number was found to be shared by several files, the oldest file kept it and the later files were renumbered in date order; a renumbered ADR carries an `Also known as: ADR-XXX (former number)` line directly under its heading so older references still resolve. `check adrs` fails on duplicate numbers, a missing `# ADR-` heading, an ADR missing from this index or listed twice, and any link in this index that does not resolve.
 
-Reservation rule: a new ADR takes the next free number after the highest number listed in `docs/adr/index.md` on current `main`. Parallel pull requests may claim numbers at the same time, so re-check `main` before pushing and renumber your ADR if its number has been taken. Numbers claimed by open pull requests stay free here until those ADRs merge, so gaps in the sequence are expected; ADR-2257 to ADR-2260 and ADR-2446 to ADR-2448 are reserved for in-flight PRs.
+Reservation rule: a new ADR takes the next free number after the highest number listed in `docs/adr/index.md` on current `main`. Parallel pull requests may claim numbers at the same time, so re-check `main` before pushing and renumber your ADR if its number has been taken. Numbers claimed by open pull requests stay free here until those ADRs merge, so gaps in the sequence are expected; ADR-2258 to ADR-2260, ADR-2446 and ADR-2448 are reserved for in-flight PRs.
 
 ## Clinical Kernel Decisions
 
@@ -434,3 +434,5 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2248: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md) (2026-09-29)
 - [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) (2026-09-29)
 - [ADR-2256: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) (2026-09-29)
+- [ADR-2257: Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md) (2026-09-29)
+- [ADR-2447: Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) (2026-09-29)

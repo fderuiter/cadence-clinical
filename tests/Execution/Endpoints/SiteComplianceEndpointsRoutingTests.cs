@@ -426,9 +426,8 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         sp.GetRequiredService<IConsentRepository>().Should().NotBeNull();
         sp.GetRequiredService<ISiteComplianceRepository>().Should().NotBeNull();
         sp.GetRequiredService<IAuditLogWriter>().Should().NotBeNull();
-        sp.GetRequiredService<ICurrentAuditContextAccessor>().Should().BeOfType<HttpCurrentAuditContextAccessor>(
-            "the ambient (non-MassTransit) DI scope must resolve the HTTP-backed accessor, not the fixed system one");
-        sp.GetRequiredService<SystemAuditContextAccessor>().Should().NotBeNull();
+        sp.GetRequiredService<ICurrentAuditContextAccessor>().Should().BeSameAs(sp.GetRequiredService<IAuditActorScope>(),
+            "a consumer's declared service account must be what the audit interceptor reads in the same scope");
         sp.GetRequiredService<ISubjectApplicationService>().Should().NotBeNull();
         sp.GetRequiredService<ISiteComplianceApplicationService>().Should().NotBeNull();
         sp.GetRequiredService<IValidator<SubjectCreateRequest>>().Should().NotBeNull();

@@ -159,13 +159,19 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   (`packages/database`) resolves `ConnectionStrings:cadence` (set by the Aspire AppHost), then
   `POSTGRES_CONNECTION_STRING`. Only the `Development` environment falls back to the local compose
   database; any other environment fails at startup. Transient-failure retries are enabled.
+- **One database, a schema per service** ([ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)):
+  every service connects to the shared `cadence` database with its search path set to its own module
+  schema (`ctms`, `execution`, …). The kernel owns the `kernel` schema.
 - **Migrations** live in each service's `Infrastructure/Persistence/Migrations/` and are managed with
-  `scripts/manage_migrations.ps1` (see [AGENTS.md §10](AGENTS.md)).
-- **Today** each service has its own `DbContext` and schema. **Target:** one kernel schema with
+  `scripts/manage_migrations.ps1` (see [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true`
+  applies them at startup; `Database__MigrateOnly=true` runs them as a deployment job and exits. See the
+  [database runbook](docs/OPERATIONAL_DATABASE.md).
+- **Today** each service has its own `DbContext` in its own schema. **Target:** one kernel schema with
   row-level security per tenant (ADR-2250), bitemporal `tstzrange` columns (ADR-2246), an audit chain,
   a transactional outbox and a lineage store (spec §5, §9.6).
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`
-  and `VersionIndex` (21 CFR Part 11). `apps/execution` publishes domain events through the MassTransit
+  and `VersionIndex` (21 CFR Part 11), attributing every write to a real user or a named service account
+  ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md)). `apps/execution` publishes domain events through the MassTransit
   EF Core outbox.
 
 ## 6. Cross-cutting building blocks

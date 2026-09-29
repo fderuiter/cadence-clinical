@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -10,9 +11,21 @@ namespace Cadence.Security;
 
 /// <summary>
 /// Provides canonical JSON serialization and HMAC-SHA256 signature generation/verification.
+/// Canonical form: object keys sorted by ordinal (UTF-16 code unit) order, no insignificant whitespace, and
+/// only the escapes JSON requires (quote, backslash, control characters). HTML-sensitive characters
+/// (<c>&lt; &gt; &amp; '</c>) and non-ASCII text are written literally, byte-for-byte the same as
+/// <c>canonicalSerialize</c> in <c>packages/ui/signing.js</c> (<c>JSON.stringify</c>), so a signature made
+/// on either side verifies on the other.
+/// @req:PRD-SYS-053
 /// </summary>
 public static class CanonicalSigner
 {
+    private static readonly JsonSerializerOptions CanonicalWriterOptions = new()
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     public static byte[] CanonicalSerialize(object payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
@@ -25,7 +38,7 @@ public static class CanonicalSigner
         };
 
         var sortedNode = SortJsonNode(node);
-        string json = sortedNode?.ToJsonString() ?? "null";
+        string json = sortedNode?.ToJsonString(CanonicalWriterOptions) ?? "null";
         return Encoding.UTF8.GetBytes(json);
     }
 

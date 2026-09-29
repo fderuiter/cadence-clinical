@@ -33,8 +33,16 @@ run_action_for_service() {
     local service="$1"
     local cap_name
     cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
-    local project_path="$REPO_ROOT/apps/$service/src/Cadence.Apps.$cap_name.csproj"
+    local project_dir="$REPO_ROOT/apps/$service/src"
+    local project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
     local migrations_dir="Infrastructure/Persistence/Migrations"
+
+    # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
+    if [ "$service" = "kernel" ]; then
+        project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
+        project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
+        migrations_dir="Migrations"
+    fi
 
     if [ ! -f "$project_path" ]; then
         echo "Error: Project not found at $project_path"
@@ -56,13 +64,13 @@ run_action_for_service() {
             echo "[SUCCESS] Migration created in $migrations_dir"
             ;;
         script)
-            OUT_FILE="$REPO_ROOT/apps/$service/src/$migrations_dir/idempotent_migration.sql"
+            OUT_FILE="$project_dir/$migrations_dir/idempotent_migration.sql"
             echo "Generating idempotent SQL migration script..."
             dotnet ef migrations script --idempotent --project "$project_path" --output "$OUT_FILE"
             echo "[SUCCESS] SQL Script written to $OUT_FILE"
             ;;
         bundle)
-            OUT_FILE="$REPO_ROOT/apps/$service/src/Infrastructure/Persistence/migration_bundle"
+            OUT_FILE="$project_dir/migration_bundle"
             echo "Generating self-contained executable migration bundle..."
             dotnet ef migrations bundle --project "$project_path" --output "$OUT_FILE" --force
             echo "[SUCCESS] Migration bundle created at $OUT_FILE"

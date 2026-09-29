@@ -954,6 +954,9 @@ public sealed class HttpCurrentAuditContextAccessor(IHttpContextAccessor http) :
 
 For the `EConsentCompletedConsumer` (no `HttpContext`), a second implementation (`SystemAuditContextAccessor`, fixed `"system-pubsub"`/`"Automated consent-completion enrollment"`) is registered scoped-per-consume via MassTransit's own DI scope — matching the legacy subscriber's fixed `user_id="system-pubsub"`.
 
+> [!NOTE]
+> **Superseded by #4767 / ADR-2257 (2026-09-29).** The `"system"` and `"system-pubsub"` defaults above are gone. `AmbientAuditContextAccessor` implements both `ICurrentAuditContextAccessor` and `IAuditActorScope`. `UserId` is the caller's `sub`, or the `svc:` service account declared with `RunAs`. With neither, it throws `AuditActorUnresolvedException`. The consumer calls `RunAs(ServiceAccounts.EConsentConsumer)` and is recorded as `svc:econsent-consumer`. The eTMF webhook (`ETMF_COMPLIANCE_UPDATE`) and demographics deletion (`DELETE_DEMOGRAPHICS`) now write semantic audit entries.
+
 ---
 
 ## 5. Resilience & External Integrations

@@ -1,23 +1,73 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Cadence.ToolingCore.Services;
 
+/// <summary>
+/// Typechecks the web app, which compiles every <c>apps/web/src/api</c> client against the
+/// OpenAPI-generated types in <c>apps/web/src/api/types.ts</c>.
+/// </summary>
 public static class ApiClientValidatorService
 {
     public static int ValidateApiClients(string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
-        Console.WriteLine("Validating web client API types alignment with OpenAPI schema...");
+        Console.WriteLine("Typechecking the web API clients against their OpenAPI types...");
 
-        string clientApiDir = Path.Combine(repoRoot, "apps", "web", "src", "api");
-        if (!Directory.Exists(clientApiDir))
+        string webDir = Path.Combine(repoRoot, "apps", "web");
+        if (!File.Exists(Path.Combine(webDir, "tsconfig.json")))
         {
-            Console.WriteLine("✔ Web client API directory not found, skipping.");
-            return 0;
+            Console.WriteLine("[ERROR] apps/web/tsconfig.json not found.");
+            return 1;
         }
 
-        Console.WriteLine("✔ Web client API types contract validated cleanly.");
+        var psi = new ProcessStartInfo("pnpm")
+        {
+            WorkingDirectory = webDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        foreach (string arg in new[] { "exec", "tsc", "--noEmit" })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        Process? process;
+        try
+        {
+            process = Process.Start(psi);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Could not run pnpm ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
+            return 1;
+        }
+
+        if (process == null)
+        {
+            Console.WriteLine("[ERROR] Could not start 'pnpm exec tsc'.");
+            return 1;
+        }
+
+        using (process)
+        {
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            string stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            string stderr = stderrTask.GetAwaiter().GetResult();
+
+            if (process.ExitCode != 0)
+            {
+                Console.WriteLine("[ERROR] The web API clients don't typecheck:");
+                Console.WriteLine(stdout);
+                Console.WriteLine(stderr);
+                return 1;
+            }
+        }
+
+        Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
         return 0;
     }
 
