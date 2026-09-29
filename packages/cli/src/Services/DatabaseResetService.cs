@@ -117,6 +117,89 @@ public static class DatabaseResetService
         return 1;
     }
 
+    public static async Task<int> SeedDatabasesAsync(bool allowOffline = true)
+    {
+        AnsiConsole.MarkupLine("[bold cyan]Seeding multi-engine databases (PostgreSQL/Neo4j) via native C#...[/]\n");
+
+        ValidateLocalEnvironment();
+
+        string pgConnStr = GetPostgresConnectionString();
+        ValidateLocalOnly("Postgres", pgConnStr);
+
+        string neo4jUri = Environment.GetEnvironmentVariable("NEO4J_URI") ?? DefaultNeo4jUri;
+        string neo4jUser = Environment.GetEnvironmentVariable("NEO4J_USER") ?? "neo4j";
+        string neo4jPass = Environment.GetEnvironmentVariable("NEO4J_PASSWORD") ?? "password123";
+        ValidateLocalOnly("Neo4j", neo4jUri);
+
+        bool allOk = true;
+
+        try
+        {
+            AnsiConsole.MarkupLine("  1. Seeding PostgreSQL database initial data...");
+            await SeedPostgresDataAsync(pgConnStr);
+            AnsiConsole.MarkupLine("  [green][[OK]] PostgreSQL seed data inserted.[/]");
+        }
+        catch (Exception ex)
+        {
+            if (allowOffline)
+            {
+                AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL seeding skipped or failed: {ex.Message}[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"  [red]ERROR: PostgreSQL seeding failed: {ex.Message}[/]");
+                allOk = false;
+            }
+        }
+
+        try
+        {
+            AnsiConsole.MarkupLine("\n  2. Seeding Neo4j graph database mock studies...");
+            await ResetNeo4jAsync(neo4jUri, neo4jUser, neo4jPass);
+            AnsiConsole.MarkupLine("  [green][[OK]] Neo4j graph seeding complete.[/]");
+        }
+        catch (Exception ex)
+        {
+            if (allowOffline)
+            {
+                AnsiConsole.MarkupLine($"  [yellow]WARNING: Neo4j seeding skipped or failed: {ex.Message}[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"  [red]ERROR: Neo4j seeding failed: {ex.Message}[/]");
+                allOk = false;
+            }
+        }
+
+        if (allOk)
+        {
+            AnsiConsole.MarkupLine("\n[bold green]Multi-Database Seeding Complete.[/]");
+            return 0;
+        }
+
+        return 1;
+    }
+
+    private static async Task SeedPostgresDataAsync(string connStr)
+    {
+        using var conn = new NpgsqlConnection(connStr);
+        await conn.OpenAsync();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO ""clinical_subjects"" (
+                ""Id"", ""SubjectCode"", ""StudyCode"", ""SiteCode"", ""Status"", ""ActiveProtocolVersion"",
+                ""EnrollmentIndex"", ""IsUnblinded"", ""strat_factors"", ""_version"", ""CreatedAt"",
+                ""CreatedBy"", ""ReasonForChange"", ""VersionIndex""
+            )
+            VALUES
+                ('a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', 'SUBJ-001', 'STUDY-001', 'SITE-01', 'ENROLLED', '1.0', 1, false, '{}'::jsonb, 1, NOW(), 'system', 'Seed Data', 1),
+                ('b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e', 'SUBJ-002', 'STUDY-001', 'SITE-01', 'SCREENING', '1.0', 2, false, '{}'::jsonb, 1, NOW(), 'system', 'Seed Data', 1)
+            ON CONFLICT (""Id"") DO NOTHING;
+        ";
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     public static void ValidateLocalEnvironment()
     {
         string envName = (Environment.GetEnvironmentVariable("CADENCE_ENV") ??

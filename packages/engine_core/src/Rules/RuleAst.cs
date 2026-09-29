@@ -55,6 +55,7 @@ public class RuleDefinition
                 ["rule_id"] = RuleId,
                 ["study_id"] = StudyId,
                 ["rule_type"] = RuleType,
+                ["condition"] = ConvertExpressionNode(Condition),
                 ["action"] = Action,
                 ["target_field"] = TargetField,
                 ["target_form"] = TargetForm,
@@ -65,5 +66,78 @@ public class RuleDefinition
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
             Sha256Checksum = Convert.ToHexString(hash).ToLowerInvariant();
         }
+    }
+
+    private static JsonNode ConvertExpressionNode(ExpressionNode? node)
+    {
+        if (node == null) return new JsonObject();
+
+        var obj = new JsonObject
+        {
+            ["type"] = node.Type
+        };
+        if (node.Operator != null) obj["operator"] = node.Operator;
+        if (node.Operands != null)
+        {
+            var arr = new JsonArray();
+            foreach (var op in node.Operands)
+            {
+                arr.Add(ConvertExpressionNode(op));
+            }
+            obj["operands"] = arr;
+        }
+        if (node.Value != null)
+        {
+            if (node.Value is JsonElement elem)
+            {
+                obj["value"] = JsonNode.Parse(elem.GetRawText());
+            }
+            else if (node.Value is string s)
+            {
+                obj["value"] = s;
+            }
+            else if (node.Value is bool b)
+            {
+                obj["value"] = b;
+            }
+            else if (node.Value is int i)
+            {
+                obj["value"] = i;
+            }
+            else if (node.Value is long l)
+            {
+                obj["value"] = l;
+            }
+            else if (node.Value is double d)
+            {
+                obj["value"] = d;
+            }
+            else if (node.Value is decimal dec)
+            {
+                obj["value"] = dec;
+            }
+            else if (node.Value is JsonNode jn)
+            {
+                obj["value"] = jn;
+            }
+            else
+            {
+                obj["value"] = node.Value.ToString();
+            }
+        }
+        if (node.FieldRef != null)
+        {
+            var fr = new JsonObject
+            {
+                ["field_id"] = node.FieldRef.FieldId
+            };
+            if (node.FieldRef.FormId != null) fr["form_id"] = node.FieldRef.FormId;
+            if (node.FieldRef.VisitId != null) fr["visit_id"] = node.FieldRef.VisitId;
+            if (node.FieldRef.VisitRelative != null) fr["visit_relative"] = node.FieldRef.VisitRelative;
+            obj["field_ref"] = fr;
+        }
+        if (node.VariableName != null) obj["variable_name"] = node.VariableName;
+
+        return obj;
     }
 }

@@ -165,7 +165,7 @@ public static class DuplicationDetectorService
                 ["loc2"] = new JsonObject { ["file"] = d.Loc2.File, ["start"] = d.Loc2.Start, ["end"] = d.Loc2.End },
                 ["preview"] = d.Loc1.Preview
             };
-            dupsArray.Add(item);
+            dupsArray.Add((JsonNode)item);
         }
         var summaryObj = new JsonObject
         {

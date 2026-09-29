@@ -11,8 +11,7 @@
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-    <NoWarn>$(NoWarn);IL2104;IL3000;IL3053;IL2026;IL3050</NoWarn>
+    <NoWarn>$(NoWarn);IL2104;IL3000;IL3053</NoWarn>
     <RootAllApplicationAssemblies>true</RootAllApplicationAssemblies>
   </PropertyGroup>
 
