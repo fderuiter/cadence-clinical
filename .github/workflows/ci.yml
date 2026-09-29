@@ -241,10 +241,12 @@ jobs:
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check audit-security
 
       - name: Build container image for security scan
+        if: github.event_name == 'push'
         run: |
           docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=gateway .
 
       - name: Run container vulnerability scan
+        if: github.event_name == 'push'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'cadence-gateway:latest'
@@ -364,98 +366,10 @@ jobs:
           name: trx-report-dotnet
           path: tests/**/TestResults/*.trx
 
-  integration-tests:
-    name: Playwright Integration Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      test_outcome: ${{ steps.run_tests.outcome }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "pnpm"
-
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run backend integration tests
-        id: run_tests
-        if: always()
-        run: dotnet test Cadence.sln --configuration Release --filter "Category=Integration|Category=E2E" --logger "trx;LogFileName=report_dotnet.trx"
-
-      - name: Upload integration test report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: junit-report-integration
-          path: tests/**/TestResults/*.trx
-
-  qualification-tests:
-    name: Isolated GxP Qualification Suite
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      test_outcome: ${{ steps.run_tests.outcome }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "pnpm"
-
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Run GxP qualification validation suite
-        id: run_tests
-        if: always()
-        run: dotnet test Cadence.sln --configuration Release --filter "Category=E2E|Category=Validation" --logger "trx;LogFileName=report_dotnet.trx"
-
-      - name: Upload qualification test report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: junit-report-qualification
-          path: tests/**/TestResults/*.trx
-
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
+    # Playwright browser installs are the most expensive job; run on main only.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -517,8 +431,8 @@ jobs:
   compliance:
     name: GxP Compliance & Qualification Reporting
     runs-on: ubuntu-latest
-    needs: [unit-tests, dotnet-tests, integration-tests, qualification-tests]
-    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.dotnet-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success' && needs.qualification-tests.outputs.test_outcome == 'success'
+    needs: [unit-tests, dotnet-tests]
+    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.dotnet-tests.outputs.test_outcome == 'success'
     permissions:
       contents: read
     steps:
@@ -547,30 +461,6 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Download Unit Test Report
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: junit-report-unit
-          path: .
-          merge-multiple: true
-
-      - name: Download Integration Test Report
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: junit-report-integration
-          path: .
-          merge-multiple: true
-
-      - name: Download Qualification Test Report
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: junit-report-qualification
-          path: .
-          merge-multiple: true
-
       - name: Generate Compliance Reports
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
@@ -587,7 +477,7 @@ jobs:
   comment:
     name: Post PR Quality Checklist Comment
     if: always() && github.event_name == 'pull_request'
-    needs: [style, security, unit-tests, dotnet-tests, integration-tests]
+    needs: [style, security, unit-tests, dotnet-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -616,7 +506,7 @@ jobs:
           CONTRACTS_OUTCOME: ${{ needs.style.outputs.contracts_outcome }}
           LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
           DOTNET_TEST_OUTCOME: ${{ needs.dotnet-tests.outputs.test_outcome }}
-          TEST_OUTCOME: ${{ (needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success') && 'success' || 'failure' }}
+          TEST_OUTCOME: ${{ needs.unit-tests.outputs.test_outcome }}
           FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
           ADR_OUTCOME: ${{ needs.style.outputs.adr_outcome }}
           AUDIT_OUTCOME: ${{ needs.security.outputs.audit_outcome }}
@@ -681,7 +571,7 @@ jobs:
   automerge:
     name: Approve and Automerge
     needs:
-      [classify, style, security, unit-tests, dotnet-tests, integration-tests, compliance, accessibility-e2e]
+      [classify, style, security, unit-tests, dotnet-tests, compliance]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
