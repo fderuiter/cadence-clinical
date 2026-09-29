@@ -1,4 +1,4 @@
-# ADR-2256: Module Schemas via Search Path and Migration Deployment Modes
+# ADR-2447: Module Schemas via Search Path and Migration Deployment Modes
 
 - **Status:** Accepted
 - **Date:** 2026-09-29

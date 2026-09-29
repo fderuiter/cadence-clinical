@@ -2,7 +2,7 @@
 
 How Cadence services store data in PostgreSQL, how schema changes reach an environment, and what to do when they
 fail. The decisions behind it are [ADR-2247](adr/2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md)
-(one database, schema per module) and [ADR-2256](adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
+(one database, schema per module) and [ADR-2447](adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
 (how the schemas and migrations are applied).
 
 ## Layout
@@ -81,6 +81,6 @@ owns only its schema.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `PendingModelChangesWarning` at startup | Model changed without a migration | Add a migration for that service |
-| `relation ... already exists` | A local database created before ADR-2256 has tables in `public` | Drop and recreate the local database (`docker compose down -v`) |
+| `relation ... already exists` | A local database created before ADR-2447 has tables in `public` | Drop and recreate the local database (`docker compose down -v`) |
 | Service exits with `No PostgreSQL connection string configured` | Neither connection key set outside Development | Set `ConnectionStrings__cadence` |
 | `/healthz/ready` returns 503 | Database unreachable or credentials wrong | Check connectivity from the service's network |

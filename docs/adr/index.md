@@ -11,7 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
-- [2026-09-29: ADR-2256 Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
+- [2026-09-29: ADR-2447 Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
 - [2026-09-28: Topological Tier-Based .NET 10 Migration and Legacy Python Decommissioning](2026-09-28-topological-tier-based-dotnet-10-migration-and-python-decommissioning.md)
 - [2026-09-25: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](2026-09-25-payments-primitive-decimal-conversion-and-explicit-ef-core-precision.md)
 - [2026-09-25: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime](2026-09-25-decommission-legacy-python-services-and-default-dotnet10-runtime.md)

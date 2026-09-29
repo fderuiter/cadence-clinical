@@ -14,7 +14,7 @@ migration application.
   module schema, with transient-failure retries, a readiness health check (tag `ready`, served at `/healthz/ready`)
   and migrations.
 - `WithModuleSchema(connectionString, schema)`: scopes a connection to one module schema (search path
-  `<schema>,public`, ADR-2256). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
+  `<schema>,public`, ADR-2447). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
 - `ResolvePostgresConnectionString(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`.
   Only the Development environment falls back to the local compose database; elsewhere a missing value fails startup.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
