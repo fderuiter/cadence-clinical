@@ -13,7 +13,7 @@ SERVICE="${2:-}"
 MIGRATION_NAME="${3:-}"
 
 if [ -z "$ACTION" ] || [ -z "$SERVICE" ]; then
-    echo "Usage: $0 <add|script|bundle|apply|seed|list> <service-name|all> [migration-name]"
+    echo "Usage: $0 <add|script|bundle|apply|seed|list|optimize> <service-name|all> [migration-name]"
     exit 1
 fi
 
@@ -79,6 +79,11 @@ run_action_for_service() {
             ;;
         list)
             dotnet ef migrations list --project "$project_path"
+            ;;
+        optimize)
+            echo "Generating pre-compiled EF Core models for target service..."
+            dotnet ef dbcontext optimize --project "$project_path" --output-dir "CompiledModels" --namespace "Cadence.Apps.$cap_name.CompiledModels"
+            echo "[SUCCESS] Compiled model optimization complete."
             ;;
         *)
             echo "Unknown action: $ACTION"

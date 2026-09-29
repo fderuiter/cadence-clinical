@@ -136,7 +136,7 @@ string executionDbConnectionString = builder.Configuration["POSTGRES_CONNECTION_
         ? configuredConnectionString
         : "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
-builder.Services.AddDbContext<ExecutionDbContext>((sp, options) =>
+builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 {
     options.UseNpgsql(executionDbConnectionString);
     options.AddInterceptors(

@@ -159,6 +159,7 @@ scripts/live_hygiene_enforcement.py
 # ------------------------------------------
 bin/
 obj/
+**/CompiledModels/
 *.user
 *.userosscache
 *.sln.docstates
