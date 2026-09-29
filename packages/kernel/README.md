@@ -30,3 +30,15 @@ Rendering lives in `packages/templating` (`Cadence.Templating`), outside the ker
 scripts/manage_migrations.sh add kernel <MigrationName>
 scripts/manage_migrations.sh script kernel   # idempotent SQL for DBA review
 ```
+
+After adding a migration, apply it to a real PostgreSQL before opening the PR (no Docker needed; any reachable
+server works, e.g. an apt-installed PostgreSQL 16):
+
+```bash
+CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" \
+  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Kernel.Integration"
+```
+
+The fixture (`tests/Kernel/Integration/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel
+migrations through `AddKernelPersistence`, and drops it afterwards. Without `CADENCE_TEST_POSTGRES` these tests are
+reported as skipped, never as passed.
