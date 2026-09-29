@@ -2433,146 +2433,458 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 20,
-        "end": 34
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3349,
+        "end": 3367
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 109,
-        "end": 123
+        "start": 345,
+        "end": 362
       },
-      "preview": "  },\n  username: {\n    type: String,\n..."
+      "preview": "  });\n\u003C/script\u003E\n\u003Cstyle scoped\u003E\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 21,
-        "end": 35
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
+      },
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3351,
+        "end": 3368
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 110,
-        "end": 124
+        "start": 346,
+        "end": 363
       },
-      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 22,
-        "end": 36
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 837,
+        "end": 854
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 111,
-        "end": 125
+        "start": 346,
+        "end": 363
       },
-      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
+      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 23,
-        "end": 37
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
+      },
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3353,
+        "end": 3369
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 112,
-        "end": 126
+        "start": 348,
+        "end": 364
       },
-      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/SignatureCaptureModal.vue",
-        "start": 24,
-        "end": 38
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 839,
+        "end": 855
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 113,
-        "end": 127
+        "start": 348,
+        "end": 364
       },
-      "preview": "  },\n  signerName: {\n    type: String,\n..."
+      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 155,
-        "end": 169
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
       },
       "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3354,
+        "end": 3370
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 840,
+        "end": 856
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 349,
+        "end": 365
+      },
+      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3355,
+        "end": 3371
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 841,
+        "end": 857
+      },
+      "preview": "  display: flex;\n  position: fixed;\n  top: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3356,
+        "end": 3372
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 842,
+        "end": 858
+      },
+      "preview": "  position: fixed;\n  top: 0;\n  left: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3357,
+        "end": 3373
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 843,
+        "end": 859
+      },
+      "preview": "  top: 0;\n  left: 0;\n  right: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3358,
+        "end": 3374
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 844,
+        "end": 860
+      },
+      "preview": "  left: 0;\n  right: 0;\n  bottom: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3359,
+        "end": 3377
+      },
+      "loc2": {
+        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
+        "start": 845,
+        "end": 863
+      },
+      "preview": "  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3421,
+        "end": 3439
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 307,
+        "end": 325
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 417,
+        "end": 435
+      },
+      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3422,
+        "end": 3440
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 308,
+        "end": 326
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 418,
+        "end": 436
+      },
+      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3423,
+        "end": 3441
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 309,
+        "end": 327
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 419,
+        "end": 437
+      },
+      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/CtmsView.vue",
+        "start": 3424,
+        "end": 3442
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 310,
+        "end": 328
+      },
+      "loc2": {
+        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+        "start": 420,
+        "end": 438
+      },
+      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 472,
+        "end": 486
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 73,
+        "end": 87
+      },
+      "preview": "  signoffTargetType,\n  signoffTargetId,\n  customTargetId,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/EcrfView.vue",
+        "start": 473,
+        "end": 487
+      },
+      "loc2": {
+        "file": "apps/web/src/composables/usePiSignoff.js",
+        "start": 74,
+        "end": 88
+      },
+      "preview": "  signoffTargetId,\n  customTargetId,\n  signoffReason,\n..."
+    },
+    {
+      "loc1": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 508,
         "end": 522
       },
-      "preview": "    selectedFileName,\n    editingItemId,\n    editItemValue,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 155,
+        "end": 169
+      },
+      "preview": "  selectedFileName,\n  editingItemId,\n  editItemValue,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 156,
-        "end": 170
-      },
-      "loc2": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 509,
         "end": 523
       },
-      "preview": "    editingItemId,\n    editItemValue,\n    editItemReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 156,
+        "end": 170
+      },
+      "preview": "  editingItemId,\n  editItemValue,\n  editItemReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 157,
-        "end": 171
-      },
-      "loc2": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 510,
         "end": 524
       },
-      "preview": "    editItemValue,\n    editItemReason,\n    rejectingItemId,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 157,
+        "end": 171
+      },
+      "preview": "  editItemValue,\n  editItemReason,\n  rejectingItemId,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 158,
-        "end": 172
-      },
-      "loc2": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 511,
         "end": 525
       },
-      "preview": "    editItemReason,\n    rejectingItemId,\n    rejectItemReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 158,
+        "end": 172
+      },
+      "preview": "  editItemReason,\n  rejectingItemId,\n  rejectItemReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 159,
-        "end": 173
-      },
-      "loc2": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 512,
         "end": 526
       },
-      "preview": "    rejectingItemId,\n    rejectItemReason,\n    promoteChangeReason,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 159,
+        "end": 173
+      },
+      "preview": "  rejectingItemId,\n  rejectItemReason,\n  promoteChangeReason,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/useSchemaIngestion.js",
-        "start": 160,
-        "end": 174
-      },
-      "loc2": {
         "file": "apps/web/src/views/EcrfView.vue",
         "start": 513,
         "end": 527
       },
-      "preview": "    rejectItemReason,\n    promoteChangeReason,\n    unreviewedCount,\n..."
+      "loc2": {
+        "file": "apps/web/src/composables/useSchemaIngestion.js",
+        "start": 160,
+        "end": 174
+      },
+      "preview": "  rejectItemReason,\n  promoteChangeReason,\n  unreviewedCount,\n..."
     },
     {
       "loc1": {
@@ -3187,380 +3499,68 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 73,
-        "end": 87
-      },
-      "loc2": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 472,
-        "end": 486
-      },
-      "preview": "    signoffTargetType,\n    signoffTargetId,\n    customTargetId,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/composables/usePiSignoff.js",
-        "start": 74,
-        "end": 88
-      },
-      "loc2": {
-        "file": "apps/web/src/views/EcrfView.vue",
-        "start": 473,
-        "end": 487
-      },
-      "preview": "    signoffTargetId,\n    customTargetId,\n    signoffReason,\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3349,
-        "end": 3367
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 20,
+        "end": 34
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 345,
-        "end": 362
+        "start": 109,
+        "end": 123
       },
-      "preview": "  });\n\u003C/script\u003E\n\u003Cstyle scoped\u003E\n..."
+      "preview": "  },\n  username: {\n    type: String,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3351,
-        "end": 3368
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 837,
-        "end": 854
-      },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3351,
-        "end": 3368
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 21,
+        "end": 35
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 346,
-        "end": 363
+        "start": 110,
+        "end": 124
       },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+      "preview": "  username: {\n    type: String,\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 837,
-        "end": 854
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 22,
+        "end": 36
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 346,
-        "end": 363
+        "start": 111,
+        "end": 125
       },
-      "preview": "\u003C/script\u003E\n\u003Cstyle scoped\u003E\n.modal-overlay {\n..."
+      "preview": "    type: String,\n    default: \u0022\u0022,\n  },\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3353,
-        "end": 3369
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 839,
-        "end": 855
-      },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3353,
-        "end": 3369
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 23,
+        "end": 37
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 348,
-        "end": 364
+        "start": 112,
+        "end": 126
       },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
+      "preview": "    default: \u0022\u0022,\n  },\n  signerName: {\n..."
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 839,
-        "end": 855
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 24,
+        "end": 38
       },
       "loc2": {
         "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 348,
-        "end": 364
+        "start": 113,
+        "end": 127
       },
-      "preview": "\u003Cstyle scoped\u003E\n.modal-overlay {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3354,
-        "end": 3370
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 840,
-        "end": 856
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3354,
-        "end": 3370
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 349,
-        "end": 365
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 840,
-        "end": 856
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 349,
-        "end": 365
-      },
-      "preview": ".modal-overlay {\n  display: flex;\n  position: fixed;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3355,
-        "end": 3371
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 841,
-        "end": 857
-      },
-      "preview": "  display: flex;\n  position: fixed;\n  top: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3356,
-        "end": 3372
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 842,
-        "end": 858
-      },
-      "preview": "  position: fixed;\n  top: 0;\n  left: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3357,
-        "end": 3373
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 843,
-        "end": 859
-      },
-      "preview": "  top: 0;\n  left: 0;\n  right: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3358,
-        "end": 3374
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 844,
-        "end": 860
-      },
-      "preview": "  left: 0;\n  right: 0;\n  bottom: 0;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3359,
-        "end": 3377
-      },
-      "loc2": {
-        "file": "apps/web/src/components/persona/CraVerificationConsole.vue",
-        "start": 845,
-        "end": 863
-      },
-      "preview": "  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3421,
-        "end": 3439
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 307,
-        "end": 325
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3421,
-        "end": 3439
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 417,
-        "end": 435
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 307,
-        "end": 325
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 417,
-        "end": 435
-      },
-      "preview": ".error-msg {\n  margin-top: 8px;\n  color: #ef4444;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3422,
-        "end": 3440
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 308,
-        "end": 326
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3422,
-        "end": 3440
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 418,
-        "end": 436
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 308,
-        "end": 326
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 418,
-        "end": 436
-      },
-      "preview": "  margin-top: 8px;\n  color: #ef4444;\n  font-size: 13px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3423,
-        "end": 3441
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 309,
-        "end": 327
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3423,
-        "end": 3441
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 419,
-        "end": 437
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 309,
-        "end": 327
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 419,
-        "end": 437
-      },
-      "preview": "  color: #ef4444;\n  font-size: 13px;\n  font-weight: 500;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3424,
-        "end": 3442
-      },
-      "loc2": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 310,
-        "end": 328
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/views/CtmsView.vue",
-        "start": 3424,
-        "end": 3442
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 420,
-        "end": 438
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
-        "start": 310,
-        "end": 328
-      },
-      "loc2": {
-        "file": "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
-        "start": 420,
-        "end": 438
-      },
-      "preview": "  font-size: 13px;\n  font-weight: 500;\n.modal-footer {\n..."
+      "preview": "  },\n  signerName: {\n    type: String,\n..."
     },
     {
       "loc1": {
@@ -3785,123 +3785,6 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 756,
-        "end": 776
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1424,
-        "end": 1444
-      },
-      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 759,
-        "end": 777
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1427,
-        "end": 1445
-      },
-      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
-        "start": 760,
-        "end": 778
-      },
-      "loc2": {
-        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
-        "start": 1428,
-        "end": 1446
-      },
-      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1094,
-        "end": 1117
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 446,
-        "end": 470
-      },
-      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1254,
-        "end": 1272
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 566,
-        "end": 584
-      },
-      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
-        "start": 1255,
-        "end": 1273
-      },
-      "loc2": {
-        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
-        "start": 567,
-        "end": 585
-      },
-      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 210,
-        "end": 226
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 109,
-        "end": 125
-      },
-      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 211,
-        "end": 227
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 110,
-        "end": 126
-      },
-      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
-        "start": 213,
-        "end": 228
-      },
-      "loc2": {
-        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
-        "start": 112,
-        "end": 127
-      },
-      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
-    },
-    {
-      "loc1": {
         "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
         "start": 297,
         "end": 315
@@ -4058,97 +3941,6 @@
     },
     {
       "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1482,
-        "end": 1501
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1215,
-        "end": 1234
-      },
-      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1483,
-        "end": 1502
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1216,
-        "end": 1235
-      },
-      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1484,
-        "end": 1505
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1217,
-        "end": 1238
-      },
-      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1485,
-        "end": 1506
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1218,
-        "end": 1239
-      },
-      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1486,
-        "end": 1507
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1219,
-        "end": 1240
-      },
-      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1487,
-        "end": 1510
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1220,
-        "end": 1243
-      },
-      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
-    },
-    {
-      "loc1": {
-        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
-        "start": 1488,
-        "end": 1511
-      },
-      "loc2": {
-        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-        "start": 1221,
-        "end": 1244
-      },
-      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
-    },
-    {
-      "loc1": {
         "file": "apps/web/src/components/econsent/IcfSectionEditor.vue",
         "start": 6,
         "end": 21
@@ -4289,6 +4081,214 @@
         "end": 65
       },
       "preview": "        type=\u0022button\u0022\n        class=\u0022toolbar-btn\u0022\n        title=\u0022Bullet List\u0022\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 756,
+        "end": 776
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1424,
+        "end": 1444
+      },
+      "preview": "  margin-bottom: 12px;\n.modal-footer {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 759,
+        "end": 777
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1427,
+        "end": 1445
+      },
+      "preview": ".modal-footer {\n  display: flex;\n  justify-content: flex-end;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/imaging/OncologyCalipers.vue",
+        "start": 760,
+        "end": 778
+      },
+      "loc2": {
+        "file": "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+        "start": 1428,
+        "end": 1446
+      },
+      "preview": "  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1094,
+        "end": 1117
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 446,
+        "end": 470
+      },
+      "preview": ".font-mono {\n  font-family: monospace;\n.font-bold {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1254,
+        "end": 1272
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 566,
+        "end": 584
+      },
+      "preview": "  z-index: 100;\n  pointer-events: none;\n  overflow: hidden;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+        "start": 1255,
+        "end": 1273
+      },
+      "loc2": {
+        "file": "apps/web/src/components/etmf/PdfPreviewModal.vue",
+        "start": 567,
+        "end": 585
+      },
+      "preview": "  pointer-events: none;\n  overflow: hidden;\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1482,
+        "end": 1501
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1215,
+        "end": 1234
+      },
+      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1483,
+        "end": 1502
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1216,
+        "end": 1235
+      },
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1484,
+        "end": 1505
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1217,
+        "end": 1238
+      },
+      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1485,
+        "end": 1506
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1218,
+        "end": 1239
+      },
+      "preview": "  justify-content: center;\n  width: 44px;\n  height: 44px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1486,
+        "end": 1507
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1219,
+        "end": 1240
+      },
+      "preview": "  width: 44px;\n  height: 44px;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1487,
+        "end": 1510
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1220,
+        "end": 1243
+      },
+      "preview": "  height: 44px;\n  border-radius: 8px;\n  font-size: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1488,
+        "end": 1511
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 1221,
+        "end": 1244
+      },
+      "preview": "  border-radius: 8px;\n  font-size: 20px;\n.bg-blue {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 210,
+        "end": 226
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 109,
+        "end": 125
+      },
+      "preview": "          /\u003E\n        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 110,
+        "end": 126
+      },
+      "preview": "        \u003C/div\u003E\n        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/tickets/TicketCreateModal.vue",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "apps/web/src/components/tickets/TicketSignModal.vue",
+        "start": 112,
+        "end": 127
+      },
+      "preview": "        \u003Cdiv v-if=\u0022errorMessage\u0022 class=\u0022error-banner\u0022\u003E\n          \u26A0\uFE0F {{ errorMessage }}\n        \u003C/div\u003E\n..."
     },
     {
       "loc1": {
@@ -4565,79 +4565,79 @@
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 53,
-        "end": 67
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 39,
         "end": 53
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 53,
+        "end": 67
       },
       "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 54,
-        "end": 68
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 40,
         "end": 54
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 54,
+        "end": 68
       },
       "preview": "  modelValue: {\n    type: [String, Number],\n    default: \u0022\u0022,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
-        "start": 55,
-        "end": 69
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 41,
         "end": 55
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+        "start": 55,
+        "end": 69
       },
       "preview": "    type: [String, Number],\n    default: \u0022\u0022,\n  },\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
-        "start": 80,
-        "end": 94
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 43,
         "end": 57
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 80,
+        "end": 94
       },
       "preview": "  },\n  query: {\n    type: Object,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
-        "start": 81,
-        "end": 95
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 44,
         "end": 58
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 81,
+        "end": 95
       },
       "preview": "  query: {\n    type: Object,\n    default: null,\n..."
     },
     {
       "loc1": {
-        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
-        "start": 82,
-        "end": 96
-      },
-      "loc2": {
         "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
         "start": 45,
         "end": 59
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 82,
+        "end": 96
       },
       "preview": "    type: Object,\n    default: null,\n  },\n..."
     }

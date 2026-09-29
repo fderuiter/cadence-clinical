@@ -52,6 +52,7 @@ const authMiddleware: Middleware = {
 
 export const openApiClient = createClient<paths>({
   baseUrl: getBaseUrl(),
+  fetch: (...args) => globalThis.fetch(...args),
 });
 
 openApiClient.use(authMiddleware);

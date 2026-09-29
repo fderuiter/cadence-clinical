@@ -223,7 +223,7 @@
           <!-- Editable Schema Fields -->
           <div class="correction-fields-grid">
             <div class="form-group">
-              <label for="corr-proto-id" class="form-label"
+              <label class="form-label" for="corr-proto-id"
                 >Protocol Identifier</label
               >
               <input
@@ -235,9 +235,11 @@
               />
             </div>
             <div class="form-group">
-              <label for="corr-title" class="form-label">Study Title</label>
+              <label class="form-label" for="corr-study-title"
+                >Study Title</label
+              >
               <input
-                id="corr-title"
+                id="corr-study-title"
                 v-model="correctionTitle"
                 type="text"
                 class="form-control input-study-title"
@@ -245,11 +247,11 @@
               />
             </div>
             <div class="form-group">
-              <label for="corr-phase" class="form-label"
+              <label class="form-label" for="corr-dev-phase"
                 >Development Phase</label
               >
               <select
-                id="corr-phase"
+                id="corr-dev-phase"
                 v-model="correctionPhase"
                 class="form-control select-phase"
               >
@@ -260,7 +262,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="corr-ther-area" class="form-label"
+              <label class="form-label" for="corr-ther-area"
                 >Therapeutic Area</label
               >
               <input
@@ -278,11 +280,11 @@
             <h5>✍️ 21 CFR Part 11 Electronic Signature Verification</h5>
             <div class="esignature-grid">
               <div class="form-group">
-                <label for="sign-user-id" class="form-label"
+                <label class="form-label" for="corr-signer-id"
                   >Signer Username / ID *</label
                 >
                 <input
-                  id="sign-user-id"
+                  id="corr-signer-id"
                   v-model="signatureUsername"
                   type="text"
                   class="form-control input-signer-id"
@@ -290,11 +292,11 @@
                 />
               </div>
               <div class="form-group">
-                <label for="sign-reason" class="form-label"
+                <label class="form-label" for="corr-change-reason"
                   >Change Justification Reason *</label
                 >
                 <input
-                  id="sign-reason"
+                  id="corr-change-reason"
                   v-model="signatureReason"
                   type="text"
                   class="form-control input-change-reason"

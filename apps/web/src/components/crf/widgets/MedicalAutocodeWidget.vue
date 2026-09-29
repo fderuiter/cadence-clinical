@@ -1,11 +1,11 @@
 <template>
   <div class="medical-autocode-container">
-    <label for="autocode-input-field" class="widget-label"
+    <label class="widget-label" :for="inputId"
       >{{ label }} <span v-if="required" class="required-star">*</span></label
     >
     <div class="input-wrapper">
       <input
-        id="autocode-input-field"
+        :id="inputId"
         type="text"
         class="autocode-input"
         :value="modelValue"
@@ -24,9 +24,9 @@
         v-for="term in suggestions"
         :key="term.code"
         class="suggestion-item"
-        tabindex="0"
         role="option"
         :aria-selected="selectedCoding?.code === term.code"
+        tabindex="0"
         @click="selectTerm(term)"
         @keydown.enter="selectTerm(term)"
       >
@@ -61,6 +61,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "code-selected"]);
 
+const inputId = `autocode-input-${Math.random().toString(36).substring(2, 9)}`;
 const isOpen = ref(false);
 const loading = ref(false);
 const suggestions = ref([]);

@@ -64,10 +64,7 @@
               }"
             >
               <!-- Field Label & Constraints -->
-              <label
-                :for="`widget-input-${widget.variable_id}`"
-                class="field-label"
-              >
+              <label class="field-label" :for="'widget-' + widget.variable_id">
                 {{ getVariable(widget.variable_id)?.name }}
                 <span
                   v-if="getVariable(widget.variable_id)?.constraints?.required"
@@ -79,7 +76,7 @@
               <!-- Widget Rendering -->
               <template v-if="widget.widget === 'number_input'">
                 <input
-                  :id="`widget-input-${widget.variable_id}`"
+                  :id="'widget-' + widget.variable_id"
                   type="number"
                   class="form-input"
                   v-model.number="formData[widget.variable_id]"
@@ -112,7 +109,7 @@
 
               <template v-else>
                 <input
-                  :id="`widget-input-${widget.variable_id}`"
+                  :id="'widget-' + widget.variable_id"
                   type="text"
                   class="form-input"
                   v-model="formData[widget.variable_id]"

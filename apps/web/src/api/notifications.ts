@@ -47,11 +47,20 @@ export const notificationsService = {
   /**
    * Acknowledges a notification (transition from OPEN to ACKNOWLEDGED).
    */
-  acknowledgeNotification(id: string, options: Record<string, unknown> = {}) {
+  acknowledgeNotification(
+    id: string,
+    options: { changeReason?: string; [key: string]: unknown } = {}
+  ) {
+    const { changeReason, headers, ...rest } = options;
     return unwrapResponse(
       openApiClient.POST("/api/v1/notifications/{id}/acknowledge", {
         params: { path: { id } },
-        ...options,
+        headers: {
+          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
+          ...((headers as Record<string, string>) || {}),
+        },
+        changeReason,
+        ...rest,
       })
     );
   },
@@ -59,11 +68,20 @@ export const notificationsService = {
   /**
    * Resolves a notification (transition from OPEN or ACKNOWLEDGED to RESOLVED).
    */
-  resolveNotification(id: string, options: Record<string, unknown> = {}) {
+  resolveNotification(
+    id: string,
+    options: { changeReason?: string; [key: string]: unknown } = {}
+  ) {
+    const { changeReason, headers, ...rest } = options;
     return unwrapResponse(
       openApiClient.POST("/api/v1/notifications/{id}/resolve", {
         params: { path: { id } },
-        ...options,
+        headers: {
+          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
+          ...((headers as Record<string, string>) || {}),
+        },
+        changeReason,
+        ...rest,
       })
     );
   },

@@ -7,8 +7,8 @@
 
     <div
       class="canvas-wrapper"
-      tabindex="0"
       role="button"
+      tabindex="0"
       aria-label="Anatomical map canvas"
       @click="onCanvasClick"
       @keydown.enter="onCanvasClick"
