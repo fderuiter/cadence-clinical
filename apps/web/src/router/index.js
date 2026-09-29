@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
+import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -16,6 +17,20 @@ export function hasRequiredRole(userRoles, requiredRoles) {
   });
 }
 
+// The screen each role lands on when opening "/".
+function landingRouteFor(roles) {
+  if (roles.includes("sponsor_designer")) return "mdr";
+  if (roles.includes("site_investigator") || roles.includes("crc")) {
+    return "ecrf";
+  }
+  if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
+  if (roles.includes("data_manager")) return "rules";
+  if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
+    return "audit";
+  }
+  return "mdr";
+}
+
 const routes = [
   {
     path: "/",
@@ -26,31 +41,19 @@ const routes = [
         return "/login";
       }
       const roles = authStore.normalizedRoles || [];
-      // Dynamic Landing Route Redirection based on roles:
-      // - Designer (sponsor_designer) → /mdr
-      // - CRC (site_investigator / crc) → /ecrf
-      // - CRA (cra / monitor) → /ctms
-      // - Data Manager (data_manager) → /rules
-      // - TMF Auditor (auditor / tmf_auditor) → /audit
-      if (roles.includes("sponsor_designer")) {
-        return "/mdr";
+      const preferred = landingRouteFor(roles);
+      if (isScreenAvailable(preferred)) {
+        return { name: preferred };
       }
-      if (roles.includes("site_investigator") || roles.includes("crc")) {
-        return "/ecrf";
-      }
-      if (roles.includes("cra") || roles.includes("monitor")) {
-        return "/ctms";
-      }
-      if (roles.includes("data_manager")) {
-        return "/rules";
-      }
-      if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
-        return "/audit";
-      }
-      if (roles.includes("sponsor_admin")) {
-        return "/mdr";
-      }
-      return "/mdr"; // Default fallback
+      // The preferred screen has no .NET backend yet: land on the first
+      // screen that does and that the user may open.
+      const fallback = routes.find(
+        (route) =>
+          AVAILABLE_SCREENS.has(route.name) &&
+          (!route.meta?.requiresRole?.length ||
+            hasRequiredRole(roles, route.meta.requiresRole))
+      );
+      return fallback ? { name: fallback.name } : { name: "unavailable" };
     },
   },
   {
@@ -63,6 +66,12 @@ const routes = [
     path: "/forbidden",
     name: "forbidden",
     component: () => import("../views/ForbiddenView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/unavailable",
+    name: "unavailable",
+    component: () => import("../views/UnavailableView.vue"),
     meta: { requiresAuth: false },
   },
   {
@@ -550,5 +559,9 @@ router.beforeEach(async (to) => {
         return { path: "/forbidden" };
       }
     }
+  }
+
+  if (to.name && !isScreenAvailable(to.name)) {
+    return { name: "unavailable", query: { screen: String(to.name) } };
   }
 });

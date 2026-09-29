@@ -36,7 +36,9 @@ describe("Vue SPA Smoke Tests", () => {
     });
 
     expect(wrapper.text()).toContain("Cadence");
-    expect(wrapper.text()).toContain("Design & Metadata");
+    expect(wrapper.text()).toContain("Execution & EDC");
+    // No design screen has a .NET backend yet (#4829).
+    expect(wrapper.text()).not.toContain("Design & Metadata");
   });
 
   it("mounts MdrView and renders USDM structure", () => {

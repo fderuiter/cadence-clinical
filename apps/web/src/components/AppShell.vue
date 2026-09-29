@@ -111,11 +111,12 @@
       <aside class="app-sidebar">
         <div class="sidebar-nav-scroll">
           <!-- Section 1: Study Design & MDR -->
-          <div class="nav-category">
+          <div v-if="hasAvailableScreen(DESIGN_SCREENS)" class="nav-category">
             <div class="nav-category-title">Design &amp; Metadata</div>
             <ul class="nav-menu">
               <li
                 v-if="
+                  isScreenAvailable('digitization') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -135,6 +136,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('mdr') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -157,6 +159,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('mdr') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -179,6 +182,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('icf-builder') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -202,6 +206,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('rules') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -221,6 +226,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('amendment-diff') &&
                   canAccess([
                     'sponsor_designer',
                     'data_manager',
@@ -251,6 +257,7 @@
             <ul class="nav-menu">
               <li
                 v-if="
+                  isScreenAvailable('ecrf') &&
                   canAccess([
                     'site_investigator',
                     'crc',
@@ -273,6 +280,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('imaging') &&
                   canAccess([
                     'site_investigator',
                     'crc',
@@ -296,6 +304,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('devices') &&
                   canAccess([
                     'site_investigator',
                     'crc',
@@ -323,6 +332,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('sensors')"
                 id="tab-btn-sensors"
                 class="nav-item"
                 :class="{ active: $route.name === 'sensors' }"
@@ -335,6 +345,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('dct')"
                 id="tab-btn-dct"
                 class="nav-item"
                 :class="{ active: $route.name === 'dct' }"
@@ -350,6 +361,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('coding') &&
                   canAccess([
                     'data_manager',
                     'sponsor_designer',
@@ -369,6 +381,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('data-lock') &&
                   canAccess([
                     'data_manager',
                     'sponsor_designer',
@@ -387,7 +400,10 @@
                 </router-link>
               </li>
               <li
-                v-if="canAccess(['cra', 'monitor', 'sponsor_admin'])"
+                v-if="
+                  isScreenAvailable('ctms') &&
+                  canAccess(['cra', 'monitor', 'sponsor_admin'])
+                "
                 id="tab-btn-ctms"
                 class="nav-item"
                 :class="{ active: $route.name === 'ctms' }"
@@ -400,6 +416,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('participant-wallet')"
                 id="tab-btn-participant-wallet"
                 class="nav-item"
                 :class="{ active: $route.name === 'participant-wallet' }"
@@ -416,6 +433,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('lay-summaries')"
                 id="tab-btn-lay-summaries"
                 class="nav-item"
                 :class="{ active: $route.name === 'lay-summaries' }"
@@ -429,6 +447,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('etmf') &&
                   canAccess([
                     'cra',
                     'monitor',
@@ -449,6 +468,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('documents')"
                 id="tab-btn-documents"
                 class="nav-item"
                 :class="{ active: $route.name === 'documents' }"
@@ -461,6 +481,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('safety')"
                 id="tab-btn-safety"
                 class="nav-item"
                 :class="{ active: $route.name === 'safety' }"
@@ -473,6 +494,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('quality')"
                 id="tab-btn-quality"
                 class="nav-item"
                 :class="{ active: $route.name === 'quality' }"
@@ -485,6 +507,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('tickets')"
                 id="tab-btn-tickets"
                 class="nav-item"
                 :class="{ active: $route.name === 'tickets' }"
@@ -497,6 +520,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('knowledge')"
                 id="tab-btn-knowledge"
                 class="nav-item"
                 :class="{ active: $route.name === 'knowledge' }"
@@ -509,6 +533,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('training')"
                 id="tab-btn-training"
                 class="nav-item"
                 :class="{ active: $route.name === 'training' }"
@@ -522,7 +547,10 @@
               </li>
 
               <li
-                v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
+                v-if="
+                  isScreenAvailable('audit') &&
+                  canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])
+                "
                 id="tab-btn-audit"
                 class="nav-item"
                 :class="{
@@ -538,6 +566,7 @@
               </li>
               <li
                 v-if="
+                  isScreenAvailable('exports') &&
                   canAccess([
                     'data_manager',
                     'sponsor_designer',
@@ -556,6 +585,7 @@
                 </router-link>
               </li>
               <li
+                v-if="isScreenAvailable('notifications')"
                 id="tab-btn-notifications"
                 class="nav-item"
                 :class="{ active: $route.name === 'notifications' }"
@@ -825,6 +855,7 @@ import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { hasRequiredRole } from "../router";
+import { isScreenAvailable } from "../router/availability";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
@@ -832,6 +863,25 @@ const notificationsStore = useNotificationsStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
 const knowledgeStore = useKnowledgeStore();
+
+const DESIGN_SCREENS = [
+  "digitization",
+  "mdr",
+  "icf-builder",
+  "rules",
+  "amendment-diff",
+];
+
+function hasAvailableScreen(routeNames) {
+  return routeNames.some(isScreenAvailable);
+}
+
+// No .NET service serves the user's notifications yet (#4828).
+function refreshNotifications() {
+  if (isScreenAvailable("notifications")) {
+    notificationsStore.fetchNotifications();
+  }
+}
 
 function canAccess(requiredRoles) {
   if (!requiredRoles || requiredRoles.length === 0) return true;
@@ -854,7 +904,7 @@ const activePersonaLabel = computed(() => {
 
 function onPersonaSelect() {
   authStore.switchPersona(activePersonaKey.value);
-  notificationsStore.fetchNotifications();
+  refreshNotifications();
   screenReaderAnnouncement.value = `Switched persona to ${activePersonaLabel.value}. Permissions updated.`;
 }
 
@@ -866,7 +916,7 @@ watch(
         activePersonaKey.value = newVal;
       }
       onboardingStore.loadPersonaState(newVal);
-      notificationsStore.fetchNotifications();
+      refreshNotifications();
     }
   },
   { immediate: true }
