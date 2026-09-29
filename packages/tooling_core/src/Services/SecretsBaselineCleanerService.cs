@@ -70,7 +70,7 @@ public static class SecretsBaselineCleanerService
                 }
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                string formatted = JsonSerializer.Serialize(obj, options);
+                string formatted = obj.ToJsonString(options);
                 File.WriteAllText(filepath, formatted + "\n");
 
                 Console.WriteLine($"✔ Successfully cleaned secrets baseline at {filepath}");

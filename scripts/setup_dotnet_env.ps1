@@ -149,7 +149,7 @@ if ($pgSuccess -and $pgSocket.Connected) {
     $pgSocket.Close()
 }
 else {
-    Write-Host "  [INFO] PostgreSQL not reachable on port $pgPort (Run 'docker compose --profile python up -d postgres' to start)." -ForegroundColor DarkYellow
+    Write-Host "  [INFO] PostgreSQL not reachable on port $pgPort (Run 'docker compose -f docker/docker-compose.yml up -d postgres' to start)." -ForegroundColor DarkYellow
 }
 
 # Test Neo4j Bolt port
@@ -161,7 +161,7 @@ if ($neoSuccess -and $neoSocket.Connected) {
     $neoSocket.Close()
 }
 else {
-    Write-Host "  [INFO] Neo4j not reachable on port $neo4jPort (Run 'docker compose --profile python up -d neo4j' to start)." -ForegroundColor DarkYellow
+    Write-Host "  [INFO] Neo4j not reachable on port $neo4jPort (Run 'docker compose -f docker/docker-compose.yml up -d neo4j' to start)." -ForegroundColor DarkYellow
 }
 
 Write-Host "`n=================================================================" -ForegroundColor Cyan

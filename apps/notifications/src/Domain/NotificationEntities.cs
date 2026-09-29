@@ -44,3 +44,36 @@ public class NotificationDelivery
     public DateTime? CompletedAt { get; set; }
     public bool RetryEligible { get; set; } = true;
 }
+
+public record NotificationPayload(
+    string SubjectId = "",
+    string AdverseEventDescription = "",
+    string FlagReason = "",
+    string DiscrepancySource = "",
+    string ProtocolVersion = "",
+    string VersionNumber = "",
+    string ChangeSummary = "",
+    string SummaryOfChanges = "",
+    string SiteId = "",
+    string FormName = "",
+    string FieldName = "",
+    string QueryMessage = "",
+    string DiaryName = "",
+    string DueDate = "",
+    string AmendmentTag = "",
+    string VersionIndex = "",
+    string ChangeReason = "",
+    string SubmittedBy = "",
+    string DocumentName = "",
+    string ArtifactCode = "",
+    string ExpirationDate = ""
+);
+
+public record NotificationRenderModel(
+    string StudyId,
+    string EventId,
+    string TimestampUtc,
+    NotificationPayload Payload,
+    string BrandName = "Cadence Clinical Platform",
+    string? PortalUrl = null
+);

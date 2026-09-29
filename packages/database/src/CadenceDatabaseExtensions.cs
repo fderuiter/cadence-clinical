@@ -20,7 +20,7 @@ public static class CadenceDatabaseExtensions
                 ? configuredConnectionString
                 : $"Host=localhost;Port=5432;Database={defaultDatabaseName};Username=cadence;Password=cadence_password";
 
-        builder.Services.AddDbContext<TDbContext>(options => options.UseNpgsql(connectionString));
+        builder.Services.AddCadenceDbContext<TDbContext>(options => options.UseNpgsql(connectionString));
 
         return builder;
     }

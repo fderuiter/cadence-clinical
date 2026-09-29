@@ -242,7 +242,7 @@ jobs:
 
       - name: Build container image for security scan
         run: |
-          docker build -t cadence-gateway:latest -f apps/gateway/Dockerfile .
+          docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=gateway .
 
       - name: Run container vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0

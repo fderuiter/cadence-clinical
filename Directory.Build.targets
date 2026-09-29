@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Cadence MSBuild Compile-Time EF Core Model Optimization
+    Generates pre-compiled EF Core models during build and publish steps for microservices with DbContext definitions.
+  -->
+  <Target Name="GenerateEFCompiledModels"
+          AfterTargets="Build"
+          Condition="'$(GenerateEFCompiledModels)' != 'false' and Exists('$(MSBuildProjectDirectory)\Infrastructure\Persistence')">
+    <Message Text="[Cadence MSBuild] Generating compiled EF Core models for $(MSBuildProjectName)..." Importance="high" />
+    <Exec Command="dotnet ef dbcontext optimize --no-build --project &quot;$(MSBuildProjectFullPath)&quot; --output-dir CompiledModels --namespace $(RootNamespace).CompiledModels"
+          ContinueOnError="true"
+          IgnoreExitCode="true" />
+  </Target>
+</Project>
