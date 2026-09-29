@@ -1,4 +1,5 @@
 using Cadence.Apps.Safety.Domain;
+using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
@@ -15,7 +16,6 @@ builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
 
-FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
 FluidTemplateRenderer.RegisterType<IcsrHeader>();
 FluidTemplateRenderer.RegisterType<IcsrReportIdentifiers>();
 FluidTemplateRenderer.RegisterType<IcsrPatient>();
@@ -33,14 +33,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Clinical Safety & Pharmacovigilance health probe.",
     "Returns Safety operational status.");
 
-var api = app.MapGroup("/api/v1/safety");
-api.MapPost("/icsr/render", async (IcsrReport request, ITemplateRenderer renderer) =>
-{
-    string rendered = await renderer.RenderAsync("e2b_r3_icsr.xml.liquid", request, typeof(Program).Assembly);
-    return TypedResults.Content(rendered, "application/xml");
-})
-.WithName("RenderIcsrReport")
-.WithSummary("Renders an ICSR E2B(R3) safety report as Liquid XML.");
+app.MapGroup("/api/v1/safety").MapIcsrTemplateEndpoints();
 
 await app.RunAsync();
 

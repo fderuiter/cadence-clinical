@@ -18,13 +18,14 @@ namespace Cadence.Templating;
 
 /// <summary>
 /// Core implementation of <see cref="ITemplateRenderer"/> powered by Fluid.Core Liquid engine.
-/// Sandboxed, high-performance, embedded resource template renderer adhering to GxP compliance rules.
+/// Renders only templates a module's <see cref="TemplateCatalog"/> allows, loaded from that module's own
+/// assembly; parsed templates are cached per assembly and resource so modules can never collide.
+/// @req:PRD-SYS-053
 /// </summary>
 public class FluidTemplateRenderer : ITemplateRenderer
 {
     private static readonly FluidParser Parser = new();
-    private static readonly ConcurrentDictionary<string, IFluidTemplate> TemplateCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly List<Assembly> RegisteredAssemblies = new();
+    private static readonly ConcurrentDictionary<(string Assembly, string Resource), IFluidTemplate> TemplateCache = new();
     private static readonly ConcurrentBag<Type> PreRegisteredTypes = new();
     private static readonly Lazy<FluidTemplateRenderer> DefaultInstance = new(() => new FluidTemplateRenderer());
 
@@ -38,21 +39,6 @@ public class FluidTemplateRenderer : ITemplateRenderer
     public FluidTemplateRenderer(TemplateOptions? options = null)
     {
         _options = options ?? CreateDefaultOptions();
-    }
-
-    /// <summary>
-    /// Pre-registers an assembly containing embedded Liquid templates.
-    /// </summary>
-    public static void RegisterAssembly(Assembly assembly)
-    {
-        ArgumentNullException.ThrowIfNull(assembly);
-        lock (RegisteredAssemblies)
-        {
-            if (!RegisteredAssemblies.Contains(assembly))
-            {
-                RegisteredAssemblies.Add(assembly);
-            }
-        }
     }
 
     /// <summary>
@@ -75,18 +61,17 @@ public class FluidTemplateRenderer : ITemplateRenderer
     }
 
     /// <inheritdoc />
-    public async ValueTask<string> RenderAsync(string templateName, object model, Assembly? assembly = null)
+    public async ValueTask<string> RenderAsync(TemplateCatalog catalog, string key, object model)
     {
-        ArgumentException.ThrowIfNullOrEmpty(templateName);
-        var template = GetOrParseTemplate(templateName, assembly);
+        var template = GetOrParseTemplate(catalog, key);
         var context = CreateContext(model);
         return await template.RenderAsync(context);
     }
 
     /// <inheritdoc />
-    public string Render(string templateName, object model, Assembly? assembly = null)
+    public string Render(TemplateCatalog catalog, string key, object model)
     {
-        return RenderAsync(templateName, model, assembly).GetAwaiter().GetResult();
+        return RenderAsync(catalog, key, model).GetAwaiter().GetResult();
     }
 
     private static TemplateOptions CreateDefaultOptions()
@@ -125,71 +110,28 @@ public class FluidTemplateRenderer : ITemplateRenderer
         strategy.Register(type);
     }
 
-    private static IFluidTemplate GetOrParseTemplate(string templateName, Assembly? targetAssembly)
+    private static IFluidTemplate GetOrParseTemplate(TemplateCatalog catalog, string key)
     {
-        return TemplateCache.GetOrAdd(templateName, name =>
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (!catalog.TryGetResourceName(key, out string resourceName))
         {
-            string content = LoadEmbeddedTemplateContent(name, targetAssembly);
+            throw new TemplateNotFoundException(key ?? string.Empty);
+        }
+
+        string assemblyName = catalog.Assembly.FullName ?? catalog.Assembly.GetName().Name ?? string.Empty;
+        return TemplateCache.GetOrAdd((assemblyName, resourceName), _ =>
+        {
+            using var stream = catalog.Assembly.GetManifestResourceStream(resourceName)
+                ?? throw new TemplateNotFoundException(key);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            string content = reader.ReadToEnd();
+
             if (!Parser.TryParse(content, out var template, out var error))
             {
-                throw new InvalidOperationException($"Failed to parse Liquid template '{name}': {error}");
+                throw new InvalidOperationException($"Failed to parse Liquid template '{key}': {error}");
             }
             return template;
         });
-    }
-
-    private static string LoadEmbeddedTemplateContent(string templateName, Assembly? targetAssembly)
-    {
-        List<Assembly> assembliesToSearch = new();
-        if (targetAssembly != null) assembliesToSearch.Add(targetAssembly);
-
-        lock (RegisteredAssemblies)
-        {
-            foreach (var asm in RegisteredAssemblies)
-            {
-                if (!assembliesToSearch.Contains(asm)) assembliesToSearch.Add(asm);
-            }
-        }
-
-        var entry = Assembly.GetEntryAssembly();
-        if (entry != null && !assembliesToSearch.Contains(entry)) assembliesToSearch.Add(entry);
-
-        var calling = Assembly.GetCallingAssembly();
-        if (calling != null && !assembliesToSearch.Contains(calling)) assembliesToSearch.Add(calling);
-
-        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (!asm.IsDynamic && !assembliesToSearch.Contains(asm)) assembliesToSearch.Add(asm);
-        }
-
-        foreach (var asm in assembliesToSearch)
-        {
-            string[] resourceNames;
-            try
-            {
-                resourceNames = asm.GetManifestResourceNames();
-            }
-            catch
-            {
-                continue;
-            }
-
-            string? match = resourceNames.FirstOrDefault(r =>
-                r.EndsWith("." + templateName, StringComparison.OrdinalIgnoreCase) ||
-                r.Equals(templateName, StringComparison.OrdinalIgnoreCase));
-
-            if (match != null)
-            {
-                using var stream = asm.GetManifestResourceStream(match);
-                if (stream != null)
-                {
-                    using var reader = new StreamReader(stream, Encoding.UTF8);
-                    return reader.ReadToEnd();
-                }
-            }
-        }
-
-        throw new FileNotFoundException($"Embedded Liquid template '{templateName}' was not found in any registered assembly.");
     }
 
     private TemplateContext CreateContext(object model)

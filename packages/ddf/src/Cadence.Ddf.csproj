@@ -9,9 +9,6 @@
     <ProjectReference Include="..\..\templating\src\Cadence.Templating.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Fluid.Core" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="..\Templates\**\*.liquid" Link="Templates\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

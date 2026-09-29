@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Cadence.Templating</RootNamespace>
-    <Description>Liquid (Fluid) document rendering shared by application modules. Not part of the clinical kernel (spec §0.2).</Description>
+    <Description>Sandboxed Liquid rendering of a module's own embedded templates, addressed by allow-listed keys.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -19,6 +19,18 @@ namespace Cadence.Ddf;
 /// </summary>
 public static class UsdmCompiler
 {
+    private const string OdmTemplateKey = "odm";
+    private const string OpenRosaTemplateKey = "openrosa";
+
+    /// <summary>The DDF compiler's own output templates; nothing else can be rendered through it.</summary>
+    public static TemplateCatalog Templates { get; } = new(
+        typeof(UsdmCompiler).Assembly,
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [OdmTemplateKey] = "odm_template.xml.liquid",
+            [OpenRosaTemplateKey] = "openrosa_template.xml.liquid",
+        });
+
     /// <summary>
     /// Compiles an immutable ProtocolVersion snapshot entity into a complete DDF compilation artifact.
     /// </summary>
@@ -42,8 +54,8 @@ public static class UsdmCompiler
         var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag);
 
         var renderer = templateRenderer ?? FluidTemplateRenderer.Instance;
-        string odmXml = renderer.Render("odm_template.xml.liquid", studyIr, typeof(UsdmCompiler).Assembly);
-        string openRosaXml = renderer.Render("openrosa_template.xml.liquid", studyIr, typeof(UsdmCompiler).Assembly);
+        string odmXml = renderer.Render(Templates, OdmTemplateKey, studyIr);
+        string openRosaXml = renderer.Render(Templates, OpenRosaTemplateKey, studyIr);
         string formHash = ComputeSha256Hash(openRosaXml);
 
         var accessibility = options.ValidateAccessibility

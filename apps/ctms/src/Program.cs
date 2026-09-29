@@ -1,4 +1,5 @@
 using Cadence.Apps.Ctms.Domain;
+using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
@@ -15,7 +16,6 @@ builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
 
-FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
 FluidTemplateRenderer.RegisterType<SiteVisitFindingModel>();
 FluidTemplateRenderer.RegisterType<SiteVisitLetterModel>();
 
@@ -28,14 +28,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "CTMS operations health probe.",
     "Returns CTMS operational status.");
 
-var api = app.MapGroup("/api/v1/ctms");
-api.MapPost("/letters/render", async (string templateName, SiteVisitLetterModel request, ITemplateRenderer renderer) =>
-{
-    string rendered = await renderer.RenderAsync(templateName, request, typeof(Program).Assembly);
-    return TypedResults.Content(rendered, "text/plain");
-})
-.WithName("RenderSiteVisitLetter")
-.WithSummary("Renders a CTMS site visit monitoring letter via Liquid template.");
+app.MapGroup("/api/v1/ctms").MapLetterTemplateEndpoints();
 
 await app.RunAsync();
 

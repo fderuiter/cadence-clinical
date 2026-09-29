@@ -1,4 +1,5 @@
 using Cadence.Apps.Notifications.Domain;
+using Cadence.Apps.Notifications.Endpoints;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
@@ -15,7 +16,6 @@ builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<NotificationsDbContext>();
 builder.Services.AddFluidTemplating();
 
-FluidTemplateRenderer.RegisterAssembly(typeof(Program).Assembly);
 FluidTemplateRenderer.RegisterType<NotificationPayload>();
 FluidTemplateRenderer.RegisterType<NotificationRenderModel>();
 
@@ -28,14 +28,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Notifications dispatch health probe.",
     "Returns Notifications operational status.");
 
-var api = app.MapGroup("/api/v1/notifications");
-api.MapPost("/render", async (string templateName, NotificationRenderModel request, ITemplateRenderer renderer) =>
-{
-    string rendered = await renderer.RenderAsync(templateName, request, typeof(Program).Assembly);
-    return TypedResults.Ok(new { templateName, content = rendered });
-})
-.WithName("RenderNotificationTemplate")
-.WithSummary("Renders a Liquid notification template asynchronously.");
+app.MapGroup("/api/v1/notifications").MapNotificationTemplateEndpoints();
 
 await app.RunAsync();
 
