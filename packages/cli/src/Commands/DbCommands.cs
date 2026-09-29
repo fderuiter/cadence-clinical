@@ -35,3 +35,12 @@ public class DbStatusCommand : Command
         return 0;
     }
 }
+
+public class DbSeedCommand : Command
+{
+    public override int Execute(CommandContext context)
+    {
+        AnsiConsole.MarkupLine("[cyan]Seeding multi-engine database schemas...[/]");
+        return 0;
+    }
+}

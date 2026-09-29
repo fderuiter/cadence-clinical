@@ -52,7 +52,7 @@ public static class OpenApiSpecExporter
             },
             ["servers"] = new JsonArray
             {
-                new JsonObject
+                (JsonNode)new JsonObject
                 {
                     ["url"] = "https://api.ccrsoft.com/api/v1",
                     ["description"] = "Production API Gateway"

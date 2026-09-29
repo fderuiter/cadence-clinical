@@ -7,14 +7,18 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
 RESET := \033[0m
 BOLD  := \033[1m
 
-CADENCE_CLI := dotnet run --project packages/cli/src/Cadence.Cli.csproj --
+CADENCE_CLI := ./bin/cadence
+
+./bin/cadence:
+	@mkdir -p ./bin
+	dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release --self-contained -o ./bin
 
 ##@ Setup
 
@@ -27,18 +31,18 @@ wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/C
 
 ##@ Developer Experience & CLI
 
-build: ## Compile the Cadence solution (.NET 10)
+build: $(CADENCE_CLI) ## Compile the Cadence solution (.NET 10)
 	dotnet build Cadence.sln
 
-doctor: ## Run system diagnostics and auto-heal development environment health (dotnet cadence doctor --auto-fix)
+doctor: $(CADENCE_CLI) ## Run system diagnostics and auto-heal development environment health (dotnet cadence doctor --auto-fix)
 	$(CADENCE_CLI) doctor --auto-fix
 
-dev: ## Orchestrate local microservices with live reloading
+dev: $(CADENCE_CLI) ## Orchestrate local microservices with live reloading
 	$(CADENCE_CLI) dev
 
 ##@ Code Quality
 
-fix: ## Auto-fix all C# code formatting, ADRs, and schemas (safe to run anytime)
+fix: $(CADENCE_CLI) ## Auto-fix all C# code formatting, ADRs, and schemas (safe to run anytime)
 	$(CADENCE_CLI) fix
 
 lint-paths: ## Run lightweight path-pattern boundary linter
@@ -53,26 +57,28 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
 
-check: ## Run all 21 pre-push quality gates concurrently in parallel (dotnet cadence check --parallel)
+check: $(CADENCE_CLI) ## Run all 21 pre-push quality gates concurrently in parallel (dotnet cadence check --parallel)
 	$(CADENCE_CLI) check --parallel
 
-verify: ## Full verification — quality gates + all test suites (use before opening a PR)
+verify: $(CADENCE_CLI) ## Full verification — quality gates + all test suites (use before opening a PR)
 	$(CADENCE_CLI) check --parallel
 
-test: ## Run backend unit tests with coverage
+test: $(CADENCE_CLI) ## Run backend unit tests with coverage
 	$(CADENCE_CLI) test
 
 ##@ GxP Compliance
 
-sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (dotnet cadence gxp sync)
+sync-gxp: $(CADENCE_CLI) ## Run tests → regenerate RTM docs → stage docs/SDLC/ (dotnet cadence gxp sync)
 	$(CADENCE_CLI) gxp sync
 
-rtm: ## Validate that checked-in RTM docs are up to date (dotnet cadence gxp validate)
+gxp-sync: sync-gxp ## Alias for sync-gxp
+
+rtm: $(CADENCE_CLI) ## Validate that checked-in RTM docs are up to date (dotnet cadence gxp validate)
 	$(CADENCE_CLI) gxp validate
 
 ##@ Architecture & Documentation
 
-adr: ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
+adr: $(CADENCE_CLI) ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
 	$(CADENCE_CLI) scaffold adr
 
 docs: ## Serve the VitePress documentation portal locally
@@ -80,22 +86,22 @@ docs: ## Serve the VitePress documentation portal locally
 
 ##@ Database
 
-db-reset: ## Drop and re-create the local development database schema
+db-reset: $(CADENCE_CLI) ## Drop and re-create the local development database schema
 	$(CADENCE_CLI) db reset
 
-db-reset-offline: ## Reset databases offline, generating warnings if remote connections fail
+db-reset-offline: $(CADENCE_CLI) ## Reset databases offline, generating warnings if remote connections fail
 	$(CADENCE_CLI) db reset
 
-db-seed: ## Populate multi-engine databases with realistic end-to-end clinical trial datasets
+db-seed: $(CADENCE_CLI) ## Populate multi-engine databases with realistic end-to-end clinical trial datasets
 	$(CADENCE_CLI) db seed
 
-db-status: ## Display multi-engine database sizes and available snapshots
+db-status: $(CADENCE_CLI) ## Display multi-engine database sizes and available snapshots
 	$(CADENCE_CLI) db status
 
-regenerate-templates: ## Regenerate DOCX protocol templates programmatically
+regenerate-templates: $(CADENCE_CLI) ## Regenerate DOCX protocol templates programmatically
 	$(CADENCE_CLI) check --parallel
 
-ports: ## Check that all required service ports are free (dotnet cadence doctor)
+ports: $(CADENCE_CLI) ## Check that all required service ports are free (dotnet cadence doctor)
 	$(CADENCE_CLI) doctor
 
 ##@ Help

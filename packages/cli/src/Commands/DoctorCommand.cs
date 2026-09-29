@@ -9,9 +9,16 @@ using Spectre.Console.Cli;
 
 namespace Cadence.Cli.Commands;
 
-public class DoctorCommand : Command
+public class DoctorCommand : Command<DoctorCommand.Settings>
 {
-    public override int Execute(CommandContext context)
+    public class Settings : CommandSettings
+    {
+        [CommandOption("-f|--auto-fix")]
+        [Description("Automatically remediate missing databases and recoverable environment issues")]
+        public bool AutoFix { get; set; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
     {
         AnsiConsole.MarkupLine("[cyan]=== Cadence Clinical System Diagnostics ===[/]\n");
 
