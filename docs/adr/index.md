@@ -463,3 +463,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
 - [2026-09-29: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
+- [2026-09-29: ADR-2257 Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md)

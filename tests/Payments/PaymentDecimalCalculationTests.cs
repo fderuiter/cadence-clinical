@@ -189,6 +189,7 @@ public class PaymentDecimalCalculationTests
 
         var payable = new Payable
         {
+            CreatedBy = "payments-test",
             BaseAmount = baseAmount,
             OverheadAmount = overheadAmount,
             PatientStipendAmount = patientStipend,
@@ -231,6 +232,7 @@ public class PaymentDecimalCalculationTests
     {
         var wallet = new ParticipantWallet
         {
+            CreatedBy = "payments-test",
             CurrentBalance = 0.00m,
             LifetimeStipends = 0.00m,
             TaxableYtd = 0.00m,
@@ -264,6 +266,7 @@ public class PaymentDecimalCalculationTests
 
         var alloc1 = new PayableAllocation
         {
+            CreatedBy = "payments-test",
             AllocationPercentage = payee1AllocationRate,
             GrossShare = Math.Round(grossAmount * (payee1AllocationRate / 100.0m), 4, MidpointRounding.ToEven),
             WithholdingShare = Math.Round(withholdingAmount * (payee1AllocationRate / 100.0m), 4, MidpointRounding.ToEven),
@@ -272,6 +275,7 @@ public class PaymentDecimalCalculationTests
 
         var alloc2 = new PayableAllocation
         {
+            CreatedBy = "payments-test",
             AllocationPercentage = payee2AllocationRate,
             GrossShare = Math.Round(grossAmount * (payee2AllocationRate / 100.0m), 4, MidpointRounding.ToEven),
             WithholdingShare = Math.Round(withholdingAmount * (payee2AllocationRate / 100.0m), 4, MidpointRounding.ToEven),
