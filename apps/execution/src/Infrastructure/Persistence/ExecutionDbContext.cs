@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database;
 
 using MassTransit;
 
@@ -51,6 +52,6 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
 
-        modelBuilder.AddTransactionalOutboxEntities();
+        modelBuilder.AddCadenceTransactionalOutboxEntities();
     }
 }

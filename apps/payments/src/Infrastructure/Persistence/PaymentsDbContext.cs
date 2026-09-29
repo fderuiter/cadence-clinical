@@ -1,6 +1,7 @@
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database;
 using Cadence.Database.Configurations;
 
 using Microsoft.EntityFrameworkCore;
@@ -44,5 +45,7 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
         modelBuilder.ApplyConfiguration(new ErpSyncLogConfiguration());
         modelBuilder.ApplyConfiguration(new ParticipantWalletConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddCadenceTransactionalOutboxEntities();
     }
 }

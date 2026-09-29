@@ -1,6 +1,7 @@
 using Cadence.Apps.Org.Domain;
 using Cadence.Apps.Org.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database;
 using Cadence.Database.Configurations;
 
 using Microsoft.EntityFrameworkCore;
@@ -28,5 +29,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
         modelBuilder.ApplyConfiguration(new TrainingLogConfiguration());
         modelBuilder.ApplyConfiguration(new OrgAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddCadenceTransactionalOutboxEntities();
     }
 }

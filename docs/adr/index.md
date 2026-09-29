@@ -452,3 +452,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: PostgreSQL Native Bitemporal Interval Standard via tstzrange and GiST](2026-09-29-postgresql-native-bitemporal-interval-standard-via-tstzrange-and-gist.md)
 
 - [2026-09-29: Clinical Kernel Single Database Schema and Architecture Sentinel Hardening](2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md)
+
+- [2026-09-29: MassTransit EF Core Transactional Outbox Persistence Standard](2026-09-29-masstransit-ef-core-transactional-outbox-persistence-standard.md)

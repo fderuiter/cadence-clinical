@@ -1,6 +1,7 @@
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database;
 using Cadence.Database.Configurations;
 
 using Microsoft.EntityFrameworkCore;
@@ -48,5 +49,7 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
         modelBuilder.ApplyConfiguration(new PeriodicSafetyReportRecordConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceSafetyInvestigationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddCadenceTransactionalOutboxEntities();
     }
 }

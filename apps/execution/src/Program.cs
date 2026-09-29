@@ -230,11 +230,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<SubjectCreateRequestValidat
 // connection is ever needed for the outbox itself to actually deliver.
 builder.Services.AddMassTransit(x =>
 {
-    x.AddEntityFrameworkOutbox<ExecutionDbContext>(o =>
-    {
-        o.UsePostgres();
-        o.UseBusOutbox();
-    });
+    x.AddCadenceTransactionalOutbox<ExecutionDbContext>();
 
     x.AddConsumer<EConsentCompletedConsumer>();
 
