@@ -13,6 +13,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<TenantId>().HaveConversion<TenantIdValueConverter, EntityIdValueComparer<TenantId>>();
         configurationBuilder.Properties<OrganizationId>().HaveConversion<OrganizationIdValueConverter, EntityIdValueComparer<OrganizationId>>();
         configurationBuilder.Properties<PersonId>().HaveConversion<PersonIdValueConverter, EntityIdValueComparer<PersonId>>();
+        configurationBuilder.Properties<TenantMembershipId>().HaveConversion<TenantMembershipIdValueConverter, EntityIdValueComparer<TenantMembershipId>>();
         configurationBuilder.Properties<StudyId>().HaveConversion<StudyIdValueConverter, EntityIdValueComparer<StudyId>>();
         configurationBuilder.Properties<SiteId>().HaveConversion<SiteIdValueConverter, EntityIdValueComparer<SiteId>>();
         configurationBuilder.Properties<StudySiteId>().HaveConversion<StudySiteIdValueConverter, EntityIdValueComparer<StudySiteId>>();

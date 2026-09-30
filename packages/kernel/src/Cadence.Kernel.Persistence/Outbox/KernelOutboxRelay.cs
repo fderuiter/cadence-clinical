@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -14,15 +14,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Cadence.Kernel.Persistence.Outbox;
 
-/// <summary>What one relay pass did.</summary>
-internal sealed record OutboxRelayResult(int Dispatched, int Failed)
+/// <summary>What one relay pass did, over every tenant.</summary>
+/// <param name="Dispatched">Messages delivered and marked dispatched.</param>
+/// <param name="Failed">Messages whose delivery failed and were scheduled for a retry.</param>
+/// <param name="MoreDue">True when some tenant filled its batch without a failure, so another pass should run now.</param>
+internal sealed record OutboxRelayResult(int Dispatched, int Failed, bool MoreDue)
 {
     public int Claimed => Dispatched + Failed;
 }
 
 /// <summary>
 /// Delivers committed events from <c>kernel.outbox_messages</c> to <see cref="IKernelEventPublisher"/> (spec §5.1,
-/// at-least-once). Each pass claims due messages with <c>FOR UPDATE SKIP LOCKED</c>, so several relays never deliver
+/// at-least-once). Each pass visits every tenant in turn through a connection scoped to that tenant (ADR-2250 rule
+/// 3), claims up to a batch of its due messages with <c>FOR UPDATE SKIP LOCKED</c>, so several relays never deliver
 /// the same row at once, then marks each one dispatched or schedules a retry with exponential backoff.
 /// </summary>
 /// <remarks>
@@ -33,7 +37,7 @@ internal sealed record OutboxRelayResult(int Dispatched, int Failed)
 /// @req:PRD-SYS-053
 /// </remarks>
 internal sealed partial class KernelOutboxRelay(
-    IDbContextFactory<KernelDbContext> contextFactory,
+    KernelTenantDbContextFactory contextFactory,
     IKernelEventPublisher publisher,
     IClock clock,
     ILogger<KernelOutboxRelay> logger)
@@ -43,12 +47,29 @@ internal sealed partial class KernelOutboxRelay(
 
     private const int MaxErrorLength = 2000;
 
+    /// <summary>Relays up to <paramref name="batchSize"/> due messages for each tenant.</summary>
     public async Task<OutboxRelayResult> RelayBatchAsync(int batchSize, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         var now = KernelTimestamps.ToStoredPrecision(clock.UtcNow);
 
-        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        int dispatched = 0, failed = 0;
+        var moreDue = false;
+        foreach (var tenant in await contextFactory.ListTenantsAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var (tenantDispatched, tenantFailed) = await RelayTenantAsync(tenant, batchSize, now, cancellationToken).ConfigureAwait(false);
+            dispatched += tenantDispatched;
+            failed += tenantFailed;
+            moreDue |= tenantFailed == 0 && tenantDispatched == batchSize;
+        }
+
+        return new OutboxRelayResult(dispatched, failed, moreDue);
+    }
+
+    private async Task<(int Dispatched, int Failed)> RelayTenantAsync(
+        TenantId tenant, int batchSize, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await using var db = contextFactory.Create(tenant);
         using var writes = db.PermitPipelineWrites();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
@@ -56,7 +77,8 @@ internal sealed partial class KernelOutboxRelay(
             .FromSql(
                 $"""
                 SELECT o.* FROM kernel.outbox_messages o
-                WHERE o.dispatched_at IS NULL
+                WHERE o.tenant_id = {tenant.Value}
+                  AND o.dispatched_at IS NULL
                   AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= {now})
                   AND NOT EXISTS (
                       SELECT 1 FROM kernel.outbox_messages earlier
@@ -70,11 +92,11 @@ internal sealed partial class KernelOutboxRelay(
                 """)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        var heldBack = new HashSet<TenantId>();
+        var heldBack = false;
         int dispatched = 0, failed = 0;
         foreach (var message in due)
         {
-            if (heldBack.Contains(message.TenantId))
+            if (heldBack)
             {
                 continue;
             }
@@ -94,7 +116,7 @@ internal sealed partial class KernelOutboxRelay(
                 message.Attempts++;
                 message.NextAttemptAt = now + Backoff(message.Attempts);
                 message.LastError = Truncate($"{ex.GetType().Name}: {ex.Message}");
-                heldBack.Add(message.TenantId);
+                heldBack = true;
                 failed++;
                 LogDeliveryFailed(logger, ex, message.EventId, message.Type, message.Attempts, message.NextAttemptAt.Value);
             }
@@ -102,7 +124,7 @@ internal sealed partial class KernelOutboxRelay(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return new OutboxRelayResult(dispatched, failed);
+        return (dispatched, failed);
     }
 
     /// <summary>2^attempts seconds, capped at <see cref="MaxBackoff"/>.</summary>

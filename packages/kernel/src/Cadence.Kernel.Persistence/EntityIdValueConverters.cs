@@ -30,6 +30,11 @@ public class PersonIdValueConverter() : ValueConverter<PersonId, Guid>(
     guid => new PersonId(guid)
 );
 
+public class TenantMembershipIdValueConverter() : ValueConverter<TenantMembershipId, Guid>(
+    id => id.Value,
+    guid => new TenantMembershipId(guid)
+);
+
 public class StudyIdValueConverter() : ValueConverter<StudyId, Guid>(
     id => id.Value,
     guid => new StudyId(guid)

@@ -66,7 +66,7 @@ public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) :
     private ProbeDbContext NewContext()
     {
         fixture.SkipIfUnavailable();
-        return ProbeDbContext.Create(fixture.ConnectionString!);
+        return ProbeDbContext.Create(fixture.AdminConnectionString!);
     }
 
     /// <summary>

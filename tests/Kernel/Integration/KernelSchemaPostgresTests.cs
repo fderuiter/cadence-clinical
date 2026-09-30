@@ -37,7 +37,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     public async Task KernelMigrationsApplyToPostgresCreatingEveryTableInKernelSchema()
     {
         fixture.SkipIfUnavailable();
-        await using var context = fixture.CreateContext();
+        await using var context = fixture.CreateAdminContext();
 
         (await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken)).Should().BeEmpty();
 
@@ -47,7 +47,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
         tables.Should().BeEquivalentTo(
             "__ef_migrations_history", "tenants", "organizations", "people", "sites", "studies", "study_sites",
             "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
-            "idempotency_records", "audit_chain_seals");
+            "idempotency_records", "audit_chain_seals", "tenant_memberships");
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        await using var context = fixture.CreateContext();
+        await using var context = fixture.CreateAdminContext();
 
         var bitemporalTables = context.Model.GetEntityTypes()
             .Where(e => typeof(IBitemporalEntity).IsAssignableFrom(e.ClrType))
@@ -85,7 +85,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
 
         await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
 
-        await using var read = fixture.CreateContext();
+        await using var read = fixture.CreateAdminContext();
         var studySite = await read.StudySites.AsNoTracking().SingleAsync(s => s.Id == graph.StudySite.Id, ct);
         studySite.StudyId.Should().Be(graph.Study.Id);
         studySite.SiteId.Should().Be(graph.Site.Id);
@@ -101,7 +101,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
     public async Task KernelDbContextSaveOutsidePipelineIsRefused()
     {
         fixture.SkipIfUnavailable();
-        await using var context = fixture.CreateContext();
+        await using var context = fixture.CreateAdminContext();
         context.Add(NewGraph().Tenant);
 
         var act = () => context.SaveChangesAsync(TestContext.Current.CancellationToken);

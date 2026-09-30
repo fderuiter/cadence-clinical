@@ -1,5 +1,4 @@
 using System;
-using System.Text.RegularExpressions;
 
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -11,7 +10,7 @@ namespace Cadence.Kernel.Persistence.Commands;
 /// <see cref="ViolationSqlState"/>, whoever the database user is.
 /// @req:PRD-SYS-053
 /// </summary>
-internal static partial class InsertOnlySql
+internal static class InsertOnlySql
 {
     /// <summary>Name of the shared trigger function, created once in the kernel schema.</summary>
     public const string FunctionName = "enforce_insert_only";
@@ -27,7 +26,7 @@ internal static partial class InsertOnlySql
         ["audit_entries", "domain_events", "provenance_activities", "idempotency_records", "audit_chain_seals"];
 
     public static string CreateFunction(string schema) => $$"""
-        CREATE OR REPLACE FUNCTION {{Quote(schema)}}.{{FunctionName}}() RETURNS trigger
+        CREATE OR REPLACE FUNCTION {{SqlIdentifier.Quote(schema)}}.{{FunctionName}}() RETURNS trigger
         LANGUAGE plpgsql AS $fn$
         BEGIN
             RAISE EXCEPTION 'K-AUDIT: %.% is insert-only; % is not allowed',
@@ -37,41 +36,33 @@ internal static partial class InsertOnlySql
         """;
 
     public static string DropFunction(string schema) =>
-        $"DROP FUNCTION IF EXISTS {Quote(schema)}.{FunctionName}();";
+        $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{FunctionName}();";
 
     public static string CreateGuards(string schema, string table)
     {
-        var qualified = $"{Quote(schema)}.{Quote(table)}";
+        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
         return $"""
-            CREATE TRIGGER {Quote(RowTriggerName(table))} BEFORE UPDATE OR DELETE ON {qualified}
-                FOR EACH ROW EXECUTE FUNCTION {Quote(schema)}.{FunctionName}();
-            CREATE TRIGGER {Quote(TruncateTriggerName(table))} BEFORE TRUNCATE ON {qualified}
-                FOR EACH STATEMENT EXECUTE FUNCTION {Quote(schema)}.{FunctionName}();
+            CREATE TRIGGER {SqlIdentifier.Quote(RowTriggerName(table))} BEFORE UPDATE OR DELETE ON {qualified}
+                FOR EACH ROW EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{FunctionName}();
+            CREATE TRIGGER {SqlIdentifier.Quote(TruncateTriggerName(table))} BEFORE TRUNCATE ON {qualified}
+                FOR EACH STATEMENT EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{FunctionName}();
             """;
     }
 
     public static string DropGuards(string schema, string table)
     {
-        var qualified = $"{Quote(schema)}.{Quote(table)}";
+        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
         return $"""
-            DROP TRIGGER IF EXISTS {Quote(TruncateTriggerName(table))} ON {qualified};
-            DROP TRIGGER IF EXISTS {Quote(RowTriggerName(table))} ON {qualified};
+            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(TruncateTriggerName(table))} ON {qualified};
+            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(RowTriggerName(table))} ON {qualified};
             """;
     }
 
-    public static string RowTriggerName(string table) => Truncate($"trg_{table}_insert_only");
+    public static string RowTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_insert_only");
 
-    public static string TruncateTriggerName(string table) => Truncate($"trg_{table}_no_truncate");
+    public static string TruncateTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_no_truncate");
 
-    private static string Truncate(string name) => name.Length <= 63 ? name : name[..63];
 
-    private static string Quote(string identifier) =>
-        SafeIdentifier().IsMatch(identifier)
-            ? $"\"{identifier}\""
-            : throw new ArgumentException($"'{identifier}' is not a lower-case snake_case identifier.", nameof(identifier));
-
-    [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$")]
-    private static partial Regex SafeIdentifier();
 }
 
 /// <summary>Migration helpers for <see cref="InsertOnlySql"/>.</summary>

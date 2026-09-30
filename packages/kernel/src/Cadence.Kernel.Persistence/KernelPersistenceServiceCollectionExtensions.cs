@@ -6,6 +6,7 @@ using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Outbox;
+using Cadence.Kernel.Persistence.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,8 @@ namespace Cadence.Kernel.Persistence;
 /// </summary>
 public static class KernelPersistenceServiceCollectionExtensions
 {
+    private static readonly KernelTenantConnectionInterceptor TenantInterceptor = new();
+
     /// <summary>
     /// Registers the kernel <see cref="DbContext"/> against PostgreSQL and the unit of work the command pipeline
     /// commits through (<see cref="IKernelUnitOfWorkFactory"/>). Each command gets its own context and transaction;
@@ -27,17 +30,26 @@ public static class KernelPersistenceServiceCollectionExtensions
     /// <remarks>
     /// No automatic retry strategy is configured: a command's transaction is not safely re-runnable by EF Core. Callers
     /// retry the whole command with the same idempotency key instead (K-TX-3).
+    /// <para>
+    /// Every connection is scoped to one tenant by PostgreSQL Row-Level Security (K-ID-2, ADR-2250): the pipeline
+    /// binds each command's context to the command's tenant, and a context without a tenant cannot connect. Connect
+    /// as the application role (<see cref="KernelDatabase.GrantAppRoleSql"/>), not as the schema owner, and apply
+    /// migrations separately with <see cref="KernelDatabase.MigrateAsync"/>.
+    /// </para>
     /// </remarks>
     /// <param name="services">The service collection.</param>
-    /// <param name="connectionString">The <c>cadence</c> database connection string.</param>
+    /// <param name="connectionString">The <c>cadence</c> database connection string for the application role.</param>
     public static IServiceCollection AddKernelPersistence(this IServiceCollection services, string connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-        services.AddDbContextFactory<KernelDbContext>(options => options.UseNpgsql(
-            connectionString,
-            npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", KernelDbContext.Schema)));
+        services.AddDbContextFactory<KernelDbContext>(options =>
+        {
+            KernelDatabase.UseKernelNpgsql(options, connectionString);
+            options.AddInterceptors(TenantInterceptor);
+        });
+        services.TryAddSingleton<KernelTenantDbContextFactory>();
         services.TryAddSingleton<KernelUnitOfWorkFactory>();
         services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
         services.TryAddSingleton<KernelAuditChainVerifier>();

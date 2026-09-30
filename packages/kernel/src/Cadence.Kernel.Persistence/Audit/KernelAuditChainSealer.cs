@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +37,7 @@ internal sealed record SealResult(TenantId TenantId, SealOutcome Outcome, AuditC
 /// @req:PRD-SYS-053
 /// </summary>
 internal sealed partial class KernelAuditChainSealer(
-    IDbContextFactory<KernelDbContext> contextFactory,
+    KernelTenantDbContextFactory contextFactory,
     KernelAuditChainVerifier verifier,
     IClock clock,
     ILogger<KernelAuditChainSealer> logger)
@@ -59,7 +60,7 @@ internal sealed partial class KernelAuditChainSealer(
         }
 
         var sealedAt = KernelTimestamps.ToStoredPrecision(clock.UtcNow);
-        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using var db = contextFactory.Create(tenant);
         var inserted = await db.Database.ExecuteSqlAsync(
             $"""
             INSERT INTO kernel.audit_chain_seals (id, tenant_id, sequence, hash, sealed_at, sealed_by)
@@ -71,14 +72,13 @@ internal sealed partial class KernelAuditChainSealer(
         return new SealResult(tenant, inserted == 1 ? SealOutcome.Sealed : SealOutcome.UpToDate, verification);
     }
 
-    /// <summary>Seals every tenant that has an audit chain. One tenant's failure does not stop the others.</summary>
+    /// <summary>
+    /// Seals every tenant's chain, one tenant at a time, each through a connection scoped to that tenant (ADR-2250
+    /// rule 3). A tenant with no chain yet is up to date.
+    /// </summary>
     public async Task<IReadOnlyList<SealResult>> SealAllAsync(CancellationToken cancellationToken)
     {
-        List<TenantId> tenants;
-        await using (var db = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false))
-        {
-            tenants = await db.AuditChainHeads.AsNoTracking().Select(h => h.TenantId).ToListAsync(cancellationToken).ConfigureAwait(false);
-        }
+        var tenants = await contextFactory.ListTenantsAsync(cancellationToken).ConfigureAwait(false);
 
         var results = new List<SealResult>(tenants.Count);
         foreach (var tenant in tenants)

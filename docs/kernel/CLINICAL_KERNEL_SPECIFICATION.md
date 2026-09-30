@@ -211,6 +211,9 @@ Tenant
 - **K-ID-3** Cross-tenant exchange occurs only through an explicit, audited `DataSharingAgreement`.
 - **K-ID-4** Person identity is tenant-independent; roles and access are tenant-scoped.
 - A regulated customer MAY be placed in a dedicated database with the identical schema (ADR-2250 upgrade path).
+- *Implemented (#4780):* composite keys and forced Row-Level Security on every kernel table; the tenant is set on
+  each kernel connection by `KernelTenantConnectionInterceptor`; persons are visible through `tenant_memberships`;
+  system jobs list tenants through `kernel.tenant_ids()`. See ADR-2250 §6 and `packages/kernel/README.md`.
 
 ---
 
