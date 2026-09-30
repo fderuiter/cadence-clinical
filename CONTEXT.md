@@ -113,6 +113,11 @@ An architectural paradigm establishing a single, unified body of clinical truth 
 
 A persistence consolidation standard aligning .NET Aspire AppHost (`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto a single logical PostgreSQL database (`cadence`) with schema-level isolation (`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys, and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11 without distributed transactions.
 
+
+### Kernel Tenant Isolation
+
+The database-enforced separation of Cadence tenants in the `kernel` schema (ADR-2250, K-ID-1, K-ID-2). Every tenant-scoped table carries `tenant_id`, every reference between them is a composite `(tenant_id, id)` foreign key, and PostgreSQL Row-Level Security is enabled and forced on every table. The tenant is set on each kernel connection in one place (`KernelTenantConnectionInterceptor`); a connection without one sees nothing. `Person` is tenant-independent and visible to a tenant through a `TenantMembership`.
+_Avoid_: `WHERE tenant_id = …` as the only protection, schema-per-tenant `search_path`, connecting the application as the schema owner or a superuser
 ### Two-Tier Regulatory Traceability Standard
 
 A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `dotnet cadence gxp sync` to pass in strict mode.

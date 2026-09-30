@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Persistence.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -29,13 +30,13 @@ internal enum CommitStage
 }
 
 /// <summary>Creates a <see cref="KernelCommandTransaction"/> with its own <see cref="KernelDbContext"/> per command.</summary>
-internal sealed class KernelUnitOfWorkFactory(IDbContextFactory<KernelDbContext> contextFactory) : IKernelUnitOfWorkFactory
+internal sealed class KernelUnitOfWorkFactory(KernelTenantDbContextFactory contextFactory) : IKernelUnitOfWorkFactory
 {
     /// <summary>Test hook: invoked at each <see cref="CommitStage"/>; throwing aborts the commit.</summary>
     internal Action<CommitStage>? FaultInjector { get; set; }
 
     public IKernelCommandTransaction Begin(CommandExecution execution) =>
-        new KernelCommandTransaction(contextFactory.CreateDbContext(), execution, FaultInjector);
+        new KernelCommandTransaction(contextFactory.Create(execution.Command.TenantId), execution, FaultInjector);
 }
 
 /// <summary>

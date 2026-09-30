@@ -69,7 +69,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         result.Value.Should().Be(command.TenantId);
         result.Replayed.Should().BeFalse();
 
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         var tenant = await db.Tenants.AsNoTracking().SingleAsync(t => t.Id == command.TenantId, ct);
         tenant.CreatedBy.Should().Be(KernelPostgresFixture.ActorId);
         tenant.CreatedAt.Should().Be(KernelTimestamps.ToStoredPrecision(fixture.Clock.UtcNow).UtcDateTime);
@@ -193,7 +193,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         result.Error.HttpStatus.Should().Be(403);
         result.Error.Message.Should().Contain("tenant.provision");
 
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         (await db.Tenants.AnyAsync(t => t.Id == command.TenantId, ct)).Should().BeFalse();
         (await db.ProvenanceActivities.SingleAsync(a => a.TenantId == command.TenantId, ct)).Outcome.Should().Be("Denied");
         (await db.DomainEvents.SingleAsync(e => e.TenantId == command.TenantId, ct)).Type.Should().Be("DecisionDenied");
@@ -228,7 +228,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
         (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage($"Injected fault at {stage}.");
         (await CountWritesAsync(command.TenantId, ct)).Should().Be(new WriteCounts(0, 0, 0, 0));
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         (await db.Tenants.AnyAsync(t => t.Id == command.TenantId, ct)).Should().BeFalse();
         (await db.AuditChainHeads.AnyAsync(h => h.TenantId == command.TenantId, ct)).Should().BeFalse();
         (await db.OutboxMessages.AnyAsync(o => o.TenantId == command.TenantId, ct)).Should().BeFalse();
@@ -272,7 +272,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         var result = await fixture.Sender.SendAsync(register, cancellationToken: ct);
 
         result.Value.Should().Be(register.OrganizationId);
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         var organization = await db.Organizations.AsNoTracking().SingleAsync(o => o.Id == register.OrganizationId, ct);
         organization.Kind.Should().Be(OrganizationKind.Sponsor);
         var chain = await db.AuditEntries.AsNoTracking().Where(a => a.TenantId == tenant.TenantId).OrderBy(a => a.Sequence).ToListAsync(ct);
@@ -399,7 +399,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         secondCopy.Activate(Reason);
         (await second.CommitAsync("true", ct)).Should().Be(CommitOutcome.ConcurrencyConflict);
 
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         var stored = await db.StudySites.AsNoTracking().SingleAsync(s => s.Id == graph.StudySite.Id, ct);
         stored.VersionIndex.Should().Be(2, "one change is one version");
         stored.CreatedBy.Should().Be(KernelPostgresFixture.ActorId, "an update never rewrites the creator");
@@ -437,7 +437,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     private async Task<WriteCounts> CountWritesAsync(TenantId tenant, CancellationToken ct)
     {
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         return new WriteCounts(
             await db.ProvenanceActivities.CountAsync(a => a.TenantId == tenant, ct),
             await db.DomainEvents.CountAsync(e => e.TenantId == tenant, ct),
@@ -447,7 +447,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     private async Task ExecuteAsync(string sql, CancellationToken ct)
     {
-        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
         await connection.OpenAsync(ct);
         await using var command = new NpgsqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync(ct);

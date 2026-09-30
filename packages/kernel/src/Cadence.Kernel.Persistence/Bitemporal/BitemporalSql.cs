@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Cadence.Kernel.Persistence.Bitemporal;
 
@@ -16,7 +15,7 @@ namespace Cadence.Kernel.Persistence.Bitemporal;
 /// Used from migrations through <see cref="BitemporalMigrationBuilderExtensions"/>.
 /// @req:PRD-SYS-053
 /// </summary>
-internal static partial class BitemporalSql
+internal static class BitemporalSql
 {
     /// <summary>Name of the shared trigger function, created once in the kernel schema.</summary>
     public const string AppendOnlyFunctionName = "enforce_bitemporal_append_only";
@@ -35,7 +34,7 @@ internal static partial class BitemporalSql
     {
         var excluded = string.Concat(MutableColumns.Select(c => $" - '{c}'"));
         return $$"""
-            CREATE OR REPLACE FUNCTION {{Quote(schema)}}.{{AppendOnlyFunctionName}}() RETURNS trigger
+            CREATE OR REPLACE FUNCTION {{SqlIdentifier.Quote(schema)}}.{{AppendOnlyFunctionName}}() RETURNS trigger
             LANGUAGE plpgsql AS $fn$
             BEGIN
                 IF TG_OP IN ('DELETE', 'TRUNCATE') THEN
@@ -60,7 +59,7 @@ internal static partial class BitemporalSql
     }
 
     public static string DropAppendOnlyFunction(string schema) =>
-        $"DROP FUNCTION IF EXISTS {Quote(schema)}.{AppendOnlyFunctionName}();";
+        $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{AppendOnlyFunctionName}();";
 
     /// <summary>
     /// Adds the K-TIME-2 exclusion constraint and the K-TIME-1 triggers to a bitemporal table.
@@ -79,42 +78,34 @@ internal static partial class BitemporalSql
             throw new ArgumentException("A single-truth constraint needs at least one entity key column.", nameof(entityKeyColumns));
         }
 
-        var qualified = $"{Quote(schema)}.{Quote(table)}";
-        var keys = string.Join(", ", new[] { "tenant_id" }.Concat(entityKeyColumns).Select(c => $"{Quote(c)} WITH ="));
+        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
+        var keys = string.Join(", ", new[] { "tenant_id" }.Concat(entityKeyColumns).Select(c => $"{SqlIdentifier.Quote(c)} WITH ="));
         return $"""
-            ALTER TABLE {qualified} ADD CONSTRAINT {Quote(ExclusionConstraintName(table))}
-                EXCLUDE USING gist ({keys}, {Quote(BitemporalEntityTypeBuilderExtensions.ValidPeriodColumn)} WITH &&, {Quote(BitemporalEntityTypeBuilderExtensions.RecordedPeriodColumn)} WITH &&)
+            ALTER TABLE {qualified} ADD CONSTRAINT {SqlIdentifier.Quote(ExclusionConstraintName(table))}
+                EXCLUDE USING gist ({keys}, {SqlIdentifier.Quote(BitemporalEntityTypeBuilderExtensions.ValidPeriodColumn)} WITH &&, {SqlIdentifier.Quote(BitemporalEntityTypeBuilderExtensions.RecordedPeriodColumn)} WITH &&)
                 DEFERRABLE INITIALLY DEFERRED;
-            CREATE TRIGGER {Quote(RowTriggerName(table))} BEFORE UPDATE OR DELETE ON {qualified}
-                FOR EACH ROW EXECUTE FUNCTION {Quote(schema)}.{AppendOnlyFunctionName}();
-            CREATE TRIGGER {Quote(TruncateTriggerName(table))} BEFORE TRUNCATE ON {qualified}
-                FOR EACH STATEMENT EXECUTE FUNCTION {Quote(schema)}.{AppendOnlyFunctionName}();
+            CREATE TRIGGER {SqlIdentifier.Quote(RowTriggerName(table))} BEFORE UPDATE OR DELETE ON {qualified}
+                FOR EACH ROW EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{AppendOnlyFunctionName}();
+            CREATE TRIGGER {SqlIdentifier.Quote(TruncateTriggerName(table))} BEFORE TRUNCATE ON {qualified}
+                FOR EACH STATEMENT EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{AppendOnlyFunctionName}();
             """;
     }
 
     public static string DropGuards(string schema, string table)
     {
-        var qualified = $"{Quote(schema)}.{Quote(table)}";
+        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
         return $"""
-            DROP TRIGGER IF EXISTS {Quote(TruncateTriggerName(table))} ON {qualified};
-            DROP TRIGGER IF EXISTS {Quote(RowTriggerName(table))} ON {qualified};
-            ALTER TABLE {qualified} DROP CONSTRAINT IF EXISTS {Quote(ExclusionConstraintName(table))};
+            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(TruncateTriggerName(table))} ON {qualified};
+            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(RowTriggerName(table))} ON {qualified};
+            ALTER TABLE {qualified} DROP CONSTRAINT IF EXISTS {SqlIdentifier.Quote(ExclusionConstraintName(table))};
             """;
     }
 
-    public static string ExclusionConstraintName(string table) => Truncate($"ex_{table}_single_truth");
+    public static string ExclusionConstraintName(string table) => SqlIdentifier.Truncate($"ex_{table}_single_truth");
 
-    public static string RowTriggerName(string table) => Truncate($"trg_{table}_append_only");
+    public static string RowTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_append_only");
 
-    public static string TruncateTriggerName(string table) => Truncate($"trg_{table}_no_truncate");
+    public static string TruncateTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_no_truncate");
 
-    private static string Truncate(string name) => name.Length <= 63 ? name : name[..63];
 
-    private static string Quote(string identifier) =>
-        SafeIdentifier().IsMatch(identifier)
-            ? $"\"{identifier}\""
-            : throw new ArgumentException($"'{identifier}' is not a lower-case snake_case identifier.", nameof(identifier));
-
-    [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$")]
-    private static partial Regex SafeIdentifier();
 }

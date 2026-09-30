@@ -113,3 +113,34 @@ Rules that implement the decision:
   - Migration test: RLS enabled and forced on every `kernel` table; `cadence_app` lacks `BYPASSRLS`.
   - Integration test (PostgreSQL): tenant A cannot read tenant B's rows; FK insert pointing at tenant B's row fails;
     a transaction with no tenant set reads zero rows.
+
+### Implementation notes (#4780, 2026-09-30)
+
+These refine how the rules above are carried out; the decision is unchanged.
+
+- **Rule 2, scope of the setting.** `KernelTenantConnectionInterceptor` sets `cadence.tenant_id` when a kernel
+  context opens a connection and clears it before the connection is closed, instead of once per transaction. A command
+  reads its aggregate before it opens its write transaction, and EF Core runs those reads as separate statements, so
+  a transaction-local value would be gone before the reads. Each connection lease belongs to one context, and each
+  context is bound once to one tenant by `KernelTenantDbContextFactory`. A context with no tenant cannot open a
+  connection. Npgsql also discards session state when a connection returns to its pool, and the policies compare with
+  `NULLIF(…, '')`, so a cleared value sees nothing.
+- **Rule 3, listing tenants.** `kernel.tenant_ids()` is a `SECURITY DEFINER` function that returns tenant ids only.
+  It turns on `cadence.tenant_directory` for its own execution, and a read-only policy on `tenants` admits rows only
+  when that setting is on and the caller is the table owner, which inside the function it is. The application role
+  can call the function but cannot reproduce it: it does not own the table. The outbox relay and the verify-and-seal
+  job list tenants this way and then work through a connection scoped to each tenant. The relay's batch size is per
+  tenant.
+- **Persons (K-ID-4).** `people` has no `tenant_id`. Its policy shows a person only when the current tenant has a
+  `tenant_memberships` row for them, and any tenant may register a person. Organization memberships and grants arrive
+  with the authority model (#4781). The global unique index on `people.email` still reveals whether an address is
+  registered somewhere; the IdentityVault (#4782) replaces it with blind indexes.
+- **Rule 1, grants.** `KernelDatabase.GrantAppRoleSql(role)` grants the application role read, insert and update on
+  the kernel tables, no update on insert-only tables, no delete, nothing on the migration history, and execute on the
+  directory function. Role creation stays with deployment.
+- **Scope.** The command tables (`provenance_activities`, `domain_events`, `audit_entries`, …) carry `tenant_id`
+  and the policy but no foreign keys to each other; they are written only by the pipeline in one transaction.
+- **Verified by** `KernelTenantIsolationPostgresTests` (schema-wide RLS check, application-role check, cross-tenant
+  read, cross-tenant foreign key, no tenant, persons, tenant directory, pipeline under RLS),
+  `KernelDbContextModelTests` (composite foreign keys in the model), and the kernel PostgreSQL fixture, which now runs
+  every pipeline test as a non-owner role without `BYPASSRLS`.

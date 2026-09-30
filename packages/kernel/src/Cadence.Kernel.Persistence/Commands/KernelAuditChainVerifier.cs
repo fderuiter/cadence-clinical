@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Persistence.Tenancy;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Kernel.Persistence.Commands;
@@ -34,13 +36,13 @@ internal sealed record AuditChainVerification(
 /// The head is read first and only links up to it are checked. A link and its head update commit together, so
 /// commands appending while the verifier runs never make an intact chain look broken.
 /// </remarks>
-internal sealed class KernelAuditChainVerifier(IDbContextFactory<KernelDbContext> contextFactory)
+internal sealed class KernelAuditChainVerifier(KernelTenantDbContextFactory contextFactory)
 {
     private const int BatchSize = 1000;
 
     public async Task<AuditChainVerification> VerifyAsync(TenantId tenant, CancellationToken cancellationToken)
     {
-        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using var db = contextFactory.Create(tenant);
 
         var head = await db.AuditChainHeads.AsNoTracking()
             .SingleOrDefaultAsync(h => h.TenantId == tenant, cancellationToken).ConfigureAwait(false);

@@ -603,3 +603,363 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.sites DROP CONSTRAINT "FK_sites_organizations_institution_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.studies DROP CONSTRAINT "FK_studies_organizations_sponsor_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.study_sites DROP CONSTRAINT "FK_study_sites_sites_site_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.study_sites DROP CONSTRAINT "FK_study_sites_studies_study_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    DROP INDEX kernel."IX_study_sites_site_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    DROP INDEX kernel."IX_study_sites_tenant_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    DROP INDEX kernel."IX_studies_sponsor_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    DROP INDEX kernel."IX_sites_tenant_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.study_sites ADD CONSTRAINT "AK_study_sites_tenant_id_id" UNIQUE (tenant_id, id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.studies ADD CONSTRAINT "AK_studies_tenant_id_id" UNIQUE (tenant_id, id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.sites ADD CONSTRAINT "AK_sites_tenant_id_id" UNIQUE (tenant_id, id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.organizations ADD CONSTRAINT "AK_organizations_tenant_id_id" UNIQUE (tenant_id, id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE TABLE kernel.tenant_memberships (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        person_id uuid NOT NULL,
+        is_active boolean NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_tenant_memberships" PRIMARY KEY (id),
+        CONSTRAINT "AK_tenant_memberships_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_tenant_memberships_people_person_id" FOREIGN KEY (person_id) REFERENCES kernel.people (id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_tenant_memberships_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE INDEX "IX_study_sites_tenant_id_site_id" ON kernel.study_sites (tenant_id, site_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE INDEX "IX_study_sites_tenant_id_study_id" ON kernel.study_sites (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE INDEX "IX_studies_tenant_id_sponsor_id" ON kernel.studies (tenant_id, sponsor_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE INDEX "IX_sites_tenant_id_institution_id" ON kernel.sites (tenant_id, institution_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE INDEX "IX_tenant_memberships_person_id" ON kernel.tenant_memberships (person_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE UNIQUE INDEX "IX_tenant_memberships_tenant_id_person_id" ON kernel.tenant_memberships (tenant_id, person_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.sites ADD CONSTRAINT "FK_sites_organizations_tenant_id_institution_id" FOREIGN KEY (tenant_id, institution_id) REFERENCES kernel.organizations (tenant_id, id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.studies ADD CONSTRAINT "FK_studies_organizations_tenant_id_sponsor_id" FOREIGN KEY (tenant_id, sponsor_id) REFERENCES kernel.organizations (tenant_id, id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.study_sites ADD CONSTRAINT "FK_study_sites_sites_tenant_id_site_id" FOREIGN KEY (tenant_id, site_id) REFERENCES kernel.sites (tenant_id, id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE kernel.study_sites ADD CONSTRAINT "FK_study_sites_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    CREATE OR REPLACE FUNCTION "kernel".current_tenant_id() RETURNS uuid
+    LANGUAGE sql STABLE PARALLEL SAFE AS $fn$
+        SELECT NULLIF(pg_catalog.current_setting('cadence.tenant_id', true), '')::uuid
+    $fn$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."tenants" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."tenants" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."tenants"
+        USING (id = "kernel".current_tenant_id())
+        WITH CHECK (id = "kernel".current_tenant_id());
+    CREATE POLICY tenant_directory ON "kernel"."tenants" FOR SELECT
+        USING (pg_catalog.current_setting('cadence.tenant_directory', true) = 'on'
+           AND pg_catalog.pg_has_role(current_user, (SELECT c.relowner FROM pg_catalog.pg_class c WHERE c.oid = 'kernel.tenants'::regclass), 'MEMBER'));
+    CREATE OR REPLACE FUNCTION "kernel".tenant_ids() RETURNS SETOF uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path = pg_catalog, pg_temp
+    SET cadence.tenant_directory = 'on'
+    AS $fn$
+        SELECT t.id FROM "kernel"."tenants" t ORDER BY t.id
+    $fn$;
+    REVOKE ALL ON FUNCTION "kernel".tenant_ids() FROM PUBLIC;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."people" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."people" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "person_visibility" ON "kernel"."people"
+        USING (EXISTS (SELECT 1 FROM "kernel"."tenant_memberships" m WHERE m.person_id = "people".id))
+        WITH CHECK ("kernel".current_tenant_id() IS NOT NULL);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."organizations" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."organizations" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."organizations"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."sites" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."sites" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."sites"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."studies" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."studies" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."studies"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."study_sites" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."study_sites" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."study_sites"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."tenant_memberships" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."tenant_memberships" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."tenant_memberships"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."provenance_activities" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."provenance_activities" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."provenance_activities"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."domain_events" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."domain_events" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."domain_events"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."audit_entries" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."audit_entries" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."audit_entries"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."audit_chain_heads" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."audit_chain_heads" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."audit_chain_heads"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."audit_chain_seals" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."audit_chain_seals" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."audit_chain_seals"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."outbox_messages" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."outbox_messages" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."outbox_messages"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    ALTER TABLE "kernel"."idempotency_records" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."idempotency_records" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."idempotency_records"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930001034_TenantIsolation', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Commands;
@@ -11,6 +12,7 @@ using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Outbox;
+using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
 
@@ -27,10 +29,13 @@ namespace Cadence.UnitTests.Kernel.Integration;
 
 /// <summary>
 /// PostgreSQL fixture for the kernel schema. Opt in with <c>CADENCE_TEST_POSTGRES</c> (an Npgsql connection string
-/// to an existing server): the fixture creates a throwaway database, applies the kernel migrations, wires the command
-/// pipeline exactly as a host does (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/>
-/// plus <see cref="KernelApplicationServiceCollectionExtensions.AddKernelCommandPipeline"/>) with a settable actor
-/// and authorizer, and drops the database afterwards.
+/// to an existing server, as a superuser): the fixture creates a throwaway database, applies the kernel migrations as
+/// the owner, creates a login role granted exactly <see cref="KernelDatabase.GrantAppRoleSql"/> (not the owner, no
+/// <c>BYPASSRLS</c>), wires the command pipeline for that role exactly as a host does
+/// (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/> plus
+/// <see cref="KernelApplicationServiceCollectionExtensions.AddKernelCommandPipeline"/>) with a settable actor and
+/// authorizer, and drops the database and role afterwards. Every pipeline test therefore runs under Row-Level
+/// Security (ADR-2250).
 /// Without it, tests call <see cref="SkipIfUnavailable"/> and report as skipped rather than passing against a
 /// stand-in. Once opted in, any startup failure is rethrown.
 /// </summary>
@@ -40,12 +45,20 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     private const string SkipReason = "Kernel PostgreSQL tests need CADENCE_TEST_POSTGRES=<connection string>.";
 
-    private string? _adminConnectionString;
+    private string? _serverConnectionString;
     private string? _databaseName;
+    private string? _appRole;
     private readonly ConcurrentBag<IServiceScope> _scopes = [];
     private ServiceProvider? _services;
 
+    /// <summary>The application role's connection string: not the owner, no <c>BYPASSRLS</c>.</summary>
     public string? ConnectionString { get; private set; }
+
+    /// <summary>A superuser connection to the test database, which bypasses Row-Level Security.</summary>
+    public string? AdminConnectionString { get; private set; }
+
+    /// <summary>The application role's name.</summary>
+    public string? AppRole => _appRole;
 
     public FakeClock Clock { get; } = new();
 
@@ -68,16 +81,24 @@ public class KernelPostgresFixture : IAsyncLifetime
             return;
         }
 
-        _adminConnectionString = external;
+        _serverConnectionString = external;
         _databaseName = $"cadence_kernel_it_{Guid.NewGuid():N}";
-        await using (var admin = new NpgsqlConnection(external))
-        {
-            await admin.OpenAsync().ConfigureAwait(false);
-            await using var create = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\"", admin);
-            await create.ExecuteNonQueryAsync().ConfigureAwait(false);
-        }
+        _appRole = $"{_databaseName}_app";
+        var password = Guid.NewGuid().ToString("N");
+        await ExecuteAsync(external, $"CREATE DATABASE \"{_databaseName}\"").ConfigureAwait(false);
+        await ExecuteAsync(external, $"CREATE ROLE \"{_appRole}\" LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}'").ConfigureAwait(false);
 
-        ConnectionString = new NpgsqlConnectionStringBuilder(external) { Database = _databaseName }.ConnectionString;
+        AdminConnectionString = new NpgsqlConnectionStringBuilder(external) { Database = _databaseName }.ConnectionString;
+        ConnectionString = new NpgsqlConnectionStringBuilder(external)
+        {
+            Database = _databaseName,
+            Username = _appRole,
+            Password = password,
+        }.ConnectionString;
+
+        await KernelDatabase.MigrateAsync(AdminConnectionString).ConfigureAwait(false);
+        await OnMigratedAsync(AdminConnectionString).ConfigureAwait(false);
+        await ExecuteAsync(AdminConnectionString, KernelDatabase.GrantAppRoleSql(_appRole)).ConfigureAwait(false);
 
         _services = new ServiceCollection()
             .AddSingleton<IClock>(Clock)
@@ -89,16 +110,12 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelPersistence(ConnectionString)
             .AddKernelCommandPipeline()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
-
-        await using (var context = CreateContext())
-        {
-            await context.Database.MigrateAsync().ConfigureAwait(false);
-        }
-
-        await OnMigratedAsync(ConnectionString).ConfigureAwait(false);
     }
 
-    /// <summary>Runs once after the kernel migrations are applied, for fixtures that add test-only objects.</summary>
+    /// <summary>
+    /// Runs once as the superuser after the kernel migrations are applied, before the application role is granted,
+    /// for fixtures that add test-only objects.
+    /// </summary>
     protected virtual ValueTask OnMigratedAsync(string connectionString) => ValueTask.CompletedTask;
 
     /// <summary>A command sender resolved from a fresh scope, as a request would get one.</summary>
@@ -113,17 +130,38 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     internal KernelOutboxRelay OutboxRelay => Scope().GetRequiredService<KernelOutboxRelay>();
 
-    /// <summary>Creates a context wired as the kernel host wires it. Reads only: writes go through the pipeline.</summary>
-    internal KernelDbContext CreateContext() =>
+    /// <summary>
+    /// A context wired as the kernel host wires it, connected as the application role and scoped to
+    /// <paramref name="tenant"/> by Row-Level Security. Reads only: writes go through the pipeline.
+    /// </summary>
+    internal KernelDbContext CreateContext(TenantId tenant) =>
+        Scope().GetRequiredService<KernelTenantDbContextFactory>().Create(tenant);
+
+    /// <summary>The tenant-scoped context factory the kernel uses, including the tenant directory.</summary>
+    internal KernelTenantDbContextFactory TenantContexts => Scope().GetRequiredService<KernelTenantDbContextFactory>();
+
+    /// <summary>A context from the host's factory that was never bound to a tenant; it must not be able to connect.</summary>
+    internal KernelDbContext CreateUnboundContext() =>
         Scope().GetRequiredService<IDbContextFactory<KernelDbContext>>().CreateDbContext();
 
     /// <summary>
-    /// Inserts rows directly, bypassing the pipeline, for tests of database constraints that commands would never
-    /// reach. Nothing else in the tests writes this way.
+    /// A superuser context over the test database: it bypasses Row-Level Security, so tests use it to inspect every
+    /// tenant's rows at once. Reads only, except through <see cref="SeedAsync"/>.
+    /// </summary>
+    internal KernelDbContext CreateAdminContext()
+    {
+        var options = new DbContextOptionsBuilder<KernelDbContext>();
+        KernelDatabase.UseKernelNpgsql(options, AdminConnectionString ?? throw new InvalidOperationException(SkipReason));
+        return new KernelDbContext(options.Options);
+    }
+
+    /// <summary>
+    /// Inserts rows directly as the superuser, bypassing the pipeline and Row-Level Security (not constraints), for
+    /// tests of database constraints that commands would never reach. Nothing else in the tests writes this way.
     /// </summary>
     internal async Task SeedAsync(params object[] entities)
     {
-        await using var context = CreateContext();
+        await using var context = CreateAdminContext();
         using var writes = context.PermitPipelineWrites();
         context.AddRange(entities);
         await context.SaveChangesAsync().ConfigureAwait(false);
@@ -148,14 +186,20 @@ public class KernelPostgresFixture : IAsyncLifetime
             await _services.DisposeAsync().ConfigureAwait(false);
         }
 
-        if (_databaseName is not null && _adminConnectionString is not null)
+        if (_databaseName is not null && _serverConnectionString is not null)
         {
             NpgsqlConnection.ClearAllPools();
-            await using var admin = new NpgsqlConnection(_adminConnectionString);
-            await admin.OpenAsync().ConfigureAwait(false);
-            await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);
-            await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+            await ExecuteAsync(_serverConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
+            await ExecuteAsync(_serverConnectionString, $"DROP ROLE IF EXISTS \"{_appRole}\"").ConfigureAwait(false);
         }
+    }
+
+    private static async Task ExecuteAsync(string connectionString, string sql)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 }
 

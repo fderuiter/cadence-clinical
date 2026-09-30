@@ -1,11 +1,13 @@
 using System.Linq;
 
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Testing;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 using Xunit;
 
@@ -33,11 +35,42 @@ public class KernelDbContextModelTests
         entityTypes.Select(e => e.GetTableName()).Should().BeEquivalentTo(
             "tenants", "organizations", "people", "sites", "studies", "study_sites",
             "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
-            "idempotency_records", "audit_chain_seals");
+            "idempotency_records", "audit_chain_seals", "tenant_memberships");
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
             .Select(p => p.GetColumnName())
             .Should().OnlyContain(c => c == c.ToLowerInvariant() && !c.Contains(' '));
+    }
+
+    /// <summary>
+    /// Validates K-ID-1 in the model: every kernel entity except <c>Tenant</c> and <c>Person</c> has a required
+    /// <c>TenantId</c>, and every foreign key between two tenant-scoped entities is composite, leading with
+    /// <c>TenantId</c> on both sides, so it can never point into another tenant. A plain foreign key to a tenant-scoped
+    /// table fails here before any migration is written.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "KernelDbContext_TenantScopedEntities_UseCompositeTenantForeignKeys")]
+    [Trait("Category", "Unit")]
+    [GxPRequirement("PRD-SYS-053")]
+    public void KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys()
+    {
+        using var context = CreateContext();
+        var entityTypes = context.Model.GetEntityTypes().ToList();
+        bool IsTenantScoped(IReadOnlyEntityType e) => !TenantIsolationSql.TablesWithoutTenantColumn.Contains(e.GetTableName()!);
+
+        foreach (var entity in entityTypes.Where(IsTenantScoped))
+        {
+            entity.FindProperty("TenantId").Should().NotBeNull($"{entity.GetTableName()} is tenant-scoped");
+            entity.FindProperty("TenantId")!.IsNullable.Should().BeFalse();
+        }
+
+        var tenantToTenantKeys = entityTypes.SelectMany(e => e.GetForeignKeys())
+            .Where(fk => IsTenantScoped(fk.DeclaringEntityType) && IsTenantScoped(fk.PrincipalEntityType))
+            .ToList();
+        tenantToTenantKeys.Should().NotBeEmpty();
+        tenantToTenantKeys.Should().OnlyContain(
+            fk => fk.Properties[0].Name == "TenantId" && fk.PrincipalKey.Properties[0].Name == "TenantId",
+            "every reference between tenant-scoped tables is (tenant_id, x_id) → (tenant_id, id)");
     }
 
     /// <summary>
