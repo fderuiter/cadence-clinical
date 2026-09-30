@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -959,6 +959,302 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930001034_TenantIsolation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930001034_TenantIsolation', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.code_systems (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        uri character varying(512) NOT NULL,
+        name character varying(255) NOT NULL,
+        publisher character varying(255) NOT NULL,
+        license character varying(32) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_code_systems" PRIMARY KEY (id),
+        CONSTRAINT "AK_code_systems_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_code_systems_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.concepts (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        origin character varying(32) NOT NULL,
+        external_code character varying(64),
+        kind character varying(32) NOT NULL,
+        status character varying(32) NOT NULL,
+        version integer NOT NULL,
+        preferred_label character varying(500) NOT NULL,
+        definition text NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_concepts" PRIMARY KEY (id),
+        CONSTRAINT "AK_concepts_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_concepts_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.code_system_versions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        code_system_id uuid NOT NULL,
+        version character varying(64) NOT NULL,
+        released_on date NOT NULL,
+        package_sha256 character(64) NOT NULL,
+        package_file_name character varying(255) NOT NULL,
+        package_source_uri character varying(1024) NOT NULL,
+        package_byte_length bigint NOT NULL,
+        package_format character varying(64) NOT NULL,
+        entry_count integer NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_code_system_versions" PRIMARY KEY (id),
+        CONSTRAINT "AK_code_system_versions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_code_system_versions_code_systems_tenant_id_code_system_id" FOREIGN KEY (tenant_id, code_system_id) REFERENCES kernel.code_systems (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_code_system_versions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.concept_revisions (
+        tenant_id uuid NOT NULL,
+        concept_id uuid NOT NULL,
+        version integer NOT NULL,
+        preferred_label character varying(500) NOT NULL,
+        definition text NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_concept_revisions" PRIMARY KEY (tenant_id, concept_id, version),
+        CONSTRAINT "FK_concept_revisions_concepts_tenant_id_concept_id" FOREIGN KEY (tenant_id, concept_id) REFERENCES kernel.concepts (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.code_system_entries (
+        tenant_id uuid NOT NULL,
+        code_system_version_id uuid NOT NULL,
+        ordinal integer NOT NULL,
+        code character varying(64) NOT NULL,
+        display character varying(1000) NOT NULL,
+        group_code character varying(64),
+        submission_value character varying(255),
+        definition text,
+        synonyms text[] NOT NULL,
+        CONSTRAINT "PK_code_system_entries" PRIMARY KEY (tenant_id, code_system_version_id, ordinal),
+        CONSTRAINT "FK_code_system_entries_code_system_versions_tenant_id_code_sys~" FOREIGN KEY (tenant_id, code_system_version_id) REFERENCES kernel.code_system_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TABLE kernel.concept_mappings (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        concept_id uuid NOT NULL,
+        concept_version integer NOT NULL,
+        code_system_version_id uuid NOT NULL,
+        code character varying(64) NOT NULL,
+        relation character varying(32) NOT NULL,
+        status character varying(32) NOT NULL,
+        evidence character varying(2000) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_concept_mappings" PRIMARY KEY (id),
+        CONSTRAINT "AK_concept_mappings_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_concept_mappings_code_system_versions_tenant_id_code_system~" FOREIGN KEY (tenant_id, code_system_version_id) REFERENCES kernel.code_system_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_concept_mappings_concept_revisions_tenant_id_concept_id_con~" FOREIGN KEY (tenant_id, concept_id, concept_version) REFERENCES kernel.concept_revisions (tenant_id, concept_id, version) ON DELETE RESTRICT,
+        CONSTRAINT "FK_concept_mappings_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE INDEX "IX_code_system_entries_tenant_id_code_system_version_id_code" ON kernel.code_system_entries (tenant_id, code_system_version_id, code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE UNIQUE INDEX "IX_code_system_entries_tenant_id_code_system_version_id_group_~" ON kernel.code_system_entries (tenant_id, code_system_version_id, group_code, code) NULLS NOT DISTINCT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE UNIQUE INDEX "IX_code_system_versions_tenant_id_code_system_id_version" ON kernel.code_system_versions (tenant_id, code_system_id, version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE UNIQUE INDEX "IX_code_systems_tenant_id_uri" ON kernel.code_systems (tenant_id, uri);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE INDEX "IX_concept_mappings_tenant_id_code_system_version_id_code" ON kernel.concept_mappings (tenant_id, code_system_version_id, code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE INDEX "IX_concept_mappings_tenant_id_concept_id" ON kernel.concept_mappings (tenant_id, concept_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE INDEX "IX_concept_mappings_tenant_id_concept_id_concept_version" ON kernel.concept_mappings (tenant_id, concept_id, concept_version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE UNIQUE INDEX "IX_concepts_tenant_id_external_code" ON kernel.concepts (tenant_id, external_code) WHERE external_code IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."code_systems" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."code_systems" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."code_systems"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."code_system_versions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."code_system_versions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."code_system_versions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."code_system_entries" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."code_system_entries" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."code_system_entries"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."concepts" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."concepts" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."concepts"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."concept_revisions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."concept_revisions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."concept_revisions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    ALTER TABLE "kernel"."concept_mappings" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."concept_mappings" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."concept_mappings"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TRIGGER "trg_code_system_versions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."code_system_versions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_code_system_versions_no_truncate" BEFORE TRUNCATE ON "kernel"."code_system_versions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TRIGGER "trg_code_system_entries_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."code_system_entries"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_code_system_entries_no_truncate" BEFORE TRUNCATE ON "kernel"."code_system_entries"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    CREATE TRIGGER "trg_concept_revisions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."concept_revisions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_concept_revisions_no_truncate" BEFORE TRUNCATE ON "kernel"."concept_revisions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930004914_ConceptRegistry') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930004914_ConceptRegistry', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;
