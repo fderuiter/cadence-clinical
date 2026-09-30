@@ -1,6 +1,6 @@
 # ADR-2590: Counts Limited to the Reader's Visible Scope
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-30
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

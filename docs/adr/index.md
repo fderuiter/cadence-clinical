@@ -90,7 +90,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2486: Work Queues as Capability-Keyed Definitions](2026-09-30-work-queues-as-capability-keyed-definitions.md) (2026-09-30)
 - [ADR-2487: Expected Schedule as a Pure Function of the Protocol Design](2026-09-30-expected-schedule-as-a-pure-function.md) (2026-09-30)
 - [ADR-2488: Study Pulse Metrics and Attention Rules as Versioned Indicators](2026-09-30-study-pulse-metrics-as-versioned-indicators.md) (2026-09-30)
-- [ADR-2590: Counts Limited to the Reader's Visible Scope](2026-09-30-counts-limited-to-the-readers-visible-scope.md) (2026-09-30) *(Proposed)*
+- [ADR-2590: Counts Limited to the Reader's Visible Scope](2026-09-30-counts-limited-to-the-readers-visible-scope.md) (2026-09-30)
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
