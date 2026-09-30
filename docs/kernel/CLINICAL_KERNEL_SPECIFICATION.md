@@ -306,7 +306,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 
 | Family | Examples |
 | --- | --- |
-| Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
+| Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished` (`LibraryItemApproved` with kind `MappingSpecification`, ADR-2463), `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityDeclared`, `EffectivityStatusChanged`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
@@ -507,6 +507,18 @@ enforces K-PROJ-1 against the shipped seeds.
 **Implemented (#4789, ADR-2503):** reusable form blocks. `CollectionSpecification` library item content is checked
 when it is drafted. Its items name CDISC Biomedical Concepts by C-code, and instantiating it in a tenant resolves them
 to a protocol design `CollectionSpec`. `Cadence.Standards` ships a checksum-verified vital signs block.
+
+**Implemented (#4810, [ADR-2463](../adr/2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md), K028):** mapping specifications and K-STD-1. A
+`MappingSpecification` is the content of a `MappingSpecification` library item, pinned to exactly one standard
+version, its CT versions and the Concept versions it maps; drafting checks every dataset and variable against the
+standard's registered package and links each reference as a `DefinedBy` input. Each mapping maps one Concept to a
+dataset: constant variables (value-level metadata such as `VSTESTCD`), the original result and unit, the result
+converted into a standard unit (`--STRESC/--STRESN/--STRESU`), and CT decodes. A study-level override is a versioned
+specification naming the base it overrides. `IMappingEngine` applies a specification to a collected value; the .NET
+engine is in `Cadence.Standards`. K-STD-1 is enforced when a protocol version is submitted for review: every Concept
+its CollectionSpec items record must be mapped in the study's pinned specifications, or the gap must be an accepted
+Design finding (`MappingGap`); the protocol version records the mapping versions it relies on as `MappedBy` inputs.
+The format is described in [MAPPING_SPECIFICATIONS.md](MAPPING_SPECIFICATIONS.md).
 
 ---
 
@@ -1205,6 +1217,7 @@ kernel, is merged into another, or is retired.
 | K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
 | K026 | Indicators | Pulse metrics, attention rules, KRIs and QTLs as versioned indicators in released `IndicatorSet` library items; counted through `IRuleEvaluator`; results carry the definition version, hashes, contributors and an explanation | ADR-2488 |
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
+| K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
 
 ---
 

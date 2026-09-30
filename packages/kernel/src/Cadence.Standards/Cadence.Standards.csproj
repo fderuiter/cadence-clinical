@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Standards</RootNamespace>
     <AssemblyName>Cadence.Standards</AssemblyName>
-    <Description>Standards subsystem (spec §6.3): loaders for public standards content (CDISC Library) into Standards Registry packages, and reusable collection specifications (form blocks). Depends on Cadence.Kernel.Abstractions only.</Description>
+    <Description>Standards subsystem (spec §6.3): loaders for public standards content (CDISC Library) into Standards Registry packages, reusable collection specifications (form blocks), and the .NET mapping engine behind IMappingEngine. Depends on Cadence.Kernel.Abstractions only.</Description>
     <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
     <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>

@@ -29,7 +29,7 @@ public enum LibraryItemKind
     /// <summary>A reusable collection specification (items bound to concepts, units and terminology).</summary>
     CollectionSpecification,
 
-    /// <summary>A mapping specification from concepts to standard variables (#4810).</summary>
+    /// <summary>A mapping specification from concepts to standard variables (ADR-2463, <c>Cadence.Kernel.Standards.Mapping</c>).</summary>
     MappingSpecification,
 
     /// <summary>A pack of versioned rules (#4811).</summary>
@@ -167,4 +167,11 @@ public static class StandardsErrors
 
     public static readonly KernelError StudyUnknown =
         new("K.Standards.StudyUnknown", 404, "The study does not exist.");
+
+    /// <summary>
+    /// K-STD-1: a collected Concept has no mapping in the study's declared standards and no accepted gap finding, or
+    /// the study's pinned mapping specifications cannot be used together (ADR-2463).
+    /// </summary>
+    public static readonly KernelError MappingMissing =
+        new("K.Standards.MappingMissing", 422, "Every collected concept needs a mapping in the study's declared standards (K-STD-1).");
 }
