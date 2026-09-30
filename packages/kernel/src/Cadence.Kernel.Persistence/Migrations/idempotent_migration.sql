@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -2962,6 +2962,139 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930090624_ValidationRunsAndFindings', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    ALTER TABLE kernel.grants DROP CONSTRAINT ck_grants_scope;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE TABLE kernel.effectivities (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        scope_level character varying(16) NOT NULL,
+        scope_country character varying(2),
+        scope_study_site_id uuid,
+        status character varying(32) NOT NULL,
+        status_since timestamp with time zone NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_effectivities" PRIMARY KEY (id),
+        CONSTRAINT "AK_effectivities_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_effectivities_scope CHECK ((scope_level = 'Study' AND scope_country IS NULL AND scope_study_site_id IS NULL) OR (scope_level = 'Country' AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$' AND scope_study_site_id IS NULL) OR (scope_level = 'StudySite' AND scope_country IS NULL AND scope_study_site_id IS NOT NULL)),
+        CONSTRAINT "FK_effectivities_protocol_versions_tenant_id_protocol_version_~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_effectivities_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_effectivities_study_sites_tenant_id_scope_study_site_id_stu~" FOREIGN KEY (tenant_id, scope_study_site_id, study_id) REFERENCES kernel.study_sites (tenant_id, id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_effectivities_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE TABLE kernel.effectivity_status_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        effectivity_id uuid NOT NULL,
+        status character varying(32) NOT NULL,
+        evidence uuid[] NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_effectivity_status_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_effectivity_status_periods_effectivities_tenant_id_effectiv~" FOREIGN KEY (tenant_id, effectivity_id) REFERENCES kernel.effectivities (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    ALTER TABLE kernel.grants ADD CONSTRAINT ck_grants_scope CHECK ((scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE UNIQUE INDEX "IX_effectivities_tenant_id_protocol_version_id_scope_level_sco~" ON kernel.effectivities (tenant_id, protocol_version_id, scope_level, scope_country, scope_study_site_id) NULLS NOT DISTINCT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE INDEX "IX_effectivities_tenant_id_scope_study_site_id_study_id" ON kernel.effectivities (tenant_id, scope_study_site_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE INDEX "IX_effectivities_tenant_id_study_id" ON kernel.effectivities (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    CREATE INDEX "IX_effectivity_status_periods_tenant_id_effectivity_id" ON kernel.effectivity_status_periods (tenant_id, effectivity_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    ALTER TABLE "kernel"."effectivity_status_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."effectivity_status_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."effectivity_status_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    ALTER TABLE "kernel"."effectivities" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."effectivities" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."effectivities"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    ALTER TABLE "kernel"."effectivity_status_periods" ADD CONSTRAINT "ex_effectivity_status_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "effectivity_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_effectivity_status_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."effectivity_status_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_effectivity_status_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."effectivity_status_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930094042_EffectivityAndStudySiteActivation', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

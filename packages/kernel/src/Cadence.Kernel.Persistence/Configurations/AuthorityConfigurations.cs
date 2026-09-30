@@ -42,7 +42,7 @@ internal sealed class GrantConfiguration : IEntityTypeConfiguration<Grant>
                 "ck_grants_scope",
                 "(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL)"
                 + " OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL)"
-                + " OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')");
+                + " OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')");
         });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.GranteeKind).HasConversion<string>().HasMaxLength(32).IsRequired();

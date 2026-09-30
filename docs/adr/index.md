@@ -43,6 +43,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K021 | Grants, roles and delegation as bitemporal kernel authority | [ADR-2455](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) |
 | K022 | Validation findings derived from immutable runs and attested decisions | [ADR-2462](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) |
 | K023 | Work queues as capability-keyed definitions | [ADR-2486](2026-09-30-work-queues-as-capability-keyed-definitions.md) |
+| K024 | Effectivity and study-site activation | [ADR-2456](2026-09-30-effectivity-and-study-site-activation.md) |
 | K025 | Expected schedule as a pure function of the protocol design | [ADR-2487](2026-09-30-expected-schedule-as-a-pure-function.md) |
 
 ## Domain-Based Decisions Log
@@ -64,6 +65,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2453: Participants, Bitemporal Enrollment Lifecycle and Gap-Free Enrollment Numbering](2026-09-30-participants-enrollment-lifecycle-and-gap-free-numbering.md) (2026-09-30)
 - [ADR-2454: Evidence Artifacts as Immutable, Hash-Addressed Versions](2026-09-30-evidence-artifacts-as-immutable-hash-addressed-versions.md) (2026-09-30)
 - [ADR-2455: Grants, Roles and Delegation as Bitemporal Kernel Authority](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) (2026-09-30)
+- [ADR-2456: Effectivity and Study-Site Activation](2026-09-30-effectivity-and-study-site-activation.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
 - [ADR-2462: Validation Findings Derived from Immutable Runs and Attested Decisions](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) (2026-09-30)

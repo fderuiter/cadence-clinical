@@ -180,7 +180,8 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
 
     /// <summary>
     /// Validates the database guards (K-TIME-1, K-AUTH-4 by construction): grant validity rows are append-only
-    /// (SQLSTATE KT001), roles cannot change (KA001), and a grant must name exactly one capability or role.
+    /// (SQLSTATE KT001), roles cannot change (KA001), a grant must name exactly one capability or role, and a
+    /// study-country grant must name its country.
     /// </summary>
     [Fact(DisplayName = "Authority_DatabaseGuards_KeepHistoryAndRoles")]
     public async Task AuthorityDatabaseGuardsKeepHistoryAndRoles()
@@ -197,6 +198,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
             ($"DELETE FROM kernel.grant_periods WHERE grant_id = '{grant.GrantId.Value}'", BitemporalSql.AppendOnlyViolationSqlState),
             ($"UPDATE kernel.roles SET capabilities = ARRAY['enrollment.unblind'] WHERE id = '{role.RoleId.Value}'", "KA001"),
             ($"UPDATE kernel.grants SET capability = 'observation.record' WHERE id = '{grant.GrantId.Value}'", PostgresErrorCodes.CheckViolation),
+            ($"UPDATE kernel.grants SET scope_level = 'StudyCountry', scope_country = NULL WHERE id = '{grant.GrantId.Value}'", PostgresErrorCodes.CheckViolation),
         })
         {
             var act = () => ExecuteAsAdminAsync(statement, ct);

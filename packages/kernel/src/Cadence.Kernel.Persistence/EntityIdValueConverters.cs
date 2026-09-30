@@ -120,3 +120,8 @@ public class WorkQueueDefinitionIdValueConverter() : ValueConverter<WorkQueueDef
     id => id.Value,
     guid => new WorkQueueDefinitionId(guid)
 );
+
+public class EffectivityIdValueConverter() : ValueConverter<EffectivityId, Guid>(
+    id => id.Value,
+    guid => new EffectivityId(guid)
+);

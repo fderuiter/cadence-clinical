@@ -13,6 +13,7 @@ using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence;
@@ -159,6 +160,9 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The protocol version read port, as a host gets it.</summary>
     public IProtocolVersionReader ProtocolVersions => Scope().GetRequiredService<IProtocolVersionReader>();
+
+    /// <summary>The effectivity read port, as applications get it.</summary>
+    public IEffectivityReader Effectivity => Scope().GetRequiredService<IEffectivityReader>();
 
     /// <summary>The tenant code directory, as a host gets it.</summary>
     public ITenantDirectory TenantDirectory => Scope().GetRequiredService<ITenantDirectory>();

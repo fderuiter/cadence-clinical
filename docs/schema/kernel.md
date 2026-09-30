@@ -20,6 +20,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
 | [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
+| [`kernel.effectivities`](#kerneleffectivities) | `Effectivity` | 13 |
+| [`kernel.effectivity_status_periods`](#kerneleffectivity_status_periods) | `EffectivityStatusPeriod` | 7 |
 | [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods) | `EnrollmentStatusPeriod` | 8 |
 | [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
 | [`kernel.grant_periods`](#kernelgrant_periods) | `GrantPeriod` | 5 |
@@ -412,6 +414,66 @@ Indexes:
 - `IX_domain_events_activity_id`: (`activity_id`)
 - `IX_domain_events_tenant_id_recorded`: (`tenant_id`, `recorded`)
 
+## kernel.effectivities
+
+Entity: `Effectivity`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `scope_country` | `character varying(2)` | yes |  |  |
+| `scope_level` | `character varying(16)` | no |  |  |
+| `scope_study_site_id` | `uuid` | yes |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `status_since` | `timestamp with time zone` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_effectivities_protocol_versions_tenant_id_protocol_version_~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_effectivities_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_effectivities_study_sites_tenant_id_scope_study_site_id_stu~`: (`tenant_id`, `scope_study_site_id`, `study_id`) references `kernel.study_sites` (`tenant_id`, `id`, `study_id`), on delete restrict
+- `FK_effectivities_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_effectivities_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_effectivities_tenant_id_protocol_version_id_scope_level_sco~`: unique (`tenant_id`, `protocol_version_id`, `scope_level`, `scope_country`, `scope_study_site_id`)
+- `IX_effectivities_tenant_id_scope_study_site_id_study_id`: (`tenant_id`, `scope_study_site_id`, `study_id`)
+- `IX_effectivities_tenant_id_study_id`: (`tenant_id`, `study_id`)
+
+Check constraints:
+
+- `ck_effectivities_scope`: `(scope_level = 'Study' AND scope_country IS NULL AND scope_study_site_id IS NULL) OR (scope_level = 'Country' AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$' AND scope_study_site_id IS NULL) OR (scope_level = 'StudySite' AND scope_country IS NULL AND scope_study_site_id IS NOT NULL)`
+
+## kernel.effectivity_status_periods
+
+Entity: `EffectivityStatusPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `effectivity_id` | `uuid` | no |  |  |
+| `evidence` | `uuid[]` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_effectivity_status_periods_effectivities_tenant_id_effectiv~`: (`tenant_id`, `effectivity_id`) references `kernel.effectivities` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_effectivity_status_periods_tenant_id_effectivity_id`: (`tenant_id`, `effectivity_id`)
+
 ## kernel.enrollment_status_periods
 
 Entity: `EnrollmentStatusPeriod`
@@ -538,7 +600,7 @@ Indexes:
 
 Check constraints:
 
-- `ck_grants_scope`: `(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')`
+- `ck_grants_scope`: `(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')`
 - `ck_grants_target`: `(capability IS NULL) <> (role_id IS NULL)`
 
 ## kernel.idempotency_records
