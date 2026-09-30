@@ -101,8 +101,6 @@ public static class Program
             () => NotImplemented("'setup credentials' is not implemented yet. Copy .env.example to .env and fill in the values described in docs/ENVIRONMENT_VARIABLES.md."));
 
         var record = AddBranch(root, "record", "E2E recording and media tools");
-        AddCommand(record, "setup-gdrive", "Not implemented yet: configures Google Drive for session recordings",
-            () => NotImplemented("'record setup-gdrive' is not implemented yet."));
         AddCommand(record, "list", "Not implemented yet: lists recorded session videos",
             () => NotImplemented("'record list' is not implemented yet."));
         AddCommand(record, "run", "Not implemented yet: runs a Playwright E2E recording session",

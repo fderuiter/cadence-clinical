@@ -285,10 +285,6 @@ Not implemented yet. Copy `.env.example` to `.env` and fill in the values descri
 
 ### `cadence record`
 
-#### `cadence record setup-gdrive`
-
-Not implemented yet.
-
 #### `cadence record list`
 
 Not implemented yet.

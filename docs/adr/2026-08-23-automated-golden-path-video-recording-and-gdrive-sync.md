@@ -1,5 +1,10 @@
 # ADR-2210: Automated Golden Path Video Recording and GDrive Sync
 
+> [!NOTE]
+> Amended by [ADR-2505](2026-09-30-recording-evidence-goes-to-controlled-object-storage.md). Recording evidence is
+> stored through the platform's object storage port, not Google Drive. The recording suites and the Triple Sentinel
+> gate stand.
+
 - **Status:** Accepted
 - **Date:** 2026-08-23
 - **Authors:** @fderuiter
