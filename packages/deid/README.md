@@ -9,7 +9,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 - `DeidTransforms`, `DeidAirGapVault`.
 - `DicomDeidentifier` (with `DicomDeidResult`, `DicomDeidCertificate`, `PixelMaskBoundingBox`), built on fo-dicom.
 - `RedactionManifestBuilder`, `RedactionManifest`, `RedactionRecordItem`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `cli.py`, `__main__.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- No Python reference sources remain (#4789). The repository scanner `cli.py` became the `check deid` gate (`packages/tooling_core/src/Services/DeidComplianceService.cs`, [docs/cli.md](../../docs/cli.md#cadence-check)).
 
 ## Key dependencies
 
@@ -18,7 +18,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 
 ## Referenced by
 
-`packages/compliance`, `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it directly.
+`packages/compliance`, `packages/tooling_core` (the `deid` gate), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it directly.
 
 ## Tests
 

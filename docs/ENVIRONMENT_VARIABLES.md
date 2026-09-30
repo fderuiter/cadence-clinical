@@ -129,6 +129,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
+| `CADENCE_UPDATE_BASELINE` | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline) | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:214` | off |
 | `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
