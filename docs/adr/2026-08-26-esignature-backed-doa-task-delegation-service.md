@@ -72,7 +72,7 @@ We implement the core services under `apps/ctms/services/doa_service.py`:
 - **Negative Impact:**
   - Standard database migrations are required to backfill and deploy these GxP schemas.
 - **Cross-Reference:**
-  - This service works alongside central OIDC RBAC definitions located in [ADR-095](2026-08-08-centralized-rbac-toolkit.md).
+  - This service works alongside central OIDC RBAC definitions located in [ADR-059](2026-08-08-centralized-rbac-toolkit.md).
 
 ---
 
