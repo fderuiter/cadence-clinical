@@ -17,6 +17,8 @@ public class LocalCiRunnerTests
 
     private readonly List<string> _ran = [];
     private readonly Dictionary<string, int> _exitCodes = [];
+    private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _variables = [];
+    private readonly Dictionary<string, string?> _files = [];
 
     private static CiCommand Cmd(string name) => new("tool", [name]);
 
@@ -26,12 +28,20 @@ public class LocalCiRunnerTests
         IReadOnlyList<string>? files = null) => new()
         {
             RepoRoot = "/repo",
-            Run = (command, extra) =>
+            Run = (command, extra, variables) =>
             {
                 string name = command.Arguments[0];
                 _ran.Add(extra.Count == 0 ? name : $"{name} {string.Join(' ', extra)}");
+                _variables[name] = variables;
+                if (_files.ContainsKey("/repo/report.md"))
+                {
+                    _files["/repo/report.md"] = "rewritten by " + name;
+                }
+
                 return _exitCodes.GetValueOrDefault(name);
             },
+            ReadFile = path => _files.GetValueOrDefault(path),
+            RestoreFile = (path, content) => _files[path] = content,
             IsToolOnPath = tools ?? (_ => true),
             ProbePostgres = () => new CiPostgresStatus(postgres, postgres ? "reachable." : "Neither CADENCE_TEST_POSTGRES nor CADENCE_TEST_DOCKER=1 is set."),
             FindFiles = (_, _) => files ?? [],
@@ -191,5 +201,38 @@ public class LocalCiRunnerTests
 
         new[] { "a.cs", "b.md", "c.vue", "d.csproj" }.Where(p => CiPlan.MatchesFilePattern(step, p))
             .Should().Equal("a.cs", "c.vue");
+    }
+
+    [Fact]
+    public void AnEnvironmentVariable_IsPassedOnlyWhenItsStepPassed()
+    {
+        var docs = new CiStep("a", "docs")
+        {
+            Always = true,
+            EnvironmentIfPassed = [new CiEnvironmentIfPassed("a/all gates", "SKIP_CHECKS", "1")],
+            Commands = [Cmd("docs")],
+        };
+
+        LocalCiRunner.Run([Job("a", new CiStep("a", "all gates") { Commands = [Cmd("check")] }, docs)], Defaults, Environment());
+        _variables["docs"].Should().Equal(new Dictionary<string, string> { ["SKIP_CHECKS"] = "1" });
+
+        _exitCodes["check"] = 1;
+        LocalCiRunner.Run([Job("a", new CiStep("a", "all gates") { Commands = [Cmd("check")] }, docs)], Defaults, Environment());
+        _variables["docs"].Should().BeEmpty("the docs build must run the checks itself when they did not pass earlier");
+    }
+
+    [Fact]
+    public void RestoreFiles_ArePutBackAfterTheStep_EvenWhenItFails()
+    {
+        _files["/repo/report.md"] = "committed";
+        var step = new CiStep("a", "docs") { RestoreFiles = ["report.md"], Commands = [Cmd("docs")] };
+
+        LocalCiRunner.Run([Job("a", step)], Defaults, Environment());
+        _files["/repo/report.md"].Should().Be("committed");
+
+        _exitCodes["docs"] = 1;
+        var results = LocalCiRunner.Run([Job("a", step)], Defaults, Environment());
+        results.Single().Outcome.Should().Be(CiOutcome.Failed);
+        _files["/repo/report.md"].Should().Be("committed");
     }
 }
