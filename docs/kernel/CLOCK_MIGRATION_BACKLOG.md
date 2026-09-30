@@ -45,8 +45,8 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | --- | ---: | --- | --- |
 | payments | 22 | `Domain/PaymentEntities.cs` | `= DateTime.UtcNow` property initializers |
 | interop | ~~19~~ 0 | `Domain/InteropEntities.cs` | Done: `DeviceTimestamp` and `ServerTimestamp` no longer both default to server now (spec §10) |
-| econsent | 16 | `Domain/EconsentEntities.cs` | initializers |
-| safety | 15 | `Domain/SafetyEntities.cs` | initializers |
+| econsent | ~~16~~ 0 | `Domain/EconsentEntities.cs` | Done |
+| safety | ~~15~~ 0 | `Domain/SafetyEntities.cs` | Done |
 | imaging | ~~10~~ 0 | `Domain/ImagingEntities.cs` | Done |
 | knowledge | ~~6~~ 0 | `Domain/KnowledgeEntities.cs` | Done |
 | etmf | ~~4~~ 0 | `Domain/EtmfEntities.cs` | Done |

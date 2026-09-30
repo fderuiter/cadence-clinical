@@ -5,6 +5,7 @@ using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -89,6 +90,7 @@ public class EconsentScoreDecimalPrecisionTests
             SubjectPseudonym = "SUBJ-101",
             Passed = false,
             Score = 79.99m,
+            CreatedAt = FakeClock.DefaultStart,
             CreatedBy = "user-001",
             ReasonForChange = "Initial submission",
         };
@@ -101,6 +103,7 @@ public class EconsentScoreDecimalPrecisionTests
             SubjectPseudonym = "SUBJ-102",
             Passed = true,
             Score = 80.00m,
+            CreatedAt = FakeClock.DefaultStart,
             CreatedBy = "user-001",
             ReasonForChange = "Initial submission",
         };

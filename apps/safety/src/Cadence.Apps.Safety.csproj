@@ -2,6 +2,8 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Apps.Safety</RootNamespace>
     <Description>Cadence Clinical Safety Service (.NET 10 / C# 14 Minimal APIs).</Description>
+    <!-- #4784 K-TIME-3: time comes only from Cadence.Kernel.Time.IClock (see Directory.Build.props). -->
+    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>

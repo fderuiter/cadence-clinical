@@ -9,6 +9,7 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 - Project: `apps/econsent/src/Cadence.Apps.Econsent.csproj` (assembly `Cadence.Apps.Econsent`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (consent documents and templates, subject consents, signatures, comprehension checks, withdrawals, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `EconsentDbContext`, a design-time `EconsentDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144810_InitialCreate`, `20260928223000_ConvertEconsentScoreToDecimal`.
 

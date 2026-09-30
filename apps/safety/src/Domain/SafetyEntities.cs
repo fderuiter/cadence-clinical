@@ -8,7 +8,7 @@ public class IcsrReportingEvaluation
     public string CaseId { get; set; } = string.Empty;
     public string StudyId { get; set; } = string.Empty;
     public string SubjectId { get; set; } = string.Empty;
-    public DateTime ReceiptDate { get; set; }
+    public DateTimeOffset ReceiptDate { get; set; }
     public bool SeriousnessDeath { get; set; }
     public bool SeriousnessLifeThreatening { get; set; }
     public bool SeriousnessHospitalization { get; set; }
@@ -26,9 +26,9 @@ public class IcsrReportingEvaluation
     public string EvaluationsJson { get; set; } = "[]";
     public string ApprovalStatus { get; set; } = "DRAFT";
     public string? ApprovedByUserId { get; set; }
-    public DateTime? ApprovedAt { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -40,7 +40,7 @@ public class SafetyCaseIcsr
     public string WorldwideUniqueCaseId { get; set; } = string.Empty;
     public string PatientId { get; set; } = string.Empty;
     public string CaseDataJson { get; set; } = "{}";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -53,7 +53,7 @@ public class ExportJob
     public string Status { get; set; } = "PENDING";
     public string? Output { get; set; }
     public string? Error { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -63,8 +63,8 @@ public class SaeReconciliationRun
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string StudyId { get; set; } = string.Empty;
-    public DateTime RunDate { get; set; } = DateTime.UtcNow;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset RunDate { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -80,7 +80,7 @@ public class SaeDiscrepancy
     public string? ExpectedValue { get; set; }
     public string? ActualValue { get; set; }
     public string? MeddraVersion { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -93,7 +93,7 @@ public class SaeReconciliationJob
     public string Status { get; set; } = "PENDING";
     public string? RunId { get; set; }
     public string? Error { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -116,9 +116,9 @@ public class SafetyNarrative
     public double ConfidenceScore { get; set; } = 1.0;
     public string ReviewStatus { get; set; } = "DRAFT_AI";
     public string? ApprovedByUserId { get; set; }
-    public DateTime? ApprovedAt { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -127,7 +127,7 @@ public class SafetyNarrative
 public class SafetyAuditLog
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -159,18 +159,18 @@ public class As2Transmission
     public string? MdnDisposition { get; set; }
     public string? MdnMic { get; set; }
     public string? MdnStatus { get; set; }
-    public DateTime? MdnReceivedAt { get; set; }
+    public DateTimeOffset? MdnReceivedAt { get; set; }
     public string? AckAStatus { get; set; }
-    public DateTime? AckAReceivedAt { get; set; }
+    public DateTimeOffset? AckAReceivedAt { get; set; }
     public string? AckBStatus { get; set; }
-    public DateTime? AckBReceivedAt { get; set; }
+    public DateTimeOffset? AckBReceivedAt { get; set; }
     public string AckBErrorsJson { get; set; } = "[]";
     public string? AckCStatus { get; set; }
-    public DateTime? AckCReceivedAt { get; set; }
+    public DateTimeOffset? AckCReceivedAt { get; set; }
     public string AckCDetailsJson { get; set; } = "{}";
     public string? ErrorMessage { get; set; }
     public int RetryCount { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -184,7 +184,7 @@ public class As2TransmissionAuditLog
     public string? FromStatus { get; set; }
     public string? ToStatus { get; set; }
     public string Details { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -199,7 +199,7 @@ public class SafetySignalDetectionRun
     public int TotalCasesAnalyzed { get; set; }
     public int SignalsDetectedCount { get; set; }
     public string SummaryMetricsJson { get; set; } = "[]";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -234,9 +234,9 @@ public class SafetySignalAlert
     public string? ReviewJustification { get; set; }
     public string? ClinicalSummary { get; set; }
     public string? ReviewedBy { get; set; }
-    public DateTime? ReviewedAt { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -248,16 +248,16 @@ public class PeriodicSafetyReportRecord
     public string ReportType { get; set; } = "DSUR";
     public string StudyId { get; set; } = string.Empty;
     public string CompoundName { get; set; } = string.Empty;
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateTimeOffset PeriodStart { get; set; }
+    public DateTimeOffset PeriodEnd { get; set; }
     public string Status { get; set; } = "DRAFT";
     public int TotalSubjectExposure { get; set; }
     public int TotalSaes { get; set; }
     public string ReportPayloadJson { get; set; } = "{}";
     public string? ApprovedByUserId { get; set; }
-    public DateTime? ApprovedAt { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -280,7 +280,7 @@ public class DeviceSafetyInvestigation
     public bool IsUsade { get; set; }
     public bool VigilanceReportingRequired { get; set; } = true;
     public int VigilanceDeadlineDays { get; set; } = 15;
-    public DateTime VigilanceDueDate { get; set; }
+    public DateTimeOffset VigilanceDueDate { get; set; }
     public bool NotifiedBodyNotified { get; set; }
     public bool CompetentAuthorityNotified { get; set; }
     public string Status { get; set; } = "OPEN";
@@ -290,9 +290,9 @@ public class DeviceSafetyInvestigation
     public string? CapaReference { get; set; }
     public bool FscaRequired { get; set; }
     public string? SafetyPhysicianUserId { get; set; }
-    public DateTime? AdjudicatedAt { get; set; }
+    public DateTimeOffset? AdjudicatedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
