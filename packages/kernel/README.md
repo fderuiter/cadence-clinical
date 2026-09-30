@@ -399,6 +399,12 @@ var dossier = await lineage.DossierAsync(tenant, reader, node);
 - Objects the reader may not see (the host's `INodeVisibility`) come back masked: no `Ref`, a `masked:n` handle and a
   `MaskReason`. They are never dropped.
 
+**Dependents and impact.** `DependentsAsync(tenant, reader, new DependentsQuery(node))` returns what depends on an object,
+grouped by kind with counts (Canvas D2). Counts are of objects, not versions. Masked objects are counted like any
+other, so every screen and every reader gets the same number. `IAmendmentImpact.ComputeAsync(tenant, reader,
+amendedVersion)` is K-PROT-2 as one caller of it: the dependents of the parent version, not walking through the fork
+itself. Forking a protocol version links the fork to its parent (`DerivedFrom`).
+
 ## Activity stream (ADR-2485)
 
 `IActivityStream.ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(study), Families: [EventFamily.Trust]))`
