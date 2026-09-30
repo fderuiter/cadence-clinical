@@ -26,6 +26,7 @@
     <Compile Remove="Audit/**" />
     <Compile Remove="Packages/**" />
     <Compile Remove="Kernel/**" />
+    <Compile Remove="Integration/**" />
     <Compile Remove="Gateway/**" />
     <Compile Remove="SecurityAndDomainTests.cs" />
     <Compile Remove="ArchitectureSentinelTests.cs" />
