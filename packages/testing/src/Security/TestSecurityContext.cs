@@ -23,6 +23,9 @@ public static class TestSecurityContext
     /// <summary>Test-only gateway secret; long enough to pass the host's startup validation.</summary>
     public const string GatewaySecret = "cadence-test-gateway-secret-0123456789abcdef";
 
+    /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
+    public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
+
     /// <summary>The identity signed onto requests when a test does not name one.</summary>
     public static GatewayIdentity DefaultIdentity { get; } = new(
         UserId: "test-user",
@@ -92,4 +95,8 @@ public static class SignedClientExtensions
     /// <summary>Supplies the test gateway secret so the host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestGatewaySecret(this IWebHostBuilder builder) =>
         builder.UseSetting("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+
+    /// <summary>Supplies the test demographics encryption key so the execution host's startup validation passes.</summary>
+    public static IWebHostBuilder UseTestDemographicsKey(this IWebHostBuilder builder) =>
+        builder.UseSetting("DemographicsEncryption:KeyBase64", TestSecurityContext.DemographicsKeyBase64);
 }

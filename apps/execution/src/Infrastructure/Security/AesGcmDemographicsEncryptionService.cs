@@ -20,7 +20,7 @@ public sealed class AesGcmDemographicsEncryptionService : IDemographicsEncryptio
 
     public AesGcmDemographicsEncryptionService(IOptions<DemographicsEncryptionOptions> options)
     {
-        _key = Convert.FromBase64String(options.Value.KeyBase64);
+        _key = Convert.FromBase64String(options.Value.KeyBase64.Trim());
     }
 
     public string Encrypt(IReadOnlyDictionary<string, object?> demographics)

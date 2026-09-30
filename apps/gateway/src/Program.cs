@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using Yarp.ReverseProxy.Configuration;
 
@@ -58,11 +59,21 @@ builder.Services.AddOptions<GatewaySigningOptions>()
         $"GATEWAY_SECRET must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
     .ValidateOnStart();
 
+// Each service's address. Only in Development does a missing address fall back to the local port; anywhere
+// else the gateway refuses to start rather than forwarding to localhost, and an address that is not an
+// absolute http(s) URL fails startup in every environment.
 string GetServiceUrl(string envVar, int defaultPort)
 {
-    return builder.Configuration[envVar] is { Length: > 0 } url
+    if (builder.Configuration[envVar] is not { Length: > 0 } url)
+    {
+        return builder.Environment.IsDevelopment()
+            ? new UriBuilder(Uri.UriSchemeHttp, "localhost", defaultPort).ToString()
+            : throw new InvalidOperationException($"{envVar} must be set to the service's base URL outside Development.");
+    }
+
+    return Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
         ? url
-        : new UriBuilder(Uri.UriSchemeHttp, "localhost", defaultPort).ToString();
+        : throw new InvalidOperationException($"{envVar} must be an absolute http or https URL (was '{url}').");
 }
 
 string designerUrl = GetServiceUrl("DESIGNER_SERVICE_URL", 8001);

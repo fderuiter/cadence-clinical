@@ -30,15 +30,18 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 | `OIDC_AUDIENCE` | no | Expected `aud` claim; validated when set. |
 | `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
 | `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
-| `<SERVICE>_SERVICE_URL` | no | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`. |
+| `<SERVICE>_SERVICE_URL` | outside Development | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs. |
 | `GATEWAY_PROXY_TIMEOUT_SECONDS` | no (default `30`) | Idle time after which a proxied request fails with 504. |
 | `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`) | How often each service's `/healthz/ready` is probed. |
 | `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | no (default `5`) | Time limit for one probe. |
 
 ## Routes
 
-Each route forwards a whole path prefix to one service. Service addresses come from `<SERVICE>_SERVICE_URL` and
-default to `http://localhost:<port>` (the ports in [docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)).
+Each route forwards a whole path prefix to one service. Service addresses come from `<SERVICE>_SERVICE_URL`. In
+Development a missing address defaults to `http://localhost:<port>` (the ports in
+[docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)); in any other environment the gateway refuses to
+start without it. An address that is not an absolute http or https URL fails startup everywhere
+(`tests/Gateway/GatewayServiceUrlValidationTests.cs`).
 
 | Path prefix | Service | Address key |
 | --- | --- | --- |

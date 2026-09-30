@@ -99,19 +99,13 @@ builder.Services.AddProblemDetails(options =>
 builder.Services.AddHttpContextAccessor();
 
 // Rule 7 demographics encryption key (AesGcmDemographicsEncryptionService, MIG-SUBJ-015): bound from
-// configuration, never a literal in source -- closing the exact hardcoded-Fernet-key trap `01_spec.md` §3
-// names. No "DemographicsEncryption" configuration section exists yet anywhere in this repo (no
-// appsettings.json has been added for any .NET service so far, per a solution-wide search performed while
-// implementing this ticket) -- binding against configuration regardless, rather than inlining a literal
-// default here, is what keeps the "never a literal in source" guarantee intact even before a real deployment
-// value is supplied. DemographicsEncryptionOptions.KeyBase64's own `string.Empty` default
-// (Infrastructure/Security/DemographicsEncryptionOptions.cs) is what lets
-// AesGcmDemographicsEncryptionService's constructor still resolve cleanly with no configuration present
-// (Convert.FromBase64String("") is a valid zero-length key, not a throw) -- satisfying this ticket's own
-// DI-resolves-at-startup boundary check; an actual Encrypt/Decrypt call with no real key configured would
-// fail downstream at the AesGcm layer, which is a deployment-configuration concern outside this ticket's
-// scope.
-builder.Services.Configure<DemographicsEncryptionOptions>(builder.Configuration.GetSection("DemographicsEncryption"));
+// configuration, never a literal in source (the hardcoded-Fernet-key trap `01_spec.md` §3 names). There is
+// no default: the host refuses to start without a valid AES key, so a missing key fails at boot, not on the
+// first subject registration.
+builder.Services.AddOptions<DemographicsEncryptionOptions>()
+    .Bind(builder.Configuration.GetSection(DemographicsEncryptionOptions.SectionName))
+    .Validate(options => DemographicsEncryptionOptions.IsValidKey(options.KeyBase64), DemographicsEncryptionOptions.InvalidKeyMessage)
+    .ValidateOnStart();
 
 // IClock / IDemographicsEncryptionService / IDemographicsNormalizationService -- all three Singleton per
 // `02_technical_design.md` §2's DI-lifetime table ("stateless, holds [at most] configured key material").

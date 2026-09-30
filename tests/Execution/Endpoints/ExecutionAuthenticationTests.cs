@@ -202,7 +202,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public void HostStartup_WithoutGatewaySecret_FailsFast()
     {
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
-            .WithWebHostBuilder(builder => builder.UseSetting("GATEWAY_SECRET", string.Empty));
+            .WithWebHostBuilder(builder => builder.UseTestDemographicsKey().UseSetting("GATEWAY_SECRET", string.Empty));
 
         Action start = () => unconfigured.CreateClient();
 

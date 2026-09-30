@@ -142,13 +142,14 @@ public static class Program
         var withHostBuilderMethod = factoryType.GetMethod("WithWebHostBuilder");
         // WebApplicationFactory guesses the content root from the assembly name, which does not match
         // the apps/<service>/src layout, so set it explicitly.
-        // The services refuse to start without auth settings. Export only reads route metadata,
-        // so a throwaway secret and an unreachable authority are enough.
+        // The services refuse to start without auth settings and, for execution, a demographics key. Export
+        // only reads route metadata, so throwaway secrets and an unreachable authority are enough.
         Action<IWebHostBuilder> configureHostBuilder = builder => builder
             .UseEnvironment("Development")
             .UseContentRoot(svc.ContentRoot)
             .UseSetting("GATEWAY_SECRET", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
-            .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export");
+            .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export")
+            .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);
