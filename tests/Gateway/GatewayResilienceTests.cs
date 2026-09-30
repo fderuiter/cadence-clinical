@@ -34,7 +34,6 @@ namespace Cadence.UnitTests.Gateway;
 /// <summary>
 /// Checks that the gateway bounds how long it waits on a service and stops forwarding to a service whose
 /// readiness probe fails, answering 503 at once instead, until the service is ready again.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GatewayResilienceTests
 {
@@ -42,7 +41,6 @@ public sealed class GatewayResilienceTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task EveryCluster_HasTimeoutAndActiveAndPassiveHealthChecks()
     {
         await using var gateway = CreateGateway("http://127.0.0.1:1");
@@ -62,7 +60,6 @@ public sealed class GatewayResilienceTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ServiceThatIsNotReady_Gets503WithoutForwarding_UntilItIsReadyAgain()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -91,7 +88,6 @@ public sealed class GatewayResilienceTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ServiceThatStopsResponding_Gets504AfterTheProxyTimeout()
     {
         var ct = TestContext.Current.CancellationToken;
