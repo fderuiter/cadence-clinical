@@ -27,13 +27,21 @@ public static class TestSecurityContext
     /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
     public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
 
+    /// <summary>
+    /// The tenant code test identities carry, as a sign-in token names one. There is no fallback tenant (#5038), so a
+    /// test of a caller without a tenant says so with <c>identity with { TenantId = null }</c>.
+    /// </summary>
+    public const string TenantCode = "tenant-test";
+
     /// <summary>The identity signed onto requests when a test does not name one.</summary>
     public static GatewayIdentity DefaultIdentity { get; } = new(
         UserId: "test-user",
         Roles: ["Data Manager", "CRA", "Site Investigator"],
-        SiteIds: []);
+        SiteIds: [],
+        TenantId: TenantCode);
 
-    public static GatewayIdentity Identity(string userId, params string[] roles) => new(userId, roles, []);
+    /// <summary>An identity for <paramref name="userId"/> with <paramref name="roles"/> in <see cref="TenantCode"/>.</summary>
+    public static GatewayIdentity Identity(string userId, params string[] roles) => new(userId, roles, [], TenantId: TenantCode);
 
     /// <summary>Signed gateway headers for <paramref name="identity"/>, issued now unless a time is given.</summary>
     public static IReadOnlyDictionary<string, string> CreateHmacHeaders(

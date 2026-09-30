@@ -2,12 +2,15 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Protocol.Design;
+
 namespace Cadence.Kernel.Protocol;
 
 /// <summary>
 /// Read-only access to a study's protocol versions (spec §6.2) for hosts that show them, such as the Canvas. Reads
 /// run under the tenant's Row-Level Security, so another tenant's version is never returned. The reader does not
-/// authorize the actor: the host checks the read with <c>CanI</c> first. Content is not returned.
+/// authorize the actor: the host checks the read with <c>CanI</c> first. Content is not returned, only its Schedule of
+/// Activities rendering (ADR-2475).
 /// </summary>
 public interface IProtocolVersionReader
 {
@@ -16,6 +19,12 @@ public interface IProtocolVersionReader
 
     /// <summary>One protocol version, or null when the tenant has no such version.</summary>
     Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The Schedule of Activities compiled from one version's design (ADR-2475), or null when the tenant has no such
+    /// version or its content is not a typed protocol design (ADR-2472).
+    /// </summary>
+    Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken);
 }
 
 /// <summary>A protocol version without its content.</summary>

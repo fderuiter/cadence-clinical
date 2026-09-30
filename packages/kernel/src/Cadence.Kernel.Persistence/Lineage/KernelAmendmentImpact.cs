@@ -10,6 +10,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
@@ -62,9 +63,9 @@ internal sealed class KernelAmendmentImpact(KernelTenantDbContextFactory context
             throw new InvalidOperationException($"Protocol version {version.Number} is a first version and amends nothing.");
         }
 
-        var diff = ProtocolStructuralDiff.Compare(
-            parentContent ?? throw new InvalidOperationException($"Protocol version {version.Number} names a parent the tenant does not have."),
-            version.Content);
+        var baseContent = parentContent
+            ?? throw new InvalidOperationException($"Protocol version {version.Number} names a parent the tenant does not have.");
+        var diff = ProtocolStructuralDiff.Compare(baseContent, version.Content);
         var changes = diff.IsSuccess
             ? diff.Value!.Where(c => c.ElementId != ProtocolStructuralDiff.RootId).ToList()
             : throw new InvalidOperationException($"Protocol version {version.Number} cannot be compared with its parent: {diff.Error!.Message}");
@@ -76,6 +77,12 @@ internal sealed class KernelAmendmentImpact(KernelTenantDbContextFactory context
             excluded: new HashSet<NodeRef> { NodeRef.For(amended) },
             followFromStart: ProtocolElementImpact.FollowFromBase(ProtocolElementImpact.Impacted(version.StudyId, changes)),
             cancellationToken).ConfigureAwait(false);
-        return new AmendmentImpact(amended, parent, amendment.ImpactedElements, dependents, changes);
+        return new AmendmentImpact(amended, parent, amendment.ImpactedElements, dependents, changes, Schedule(baseContent, version.Content));
     }
+
+    /// <summary>The Schedule of Activities directives (ADR-2475), when the amended content is a typed design.</summary>
+    private static SoaAmendmentDiff? Schedule(string parentContent, string content) =>
+        ProtocolDesignDocument.Read(content).Design is { } design
+            ? ScheduleOfActivitiesDiff.Compare(ProtocolDesignDocument.Read(parentContent).Design, design)
+            : null;
 }

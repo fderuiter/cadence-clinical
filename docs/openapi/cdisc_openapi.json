@@ -2538,6 +2538,78 @@
         }
       }
     },
+    "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "A protocol version\u0027s Schedule of Activities, compiled from its design.",
+        "description": "Planned activities as columns grouped by epoch, collection specifications as rows (ADR-2475). A version the caller may not see is refused.",
+        "operationId": "KernelGetScheduleOfActivities",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelScheduleOfActivitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/nodes/{nodeRef}/lineage": {
       "get": {
         "tags": [
@@ -5286,7 +5358,8 @@
           "parent",
           "impacted_elements",
           "dependents",
-          "changed_elements"
+          "changed_elements",
+          "schedule"
         ],
         "type": "object",
         "properties": {
@@ -5310,6 +5383,16 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelElementChangeResponse"
             }
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaAmendmentDiffResponse"
+              }
+            ]
           }
         }
       },
@@ -5864,6 +5947,60 @@
           }
         }
       },
+      "Kernel_KernelScheduleOfActivitiesResponse": {
+        "required": [
+          "version",
+          "content_hash",
+          "hash",
+          "title",
+          "epochs",
+          "columns",
+          "rows",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hash": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "epochs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaEpochResponse"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaColumnResponse"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaRowResponse"
+            }
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaFootnoteResponse"
+            }
+          }
+        }
+      },
       "Kernel_KernelSearchHitResponse": {
         "required": [
           "ref",
@@ -5907,6 +6044,380 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Kernel_KernelSoaAmendmentDiffResponse": {
+        "required": [
+          "directives",
+          "impacted_elements",
+          "impacted_concepts",
+          "undeclared",
+          "changes_schedule",
+          "changes_eligibility"
+        ],
+        "type": "object",
+        "properties": {
+          "directives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaDirectiveResponse"
+            }
+          },
+          "impacted_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "impacted_concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "undeclared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changes_schedule": {
+            "type": "boolean"
+          },
+          "changes_eligibility": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_KernelSoaColumnResponse": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "study_day",
+          "window_before",
+          "window_after",
+          "locations",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaDirectiveResponse": {
+        "required": [
+          "kind",
+          "element_id",
+          "impacted_elements",
+          "impacted_concepts",
+          "before",
+          "after",
+          "frequency_before",
+          "frequency_after",
+          "collected_at_added",
+          "collected_at_removed"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "element_id": {
+            "type": "string"
+          },
+          "impacted_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "impacted_concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaVisitResponse"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaVisitResponse"
+              }
+            ]
+          },
+          "frequency_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "frequency_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collected_at_added": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "collected_at_removed": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaEpochResponse": {
+        "required": [
+          "epoch_id",
+          "name",
+          "order",
+          "first_column",
+          "column_count"
+        ],
+        "type": "object",
+        "properties": {
+          "epoch_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "first_column": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "column_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_KernelSoaFootnoteResponse": {
+        "required": [
+          "number",
+          "kind",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelSoaRowResponse": {
+        "required": [
+          "collection_spec_id",
+          "name",
+          "item_ids",
+          "concepts",
+          "columns",
+          "frequency",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "collection_spec_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "item_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "frequency": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaVisitResponse": {
+        "required": [
+          "epoch_id",
+          "study_day",
+          "window_before",
+          "window_after",
+          "locations"
+        ],
+        "type": "object",
+        "properties": {
+          "epoch_id": {
+            "type": "string"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

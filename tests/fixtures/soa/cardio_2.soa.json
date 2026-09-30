@@ -1,0 +1,245 @@
+{
+  "title": "CARDIO-2",
+  "epochs": [
+    {
+      "epochId": "epoch.screening",
+      "name": "Screening",
+      "order": 1,
+      "firstColumn": 0,
+      "columnCount": 1
+    },
+    {
+      "epochId": "epoch.treatment",
+      "name": "Treatment",
+      "order": 2,
+      "firstColumn": 1,
+      "columnCount": 5
+    }
+  ],
+  "columns": [
+    {
+      "activityId": "visit.screening",
+      "name": "Screening",
+      "epochId": "epoch.screening",
+      "studyDay": -14,
+      "windowBefore": 7,
+      "windowAfter": 0,
+      "locations": [
+        "Telehealth"
+      ],
+      "footnotes": [
+        1,
+        2
+      ]
+    },
+    {
+      "activityId": "visit.baseline",
+      "name": "Baseline",
+      "epochId": "epoch.treatment",
+      "studyDay": 1,
+      "windowBefore": 0,
+      "windowAfter": 0,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": []
+    },
+    {
+      "activityId": "visit.week4",
+      "name": "Week 4",
+      "epochId": "epoch.treatment",
+      "studyDay": 29,
+      "windowBefore": 3,
+      "windowAfter": 3,
+      "locations": [
+        "Site",
+        "Home"
+      ],
+      "footnotes": [
+        3,
+        4
+      ]
+    },
+    {
+      "activityId": "visit.week8",
+      "name": "Week 8",
+      "epochId": "epoch.treatment",
+      "studyDay": 57,
+      "windowBefore": 3,
+      "windowAfter": 3,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": [
+        3
+      ]
+    },
+    {
+      "activityId": "visit.week12",
+      "name": "Week 12",
+      "epochId": "epoch.treatment",
+      "studyDay": 85,
+      "windowBefore": 3,
+      "windowAfter": 3,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": [
+        3
+      ]
+    },
+    {
+      "activityId": "visit.et",
+      "name": "Early termination",
+      "epochId": "epoch.treatment",
+      "windowBefore": 0,
+      "windowAfter": 0,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": [
+        5
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "collectionSpecId": "cs.consent",
+      "name": "Informed consent",
+      "itemIds": [
+        "item.consent"
+      ],
+      "concepts": [
+        {
+          "conceptId": "0192f3c4-0000-7000-8000-00000000000d",
+          "version": 1
+        }
+      ],
+      "columns": [
+        0
+      ],
+      "footnotes": [
+        6
+      ],
+      "frequency": 1
+    },
+    {
+      "collectionSpecId": "cs.vitals",
+      "name": "Vital signs",
+      "itemIds": [
+        "item.sbp"
+      ],
+      "concepts": [
+        {
+          "conceptId": "0192f3c4-0000-7000-8000-00000000000a",
+          "version": 1
+        }
+      ],
+      "columns": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "footnotes": [],
+      "frequency": 6
+    },
+    {
+      "collectionSpecId": "cs.labs",
+      "name": "Laboratory",
+      "itemIds": [
+        "item.hba1c"
+      ],
+      "concepts": [
+        {
+          "conceptId": "0192f3c4-0000-7000-8000-00000000000b",
+          "version": 2
+        }
+      ],
+      "columns": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "footnotes": [],
+      "frequency": 4
+    },
+    {
+      "collectionSpecId": "cs.ecg",
+      "name": "12-lead ECG",
+      "itemIds": [
+        "item.qt"
+      ],
+      "concepts": [
+        {
+          "conceptId": "0192f3c4-0000-7000-8000-00000000000c",
+          "version": 1
+        }
+      ],
+      "columns": [
+        1,
+        4
+      ],
+      "footnotes": [],
+      "frequency": 2
+    },
+    {
+      "collectionSpecId": "cs.pk",
+      "name": "Pharmacokinetics",
+      "itemIds": [
+        "item.pk"
+      ],
+      "concepts": [
+        {
+          "conceptId": "0192f3c4-0000-7000-8000-00000000000b",
+          "version": 2
+        }
+      ],
+      "columns": [],
+      "footnotes": [
+        7
+      ],
+      "frequency": 0
+    }
+  ],
+  "footnotes": [
+    {
+      "number": 1,
+      "kind": "Window",
+      "text": "Window: 7 days before, 0 days after."
+    },
+    {
+      "number": 2,
+      "kind": "Location",
+      "text": "May take place: by telehealth."
+    },
+    {
+      "number": 3,
+      "kind": "Window",
+      "text": "Window: 3 days either side."
+    },
+    {
+      "number": 4,
+      "kind": "Location",
+      "text": "May take place: at the site, at home."
+    },
+    {
+      "number": 5,
+      "kind": "EventDriven",
+      "text": "Not on a fixed day: done when the event that triggers it occurs."
+    },
+    {
+      "number": 6,
+      "kind": "Purpose",
+      "text": "Collected for: Documenting consent before any study procedure"
+    },
+    {
+      "number": 7,
+      "kind": "NotScheduled",
+      "text": "No planned activity collects it."
+    }
+  ]
+}
