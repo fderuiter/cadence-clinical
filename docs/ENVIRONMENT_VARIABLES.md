@@ -43,7 +43,8 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 
 Keys for `packages/security/src/FieldProtection` (#4770). Both are base64 encodings of exactly 32 random bytes
 (`openssl rand -base64 32`), are validated when the host starts, and have no default in any environment. Use two
-different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md).
+different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md). Under the Aspire AppHost, set them as the
+`field-encryption-key` and `field-lookup-hash-key` parameters.
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |

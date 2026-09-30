@@ -94,6 +94,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | — | Field-level encryption and keyed lookup hashes for secrets at rest | [ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md) |
 | — | `X-Change-Reason` is printable ASCII or RFC 8187 `UTF-8''` encoded, decoded before audit | [ADR-2495](docs/adr/2026-09-30-reason-for-change-header-encoding.md) |
 | — | Python reference sources are deleted once their C# port is tested | [ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) |
+| — | The developer CLI parses with System.CommandLine and publishes as Native AOT without suppressions | [ADR-2496](docs/adr/2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md) |
 | — | .NET 10 platform standards (C# 14, Minimal APIs, EF Core 10, CPM) | [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) |
 
 The full list is in the [ADR index](docs/adr/index.md).
@@ -223,6 +224,8 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - `IKernelSearch` finds studies, sites, organizations, concepts, terminology codes, standards and library items by
     code or title, querying the source tables under the tenant's RLS with GIN full-text indexes (ADR-2484).
   - Rule packs are released library items evaluated through `IRuleEvaluator` in `Cadence.Rules` (ADR-2461).
+  - A Participant is identity only. Each Enrollment in a study keeps a bitemporal status history, takes a
+    gap-free enrollment number under the study's lock, and needs an attestation to withdraw (ADR-2453).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
   and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`

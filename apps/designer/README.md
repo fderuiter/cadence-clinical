@@ -42,4 +42,4 @@ export GATEWAY_SECRET="<at least 32 characters>"
 dotnet run --project apps/designer/src/Cadence.Apps.Designer.csproj
 ```
 
-The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service (no datastore reference).
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8001, as docker compose does (no datastore reference).
