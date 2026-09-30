@@ -9,6 +9,7 @@ Notifications scaffold. It holds the notification record, delivery and audit mod
 - Project: `apps/notifications/src/Cadence.Apps.Notifications.csproj` (assembly `Cadence.Apps.Notifications`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (notification records, deliveries, audit log, render models).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `NotificationsDbContext`, a design-time `NotificationsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145241_InitialCreate`.
 - `../Templates/`: HTML Liquid templates (EDC query raised, eTMF expiry, missing diary, protocol amendment, re-consent required, SAE reconciliation) embedded into the assembly.

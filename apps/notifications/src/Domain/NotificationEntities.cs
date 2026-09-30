@@ -16,7 +16,7 @@ public class NotificationRecord
     public string Status { get; set; } = "OPEN";
     public string DeliveryState { get; set; } = "PENDING";
     public int Retries { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
     public string ReasonForChange { get; set; } = string.Empty;
@@ -25,7 +25,7 @@ public class NotificationRecord
 public class NotificationAuditLog
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string UserRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
@@ -40,8 +40,8 @@ public class NotificationDelivery
     public string Status { get; set; } = "PENDING";
     public int Attempts { get; set; }
     public string? LastError { get; set; }
-    public DateTime? NextRetryAt { get; set; }
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? NextRetryAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
     public bool RetryEligible { get; set; } = true;
 }
 
