@@ -15,11 +15,17 @@ and release a pack: [docs/kernel/RULE_PACKS.md](../../../../docs/kernel/RULE_PAC
 - `Evaluation/`: the `IRuleEvaluator` port and `DotNetRuleEvaluator`, which compiles each pack once and streams
   records. A Rust runtime can replace it behind the same port (K-RULE-3). `ValidationRunner` evaluates a study's
   pinned packs and records the result as a kernel validation run (`RecordValidationRun`, ADR-2462).
+- `Indicators/`: Study Pulse metrics, attention rules, KRIs and QTLs as versioned indicators
+  ([ADR-2488](../../../../docs/adr/2026-09-30-study-pulse-metrics-as-versioned-indicators.md),
+  [docs/kernel/INDICATORS.md](../../../../docs/kernel/INDICATORS.md)). `IndicatorSetJson` reads and writes
+  `IndicatorSet` library item content, `IndicatorSetContentValidator` validates it when drafted, `IndicatorSetLoader`
+  loads released sets by id or by a study's pins, and `IndicatorEvaluator` counts each population through
+  `IRuleEvaluator` and returns values with hashes, contributing objects and an explanation.
 
 ## Registration
 
-`services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader`, the content validator and the scoped
-`ValidationRunner`. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
+`services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader`, `IndicatorSetLoader`, `IndicatorEvaluator`,
+the two content validators and the scoped `ValidationRunner`. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
 `ValidationRunner` also needs the kernel's `IKernelCommandSender` and `IClock`, and the kernel host registers the
 validation handlers with `AddKernelValidation()` and `AddKernelValidationPersistence()`.
 

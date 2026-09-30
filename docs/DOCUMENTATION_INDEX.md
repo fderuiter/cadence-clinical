@@ -35,6 +35,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, authorization dry runs, search, protocol versions, Concept and Standards Registries, rule packs, validation findings, activity stream, expected schedule |
 | [Execution migration inventory](kernel/EXECUTION_MIGRATION_INVENTORY.md) | Current | What `apps/execution` must change to run on the kernel (roadmap phase 1) |
 | [Rule packs](kernel/RULE_PACKS.md) | Current | Writing, releasing and benchmarking rule packs (spec §10.1, ADR-2461) |
+| [Indicators](kernel/INDICATORS.md) | Current | Writing, releasing and evaluating Study Pulse indicators, KRIs and QTLs (spec §10.4, ADR-2488) |
 | [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
 | [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
 

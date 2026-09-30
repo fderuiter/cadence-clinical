@@ -227,7 +227,7 @@ public static partial class RulePackJson
         return stage is null ? null : new RuleApplicability(stage.Value, standard, standardVersion, agency, dataset);
     }
 
-    private static EffectivePeriod? ReadEffective(JsonElement rule, string path, List<string> problems)
+    internal static EffectivePeriod? ReadEffective(JsonElement rule, string path, List<string> problems)
     {
         path += ".effective";
         if (!rule.TryGetProperty("effective", out var json) || json.ValueKind == JsonValueKind.Null)
@@ -252,7 +252,7 @@ public static partial class RulePackJson
         return new EffectivePeriod(from, until);
     }
 
-    private static DateOnly? Date(JsonElement json, string name, string path, List<string> problems)
+    internal static DateOnly? Date(JsonElement json, string name, string path, List<string> problems)
     {
         var text = Text(json, name, path, problems, required: false);
         if (text is null)
@@ -269,7 +269,7 @@ public static partial class RulePackJson
         return null;
     }
 
-    private static string? Text(JsonElement json, string name, string path, List<string> problems, bool required)
+    internal static string? Text(JsonElement json, string name, string path, List<string> problems, bool required)
     {
         if (!json.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null)
         {
@@ -291,7 +291,7 @@ public static partial class RulePackJson
         return text;
     }
 
-    private static TEnum? Enum<TEnum>(JsonElement json, string name, string path, Dictionary<string, TEnum> names, List<string> problems, bool required)
+    internal static TEnum? Enum<TEnum>(JsonElement json, string name, string path, Dictionary<string, TEnum> names, List<string> problems, bool required)
         where TEnum : struct
     {
         var text = Text(json, name, path, problems, required);
@@ -309,7 +309,7 @@ public static partial class RulePackJson
         return null;
     }
 
-    private static void CheckProperties(JsonElement json, string path, List<string> problems, params string[] known)
+    internal static void CheckProperties(JsonElement json, string path, List<string> problems, params string[] known)
     {
         foreach (var property in json.EnumerateObject().Where(p => !known.Contains(p.Name, StringComparer.Ordinal)))
         {
