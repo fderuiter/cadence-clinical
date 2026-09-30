@@ -28,10 +28,15 @@ public partial class RuleEvaluator
     public bool StrictVariables { get; }
     public DateTime AsOf { get; }
 
-    public RuleEvaluator(bool strictVariables = false, DateTime? asOf = null)
+    /// <param name="asOf">
+    /// The instant that date functions such as <c>today()</c> and age calculations evaluate against. The caller
+    /// supplies it from its clock, so an evaluation can be repeated exactly (K-TIME-3).
+    /// </param>
+    /// <param name="strictVariables">When true, a variable missing from the context is an error.</param>
+    public RuleEvaluator(DateTime asOf, bool strictVariables = false)
     {
         StrictVariables = strictVariables;
-        AsOf = NormalizeToUtc(asOf ?? DateTime.UtcNow);
+        AsOf = NormalizeToUtc(asOf);
     }
 
     public object? Evaluate(ExpressionNode node, Dictionary<string, object?> context)

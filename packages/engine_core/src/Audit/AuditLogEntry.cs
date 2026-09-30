@@ -14,7 +14,11 @@ public sealed class AuditLogEntry
     public string EntityName { get; init; } = string.Empty;
     public string EntityId { get; init; } = string.Empty;
     public string Action { get; init; } = string.Empty;
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+    /// <summary>
+    /// When the audited change was saved, in UTC (see <see cref="NormalizeTimestamp"/>). The writer supplies it from
+    /// its injected clock; there is no wall-clock default (K-TIME-3).
+    /// </summary>
+    public required DateTime Timestamp { get; init; }
     public string UserId { get; init; } = string.Empty;
     public string ReasonForChange { get; init; } = string.Empty;
     public long VersionIndex { get; init; }

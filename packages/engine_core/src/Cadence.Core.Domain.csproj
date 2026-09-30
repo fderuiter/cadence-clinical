@@ -2,6 +2,8 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Core.Domain</RootNamespace>
     <Description>Pure domain entities, aggregate roots, value objects, and GxP audit interfaces for Cadence Clinical.</Description>
+    <!-- K-TIME-3 (#4784): time comes from the caller or an injected clock, never DateTime.Now/UtcNow. -->
+    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>

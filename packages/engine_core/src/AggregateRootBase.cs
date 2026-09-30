@@ -7,7 +7,12 @@ namespace Cadence.Core.Domain;
 /// </summary>
 public abstract class AggregateRootBase : IGxPAuditable
 {
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// When the aggregate was first saved, in UTC. It has no default: the save path stamps it from the injected
+    /// clock (the kernel command transaction, or <c>GxPAuditInterceptor</c> for services), never the wall clock
+    /// (K-TIME-3).
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public long VersionIndex { get; set; } = 1;
