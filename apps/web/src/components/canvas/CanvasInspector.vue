@@ -4,7 +4,7 @@
     class="inspector"
     aria-labelledby="canvas-inspector-title"
   >
-    <template v-if="observation || participant">
+    <template v-if="observation || participant || protocolVersion">
       <header v-if="observation" class="inspector-header">
         <span class="inspector-kind">Observation</span>
         <h2 id="canvas-inspector-title" class="inspector-title">
@@ -21,6 +21,15 @@
         </h2>
         <code id="canvas-inspector-ref" class="inspector-ref">{{
           nodeRef
+        }}</code>
+      </header>
+      <header v-else-if="protocolVersion" class="inspector-header">
+        <span class="inspector-kind">Protocol version</span>
+        <h2 id="canvas-inspector-title" class="inspector-title">
+          Version {{ protocolVersion.number }}
+        </h2>
+        <code id="canvas-inspector-ref" class="inspector-ref">{{
+          protocolVersion.ref
         }}</code>
       </header>
 
@@ -75,7 +84,7 @@
           (currentVerb === 'trace' || currentVerb === 'impact') && kernelRef
         "
         :node-ref="kernelRef"
-        :mode="currentVerb"
+        :mode="lineageMode"
       />
 
       <section
@@ -216,6 +225,35 @@
         </section>
       </template>
 
+      <dl v-else-if="protocolVersion" id="inspector-version" class="details">
+        <dt>Status</dt>
+        <dd id="inspector-version-status">{{ protocolVersion.status }}</dd>
+        <dt>Amends</dt>
+        <dd>
+          {{
+            protocolVersion.parent_version
+              ? protocolVersion.parent_version
+              : "Nothing: this is the study's first version"
+          }}
+        </dd>
+        <dt>Amendment intent</dt>
+        <dd>{{ protocolVersion.amendment_intent || "None recorded" }}</dd>
+        <dt>Content hash</dt>
+        <dd class="inspector-ref">
+          {{ protocolVersion.content_hash || "Not sealed yet" }}
+        </dd>
+        <template v-if="protocolVersion.approval_attestation">
+          <dt>Approved by</dt>
+          <dd class="inspector-ref">
+            {{ protocolVersion.approval_attestation }}
+          </dd>
+        </template>
+        <template v-if="protocolVersion.withdrawal_reason">
+          <dt>Withdrawn because</dt>
+          <dd>{{ protocolVersion.withdrawal_reason }}</dd>
+        </template>
+      </dl>
+
       <template v-else-if="participant">
         <dl class="details">
           <dt>State</dt>
@@ -263,6 +301,15 @@
       </template>
     </template>
 
+    <template v-else-if="protocolVersionError">
+      <h2 id="canvas-inspector-title" class="inspector-title">
+        Protocol version
+      </h2>
+      <p id="inspector-version-error" class="inspector-empty" role="alert">
+        The kernel couldn't answer: {{ protocolVersionError }}
+      </p>
+    </template>
+
     <template v-else-if="missing">
       <h2 id="canvas-inspector-title" class="inspector-title">
         Participant not loaded
@@ -295,13 +342,14 @@ import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
-import type { KernelCommand } from "../../api/kernelApi";
+import type { KernelCommand, KernelProtocolVersion } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
  * title and node reference, its verbs and its details. Trace, Impact, Act and Explain read the kernel's lineage,
- * dependents, command catalogue and explanations for a selected participant (ADR-2540); Simulate, and those four
+ * dependents, command catalogue and explanations for a selected participant or protocol version (ADR-2540); on an
+ * amendment, Impact is the amendment's impact (K-PROT-2). Simulate, and those four
  * verbs on an observation (which has no kernel reference yet), are shown disabled, each saying what it waits on. Nothing here is
  * computed in the browser (§6.1).
  */
@@ -313,6 +361,10 @@ const props = defineProps<{
   nodeRef: string;
   /** True when a participant is selected but the canvas has not loaded it. */
   missing: boolean;
+  /** The selected protocol version, as the kernel returned it (ADR-2540). */
+  protocolVersion?: KernelProtocolVersion | null;
+  /** Why the selected protocol version couldn't be read. */
+  protocolVersionError?: string;
   /** The selected observation; shown in place of the participant. */
   observation?: Observation | null;
   /** Where the participant's record opens; absent when it is already open. */
@@ -336,12 +388,22 @@ const props = defineProps<{
 const NO_KERNEL_REF =
   "an observation has no kernel reference yet, so the kernel can't answer for it.";
 
-/** The selection's kernel reference, when the kernel can answer for it: a participant, not an observation. */
-const kernelRef = computed(() =>
-  !props.observation && props.participant && parseNodeRef(props.nodeRef)
-    ? props.nodeRef
-    : ""
-);
+/** The selection's kernel reference, when the kernel can answer for it: a participant or protocol version, not an observation. */
+const kernelRef = computed(() => {
+  if (props.observation) return "";
+  if (props.participant)
+    return parseNodeRef(props.nodeRef) ? props.nodeRef : "";
+  const version = props.protocolVersion?.ref;
+  return version && parseNodeRef(version) ? version : "";
+});
+
+/** Impact on an amendment is the amendment's impact (K-PROT-2); on anything else, what depends on it. */
+const lineageMode = computed(() => {
+  if (currentVerb.value === "trace") return "trace";
+  return props.protocolVersion?.parent_version && !props.participant
+    ? "amendment"
+    : "impact";
+});
 
 interface Verb {
   id: "trace" | "impact" | "explain" | "simulate" | "act";
@@ -416,7 +478,7 @@ const queriesSummary = computed(() => {
 });
 
 watch(
-  () => [props.nodeRef, props.observation?.id],
+  () => [props.nodeRef, props.observation?.id, props.protocolVersion?.ref],
   () => {
     shownVerb.value = null;
     currentVerb.value = "details";

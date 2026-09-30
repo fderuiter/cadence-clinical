@@ -174,6 +174,14 @@
             @filter="applyParticipantFilter"
           />
 
+          <ProtocolVersionsSection
+            v-else-if="section?.id === 'protocol-versions'"
+            :key="studyCode"
+            :study-code="studyCode"
+            :selected-ref="selectedVersionText"
+            @select="selectVersion"
+          />
+
           <SiteActivationPanel
             v-else-if="section?.id === 'site-activation'"
             :key="studyCode"
@@ -221,6 +229,8 @@
           :node-ref="inspectedNodeText"
           :missing="Boolean(selectedNode) && !selectedParticipant"
           :observation="selectedObservation"
+          :protocol-version="inspectedVersion"
+          :protocol-version-error="inspectedVersionError"
           :record-location="
             inspectedParticipant && inspectedParticipant !== recordParticipant
               ? recordLocationFor(inspectedParticipant)
@@ -281,6 +291,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
 import type { Observation, SubjectSummary } from "../api/executionApi";
+import { kernelApi, type KernelProtocolVersion } from "../api/kernelApi";
 import {
   STAGES,
   findSection,
@@ -306,6 +317,7 @@ import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
+import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 
@@ -315,8 +327,8 @@ import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue"
  * service; what no service serves yet is absent rather than mocked (§6.1).
  *
  * The URL holds the whole state, so every view is addressable (UX-2):
- * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&observation=`. `node` (the participant
- * in the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481);
+ * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&observation=`. `node` (the participant or
+ * protocol version in the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481);
  * `observation` is Execution's observation id, which has no kernel reference yet.
  */
 interface StudyQuery {
@@ -354,6 +366,36 @@ const selectedNode = computed<NodeRef | null>(() => {
   const node = parseNodeRef(route.query.node);
   return node?.kind === "participant" ? node : null;
 });
+const selectedVersionNode = computed<NodeRef | null>(() => {
+  const node = parseNodeRef(route.query.node);
+  return node?.kind === "protocol_version" ? node : null;
+});
+const selectedVersionText = computed(() =>
+  selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
+);
+// The protocol version in the inspector, read from the kernel whenever the URL names one.
+const inspectedVersion = ref<KernelProtocolVersion | null>(null);
+const inspectedVersionError = ref("");
+let versionRequest = 0;
+watch(
+  selectedVersionText,
+  async (text) => {
+    const request = ++versionRequest;
+    inspectedVersion.value = null;
+    inspectedVersionError.value = "";
+    if (!text) return;
+    try {
+      const version = await kernelApi.getProtocolVersion(text);
+      if (request === versionRequest) inspectedVersion.value = version;
+    } catch (e) {
+      if (request === versionRequest) {
+        inspectedVersionError.value =
+          e instanceof Error ? e.message : String(e);
+      }
+    }
+  },
+  { immediate: true }
+);
 const selectedParticipant = computed<SubjectSummary | null>(() =>
   selectedNode.value
     ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
@@ -462,6 +504,22 @@ function selectObservation(observation: Observation) {
       stage: "conduct",
       participant: single(route.query.participant),
       observation: observation.id,
+    })
+  );
+  nextTick(() =>
+    document.getElementById("canvas-inspector")?.scrollIntoView?.({
+      block: "nearest",
+    })
+  );
+}
+
+function selectVersion(version: KernelProtocolVersion) {
+  if (!version.ref) return;
+  router.push(
+    studyLocation({
+      stage: "design",
+      section: "protocol-versions",
+      node: version.ref,
     })
   );
   nextTick(() =>

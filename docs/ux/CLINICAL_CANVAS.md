@@ -363,7 +363,10 @@ the states Execution allows, less unblinding), Site activation, and a participan
 with source data verification, queries with their transitions, and form submissions). Selections are addressed by NodeRef in the
 URL. For a selected participant, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
 counts what depends on it by kind, expandable to objects; objects the reader may not see stay in place as hidden and
-are counted (ADR-2540). Act lists the kernel's commands with the reader's dry-run decision and reason,
+are counted (ADR-2540). The design stage's Protocol versions section lists the study's versions from the kernel, a version
+the reader may not see kept in place as hidden. On a selected amendment, Impact is K-PROT-2 by element: the elements it adds,
+changes or removes (with the changed properties), then what depends on the version it amends; a first version shows its
+dependents. Trace works on a version the same way as on a participant. Act lists the kernel's commands with the reader's dry-run decision and reason,
 and Explain renders the kernel's explanation of a chosen decision (ADR-2540); neither sends a command. The `⌘K`
 palette adds the studies kernel search finds by code or title (ADR-2484), leaving out any the reader may not see. Simulate,
 and the kernel verbs on an observation (no kernel reference yet), are shown disabled, each
