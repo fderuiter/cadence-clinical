@@ -8,8 +8,7 @@ export const SDV_VERIFY_REASON = "Verified against source documents";
 /**
  * Typed client for the .NET Execution service, generated from docs/openapi/execution_openapi.json.
  *
- * Screens move onto this client one at a time (docs/web/API_MIGRATION.md); `execution.ts` is the
- * Python-era client it replaces.
+ * Every Execution call in the web app goes through this client (docs/web/API_MIGRATION.md).
  */
 type Schemas = components["schemas"];
 

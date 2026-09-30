@@ -38,7 +38,6 @@ onMounted(async () => {
       "System boot and cryptographic ledger initialized successfully."
     );
   }
-  await store.startSyncTimer();
 });
 </script>
 

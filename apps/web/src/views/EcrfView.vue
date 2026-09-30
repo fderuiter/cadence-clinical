@@ -103,7 +103,6 @@
             activeUserRole === 'crc'
           "
           :screening-result="screeningResult"
-          :is-screening="isScreening"
           :is-enrolling="isEnrolling"
           @enroll="onSubjectEnroll"
           @screen="onSubjectScreen"
@@ -335,12 +334,10 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
-import { useToastStore } from "../stores/toasts.js";
 import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
-import { executionService } from "../api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";
@@ -365,7 +362,6 @@ import { isDemoBuild } from "../utils/demoMode.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
-const toasts = useToastStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 
@@ -377,7 +373,6 @@ const selectedVisitId = ref("Screening");
 
 // Screening and Enrollment State (CRC)
 const screeningResult = ref(null);
-const isScreening = ref(false);
 const isEnrolling = ref(false);
 
 async function onSubjectEnroll(payload) {
@@ -399,18 +394,9 @@ async function onSubjectEnroll(payload) {
   }
 }
 
-async function onSubjectScreen(payload) {
-  isScreening.value = true;
-  try {
-    const res = await store.screenSubject(payload.subjectId, {
-      study_id: payload.studyId,
-    });
-    screeningResult.value = res;
-  } catch (err) {
-    console.error("Screening failed:", err);
-  } finally {
-    isScreening.value = false;
-  }
+function onSubjectScreen() {
+  // No service evaluates eligibility yet; the store says so and returns no result.
+  screeningResult.value = store.screenSubject();
 }
 
 // Demo Role Toggle
@@ -1224,42 +1210,9 @@ async function submitEcrf() {
     return;
   }
 
-  // Outside demo builds only a study and subject listed by Execution may be submitted (#4828).
-  const listedSubject = store.subjects.find(
-    (s) => s.id === selectedSubjectId.value
-  );
-  if (!demoBuild && (!store.activeStudyId || !listedSubject)) {
-    toasts.push({
-      tone: "error",
-      title: "Choose a study and subject first",
-      message: "Nothing was submitted.",
-    });
-    return;
-  }
-
-  try {
-    const studyId = demoBuild
-      ? store.activeStudyId || store.currentUsdm.studyId || "CADENCE-101"
-      : store.activeStudyId;
-    const siteId = demoBuild
-      ? store.activeSiteId || "SITE-101"
-      : listedSubject.siteId || store.activeSiteId;
-    await executionService.submitForm({
-      study_id: studyId,
-      site_id: siteId,
-      subject_id: selectedSubjectId.value,
-      visit_id: selectedVisitId.value,
-      form_id: "VS_DEMO",
-      protocol_version: demoBuild
-        ? "1.0.0"
-        : listedSubject.active_protocol_version,
-      payload: { ...store.formValues },
-    });
-  } catch (err) {
-    // Never record a submission the backend did not accept (#4523): no ledger block, no success alert.
-    toasts.apiError("eCRF submission failed", err);
-    return;
-  }
+  // The form is sample content until Execution serves form definitions (#4727), so it is never sent to
+  // Execution as if it were a real form. Outside a demo build nothing is saved (#4828).
+  if (!allowUnbackedAction("Submitting the form")) return;
 
   store.addLedgerBlock(
     "SESSION_SUBMIT",

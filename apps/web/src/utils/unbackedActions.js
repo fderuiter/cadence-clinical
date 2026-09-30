@@ -15,6 +15,16 @@ import { useToastStore } from "../stores/toasts.js";
 export function allowUnbackedAction(action, env = import.meta.env) {
   if (isDemoBuild(env)) return true;
 
+  refuseUnbackedAction(action);
+  return false;
+}
+
+/**
+ * Refuses, in every build, an action whose outcome only a service can produce (an eligibility verdict, an
+ * anomaly scan, an adjudication), so even a demo build has nothing to run it on. Tells the user nothing was
+ * saved. Remove the call when a service serves the action.
+ */
+export function refuseUnbackedAction(action) {
   useToastStore().push({
     tone: "error",
     title: `${action} isn't available yet`,
@@ -22,7 +32,6 @@ export function allowUnbackedAction(action, env = import.meta.env) {
       "No Cadence service records this action yet, so nothing was saved.",
     timeoutMs: 0,
   });
-  return false;
 }
 
 /** True when actions without a backend may run, for disabling their buttons up front. */

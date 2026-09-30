@@ -7,18 +7,9 @@ import { useAuthStore } from "@/stores/auth";
 import { useClinicalStore } from "@/stores/clinical";
 import { useToastStore } from "@/stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
-import { executionService } from "@/api/execution";
 
 vi.mock("@/api/apiClient", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
-}));
-
-vi.mock("@/api/execution", () => ({
-  executionService: {
-    evaluateAnomalies: vi.fn(),
-    adjudicateAnomalyCandidate: vi.fn(),
-    listLabAlerts: vi.fn().mockResolvedValue([]),
-  },
 }));
 
 const router = createRouter({
@@ -71,8 +62,6 @@ describe("RulesView API failure handling (#4523)", () => {
       );
     vi.mocked(apiClient.put).mockReset().mockResolvedValue({});
     vi.mocked(apiClient.delete).mockReset().mockResolvedValue(null);
-    vi.mocked(executionService.evaluateAnomalies).mockReset();
-    vi.mocked(executionService.adjudicateAnomalyCandidate).mockReset();
     alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -97,44 +86,26 @@ describe("RulesView API failure handling (#4523)", () => {
     expect(toasts[0].message).toContain(`HTTP ${status}`);
   }
 
-  it.each(STATUSES)(
-    "candidate adjudication HTTP %i keeps the query a CANDIDATE with no ledger block or alert",
-    async (status) => {
-      vi.mocked(executionService.adjudicateAnomalyCandidate).mockRejectedValue(
-        httpError(status)
-      );
-      const wrapper: any = await mountView();
-      const candidate = wrapper.vm.dashboardQueries.find(
-        (q: any) => q.id === "q-cand-1"
-      );
+  function expectRefusal(title: string) {
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({ tone: "error", title }),
+    ]);
+    expect(alertSpy).not.toHaveBeenCalled();
+  }
 
-      wrapper.vm.promptAdjudicateCandidate(candidate, "APPROVE");
-      await wrapper.vm.confirmChangeReason("Confirmed clinically relevant");
-      await flushPromises();
-
-      expect(candidate.status).toBe("CANDIDATE");
-      expect(ledgerActions()).not.toContain("QUERY_ADJUDICATION");
-      expect(alertSpy).not.toHaveBeenCalled();
-      expect(wrapper.vm.showReasonModal).toBe(true);
-      expectErrorToast("Candidate query adjudication failed", status);
-    }
-  );
-
-  it("candidate adjudication success still opens the query", async () => {
-    vi.mocked(executionService.adjudicateAnomalyCandidate).mockResolvedValue(
-      {}
-    );
+  it("refuses candidate adjudication, which no service serves, and keeps the query a CANDIDATE", async () => {
     const wrapper: any = await mountView();
     const candidate = wrapper.vm.dashboardQueries.find(
       (q: any) => q.id === "q-cand-1"
     );
 
-    wrapper.vm.promptAdjudicateCandidate(candidate, "APPROVE");
-    await wrapper.vm.confirmChangeReason("Confirmed clinically relevant");
+    wrapper.vm.promptAdjudicateCandidate();
+    await flushPromises();
 
-    expect(candidate.status).toBe("OPEN");
-    expect(ledgerActions()).toContain("QUERY_ADJUDICATION");
-    expect(useToastStore().toasts).toHaveLength(0);
+    expect(candidate.status).toBe("CANDIDATE");
+    expect(ledgerActions()).not.toContain("QUERY_ADJUDICATION");
+    expect(wrapper.vm.showReasonModal).toBe(false);
+    expectRefusal("Adjudicating a candidate query isn't available yet");
   });
 
   it.each(STATUSES)(
@@ -218,19 +189,11 @@ describe("RulesView API failure handling (#4523)", () => {
     expect(useToastStore().toasts).toHaveLength(0);
   });
 
-  it.each(STATUSES)(
-    "anomaly scan HTTP %i shows an error toast instead of a completion alert",
-    async (status) => {
-      vi.mocked(executionService.evaluateAnomalies).mockRejectedValue(
-        httpError(status)
-      );
-      const wrapper: any = await mountView();
+  it("refuses the anomaly scan, which no service serves, instead of reporting a result", async () => {
+    const wrapper: any = await mountView();
 
-      await wrapper.vm.triggerAnomalyScan();
+    wrapper.vm.triggerAnomalyScan();
 
-      expect(alertSpy).not.toHaveBeenCalled();
-      expect(wrapper.vm.scanningAnomalies).toBe(false);
-      expectErrorToast("Cross-domain anomaly scan failed", status);
-    }
-  );
+    expectRefusal("Scanning for cross-domain anomalies isn't available yet");
+  });
 });

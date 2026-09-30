@@ -10,7 +10,6 @@ import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
 import { designerService } from "../src/api/designer";
-import { executionService } from "../src/api/execution";
 import { etmfService } from "../src/api/etmf";
 import { interopService } from "../src/api/interop";
 import apiService from "../src/services/api";
@@ -164,43 +163,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       request = await lastRequest();
       expect(request.url).toBe("http://localhost:8000/api/v1/mdr/concepts");
       expect(request.method).toBe("GET");
-    });
-  });
-
-  describe("Execution Service Module", () => {
-    it("routes enrollment, queries, and form submission correctly through gateway contracts", async () => {
-      let request;
-      // A Response body can only be read once, so build a fresh one per call.
-      mockFetch.mockImplementation(async () => jsonResponse({}));
-
-      await executionService.createSubject({ site_id: "SITE-01" });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/execution/subjects"
-      );
-      expect(request.method).toBe("POST");
-
-      await executionService.getQueries();
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/execution/queries"
-      );
-      expect(request.method).toBe("GET");
-
-      await executionService.submitForm({ form_id: "F-01" });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/execution/form-submissions"
-      );
-      expect(request.method).toBe("POST");
-
-      await executionService.syncQueries([{ blockIndex: 0 }]);
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/execution/queries/sync"
-      );
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual({ blocks: [{ blockIndex: 0 }] });
     });
   });
 
