@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 
 using Fluid;
@@ -20,6 +22,8 @@ namespace Cadence.Templating;
 /// Core implementation of <see cref="ITemplateRenderer"/> powered by Fluid.Core Liquid engine.
 /// Renders only templates a module's <see cref="TemplateCatalog"/> allows, loaded from that module's own
 /// assembly; parsed templates are cached per assembly and resource so modules can never collide.
+/// Every value a template outputs is encoded for the template's format (#4959): <c>.xml.liquid</c> and
+/// <c>.html.liquid</c> templates escape markup characters, other templates (plain text) are written as is.
 /// @req:PRD-SYS-053
 /// </summary>
 public class FluidTemplateRenderer : ITemplateRenderer
@@ -28,6 +32,10 @@ public class FluidTemplateRenderer : ITemplateRenderer
     private static readonly ConcurrentDictionary<(string Assembly, string Resource), IFluidTemplate> TemplateCache = new();
     private static readonly ConcurrentBag<Type> PreRegisteredTypes = new();
     private static readonly Lazy<FluidTemplateRenderer> DefaultInstance = new(() => new FluidTemplateRenderer());
+
+    // Escapes & < > " ' (and characters the encoder never lets through) as entities or numeric character
+    // references, which are valid in both HTML and XML; other Unicode text is written unchanged.
+    private static readonly TextEncoder MarkupEncoder = HtmlEncoder.Create(UnicodeRanges.All);
 
     /// <summary>
     /// Shared thread-safe default instance of <see cref="FluidTemplateRenderer"/>.
@@ -63,9 +71,23 @@ public class FluidTemplateRenderer : ITemplateRenderer
     /// <inheritdoc />
     public async ValueTask<string> RenderAsync(TemplateCatalog catalog, string key, object model)
     {
-        var template = GetOrParseTemplate(catalog, key);
+        var (template, resourceName) = GetOrParseTemplate(catalog, key);
         var context = CreateContext(model);
-        return await template.RenderAsync(context);
+        return await template.RenderAsync(context, EncoderFor(resourceName));
+    }
+
+    /// <summary>
+    /// The encoder for a template's output format, chosen from its file name: markup for <c>.xml.liquid</c> and
+    /// <c>.html.liquid</c>, none for anything else.
+    /// </summary>
+    public static TextEncoder EncoderFor(string templateFileName)
+    {
+        ArgumentNullException.ThrowIfNull(templateFileName);
+        return templateFileName.EndsWith(".xml.liquid", StringComparison.OrdinalIgnoreCase)
+            || templateFileName.EndsWith(".html.liquid", StringComparison.OrdinalIgnoreCase)
+            || templateFileName.EndsWith(".htm.liquid", StringComparison.OrdinalIgnoreCase)
+            ? MarkupEncoder
+            : NullEncoder.Default;
     }
 
     /// <inheritdoc />
@@ -110,7 +132,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
         strategy.Register(type);
     }
 
-    private static IFluidTemplate GetOrParseTemplate(TemplateCatalog catalog, string key)
+    private static (IFluidTemplate Template, string ResourceName) GetOrParseTemplate(TemplateCatalog catalog, string key)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         if (!catalog.TryGetResourceName(key, out string resourceName))
@@ -119,7 +141,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
         }
 
         string assemblyName = catalog.Assembly.FullName ?? catalog.Assembly.GetName().Name ?? string.Empty;
-        return TemplateCache.GetOrAdd((assemblyName, resourceName), _ =>
+        var parsed = TemplateCache.GetOrAdd((assemblyName, resourceName), _ =>
         {
             using var stream = catalog.Assembly.GetManifestResourceStream(resourceName)
                 ?? throw new TemplateNotFoundException(key);
@@ -132,6 +154,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
             }
             return template;
         });
+        return (parsed, resourceName);
     }
 
     private TemplateContext CreateContext(object model)
@@ -188,6 +211,7 @@ public class FluidTemplateRenderer : ITemplateRenderer
         {
             var valueType = value.GetType();
             RegisterTypeMembers(_options.MemberAccessStrategy, valueType);
+            RegisterPropertyTypes(valueType, [valueType]);
 
             if (value is IEnumerable enumerable && !(value is string) && !(value is IDictionary))
             {
@@ -208,6 +232,37 @@ public class FluidTemplateRenderer : ITemplateRenderer
             context.SetValue(snake, value);
         }
     }
+
+    // Registers the model types a value reaches through its public properties (nested records and the element
+    // types of their lists), so a template can read `icsr.patient.patient_id` without each host registering them.
+    private void RegisterPropertyTypes(Type type, HashSet<Type> visited)
+    {
+        var propertyTypes = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType);
+        foreach (var propertyType in propertyTypes)
+        {
+            foreach (var candidate in new[] { propertyType, ElementType(propertyType) })
+            {
+                if (candidate is null || !IsModelType(candidate) || !visited.Add(candidate))
+                {
+                    continue;
+                }
+
+                RegisterTypeMembers(_options.MemberAccessStrategy, candidate);
+                RegisterPropertyTypes(candidate, visited);
+            }
+        }
+    }
+
+    private static Type? ElementType(Type type) =>
+        type == typeof(string)
+            ? null
+            : type.GetInterfaces().Append(type)
+                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                ?.GetGenericArguments()[0];
+
+    private static bool IsModelType(Type type) =>
+        type.IsClass && type != typeof(string) && type.Namespace?.StartsWith("System", StringComparison.Ordinal) != true;
 
     private static ValueTask<FluidValue> FormatDateFilter(FluidValue input, FilterArguments arguments, TemplateContext context)
     {
@@ -255,7 +310,8 @@ public class FluidTemplateRenderer : ITemplateRenderer
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
 
-        return new StringValue(escaped);
+        // Already escaped, so the template's encoder must not escape it a second time.
+        return new StringValue(escaped, encode: false);
     }
 
     private static string ToSnakeCase(string str)

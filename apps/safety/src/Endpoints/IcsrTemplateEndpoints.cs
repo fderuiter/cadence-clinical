@@ -42,7 +42,9 @@ public static class IcsrTemplateEndpoints
 
     public static async Task<ContentHttpResult> RenderIcsrAsync(IcsrReport request, ITemplateRenderer renderer)
     {
-        string rendered = await renderer.RenderAsync(Catalog, IcsrTemplateKey, request);
+        // The template reads the report as `icsr` (#4959).
+        string rendered = await renderer.RenderAsync(
+            Catalog, IcsrTemplateKey, new Dictionary<string, object?> { ["icsr"] = request });
         return TypedResults.Content(rendered, "application/xml");
     }
 }

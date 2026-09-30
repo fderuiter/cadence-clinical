@@ -15,6 +15,13 @@ notification bodies, safety ICSR XML and the DDF compiler's ODM/OpenRosa output.
   that module's own assembly. Callers name a key, never a resource; no other assembly is searched.
 - Parsed templates are cached per owning assembly and resource, so two modules can use the same key or
   file name without colliding.
+- Output is encoded for the template's format (#4959). Values written by `.xml.liquid` and `.html.liquid`
+  templates have `&`, `<`, `>`, `"` and `'` escaped, so caller data cannot break the document or inject markup.
+  Other templates (plain text) are written as is. `FluidTemplateRenderer.EncoderFor(fileName)` returns the
+  encoder a file name gets. Templates should not add `escape` filters of their own; `xml_escape` is kept and is
+  not escaped a second time.
+- Models are registered for member access together with the records and list element types they reach, so
+  nested values such as `icsr.patient.patient_id` render without each host registering every type.
 
 ---
 
@@ -50,5 +57,5 @@ string text = await renderer.RenderAsync(Catalog, templateName, model);
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~TemplateCatalogTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~TemplateCatalogTests|FullyQualifiedName~TemplateOutputEncodingTests"
 ```
