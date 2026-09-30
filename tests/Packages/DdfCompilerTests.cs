@@ -51,11 +51,9 @@ public class DdfCompilerTests
 
     /// <summary>
     /// Validates that UsdmCompiler compiles USDM JSON into DDF Intermediate Representation, ODM XML, and OpenRosa XForms.
-    /// @req:PRD-DDF-001
     /// </summary>
     [Fact(DisplayName = "UsdmCompiler_CompileUsdm_GeneratesCompleteArtifacts")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-DDF-001")]
     public void UsdmCompilerCompileUsdmGeneratesCompleteArtifacts()
     {
         // Act
@@ -92,11 +90,9 @@ public class DdfCompilerTests
 
     /// <summary>
     /// Validates that UsdmCompiler successfully compiles directly from a ProtocolVersion snapshot aggregate.
-    /// @req:PRD-DDF-001
     /// </summary>
     [Fact(DisplayName = "UsdmCompiler_Compile_FromProtocolVersion_Succeeds")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-DDF-001")]
     public void UsdmCompilerCompileFromProtocolVersionSucceeds()
     {
         // Arrange
@@ -115,11 +111,9 @@ public class DdfCompilerTests
 
     /// <summary>
     /// Validates that UsdmCompiler with ValidateAccessibility option produces an accessibility validation report.
-    /// @req:PRD-DDF-001
     /// </summary>
     [Fact(DisplayName = "UsdmCompiler_Compile_WithAccessibilityValidation_ProducesReport")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-DDF-001")]
     public void UsdmCompilerCompileWithAccessibilityValidationProducesReport()
     {
         // Arrange

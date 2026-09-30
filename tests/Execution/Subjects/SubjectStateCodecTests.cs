@@ -10,7 +10,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// Round-trip, malformed-input, and casing/whitespace-normalization coverage for
 /// `MIG-SUBJ-002`'s `SubjectStateCodec` (`normalize_state`'s `UPPER_SNAKE_CASE` port).
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectStateCodecTests
 {
@@ -24,7 +23,6 @@ public class SubjectStateCodecTests
     [InlineData(SubjectState.Completed, "COMPLETED")]
     [InlineData(SubjectState.Withdrawn, "WITHDRAWN")]
     [InlineData(SubjectState.ReconsentRequired, "RECONSENT_REQUIRED")]
-    [GxPRequirement("PRD-SUB-001")]
     public void ToCode_RoundTripsThroughTryParse(SubjectState state, string expectedCode)
     {
         string code = SubjectStateCodec.ToCode(state);
@@ -39,7 +37,6 @@ public class SubjectStateCodecTests
     [InlineData("  SCREENING  ", SubjectState.Screening)]
     [InlineData("screen failed", SubjectState.ScreenFailed)]
     [InlineData("Reconsent Required", SubjectState.ReconsentRequired)]
-    [GxPRequirement("PRD-SUB-001")]
     public void TryParse_NormalizesCasingWhitespaceAndSpaces(string raw, SubjectState expected)
     {
         SubjectStateCodec.TryParse(raw, out var parsed).Should().BeTrue();
@@ -53,7 +50,6 @@ public class SubjectStateCodecTests
     [InlineData("IN_PROGRESS")]
     [InlineData("in progress")]
     [InlineData("SCREENIN")]
-    [GxPRequirement("PRD-SUB-001")]
     public void TryParse_UnmappedOrEmptyInput_ReturnsFalseWithoutThrowing(string? raw)
     {
         bool result = SubjectStateCodec.TryParse(raw, out var state);
