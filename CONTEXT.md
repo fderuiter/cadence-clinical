@@ -1116,6 +1116,8 @@ _Avoid_: Silent database lookups or unlogged treatment code disclosures during m
 
 ### Tripartite JSON Schema Architecture
 
+> Retired by ADR-2504. Each part now lives in the kernel or an application: collection specifications, mapping specifications, rule packs and DDF form design.
+
 A clinical form metadata pattern decoupling form definitions into three distinct, version-controlled JSON documents: 1) Data Schema (`schema.json`) defining variables, CDISC OIDs, and validation constraints; 2) UI Schema (`uischema.json`) defining responsive CSS grid layouts, widget selections, and viewport breakpoints; and 3) Logic Schema (`rules.json`) defining declarative AST edit checks, cross-visit dependencies, and derived math formulas.
 _Avoid_: Mapping form fields to physical relational database columns or generating physical DDL tables per form
 
@@ -1131,6 +1133,8 @@ _Avoid_: Separate un-synchronized client JavaScript and backend Python validatio
 
 ### Smart Clinical Component Blocks
 
+> Retired by ADR-2503: see Form Block. A block holds what to collect; its SDTM mapping, layout and ranges live elsewhere.
+
 Pre-configured, domain-validated form panels (e.g. Vital Signs, Adverse Events, ConMeds) in the Global Metadata Repository (MDR) that inherently embed standardized CDASH/SDTM metadata mappings (`VS.VSORRES`, `AE.AETERM`), standard UCUM unit catalogs (`mmHg`, `kg`, `g/dL`), and baseline reference ranges upon canvas drop.
 _Avoid_: Raw unmapped primitive input fields requiring post-hoc SAS/SDTM ETL mapping
 
@@ -1140,6 +1144,8 @@ An automated qualification environment in the eCRF Designer that utilizes AI Gat
 _Avoid_: Weeks of manual data entry and exploratory testing for study UAT sign-off
 
 ### In-Flight Patient Migration Matrix
+
+> Retired by ADR-2504. Which protocol version governs a participant, and from when, is Applicability (spec §7.5) under Effectivity (ADR-2456).
 
 A runtime routing policy governing active subjects during protocol amendments without database DDL migrations, enabling data managers to configure prospective deployment (applied only to newly enrolled subjects) versus retrospective deployment (applied to all active subjects with automated missing-data queries for past encounters).
 _Avoid_: Offline database migrations, global patient freezes, or data loss during mid-study amendments

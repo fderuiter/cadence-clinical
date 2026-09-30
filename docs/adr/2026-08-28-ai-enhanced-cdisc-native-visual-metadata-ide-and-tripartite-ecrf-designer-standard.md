@@ -1,5 +1,11 @@
 # ADR-2231: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard
 
+> [!NOTE]
+> Amended by [ADR-2504](2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md). The tripartite JSON document (data, UI and logic schemas, the migration matrix and the UAT
+> report) is not carried forward. Each part now lives in the kernel or an application: collection specifications,
+> mapping specifications, rule packs, form design, Applicability and simulation. The designer's product direction
+> stands.
+
 - **Status:** Accepted
 - **Date:** 2026-08-28
 - **Authors:** @fderuiter
