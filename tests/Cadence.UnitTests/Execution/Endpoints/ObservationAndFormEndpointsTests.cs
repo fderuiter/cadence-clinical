@@ -18,6 +18,7 @@ using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 
+using Cadence.UnitTests.Fixtures.Execution;
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
@@ -33,12 +34,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// </summary>
 public sealed class ObservationAndFormEndpointsTests
 {
-    private sealed class FakeAuditContextAccessor(string userId = "test_cra_user", string reason = "GxP Audit Reason") : ICurrentAuditContextAccessor
-    {
-        public string UserId => userId;
-        public string ChangeReason => reason;
-    }
-
     private static DefaultHttpContext CreateHttpContext(string role = "cra")
     {
         return new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("test_user", role) };
@@ -56,7 +51,7 @@ public sealed class ObservationAndFormEndpointsTests
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
         var svc = new ObservationApplicationService(repo, subjectRepo, ucum, labRange, editChecks, clock, audit);
 
         var request = new ObservationCreateRequest(
@@ -90,7 +85,7 @@ public sealed class ObservationAndFormEndpointsTests
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new ObservationApplicationService(repo, subjectRepo, ucum, labRange, editChecks, clock, audit);
 
@@ -128,7 +123,7 @@ public sealed class ObservationAndFormEndpointsTests
         var repo = new InMemoryObservationRepository();
         var svc = new ObservationApplicationService(
             repo, new InMemorySubjectRepository(), new UcumNormalizationService(), new LabRangeService(),
-            new AstEditCheckEngine(), new FakeClock(), new FakeAuditContextAccessor());
+            new AstEditCheckEngine(), new FakeClock(), new FakeCurrentAuditContextAccessor());
         var created = await svc.CreateAsync(new ObservationCreateRequest(
             StudyId: "STUDY-001",
             SubjectId: "SUBJ-001",
@@ -161,7 +156,7 @@ public sealed class ObservationAndFormEndpointsTests
     {
         var svc = new ObservationApplicationService(
             new InMemoryObservationRepository(), new InMemorySubjectRepository(), new UcumNormalizationService(),
-            new LabRangeService(), new AstEditCheckEngine(), new FakeClock(), new FakeAuditContextAccessor());
+            new LabRangeService(), new AstEditCheckEngine(), new FakeClock(), new FakeCurrentAuditContextAccessor());
 
         var result = await svc.VerifySdvAsync(Guid.NewGuid().ToString(), verifier: null, CancellationToken.None);
 
@@ -190,7 +185,7 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
@@ -217,7 +212,7 @@ public sealed class ObservationAndFormEndpointsTests
     {
         var repo = new InMemoryClinicalQueryRepository();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
 
@@ -243,7 +238,7 @@ public sealed class ObservationAndFormEndpointsTests
     {
         var repo = new InMemoryClinicalQueryRepository();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
 
@@ -275,7 +270,7 @@ public sealed class ObservationAndFormEndpointsTests
     {
         var repo = new InMemoryClinicalQueryRepository();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
 
@@ -310,7 +305,7 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
@@ -350,7 +345,7 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor("test_cra_user", "GxP Audit Reason");
 
         var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
@@ -388,7 +383,7 @@ public sealed class ObservationAndFormEndpointsTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor(userId: "dm-01", reason: "Sponsor query correction");
+        var audit = new FakeCurrentAuditContextAccessor(userId: "dm-01", changeReason: "Sponsor query correction");
 
         var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
 
