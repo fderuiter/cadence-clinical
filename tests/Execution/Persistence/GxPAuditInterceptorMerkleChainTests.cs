@@ -2,6 +2,7 @@ using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -88,12 +89,13 @@ public class GxPAuditInterceptorMerkleChainTests
     [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType()
     {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
+        var clock = new FakeClock();
+        await using var context = CreateContext(Guid.NewGuid().ToString(), () => clock.UtcNow.UtcDateTime);
         var aggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
         context.GuidAggregates.Add(aggregate);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        await Task.Delay(5, TestContext.Current.CancellationToken);
+        clock.Advance(TimeSpan.FromSeconds(1));
         aggregate.Name = "Beta";
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 

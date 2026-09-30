@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K014 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K015 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -80,6 +80,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K012 | Every kernel object has a public `NodeRef`; the kernel computes its zoom path | [ADR-2481](docs/adr/2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) |
 | K013 | Standards Registry and MDR as governed, tenant-scoped reference data | [ADR-2460](docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
 | K014 | Anything that decides also explains, with one `Explanation` type produced by the rule owner | [ADR-2482](docs/adr/2026-09-30-explanation-model-produced-by-the-rule-owner.md) |
+| K015 | Every kernel command declares its capability; a dry run (`CanI`) takes the same authorization path and is logged, not audited | [ADR-2483](docs/adr/2026-09-30-dry-run-authorization-and-command-catalogue.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
@@ -207,6 +208,9 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
     and its zoom path (ADR-2481).
   - A decision, such as a denied command, carries an `Explanation`: the claim, every evaluated condition with its
     evidence and the next actions, produced by the component that owns the rule (ADR-2482).
+  - Every kernel command declares its capability. `IAuthorizationProbe` answers "can I?" and lists the commands
+    offered on an object through the same decision path as a real command; dry runs go to the access log, not
+    the audit chain (ADR-2483).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
   and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`

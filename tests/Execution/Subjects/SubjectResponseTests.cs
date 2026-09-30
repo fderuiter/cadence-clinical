@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -150,7 +151,7 @@ public class SubjectResponseTests
     {
         var response = new SubjectConsentResponse(
             SubjectConsentId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
-            VersionTag: "v1", VersionIndex: 1, IcfSigned: true, IcfSignedDate: DateTimeOffset.UtcNow,
+            VersionTag: "v1", VersionIndex: 1, IcfSigned: true, IcfSignedDate: FakeClock.DefaultStart,
             RequiresReconsent: false, IsPaperOverride: false, Version: 1);
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(response, WireOptions));

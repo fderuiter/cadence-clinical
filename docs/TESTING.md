@@ -86,11 +86,27 @@ Use `packages/testing/src` rather than writing ad-hoc fakes:
 - `TestSecurityContext`: `CreateHmacHeaders(...)`, `CreatePrincipal(...)` and `Identity(...)` for gateway identities.
 - The `factory.CreateSignedClient()` and `builder.UseTestGatewaySecret()` extensions, for signed calls into a
   `WebApplicationFactory` host.
-- `FakeClock`: a settable `IClock`. Production code must not call `DateTime.Now` or `DateTime.UtcNow`, and
-  tests should not depend on wall-clock time either.
+- `FakeClock` (`Cadence.Testing.Time`): a settable `IClock`, frozen at `FakeClock.DefaultStart`
+  (2026-01-01T00:00:00Z) unless a test calls `Advance` or `Set`. See "Time in tests" below.
 - `GoldenMasterFixtureLoader` and `GoldenMasterAssert`: golden-master scenarios ported from the Python
   reference.
 - `GxPRequirementAttribute`: declares which requirement a test verifies. See below.
+
+## Time in tests
+
+Tests follow K-TIME-3 like the kernel does: `tests/Directory.Build.props` enables the banned-API analyzer with
+[`BannedSymbols.txt`](../BannedSymbols.txt), so `DateTime.Now/UtcNow` and `DateTimeOffset.Now/UtcNow` fail the
+build (RS0030). Pick the replacement by what the test needs:
+
+- **A fixed instant** for dates the test controls (observation dates, signed-at values, anything passed to the
+  code under test): `new FakeClock()` or `FakeClock.DefaultStart`. Use `clock.Advance(...)` when the test needs
+  time to move, instead of sleeping. Don't declare a private clock class; the shared one covers it.
+- **The real clock** only where the code under test compares with it and offers no clock to inject, such as
+  token expiry, HMAC freshness or certificate validity: `SystemClock.Instance.UtcNow`.
+- **Elapsed time** for timeouts and polling deadlines: `Stopwatch.StartNew()`.
+
+`Task.Delay` belongs only where a test deliberately holds a lock or widens a race window, or where a fake
+downstream must stall. It never makes timestamps differ.
 
 ## Linking a test to a requirement
 

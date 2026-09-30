@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 

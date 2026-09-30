@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Nodes;
 
+using Cadence.Kernel.Time;
 using Cadence.Security;
 using Cadence.Testing;
 
@@ -174,7 +175,7 @@ public class AsymmetricSignerTests
     {
         using var rsa = RSA.Create(2048);
         var request = new CertificateRequest("CN=cadence-deid-test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
-        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(1));
+        using var cert = request.CreateSelfSigned(SystemClock.Instance.UtcNow.AddMinutes(-5), SystemClock.Instance.UtcNow.AddDays(1));
 
         string signature = AsymmetricSigner.AsymmetricSign(Data, rsa.ExportPkcs8PrivateKeyPem());
 
@@ -186,7 +187,7 @@ public class AsymmetricSignerTests
     {
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var request = new CertificateRequest("CN=cadence-deid-test", ecdsa, HashAlgorithmName.SHA256);
-        using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(1));
+        using var cert = request.CreateSelfSigned(SystemClock.Instance.UtcNow.AddMinutes(-5), SystemClock.Instance.UtcNow.AddDays(1));
 
         string signature = AsymmetricSigner.AsymmetricSign(Data, ecdsa.ExportPkcs8PrivateKeyPem());
 

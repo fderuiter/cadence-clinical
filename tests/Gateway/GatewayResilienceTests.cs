@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -103,11 +104,11 @@ public sealed class GatewayResilienceTests
         await using var gateway = CreateGateway(DownstreamUrl(downstream), ("GATEWAY_PROXY_TIMEOUT_SECONDS", "1"));
         using var client = AuthenticatedClient(gateway);
 
-        var started = DateTime.UtcNow;
+        var elapsed = Stopwatch.StartNew();
         var response = await client.GetAsync(ProxiedPath, ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
-        (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(15));
+        elapsed.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15));
     }
 
     internal static WebApplicationFactory<Cadence.Apps.Gateway.Program> CreateGateway(
@@ -154,7 +155,7 @@ public sealed class GatewayResilienceTests
 
     private static async Task WaitForStatusAsync(HttpClient client, HttpStatusCode expected, CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(15);
+        var elapsed = Stopwatch.StartNew();
         HttpStatusCode last;
         do
         {
@@ -166,7 +167,7 @@ public sealed class GatewayResilienceTests
 
             await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
         }
-        while (DateTime.UtcNow < deadline);
+        while (elapsed.Elapsed < TimeSpan.FromSeconds(15));
 
         last.Should().Be(expected, "the gateway should reflect the service's readiness within a few probe intervals");
     }

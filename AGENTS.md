@@ -33,8 +33,9 @@ clinical truth (K-TRUTH-1).
   in `tests/Architecture`; existing violations sit in a baseline that may only shrink.
 - **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` only, never kernel persistence.
 - **Time (K-TIME-3):** never call `DateTime.Now/UtcNow` or `DateTimeOffset.Now/UtcNow` (banned in
-  [`BannedSymbols.txt`](BannedSymbols.txt)). Inject `Cadence.Kernel.Time.IClock`; use `FakeClock`
-  from `Cadence.Testing.Time` in tests.
+  [`BannedSymbols.txt`](BannedSymbols.txt), enforced in `packages/kernel` and `tests/`). Inject
+  `Cadence.Kernel.Time.IClock`; in tests use `FakeClock` from `Cadence.Testing.Time`, or `SystemClock.Instance`
+  where the code under test checks the real clock ([docs/TESTING.md](docs/TESTING.md#time-in-tests)).
 - **Hold structural changes that contradict the spec.** If a change needs the spec to change, raise it
   on the kernel epic (#4719) instead of working around it.
 

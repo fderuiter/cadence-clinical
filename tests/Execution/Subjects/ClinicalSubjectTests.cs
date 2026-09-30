@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -22,11 +23,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class ClinicalSubjectTests
 {
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
-
     private static ClinicalSubject CreateScreeningSubject(
         SiteCode? siteCode = null,
         int enrollmentIndex = 1,
@@ -289,7 +285,7 @@ public class ClinicalSubjectTests
     public void Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock()
     {
         var subject = DriveToState(SubjectState.Randomized);
-        subject.Unblind("doctor_smith", "SAE-Life-Threatening-Event", new FakeClock(DateTimeOffset.UtcNow));
+        subject.Unblind("doctor_smith", "SAE-Life-Threatening-Event", new FakeClock());
         var withdrawTime = new DateTimeOffset(2026, 3, 2, 9, 30, 0, TimeSpan.Zero);
         var clock = new FakeClock(withdrawTime);
 
@@ -307,7 +303,7 @@ public class ClinicalSubjectTests
     {
         var subject = DriveToState(SubjectState.Withdrawn);
 
-        var result = subject.Withdraw("second withdrawal attempt", new FakeClock(DateTimeOffset.UtcNow));
+        var result = subject.Withdraw("second withdrawal attempt", new FakeClock());
 
         result.IsSuccess.Should().BeTrue();
         subject.Status.Should().Be(SubjectState.Withdrawn);
@@ -321,7 +317,7 @@ public class ClinicalSubjectTests
 
         // No try/catch: a throw here would fail the test on its own, proving the failure
         // propagates through the Result<bool> return rather than as an exception.
-        var result = subject.Unblind("doctor_smith", "attempted-early-unblind", new FakeClock(DateTimeOffset.UtcNow));
+        var result = subject.Unblind("doctor_smith", "attempted-early-unblind", new FakeClock());
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
@@ -337,7 +333,7 @@ public class ClinicalSubjectTests
 
         // No try/catch: a throw here would fail the test on its own, proving the failure
         // propagates through the Result<bool> return rather than as an exception.
-        var result = subject.Withdraw("attempted-withdraw-from-terminal-state", new FakeClock(DateTimeOffset.UtcNow));
+        var result = subject.Withdraw("attempted-withdraw-from-terminal-state", new FakeClock());
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");

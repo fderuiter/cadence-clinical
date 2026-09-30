@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -92,7 +94,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public async Task ApiRequest_WithStaleSignature_Returns401()
     {
         using var client = factory.CreateClient();
-        var stale = TestSecurityContext.CreateHmacHeaders(Cra, DateTimeOffset.UtcNow.AddMinutes(-10));
+        var stale = TestSecurityContext.CreateHmacHeaders(Cra, SystemClock.Instance.UtcNow.AddMinutes(-10));
 
         var response = await SendWithHeadersAsync(client, stale);
 
@@ -340,7 +342,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
             signer_role = signerRole,
             signing_reason = SigningReason,
             payload_hash = FormSubmissionApplicationService.ComputeSha256(payload),
-            signed_at = DateTime.UtcNow,
+            signed_at = FakeClock.DefaultStart.UtcDateTime,
         },
     };
 

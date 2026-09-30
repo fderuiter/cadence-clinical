@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -100,7 +101,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload));
 
         var approveResult = form.Approve(manifest);
@@ -130,7 +131,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload)));
 
         var updateResult = form.UpdatePayload("{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}", "Post-lock edit attempt");
@@ -157,7 +158,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload)));
 
         var unlockResult = form.Unlock("dm-user-01", "Lab result correction required by DM query");
@@ -206,7 +207,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: "0000000000000000000000000000000000000000000000000000000000000000"),
             PrincipalInvestigator,
             CancellationToken.None);
@@ -220,7 +221,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: validHash),
             PrincipalInvestigator,
             CancellationToken.None);
@@ -249,7 +250,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "Because I felt like it.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload));
 
         var approveResult = form.Approve(manifest);
@@ -290,7 +291,7 @@ public sealed class FormSubmissionStateTests
             SignerId: "clerk-01",
             SignerRole: "data_entry_clerk",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload)),
             new AuthenticatedCaller("clerk-01", ["data_entry_clerk"]),
             CancellationToken.None);
