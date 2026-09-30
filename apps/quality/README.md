@@ -9,6 +9,7 @@ Quality management scaffold. It holds the deviation, root cause analysis and CAP
 - Project: `apps/quality/src/Cadence.Apps.Quality.csproj` (assembly `Cadence.Apps.Quality`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (deviations, root cause analyses, CAPA records, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `QualityDbContext`, a design-time `QualityDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144718_InitialCreate`.
 

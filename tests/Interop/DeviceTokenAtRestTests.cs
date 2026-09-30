@@ -68,6 +68,7 @@ public sealed class DeviceTokenAtRestTests : IDisposable
                 UdiDi = "00312345678901",
                 DeviceTokenHash = tokenHash,
                 CreatedBy = "interop-test",
+                CreatedAt = FakeClock.DefaultStart,
             });
             write.SensorTelemetryStreamRecords.Add(new SensorTelemetryStreamRecord
             {
@@ -75,6 +76,8 @@ public sealed class DeviceTokenAtRestTests : IDisposable
                 SubjectId = "SUBJ-101",
                 DeviceType = "CGM",
                 BatchId = "B-1",
+                ReceivedAt = FakeClock.DefaultStart,
+                CreatedAt = FakeClock.DefaultStart,
                 RawDataHash = new string('a', 64),
                 DeviceTokenHash = tokenHash,
             });
@@ -85,6 +88,7 @@ public sealed class DeviceTokenAtRestTests : IDisposable
                 DeviceType = "CGM",
                 SummaryDate = FakeClock.DefaultStart.UtcDateTime.Date,
                 Sha256Hash = new string('b', 64),
+                CreatedAt = FakeClock.DefaultStart,
                 DeviceTokenHash = tokenHash,
             });
             write.SensorSafetyAlertRecords.Add(new SensorSafetyAlertRecord
@@ -98,6 +102,7 @@ public sealed class DeviceTokenAtRestTests : IDisposable
                 ParameterName = "glucose",
                 Unit = "mg/dL",
                 DeviceTokenHash = tokenHash,
+                CreatedAt = FakeClock.DefaultStart,
             });
             await write.SaveChangesAsync(ct);
         }

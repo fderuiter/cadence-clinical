@@ -9,6 +9,7 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 - Project: `apps/interop/src/Cadence.Apps.Interop.csproj` (assembly `Cadence.Apps.Interop`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (ePRO submissions and quarantine, instruments, subject assignments, EHR endpoints, device registrations, sensor telemetry, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `InteropDbContext`, a design-time `InteropDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145123_InitialCreate`.
 
