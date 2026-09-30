@@ -32,9 +32,23 @@
               >Site {{ zoomSite }}</router-link
             >
           </li>
-          <li v-if="selectedParticipant">
-            <span id="zoom-participant" aria-current="page">{{
-              selectedParticipant.subject_id
+          <li v-if="zoomParticipant">
+            <span
+              v-if="zoomCurrent === 'participant'"
+              id="zoom-participant"
+              aria-current="page"
+              >{{ zoomParticipant.subject_id }}</span
+            >
+            <router-link
+              v-else
+              id="zoom-participant"
+              :to="recordLocationFor(zoomParticipant)"
+              >{{ zoomParticipant.subject_id }}</router-link
+            >
+          </li>
+          <li v-if="selectedObservation">
+            <span id="zoom-observation" aria-current="page">{{
+              selectedObservation.test_name
             }}</span>
           </li>
         </ol>
@@ -126,7 +140,27 @@
           tabindex="-1"
           :aria-label="workspaceLabel"
         >
-          <template v-if="!stage">
+          <template v-if="recordRef">
+            <ParticipantRecord
+              v-if="recordParticipant"
+              :participant="recordParticipant"
+              :selected-observation-id="selectedObservation?.id ?? ''"
+              :can-manage="canManage"
+              @select-observation="selectObservation"
+              @retry="canvas.loadRecord(recordParticipant.subject_id)"
+            />
+            <p v-else id="record-not-loaded" class="stage-empty">
+              This participant isn't among those loaded for {{ studyCode }}.
+              <router-link
+                :to="
+                  studyLocation({ stage: 'conduct', section: 'participants' })
+                "
+                >Find it in Participants</router-link
+              >.
+            </p>
+          </template>
+
+          <template v-else-if="!stage">
             <StudyPulse @drill="drillToParticipants" />
           </template>
 
@@ -182,9 +216,21 @@
 
         <CanvasInspector
           :study-code="studyCode"
-          :participant="selectedParticipant"
-          :node-ref="selectedNodeText"
+          :participant="inspectedParticipant"
+          :node-ref="inspectedNodeText"
           :missing="Boolean(selectedNode) && !selectedParticipant"
+          :observation="selectedObservation"
+          :record-location="
+            inspectedParticipant && inspectedParticipant !== recordParticipant
+              ? recordLocationFor(inspectedParticipant)
+              : null
+          "
+          :can-verify="canVerify"
+          :verify-sdv="canvas.verifySdv"
+          :flag-sdv="canvas.flagSdv"
+          :can-manage="canManage"
+          :observation-queries="observationQueries"
+          :raise-query="canvas.raiseQuery"
         />
       </div>
     </template>
@@ -232,7 +278,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
-import type { SubjectSummary } from "../api/executionApi";
+import type { Observation, SubjectSummary } from "../api/executionApi";
 import {
   STAGES,
   findSection,
@@ -245,12 +291,14 @@ import {
   tryNodeRef,
   type NodeRef,
 } from "../canvas/nodeRef";
+import { canManageQueries, canVerifySource } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
+import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
@@ -261,7 +309,9 @@ import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue"
  * service; what no service serves yet is absent rather than mocked (§6.1).
  *
  * The URL holds the whole state, so every view is addressable (UX-2):
- * `/studies/:studyCode?stage=&section=&status=&site=&node=`, where `node` is a kernel NodeRef (ADR-2481).
+ * `/studies/:studyCode?stage=&section=&status=&site=&node=&participant=&observation=`. `node` (the participant
+ * in the inspector) and `participant` (the participant whose data is open) are kernel NodeRefs (ADR-2481);
+ * `observation` is Execution's observation id, which has no kernel reference yet.
  */
 interface StudyQuery {
   stage?: string;
@@ -269,6 +319,8 @@ interface StudyQuery {
   status?: string;
   site?: string;
   node?: string;
+  participant?: string;
+  observation?: string;
 }
 
 const route = useRoute();
@@ -296,28 +348,66 @@ const selectedNode = computed<NodeRef | null>(() => {
   const node = parseNodeRef(route.query.node);
   return node?.kind === "participant" ? node : null;
 });
-const selectedNodeText = computed(() =>
-  selectedNode.value ? formatNodeRef(selectedNode.value) : ""
-);
 const selectedParticipant = computed<SubjectSummary | null>(() =>
   selectedNode.value
     ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
     : null
 );
 
+const participantRef = (value: unknown): NodeRef | null => {
+  const node = parseNodeRef(value);
+  return node?.kind === "participant" ? node : null;
+};
+const recordRef = computed(() => participantRef(route.query.participant));
+const recordParticipant = computed<SubjectSummary | null>(() =>
+  recordRef.value
+    ? (canvas.knownParticipants[recordRef.value.id] ?? null)
+    : null
+);
+const selectedObservation = computed<Observation | null>(() => {
+  const id = single(route.query.observation);
+  if (!id || !recordParticipant.value) return null;
+  return canvas.record.observations.find((o) => o.id === id) ?? null;
+});
+const inspectedParticipant = computed(
+  () => selectedParticipant.value ?? recordParticipant.value
+);
+const inspectedNodeText = computed(() => {
+  const participant = inspectedParticipant.value;
+  const node = participant ? tryNodeRef("participant", participant.id) : null;
+  return node ? formatNodeRef(node) : "";
+});
+const canVerify = computed(() => canVerifySource(authStore));
+const observationQueries = computed(() =>
+  selectedObservation.value
+    ? canvas.record.queries.filter(
+        (q) => q.observation_id === selectedObservation.value?.id
+      )
+    : []
+);
+const canManage = computed(() => canManageQueries(authStore));
+
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
 );
 
+const zoomParticipant = computed(
+  () => recordParticipant.value ?? selectedParticipant.value
+);
 const zoomSite = computed(
-  () => selectedParticipant.value?.site_id || siteFilter.value || ""
+  () => zoomParticipant.value?.site_id || siteFilter.value || ""
 );
 const zoomCurrent = computed(() => {
+  if (selectedObservation.value) return "observation";
+  if (recordParticipant.value) return "participant";
   if (selectedParticipant.value) return "participant";
   return zoomSite.value ? "site" : "study";
 });
 
 const workspaceLabel = computed(() => {
+  if (recordRef.value) {
+    return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
+  }
   if (!stage.value) return `${studyCode.value} home`;
   return section.value
     ? `${stage.value.label}: ${section.value.label}`
@@ -345,6 +435,28 @@ function selectParticipant(participant: SubjectSummary) {
     })
   );
   // Stacked panes on a narrow screen: bring the inspector into view (§2.4).
+  nextTick(() =>
+    document.getElementById("canvas-inspector")?.scrollIntoView?.({
+      block: "nearest",
+    })
+  );
+}
+
+/** The participant's data, opened at the participant zoom level with the participant in the inspector. */
+function recordLocationFor(participant: SubjectSummary) {
+  const node = tryNodeRef("participant", participant.id);
+  const text = node ? formatNodeRef(node) : "";
+  return studyLocation({ stage: "conduct", participant: text });
+}
+
+function selectObservation(observation: Observation) {
+  router.push(
+    studyLocation({
+      stage: "conduct",
+      participant: single(route.query.participant),
+      observation: observation.id,
+    })
+  );
   nextTick(() =>
     document.getElementById("canvas-inspector")?.scrollIntoView?.({
       block: "nearest",
@@ -401,6 +513,15 @@ watch(
   { immediate: true }
 );
 
+// Open a participant's data once the canvas knows which participant it is.
+watch(
+  [studyCode, () => recordParticipant.value?.subject_id],
+  ([, code]) => {
+    if (code && canvas.record.subjectCode !== code) canvas.loadRecord(code);
+  },
+  { immediate: true }
+);
+
 // Load what the current view shows, once per study and filter.
 watch(
   [
@@ -411,7 +532,7 @@ watch(
     siteFilter,
   ],
   () => {
-    if (!studyCode.value) return;
+    if (!studyCode.value || recordRef.value) return;
     if (!stage.value) {
       if (!canvas.pulse && !canvas.pulseLoading) canvas.loadPulse();
       return;

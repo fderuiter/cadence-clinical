@@ -14,6 +14,16 @@ export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
+export type Observation = Schemas["Execution_ObservationResponse"];
+export type FormSubmission = Schemas["Execution_FormSubmissionResponse"];
+export type ClinicalQuery = Schemas["Execution_ClinicalQueryResponse"];
+
+export interface RaiseQuery {
+  studyId: string;
+  subjectCode: string;
+  observation: Observation;
+  explanation: string;
+}
 
 export interface ListSubjectsQuery {
   studyId: string;
@@ -58,6 +68,133 @@ export const executionApi = {
           path: { siteId },
           query: { study_id: studyId, milestone },
         },
+      })
+    );
+  },
+
+  /** A participant's observations (GET /api/v1/execution/observations/subject/{studyId}/{subjectId}), by subject code. */
+  listObservations(
+    studyId: string,
+    subjectCode: string
+  ): Promise<Observation[]> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/execution/observations/subject/{studyId}/{subjectId}",
+        {
+          params: { path: { studyId, subjectId: subjectCode } },
+        }
+      )
+    );
+  },
+
+  /** A participant's form submissions (GET /api/v1/execution/forms/subject/{studyId}/{subjectId}), by subject code. */
+  listFormSubmissions(
+    studyId: string,
+    subjectCode: string
+  ): Promise<FormSubmission[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/forms/subject/{studyId}/{subjectId}", {
+        params: { path: { studyId, subjectId: subjectCode } },
+      })
+    );
+  },
+
+  /** Records that the signed-in user verified an observation against its source. Execution records who and when. */
+  verifyObservationSdv(id: string): Promise<Observation> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/observations/{id}/sdv", {
+        params: { path: { id } },
+      })
+    );
+  },
+
+  /** Flags an observation for re-verification, clearing any earlier verification; the reason is recorded. */
+  flagObservationSdv(id: string, reason: string): Promise<Observation> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/observations/{id}/sdv/flag", {
+        params: { path: { id } },
+        body: { reason },
+      })
+    );
+  },
+
+  /** Queries on a participant (GET /api/v1/execution/queries?study_id=&subject_id=), by subject code. */
+  listQueries(studyId: string, subjectCode: string): Promise<ClinicalQuery[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/queries", {
+        params: { query: { study_id: studyId, subject_id: subjectCode } },
+      })
+    );
+  },
+
+  /** Raises a query on one observation. Execution records the signed-in user as its author. */
+  raiseQuery({
+    studyId,
+    subjectCode,
+    observation,
+    explanation,
+  }: RaiseQuery): Promise<ClinicalQuery> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries", {
+        body: {
+          study_id: studyId,
+          subject_id: subjectCode,
+          test_code: observation.test_code,
+          domain: observation.domain,
+          observation_id: observation.id,
+          visit_id: observation.visit_id ?? null,
+          site_id: observation.site_id ?? null,
+          explanation,
+          // Execution's own defaults for a query a person raises.
+          status: "OPEN",
+          origin: "MANUAL",
+          priority: "MEDIUM",
+        },
+      })
+    );
+  },
+
+  /**
+   * Answers an open or reopened query. The responder is the signed-in user; this client never sends a
+   * responder of its own (#4920).
+   */
+  respondQuery(id: string, response: string): Promise<ClinicalQuery> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/{id}/respond", {
+        params: { path: { id } },
+        body: { response },
+      })
+    );
+  },
+
+  /** Closes an answered query (CRA or data manager), with the reason as X-Change-Reason. */
+  closeQuery(id: string, reason: string): Promise<ClinicalQuery> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/{id}/close", {
+        params: { path: { id } },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /** Reopens an answered or closed query (CRA or data manager); Execution requires the reason in both places. */
+  reopenQuery(id: string, reason: string): Promise<ClinicalQuery> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/{id}/reopen", {
+        params: { path: { id } },
+        body: { reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /** Cancels a query that is not closed (CRA or data manager); Execution requires the reason in both places. */
+  cancelQuery(id: string, reason: string): Promise<ClinicalQuery> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/{id}/cancel", {
+        params: { path: { id } },
+        body: { reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
