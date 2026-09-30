@@ -74,7 +74,7 @@ pnpm cadence check
 ```
 
 Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`, `arch-drift`,
-`env-vars`, `contracts`, `openapi`, `rtm`, `duplication`, `security`, `vulnerabilities`.
+`env-vars`, `contracts`, `openapi`, `rtm`, `duplication`, `security`, `deid`, `vulnerabilities`.
 
 **PostgreSQL integration tests** are skipped unless you provide a database:
 `CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
@@ -134,6 +134,11 @@ Every PR updates what its change makes stale, in the same PR:
 
 - Never commit `.env`, secrets, `.docx` files, test reports (`*.trx`, `report.xml`) or build output.
   `.secrets.baseline` tracks accepted detect-secrets findings.
+- Never commit PHI or PII. The `deid` gate runs the full de-identification detector (14 categories) over
+  every tracked file outside `tests/`, `docs/`, `scripts/` and similar folders, and fails on any finding not in
+  `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is not PHI (demo data, a code-system
+  URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
+  baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
   verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
