@@ -1125,7 +1125,7 @@ async function handleEnrollSubmit() {
 
   const storeInstance = props.store || clinicalStore;
   if (typeof storeInstance.enrollSubject === "function") {
-    await storeInstance.enrollSubject({
+    const enrolled = await storeInstance.enrollSubject({
       id: enrollForm.subjectId.trim(),
       siteId: enrollForm.siteId,
       consentDate: enrollForm.consentDate,
@@ -1133,6 +1133,8 @@ async function handleEnrollSubmit() {
       protocolVersion: "1.0.0",
       reason: enrollForm.changeReason,
     });
+    // Refused (no backend yet, #4827): keep the dialog open and report nothing as enrolled.
+    if (!enrolled) return;
   }
 
   emit("enroll-subject", { ...enrollForm });

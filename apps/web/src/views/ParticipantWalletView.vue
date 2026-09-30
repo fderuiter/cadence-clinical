@@ -1013,6 +1013,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useToastStore } from "../stores/toasts.js";
+import { ensureOk } from "../utils/apiErrors.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 const activeTab = ref("wallets");
 const isLoading = ref(false);
@@ -1281,12 +1284,16 @@ async function loadAllData() {
       fetch("/api/v1/payments/participant/expenses"),
     ]);
 
+    // #4827: outside demo builds a failed request is an error, never an empty or sample wallet.
+    if (!isDemoBuild()) {
+      await Promise.all([wRes, rRes, cRes].map(ensureOk));
+    }
     if (wRes.ok) wallets.value = await wRes.json();
     if (rRes.ok) stipendRules.value = await rRes.json();
     if (cRes.ok) expenseClaims.value = await cRes.json();
 
-    // Default fallback mock items if empty
-    if (stipendRules.value.length === 0) {
+    // Sample stipend rules and wallets, in demo builds only.
+    if (isDemoBuild() && stipendRules.value.length === 0) {
       stipendRules.value = [
         {
           id: "1",
@@ -1352,7 +1359,7 @@ async function loadAllData() {
       ];
     }
 
-    if (wallets.value.length === 0) {
+    if (isDemoBuild() && wallets.value.length === 0) {
       wallets.value = [
         {
           id: "w-101",
@@ -1401,7 +1408,7 @@ async function loadAllData() {
       ];
     }
   } catch (e) {
-    console.error("Error loading participant wallet data:", e);
+    useToastStore().apiError("Loading participant wallets failed", e);
   } finally {
     isLoading.value = false;
   }
@@ -1426,13 +1433,17 @@ async function triggerVisitVerified() {
         }),
       }
     );
-    if (res.ok) {
-      const data = await res.json();
-      visitTriggerSuccess.value = `Successfully credited $${data.amount?.toFixed(2) || "150.00"} stipend for visit ${visitEventForm.value.visit_code}! New balance: $${data.current_balance?.toFixed(2) || "475.00"}`;
-      await loadAllData();
-    }
+    await ensureOk(res);
+    const data = await res.json();
+    // Report only the amounts the service returned (#4827).
+    visitTriggerSuccess.value =
+      typeof data.amount === "number" &&
+      typeof data.current_balance === "number"
+        ? `Credited $${data.amount.toFixed(2)} stipend for visit ${visitEventForm.value.visit_code}. New balance: $${data.current_balance.toFixed(2)}`
+        : `Stipend for visit ${visitEventForm.value.visit_code} recorded.`;
+    await loadAllData();
   } catch (e) {
-    console.error("Error triggering visit verification:", e);
+    useToastStore().apiError("Crediting the visit stipend failed", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1459,13 +1470,12 @@ async function submitExpenseClaim() {
         receipt_ocr_data: ocrResult.value || {},
       }),
     });
-    if (res.ok) {
-      claimSubmitSuccess.value = `Expense claim of $${expenseForm.value.gross_amount.toFixed(2)} submitted successfully!`;
-      await loadAllData();
-      activeTab.value = "approvals";
-    }
+    await ensureOk(res);
+    claimSubmitSuccess.value = `Expense claim of $${expenseForm.value.gross_amount.toFixed(2)} submitted.`;
+    await loadAllData();
+    activeTab.value = "approvals";
   } catch (e) {
-    console.error("Error submitting expense claim:", e);
+    useToastStore().apiError("Submitting the expense claim failed", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1488,11 +1498,10 @@ async function reviewClaim(claimId: string, decision: string) {
         }),
       }
     );
-    if (res.ok) {
-      await loadAllData();
-    }
+    await ensureOk(res);
+    await loadAllData();
   } catch (e) {
-    console.error("Error reviewing claim:", e);
+    useToastStore().apiError("Reviewing the expense claim failed", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1514,13 +1523,12 @@ async function triggerDisbursement() {
         }),
       }
     );
-    if (res.ok) {
-      await loadAllData();
-      selectedWallet.value = null;
-      activeTab.value = "disbursements";
-    }
+    await ensureOk(res);
+    await loadAllData();
+    selectedWallet.value = null;
+    activeTab.value = "disbursements";
   } catch (e) {
-    console.error("Error triggering disbursement:", e);
+    useToastStore().apiError("Disbursement failed. Nothing was paid out", e);
   } finally {
     isSubmitting.value = false;
   }

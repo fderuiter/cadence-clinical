@@ -356,6 +356,7 @@ import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { usePiSignoff } from "../composables/usePiSignoff";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -776,6 +777,12 @@ function cancelChange() {
 function saveChange(finalReason) {
   if (pendingSdvToggle.value) {
     const { fieldId, checked } = pendingSdvToggle.value;
+    // #4827: SDV is not sent to the Execution service from here yet, so outside demo builds nothing changes.
+    if (!allowUnbackedAction("Recording source data verification")) {
+      pendingSdvToggle.value = null;
+      showReasonModal.value = false;
+      return;
+    }
     const sKey = getSdvKey(fieldId);
     sdvStates[sKey] = checked;
 

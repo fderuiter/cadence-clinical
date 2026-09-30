@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { ref } from "vue";
@@ -26,8 +26,14 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe("useConsentGating Composable", () => {
-    it("correctly identifies gated subjects and clears gating upon consent completion", async () => {
+    it("correctly identifies gated subjects and clears gating upon consent completion (demo build)", async () => {
+      // Re-consent runs on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       const activeSubject = ref("SUBJ-002");
       const {
         isReconsentGated,

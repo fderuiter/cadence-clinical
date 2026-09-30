@@ -1166,6 +1166,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import RactMatrixViewer from "@/components/quality/RactMatrixViewer.vue";
 import StatisticalForensicsViewer from "@/components/quality/StatisticalForensicsViewer.vue";
 
@@ -1526,7 +1528,11 @@ function loadSeedData() {
 }
 
 onMounted(() => {
-  loadSeedData();
+  // Sample deviations, CAPAs and dossier for demo builds only (#4827): no quality service serves them yet,
+  // and every action below that changes them is refused outside demo builds.
+  if (isDemoBuild()) {
+    loadSeedData();
+  }
 });
 
 function onStudyChange() {
@@ -1555,6 +1561,7 @@ function openRcaModal(dev) {
 }
 
 function saveRcaInvestigation() {
+  if (!allowUnbackedAction("Saving a root cause investigation")) return;
   if (activeRcaDeviation.value) {
     activeRcaDeviation.value.rca = {
       methodology: rcaMethod.value,
@@ -1579,6 +1586,7 @@ function openCapaDetail(capa) {
 }
 
 function advanceCapaStage(capa) {
+  if (!allowUnbackedAction("Advancing a CAPA")) return;
   const next = getNextStage(capa.status);
   if (!next) return;
 
@@ -1617,6 +1625,7 @@ function openAuditFindingsModal(audit) {
 }
 
 function executePromoteFinding() {
+  if (!allowUnbackedAction("Promoting a finding to a CAPA")) return;
   if (!activeFindingToPromote.value) return;
   capas.value.push({
     id: `CAPA-PROMOTE-${Date.now().toString().slice(-4)}`,
@@ -1641,6 +1650,7 @@ function openNewBreachModal() {
 }
 
 function confirmBreach(breach) {
+  if (!allowUnbackedAction("Confirming a serious breach")) return;
   breach.status = "CONFIRMED_BREACH";
   alert(
     "⚠️ Breach status confirmed. Regulatory notification 7-day clock is running."
@@ -1648,21 +1658,25 @@ function confirmBreach(breach) {
 }
 
 function notifyAuthorities(breach) {
+  if (!allowUnbackedAction("Notifying health authorities")) return;
   breach.status = "AUTHORITY_NOTIFIED";
   alert("🏛️ Regulatory health authority formal notification dispatched.");
 }
 
 function runKriBatchScoring() {
+  if (!allowUnbackedAction("KRI scoring")) return;
   alert(
     "⚡ Running KRI batch evaluation across study sites. Statistical Z-scores updated."
   );
 }
 
 function recomputeSiteProfiles() {
+  if (!allowUnbackedAction("Recomputing site risk")) return;
   alert("🔄 Site Risk Index recomputed and ranked.");
 }
 
 function triggerTargetedMonitoring(siteId) {
+  if (!allowUnbackedAction("Targeted monitoring")) return;
   alert(
     `🎯 Targeted Monitoring Plan generated for ${siteId}. Triggering focused SDV sample.`
   );
@@ -1673,6 +1687,7 @@ function openNewQtlModal() {
 }
 
 function evaluateQtlBreach(qtl) {
+  if (!allowUnbackedAction("QTL evaluation")) return;
   qtl.observed_value = 6.5;
   qtl.latest_breach = {
     observed_value: 6.5,
@@ -1696,6 +1711,7 @@ function copyCsrText() {
 }
 
 function downloadDossierJson() {
+  if (!allowUnbackedAction("Downloading the inspection dossier")) return;
   const jsonStr = JSON.stringify(dossierData.value, null, 2);
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);

@@ -698,6 +698,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const STEPS = [
   { number: 1, title: "Target Format", shortDesc: "XPT, ODM, JSON, CSV" },
@@ -1092,6 +1093,8 @@ function toggleCohort(arm) {
 }
 
 async function startExportPipeline() {
+  // #4827: the package below is a hardcoded sample, not an export of study data. Only a demo build builds it.
+  if (!allowUnbackedAction("Exporting study data")) return;
   exportStatus.value = "processing";
   progressPercent.value = 15;
   progressStepText.value =

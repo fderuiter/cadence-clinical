@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import { useClinicalStore } from "@/stores/clinical";
@@ -88,7 +88,13 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     expect(ecrfWrapper.find("fieldset").attributes("disabled")).toBeUndefined();
   });
 
-  it("Requirement 3: clearing a re-consent gate via eCRF or eConsent forms reactively unlocks data entry fields", async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("Requirement 3: clearing a re-consent gate via eCRF or eConsent forms reactively unlocks data entry fields (demo build)", async () => {
+    // The eCRF records re-consent on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const gatedSubjectId = "SUBJ-002";
     expect(clinicalStore.isSubjectGated(gatedSubjectId)).toBe(true);
 

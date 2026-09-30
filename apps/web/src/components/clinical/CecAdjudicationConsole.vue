@@ -1412,6 +1412,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { isDemoBuild } from "../../utils/demoMode.js";
+import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const currentRole = ref("READER_1");
 const selectedStudyId = ref("STUDY-101");
@@ -1424,239 +1426,244 @@ const isSubmitting = ref(false);
 const showReaderModal = ref(false);
 const activeReaderTarget = ref("READER_1");
 
-// Mock Seed Dossiers
-const dossiers = ref([
-  {
-    dossier_id: "DOSSIER-MACE-001",
-    event_id: "AE-REC-8801",
-    study_id: "STUDY-101",
-    site_id: "SITE-101",
-    masked_site_id: "SITE-BLINDED-9A1F",
-    subject_id: "SUBJ-101-0042",
-    masked_subject_id: "SUBJ-BLINDED-B4C2",
-    candidate_event_type: "MYOCARDIAL_INFARCTION",
-    reported_term: "Acute Myocardial Infarction",
-    verbatim_description:
-      "Patient presented with crushing substernal chest pressure, diaphoresis, and radiation to left arm for 45 minutes.",
-    reported_onset_date: "2026-08-10",
-    medical_narrative:
-      "Patient presented to the emergency department complaining of acute retrosternal chest pain. High-sensitivity Troponin I rose significantly over 3 hours. 12-lead ECG showed 3mm ST elevation in leads V2-V4. Emergent coronary catheterization revealed 95% occlusion of the proximal LAD, successfully treated with drug-eluting stent.",
-    is_deidentified: true,
-    workflow_status: "PENDING_PRIMARY_REVIEWS",
-    is_discordant: false,
-    discordance_reasons: [],
-    dossier_digest:
-      "8f92a3c4b12398fa209cba112984719283719284729184719284719284719284",
-    lab_panels: [
-      {
-        test_name: "High-Sensitivity Troponin I",
-        loinc_code: "49563-0",
-        result_value: "4.82",
-        result_unit: "ng/mL",
-        reference_low: 0.0,
-        reference_high: 0.04,
-        is_out_of_range: true,
-        toxicity_grade: 4,
-      },
-      {
-        test_name: "CK-MB",
-        loinc_code: "13969-1",
-        result_value: "48.5",
-        result_unit: "ng/mL",
-        reference_low: 0.0,
-        reference_high: 5.0,
-        is_out_of_range: true,
-        toxicity_grade: 3,
-      },
-      {
-        test_name: "Serum Creatinine",
-        loinc_code: "2160-0",
-        result_value: "1.1",
-        result_unit: "mg/dL",
-        reference_low: 0.7,
-        reference_high: 1.3,
-        is_out_of_range: false,
-        toxicity_grade: 0,
-      },
-    ],
-    ecg_records: [
-      {
-        ecg_id: "ECG-001-A",
-        timestamp: "2026-08-10T14:20:00Z",
-        rhythm: "Sinus rhythm with acute anterior STEMI",
-        st_elevation_leads: ["V1", "V2", "V3", "V4"],
-        st_depression_leads: ["II", "III", "aVF"],
-        q_wave_leads: ["V1", "V2"],
-        lbbb_present: false,
-        qtcf_ms: 428,
-        interpretation: "Acute anterior ST-elevation myocardial infarction.",
-      },
-    ],
-    diagnostic_attachments: [
-      {
-        attachment_id: "ATT-COR-01",
-        document_type: "Coronary Angiogram",
-        title: "Cardiac Catheterization Report",
-        summary:
-          "Culprit lesion: 95% proximal LAD thrombus. Successful deployment of 3.5x18mm DES with TIMI 3 flow restored.",
-        key_findings: [
-          "Proximal LAD 95% stenosis with acute intraluminal thrombus",
-          "Post-PCI TIMI 3 flow achieved",
-        ],
-      },
-    ],
-    reader_1_id: "reader_01",
-    reader_1_name: "Dr. Primary Reader 1",
-    reader_1_status: "PENDING",
-    reader_1_assessment: null,
-    reader_2_id: "reader_02",
-    reader_2_name: "Dr. Primary Reader 2",
-    reader_2_status: "PENDING",
-    reader_2_assessment: null,
-    final_consensus_classification: null,
-    final_consensus_subtype: null,
-    final_adjudicated_onset_date: null,
-  },
-  {
-    dossier_id: "DOSSIER-STRK-002",
-    event_id: "AE-REC-8802",
-    study_id: "STUDY-101",
-    site_id: "SITE-102",
-    masked_site_id: "SITE-BLINDED-F102",
-    subject_id: "SUBJ-101-0089",
-    masked_subject_id: "SUBJ-BLINDED-A92B",
-    candidate_event_type: "STROKE",
-    reported_term: "Acute Ischemic Stroke / Focal Deficit",
-    verbatim_description:
-      "Sudden onset right facial droop, right arm hemiparesis, and expressive aphasia lasting > 24 hours.",
-    reported_onset_date: "2026-08-12",
-    medical_narrative:
-      "Patient experienced sudden right-sided hemiparesis and motor aphasia while at home. Emergency brain MRI confirmed acute left MCA territory diffusion restriction consistent with acute cerebral infarction.",
-    is_deidentified: true,
-    workflow_status: "DISCORDANCE_DETECTED",
-    is_discordant: true,
-    discordance_reasons: [
-      "Primary classification discordance: Reader 1 assessed [CONFIRMED_ISCHEMIC_STROKE] vs Reader 2 assessed [NOT_AN_ENDPOINT]",
-    ],
-    dossier_digest:
-      "4a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b",
-    lab_panels: [],
-    ecg_records: [],
-    diagnostic_attachments: [
-      {
-        attachment_id: "ATT-MRI-02",
-        document_type: "Brain MRI",
-        title: "MRI Brain with DWI/ADC",
-        summary:
-          "Restricted diffusion in the left middle cerebral artery distribution compatible with acute non-hemorrhagic infarction.",
-        key_findings: [
-          "Acute left MCA cortical infarction",
-          "No evidence of acute intracranial hemorrhage",
-        ],
-      },
-    ],
-    reader_1_id: "reader_01",
-    reader_1_name: "Dr. Primary Reader 1",
-    reader_1_status: "COMPLETED",
-    reader_1_assessment: {
-      assessment_id: "ASSESS-001",
-      dossier_id: "DOSSIER-STRK-002",
-      reader_id: "reader_01",
-      reader_name: "Dr. Primary Reader 1",
-      reader_role: "READER_1",
-      classification: "CONFIRMED_ISCHEMIC_STROKE",
-      subtype: "Acute Ischemic Infarction (Left MCA)",
-      adjudicated_onset_date: "2026-08-12",
-      criteria_met: [
-        "Acute focal neurological deficit > 24 hours",
-        "Brain MRI restricted diffusion confirmed",
-      ],
-      confidence_score: 5,
-      clinical_rationale:
-        "Clear imaging and clinical criteria satisfied for acute ischemic stroke.",
-    },
-    reader_2_id: "reader_02",
-    reader_2_name: "Dr. Primary Reader 2",
-    reader_2_status: "COMPLETED",
-    reader_2_assessment: {
-      assessment_id: "ASSESS-002",
-      dossier_id: "DOSSIER-STRK-002",
-      reader_id: "reader_02",
-      reader_name: "Dr. Primary Reader 2",
-      reader_role: "READER_2",
-      classification: "NOT_AN_ENDPOINT",
-      subtype: "Transient Ischemic Attack (TIA)",
-      adjudicated_onset_date: "2026-08-12",
-      criteria_met: [],
-      confidence_score: 3,
-      clinical_rationale:
-        "Symptoms may have resolved within 24 hours based on initial EMS dispatch narrative.",
-    },
-    final_consensus_classification: null,
-  },
-  {
-    dossier_id: "DOSSIER-MACE-003",
-    event_id: "AE-REC-8803",
-    study_id: "STUDY-101",
-    site_id: "SITE-101",
-    masked_site_id: "SITE-BLINDED-9A1F",
-    subject_id: "SUBJ-101-0120",
-    masked_subject_id: "SUBJ-BLINDED-C781",
-    candidate_event_type: "CARDIOVASCULAR_MORTALITY",
-    reported_term: "Sudden Cardiac Death",
-    reported_onset_date: "2026-08-14",
-    medical_narrative:
-      "Patient found unresponsive at home. Paramedic resuscitation noted ventricular fibrillation. Patient pronounced deceased.",
-    is_deidentified: true,
-    workflow_status: "FINALIZED_CONCORDANT",
-    is_discordant: false,
-    discordance_reasons: [],
-    dossier_digest:
-      "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff",
-    lab_panels: [],
-    ecg_records: [],
-    diagnostic_attachments: [],
-    reader_1_id: "reader_01",
-    reader_1_name: "Dr. Primary Reader 1",
-    reader_1_status: "COMPLETED",
-    reader_1_assessment: {
-      assessment_id: "ASSESS-003",
-      dossier_id: "DOSSIER-MACE-003",
-      reader_id: "reader_01",
-      reader_name: "Dr. Primary Reader 1",
-      reader_role: "READER_1",
-      classification: "CONFIRMED_CV_DEATH",
-      subtype: "Sudden Cardiac Arrest",
-      adjudicated_onset_date: "2026-08-14",
-      criteria_met: [
-        "Sudden witnessed cardiac arrest with initial rhythm of VF",
-      ],
-      confidence_score: 5,
-      clinical_rationale: "Definitive sudden cardiac death.",
-    },
-    reader_2_id: "reader_02",
-    reader_2_name: "Dr. Primary Reader 2",
-    reader_2_status: "COMPLETED",
-    reader_2_assessment: {
-      assessment_id: "ASSESS-004",
-      dossier_id: "DOSSIER-MACE-003",
-      reader_id: "reader_02",
-      reader_name: "Dr. Primary Reader 2",
-      reader_role: "READER_2",
-      classification: "CONFIRMED_CV_DEATH",
-      subtype: "Sudden Cardiac Arrest",
-      adjudicated_onset_date: "2026-08-14",
-      criteria_met: [
-        "Sudden witnessed cardiac arrest with initial rhythm of VF",
-      ],
-      confidence_score: 5,
-      clinical_rationale: "Concordant with Reader 1.",
-    },
-    final_consensus_classification: "CONFIRMED_CV_DEATH",
-    final_consensus_subtype: "Sudden Cardiac Arrest",
-    final_adjudicated_onset_date: "2026-08-14",
-  },
-]);
+// Sample dossiers, in demo builds only (#4827): no service serves adjudication dossiers yet.
+const dossiers = ref(
+  isDemoBuild()
+    ? [
+        {
+          dossier_id: "DOSSIER-MACE-001",
+          event_id: "AE-REC-8801",
+          study_id: "STUDY-101",
+          site_id: "SITE-101",
+          masked_site_id: "SITE-BLINDED-9A1F",
+          subject_id: "SUBJ-101-0042",
+          masked_subject_id: "SUBJ-BLINDED-B4C2",
+          candidate_event_type: "MYOCARDIAL_INFARCTION",
+          reported_term: "Acute Myocardial Infarction",
+          verbatim_description:
+            "Patient presented with crushing substernal chest pressure, diaphoresis, and radiation to left arm for 45 minutes.",
+          reported_onset_date: "2026-08-10",
+          medical_narrative:
+            "Patient presented to the emergency department complaining of acute retrosternal chest pain. High-sensitivity Troponin I rose significantly over 3 hours. 12-lead ECG showed 3mm ST elevation in leads V2-V4. Emergent coronary catheterization revealed 95% occlusion of the proximal LAD, successfully treated with drug-eluting stent.",
+          is_deidentified: true,
+          workflow_status: "PENDING_PRIMARY_REVIEWS",
+          is_discordant: false,
+          discordance_reasons: [],
+          dossier_digest:
+            "8f92a3c4b12398fa209cba112984719283719284729184719284719284719284",
+          lab_panels: [
+            {
+              test_name: "High-Sensitivity Troponin I",
+              loinc_code: "49563-0",
+              result_value: "4.82",
+              result_unit: "ng/mL",
+              reference_low: 0.0,
+              reference_high: 0.04,
+              is_out_of_range: true,
+              toxicity_grade: 4,
+            },
+            {
+              test_name: "CK-MB",
+              loinc_code: "13969-1",
+              result_value: "48.5",
+              result_unit: "ng/mL",
+              reference_low: 0.0,
+              reference_high: 5.0,
+              is_out_of_range: true,
+              toxicity_grade: 3,
+            },
+            {
+              test_name: "Serum Creatinine",
+              loinc_code: "2160-0",
+              result_value: "1.1",
+              result_unit: "mg/dL",
+              reference_low: 0.7,
+              reference_high: 1.3,
+              is_out_of_range: false,
+              toxicity_grade: 0,
+            },
+          ],
+          ecg_records: [
+            {
+              ecg_id: "ECG-001-A",
+              timestamp: "2026-08-10T14:20:00Z",
+              rhythm: "Sinus rhythm with acute anterior STEMI",
+              st_elevation_leads: ["V1", "V2", "V3", "V4"],
+              st_depression_leads: ["II", "III", "aVF"],
+              q_wave_leads: ["V1", "V2"],
+              lbbb_present: false,
+              qtcf_ms: 428,
+              interpretation:
+                "Acute anterior ST-elevation myocardial infarction.",
+            },
+          ],
+          diagnostic_attachments: [
+            {
+              attachment_id: "ATT-COR-01",
+              document_type: "Coronary Angiogram",
+              title: "Cardiac Catheterization Report",
+              summary:
+                "Culprit lesion: 95% proximal LAD thrombus. Successful deployment of 3.5x18mm DES with TIMI 3 flow restored.",
+              key_findings: [
+                "Proximal LAD 95% stenosis with acute intraluminal thrombus",
+                "Post-PCI TIMI 3 flow achieved",
+              ],
+            },
+          ],
+          reader_1_id: "reader_01",
+          reader_1_name: "Dr. Primary Reader 1",
+          reader_1_status: "PENDING",
+          reader_1_assessment: null,
+          reader_2_id: "reader_02",
+          reader_2_name: "Dr. Primary Reader 2",
+          reader_2_status: "PENDING",
+          reader_2_assessment: null,
+          final_consensus_classification: null,
+          final_consensus_subtype: null,
+          final_adjudicated_onset_date: null,
+        },
+        {
+          dossier_id: "DOSSIER-STRK-002",
+          event_id: "AE-REC-8802",
+          study_id: "STUDY-101",
+          site_id: "SITE-102",
+          masked_site_id: "SITE-BLINDED-F102",
+          subject_id: "SUBJ-101-0089",
+          masked_subject_id: "SUBJ-BLINDED-A92B",
+          candidate_event_type: "STROKE",
+          reported_term: "Acute Ischemic Stroke / Focal Deficit",
+          verbatim_description:
+            "Sudden onset right facial droop, right arm hemiparesis, and expressive aphasia lasting > 24 hours.",
+          reported_onset_date: "2026-08-12",
+          medical_narrative:
+            "Patient experienced sudden right-sided hemiparesis and motor aphasia while at home. Emergency brain MRI confirmed acute left MCA territory diffusion restriction consistent with acute cerebral infarction.",
+          is_deidentified: true,
+          workflow_status: "DISCORDANCE_DETECTED",
+          is_discordant: true,
+          discordance_reasons: [
+            "Primary classification discordance: Reader 1 assessed [CONFIRMED_ISCHEMIC_STROKE] vs Reader 2 assessed [NOT_AN_ENDPOINT]",
+          ],
+          dossier_digest:
+            "4a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b",
+          lab_panels: [],
+          ecg_records: [],
+          diagnostic_attachments: [
+            {
+              attachment_id: "ATT-MRI-02",
+              document_type: "Brain MRI",
+              title: "MRI Brain with DWI/ADC",
+              summary:
+                "Restricted diffusion in the left middle cerebral artery distribution compatible with acute non-hemorrhagic infarction.",
+              key_findings: [
+                "Acute left MCA cortical infarction",
+                "No evidence of acute intracranial hemorrhage",
+              ],
+            },
+          ],
+          reader_1_id: "reader_01",
+          reader_1_name: "Dr. Primary Reader 1",
+          reader_1_status: "COMPLETED",
+          reader_1_assessment: {
+            assessment_id: "ASSESS-001",
+            dossier_id: "DOSSIER-STRK-002",
+            reader_id: "reader_01",
+            reader_name: "Dr. Primary Reader 1",
+            reader_role: "READER_1",
+            classification: "CONFIRMED_ISCHEMIC_STROKE",
+            subtype: "Acute Ischemic Infarction (Left MCA)",
+            adjudicated_onset_date: "2026-08-12",
+            criteria_met: [
+              "Acute focal neurological deficit > 24 hours",
+              "Brain MRI restricted diffusion confirmed",
+            ],
+            confidence_score: 5,
+            clinical_rationale:
+              "Clear imaging and clinical criteria satisfied for acute ischemic stroke.",
+          },
+          reader_2_id: "reader_02",
+          reader_2_name: "Dr. Primary Reader 2",
+          reader_2_status: "COMPLETED",
+          reader_2_assessment: {
+            assessment_id: "ASSESS-002",
+            dossier_id: "DOSSIER-STRK-002",
+            reader_id: "reader_02",
+            reader_name: "Dr. Primary Reader 2",
+            reader_role: "READER_2",
+            classification: "NOT_AN_ENDPOINT",
+            subtype: "Transient Ischemic Attack (TIA)",
+            adjudicated_onset_date: "2026-08-12",
+            criteria_met: [],
+            confidence_score: 3,
+            clinical_rationale:
+              "Symptoms may have resolved within 24 hours based on initial EMS dispatch narrative.",
+          },
+          final_consensus_classification: null,
+        },
+        {
+          dossier_id: "DOSSIER-MACE-003",
+          event_id: "AE-REC-8803",
+          study_id: "STUDY-101",
+          site_id: "SITE-101",
+          masked_site_id: "SITE-BLINDED-9A1F",
+          subject_id: "SUBJ-101-0120",
+          masked_subject_id: "SUBJ-BLINDED-C781",
+          candidate_event_type: "CARDIOVASCULAR_MORTALITY",
+          reported_term: "Sudden Cardiac Death",
+          reported_onset_date: "2026-08-14",
+          medical_narrative:
+            "Patient found unresponsive at home. Paramedic resuscitation noted ventricular fibrillation. Patient pronounced deceased.",
+          is_deidentified: true,
+          workflow_status: "FINALIZED_CONCORDANT",
+          is_discordant: false,
+          discordance_reasons: [],
+          dossier_digest:
+            "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff",
+          lab_panels: [],
+          ecg_records: [],
+          diagnostic_attachments: [],
+          reader_1_id: "reader_01",
+          reader_1_name: "Dr. Primary Reader 1",
+          reader_1_status: "COMPLETED",
+          reader_1_assessment: {
+            assessment_id: "ASSESS-003",
+            dossier_id: "DOSSIER-MACE-003",
+            reader_id: "reader_01",
+            reader_name: "Dr. Primary Reader 1",
+            reader_role: "READER_1",
+            classification: "CONFIRMED_CV_DEATH",
+            subtype: "Sudden Cardiac Arrest",
+            adjudicated_onset_date: "2026-08-14",
+            criteria_met: [
+              "Sudden witnessed cardiac arrest with initial rhythm of VF",
+            ],
+            confidence_score: 5,
+            clinical_rationale: "Definitive sudden cardiac death.",
+          },
+          reader_2_id: "reader_02",
+          reader_2_name: "Dr. Primary Reader 2",
+          reader_2_status: "COMPLETED",
+          reader_2_assessment: {
+            assessment_id: "ASSESS-004",
+            dossier_id: "DOSSIER-MACE-003",
+            reader_id: "reader_02",
+            reader_name: "Dr. Primary Reader 2",
+            reader_role: "READER_2",
+            classification: "CONFIRMED_CV_DEATH",
+            subtype: "Sudden Cardiac Arrest",
+            adjudicated_onset_date: "2026-08-14",
+            criteria_met: [
+              "Sudden witnessed cardiac arrest with initial rhythm of VF",
+            ],
+            confidence_score: 5,
+            clinical_rationale: "Concordant with Reader 1.",
+          },
+          final_consensus_classification: "CONFIRMED_CV_DEATH",
+          final_consensus_subtype: "Sudden Cardiac Arrest",
+          final_adjudicated_onset_date: "2026-08-14",
+        },
+      ]
+    : []
+);
 
 // Charter Governance Mock
 const activeCharter = ref({
@@ -1866,6 +1873,8 @@ function openReaderForm(targetRole) {
 }
 
 function submitReaderForm() {
+  // #4827: reader assessments are recorded nowhere yet.
+  if (!allowUnbackedAction("Recording a reader assessment")) return;
   isSubmitting.value = true;
   setTimeout(() => {
     if (activeDossier.value) {
@@ -1922,6 +1931,8 @@ function submitChairAdjudication() {
     );
     return;
   }
+  // #4827: the chair's adjudication and sign-off are recorded nowhere yet.
+  if (!allowUnbackedAction("Chair adjudication sign-off")) return;
   isSubmitting.value = true;
   setTimeout(() => {
     if (activeDossier.value) {

@@ -11,6 +11,7 @@ declare module "pinia" {
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { useToastStore } from "./toasts.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { soaClient } from "../api/soaClient.js";
 import {
   executionService,
@@ -948,6 +949,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       method: string = "ECONSENT",
       reason?: string
     ) {
+      // Updates the local gate only. Callers must first have the re-consent recorded by a service, or be
+      // running a demo build (#4827, see useConsentGating).
       let sub = this.subjects.find((s) => s.id === subjectId);
       if (!sub) {
         sub = {
@@ -1068,6 +1071,8 @@ const useClinicalStoreInner = defineStore("clinical", {
     }) {
       const subjectId = enrollData.id.trim();
       if (!subjectId) return null;
+      // #4827: enrolment is not recorded by any service from here yet; outside demo builds nothing changes.
+      if (!allowUnbackedAction("Enrolling a subject")) return null;
 
       let sub = this.subjects.find((s) => s.id === subjectId);
       const version = enrollData.protocolVersion || "1.0.0";

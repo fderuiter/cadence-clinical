@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { useEconsentStore } from "../../src/stores/econsent";
@@ -37,7 +37,13 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     expect(wrapper.text()).toContain("Genetic Screening and Biobanking");
   });
 
-  it("prompts for change justification and increments the version index when publishing (v1.0 -> v2.0)", async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("prompts for change justification and increments the version index when publishing (v1.0 -> v2.0, demo build)", async () => {
+    // Publishing runs on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const store = useEconsentStore();
     const wrapper = mount(ICFBuilderView);
 

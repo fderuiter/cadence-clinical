@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 export const useEconsentStore = defineStore("econsent", {
   state: () => ({
@@ -260,16 +261,21 @@ export const useEconsentStore = defineStore("econsent", {
       this.quizScore = 0;
     },
 
+    /** Returns false, recording nothing, when no service can record the signature (#4827). */
     recordSignedConsent(signatureRecord) {
+      if (!allowUnbackedAction("Recording a consent signature")) return false;
       this.signedConsents.push({
         id: `sig-${Date.now()}`,
         timestamp: new Date().toISOString(),
         ...signatureRecord,
       });
+      return true;
     },
 
+    /** Returns false, publishing nothing, when no service can publish the ICF version (#4827). */
     publishIcfVersion(reason) {
-      if (!this.currentIcf) return;
+      if (!this.currentIcf) return false;
+      if (!allowUnbackedAction("Publishing an ICF version")) return false;
       const currentVerStr = this.currentIcf.version;
 
       // Increment version v1.0 -> v2.0
@@ -290,6 +296,7 @@ export const useEconsentStore = defineStore("econsent", {
       };
 
       this.versionHistory.push(versionRecord);
+      return true;
     },
   },
 });
