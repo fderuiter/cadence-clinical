@@ -590,11 +590,9 @@
               align-items: center;
               gap: 6px;
             "
-            :disabled="scanningAnomalies"
             @click="triggerAnomalyScan"
           >
-            <span v-if="scanningAnomalies">⏳ Scanning...</span>
-            <span v-else>🔍 Run Cross-Domain Anomaly Scan</span>
+            <span>🔍 Run Cross-Domain Anomaly Scan</span>
           </button>
         </div>
 
@@ -667,7 +665,7 @@
                   <button
                     class="btn btn-sm btn-primary"
                     style="padding: 4px 8px; font-size: 0.75rem"
-                    @click="promptAdjudicateCandidate(q, 'APPROVE')"
+                    @click="promptAdjudicateCandidate"
                   >
                     Approve (Open)
                   </button>
@@ -679,7 +677,7 @@
                       background-color: var(--error-bg);
                       color: var(--error);
                     "
-                    @click="promptAdjudicateCandidate(q, 'REJECT')"
+                    @click="promptAdjudicateCandidate"
                   >
                     Dismiss
                   </button>
@@ -743,9 +741,11 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
-import { executionService } from "@/api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import {
+  allowUnbackedAction,
+  refuseUnbackedAction,
+} from "../utils/unbackedActions.js";
 import {
   createRuleEditorHTML,
   serializeConditionsTree,
@@ -773,7 +773,6 @@ const dictQuery = ref("");
 const dictSearching = ref(false);
 const dictResults = ref([]);
 const queryFilterStatus = ref("ALL"); // 'ALL', 'CANDIDATE', 'OPEN', 'ANSWERED', 'CLOSED'
-const scanningAnomalies = ref(false);
 
 const dashboardQueries = ref([
   {
@@ -858,45 +857,21 @@ function getBadgeClass(status) {
 
 // State-machine transition & GxP Change capture
 const pendingQueryStateTransition = ref(null);
-const pendingCandidateAdjudication = ref(null);
 
 function promptUpdateQueryState(query, nextState) {
   pendingQueryStateTransition.value = { query, nextState };
   showReasonModal.value = true;
 }
 
-function promptAdjudicateCandidate(query, action) {
-  pendingCandidateAdjudication.value = { query, action };
-  showReasonModal.value = true;
+function promptAdjudicateCandidate() {
+  // Candidate queries are adjudicated by the anomaly service, which no Cadence service serves yet: nothing
+  // changes, in any build (#4829).
+  refuseUnbackedAction("Adjudicating a candidate query");
 }
 
-async function triggerAnomalyScan() {
-  scanningAnomalies.value = true;
-  try {
-    const studyId = store.currentStudyId || "study_1";
-    const subjectId = store.selectedSubjectId || "SUBJ-001";
-    const res = await executionService.evaluateAnomalies({
-      study_id: studyId,
-      subject_id: subjectId,
-      enable_ai: true,
-      auto_stage_queries: true,
-    });
-
-    if (res && res.anomalies && res.anomalies.length > 0) {
-      alert(
-        `Anomaly scan complete: ${res.anomalies.length} cross-domain discrepancies evaluated (${res.queries_staged_count} staged).`
-      );
-    } else {
-      alert(
-        "Cross-domain anomaly scan complete: No active discrepancies detected."
-      );
-    }
-  } catch (err) {
-    // A failed scan found nothing; never report it as completed (#4523).
-    toasts.apiError("Cross-domain anomaly scan failed", err);
-  } finally {
-    scanningAnomalies.value = false;
-  }
+function triggerAnomalyScan() {
+  // No Cadence service runs the cross-domain anomaly scan yet; nothing is scanned in any build (#4829).
+  refuseUnbackedAction("Scanning for cross-domain anomalies");
 }
 
 // Search Terminology / Coding Dictionary lookups
@@ -1347,48 +1322,9 @@ function closeReasonModal() {
   showReasonModal.value = false;
   pendingAction.value = null;
   pendingQueryStateTransition.value = null;
-  pendingCandidateAdjudication.value = null;
 }
 
 async function confirmChangeReason(reasonText) {
-  // Handle Candidate Query Adjudication
-  if (pendingCandidateAdjudication.value) {
-    const { query, action: adjAction } = pendingCandidateAdjudication.value;
-    try {
-      await executionService.adjudicateAnomalyCandidate(query.id, {
-        action: adjAction,
-        reason: reasonText,
-      });
-    } catch (err) {
-      // The query stays a CANDIDATE and the reason dialog stays open so the user can retry or cancel (#4523).
-      toasts.apiError("Candidate query adjudication failed", err);
-      return;
-    }
-
-    if (adjAction === "APPROVE") {
-      query.status = "OPEN";
-      query.createdBy = authStore.userId || "usr_dm_fderuiter";
-      query.createdAt = new Date().toISOString().slice(0, 10);
-    } else {
-      query.status = "CANCELLED";
-      query.closedBy = authStore.userId || "usr_dm_fderuiter";
-      query.closedAt = new Date().toISOString().slice(0, 10);
-    }
-
-    await store.addLedgerBlock(
-      "QUERY_ADJUDICATION",
-      { queryId: query.id, action: adjAction },
-      reasonText
-    );
-
-    pendingCandidateAdjudication.value = null;
-    showReasonModal.value = false;
-    alert(
-      `Candidate query successfully ${adjAction === "APPROVE" ? "approved into OPEN status" : "dismissed as CANCELLED"}!`
-    );
-    return;
-  }
-
   const action = pendingAction.value;
 
   // Handle Query State Transition inside confirmation

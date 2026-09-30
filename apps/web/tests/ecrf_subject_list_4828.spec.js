@@ -5,7 +5,6 @@ import { useClinicalStore, subjectFromExecution } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth";
 import { useToastStore } from "../src/stores/toasts.js";
 import { executionApi } from "../src/api/executionApi";
-import { executionService } from "../src/api/execution";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import StudySubjectsBar from "../src/components/clinical/StudySubjectsBar.vue";
@@ -19,16 +18,6 @@ vi.mock("vue-router", () => ({
 
 vi.mock("../src/api/executionApi", () => ({
   executionApi: { listSubjects: vi.fn() },
-}));
-
-vi.mock("../src/api/execution", () => ({
-  executionService: {
-    submitForm: vi.fn(),
-    screenSubject: vi.fn(),
-    listLabAlerts: vi.fn().mockResolvedValue([]),
-    listQueries: vi.fn().mockResolvedValue([]),
-    syncQueries: vi.fn().mockResolvedValue({}),
-  },
 }));
 
 function summary(code, overrides = {}) {
@@ -61,7 +50,6 @@ describe("eCRF subject list from Execution (#4828)", () => {
   beforeEach(() => {
     routeQuery.value = {};
     vi.mocked(executionApi.listSubjects).mockReset();
-    vi.mocked(executionService.submitForm).mockReset();
     vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -324,7 +312,7 @@ describe("eCRF subject list from Execution (#4828)", () => {
       );
     });
 
-    it("submits nothing until a study and a listed subject are chosen", async () => {
+    it("submits nothing: the form is sample content until form definitions are served (#4727)", async () => {
       const store = createStore();
       store.ecrfFields = [];
       const wrapper = mountView();
@@ -333,11 +321,15 @@ describe("eCRF subject list from Execution (#4828)", () => {
       wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
       await flushPromises();
 
-      expect(executionService.submitForm).not.toHaveBeenCalled();
-      expect(useToastStore().toasts[0]).toMatchObject({
-        tone: "error",
-        title: "Choose a study and subject first",
-      });
+      expect(useToastStore().toasts).toContainEqual(
+        expect.objectContaining({
+          tone: "error",
+          title: "Submitting the form isn't available yet",
+        })
+      );
+      expect(store.ledgerBlocks.map((b) => b.action)).not.toContain(
+        "SESSION_SUBMIT"
+      );
     });
 
     it("shows no study bar in a demo build", async () => {

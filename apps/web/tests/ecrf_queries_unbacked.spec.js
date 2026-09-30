@@ -3,7 +3,6 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
 import { useToastStore } from "../src/stores/toasts.js";
-import { executionService } from "../src/api/execution";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 
@@ -14,16 +13,6 @@ vi.mock("vue-router", () => ({
 
 vi.mock("../src/api/executionApi", () => ({
   executionApi: { listSubjects: vi.fn() },
-}));
-
-vi.mock("../src/api/execution", () => ({
-  executionService: {
-    submitForm: vi.fn(),
-    screenSubject: vi.fn(),
-    listLabAlerts: vi.fn().mockResolvedValue([]),
-    listQueries: vi.fn().mockResolvedValue([]),
-    syncQueries: vi.fn().mockResolvedValue({}),
-  },
 }));
 
 const QUERY_ACTIONS = [
@@ -37,7 +26,7 @@ const QUERY_ACTIONS = [
   ["reopen-query", ["vssbp"], "Reopening a query"],
 ];
 
-// #4827: eCRF queries live on the sample form and sync only to the demo mock API, so other builds refuse them.
+// #4827: eCRF queries live on the sample form, so builds other than a demo build refuse them.
 describe("eCRF queries outside a demo build", () => {
   let pinia;
   let store;
@@ -60,7 +49,6 @@ describe("eCRF queries outside a demo build", () => {
       vssbp: { status: "ANSWERED", message: "Check value", response: "OK" },
     };
     vi.spyOn(window, "alert").mockImplementation(() => {});
-    vi.mocked(executionService.syncQueries).mockClear();
   });
 
   afterEach(() => {
@@ -89,15 +77,6 @@ describe("eCRF queries outside a demo build", () => {
       });
     }
   );
-
-  it("does not start the query ledger sync", async () => {
-    store.ledgerBlocks = [{ action: "QUERY_CREATE", synced: false }];
-
-    await store.startSyncTimer();
-
-    expect(store.syncInterval).toBeNull();
-    expect(executionService.syncQueries).not.toHaveBeenCalled();
-  });
 
   it("raises a query on sample data in a demo build", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");

@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth";
 import { useToastStore } from "../src/stores/toasts.js";
-import { executionService } from "../src/api/execution";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import SubjectEnrollmentForm from "../src/components/clinical/SubjectEnrollmentForm.vue";
@@ -19,16 +18,6 @@ vi.mock("vue-router", () => ({
       visitId: "Week2",
     },
   }),
-}));
-
-vi.mock("../src/api/execution", () => ({
-  executionService: {
-    submitForm: vi.fn(),
-    screenSubject: vi.fn(),
-    listLabAlerts: vi.fn().mockResolvedValue([]),
-    listQueries: vi.fn().mockResolvedValue([]),
-    syncQueries: vi.fn().mockResolvedValue({}),
-  },
 }));
 
 // Outside a demo build the eCRF lists the study's subjects from Execution (#4828).
@@ -74,58 +63,38 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     authStore.isDemoMode = false;
     authStore.rawRoles = ["Site Investigator"];
     store.ecrfFields = [];
-    vi.mocked(executionService.submitForm).mockReset();
-    vi.mocked(executionService.screenSubject).mockReset();
     alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
   afterEach(() => {
     alertSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 
   function mountView() {
     return mount(EcrfView, { global: { plugins: [pinia] } });
   }
 
-  it.each([500, 502, 504])(
-    "HTTP %i: no SESSION_SUBMIT ledger block, no success alert, error toast shown",
-    async (status) => {
-      vi.mocked(executionService.submitForm).mockRejectedValueOnce(
-        httpError(status)
-      );
-      const wrapper = mountView();
-      await flushPromises();
-      const ledgerBefore = store.ledgerBlocks.length;
+  it("refuses the submission outside a demo build: no SESSION_SUBMIT block, no success alert (#4828)", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    const ledgerBefore = store.ledgerBlocks.length;
 
-      wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
-      await flushPromises();
+    wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
+    await flushPromises();
 
-      expect(executionService.submitForm).toHaveBeenCalledTimes(1);
-      expect(executionService.submitForm).toHaveBeenCalledWith(
-        expect.objectContaining({
-          study_id: "TEST-STUDY",
-          site_id: "TEST-SITE",
-          subject_id: "SUBJ-001",
-          protocol_version: "2.0.0",
-        })
-      );
-      expect(
-        store.ledgerBlocks.some((b) => b.action === "SESSION_SUBMIT")
-      ).toBe(false);
-      expect(store.ledgerBlocks.length).toBe(ledgerBefore);
-      expect(alertSpy).not.toHaveBeenCalled();
-      const toasts = useToastStore().toasts;
-      expect(toasts).toHaveLength(1);
-      expect(toasts[0]).toMatchObject({
+    expect(store.ledgerBlocks.length).toBe(ledgerBefore);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
         tone: "error",
-        title: "eCRF submission failed",
-      });
-      expect(toasts[0].message).toContain(`HTTP ${status}`);
-    }
-  );
+        title: "Submitting the form isn't available yet",
+      }),
+    ]);
+  });
 
-  it("records and announces a successful submission", async () => {
-    vi.mocked(executionService.submitForm).mockResolvedValueOnce({});
+  it("records and announces a submission on sample data in a demo build", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const wrapper = mountView();
     await flushPromises();
 
@@ -147,10 +116,7 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     expect(useToastStore().toasts).toHaveLength(0);
   });
 
-  it("a failed screening leaves no screening result and shows an error toast", async () => {
-    vi.mocked(executionService.screenSubject).mockRejectedValueOnce(
-      httpError(502)
-    );
+  it("refuses screening, which no service evaluates, and shows no result", async () => {
     const wrapper = mountView();
     await flushPromises();
     const form = wrapper.findComponent(SubjectEnrollmentForm);
@@ -160,13 +126,12 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     await flushPromises();
 
     expect(form.props("screeningResult")).toBe(null);
-    expect(form.props("isScreening")).toBe(false);
     expect(store.ledgerBlocks.some((b) => b.action === "SUBJECT_SCREEN")).toBe(
       false
     );
     expect(useToastStore().toasts[0]).toMatchObject({
       tone: "error",
-      title: "Subject screening failed",
+      title: "Screening a subject isn't available yet",
     });
   });
 });

@@ -2,16 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { useAuthStore } from "../../src/stores/auth";
-import { executionService } from "../../src/api/execution";
-
-// Mock execution service
-vi.mock("../../src/api/execution", () => ({
-  executionService: {
-    createSubject: vi.fn(),
-    screenSubject: vi.fn(),
-    listLabAlerts: vi.fn().mockResolvedValue([]),
-  },
-}));
+import { useToastStore } from "../../src/stores/toasts.js";
 
 describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specification", () => {
   beforeEach(() => {
@@ -62,58 +53,20 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     expect(store.subjectIds).toContain("SUBJ-002");
   });
 
-  it("clinicalStore.screenSubject calls executionService, updates subject status, and writes ledger block", async () => {
+  it("clinicalStore.screenSubject refuses and changes nothing, since no service evaluates eligibility (#4523)", () => {
     const store = useClinicalStore();
+    const subjects = JSON.stringify(store.subjects);
+    const blocks = store.ledgerBlocks.length;
 
-    vi.mocked(executionService.screenSubject).mockResolvedValueOnce({
-      eligible: true,
-      failed_criteria: [],
-      indeterminate_criteria: [],
-      criterion_evaluations: [],
-    });
+    expect(store.screenSubject()).toBeNull();
 
-    const result = await store.screenSubject("SUBJ-SCREEN-1", {
-      study_id: "CADENCE-101",
-    });
-
-    expect(executionService.screenSubject).toHaveBeenCalledWith(
-      "SUBJ-SCREEN-1",
-      { study_id: "CADENCE-101" }
-    );
-    expect(result.eligible).toBe(true);
-
-    const subject = store.subjects.find((s) => s.id === "SUBJ-SCREEN-1");
-    expect(subject).toBeDefined();
-    expect(subject?.status).toBe("SCREENED");
-    expect(subject?.consentColor).toBe("green");
-
-    // Verify ledger block was added
-    const screenBlock = store.ledgerBlocks.find(
-      (b) => b.action === "SUBJECT_SCREEN"
-    );
-    expect(screenBlock).toBeDefined();
-    expect((screenBlock?.details as any)?.subject_id).toBe("SUBJ-SCREEN-1");
-    expect((screenBlock?.details as any)?.eligible).toBe(true);
-  });
-
-  it("clinicalStore.screenSubject handles ineligible result and sets SCREEN_FAILED status", async () => {
-    const store = useClinicalStore();
-
-    vi.mocked(executionService.screenSubject).mockResolvedValueOnce({
-      eligible: false,
-      failed_criteria: ["CRIT-01"],
-      indeterminate_criteria: [],
-      criterion_evaluations: [],
-    });
-
-    const result = await store.screenSubject("SUBJ-SCREEN-2", {
-      study_id: "CADENCE-101",
-    });
-
-    expect(result.eligible).toBe(false);
-
-    const subject = store.subjects.find((s) => s.id === "SUBJ-SCREEN-2");
-    expect(subject?.status).toBe("SCREEN_FAILED");
-    expect(subject?.consentColor).toBe("red");
+    expect(JSON.stringify(store.subjects)).toBe(subjects);
+    expect(store.ledgerBlocks).toHaveLength(blocks);
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "error",
+        title: "Screening a subject isn't available yet",
+      }),
+    ]);
   });
 });

@@ -11,15 +11,13 @@ declare module "pinia" {
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { useToastStore } from "./toasts.js";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import {
+  allowUnbackedAction,
+  refuseUnbackedAction,
+} from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { executionApi, type SubjectSummary } from "../api/executionApi";
 import { soaClient } from "../api/soaClient.js";
-import {
-  executionService,
-  type SubjectScreeningRequest,
-  type SubjectScreeningResponse,
-} from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm, type NormalizedUsdm } from "./normalization";
@@ -114,19 +112,6 @@ export interface ClinicalQuery {
   closed_at?: string;
 }
 
-export interface LabAlert {
-  id?: string;
-  study_id?: string;
-  subject_id?: string;
-  test_code?: string;
-  test_name?: string;
-  severity?: string;
-  value?: string | number;
-  unit?: string;
-  message?: string;
-  flag?: string;
-}
-
 export interface LedgerBlock {
   index: number;
   timestamp: string;
@@ -204,11 +189,7 @@ export interface ClinicalState {
   formValues: Record<string, string | number | boolean | null | undefined>;
   fieldVisibility: Record<string, boolean>;
   formQueries: Record<string, ClinicalQuery>;
-  labAlerts: Record<string, LabAlert>;
-  labAlertsLoading: boolean;
-  labAlertsError: string | null;
   ledgerBlocks: LedgerBlock[];
-  syncInterval: ReturnType<typeof setInterval> | number | null;
 
   activeStudyId: string;
   activeSiteId: string;
@@ -749,11 +730,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},
-      labAlerts: {},
-      labAlertsLoading: false,
-      labAlertsError: null,
       ledgerBlocks: savedLedgerBlocks || [],
-      syncInterval: null,
 
       activeStudyId: demo ? "STUDY-USDM-001" : "",
       activeSiteId: demo ? "SITE-001" : "",
@@ -773,7 +750,6 @@ const useClinicalStoreInner = defineStore("clinical", {
     };
   },
   trackActions: {
-    fetchLabAlerts: { loading: "labAlertsLoading", error: "labAlertsError" },
     fetchSoAProjection: { loading: "soaLoading", error: "soaError" },
     pushSoAMutation: { loading: "soaLoading", error: "soaError" },
     pushSoALink: { loading: "soaLoading", error: "soaError" },
@@ -1189,96 +1165,13 @@ const useClinicalStoreInner = defineStore("clinical", {
       return sub;
     },
     /**
-     * Evaluates subject screening eligibility against protocol criteria,
-     * updates subject status in store, and appends a ledger block.
-     *
-     * @param subjectId - Target subject identifier.
-     * @param body - Optional screening payload including study_id.
-     * @param reason - Reason for audit ledger entry.
-     * @returns The screening evaluation response or null if invalid subject ID.
-     * @throws The API error when screening fails; it is reported as a toast and no state is changed.
+     * Screening evaluates a subject's eligibility against the protocol's criteria. No Cadence service serves
+     * that evaluation yet, so this refuses in every build and changes nothing: an eligibility result is never
+     * made up in the browser (#4523, #4828).
      */
-    async screenSubject(
-      subjectId: string,
-      body: SubjectScreeningRequest | null = null,
-      reason: string = "Subject Screening Evaluation"
-    ): Promise<SubjectScreeningResponse | null> {
-      const trimmedId = (subjectId || "").trim();
-      if (!trimmedId) return null;
-
-      // Screening outcomes are regulatory records: never fabricate an eligibility result when the backend call
-      // fails (#4523). Report the failure and leave the subject, the ledger and localStorage untouched.
-      let result: SubjectScreeningResponse;
-      try {
-        const res = await executionService.screenSubject(
-          trimmedId,
-          body ?? undefined
-        );
-        if (!res) {
-          throw new Error("Screening service returned an empty response");
-        }
-        result = res;
-      } catch (err) {
-        useToastStore().apiError("Subject screening failed", err);
-        throw err;
-      }
-
-      let sub = this.subjects.find((s) => s.id === trimmedId);
-      if (!sub) {
-        sub = {
-          id: trimmedId,
-          siteId: "SITE-101",
-          status: "SCREENING",
-          active_protocol_version: "1.0.0",
-          consentText: "Pending Screening",
-          consentColor: "yellow",
-          category: "pending",
-          isGated: false,
-          label: `${trimmedId} (Screening)`,
-        };
-        this.subjects.push(sub);
-      }
-
-      if ((result as any).status === "ENROLLED") {
-        sub.status = "ENROLLED";
-        sub.consentColor = "green";
-      } else if (
-        result.eligible === true ||
-        (result as any).status === "SCREENED"
-      ) {
-        sub.status = "SCREENED";
-        sub.consentColor = "green";
-      } else if (
-        result.eligible === false ||
-        (result as any).status === "SCREEN_FAILED"
-      ) {
-        sub.status = "SCREEN_FAILED";
-        sub.consentColor = "red";
-      } else {
-        sub.status = "SCREENING";
-        sub.consentColor = "yellow";
-      }
-
-      await this.addLedgerBlock(
-        "SUBJECT_SCREEN",
-        {
-          subject_id: trimmedId,
-          eligible: result.eligible,
-          failed_criteria: result.failed_criteria || [],
-          indeterminate_criteria: result.indeterminate_criteria || [],
-        },
-        reason
-      );
-
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
-        window.localStorage.setItem(
-          "cadence_clinical_subjects",
-          JSON.stringify(this.subjects)
-        );
-      }
-
-      return result;
+    screenSubject(): null {
+      refuseUnbackedAction("Screening a subject");
+      return null;
     },
     clearLedger() {
       this.ledgerBlocks = [];
@@ -1289,100 +1182,6 @@ const useClinicalStoreInner = defineStore("clinical", {
         );
       }
     },
-    async startSyncTimer() {
-      // The query ledger sync endpoint exists only in the demo build's mock API; no service serves it.
-      if (!isDemoBuild()) return;
-      if (this.syncInterval) return;
-      // Sync immediately on boot
-      this.syncUnsyncedBlocks();
-      this.syncInterval = setInterval(async () => {
-        await this.syncUnsyncedBlocks();
-      }, 10000); // deid-ignore
-    },
-    async syncUnsyncedBlocks(sigToken: string | null = null) {
-      const unsynced = this.ledgerBlocks.filter(
-        (b) =>
-          !b.synced &&
-          [
-            "QUERY_CREATE",
-            "QUERY_RESPOND",
-            "QUERY_CLOSE",
-            "QUERY_REOPEN",
-          ].includes(b.action)
-      );
-      if (unsynced.length === 0) return;
-
-      console.log(
-        `Background sync: syncing ${unsynced.length} queued clinical query blocks.`
-      );
-
-      try {
-        const options: {
-          changeReason: string;
-          headers?: Record<string, string>;
-        } = {
-          changeReason: "Background sync of clinical query ledger blocks",
-        };
-        if (sigToken) {
-          options.headers = {
-            "X-Sig-Token": sigToken,
-          };
-        }
-
-        await executionService.syncQueries(unsynced, options);
-
-        // Successfully synced! Update local blocks
-        unsynced.forEach((b) => {
-          b.synced = true;
-        });
-
-        // Save updated blocks to localStorage
-        if (typeof window !== "undefined" && window.localStorage) {
-          window.localStorage.setItem(
-            "ledgerBlocks",
-            JSON.stringify(this.ledgerBlocks)
-          );
-        }
-        console.log("Background sync: Successfully synchronized query blocks.");
-      } catch (err: unknown) {
-        console.warn("Background sync failed (retrying automatically):", err);
-        throw err;
-      }
-    },
-
-    // --- Lab Alerts Pinia Actions ---
-    async fetchLabAlerts(studyId: string, subjectId: string) {
-      try {
-        const data = await executionService.listLabAlerts({
-          study_id: studyId,
-          subject_id: subjectId,
-        });
-        const alertsMap: Record<string, LabAlert> = {};
-        if (Array.isArray(data)) {
-          for (const alert of data) {
-            const alertTestCode = alert.test_code;
-            if (!alertTestCode) continue;
-            const field = this.ecrfFields.find((f) => {
-              if (!f.cdash) return false;
-              const parts = f.cdash.split(".");
-              return (
-                parts[1] &&
-                parts[1].toUpperCase() === alertTestCode.toUpperCase()
-              );
-            });
-            if (field) {
-              alertsMap[field.id] = alert;
-            }
-          }
-        }
-        this.labAlerts = alertsMap || {};
-      } catch (err: unknown) {
-        console.warn("Database connection failed", err);
-        this.labAlertsError = err instanceof Error ? err.message : String(err);
-        // Suppress/Swallow the error (DO NOT re-throw)
-      }
-    },
-
     // --- SoA Pinia Actions ---
     async fetchSoAProjection() {
       const data = await soaClient.getSoAProjection(
