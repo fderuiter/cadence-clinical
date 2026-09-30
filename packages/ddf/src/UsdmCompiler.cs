@@ -49,7 +49,7 @@ public static class UsdmCompiler
         IAccessibilityValidator? accessibilityValidator = null)
     {
         options ??= new CompileOptions();
-        var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag);
+        var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag, options.DefaultLanguage);
 
         var renderer = templateRenderer ?? FluidTemplateRenderer.Instance;
         string odmXml = renderer.Render(Templates, OdmTemplateKey, studyIr);
@@ -86,7 +86,8 @@ public static class UsdmCompiler
     public static (DDFStudyIR StudyIr, List<IReadOnlyDictionary<string, object?>> Warnings) ParseUsdmToIr(
         string usdmJson,
         string? fallbackStudyId = null,
-        string? versionTag = null)
+        string? versionTag = null,
+        string defaultLanguage = "en")
     {
         var warnings = new List<IReadOnlyDictionary<string, object?>>();
         if (string.IsNullOrWhiteSpace(usdmJson) || usdmJson == "{}")
@@ -107,16 +108,32 @@ public static class UsdmCompiler
         string studyName = "Clinical Trial Protocol";
         string version = versionTag ?? "1.0";
 
-        if (root.TryGetProperty("study", out var studyElem))
+        bool nested = root.TryGetProperty("study", out var studyElem);
+        var header = nested ? studyElem : root;
+        string? givenId = header.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+        string? givenName = header.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+        if (nested && header.TryGetProperty("version", out var verProp))
         {
-            if (studyElem.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
-            if (studyElem.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
-            if (studyElem.TryGetProperty("version", out var verProp)) version = verProp.GetString() ?? version;
+            version = verProp.GetString() ?? version;
+        }
+
+        // Like the Python normalizer, a missing study id or name is filled in and reported, never silently.
+        if (givenId is null)
+        {
+            warnings.Add(Warning("study.id", studyId, "The study has no id; the fallback id is used."));
         }
         else
         {
-            if (root.TryGetProperty("id", out var idProp)) studyId = idProp.GetString() ?? studyId;
-            if (root.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
+            studyId = givenId;
+        }
+
+        if (givenName is null)
+        {
+            warnings.Add(Warning("study.name", studyName, "The study has no name; a placeholder title is used."));
+        }
+        else
+        {
+            studyName = givenName;
         }
 
         var sources = new List<ItemSource>();
@@ -139,7 +156,7 @@ public static class UsdmCompiler
             sources.AddRange(topItems.EnumerateArray().Select(it => ItemSource.Read(it, activity: null)));
         }
 
-        var items = BuildItems(sources, warnings);
+        var items = BuildItems(sources, warnings, defaultLanguage);
 
         var studyIr = new DDFStudyIR(
             StudyId: studyId,
@@ -156,7 +173,15 @@ public static class UsdmCompiler
     }
 
     // One item as the USDM input gives it, before names and rules are resolved.
-    private sealed record ItemSource(string? Id, string Name, string Type, JsonElement? Rules, bool HasRawConstraint, string? Appearance)
+    private sealed record ItemSource(
+        string? Id,
+        string Name,
+        string Type,
+        JsonElement? Rules,
+        bool HasRawConstraint,
+        string? Appearance,
+        ItemText Text,
+        JsonElement? Localizations)
     {
         private static readonly string[] WidthKeys = ["cols", "column_span", "span"];
 
@@ -172,8 +197,15 @@ public static class UsdmCompiler
                 type,
                 rules,
                 item.TryGetProperty("constraint", out _),
-                Width(item) ?? Width(item, "layout") ?? Width(item, "grid"));
+                Width(item) ?? Width(item, "layout") ?? Width(item, "grid"),
+                new ItemText(TextOf(item, "label") ?? name, TextOf(item, "description"), TextOf(item, "hint")),
+                item.TryGetProperty("localizations", out var lp) ? lp.Clone() : null);
         }
+
+        private static string? TextOf(JsonElement item, string key) =>
+            item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString())
+                ? value.GetString()
+                : null;
 
         // A width of 1 to 4 columns, on the item or in its "layout" or "grid" object, becomes the Enketo
         // appearance w1 to w4.
@@ -199,7 +231,7 @@ public static class UsdmCompiler
 
     // Names each item, compiles its skip logic and constraints to XPath, and refuses the study when an item is
     // duplicated, a rule does not parse or names an unknown item, or skip logic makes a cycle.
-    private static List<DDFItemIR> BuildItems(List<ItemSource> sources, List<IReadOnlyDictionary<string, object?>> warnings)
+    private static List<DDFItemIR> BuildItems(List<ItemSource> sources, List<IReadOnlyDictionary<string, object?>> warnings, string defaultLanguage)
     {
         var problems = new List<string>();
         var named = new List<(string Id, string Element, ItemSource Source)>();
@@ -213,12 +245,7 @@ public static class UsdmCompiler
             string id = source.Id ?? element;
             if (source.Id is null)
             {
-                warnings.Add(new Dictionary<string, object?>
-                {
-                    ["field"] = $"items[{index}].id",
-                    ["generated_value"] = id,
-                    ["warning_reason"] = "The item has no id; its element name is used.",
-                });
+                warnings.Add(Warning($"items[{index}].id", id, "The item has no id; its element name is used."));
             }
 
             if (!elementById.TryAdd(id, element))
@@ -258,7 +285,8 @@ public static class UsdmCompiler
                 Appearance: source.Appearance,
                 Relevant: itemRules.Relevant,
                 Constraint: itemRules.Constraint,
-                ConstraintMessage: itemRules.ConstraintMessage));
+                ConstraintMessage: itemRules.ConstraintMessage,
+                Localizations: ItemText.Localize(id, source.Text, source.Localizations, defaultLanguage, problems)));
         }
 
         problems.AddRange(DdfDependencyGraph.FindCycles(dependsOn).Select(cycle => $"Skip logic makes a cycle: {cycle}."));
@@ -269,6 +297,15 @@ public static class UsdmCompiler
 
         return items;
     }
+
+    // A compiler warning in the shape of the Python reference's CompilerWarning.to_dict().
+    private static IReadOnlyDictionary<string, object?> Warning(string field, object? generatedValue, string reason) =>
+        new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["field"] = field,
+            ["generated_value"] = generatedValue,
+            ["warning_reason"] = reason,
+        };
 
     private static string ComputeSha256Hash(string rawData)
     {

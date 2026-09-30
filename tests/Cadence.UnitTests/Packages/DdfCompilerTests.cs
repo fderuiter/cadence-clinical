@@ -63,8 +63,9 @@ public class DdfCompilerTests
         // Validate ODM XML
         result.OdmXml.Should().Contain("<ODM xmlns=\"http://www.cdisc.org/ns/odm/v1.3\"");
         result.OdmXml.Should().Contain("<Study OID=\"STUDY-USDM-701\">");
-        result.OdmXml.Should().Contain("<ItemDef OID=\"SYS_BP\" Name=\"Systolic_Blood_Pressure\" DataType=\"integer\" />");
-        result.OdmXml.Should().Contain("<ItemDef OID=\"DIAS_BP\" Name=\"Diastolic_Blood_Pressure\" DataType=\"integer\" />");
+        result.OdmXml.Should().Contain("<ItemDef OID=\"SYS_BP\" Name=\"Systolic_Blood_Pressure\" DataType=\"integer\">");
+        result.OdmXml.Should().Contain("<TranslatedText xml:lang=\"en\">Sitting Systolic Blood Pressure (mmHg)</TranslatedText>");
+        result.OdmXml.Should().Contain("<ItemDef OID=\"DIAS_BP\" Name=\"Diastolic_Blood_Pressure\" DataType=\"integer\">");
 
         // Validate OpenRosa XForms
         result.OpenRosaXml.Should().Contain("<h:html xmlns=\"http://www.w3.org/2002/xforms\"");
@@ -73,6 +74,7 @@ public class DdfCompilerTests
         result.OpenRosaXml.Should().Contain("<Systolic_Blood_Pressure />");
         result.OpenRosaXml.Should().Contain("<Diastolic_Blood_Pressure />");
         result.OpenRosaXml.Should().Contain("<input ref=\"/data/Systolic_Blood_Pressure\">");
+        result.OpenRosaXml.Should().Contain("<label xml:lang=\"en\">Sitting Systolic Blood Pressure (mmHg)</label>");
 
         // Validate Form Hash
         result.FormHash.Should().NotBeNullOrWhiteSpace();

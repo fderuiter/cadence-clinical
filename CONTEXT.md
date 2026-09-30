@@ -956,7 +956,7 @@ _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
 ### Form Item Rules
 
-The skip logic and constraints of a DDF form item, written in the one rule language (K-RULE-3) with item ids as variables and compiled to OpenRosa XPath `relevant` and `constraint` expressions. A skip-logic condition says when the item shows (or, with `hide`, when it hides); a constraint condition says what a valid value satisfies, unlike a rule-pack rule whose condition is the violation. Skip-logic cycles fail the compile (ADR-2502).
+The skip logic and constraints of a DDF form item, written in the one rule language (K-RULE-3) with item ids as variables and compiled to OpenRosa XPath `relevant` and `constraint` expressions. A skip-logic condition says when the item shows (or, with `hide`, when it hides); a constraint condition says what a valid value satisfies, unlike a rule-pack rule whose condition is the violation. Skip-logic cycles fail the compile (ADR-2502). An item's label, description and hint, with a translation per language, come from the item's own fields and are never the XML element name.
 _Avoid_: Raw XPath strings in a protocol definition, a separate DDF rule AST
 
 ### Form Accessibility Check
