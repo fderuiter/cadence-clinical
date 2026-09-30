@@ -1,4 +1,6 @@
-# ADR-2199: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator
+# ADR-2392: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator
+
+Also known as: ADR-2199 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-23

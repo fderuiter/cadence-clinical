@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Dynamic OpenAPI Schema Aggregation at the Gateway
+# ADR-2271: Dynamic OpenAPI Schema Aggregation at the Gateway
 
 ## Status
 

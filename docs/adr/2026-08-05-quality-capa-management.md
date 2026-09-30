@@ -1,4 +1,6 @@
-# ADR-056: Quality & CAPA Management, Platform Placement, and Traceability
+# ADR-2342: Quality & CAPA Management, Platform Placement, and Traceability
+
+Also known as: ADR-056 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-05

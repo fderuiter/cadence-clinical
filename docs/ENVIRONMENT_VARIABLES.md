@@ -61,6 +61,14 @@ Read by `apps/gateway/src/Program.cs:68-84`. Each defaults to `http://localhost:
 | `PAYMENTS_SERVICE_URL` | 8016 |
 | `AI_GATEWAY_SERVICE_URL` | 8017 |
 
+Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS` | 30 | A proxied request fails with 504 once its service sends nothing for this long. |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10 | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | 5 | How long one readiness probe may take before it counts as failed. |
+
 ## Authentication and audit
 
 | Key | Read by | Default | Required |
@@ -86,9 +94,9 @@ Read by `apps/gateway/src/Program.cs:68-84`. Each defaults to `http://localhost:
 | --- | --- | --- |
 | `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
-| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:59-60` | off |
-| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:152` | off |
-| `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | `packages/cli/src/Services/DatabaseResetService.cs:44-46` (Neo4j is being retired, #4790) | `bolt://localhost:7687`, `neo4j`, `password123` |
+| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
+| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:205` | off |
+| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
 ## Web apps
 

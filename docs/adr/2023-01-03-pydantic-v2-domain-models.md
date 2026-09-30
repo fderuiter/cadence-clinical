@@ -1,4 +1,4 @@
-# ADR 2023-01-03: Pydantic v2 for Domain Models
+# ADR-2264: Pydantic v2 for Domain Models
 
 ## Status
 

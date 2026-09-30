@@ -1,5 +1,8 @@
 # Quality Assurance (QA) & Validation Plan
 
+> [!WARNING]
+> **Status: baseline, pre-kernel.** **Neo4j is retired** ([ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); sections that describe Neo4j graphs, Cypher, Neo4j migrations or Neo4j backups no longer apply. Protocol versions become immutable PostgreSQL snapshots in the kernel ([kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md)). Current test and qualification rules: [docs/TESTING.md](../TESTING.md).
+
 **Document ID:** CAD-VAL-PLN-001
 **Version:** 1.0.0
 **Effective Date:** 2026-07-22
@@ -99,8 +102,8 @@ Cadence Clinical employs the classic V-Model validation life cycle, tightly coup
 
 To ensure comprehensive test coverage, the platform is subjected to a five-tier testing hierarchy:
 
-1. **Unit Testing:** Focuses on individual code blocks, helper utilities, and schema validators. Authored in Python using the `pytest` framework. 100% of Pydantic models, custom decorators, and calculation logic must pass unit tests with a mandatory coverage threshold of 80% (target 90%+).
-2. **Integration Testing (IEC 62304 Section 5.7):** Verifies the communication and data exchange between microservices (Designer, Execution, Auth Gateway). This includes programmatic database transactions across Neo4j and PostgreSQL, and validating REST and GraphQL API contracts.
+1. **Unit Testing:** Focuses on individual code blocks, helper utilities, and schema validators. Authored in C# with xUnit v3 and FluentAssertions (`tests/Cadence.UnitTests`). Domain records, validators and calculation logic must pass unit tests with a mandatory coverage threshold of 80% (target 90%+).
+2. **Integration Testing (IEC 62304 Section 5.7):** Verifies the communication and data exchange between microservices (Designer, Execution, Auth Gateway). This includes database transactions against real PostgreSQL (Testcontainers or `CADENCE_TEST_POSTGRES`), architecture rules (`tests/Cadence.ArchitectureTests`) and REST API contracts.
 3. **System Testing (IEC 62304 Section 5.8):** End-to-end functional verification of the entire clinical platform. This validates subject state transitions, eCRF dynamic rendering, randomization allocation, and security access controls under simulated study conditions.
 4. **Regression Testing:** Automated regression suites are executed upon every code commit via CI/CD pipelines to ensure new features or hotfixes do not introduce regressions into existing, validated clinical modules.
 5. **User Acceptance Testing (UAT):** Executed by clinical monitors, medical coders, and principal investigators in an isolated Validation environment. UAT focuses on clinical usability, complex multi-site transfers, manual query lifecycles, and actual clinical trial data capture workflows.
@@ -235,23 +238,23 @@ To achieve clinical validation sign-off and satisfy FDA, EMA, and PMDA audits, t
 
 ### 3.4 Automated Testing & Continuous Integration (CI/CD) Validation
 
-In modern clinical trial platform validation, the tooling used to perform software verification must itself be validated. In accordance with GAMP 5 Category 1 (Infrastructure Software) or Category 3 (Non-Configured Software), the automated testing toolset used within Cadence Clinical (specifically, Python `pytest`, `pytest-asyncio`, `pytest-cov`, `Black`, `Ruff`, and GitHub Actions / GitLab CI pipelines) undergoes formal tool validation.
+In modern clinical trial platform validation, the tooling used to perform software verification must itself be validated. In accordance with GAMP 5 Category 1 (Infrastructure Software) or Category 3 (Non-Configured Software), the automated testing toolset used within Cadence Clinical (specifically, xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers, coverlet coverage, `dotnet format` with Roslyn analyzers, the Cadence CLI quality gates, and GitHub Actions pipelines) undergoes formal tool validation.
 
 #### 3.4.1 Tool Validation & Verification Protocols
 
-- **pytest & pytest-asyncio:** Verified prior to use by executing standard reference suites provided by the developer. This confirms that test results, execution times, and assertion checks are evaluated deterministically.
-- **pytest-cov:** Formal qualification runs demonstrate that the code coverage reports generated match mathematical execution trees exactly, ensuring that our mandatory 80% coverage check functions reliably.
-- **Linter & Formatting Engines (Black/Ruff):** Confirmed to programmatically enforce coding rules, prevent deprecated or unsafe language patterns, and ensure strict syntax layouts, which are critical for maintaining code readability and audit readiness over long-term clinical trial timelines.
+- **xUnit v3 and FluentAssertions:** Verified prior to use by executing standard reference suites provided by the developer. This confirms that test results, execution times, and assertion checks are evaluated deterministically.
+- **Coverage (coverlet):** Formal qualification runs demonstrate that the code coverage reports generated match mathematical execution trees exactly, ensuring that our mandatory 80% coverage check functions reliably.
+- **Formatting and analysis (`dotnet format`, Roslyn analyzers, warnings as errors):** Confirmed to programmatically enforce coding rules, prevent deprecated or unsafe language patterns, and ensure strict syntax layouts, which are critical for maintaining code readability and audit readiness over long-term clinical trial timelines.
 
 #### 3.4.2 CI/CD Pipeline as a Validated System
 
 The deployment pipeline itself acts as a locked GxP gateway. Upon initiating a pull request or merging code, the following sequence is executed in a secure, containerized, and isolated build runner:
 
 1. **Isolation Setup:** Build runners initialize an empty virtual environment and download only pinned, SHA-verified dependency packages from our private, qualified artifact repository.
-2. **Static Inspection:** Ruff linting and Black formatting checks are executed. Any warning or layout violation instantly fails the build, preventing promotion.
+2. **Static Inspection:** `dotnet format --verify-no-changes`, the analyzers (warnings are errors) and `cadence check` quality gates are executed. Any warning or layout violation instantly fails the build, preventing promotion.
 3. **Unit Test Pass:** 100% of the unit test suite must pass successfully. If a single assertion fails, or if a coroutine fails to await, the build is blocked.
-4. **Coverage Enforcement:** The `pytest-cov` plugin evaluates total test coverage. If coverage falls below the mandatory 80% threshold, the build is aborted, and a QMS incident is logged.
-5. **Database Migration Verification:** Ordered Postgres migrations are executed in a test container. The system runs the `run_migrations` script, and validates that relational schemas map exactly to the current models, ensuring database migrations are validated before staging deployment.
+4. **Coverage Enforcement:** Coverage collected during `dotnet test` is evaluated. If coverage falls below the mandatory 80% threshold, the build is aborted, and a QMS incident is logged.
+5. **Database Migration Verification:** Ordered Postgres migrations are executed in a test container. EF Core migrations are applied, and the pipeline validates that relational schemas map exactly to the current models, ensuring database migrations are validated before staging deployment.
 6. **Immutable Logging:** The entire pipeline execution log (including tool versions, standard output, and exit codes) is written to a write-once-read-many (WORM) storage bucket. This execution log acts as direct regulatory evidence for our Operational Qualification (OQ) reports.
 
 ---

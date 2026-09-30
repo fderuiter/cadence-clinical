@@ -1,4 +1,4 @@
-# ADR 2026-07-25: eTMF Quality Control Review Lifecycle & Validated State Machine
+# ADR-2289: eTMF Quality Control Review Lifecycle & Validated State Machine
 
 ## Status
 

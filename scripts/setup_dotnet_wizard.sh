@@ -74,18 +74,13 @@ dotnet dev-certs https --trust 2>/dev/null || true
 printf '  %s[SUCCESS] Dev certificates trusted.%s\n' "$GREEN" "$RESET"
 
 # Stage 4: Datastores
-stage "Clinical Datastores" "Probing PostgreSQL (5432) and Neo4j (7687)..."
+stage "Clinical Datastores" "Probing PostgreSQL (5432)..."
 if nc -z 127.0.0.1 5432 2>/dev/null; then
   printf '  %s[SUCCESS] PostgreSQL running on port 5432.%s\n' "$GREEN" "$RESET"
 else
   printf '  %s[INFO] PostgreSQL not reachable. Start via: docker compose up -d postgres%s\n' "$YELLOW" "$RESET"
 fi
 
-if nc -z 127.0.0.1 7687 2>/dev/null; then
-  printf '  %s[SUCCESS] Neo4j Bolt running on port 7687.%s\n' "$GREEN" "$RESET"
-else
-  printf '  %s[INFO] Neo4j Bolt not reachable. Start via: docker compose up -d neo4j%s\n' "$YELLOW" "$RESET"
-fi
 
 # Stage 5: Environment
 stage "Environment Configuration (.env)" "Ensuring local .env is initialized..."

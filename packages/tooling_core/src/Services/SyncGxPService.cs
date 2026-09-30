@@ -69,7 +69,7 @@ public static class SyncGxPService
         Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
         Console.WriteLine("============================================================");
 
-        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: resultsDir, repoRoot: repoRoot);
+        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: resultsDir, repoRoot: repoRoot, honorDraftEnvironment: false);
         if (testExitCode != 0) return testExitCode;
         if (rtmRes != 0) return rtmRes;
 

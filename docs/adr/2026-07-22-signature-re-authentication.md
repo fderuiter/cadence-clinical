@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Signature Re-Authentication
+# ADR-2276: Signature Re-Authentication
 
 ## Status
 

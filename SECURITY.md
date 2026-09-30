@@ -6,12 +6,12 @@ Cadence Clinical is a clinical trial software platform handling sensitive data a
 
 ## Supported Versions
 
-Security patches and vulnerability remediation are actively provided for the following release branches:
+Cadence is pre-release. Security fixes land on `main` only; there are no maintained release branches yet.
 
-| Version | Supported | Status |
-| --- | --- | --- |
-| 2.x | :white_check_mark: | Current active release branch (`main`) |
-| 1.x | :x: | End of Life (EOL) |
+| Version | Supported |
+| --- | --- |
+| `main` | :white_check_mark: |
+| Anything else | :x: |
 
 ---
 
@@ -21,7 +21,7 @@ Do **NOT** file public GitHub issues, discussions, or pull requests for suspecte
 
 ### Private Reporting Channels
 
-* **GitHub Advisory:** Submit a report privately through [GitHub Private Vulnerability Reporting](https://www.google.com/search?q=../../security/advisories/new).
+* **GitHub Advisory:** Submit a report privately through [GitHub Private Vulnerability Reporting](https://github.com/fderuiter/cadence-clinical/security/advisories/new).
 * **Dedicated Security Mailbox:** Email **security@cadenceclinical.org** (or your organization's designated security alias).
 
 ### Information to Include

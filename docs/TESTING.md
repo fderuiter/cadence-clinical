@@ -12,6 +12,7 @@ requirement as qualified.
 | `tests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests.csproj` |
 | `packages/ui/tests/` | Vitest suite for the shared JavaScript signing and UI helpers. | `pnpm --filter ui test` |
+| `apps/web/tests/` | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded. | `pnpm --filter web test` |
 
 `dotnet test Cadence.sln` runs all three .NET projects. `dotnet cadence test --fast` is the quick loop, and
 `make verify` runs the quality gates plus every suite before you open a PR.
@@ -50,6 +51,29 @@ These tests currently use it:
 - `tests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.
+
+## Web app tests (`apps/web`)
+
+`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm --filter web typecheck` and
+`pnpm --filter web lint` are the other two checks to run before pushing a web change.
+
+These three scripts regenerate `apps/web/src/types/usdm.ts` from `docs/openapi/legacy` before they run.
+If that leaves the file modified, restore it with `git checkout apps/web/src/types/usdm.ts` rather than
+committing the regenerated copy.
+
+Rules for web tests:
+
+- **Never reach the network.** Stub `fetch` in every test that calls an API client. When the module under
+  test captures `fetch` at import time, create the stub with `vi.hoisted` and install it with
+  `vi.stubGlobal` so it is in place before the import runs.
+- **Return real `Response` objects.** The API client is built on `openapi-fetch`, which calls
+  `fetch(request)` with a single `Request` and reads the status, headers and body of a real `Response`. Use
+  `jsonResponse(body, { status })` from `apps/web/tests/fetch_mock.js` instead of a hand-built object.
+- **Assert on the request that was sent.** `recordedRequest(mockFetch, index)` from the same file returns the
+  URL, method, headers and parsed JSON body, whether the caller passed a `Request` or a `(url, init)` pair.
+  Check the headers the gateway depends on, such as `X-Change-Reason`, not only the URL.
+- **Wait for conditions, not time.** Use `vi.waitFor(...)` or `await router.isReady()` rather than fixed
+  sleeps, which fail when the suite runs under load.
 
 ## Shared test helpers (`Cadence.Testing`)
 
@@ -122,10 +146,24 @@ their fully qualified name. Theory cases are merged: a single failing case fails
 
 A test with no result is reported as **NOT RUN**. It is never assumed to have passed. Without any TRX
 results, generation stops with an error unless you run `dotnet cadence generate-rtm --draft` or set
-`RTM_DRAFT=true`. A draft is
-marked **DRAFT ONLY** and every test shows as **UNVERIFIED**.
+`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` ignores
+`RTM_DRAFT`, so a variable left set in a shell or CI job can't turn documents built from real results into
+drafts.
 
 Set `RTM_STRICT_ALL=true` to make validation fail while any requirement is not qualified.
+
+### Keeping the RTM current
+
+`dotnet cadence check rtm` validates without running any tests. It fails when:
+
+- a test declares a requirement ID that no requirement document defines, or
+- the checked-in RTM lists different tests for a requirement than the tags in `tests/` declare. That happens
+  when a PR adds, removes or moves a tag without re-running `gxp sync`. The error names each test that is
+  missing from the RTM or no longer declares the requirement.
+
+It does not compare test results; only a full `gxp sync` produces those. The check is part of CI's static
+analysis job, not the pre-commit hook, because fixing it means running the whole suite. If you change a tag,
+run `gxp sync` before you open the PR.
 
 Run `gxp sync` with `CADENCE_TEST_POSTGRES` set, so the database-backed tests produce real results instead
 of skips:

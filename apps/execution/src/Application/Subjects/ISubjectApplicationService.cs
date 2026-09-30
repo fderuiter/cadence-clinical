@@ -6,7 +6,7 @@ using Cadence.Core.Domain;
 namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
-/// Direct typed application-service contract for the whole `execution-subjects` slice (ADR-2234 §3.2 — no
+/// Direct typed application-service contract for the whole `execution-subjects` slice (ADR-2428 §3.2 — no
 /// MediatR), per <c>02_technical_design.md</c> §3.1. All 7 methods are declared here by `MIG-SUBJ-018` — the
 /// first ticket to touch this file — so `MIG-SUBJ-019` can add the remaining 5 method <i>bodies</i> to
 /// <see cref="SubjectApplicationService"/> without a second interface-authoring pass. This ticket implements

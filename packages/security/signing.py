@@ -106,7 +106,7 @@ def verify_gateway_signature(
     1. Scope-bearing requests must validate either against the canonical 8-field scope-aware payload (including tenant_id)
        or the 7-field compatibility fallback (tenant_id=None) preserving all scope bindings.
     2. Fallback verification paths (re-serialization with cleared scopes or legacy 4-field payload)
-       are strictly restricted to scope-free requests only, consistent with ADR-86.
+       are strictly restricted to scope-free requests only, consistent with ADR-2369.
     """
     # 1. Verify with the canonical 9-field scope-aware payload (includes tenant_id and sig_token)
     expected = generate_gateway_signature(

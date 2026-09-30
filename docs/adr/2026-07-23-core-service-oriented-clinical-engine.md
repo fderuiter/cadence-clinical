@@ -1,4 +1,4 @@
-# ADR-16: Core Service-Oriented Clinical Engine
+# ADR-016: Core Service-Oriented Clinical Engine
 
 - **Status:** Accepted
 - **Date:** 2026-07-23

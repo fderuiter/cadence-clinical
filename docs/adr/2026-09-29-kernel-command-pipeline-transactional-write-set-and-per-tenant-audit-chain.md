@@ -84,6 +84,23 @@ events, outbox, idempotency or chain.
 9. **First commands:** `ProvisionTenant` and `RegisterOrganization`, registered by `AddKernelCommandPipeline()`.
 10. **Migration `CommandPipeline`** creates the six tables and the triggers and drops `audit_log_entries`, which no
     deployment has written to (the kernel is not yet hosted).
+11. **Outbox relay (`KernelOutboxRelay`):** delivers committed events to the host's `IKernelEventPublisher`
+    at least once. Each pass claims due rows with `FOR UPDATE SKIP LOCKED`, so concurrent relays never deliver the
+    same row at once, and marks each row dispatched or schedules a retry after 2^attempts seconds (capped at one
+    hour) with the error recorded. A tenant's rows are claimed oldest first, and a failed row holds back that
+    tenant's later rows until it is delivered, so one relay per deployment keeps each tenant's order. Subscribers
+    deduplicate on `EventId`. The relay touches only delivery bookkeeping, never kernel truth.
+12. **Root sealing (`KernelAuditChainSealer`):** verifies a tenant's chain end to end and, when it is intact and has
+    grown, inserts a row in the insert-only `audit_chain_seals` table recording the head's sequence and hash, as
+    the service account `svc:audit-sealer`. A broken chain is never sealed and is logged as critical. The verifier
+    also checks every seal still matches its link, so a privileged user who deletes the newest links and rewinds the
+    head is caught even though the remaining chain is internally consistent.
+13. **Scheduled jobs:** `AddKernelBackgroundJobs()` runs the relay continuously (back to back while there is a
+    backlog, then every 2 s) and the verify-and-seal pass over every tenant hourly. Exactly one host per deployment
+    calls it.
+14. **Verification under load:** the verifier reads the chain head first and checks links only up to it. A link and
+    its head update commit together, so commands appending during verification never make an intact chain look
+    broken.
 
 ## 5. Consequences & Trade-offs
 
@@ -99,11 +116,11 @@ events, outbox, idempotency or chain.
 - No EF Core execution retry strategy is configured: a command's transaction is not safely re-runnable by EF, so
   callers retry the whole command with the same idempotency key.
 
-### Follow-up (same issue, #4779)
+### Follow-up
 
-- Outbox relay that publishes and marks `outbox_messages` dispatched (at-least-once), running as a named service
-  account.
-- Periodic root sealing of each tenant's chain and a scheduled verifier job.
+- Seals live in the same database as the chain, so they detect tampering by anyone who cannot also rewrite
+  `audit_chain_seals`. Exporting each seal to storage outside the database (a WORM bucket, or a signed timestamp)
+  would extend that to the database owner.
 - Recording the grants and evidence behind each permit and denial (K-AUTH-2) arrives with the policy evaluator
   (ADR-2251, #4781); until then `IAuthorizer` is a port the host must provide.
 - Kernel API endpoints that call `IKernelCommandSender`, and the host wiring of `ICurrentActor` from the gateway
@@ -121,3 +138,10 @@ events, outbox, idempotency or chain.
 - `tests/Kernel/KernelCommandPipelineTests.cs`: actor rules, error registry, request hash, time truncation, and the
   order of refusals before any unit of work opens.
 - `tests/Kernel/Integration/KernelSchemaPostgresTests.cs`: the write guard refuses `SaveChanges` outside the pipeline.
+- `tests/Kernel/Integration/KernelOutboxAndSealingPostgresTests.cs` (real PostgreSQL): events delivered once and
+  marked dispatched; a failed delivery retries after its backoff while only its own tenant waits; concurrent relays
+  deliver each event once; an intact chain is sealed only when it grows; a broken chain is not sealed; a chain cut
+  back below its seal is reported broken; verification stays intact while commands append.
+- `tests/Kernel/KernelBackgroundJobsTests.cs`: the relay and sealing services are registered and resolvable.
+- Code for items 11-14: `Cadence.Kernel.Persistence/Outbox`, `/Audit`, `/Background`, migration
+  `20260929234442_OutboxRelayAndChainSeals`.

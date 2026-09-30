@@ -24,7 +24,7 @@ While this in-process model is simple, it suffers from a critical robustness and
 - The database `DictionaryImportJob` records are left permanently orphaned in `PENDING` or `PROCESSING` states with no active execution thread.
 - The temporary archive file may be leaked on disk, or deleted, making recovery impossible without re-uploading the entire package.
 
-Citing **ADR-050** (which highlighted technical debt and the eventual need for durable external/background task handling) and **ADR-065** (establishing query-subsystem and transaction idempotency precedents), we require a durable, crash-resilient execution and recovery contract for medical dictionary imports that ensures zero orphaned tasks, automatic retry-on-failure, concurrency safety, and GxP-compliant recovery audit trails.
+Citing **ADR-050** (which highlighted technical debt and the eventual need for durable external/background task handling) and **ADR-2353** (establishing query-subsystem and transaction idempotency precedents), we require a durable, crash-resilient execution and recovery contract for medical dictionary imports that ensures zero orphaned tasks, automatic retry-on-failure, concurrency safety, and GxP-compliant recovery audit trails.
 
 ## 2. Decision Drivers & Constraints
 

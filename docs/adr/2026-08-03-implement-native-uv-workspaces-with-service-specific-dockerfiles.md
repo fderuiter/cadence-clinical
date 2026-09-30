@@ -1,4 +1,6 @@
-# ADR-255: Implement native uv workspaces with service-specific Dockerfiles
+# ADR-2322: Implement native uv workspaces with service-specific Dockerfiles
+
+Also known as: ADR-255 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

@@ -1,4 +1,6 @@
-# ADR-254: Fail-Safe GxP Document Generation and Draft Warning Banners
+# ADR-2319: Fail-Safe GxP Document Generation and Draft Warning Banners
+
+Also known as: ADR-254 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

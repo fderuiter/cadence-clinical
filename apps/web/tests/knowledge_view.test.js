@@ -7,7 +7,9 @@ import KnowledgeView from "../src/views/KnowledgeView.vue";
 import AppShell from "../src/components/AppShell.vue";
 import {
   DEFAULT_CATEGORIES,
+  DEFAULT_CONTEXTUAL_SOPS,
   DEFAULT_MOCK_ARTICLES,
+  knowledgeService,
 } from "../src/api/knowledge.js";
 
 // These tests cover screens that are hidden until their .NET backend exists
@@ -16,6 +18,34 @@ vi.mock("../src/router/availability", async (importOriginal) => ({
   ...(await importOriginal()),
   isScreenAvailable: () => true,
 }));
+// The offline DEFAULT_MOCK_ARTICLES only hold the eCRF and MDR SOPs, neither of
+// which is filed under Regulatory & Quality Compliance or mentions MedDRA. The
+// category and search tests below need articles that do, so they serve this
+// wider catalogue from the mocked listArticles.
+const REGULATORY_ARTICLE = DEFAULT_CONTEXTUAL_SOPS["/audit"].primary_article;
+const MEDDRA_CODING_ARTICLE = {
+  id: "art-coding-sop",
+  title: "SOP-DM-510: MedDRA & WHODrug Medical Coding Conventions",
+  slug: "sop-dm-510-meddra-whodrug-coding",
+  status: "PUBLISHED",
+  version_index: 1,
+  version_label: "1.0",
+  tags: ["coding", "dictionary", "data-management"],
+  category_id: "cat-data-management",
+  category_name: "Data Management & Coding",
+  author_user_id: "data_manager",
+  last_edited_by: "data_manager",
+  approved_by: "qa_director",
+  created_at: "2026-01-20T09:00:00Z",
+  updated_at: "2026-06-01T11:15:00Z",
+  body_markdown: "## Adverse event and concomitant medication coding",
+  body_html: "<h2>Adverse event and concomitant medication coding</h2>",
+};
+const EXTENDED_ARTICLE_CATALOGUE = [
+  ...DEFAULT_MOCK_ARTICLES,
+  REGULATORY_ARTICLE,
+  MEDDRA_CODING_ARTICLE,
+];
 
 // Mock knowledge API service
 vi.mock("../src/api/knowledge.js", async (importOriginal) => {
@@ -278,6 +308,9 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
     });
 
     it("filters articles list when category is selected", async () => {
+      knowledgeService.listArticles.mockResolvedValueOnce([
+        ...EXTENDED_ARTICLE_CATALOGUE,
+      ]);
       authStore.switchPersona("super_admin");
       const wrapper = mount(KnowledgeView, {
         global: { plugins: [pinia, router] },
@@ -303,6 +336,9 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
 
   describe("3. Live Search & Tag Filtering", () => {
     it("filters articles dynamically when typing in search input", async () => {
+      knowledgeService.listArticles.mockResolvedValueOnce([
+        ...EXTENDED_ARTICLE_CATALOGUE,
+      ]);
       const wrapper = mount(KnowledgeView, {
         global: { plugins: [pinia, router] },
       });

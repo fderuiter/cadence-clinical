@@ -1,55 +1,67 @@
-# Execution Microservice
+# Execution service (EDC)
 
-## Overview
+Electronic data capture runtime. It manages subjects (enrolment state, consent, demographics), site compliance status, clinical observations with source data verification, form submissions and clinical queries, and runs edit checks and lab-range normalisation.
 
-Clinical application microservice for `execution` within the Cadence Clinical platform.
+**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on kernel concepts. The type-by-type plan is in [EXECUTION_MIGRATION_INVENTORY.md](../../docs/kernel/EXECUTION_MIGRATION_INVENTORY.md).
 
----
+## Project
 
-## Architectural Boundaries
+- Project: `apps/execution/src/Cadence.Apps.Execution.csproj` (assembly `Cadence.Apps.Execution`).
+- `Program.cs`: composition root (DI registrations, ProblemDetails mapping, MassTransit, route groups).
+- `Domain/`: subjects, observations, forms, queries and compliance models, domain errors, and repository ports (`Domain/Ports/`).
+- `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
+- `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
+- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
+- `Infrastructure/EditChecks/`, `Infrastructure/Normalization/`, `Infrastructure/Security/`: AST edit-check engine, UCUM/lab-range/outlier services, AES-GCM demographics encryption.
+- `Endpoints/`: Minimal API route groups and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
-Implements clinical domain services and application workflows within `apps/execution/`.
-- **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
-- **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
+## HTTP surface
 
----
+- `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `ExecutionDbContext`.
+- `/api/v1/execution/subjects`, `/api/v1/execution/observations`, `/api/v1/execution/forms`, `/api/v1/execution/queries` (route groups).
+- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id` and `status` narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list carries no treatment group or demographics, so a blinded caller can see it; the detail is `GET /api/v1/execution/subjects/{subjectId}`.
+- `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
+- Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`.
+- OpenAPI and the Scalar reference UI are mapped in the Development environment only.
+- The gateway forwards `/api/v1/execution/**`, `/api/v1/observations/**`, `/api/v1/forms/**` and `/api/v1/queries/**` here. Compose publishes port 8002.
 
-## Public APIs / Exports
+## Security
 
-Service routes and contract interfaces:
-- `HTTP` endpoints under `/api/v1/execution`
-- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id` and `status`
-  narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list
-  carries no treatment group or demographics, so a blinded caller can see it; the subject detail is
-  `GET /api/v1/execution/subjects/{subjectId}`.
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity; selected mutating routes (for example form unlock, query reopen/cancel, subject state change) also require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The demographics key is bound from the `DemographicsEncryption` configuration section (`KeyBase64`).
 
----
+## Persistence
 
-## Errors and Concurrency
+`ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema in the shared `cadence` database (ADR-2447). The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
+
+## Errors and concurrency
 
 - Domain errors come back as RFC 7807 ProblemDetails with a `code` extension. `DomainErrorHttpMapping` sets the status.
 - Writes use optimistic concurrency: each aggregate row carries a `_version` token. When another writer changed or
   deleted the row after it was read, the save is rejected rather than retried over their change.
   `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with `code: CONCURRENCY_CONFLICT`, and nothing
-  from the rejected save is written or audited. Clients re-read and re-apply (ADR-2448).
+  from the rejected save is written or audited. Clients re-read and re-apply (ADR-2450).
 - Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by the
   Polly pipeline in `SaveChangesResiliencePipelineFactory`, and never inside an explicit transaction.
 - Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446), attributed to the caller or a
   named `svc:` service account (ADR-2257).
 
----
+## Key dependencies
 
-## Dependencies
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
+- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+ `DependencyInjectionExtensions`), `Polly`, `MassTransit`, `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`; `Microsoft.EntityFrameworkCore.Design` at design time only.
 
-Interacts with core platform capabilities and shared libraries in `packages/`.
+## Tests
 
----
+- Unit and endpoint tests in `tests/Execution/`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"`. Tests under `tests/Execution/Integration/` use Testcontainers PostgreSQL and need Docker.
+- End-to-end tests in `tests/E2E/`: `dotnet test tests/Cadence.E2ETests.csproj --filter "FullyQualifiedName~Cadence.E2ETests.E2E"`.
+- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
 
-## Local Development & Testing
-
-Run the execution unit tests (set `CADENCE_TEST_POSTGRES` to a PostgreSQL connection string to include the
-PostgreSQL integration tests):
+## Run locally
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"
+export GATEWAY_SECRET="<at least 32 characters>"
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
+dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 ```
+
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service with a reference to its `cadence` PostgreSQL database.

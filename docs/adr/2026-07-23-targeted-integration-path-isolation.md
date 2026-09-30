@@ -1,4 +1,4 @@
-# ADR 2026-07-23: Targeted Integration with Path Isolation
+# ADR-2283: Targeted Integration with Path Isolation
 
 ## Status
 

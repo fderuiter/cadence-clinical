@@ -1,4 +1,4 @@
-# ADR 2026-09-02: Bypass Unused Parameter ESLint in Shared UI
+# ADR-2427: Bypass Unused Parameter ESLint in Shared UI
 
 ## Status
 

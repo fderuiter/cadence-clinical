@@ -1,4 +1,8 @@
 # Software Requirements Specification (SRS)
+
+> [!WARNING]
+> **Status: pre-kernel baseline, not a validated release.** The requirement IDs (`SRS-…`, `Trace-…`) remain in use for traceability. Architecture, topology and data-model statements describe the pre-2026-09-29 per-service design and are superseded by the [kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md). Current system: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 ## Cadence Clinical Research Software Platform
 
 **Document Identifier:** CAD-SRS-001  

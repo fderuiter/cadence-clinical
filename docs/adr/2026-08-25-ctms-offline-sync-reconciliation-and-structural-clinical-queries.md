@@ -1,4 +1,6 @@
-# ADR-107: CTMS Offline Sync Reconciliation and Structural Clinical Queries
+# ADR-2401: CTMS Offline Sync Reconciliation and Structural Clinical Queries
+
+Also known as: ADR-107 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-25

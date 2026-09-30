@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - Interactive Microservice Migration Wizard (POSIX)
-# Requirements: PRD-SYS-053, ADR-2233, ADR-2234
+# Requirements: PRD-SYS-053, ADR-2233, ADR-2428
 # ==============================================================================
 
 set -euo pipefail
@@ -31,7 +31,7 @@ printf '%s  GxP Standard: 21 CFR Part 11 / Merkle Interceptor (PRD-SYS-053)%s\n\
 if [ -z "$SERVICE_NAME" ]; then
   printf '%sAvailable Clinical Services:%s\n' "$YELLOW" "$RESET"
   echo "  [1] execution      (EDC Clinical Observation Engine)"
-  echo "  [2] designer       (MDR Protocol Designer - Neo4j)"
+  echo "  [2] designer       (MDR Protocol Designer)"
   echo "  [3] ctms           (Clinical Trial Management System)"
   echo "  [4] etmf           (Electronic Trial Master File)"
   echo "  [5] eisf           (Investigator Site File)"

@@ -1,4 +1,4 @@
-# ADR 2026-07-24: Code Formatting and Style Standardization
+# ADR-2284: Code Formatting and Style Standardization
 
 ## Status
 

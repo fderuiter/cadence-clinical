@@ -112,7 +112,7 @@ elseif (Get-Command pnpm -ErrorAction SilentlyContinue) {
 
 # 4. Local datastores
 Write-Host "`n[4/6] Clinical Datastores" -ForegroundColor Cyan
-Write-Host "  Probing PostgreSQL (5432) and Neo4j (7687)..." -ForegroundColor Gray
+Write-Host "  Probing PostgreSQL (5432)..." -ForegroundColor Gray
 function Test-TcpPort($port) {
     $client = New-Object System.Net.Sockets.TcpClient
     try {
@@ -124,8 +124,6 @@ function Test-TcpPort($port) {
 }
 if (Test-TcpPort 5432) { Write-Ok "PostgreSQL running on port 5432." }
 else { Write-Info "PostgreSQL not reachable. Start via: docker compose -f docker/docker-compose.yml up -d postgres" }
-if (Test-TcpPort 7687) { Write-Ok "Neo4j Bolt running on port 7687." }
-else { Write-Info "Neo4j not reachable. Start via: docker compose -f docker/docker-compose.yml up -d neo4j" }
 
 # 5. Environment configuration (.env)
 Write-Host "`n[5/6] Environment Configuration (.env)" -ForegroundColor Cyan

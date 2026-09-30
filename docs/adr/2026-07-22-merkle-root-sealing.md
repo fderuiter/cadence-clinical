@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Merkle Root Sealing
+# ADR-2272: Merkle Root Sealing
 
 ## Status
 

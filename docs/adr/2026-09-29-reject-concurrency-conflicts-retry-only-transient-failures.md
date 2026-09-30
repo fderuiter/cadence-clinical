@@ -1,4 +1,6 @@
-# ADR-2448: Reject Concurrency Conflicts, Retry Only Transient Failures
+# ADR-2450: Reject Concurrency Conflicts, Retry Only Transient Failures
+
+Also known as: ADR-2448 (former number; it collided with the gateway routes ADR)
 
 - **Status:** Accepted
 - **Date:** 2026-09-29

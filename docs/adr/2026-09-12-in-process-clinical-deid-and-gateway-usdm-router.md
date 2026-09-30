@@ -1,4 +1,6 @@
-# ADR-2161: In-Process Clinical De-Identification and Gateway USDM Validation Router
+# ADR-2441: In-Process Clinical De-Identification and Gateway USDM Validation Router
+
+Also known as: ADR-2161 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-12

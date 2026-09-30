@@ -1,4 +1,6 @@
-# ADR-065: Debounced Clinical Code Lookup UI Primitive
+# ADR-2354: Debounced Clinical Code Lookup UI Primitive
+
+Also known as: ADR-065 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-10

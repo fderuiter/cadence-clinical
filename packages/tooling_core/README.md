@@ -1,45 +1,32 @@
-# Tooling Core Package
+# Cadence.ToolingCore
 
-## Overview
+Implementation library behind the Cadence CLI: repository validators, generators and gate runners, plus a standalone OpenAPI exporter.
 
-Cadence Clinical Unified Tooling Core Package
+## Projects
 
----
+- `packages/tooling_core/src/Cadence.ToolingCore.csproj` (assembly `Cadence.ToolingCore`):
+  - `Cadence.ToolingCore.Services`: one static service per tool, for example `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`.
+  - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link checking).
+  - `Cadence.ToolingCore.Contracts`: `ContractVerifier`.
+  - `Cadence.ToolingCore.Security`: `SecretScanner`.
+  - `Cadence.ToolingCore.OpenApi`: `OpenApiToolingService`, and `OpenApiSpecExporter` (currently writes placeholder documents with empty `paths`).
+  - `Cadence.ToolingCore`: `ToolingHandlers` and request/response records (`Contracts.cs`) intended for MCP tools; only the unit tests call them today.
+- `packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj`: console app that loads the execution, designer and gateway services in-process and writes their OpenAPI documents (default `docs/openapi`, override with `--output-dir` / `-o`).
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `contracts.py`, `handlers.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `tooling_core` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/tooling_core/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+- `Cadence.ToolingCore`: project reference `Cadence.Compliance`; framework reference `Microsoft.AspNetCore.App`; packages `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
+- `Cadence.OpenApiExporter`: `Cadence.ToolingCore`, the execution, designer and gateway service projects, `Microsoft.AspNetCore.Mvc.Testing`.
 
----
+## Referenced by
 
-## Public APIs / Exports
+[packages/cli](../cli/README.md), `Cadence.OpenApiExporter`, `apps/gateway` (project reference only; no gateway code uses it), `tests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests.csproj`.
 
-Key exported interfaces and components:
-- CommandEnvelope
-- DoctorDiagnoseRequest
-- DoctorDiagnoseResponse
-- FastTestRequest
-- FastTestResponse
-- SeedScenarioRequest
-- SeedScenarioResponse
-- SentinelRunRequest
+## Tests
 
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `pydantic>=2.0.0`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+Covered by `tests/Packages/PortedPackagesUnitTests.cs` and `tests/Packages/DeidEngineUnitTests.cs`:
 
 ```bash
-uv run pytest packages/tooling_core
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
 ```

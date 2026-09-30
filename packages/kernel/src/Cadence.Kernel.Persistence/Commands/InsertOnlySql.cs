@@ -19,8 +19,12 @@ internal static partial class InsertOnlySql
     /// <summary>SQLSTATE raised when an insert-only table is changed.</summary>
     public const string ViolationSqlState = "KA001";
 
-    /// <summary>The kernel tables that are insert-only.</summary>
-    public static readonly string[] Tables = ["audit_entries", "domain_events", "provenance_activities", "idempotency_records"];
+    /// <summary>
+    /// Every kernel table that is insert-only today. Migrations name their own tables explicitly, so adding one here
+    /// never changes an applied migration; the schema test checks each table in this list carries the guards.
+    /// </summary>
+    public static readonly string[] Tables =
+        ["audit_entries", "domain_events", "provenance_activities", "idempotency_records", "audit_chain_seals"];
 
     public static string CreateFunction(string schema) => $$"""
         CREATE OR REPLACE FUNCTION {{Quote(schema)}}.{{FunctionName}}() RETURNS trigger
@@ -73,23 +77,26 @@ internal static partial class InsertOnlySql
 /// <summary>Migration helpers for <see cref="InsertOnlySql"/>.</summary>
 internal static class InsertOnlyMigrationBuilderExtensions
 {
-    /// <summary>Creates the trigger function and guards every table in <see cref="InsertOnlySql.Tables"/>.</summary>
-    public static void CreateInsertOnlyGuards(this MigrationBuilder migrationBuilder, string schema)
-    {
+    public static void CreateInsertOnlyFunction(this MigrationBuilder migrationBuilder, string schema) =>
         migrationBuilder.Sql(InsertOnlySql.CreateFunction(schema));
-        foreach (var table in InsertOnlySql.Tables)
+
+    public static void DropInsertOnlyFunction(this MigrationBuilder migrationBuilder, string schema) =>
+        migrationBuilder.Sql(InsertOnlySql.DropFunction(schema));
+
+    /// <summary>Guards the named tables. Migrations list their tables literally so they never change once applied.</summary>
+    public static void CreateInsertOnlyGuards(this MigrationBuilder migrationBuilder, string schema, params string[] tables)
+    {
+        foreach (var table in tables)
         {
             migrationBuilder.Sql(InsertOnlySql.CreateGuards(schema, table));
         }
     }
 
-    public static void DropInsertOnlyGuards(this MigrationBuilder migrationBuilder, string schema)
+    public static void DropInsertOnlyGuards(this MigrationBuilder migrationBuilder, string schema, params string[] tables)
     {
-        foreach (var table in InsertOnlySql.Tables)
+        foreach (var table in tables)
         {
             migrationBuilder.Sql(InsertOnlySql.DropGuards(schema, table));
         }
-
-        migrationBuilder.Sql(InsertOnlySql.DropFunction(schema));
     }
 }

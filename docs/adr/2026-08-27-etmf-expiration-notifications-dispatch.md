@@ -1,4 +1,6 @@
-# ADR-117: eTMF Expiration Alert Notification Dispatch and Recipient Routing
+# ADR-2415: eTMF Expiration Alert Notification Dispatch and Recipient Routing
+
+Also known as: ADR-117 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-27
@@ -10,7 +12,7 @@
 
 ## 1. Context & Problem Statement
 
-The eTMF module contains a background process (ADR-112) that periodically scans for upcoming and past document expirations. While scanning generates durable internal state records to avoid duplication, there is a critical need to actively notify human users (such as Document Owners or clinical trial associates/monitors) about these events.
+The eTMF module contains a background process (ADR-2405) that periodically scans for upcoming and past document expirations. While scanning generates durable internal state records to avoid duplication, there is a critical need to actively notify human users (such as Document Owners or clinical trial associates/monitors) about these events.
 
 The dispatch boundary must securely post authenticated notification requests to the external Notifications service (V2 HMAC-SHA256 Gateway signature), track the dispatch results/failure details programmatically within the alert state table, and gracefully retry failed dispatches in subsequent cycles.
 

@@ -1,4 +1,6 @@
-# ADR-065: Medical Coding Engine and Query Subsystem Integration
+# ADR-2353: Medical Coding Engine and Query Subsystem Integration
+
+Also known as: ADR-065 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
