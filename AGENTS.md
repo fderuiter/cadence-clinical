@@ -262,6 +262,7 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Integration tests only | `pnpm cadence test --integration` (`tests/Cadence.IntegrationTests`, needs PostgreSQL) |
 | Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | Formatting | `dotnet format Cadence.sln --verify-no-changes` |
+| Action pinning check | `python3 scripts/check-action-pinning.py` |
 | All quality gates (pre-commit) | `pnpm cadence check` |
 | Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> TERM=dumb pnpm cadence ci` (about 20 minutes; `TERM=dumb` or `script -qc "…" /dev/null` is needed in an agent shell, [docs/CI.md](docs/CI.md)) |
 | One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |
