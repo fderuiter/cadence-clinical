@@ -788,7 +788,7 @@ _Avoid_: Single HTTP status code assertions without audit trail verification
 
 ### 100% GxP RTM Synchronization
 
-A continuous compliance assurance protocol that automates synchronization of test execution results and `@req:` docstrings via `scripts/sync_gxp.py`, guaranteeing 100% traceability across all 226 system requirements (192 PRD + 34 SRS) with zero drift in CI/CD.
+A continuous compliance assurance protocol that regenerates the Requirements Traceability Matrix and IQ/OQ/PQ report from test results and the requirement IDs tests declare (`[GxPRequirement]` or `@req:`), via `pnpm cadence gxp sync`. A requirement counts as qualified only when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
 _Avoid_: Manual untracked Markdown table edits, partial requirement coverage
 
 ### Model Tiering Matrix
