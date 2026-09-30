@@ -203,6 +203,8 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
   `scripts/manage_migrations.sh`). Migrations go to `Infrastructure/Persistence/Migrations/`.
 - Generate an idempotent SQL script for review: `pwsh scripts/manage_migrations.ps1 script <service>`.
 - Verify migrations against real PostgreSQL (see pattern 7).
+- Regenerate the schema reference after a model change: `pnpm cadence generate-schema-doc` rewrites
+  [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale.
 
 ### 11. Porting Python reference sources
 

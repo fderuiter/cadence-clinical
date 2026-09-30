@@ -749,7 +749,8 @@ import {
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,
-  generateCanonicalSignature,
+  canonicalSerialize,
+  sha256,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -1447,10 +1448,9 @@ async function confirmChangeReason(reasonText) {
         return;
       }
 
-      const canonicalSig = await generateCanonicalSignature(
-        action.payload,
-        "internal-ledger-signing-key-12345"
-      );
+      // A content digest, not a signature: the browser holds no signing key (#4765). The server-side audit
+      // trail is the authoritative, signed record of this change.
+      const payloadSha256 = await sha256(canonicalSerialize(action.payload));
 
       // Sync verified record into compliance ledger
       await store.addLedgerBlock(
@@ -1459,14 +1459,14 @@ async function confirmChangeReason(reasonText) {
           ruleId: saved.id,
           type: saved.type,
           xpath: saved.compiled_xpath || previewXpath.value,
-          signature: canonicalSig,
+          payloadSha256,
           payload: action.payload,
           headers: signedHeaders,
         },
         reasonText
       );
 
-      alert(`Rule successfully compiled and signed save verified!`);
+      alert(`Rule saved.`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
       const signedHeaders = changeReasonHeaders(reasonText);

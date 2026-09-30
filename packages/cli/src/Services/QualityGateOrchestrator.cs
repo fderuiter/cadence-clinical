@@ -161,10 +161,14 @@ public static class QualityGateOrchestrator
         }
 
         // 17. Schema Doc
-        AnsiConsole.MarkupLine("\n17/21 Staging Schema Documentation...");
-        if (PreCommitSchemaDocService.ExecutePreCommitSchemaDoc() != 0)
+        AnsiConsole.MarkupLine("\n17/21 Validating Database Schema Documentation...");
+        if (preCommit)
         {
-            AnsiConsole.MarkupLine("[red]Gate 17 (auto-stage-schema-doc) failed![/]");
+            AnsiConsole.MarkupLine("Skipped: rendering every module's EF Core model runs in 'cadence check' and CI.");
+        }
+        else if (SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true) != 0)
+        {
+            AnsiConsole.MarkupLine("[red]Gate 17 (schema-doc) failed![/]");
             allPassed = false;
         }
 
@@ -237,7 +241,7 @@ public static class QualityGateOrchestrator
             "deid-compliance-scan" or "deid" => Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) == 0,
             "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit) == 0,
             "validate-api-clients" or "api-clients" => ApiClientValidatorService.ValidateApiClients() == 0,
-            "auto-stage-schema-doc" or "schema-doc" => PreCommitSchemaDocService.ExecutePreCommitSchemaDoc() == 0,
+            "auto-stage-schema-doc" or "schema-doc" => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true) == 0,
             "validate-path-patterns" or "path-patterns" => PathPatternValidatorService.ValidatePathPatterns(targetFiles) == 0,
             "backend-static-verify" or "contracts" => ContractVerifierService.VerifyContracts() == 0,
             "query-style-linter" or "query-linter" => QueryLinterService.LintQueries(targetFiles) == 0,

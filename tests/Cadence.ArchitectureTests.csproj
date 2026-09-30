@@ -51,6 +51,7 @@
     <!-- MIG-SUBJ-028: Integration tests use Testcontainers.PostgreSql, which is not referenced by this project.
          Keep compiled into Cadence.UnitTests.csproj only. -->
     <Compile Remove="Execution/Integration/**" />
+    <Compile Remove="Integration/**" />
     <!-- #4761: host-level authentication tests boot the real execution and gateway composition roots
          (ExecutionApiFactory, WebApplicationFactory of the gateway); compiled into Cadence.UnitTests only. -->
     <Compile Remove="Execution/Endpoints/ExecutionAuthenticationTests.cs" />

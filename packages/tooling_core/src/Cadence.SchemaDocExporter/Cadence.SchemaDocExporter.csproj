@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Cadence.SchemaDocExporter</RootNamespace>
+    <Description>Writes docs/schema: the database schema of every module, rendered from its EF Core design-time model.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Every assembly that owns a DbContext with a design-time factory; Program.ModuleAssemblies lists the same set.
+       This is a build-time documentation tool, not an application, so K-XS-2 exempts its Kernel.Persistence reference
+       by name (tests/Architecture/KernelBoundaryRules.cs). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\imaging\src\Cadence.Apps.Imaging.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\interop\src\Cadence.Apps.Interop.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
+    <ProjectReference Include="..\..\..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
+    <ProjectReference Include="..\..\..\database\src\Cadence.Database.csproj" />
+  </ItemGroup>
+
+</Project>

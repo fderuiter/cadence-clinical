@@ -279,10 +279,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates that the batch size applies per tenant, so one tenant's backlog cannot starve another, and that a pass
     /// in which a tenant fills its batch reports more work due.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "OutboxRelay_BatchesPerTenant_AndReportsMoreDue")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task OutboxRelayBatchesPerTenantAndReportsMoreDue()
     {
         fixture.SkipIfUnavailable();

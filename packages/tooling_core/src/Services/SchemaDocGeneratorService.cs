@@ -1,38 +1,160 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Cadence.ToolingCore.Services;
 
+/// <summary>
+/// Keeps <c>docs/schema/*.md</c> equal to the database schema the EF Core models define. The documents are
+/// rendered by <c>Cadence.SchemaDocExporter</c>, which builds each module's design-time model without a database.
+/// </summary>
 public static class SchemaDocGeneratorService
 {
-    public static int GenerateSchemaDocumentation(string? repoRoot = null)
+    private const string ExporterProject = "packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj";
+
+    /// <summary>
+    /// Regenerates <c>docs/schema</c>, or with <paramref name="validate"/> only reports how it differs from the models
+    /// and returns 1 when it does.
+    /// </summary>
+    public static int GenerateSchemaDocumentation(bool validate = false, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
-        Console.WriteLine("Generating interactive schema documentation and USDM catalog...");
+        string docsDir = Path.Combine(repoRoot, "docs", "schema");
+        string exportDir = Path.Combine(Path.GetTempPath(), "cadence-schema-doc-" + Guid.NewGuid().ToString("N"));
 
-        string docsDir = Path.Combine(repoRoot, "docs");
-        string htmlVisualizer = Path.Combine(docsDir, "schema_visualizer.html");
-        if (!File.Exists(htmlVisualizer))
+        Console.WriteLine("Rendering the database schema documentation from the EF Core models...");
+        try
         {
-            File.WriteAllText(htmlVisualizer, "<!-- Cadence Schema Visualizer -->\n<html><body><h1>Cadence Schema Visualizer</h1></body></html>\n");
+            if (!RunExporter(repoRoot, exportDir))
+            {
+                return 1;
+            }
+
+            var drift = FindDrift(exportDir, docsDir);
+            if (drift.Count == 0)
+            {
+                Console.WriteLine("✔ docs/schema matches the EF Core models.");
+                return 0;
+            }
+
+            if (validate)
+            {
+                Console.WriteLine("[ERROR] docs/schema differs from the EF Core models:");
+                foreach (string line in drift)
+                {
+                    Console.WriteLine($"  - {line}");
+                }
+
+                Console.WriteLine("Run 'pnpm cadence generate-schema-doc' and commit docs/schema.");
+                return 1;
+            }
+
+            Directory.CreateDirectory(docsDir);
+            foreach (string file in Directory.GetFiles(exportDir, "*.md"))
+            {
+                File.Copy(file, Path.Combine(docsDir, Path.GetFileName(file)), overwrite: true);
+            }
+
+            foreach (string stale in Stale(exportDir, docsDir))
+            {
+                File.Delete(Path.Combine(docsDir, stale));
+            }
+
+            foreach (string line in drift)
+            {
+                Console.WriteLine($"  updated {line}");
+            }
+
+            Console.WriteLine("✔ docs/schema regenerated.");
+            return 0;
+        }
+        finally
+        {
+            if (Directory.Exists(exportDir))
+            {
+                Directory.Delete(exportDir, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Compares freshly rendered documents with the committed ones, ignoring line-ending differences.
+    /// </summary>
+    public static IReadOnlyList<string> FindDrift(string renderedDir, string committedDir)
+    {
+        var drift = new List<string>();
+        foreach (string rendered in Directory.GetFiles(renderedDir, "*.md").OrderBy(f => f, StringComparer.Ordinal))
+        {
+            string name = Path.GetFileName(rendered);
+            string committed = Path.Combine(committedDir, name);
+            if (!File.Exists(committed))
+            {
+                drift.Add($"{name} (missing)");
+            }
+            else if (Normalize(File.ReadAllText(rendered)) != Normalize(File.ReadAllText(committed)))
+            {
+                drift.Add($"{name} (out of date)");
+            }
         }
 
-        string schemaIndexHtml = Path.Combine(docsDir, "schema", "index.html");
-        Directory.CreateDirectory(Path.Combine(docsDir, "schema"));
-        if (!File.Exists(schemaIndexHtml))
+        drift.AddRange(Stale(renderedDir, committedDir).Select(name => $"{name} (no module defines it)"));
+        return drift;
+    }
+
+    private static string Normalize(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+    private static IEnumerable<string> Stale(string renderedDir, string committedDir)
+    {
+        if (!Directory.Exists(committedDir))
         {
-            File.WriteAllText(schemaIndexHtml, "<!-- Cadence Schema Documentation -->\n<html><body><h1>Cadence Schema Documentation</h1></body></html>\n");
+            return [];
         }
 
-        string cdiscUsdmJson = Path.Combine(docsDir, "CDISC", "cdisc_usdm_compliance.json");
-        Directory.CreateDirectory(Path.Combine(docsDir, "CDISC"));
-        if (!File.Exists(cdiscUsdmJson))
+        var rendered = Directory.GetFiles(renderedDir, "*.md").Select(Path.GetFileName).ToHashSet(StringComparer.Ordinal);
+        return Directory.GetFiles(committedDir)
+            .Select(f => Path.GetFileName(f))
+            .Where(name => !rendered.Contains(name))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static bool RunExporter(string repoRoot, string exportDir)
+    {
+        var psi = new ProcessStartInfo("dotnet")
         {
-            File.WriteAllText(cdiscUsdmJson, "{\n  \"status\": \"COMPLIANT\",\n  \"version\": \"3.0\"\n}\n");
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        foreach (string arg in new[] { "run", "--project", ExporterProject, "--", "--output-dir", exportDir })
+        {
+            psi.ArgumentList.Add(arg);
         }
 
-        Console.WriteLine("✔ Schema documentation generated successfully.");
-        return 0;
+        using var process = Process.Start(psi);
+        if (process == null)
+        {
+            Console.WriteLine("[ERROR] Could not start 'dotnet run' for the schema documentation exporter.");
+            return false;
+        }
+
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        string stdout = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+
+        if (process.ExitCode != 0)
+        {
+            Console.WriteLine($"[ERROR] The schema documentation exporter failed with exit code {process.ExitCode}:");
+            Console.WriteLine(stdout);
+            Console.WriteLine(stderr);
+            return false;
+        }
+
+        return true;
     }
 
     private static string FindRepoRoot()

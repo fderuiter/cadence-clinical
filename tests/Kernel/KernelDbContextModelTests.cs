@@ -1,8 +1,10 @@
 using System.Linq;
 
+using Cadence.Database;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 
 using FluentAssertions;
 
@@ -20,7 +22,8 @@ namespace Cadence.UnitTests.Kernel;
 public class KernelDbContextModelTests
 {
     private static KernelDbContext CreateContext() =>
-        new KernelDbContextDesignTimeFactory().CreateDbContext([]);
+        new KernelDbContextDesignTimeFactory().CreateDbContext(
+            [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString]);
 
     /// <summary>
     /// Validates that every kernel table lives in the single <c>kernel</c> schema (ADR-2247) with snake_case columns.
@@ -47,11 +50,9 @@ public class KernelDbContextModelTests
     /// <c>TenantId</c>, and every foreign key between two tenant-scoped entities is composite, leading with
     /// <c>TenantId</c> on both sides, so it can never point into another tenant. A plain foreign key to a tenant-scoped
     /// table fails here before any migration is written.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_TenantScopedEntities_UseCompositeTenantForeignKeys")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys()
     {
         using var context = CreateContext();

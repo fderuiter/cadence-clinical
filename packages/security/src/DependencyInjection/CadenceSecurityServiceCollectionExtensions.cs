@@ -19,13 +19,18 @@ public class CadenceSecurityOptions
     /// <see cref="GatewayAuthenticationOptions.MinimumSecretLength"/> characters.
     /// </summary>
     public string? GatewaySecret { get; set; }
+
+    /// <summary>
+    /// GxP audit-trail HMAC key. When left unset it is read from the <c>AUDIT_LOG_SECRET_KEY</c> configuration
+    /// key; there is no default, so resolving <see cref="AuditDigestEngine"/> without one throws.
+    /// </summary>
     public string? AuditLogSecretKey { get; set; }
 }
 
 public static class CadenceSecurityServiceCollectionExtensions
 {
     /// <summary>The configuration key (and environment variable) holding the shared gateway secret.</summary>
-    public const string GatewaySecretConfigurationKey = "GATEWAY_SECRET";
+    public const string GatewaySecretConfigurationKey = "GATEWAY_SECRET"; // pragma: allowlist secret
 
     /// <summary>
     /// Registers Cadence security engine services, authentication middleware, authorization policies, and audit components.
@@ -54,7 +59,9 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<ReplayCache>();
         services.AddSingleton<SigTokenVerifier>();
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
-        services.AddSingleton<AuditDigestEngine>();
+        services.AddSingleton(sp => new AuditDigestEngine(
+            sp.GetRequiredService<IAuditLogWriter>(),
+            options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable]));
         services.AddTransient<GxPAuditInterceptor>();
 
         // Authorization Handlers

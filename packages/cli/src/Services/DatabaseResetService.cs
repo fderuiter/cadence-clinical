@@ -131,9 +131,17 @@ public static class DatabaseResetService
 
     private static string GetPostgresConnectionString()
     {
-        string connStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") ??
-                        Environment.GetEnvironmentVariable("DATABASE_URL") ??
-                        "Host=localhost;Port=5432;Database=cadence_edc;Username=cadence;Password=cadence_password";
+        string? connStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
+        if (string.IsNullOrEmpty(connStr))
+        {
+            connStr = Environment.GetEnvironmentVariable("DATABASE_URL");
+        }
+
+        if (string.IsNullOrEmpty(connStr))
+        {
+            throw new InvalidOperationException(
+                "POSTGRES_CONNECTION_STRING (or DATABASE_URL) is not set. Export it (see .env.example) before resetting databases.");
+        }
 
         if (connStr.StartsWith("postgresql+asyncpg://"))
         {

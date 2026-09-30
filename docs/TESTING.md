@@ -8,7 +8,7 @@ requirement as qualified.
 
 | Project | What it holds | Run it with |
 | --- | --- | --- |
-| `tests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages. The Postgres integration tests under `tests/Execution/Integration/` live here too. | `dotnet test tests/Cadence.UnitTests.csproj` |
+| `tests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages. The Postgres integration tests under `tests/Integration/`, `tests/Execution/Integration/` and `tests/Kernel/Integration/` live here too. | `dotnet test tests/Cadence.UnitTests.csproj` |
 | `tests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests.csproj` |
 | `packages/ui/tests/` | Vitest suite for the shared JavaScript signing and UI helpers. | `pnpm --filter ui test` |
@@ -48,6 +48,9 @@ These tests currently use it:
   round trip, and migrations.
 - `tests/Kernel/Integration/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
   pipeline. This fixture honours only `CADENCE_TEST_POSTGRES`.
+- `tests/Integration/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
+  service applies them, into one shared database, checking that each service's tables and migration history
+  land in its own schema (ADR-2247).
 - `tests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.

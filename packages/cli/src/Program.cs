@@ -58,7 +58,6 @@ public static class Program
             config.AddCommand<GenerateApiDocsCommand>("generate-api-docs");
             config.AddCommand<GenerateSchemaDocCommand>("generate-schema-doc");
             config.AddCommand<PreCommitOpenApiCommand>("pre-commit-openapi");
-            config.AddCommand<PreCommitSchemaDocCommand>("pre-commit-schema-doc");
             config.AddCommand<ValidateApiClientsCommand>("validate-api-clients");
             config.AddCommand<GenerateCliDocsCommand>("generate-cli-docs");
             config.AddCommand<GenerateRtmCommand>("generate-rtm");

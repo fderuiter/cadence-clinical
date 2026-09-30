@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
 
+using Cadence.Database;
 using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.UnitTests.Kernel.Integration;
 
 using FluentAssertions;
@@ -136,7 +138,8 @@ public class BitemporalPersistenceTests
     [Trait("Category", "Unit")]
     public void KernelDbContextEnablesBtreeGist()
     {
-        using var context = new KernelDbContextDesignTimeFactory().CreateDbContext([]);
+        using var context = new KernelDbContextDesignTimeFactory().CreateDbContext(
+            [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString]);
 
         var designModel = context.GetService<IDesignTimeModel>().Model;
 

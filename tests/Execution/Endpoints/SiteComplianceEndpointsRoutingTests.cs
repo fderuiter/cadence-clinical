@@ -21,6 +21,7 @@ using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -514,6 +515,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseTestGatewaySecret();
+            builder.UseTestPostgresConnectionString();
 
             builder.ConfigureServices(services =>
             {

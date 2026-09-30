@@ -9,7 +9,8 @@ command-line arguments all work; `__` in an environment variable name maps to `:
 `ConnectionStrings__cadence` is `ConnectionStrings:cadence`). CLI and library code that calls
 `Environment.GetEnvironmentVariable` reads the process environment only.
 
-"Required" means the service fails at startup outside the Development environment when the key is unset.
+"Required" means the service (or tool) fails with an error naming the key when it is unset. There are no built-in
+fallback credentials in any environment, Development included (ADR-2260).
 
 ## Hosting
 
@@ -25,8 +26,8 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
-| `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext | local compose database in Development only | yes (or `POSTGRES_CONNECTION_STRING`) |
-| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every `apps/*/src/Infrastructure/Persistence/*DbContextFactory.cs` (design-time `dotnet ef`); `packages/cli/src/Services/DatabaseResetService.cs:173` | local compose database | yes (or `ConnectionStrings__cadence`) |
+| `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext | none | yes (or `POSTGRES_CONNECTION_STRING`) |
+| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every design-time `*DbContextFactory.cs` (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`); `packages/cli/src/Services/DatabaseResetService.cs` | none | yes (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need it |
 | `Database__MigrateOnStartup` | `packages/database/src/CadenceMigrationHostedService.cs` (every service with a DbContext) | `false` | no; applies migrations before serving |
 | `Database__MigrateOnly` | same | `false` | no; applies migrations and exits 0 (deployment job) |
 | `DATABASE_URL` | `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts `postgresql+asyncpg://` URLs) | none | no |
@@ -78,7 +79,7 @@ Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClu
 | `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:27` | none | no |
 | `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:26` | none; validated when set | set it in production |
 | `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:38` | `true` | no |
-| `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditDigestEngine.cs:27,45`, `packages/compliance/src/AuditDigestCalculator.cs:26` | hardcoded test values (they differ) | should be; see #4759 |
+| `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`) | none | yes; signing or verifying the audit chain throws without it |
 | `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:18` | `cadence-validation-runner` | no |
 
 ## Observability
