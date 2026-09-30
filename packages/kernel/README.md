@@ -65,11 +65,25 @@ rejects a used idempotency key (K-TX-3), runs the handler, and commits in one Po
 | One provenance activity (K-PROV-1) | `provenance_activities` | insert-only |
 | Its events in the §5.2 envelope | `domain_events` | insert-only |
 | One link of the tenant's hash chain | `audit_entries` (+ `audit_chain_heads`) | insert-only (head advances) |
-| One outbox row per event | `outbox_messages` | `dispatched_at` only |
+| One outbox row per event | `outbox_messages` | delivery bookkeeping only |
 | The stored result for the key | `idempotency_records` | insert-only |
 
-Insert-only tables reject `UPDATE`, `DELETE` and `TRUNCATE` with SQLSTATE `KA001`. `KernelAuditChainVerifier`
-re-derives a tenant's chain and reports the first broken link.
+Insert-only tables (these, plus `audit_chain_seals`) reject `UPDATE`, `DELETE` and `TRUNCATE` with SQLSTATE
+`KA001`. `KernelAuditChainVerifier` re-derives a tenant's chain and reports the first broken link.
+
+### After the commit: relay and seals
+
+`AddKernelBackgroundJobs()` runs two jobs in the host (call it in exactly one host per deployment):
+
+- **Outbox relay** (`KernelOutboxRelay`): delivers each event's envelope to the host's `IKernelEventPublisher`, at
+  least once, oldest first per tenant. A failed delivery is retried after 2^attempts seconds (capped at one hour)
+  with the error in `outbox_messages.last_error`, and holds back only its own tenant's later events. Subscribers
+  deduplicate on `EventId`.
+- **Verify and seal** (`KernelAuditChainSealer`, hourly): verifies every tenant's chain and seals each intact one at
+  its head in `audit_chain_seals`, as `svc:audit-sealer`. A broken chain is logged as critical and never sealed. A
+  chain later cut back below a seal fails verification.
+
+Intervals and batch size are set through `KernelBackgroundOptions`.
 
 To add a command:
 
@@ -83,7 +97,8 @@ To add a command:
 4. Test it through the pipeline in `tests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
 
 A host registers `AddKernelPersistence(connectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
-`ICurrentActor` and an `IAuthorizer`; the container fails to resolve the sender if any is missing.
+`ICurrentActor`, an `IAuthorizer` and logging; the container fails to resolve the sender if any is missing. The host
+that runs `AddKernelBackgroundJobs()` also registers an `IKernelEventPublisher`.
 
 ## Migrations
 
