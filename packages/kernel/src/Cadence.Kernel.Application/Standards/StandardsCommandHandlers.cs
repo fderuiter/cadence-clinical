@@ -6,16 +6,21 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Standards.Mapping;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cadence.Kernel.Application.Standards;
 
@@ -129,8 +134,11 @@ internal sealed class StandardVersionGovernanceHandler(IAttestationVerifier atte
     }
 }
 
-/// <summary>Handles <see cref="DraftLibraryItem"/>.</summary>
-internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IEnumerable<ILibraryContentValidator> validators)
+/// <summary>
+/// Handles <see cref="DraftLibraryItem"/>. A mapping specification's references must also resolve, and become its
+/// lineage inputs (<see cref="MappingSpecificationReferences"/>).
+/// </summary>
+internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IConceptRegistry concepts, IEnumerable<ILibraryContentValidator> validators)
     : ICommandHandler<DraftLibraryItem, LibraryItemVersion>
 {
     public async Task<CommandResult<LibraryItemVersion>> HandleAsync(DraftLibraryItem command, ICommandContext context, CancellationToken cancellationToken)
@@ -155,6 +163,16 @@ internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IEnum
             }
         }
 
+        IReadOnlyList<NodeRef> inputs = [];
+        if (command.Kind == LibraryItemKind.MappingSpecification && command.Content.ValueKind == JsonValueKind.Object)
+        {
+            (inputs, var invalid) = await MappingSpecificationReferences.ResolveAsync(command, registry, concepts, context, cancellationToken).ConfigureAwait(false);
+            if (invalid is not null)
+            {
+                return invalid;
+            }
+        }
+
         var versions = await registry.ListLibraryItemVersionsAsync(command.TenantId, command.Kind, command.Key ?? string.Empty, cancellationToken).ConfigureAwait(false);
         var next = versions.Count == 0 ? 1 : versions.Max(v => v.Version) + 1;
 
@@ -171,6 +189,11 @@ internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IEnum
         }
 
         context.Work.Add(item!);
+        foreach (var input in inputs)
+        {
+            context.Work.LinkInput(input, LineageEdgeKind.DefinedBy);
+        }
+
         context.Work.Raise(new LibraryItemDrafted(command.TenantId, item!.Id, item.Kind, item.Key, item.ItemVersion, item.ContentHash));
         return CommandResult<LibraryItemVersion>.Success(item.ToVersion());
     }
@@ -255,6 +278,15 @@ internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry, 
 
         var terminology = await TerminologyResolution.ResolveAsync(concepts, command.TenantId, command.ControlledTerminology, cancellationToken).ConfigureAwait(false);
 
+        // Pinned mapping specifications must work together over the declared standards (ADR-2463). Unknown or
+        // unapproved pins are reported by the declaration itself.
+        if (pins.Count == command.LibraryPins.Distinct().Count()
+            && pins.Values.All(p => p.Status == GovernanceStatus.Approved)
+            && PinnedMappings.Resolve(pins.Values, command.StandardVersions).Problems is { Count: > 0 } mappingProblems)
+        {
+            return StandardsErrors.DeclarationInvalid.WithMessage(string.Join(" ", mappingProblems));
+        }
+
         var profile = await context.Work.FindAsync<StudyStandardsProfile>(command.ProfileId, cancellationToken).ConfigureAwait(false);
         var isNew = profile is null;
         if (profile is null)
@@ -309,7 +341,9 @@ public static class KernelStandardsServiceCollectionExtensions
     /// Registers the standards command handlers. The host must also register kernel persistence's
     /// <see cref="IStandardsRegistry"/> (<c>AddKernelStandardsPersistence</c>); <c>AddKernelPersistence</c> provides the
     /// <see cref="IAttestationVerifier"/> that approval and deprecation check and the <see cref="IConceptRegistry"/> that
-    /// terminology bindings resolve through.
+    /// terminology bindings resolve through. It also registers the mapping specification content validator and the K-STD-1
+    /// protocol submission check (ADR-2463), which reads findings through <see cref="IValidationFindings"/>
+    /// (<c>AddKernelValidationPersistence</c>).
     /// </summary>
     public static IServiceCollection AddKernelStandards(this IServiceCollection services)
     {
@@ -321,6 +355,8 @@ public static class KernelStandardsServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ApproveLibraryItem, LibraryItemVersion>, LibraryItemGovernanceHandler>();
         services.AddTransient<ICommandHandler<DeprecateLibraryItem, LibraryItemVersion>, LibraryItemGovernanceHandler>();
         services.AddTransient<ICommandHandler<DeclareStudyStandards, StudyStandardsProfileId>, DeclareStudyStandardsHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, MappingSpecificationContentValidator>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IProtocolSubmissionCheck, MappingCoverageCheck>());
         return services;
     }
 }

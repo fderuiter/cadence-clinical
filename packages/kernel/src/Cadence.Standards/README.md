@@ -1,6 +1,7 @@
 # Cadence.Standards
 
-Loads public standards content into the kernel's Standards Registry (spec §6.3, [ADR-2460](../../../../docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md)).
+Loads public standards content into the kernel's Standards Registry (spec §6.3, [ADR-2460](../../../../docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md)),
+and provides the .NET mapping engine behind `IMappingEngine` ([ADR-2463](../../../../docs/adr/2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md)).
 It references `Cadence.Kernel.Abstractions` only, so any host or application can use it; registration itself goes
 through the kernel command `RegisterStandardVersion`.
 
@@ -24,6 +25,12 @@ through the kernel command `RegisterStandardVersion`.
     Concept Registry and builds a protocol design `CollectionSpec`.
 - `AddCadenceStandards()`: registers the collection specification validator. A host that drafts library items calls it
   next to `AddKernelStandards()` and `AddCadenceRules()`.
+- `Mapping/MappingEngine`: applies a mapping specification to one collected value and returns the record fragment
+  (constant variables, original result and unit, standardised result, CT decodes). It never guesses: a missing
+  mapping, unit, conversion, unit term or decode, text that is neither a number nor a bound such as `<1.0`, or a
+  conversion out of range is a problem. Register it with `services.AddCadenceMapping()`;
+  register another `IMappingEngine` first to replace it. The format and the rules are in
+  [Mapping specifications](../../../../docs/kernel/MAPPING_SPECIFICATIONS.md).
 
 ## Seeds
 

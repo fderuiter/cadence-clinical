@@ -114,9 +114,10 @@ internal sealed class ReviseProtocolDraftHandler : ICommandHandler<ReviseProtoco
 /// <summary>
 /// Handles <see cref="SubmitProtocolVersionForReview"/>. Freezing the content is when its references outside the
 /// design must resolve (K-SEM-1): every concept version, code-system version and artifact it names must exist in the
-/// tenant, so reviewers sign a design whose meaning is pinned.
+/// tenant, so reviewers sign a design whose meaning is pinned. The registered <see cref="IProtocolSubmissionCheck"/>s
+/// then run in registration order; the first refusal stops the submission.
 /// </summary>
-internal sealed class SubmitProtocolVersionForReviewHandler : ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>
+internal sealed class SubmitProtocolVersionForReviewHandler(IEnumerable<IProtocolSubmissionCheck> checks) : ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>
 {
     public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
         SubmitProtocolVersionForReview command, ICommandContext context, CancellationToken cancellationToken)
@@ -130,6 +131,17 @@ internal sealed class SubmitProtocolVersionForReviewHandler : ICommandHandler<Su
             && await UnknownReferenceAsync(context, version.Design().ExternalReferences(), cancellationToken).ConfigureAwait(false) is { } unknown)
         {
             return ProtocolErrors.ReferenceUnknown.WithMessage($"{ProtocolErrors.ReferenceUnknown.Message} Unknown: {unknown}.");
+        }
+
+        if (version.Status == ProtocolVersionStatus.Draft)
+        {
+            foreach (var check in checks)
+            {
+                if (await check.CheckAsync(version.StudyId, version.Design(), context, cancellationToken).ConfigureAwait(false) is { } refused)
+                {
+                    return refused;
+                }
+            }
         }
 
         if (version.SubmitForReview() is { } error)

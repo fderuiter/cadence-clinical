@@ -23,7 +23,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
-- `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
+- `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds, and holds the .NET `IMappingEngine` (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
 - `Cadence.Rules`: the rule expression language, rule packs and the `IRuleEvaluator` port with its .NET implementation (see [its README](src/Cadence.Rules/README.md) and [Rule packs](../../docs/kernel/RULE_PACKS.md)). References only `Cadence.Kernel.Abstractions`. Its benchmark is `benchmarks/Cadence.Rules.Benchmarks`.
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
@@ -357,6 +357,17 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
   `RegisterStandardVersion` stores the resolved `CodeSystemVersionId` when the package is imported and leaves it
   empty otherwise; `DeclareStudyStandards` refuses (`DeclarationInvalid`) any CT version the tenant has not imported.
   `StandardVersionSummary.ResolvedTerminology` and `StudyStandardsProfileView.ResolvedTerminology` return the pairs.
+- Mapping specifications (ADR-2463, K028, namespace `Cadence.Kernel.Standards.Mapping`) are `MappingSpecification`
+  library items, read by `MappingSpecificationJson` and documented in
+  [Mapping specifications](../../docs/kernel/MAPPING_SPECIFICATIONS.md). Drafting one needs exactly one standard version
+  and checks its datasets and variables, CT versions, codelists and Concepts, linking each as `DefinedBy`.
+  `DeclareStudyStandards` refuses pins that `StudyMappings.Resolve` cannot combine (an override without its base, a
+  mapping into an undeclared standard, a Concept mapped twice).
+- K-STD-1: `SubmitProtocolVersionForReview` runs every registered `IProtocolSubmissionCheck`; `AddKernelStandards()`
+  registers `MappingCoverageCheck`, which refuses (`K.Standards.MappingMissing`) a design whose collected Concepts are
+  neither mapped nor accepted gaps (`MappingGap`), and links the mapping versions used as `MappedBy`. It reads findings
+  through `IValidationFindings`, so a host that calls `AddKernelStandards()` also calls
+  `AddKernelValidationPersistence()`.
 
 A host that uses the registry also calls `AddKernelStandards()` (handlers) and `AddKernelStandardsPersistence()`
 (`IStandardsRegistry`). Approval and deprecation name an attestation recorded with `Attest` on the `standard_version`
