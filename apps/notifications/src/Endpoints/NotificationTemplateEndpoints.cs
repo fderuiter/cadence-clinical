@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Notifications.Domain;
+using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Security.DependencyInjection;
 using Cadence.Templating;
 
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Notifications.Endpoints;
 
@@ -53,14 +55,28 @@ public static class NotificationTemplateEndpoints
     public static async Task<Results<Ok<RenderedNotification>, ProblemHttpResult>> RenderNotificationAsync(
         string templateName,
         NotificationRenderModel request,
-        ITemplateRenderer renderer)
+        ITemplateRenderer renderer,
+        IOptions<NotificationBrandingOptions> branding)
     {
         if (!Catalog.Contains(templateName))
         {
             return UnknownTemplate(Catalog);
         }
 
-        string rendered = await renderer.RenderAsync(Catalog, templateName, request);
+        // Branding and the portal link come from configuration, so a caller cannot point a notification's
+        // links elsewhere (#4983).
+        var options = branding.Value;
+        var model = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["study_id"] = request.StudyId,
+            ["event_id"] = request.EventId,
+            ["timestamp_utc"] = request.TimestampUtc,
+            ["payload"] = request.Payload,
+            ["brand_name"] = options.BrandName,
+            ["portal_url"] = string.IsNullOrWhiteSpace(options.PortalUrl) ? null : options.PortalUrl,
+        };
+
+        string rendered = await renderer.RenderAsync(Catalog, templateName, model);
         return TypedResults.Ok(new RenderedNotification(templateName, rendered));
     }
 

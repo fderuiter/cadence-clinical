@@ -69,11 +69,13 @@ public record NotificationPayload(
     string ExpirationDate = ""
 );
 
+/// <summary>
+/// What a caller asks to render: the event and its payload. The brand name and the portal link come from
+/// <c>Notifications</c> configuration, never from the caller (#4983).
+/// </summary>
 public record NotificationRenderModel(
     string StudyId,
     string EventId,
     string TimestampUtc,
-    NotificationPayload Payload,
-    string BrandName = "Cadence Clinical Platform",
-    string? PortalUrl = null
+    NotificationPayload Payload
 );

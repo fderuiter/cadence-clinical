@@ -8,6 +8,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Notifications.Domain;
 using Cadence.Apps.Notifications.Endpoints;
+using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Templating;
@@ -17,6 +18,7 @@ using FluentAssertions;
 using Fluid;
 
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -57,14 +59,14 @@ public sealed class TemplateOutputEncodingTests
     [Fact]
     public async Task NotificationHtml_EncodesMarkupInFields()
     {
-        var model = new NotificationRenderModel(
+        var request = new NotificationRenderModel(
             "STUDY-1",
             "EVT-1",
             "2026-09-30T00:00:00Z",
             new NotificationPayload(SubjectId: "<script>alert(1)</script>", QueryMessage: "a & b"));
 
         var result = await NotificationTemplateEndpoints.RenderNotificationAsync(
-            "edc_query_raised", model, FluidTemplateRenderer.Instance);
+            "edc_query_raised", request, FluidTemplateRenderer.Instance, Options.Create(new NotificationBrandingOptions()));
 
         string content = result.Result.Should().BeOfType<Ok<RenderedNotification>>().Subject.Value!.Content;
         content.Should().NotContain("<script>");

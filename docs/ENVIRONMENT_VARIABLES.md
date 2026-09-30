@@ -39,6 +39,13 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | --- | --- | --- | --- |
 | `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
 
+## Notifications service
+
+| Key | Read by | Default | Required |
+| --- | --- | --- | --- |
+| `Notifications__PortalUrl` | `apps/notifications/src/Program.cs:21` (`NotificationBrandingOptions`) | none | no; the participant portal's sign-in URL used by the "Log In" link. It must be an absolute `https` URL (`http` only on localhost), or the service refuses to start. Without it, notifications carry no portal link |
+| `Notifications__BrandName` | same | `Cadence Clinical Platform` | no; the platform name in notification footers. It must not be empty |
+
 ## Field-level protection
 
 Keys for `packages/security/src/FieldProtection` (#4770). Both are base64 encodings of exactly 32 random bytes
