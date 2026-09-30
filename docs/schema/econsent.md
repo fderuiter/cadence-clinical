@@ -169,9 +169,9 @@ Entity: `ConsentSignature`
 | `Meaning` | `character varying(255)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Role` | `character varying(50)` | no |  |  |
-| `SignatureData` | `text` | yes |  |  |
+| `SignatureBindingSha256` | `character varying(64)` | yes |  |  |
 | `SignedAt` | `timestamp with time zone` | no |  |  |
-| `SignerEmail` | `character varying(255)` | yes |  |  |
+| `SignerEmail` | `character varying(1424)` | yes |  |  |
 | `SignerName` | `character varying(255)` | yes |  |  |
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |

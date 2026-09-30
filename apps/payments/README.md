@@ -32,6 +32,25 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
+## Configuration and secrets at rest
+
+| Setting | Purpose |
+| --- | --- |
+| `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts payment processor references. The service refuses to start without a valid key; there is no default. |
+
+Participant wallets (`payments_participant_wallets`, #4770) never store card numbers, raw card tokens or bank
+routing/account numbers:
+
+- `VirtualCardProcessorReference` and `AchProcessorReference` hold the payment processor's opaque references and are
+  encrypted at rest (AES-256-GCM, `enc:v1:` format) by an EF Core value converter. They cannot be queried by equality.
+- `VirtualCardMask`, `AchRoutingMask` and `AchAccountMask` hold display masks only.
+- Migration `StoreProcessorReferencesInsteadOfPaymentSecrets` turned existing routing numbers into masks and cleared
+  the old `VirtualCardToken` / `AchRoutingNumber` columns; re-link references from the processor. Run
+  `VACUUM FULL payments_participant_wallets` afterwards. See [ADR-2494](../../docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md).
+
+The design-time factory (`dotnet ef`) builds the model with `DesignTimeFieldEncryptor`, which needs no key and
+refuses to encrypt or decrypt.
+
 ## Tests
 
 - `tests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.

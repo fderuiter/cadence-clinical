@@ -4,6 +4,7 @@ using System.Linq;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -93,7 +94,7 @@ public class PaymentDecimalCalculationTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        using var dbContext = new PaymentsDbContext(options);
+        using var dbContext = new PaymentsDbContext(options, TestFieldProtection.CreateEncryptor());
         var model = dbContext.Model;
 
         var expectedProperties = new[]

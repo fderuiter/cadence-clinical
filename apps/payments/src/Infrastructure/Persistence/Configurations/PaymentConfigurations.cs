@@ -1,4 +1,5 @@
 using Cadence.Apps.Payments.Domain;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -326,8 +327,21 @@ public class ErpSyncLogConfiguration : IEntityTypeConfiguration<ErpSyncLog>
     }
 }
 
-public class ParticipantWalletConfiguration : IEntityTypeConfiguration<ParticipantWallet>
+/// <summary>
+/// Participant wallet mapping. Processor references are encrypted at rest; bank routing and account numbers are
+/// never stored, only their masks (#4770).
+/// </summary>
+public class ParticipantWalletConfiguration(IFieldEncryptor fieldEncryptor) : IEntityTypeConfiguration<ParticipantWallet>
 {
+    /// <summary>Encryption purpose (associated data) for <see cref="ParticipantWallet.VirtualCardProcessorReference"/>.</summary>
+    public const string VirtualCardProcessorReferencePurpose = "payments.participant_wallets.virtual_card_processor_reference";
+
+    /// <summary>Encryption purpose (associated data) for <see cref="ParticipantWallet.AchProcessorReference"/>.</summary>
+    public const string AchProcessorReferencePurpose = "payments.participant_wallets.ach_processor_reference";
+
+    /// <summary>Longest processor reference accepted, in characters.</summary>
+    public const int MaxProcessorReferenceLength = 255;
+
     public void Configure(EntityTypeBuilder<ParticipantWallet> builder)
     {
         builder.ToTable("payments_participant_wallets");
@@ -353,10 +367,13 @@ public class ParticipantWalletConfiguration : IEntityTypeConfiguration<Participa
         builder.Property(x => x.TaxIdLastFour).HasMaxLength(4);
         builder.Property(x => x.CardType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.CardStatus).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.VirtualCardToken).HasMaxLength(100);
+        builder.Property(x => x.VirtualCardProcessorReference)
+            .IsEncrypted(fieldEncryptor, VirtualCardProcessorReferencePurpose, MaxProcessorReferenceLength);
         builder.Property(x => x.VirtualCardMask).HasMaxLength(50);
         builder.Property(x => x.VirtualCardExpiry).HasMaxLength(20);
-        builder.Property(x => x.AchRoutingNumber).HasMaxLength(50);
+        builder.Property(x => x.AchProcessorReference)
+            .IsEncrypted(fieldEncryptor, AchProcessorReferencePurpose, MaxProcessorReferenceLength);
+        builder.Property(x => x.AchRoutingMask).HasMaxLength(20);
         builder.Property(x => x.AchAccountMask).HasMaxLength(50);
         builder.Property(x => x.AchAccountHolder).HasMaxLength(255);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();

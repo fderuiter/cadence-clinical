@@ -106,6 +106,8 @@ Exports are protected by `GatewayAuthMiddleware` and `require_roles`. Authorized
 
 ### Privacy & PII Boundary
 Raw patient demographics are encrypted at rest (`ClinicalSubject.encrypted_demographics`). Subject identifiers in exports are pseudonymous (`subject_id`/`USUBJID`). Standard CDISC variables (such as `BRTHDTC`) are included in accordance with CDISC domain specifications.
+
+Other secrets follow the field-level protection rule (#4770): eConsent signer e-mail addresses and payment processor references are AES-256-GCM encrypted at rest, interop device tokens are stored only as keyed HMAC-SHA256 lookup hashes, eConsent signature captures are kept only as a SHA-256 binding to the signed content, and card numbers and bank routing/account numbers are not stored at all.
 ---
 
 # Data Lifecycle Specification: Medical Coding Lifecycle

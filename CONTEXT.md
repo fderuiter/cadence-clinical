@@ -166,6 +166,11 @@ A data modeling standard in C# 14 / EF Core 10 replacing Python untyped dictiona
 
 A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial audit regulations. All monetary currency values (e.g., site contract fee schedules, investigator procedure costs, withholding deductions, patient stipends, participant travel reimbursements, and invoice totals) and high-precision dosage/lab calculations are strictly forbidden from using binary floating-point types (`float`, `double`). All financial attributes must be modeled exclusively as C# 14 `decimal` (`System.Decimal`, 128-bit fixed-point precision with 28-29 significant digits) mapped to PostgreSQL `numeric(18, 4)` and evaluated using explicit banker's rounding (`MidpointRounding.ToEven`).
 
+### Field-Level Secret Protection
+
+The at-rest rule for secret columns (#4770), implemented by `Cadence.Security.FieldProtection`. A secret the application must read back (a payment processor reference, a signer e-mail) is stored as AES-256-GCM ciphertext bound to its column (`IFieldEncryptor`, EF Core `EncryptedStringConverter`). A secret that only needs to be matched (a device token) is stored as a keyed HMAC-SHA256 lookup hash, also called a blind index (`ILookupHasher`). A secret the platform does not need (card numbers, bank routing and account numbers, raw signature captures) is not stored: the processor keeps it, or a SHA-256 binding to the signed content replaces it. Keys come from configuration (`FIELD_ENCRYPTION_KEY`, `FIELD_LOOKUP_HASH_KEY`) with no defaults, and a missing key stops the service at startup.
+_Avoid_: plaintext secret columns, unkeyed hashes of low-entropy secrets, default or hardcoded keys, equality queries on encrypted columns
+
 ### Canonical Timestamp Normalization Invariant
 
 A cryptographic integrity invariant governing 21 CFR Part 11 audit trail hashing. Before an `AuditLogEntry` is hashed, `AuditLogEntry.NormalizeTimestamp` converts its timestamp to UTC and truncates it to whole microseconds, the precision PostgreSQL `timestamptz` stores, so a chain read back from the database recomputes to the same hashes. `AuditLogChainVerifier` normalises the same way (ADR-2446).

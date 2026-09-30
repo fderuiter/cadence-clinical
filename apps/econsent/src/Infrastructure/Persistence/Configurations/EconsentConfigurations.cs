@@ -1,4 +1,5 @@
 using Cadence.Apps.Econsent.Domain;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -105,8 +106,18 @@ public class ComprehensionResultConfiguration : IEntityTypeConfiguration<Compreh
     }
 }
 
-public class ConsentSignatureConfiguration : IEntityTypeConfiguration<ConsentSignature>
+/// <summary>
+/// Consent signature mapping. The signer e-mail is encrypted at rest and the raw signature capture is replaced by a
+/// SHA-256 binding to the signed content (#4770).
+/// </summary>
+public class ConsentSignatureConfiguration(IFieldEncryptor fieldEncryptor) : IEntityTypeConfiguration<ConsentSignature>
 {
+    /// <summary>Encryption purpose (associated data) for <see cref="ConsentSignature.SignerEmail"/>.</summary>
+    public const string SignerEmailPurpose = "econsent.consent_signatures.signer_email";
+
+    /// <summary>Longest signer e-mail accepted, in characters.</summary>
+    public const int MaxSignerEmailLength = 255;
+
     public void Configure(EntityTypeBuilder<ConsentSignature> builder)
     {
         builder.ToTable("consent_signatures");
@@ -118,9 +129,10 @@ public class ConsentSignatureConfiguration : IEntityTypeConfiguration<ConsentSig
         builder.HasIndex(x => x.SubjectPseudonym);
         builder.Property(x => x.Role).HasMaxLength(50).IsRequired();
         builder.Property(x => x.SignerName).HasMaxLength(255);
-        builder.Property(x => x.SignerEmail).HasMaxLength(255);
+        builder.Property(x => x.SignerEmail).IsEncrypted(fieldEncryptor, SignerEmailPurpose, MaxSignerEmailLength);
         builder.Property(x => x.Meaning).HasMaxLength(255);
         builder.Property(x => x.DigestSha256).HasMaxLength(64);
+        builder.Property(x => x.SignatureBindingSha256).HasMaxLength(64);
         builder.Property(x => x.LarRelationship).HasMaxLength(100);
         builder.Property(x => x.LarAuthorityBasis).HasMaxLength(500);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();

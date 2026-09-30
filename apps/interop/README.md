@@ -32,6 +32,19 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
+## Configuration and secrets at rest
+
+| Setting | Purpose |
+| --- | --- |
+| `FIELD_LOOKUP_HASH_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default. |
+
+Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,
+`sensor_daily_summaries` and `sensor_safety_alerts` each keep an indexed `DeviceTokenHash`: the keyed HMAC-SHA256
+computed by `DeviceTokenHasher` (registered in DI). To find a device's rows, hash the presented token and compare
+hashes. Migration `HashDeviceTokensAtRest` cleared the raw tokens of existing rows (their hash is empty until the
+device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
+[ADR-2494](../../docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md).
+
 ## Tests
 
 - No service-specific tests exist yet.

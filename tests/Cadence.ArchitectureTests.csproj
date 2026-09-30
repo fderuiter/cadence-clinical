@@ -63,6 +63,7 @@
     <Compile Remove="Packages/**" />
     <Compile Remove="Kernel/**" />
     <Compile Remove="Payments/**" />
+    <Compile Remove="Interop/**" />
     <Compile Remove="E2E/**" />
     <Compile Remove="Validation/**" />
   </ItemGroup>

@@ -186,7 +186,8 @@ public class DeviceRegistrationRecord
     public string? UdiPiSerial { get; set; }
     public string? UdiPiLot { get; set; }
     public string? MacAddressMasked { get; set; }
-    public string DeviceToken { get; set; } = string.Empty;
+    /// <summary>Keyed HMAC-SHA256 of the device token (computed by DeviceTokenHasher); the raw token is never stored (#4770).</summary>
+    public string DeviceTokenHash { get; set; } = string.Empty;
     public string? FirmwareVersion { get; set; }
     public string CalibrationStatus { get; set; } = "CALIBRATED";
     public DateTime? CalibrationDate { get; set; }
@@ -203,7 +204,8 @@ public class SensorTelemetryStreamRecord
     public string StudyId { get; set; } = string.Empty;
     public string? SiteId { get; set; }
     public string SubjectId { get; set; } = string.Empty;
-    public string DeviceToken { get; set; } = string.Empty;
+    /// <summary>Keyed HMAC-SHA256 of the device token (computed by DeviceTokenHasher); the raw token is never stored (#4770).</summary>
+    public string DeviceTokenHash { get; set; } = string.Empty;
     public string DeviceType { get; set; } = string.Empty;
     public string BatchId { get; set; } = string.Empty;
     public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
@@ -226,7 +228,8 @@ public class SensorDailySummaryRecord
     public string SubjectId { get; set; } = string.Empty;
     public DateTime SummaryDate { get; set; }
     public string DeviceType { get; set; } = string.Empty;
-    public string DeviceToken { get; set; } = string.Empty;
+    /// <summary>Keyed HMAC-SHA256 of the device token (computed by DeviceTokenHasher); the raw token is never stored (#4770).</summary>
+    public string DeviceTokenHash { get; set; } = string.Empty;
     public int ReadingsCount { get; set; }
     public double ActiveWearHours { get; set; }
     public double? TirPercentage { get; set; }
@@ -268,7 +271,8 @@ public class SensorSafetyAlertRecord
     public string? SiteId { get; set; }
     public string SubjectId { get; set; } = string.Empty;
     public string DeviceType { get; set; } = string.Empty;
-    public string DeviceToken { get; set; } = string.Empty;
+    /// <summary>Keyed HMAC-SHA256 of the device token (computed by DeviceTokenHasher); the raw token is never stored (#4770).</summary>
+    public string DeviceTokenHash { get; set; } = string.Empty;
     public string AlertType { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
     public string ParameterName { get; set; } = string.Empty;

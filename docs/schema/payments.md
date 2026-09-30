@@ -13,7 +13,7 @@ Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persis
 | [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 19 |
 | [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 20 |
 | [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 21 |
-| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 30 |
+| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 31 |
 | [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 16 |
 | [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 30 |
 | [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 26 |
@@ -238,7 +238,8 @@ Entity: `ParticipantWallet`
 | `Id` | `character varying(36)` | no |  | PK |
 | `AchAccountHolder` | `character varying(255)` | yes |  |  |
 | `AchAccountMask` | `character varying(50)` | yes |  |  |
-| `AchRoutingNumber` | `character varying(50)` | yes |  |  |
+| `AchProcessorReference` | `character varying(1424)` | yes |  |  |
+| `AchRoutingMask` | `character varying(20)` | yes |  |  |
 | `AntiCoercionCap` | `numeric(18,4)` | yes |  |  |
 | `CardStatus` | `character varying(50)` | no |  |  |
 | `CardType` | `character varying(50)` | no |  |  |
@@ -261,7 +262,7 @@ Entity: `ParticipantWallet`
 | `VersionIndex` | `integer` | no |  |  |
 | `VirtualCardExpiry` | `character varying(20)` | yes |  |  |
 | `VirtualCardMask` | `character varying(50)` | yes |  |  |
-| `VirtualCardToken` | `character varying(100)` | yes |  |  |
+| `VirtualCardProcessorReference` | `character varying(1424)` | yes |  |  |
 | `W9Status` | `character varying(50)` | no |  |  |
 | `W9SubmittedAt` | `timestamp with time zone` | yes |  |  |
 | `W9VerifiedAt` | `timestamp with time zone` | yes |  |  |
