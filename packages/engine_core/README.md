@@ -11,7 +11,7 @@ Shared domain library (folder `engine_core`): aggregate root base types, the `IG
 - `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `StochasticRandomizationEngine`, `BoinEngine` and their models.
 - `Cadence.Core.Domain.Supply`: `DTPLogisticsEngine`, `PredictiveDemandForecastingEngine` and supply models.
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `derived/`, `financial/`, `fsm/`, `operations/`, `randomization/boin.py`, `rules/`, `sla/`, `supply/`, `timeline/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `derived/`, `financial/`, `fsm/`, `operations/`, `rules/ast.py`, `rules/sentinels.py`, `sla/`, `supply/` (all but `forecasting.py`), `timeline/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
@@ -24,5 +24,16 @@ Every .NET service, `packages/contracts`, `packages/database`, `packages/kernel`
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.RuleChecksumTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~BoinEngineTests|FullyQualifiedName~RuleEvaluatorTests|FullyQualifiedName~PredictiveDemandForecastingEngineTests|FullyQualifiedName~Cadence.UnitTests.Packages.RuleChecksumTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
 ```
+
+`BoinEngineTests`, `RuleEvaluatorTests` and `PredictiveDemandForecastingEngineTests` pin the ports to the deleted
+`randomization/boin.py`, `rules/evaluator.py` and `supply/forecasting.py` (#4789). Known differences they pin rather
+than hide:
+
+- `RuleEvaluator`: `==` treats a numeric string as a number and compares text ignoring case; `True == 1` is false;
+  the string `"false"` is falsy; divisors below 1e-9 count as zero; integer results of `sum`, `floor`, `ceil`, `abs`,
+  `min` and `max` come back as `double`. JSONLogic `min` and `max` are unsupported in both languages.
+- `BoinEngine`: a configured boundary of `0.0` is kept (the Python replaced it with the calculated one).
+- `PredictiveDemandForecastingEngine`: parameters are validated when the engine runs, with the Python model's
+  limits; a null schedule or lot list falls back to the defaults.

@@ -23,7 +23,7 @@ public class TypeMismatchException : EvaluationException
     public TypeMismatchException(string message) : base(message) { }
 }
 
-public class RuleEvaluator
+public partial class RuleEvaluator
 {
     public bool StrictVariables { get; }
     public DateTime AsOf { get; }
@@ -31,7 +31,7 @@ public class RuleEvaluator
     public RuleEvaluator(bool strictVariables = false, DateTime? asOf = null)
     {
         StrictVariables = strictVariables;
-        AsOf = asOf ?? DateTime.UtcNow;
+        AsOf = NormalizeToUtc(asOf ?? DateTime.UtcNow);
     }
 
     public object? Evaluate(ExpressionNode node, Dictionary<string, object?> context)
@@ -325,7 +325,7 @@ public class RuleEvaluator
         {
             if (vals.Any(v => v is string))
             {
-                return string.Concat(vals.Select(v => v?.ToString() ?? ""));
+                return string.Concat(vals.Select(v => v is null ? "" : ToInvariantString(v)));
             }
             var nums = vals.Select(ToNumber).ToList();
             if (nums.Any(n => !n.HasValue)) return null;
@@ -373,7 +373,10 @@ public class RuleEvaluator
             var n1 = ToNumber(vals[0]);
             var n2 = ToNumber(vals[1]);
             if (!n1.HasValue || !n2.HasValue || Math.Abs(n2.Value) < 1e-9) return null;
-            return n1.Value % n2.Value;
+            // Python's % is floored: the result takes the sign of the divisor (-7 % 3 == 2).
+            double remainder = n1.Value % n2.Value;
+            if ((remainder < 0 && n2.Value > 0) || (remainder > 0 && n2.Value < 0)) remainder += n2.Value;
+            return remainder;
         }
         if (op is "^" or "**")
         {
@@ -392,7 +395,14 @@ public class RuleEvaluator
         {
             var n = ToNumber(vals[0]);
             int digits = vals.Count > 1 ? (int)(ToNumber(vals[1]) ?? 0) : 0;
-            return n.HasValue ? Math.Round(n.Value, digits) : null;
+            if (!n.HasValue) return null;
+            if (digits < 0)
+            {
+                // Python's round(1234, -2) == 1200; Math.Round rejects negative digits.
+                double factor = Math.Pow(10, -digits);
+                return Math.Round(n.Value / factor) * factor;
+            }
+            return Math.Round(n.Value, Math.Min(digits, 15));
         }
         if (op == "floor")
         {
@@ -439,36 +449,36 @@ public class RuleEvaluator
             {
                 return seq.Cast<object?>().Any(item => EqualsComparison(search, item));
             }
-            return target.ToString()!.Contains(search.ToString()!, StringComparison.OrdinalIgnoreCase);
+            return ToInvariantString(target).Contains(ToInvariantString(search), StringComparison.OrdinalIgnoreCase);
         }
         if (op == "starts_with")
         {
             object? target = Evaluate(operands[0], context);
             object? prefix = Evaluate(operands[1], context);
             if (target == null || prefix == null) return false;
-            return target.ToString()!.StartsWith(prefix.ToString()!, StringComparison.OrdinalIgnoreCase);
+            return ToInvariantString(target).StartsWith(ToInvariantString(prefix), StringComparison.Ordinal);
         }
         if (op == "ends_with")
         {
             object? target = Evaluate(operands[0], context);
             object? suffix = Evaluate(operands[1], context);
             if (target == null || suffix == null) return false;
-            return target.ToString()!.EndsWith(suffix.ToString()!, StringComparison.OrdinalIgnoreCase);
+            return ToInvariantString(target).EndsWith(ToInvariantString(suffix), StringComparison.Ordinal);
         }
         if (op == "lower")
         {
             object? val = Evaluate(operands[0], context);
-            return val?.ToString()?.ToLowerInvariant() ?? "";
+            return val is null ? "" : ToInvariantString(val).ToLowerInvariant();
         }
         if (op == "upper")
         {
             object? val = Evaluate(operands[0], context);
-            return val?.ToString()?.ToUpperInvariant() ?? "";
+            return val is null ? "" : ToInvariantString(val).ToUpperInvariant();
         }
         if (op == "trim")
         {
             object? val = Evaluate(operands[0], context);
-            return val?.ToString()?.Trim() ?? "";
+            return val is null ? "" : ToInvariantString(val).Trim();
         }
         if (op == "length")
         {
@@ -476,7 +486,7 @@ public class RuleEvaluator
             if (val == null) return 0;
             if (val is ICollection col) return col.Count;
             if (val is string s) return s.Length;
-            return val.ToString()!.Length;
+            return ToInvariantString(val).Length;
         }
         if (op is "sum" or "avg" or "min" or "max" or "count")
         {
@@ -512,7 +522,8 @@ public class RuleEvaluator
             var d1 = ParseDate(Evaluate(operands[0], context));
             var d2 = ParseDate(Evaluate(operands[1], context));
             if (!d1.HasValue || !d2.HasValue) return null;
-            return (d1.Value - d2.Value).Days;
+            // Python's timedelta.days floors (-12 hours is -1 day); TimeSpan.Days truncates toward zero.
+            return (int)Math.Floor((d1.Value - d2.Value).TotalDays);
         }
         if (op == "date_add_days")
         {
@@ -548,6 +559,20 @@ public class RuleEvaluator
             }
             return Math.Max(0, age);
         }
+        if (op == "indexed_repeat")
+        {
+            string fieldName = ToInvariantString(Evaluate(operands[0], context) ?? "None");
+            string groupName = ToInvariantString(Evaluate(operands[1], context) ?? "None");
+            // Mirrors Python's int(_to_number(x) or 1) - 1: a missing or zero index selects the first entry.
+            double? rawIndex = ToNumber(Evaluate(operands[2], context));
+            int idx = (int)(rawIndex is null or 0 ? 1 : rawIndex.Value) - 1;
+            if (context.TryGetValue(groupName, out var groupData) && groupData is IList group && idx >= 0 && idx < group.Count
+                && group[idx] is IDictionary<string, object?> entry)
+            {
+                return entry.TryGetValue(fieldName, out var fieldValue) ? fieldValue : null;
+            }
+            return null;
+        }
 
         throw new EvaluationException($"Unsupported function: '{op}'");
     }
@@ -556,9 +581,9 @@ public class RuleEvaluator
     {
         if (val == null) return false;
         if (val is bool b) return b;
-        if (val is int i) return i != 0;
-        if (val is double d) return Math.Abs(d) > 1e-9;
         if (val is string s) return !string.IsNullOrEmpty(s) && !s.Equals("false", StringComparison.OrdinalIgnoreCase);
+        if (ToNumber(val) is double n) return Math.Abs(n) > 1e-9;
+        if (val is ICollection col) return col.Count > 0;
         return true;
     }
 
@@ -576,44 +601,94 @@ public class RuleEvaluator
 
         if (left is bool b1 && right is string s2)
         {
-            return b1 == (s2.Equals("true", StringComparison.OrdinalIgnoreCase) || s2 == "1");
+            return b1 == IsTrueString(s2);
         }
         if (right is bool b2 && left is string s1)
         {
-            return b2 == (s1.Equals("true", StringComparison.OrdinalIgnoreCase) || s1 == "1");
+            return b2 == IsTrueString(s1);
         }
 
         return left.Equals(right) || string.Equals(left.ToString(), right.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsTrueString(string s) =>
+        s.Trim().ToLowerInvariant() is "true" or "1" or "yes";
+
+    private static string ToInvariantString(object val) =>
+        Convert.ToString(val, CultureInfo.InvariantCulture) ?? string.Empty;
+
     private static double? ToNumber(object? val)
     {
-        if (val == null || val is bool) return null;
-        if (val is int i) return i;
-        if (val is long l) return l;
-        if (val is double d) return d;
-        if (val is float f) return f;
-        if (val is string s && double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsed))
+        switch (val)
         {
-            return parsed;
+            case null or bool:
+                return null;
+            case int i:
+                return i;
+            case long l:
+                return l;
+            case double d:
+                return d;
+            case float f:
+                return f;
+            case decimal m:
+                return (double)m;
+            case short or byte or sbyte or ushort or uint or ulong:
+                return Convert.ToDouble(val, CultureInfo.InvariantCulture);
+            case string s:
+                // Python accepts plain int/float literals only: no thousands separators, parentheses or currency.
+                return double.TryParse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+                    && double.IsFinite(parsed)
+                    ? parsed
+                    : null;
+            default:
+                return null;
         }
-        return null;
     }
+
+    private static DateTime NormalizeToUtc(DateTime dt) => dt.Kind switch
+    {
+        DateTimeKind.Utc => dt,
+        DateTimeKind.Local => dt.ToUniversalTime(),
+        // Python treats naive datetimes as UTC.
+        _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+    };
 
     private static DateTime? ParseDate(object? val)
     {
-        if (val == null) return null;
-        if (val is DateTime dt) return dt.ToUniversalTime();
-        if (val is string s && DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var parsed))
+        switch (val)
         {
-            return parsed;
+            case DateTime dt:
+                return NormalizeToUtc(dt);
+            case DateTimeOffset dto:
+                return dto.UtcDateTime;
+            case DateOnly d:
+                return d.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            case string s:
+                string clean = s.Trim();
+                // Python parses ISO 8601 only (datetime.fromisoformat); DateTime.TryParse would also read
+                // strings such as "10.5" or "1 2" as dates in the current year.
+                if (!IsoDateShape().IsMatch(clean)) return null;
+                if (clean.Length == 8
+                    && DateTime.TryParseExact(clean, "yyyyMMdd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var compact))
+                {
+                    return compact;
+                }
+                return DateTimeOffset.TryParse(clean, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+                    ? parsed.UtcDateTime
+                    : null;
+            default:
+                return null;
         }
-        return null;
     }
+
+    [GeneratedRegex(@"^\d{4}-?\d{2}-?\d{2}(?:[T ].*)?$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex IsoDateShape();
 
     public static ExpressionNode ParseJsonLogic(object? logic)
     {
-        if (logic is not Dictionary<string, object?> dict || dict.Count != 1)
+        if (logic is not IDictionary<string, object?> dict || dict.Count != 1)
         {
             return new ExpressionNode { Type = "constant", Value = logic };
         }
@@ -628,10 +703,19 @@ public class RuleEvaluator
             {
                 return new ExpressionNode { Type = "field_ref", FieldRef = new FieldReference(varName) };
             }
+            if (rawArgs is IList varArgs && varArgs.Count > 0)
+            {
+                // JSONLogic {"var": ["name", default]}: Python uses the first element as the field id.
+                return new ExpressionNode
+                {
+                    Type = "field_ref",
+                    FieldRef = new FieldReference(varArgs[0] is null ? "None" : ToInvariantString(varArgs[0]!)),
+                };
+            }
             return new ExpressionNode { Type = "constant", Value = null };
         }
 
-        var argsList = rawArgs is List<object?> list ? list : [rawArgs];
+        List<object?> argsList = rawArgs is IList list ? list.Cast<object?>().ToList() : [rawArgs];
         var parsedOperands = argsList.Select(ParseJsonLogic).ToList();
 
         if (op is "==" or "===" or "!=" or "!==" or "<" or "<=" or ">" or ">=" or "in")
