@@ -335,22 +335,20 @@ const handleExecuteSignature = async (
       "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     sigToken,
   };
-  econsentStore.recordSignedConsent(record);
+  if (!econsentStore.recordSignedConsent(record)) {
+    throw new Error(
+      "Consent signatures aren't available yet. Nothing was signed."
+    );
+  }
   latestSignature.value = record;
   return record;
 };
 
 const onSignatureSuccess = (result) => {
   showSignatureModal.value = false;
-  if (!latestSignature.value) {
-    latestSignature.value = result || {
-      signerName: "Participant Jane Doe",
-      signerRole: "Subject",
-      meaningOfSigning: "I agree to participate",
-      timestamp: new Date().toISOString(),
-      sha256_hash:
-        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
-    };
+  // Show only a signature that was actually recorded, never a made-up one (#4827).
+  if (!latestSignature.value && result) {
+    latestSignature.value = result;
   }
 };
 
@@ -367,7 +365,7 @@ const handlePublish = () => {
     return;
   }
 
-  econsentStore.publishIcfVersion(reason);
+  if (!econsentStore.publishIcfVersion(reason)) return;
   showPublishModal.value = false;
   publishReason.value = "";
 };

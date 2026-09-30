@@ -30,6 +30,7 @@ describe("CrcFormRenderer.vue", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   function createWrapper(customProps = {}) {
@@ -102,7 +103,9 @@ describe("CrcFormRenderer.vue", () => {
     expect(fieldIdsV1).not.toContain("vs_temp");
   });
 
-  it("opens subject enrollment modal and assigns subject ID, site ID, consent date, and arm", async () => {
+  it("opens subject enrollment modal and assigns subject ID, site ID, consent date, and arm (demo build)", async () => {
+    // Enrolment runs on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     /**
      * @req: PRD-SYS-001, PRD-SUB-007
      * Verify subject enrollment flow assigns identifier, site ID, consent date, and arm.

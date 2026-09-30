@@ -580,6 +580,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { apiClient } from "../api/apiClient";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
 import SoAMatrixEditor from "../components/clinical/SoAMatrixEditor.vue";
@@ -1092,6 +1093,8 @@ const synthesizedForms = computed(() => {
 
 const commitAndActivateEDC = async () => {
   if (!changeReason.value.trim()) return;
+  // #4827: nothing commits the digitized protocol yet; the result below is made up. Demo builds only.
+  if (!allowUnbackedAction("Committing the digitized protocol")) return;
   isCommitting.value = true;
 
   try {

@@ -767,6 +767,9 @@
 </template>
 
 <script>
+import { useToastStore } from "../stores/toasts.js";
+import { ensureOk } from "../utils/apiErrors.js";
+
 export default {
   name: "DataLockView",
   data() {
@@ -996,17 +999,14 @@ export default {
         const response = await fetch(
           "/api/v1/execution/locks?study_id=STUDY-001"
         );
-        if (response.ok) {
-          const data = await response.json();
-          this.allLockRecords = data || [];
-          this.calculateStats();
-          this.syncTreeStatuses();
-        }
+        await ensureOk(response);
+        const data = await response.json();
+        this.allLockRecords = data || [];
+        this.calculateStats();
+        this.syncTreeStatuses();
       } catch (err) {
-        console.warn(
-          "Failed to fetch locks from API, operating with local state:",
-          err
-        );
+        // #4827: say the lock state could not be read rather than showing a stale or empty tree as current.
+        useToastStore().apiError("Loading data locks failed", err);
       } finally {
         this.isLoading = false;
       }
@@ -1126,27 +1126,27 @@ export default {
           body: JSON.stringify(payload),
         });
 
-        if (res.ok) {
-          const result = await res.json();
-          this.allLockRecords.unshift(
-            result.record || {
-              lock_id: result.lock_id,
-              scope_type: payload.scope_type,
-              scope_id: payload.scope_id,
-              status: result.status,
-              lock_type: result.status,
-              is_active: true,
-              created_by: "Current User",
-              reason_for_change: payload.reason_for_change,
-              created_at: new Date().toISOString(),
-            }
-          );
-          this.calculateStats();
-          this.syncTreeStatuses();
-          this.isLockModalOpen = false;
-        }
+        // #4827: a rejected lock is an error, not a silently closed dialog.
+        await ensureOk(res);
+        const result = await res.json();
+        this.allLockRecords.unshift(
+          result.record || {
+            lock_id: result.lock_id,
+            scope_type: payload.scope_type,
+            scope_id: payload.scope_id,
+            status: result.status,
+            lock_type: result.status,
+            is_active: true,
+            created_by: "Current User",
+            reason_for_change: payload.reason_for_change,
+            created_at: new Date().toISOString(),
+          }
+        );
+        this.calculateStats();
+        this.syncTreeStatuses();
+        this.isLockModalOpen = false;
       } catch (err) {
-        console.error("Lock operation failed:", err);
+        useToastStore().apiError("Locking failed. Nothing was locked", err);
       } finally {
         this.isSubmitting = false;
       }
@@ -1170,24 +1170,23 @@ export default {
           body: JSON.stringify(payload),
         });
 
-        if (res.ok) {
-          const result = await res.json();
-          const target = this.allLockRecords.find(
-            (r) =>
-              r.lock_id === result.lock_id ||
-              r.scope_id === this.unlockForm.scope_id
-          );
-          if (target) {
-            target.is_active = false;
-            target.status = "UNLOCKED";
-            target.unlock_justification = payload.justification;
-          }
-          this.calculateStats();
-          this.syncTreeStatuses();
-          this.isUnlockModalOpen = false;
+        await ensureOk(res);
+        const result = await res.json();
+        const target = this.allLockRecords.find(
+          (r) =>
+            r.lock_id === result.lock_id ||
+            r.scope_id === this.unlockForm.scope_id
+        );
+        if (target) {
+          target.is_active = false;
+          target.status = "UNLOCKED";
+          target.unlock_justification = payload.justification;
         }
+        this.calculateStats();
+        this.syncTreeStatuses();
+        this.isUnlockModalOpen = false;
       } catch (err) {
-        console.error("Unlock operation failed:", err);
+        useToastStore().apiError("Unlocking failed. Nothing was unlocked", err);
       } finally {
         this.isSubmitting = false;
       }

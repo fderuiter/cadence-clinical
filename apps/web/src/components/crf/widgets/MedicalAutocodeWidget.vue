@@ -50,6 +50,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { unbackedActionsEnabled } from "../../../utils/unbackedActions.js";
 
 const props = defineProps({
   modelValue: { type: String, default: "" },
@@ -74,7 +75,9 @@ const onInput = (e) => {
   emit("update:modelValue", query);
 
   clearTimeout(debounceTimer);
-  if (!query || query.length < 2) {
+  // #4827: no coding service backs these suggestions, and the codes below are made up. Outside demo builds
+  // the verbatim term is still captured, but nothing suggests or assigns a code.
+  if (!query || query.length < 2 || !unbackedActionsEnabled()) {
     suggestions.value = [];
     return;
   }

@@ -140,6 +140,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
+import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const props = defineProps({
   isOpen: {
@@ -180,6 +181,12 @@ const handleSign = async () => {
   if (!password.value.trim()) {
     errorMessage.value =
       "Password is required for 21 CFR Part 11 re-authentication.";
+    return;
+  }
+  // #4827: no service verifies the password or issues a signature yet, so outside demo builds nothing is signed.
+  if (!allowUnbackedAction("Electronic signature")) {
+    errorMessage.value =
+      "Electronic signatures aren't available yet. Nothing was signed.";
     return;
   }
   loading.value = true;

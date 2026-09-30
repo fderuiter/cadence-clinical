@@ -1343,6 +1343,8 @@ import { computed, onMounted, ref } from "vue";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
+import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 
 const toasts = useToastStore();
 
@@ -1730,6 +1732,8 @@ async function compileReport() {
 }
 
 async function verifySnapshot() {
+  // #4827: nothing verifies the snapshot seal yet; only a demo build may show the sample result.
+  if (!allowUnbackedAction("Verifying the snapshot seal")) return;
   isVerifyingSnapshot.value = true;
   try {
     await new Promise((r) => setTimeout(r, 600));
@@ -1991,6 +1995,8 @@ function openPhysicianSignModal(clk: any) {
 
 async function executePhysicianSignoff() {
   if (!physicianSecret.value || !physicianReason.value) return;
+  // #4827: no service checks the secret or records this signature yet.
+  if (!allowUnbackedAction("Physician electronic signature")) return;
   isSigningPhysician.value = true;
   try {
     if (selectedClockForSign.value) {
@@ -2007,6 +2013,8 @@ async function executePhysicianSignoff() {
 }
 
 onMounted(() => {
+  // Sample snapshot seal and report id for demo builds only (#4827).
+  if (!isDemoBuild()) return;
   snapshotHash.value =
     "4a8b79e2c6f1a84d291e0a84d291e0a84d291e0a84d291e0a84d291e0a84d291";
   activeReportId.value = "rpt_demo_dsur_01";

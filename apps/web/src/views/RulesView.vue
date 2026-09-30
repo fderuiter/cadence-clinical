@@ -744,6 +744,7 @@ import { useToastStore } from "../stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
 import { executionService } from "@/api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import {
   createRuleEditorHTML,
   serializeConditionsTree,
@@ -1389,6 +1390,12 @@ async function confirmChangeReason(reasonText) {
   // Handle Query State Transition inside confirmation
   if (pendingQueryStateTransition.value) {
     const { query, nextState } = pendingQueryStateTransition.value;
+    // #4827: these queries are not the Execution service's, so a transition here would be recorded nowhere.
+    if (!allowUnbackedAction(`Moving query ${query.id} to ${nextState}`)) {
+      pendingQueryStateTransition.value = null;
+      showReasonModal.value = false;
+      return;
+    }
     query.status = nextState;
 
     if (nextState === "CLOSED") {

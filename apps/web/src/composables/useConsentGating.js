@@ -1,5 +1,6 @@
 import { ref, computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 export function useConsentGating(selectedSubjectId) {
   const store = useClinicalStore();
@@ -27,6 +28,9 @@ export function useConsentGating(selectedSubjectId) {
   }
 
   async function handleCompleteReconsent(method, storeInstance) {
+    // #4827: nothing sends this re-consent to a service yet, so outside demo builds the gate stays locked
+    // and nothing is logged.
+    if (!allowUnbackedAction("Recording re-consent")) return;
     reconsentSubmitting.value = true;
     try {
       if (store && typeof store.clearReconsentGate === "function") {

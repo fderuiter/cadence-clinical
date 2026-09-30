@@ -529,6 +529,9 @@ import { ref, reactive, computed, onMounted } from "vue";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import apiClient from "../services/api";
+import { useToastStore } from "../stores/toasts.js";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const tickets = ref([]);
 const kpis = reactive({
@@ -653,7 +656,10 @@ const initialMockTickets = [
 ];
 
 onMounted(async () => {
-  tickets.value = [...initialMockTickets];
+  // Sample tickets only in a demo build (#4523, #4827); elsewhere the list shows what the service returns.
+  if (isDemoBuild()) {
+    tickets.value = [...initialMockTickets];
+  }
   fetchTicketsFromApi();
 });
 
@@ -663,8 +669,10 @@ const fetchTicketsFromApi = async () => {
     if (res && Array.isArray(res)) {
       tickets.value = res;
     }
-  } catch {
-    // Keep initialized mock tickets for smooth demo presentation
+  } catch (err) {
+    if (!isDemoBuild()) {
+      useToastStore().apiError("Loading tickets failed", err);
+    }
   }
 };
 
@@ -805,6 +813,8 @@ const handleTicketTransition = async ({
   root_cause_summary,
   resolution_code,
 }) => {
+  // #4827: the deviation/CAPA workflow below runs only in the browser; no service records it yet.
+  if (!allowUnbackedAction("Changing a ticket's status")) return;
   const index = tickets.value.findIndex((t) => t.id === ticketId);
   if (index !== -1) {
     tickets.value[index].status = newStatus;
@@ -818,6 +828,7 @@ const handleTicketTransition = async ({
 };
 
 const handleTicketComment = ({ content, visibility, reason_for_change }) => {
+  if (!allowUnbackedAction("Commenting on a ticket")) return;
   const newComment = {
     id: "cm-" + Date.now(),
     user_id: "active.user@cadence.io",
@@ -830,6 +841,7 @@ const handleTicketComment = ({ content, visibility, reason_for_change }) => {
 };
 
 const handleTicketAttachment = ({ file, reason_for_change }) => {
+  if (!allowUnbackedAction("Attaching a file to a ticket")) return;
   const newAttachment = {
     id: "att-" + Date.now(),
     filename: file.name,
@@ -846,6 +858,7 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
 };
 
 const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
+  if (!allowUnbackedAction("Signing a ticket")) return;
   const index = tickets.value.findIndex((t) => t.id === ticketId);
   if (index !== -1) {
     tickets.value[index].signature_token = signature_token;
@@ -857,6 +870,7 @@ const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
 };
 
 const handleTicketCreated = (payload) => {
+  if (!allowUnbackedAction("Creating a ticket")) return;
   const newTicket = {
     id: "tk-" + Date.now(),
     reference: "DEV-2026-" + Math.floor(1000 + Math.random() * 9000),
@@ -871,6 +885,8 @@ const handleTicketCreated = (payload) => {
 };
 
 const exportAuditTrail = (format) => {
+  // The export is built from the in-browser ticket list, not an audit trail any service kept.
+  if (!allowUnbackedAction("Exporting the ticket audit trail")) return;
   const data = JSON.stringify(tickets.value, null, 2);
   const blob = new Blob([data], {
     type: format === "json" ? "application/json" : "text/csv",

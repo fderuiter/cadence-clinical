@@ -637,6 +637,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useToastStore } from "../stores/toasts.js";
+import { ensureOk } from "../utils/apiErrors.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 const activeTab = ref("reader");
 const isLoading = ref(false);
@@ -726,11 +729,13 @@ async function loadSummaries() {
   isLoading.value = true;
   try {
     const res = await fetch("/api/v1/payments/lay-summaries");
+    // #4827: outside demo builds a failed request is an error, never a sample summary or receipt.
+    if (!isDemoBuild()) await ensureOk(res);
     if (res.ok) {
       summaries.value = await res.json();
     }
 
-    if (summaries.value.length === 0) {
+    if (isDemoBuild() && summaries.value.length === 0) {
       summaries.value = [
         {
           id: "ls-101",
@@ -772,12 +777,13 @@ async function loadSummaries() {
       const rRes = await fetch(
         `/api/v1/payments/lay-summaries/${selectedSummary.value.id}/receipts`
       );
+      if (!isDemoBuild()) await ensureOk(rRes);
       if (rRes.ok) {
         auditReceipts.value = await rRes.json();
       }
     }
 
-    if (auditReceipts.value.length === 0) {
+    if (isDemoBuild() && auditReceipts.value.length === 0) {
       auditReceipts.value = [
         {
           id: "rec-001",
@@ -794,7 +800,7 @@ async function loadSummaries() {
       ];
     }
   } catch (e) {
-    console.error("Error loading lay summaries:", e);
+    useToastStore().apiError("Loading lay summaries failed", e);
   } finally {
     isLoading.value = false;
   }
@@ -818,12 +824,14 @@ async function submitConfirmationReceipt() {
         }),
       }
     );
-    if (res.ok) {
-      lastReceipt.value = await res.json();
-      auditReceipts.value.unshift(lastReceipt.value);
-    }
+    await ensureOk(res);
+    lastReceipt.value = await res.json();
+    auditReceipts.value.unshift(lastReceipt.value);
   } catch (e) {
-    console.error("Error confirming receipt:", e);
+    useToastStore().apiError(
+      "Confirming receipt failed. No receipt was issued",
+      e
+    );
   } finally {
     isSubmitting.value = false;
   }
@@ -851,15 +859,14 @@ async function publishStudioSummary() {
         status: "PUBLISHED",
       }),
     });
-    if (res.ok) {
-      const saved = await res.json();
-      publishSuccess.value = `Successfully published Lay Summary '${saved.title}' live!`;
-      await loadSummaries();
-      selectedSummary.value = saved;
-      activeTab.value = "reader";
-    }
+    await ensureOk(res);
+    const saved = await res.json();
+    publishSuccess.value = `Published lay summary '${saved.title}'.`;
+    await loadSummaries();
+    selectedSummary.value = saved;
+    activeTab.value = "reader";
   } catch (e) {
-    console.error("Error publishing lay summary:", e);
+    useToastStore().apiError("Publishing the lay summary failed", e);
   } finally {
     isSubmitting.value = false;
   }
