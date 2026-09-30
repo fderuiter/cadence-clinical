@@ -24,24 +24,24 @@ public class Ticket
     public string? RootCauseCategory { get; set; }
     public string? RootCauseSummary { get; set; }
     public string? ResolutionCode { get; set; }
-    public DateTime? DueDate { get; set; }
-    public DateTime? SlaTargetAt { get; set; }
-    public DateTime? SlaPausedAt { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
+    public DateTimeOffset? SlaTargetAt { get; set; }
+    public DateTimeOffset? SlaPausedAt { get; set; }
     public int SlaTotalPausedSeconds { get; set; }
     public bool SlaBreached { get; set; }
     public bool SlaAmberWarned { get; set; }
-    public DateTime? LastEscalatedAt { get; set; }
-    public DateTime? LastEscalationNotifiedAt { get; set; }
+    public DateTimeOffset? LastEscalatedAt { get; set; }
+    public DateTimeOffset? LastEscalationNotifiedAt { get; set; }
     public int EscalationCount { get; set; }
     public string? WorkflowType { get; set; }
     public string? ActionType { get; set; }
     public string? SignatureAction { get; set; }
     public string? SignatureToken { get; set; }
     public string? SignatureMeaning { get; set; }
-    public DateTime? SignatureTimestamp { get; set; }
+    public DateTimeOffset? SignatureTimestamp { get; set; }
     public string? SignatureUser { get; set; }
     public bool IsDeleted { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -53,7 +53,7 @@ public class TicketComment
     public string TicketId { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
     public string Visibility { get; set; } = "PUBLIC";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -69,7 +69,7 @@ public class TicketAttachment
     public string StorageUri { get; set; } = string.Empty;
     public string Sha256Hash { get; set; } = string.Empty;
     public string UploadedBy { get; set; } = string.Empty;
-    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UploadedAt { get; set; }
     public bool DeidScrubbed { get; set; } = true;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -79,7 +79,7 @@ public class TicketAuditLog
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string? TicketId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;

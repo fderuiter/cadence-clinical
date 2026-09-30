@@ -9,6 +9,7 @@ Electronic trial master file scaffold. It holds the TMF document, expected-docum
 - Project: `apps/etmf/src/Cadence.Apps.Etmf.csproj` (assembly `Cadence.Apps.Etmf`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (TMF documents, expected documents, QC transitions, expiration alert state, audit ledger seals, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `EtmfDbContext`, a design-time `EtmfDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144631_InitialCreate`.
 

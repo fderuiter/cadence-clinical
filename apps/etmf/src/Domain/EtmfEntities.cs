@@ -19,8 +19,8 @@ public sealed class TmfDocument : AggregateRoot<string>
     public string TaxonomyVersion { get; set; } = string.Empty;
     public string ArtifactCode { get; set; } = string.Empty;
     public string? MetadataJson { get; set; }
-    public DateTime? IssueDate { get; set; }
-    public DateTime? ExpirationDate { get; set; }
+    public DateTimeOffset? IssueDate { get; set; }
+    public DateTimeOffset? ExpirationDate { get; set; }
     public string? DocumentOwnerId { get; set; }
     public string? ProtocolVersionTag { get; set; }
     public int? ProtocolVersionIndex { get; set; }
@@ -29,7 +29,7 @@ public sealed class TmfDocument : AggregateRoot<string>
     public string ApprovalStatus { get; set; } = "DRAFT";
     public string? SignatureManifestation { get; set; }
     public string? Signer { get; set; }
-    public DateTime? SigningTimestamp { get; set; }
+    public DateTimeOffset? SigningTimestamp { get; set; }
     public bool IsRedacted { get; set; }
     public string? RedactionSourceId { get; set; }
     public string? RedactionManifestJson { get; set; }
@@ -62,14 +62,14 @@ public sealed class TmfAuditLedgerSeal
     public int BlockIndex { get; set; }
     public string PreviousBlockHash { get; set; } = string.Empty;
     public string CurrentBlockHash { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public int SealedRecordCount { get; set; }
     public string MerkleRootHash { get; set; } = string.Empty;
 }
 
 public sealed class TmfAuditLog : AggregateRoot<string>
 {
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string UserRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
@@ -85,7 +85,7 @@ public sealed class TmfDocumentExpirationAlertState : AggregateRoot<string>
 {
     public string DocumentId { get; set; } = string.Empty;
     public string WarningWindow { get; set; } = string.Empty;
-    public DateTime AlertedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset AlertedAt { get; set; }
     public bool Dispatched { get; set; }
     public string? NotificationId { get; set; }
     public int Attempts { get; set; }
@@ -105,5 +105,5 @@ public sealed class TmfDocumentQcTransition
     public string ActorId { get; set; } = string.Empty;
     public string ActorRole { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
 }

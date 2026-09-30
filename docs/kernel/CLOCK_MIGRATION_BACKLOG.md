@@ -49,9 +49,9 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | safety | 15 | `Domain/SafetyEntities.cs` | initializers |
 | imaging | 10 | `Domain/ImagingEntities.cs` | initializers |
 | knowledge | 6 | `Domain/KnowledgeEntities.cs` | initializers |
-| etmf | 4 | `Domain/EtmfEntities.cs` | initializers |
+| etmf | ~~4~~ 0 | `Domain/EtmfEntities.cs` | Done |
 | org | ~~4~~ 0 | `Domain/OrgEntities.cs` | Done |
-| tickets | 4 | `Domain/TicketEntities.cs` | initializers |
+| tickets | ~~4~~ 0 | `Domain/TicketEntities.cs` | Done |
 | eisf | ~~3~~ 0 | `Domain/EisfEntities.cs` | Done |
 | fileshare | ~~3~~ 0 | `Domain/FileshareEntities.cs` | Done |
 | notifications | ~~2~~ 0 | `Domain/NotificationEntities.cs` | Done |
