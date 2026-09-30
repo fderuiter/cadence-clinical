@@ -43,7 +43,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `deid`                | PHI/PII patterns in source and fixtures                                                    |
 | `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi` |
 | `api-clients`         | The web API clients typecheck against their generated OpenAPI types                        |
-| `schema-doc`          | Creates the schema documentation files if missing (checks nothing yet)                     |
+| `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                   |
 | `path-patterns`       | Files live in allowed directories                                                          |
 | `contracts`           | Hexagonal port/adapter contracts                                                           |
 | `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                        |

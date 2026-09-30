@@ -162,11 +162,18 @@ public class GenerateApiDocsCommand : Command<GenerateApiDocsCommand.Settings>
     }
 }
 
-public class GenerateSchemaDocCommand : Command
+public class GenerateSchemaDocCommand : Command<GenerateSchemaDocCommand.Settings>
 {
-    public override int Execute(CommandContext context)
+    public class Settings : CommandSettings
     {
-        return SchemaDocGeneratorService.GenerateSchemaDocumentation();
+        [CommandOption("--validate")]
+        [Description("Only report whether docs/schema matches the EF Core models; exit 1 when it does not")]
+        public bool ValidateOnly { get; set; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        return SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: settings.ValidateOnly);
     }
 }
 
@@ -175,14 +182,6 @@ public class PreCommitOpenApiCommand : Command
     public override int Execute(CommandContext context)
     {
         return PreCommitOpenApiService.ExecutePreCommitOpenApi();
-    }
-}
-
-public class PreCommitSchemaDocCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return PreCommitSchemaDocService.ExecutePreCommitSchemaDoc();
     }
 }
 

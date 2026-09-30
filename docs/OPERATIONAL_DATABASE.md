@@ -76,6 +76,9 @@ DbContext model has changes without a migration, which would otherwise break the
 `PendingModelChangesWarning`. Never hand-edit a generated migration to create another module's tables; each module
 owns only its schema.
 
+Then run `pnpm cadence generate-schema-doc` and commit the updated [docs/schema](schema/README.md) pages, which describe
+every table, column, key and index per module. The `schema-doc` gate fails while they differ from the models.
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

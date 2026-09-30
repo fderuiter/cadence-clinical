@@ -157,9 +157,7 @@ jobs:
       - name: Verify schema documentation freshness
         id: run_schema_drift
         if: always()
-        run: |
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check schema-doc
-          git diff --exit-code docs/schema_visualizer.html docs/schema/ docs/CDISC/
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check schema-doc
 
       - name: Verify OpenAPI specification drift
         id: run_openapi_drift

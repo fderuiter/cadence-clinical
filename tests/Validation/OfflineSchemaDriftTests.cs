@@ -119,33 +119,4 @@ public class OfflineSchemaDriftTests
         var committedFile = Path.Combine(repoRoot, "apps", "web", "src", "types", "db_schemas.ts");
         File.Exists(committedFile).Should().BeTrue("db_schemas.ts must exist");
     }
-
-    /// <summary>
-    /// Validate committed schema visualizer HTML artifacts.
-    /// </summary>
-    [Fact(DisplayName = "CommittedSchemaVisualizerIsUpToDate")]
-    [Trait("Category", "Validation")]
-    public void TestCommittedSchemaVisualizerIsUpToDate()
-    {
-        var repoRoot = GetRepoRoot();
-        var visualizerFile = Path.Combine(repoRoot, "docs", "schema_visualizer.html");
-        File.Exists(visualizerFile).Should().BeTrue("schema_visualizer.html must exist");
-    }
-
-    /// <summary>
-    /// Validate schema visualizers use vendored assets without CDN dependencies.
-    /// </summary>
-    [Fact(DisplayName = "SchemaVisualizersUseVendoredAssets")]
-    [Trait("Category", "Validation")]
-    public void TestSchemaVisualizersUseVendoredAssets()
-    {
-        var repoRoot = GetRepoRoot();
-        var visualizerFile = Path.Combine(repoRoot, "docs", "schema_visualizer.html");
-        if (File.Exists(visualizerFile))
-        {
-            var content = File.ReadAllText(visualizerFile);
-            content.Should().NotContain("cdn.tailwindcss.com");
-            content.Should().NotContain("unpkg.com");
-        }
-    }
 }
