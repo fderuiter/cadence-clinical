@@ -333,6 +333,22 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         GxPSigner.VerifyStamp(firstReport).Should().BeTrue();
     }
 
+    [Fact]
+    public void QualificationReport_CountsOnlyTaggedTests_SoUntaggedTestsLeaveItUnchanged()
+    {
+        WriteMinimalRepository();
+        WriteTrx("a.trx", ("Sample.FirstTests", "First", "Passed"));
+        string report = Path.Combine(_dir, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md");
+
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir).Should().Be(0);
+        string before = File.ReadAllText(report);
+        WriteTrx("b.trx", ("Sample.Untagged", "Passes", "Passed"), ("Sample.Untagged", "IsSkipped", "NotExecuted"));
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir).Should().Be(0);
+
+        File.ReadAllText(report).Should().Be(before);
+        before.Should().Contain("**Requirement-Tagged Test Methods:** 1").And.Contain("**Passed:** 1 ");
+    }
+
     [Theory]
     [InlineData("Requirements_Traceability_Matrix.md")]
     [InlineData("IQ_OQ_PQ_Execution_Report.md")]

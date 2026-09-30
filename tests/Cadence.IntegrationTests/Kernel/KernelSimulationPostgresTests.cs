@@ -12,9 +12,11 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Simulation;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -32,7 +34,10 @@ namespace Cadence.IntegrationTests.Kernel;
 [Trait("Category", "Integration")]
 public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
 {
-    private const string Revised = """{"study":{"id":"Study_1","name":"CARDIO-1","arms":[{"id":"Arm_A","name":"Drug"},{"id":"Arm_C","name":"High dose"}]}}""";
+    private static readonly string Revised = ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with
+    {
+        Arms = [ProtocolDesignSamples.MinimalDesign().Arms[0], new Arm("arm.C", "High dose", ArmType.Experimental, [])],
+    });
 
     /// <summary>
     /// A draft forked from the approved version and revised to add an arm is reported element by element, and running
@@ -45,7 +50,7 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
         var ct = TestContext.Current.CancellationToken;
         var scenario = new KernelProtocolScenario(fixture);
         var (tenant, study) = await scenario.NewStudyAsync(ct);
-        var parent = await ApproveAsync(scenario, tenant, study, """{"study":{"id":"Study_1","name":"CARDIO-1","arms":[{"id":"Arm_A","name":"Drug"},{"id":"Arm_B","name":"Placebo"}]}}""", ct);
+        var parent = await ApproveAsync(scenario, tenant, study, ProtocolDesignSamples.Minimal, ct);
         var draft = ProtocolVersionId.New();
         await scenario.OkAsync(new ForkProtocolVersion(tenant, parent, draft, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         await scenario.OkAsync(new ReviseProtocolDraft(tenant, draft, Revised, null, KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
@@ -59,9 +64,9 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
         result.Value!.Scope.Should().Be(NodeRef.For(study));
         result.Value.StructuralDiff.Should().BeEquivalentTo(
             [
-                new ElementChange("Arm_B", null, ElementChangeKind.Removed, []),
-                new ElementChange("Arm_C", null, ElementChangeKind.Added, []),
-                new ElementChange("Study_1", null, ElementChangeKind.Changed, ["/arms"]),
+                new ElementChange(ProtocolStructuralDiff.RootId, null, ElementChangeKind.Changed, ["/arms"]),
+                new ElementChange("arm.B", null, ElementChangeKind.Removed, []),
+                new ElementChange("arm.C", null, ElementChangeKind.Added, []),
             ],
             options => options.WithStrictOrdering());
         result.Value.Candidate.BaseVersion!.Unversioned().Should().Be(NodeRef.For(parent));

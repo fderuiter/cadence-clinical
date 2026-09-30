@@ -415,8 +415,9 @@ ProtocolVersion contains:
   SafetyRule, DiscontinuationRule, RandomizationScheme (reference), StatisticalDesign (reference)
 ```
 
-- **ProtocolVersion** is an immutable, content-addressed snapshot (USDM document + `content_hash`) with
-  `number`, `parent_version`, `amendment?`, `state` and the approving Attestation (ADR-2452).
+- **ProtocolVersion** is an immutable, content-addressed snapshot (protocol design document + `content_hash`) with
+  `number`, `parent_version`, `amendment?`, `state` and the approving Attestation (ADR-2452). The design document
+  (ADR-2472) is the typed shape above, read strictly; USDM converts in and out of it.
 - State machine `Draft → InReview → Approved → Superseded | Withdrawn`.
   - Submitting for review freezes the content and sets `content_hash`, the canonical-JSON SHA-256
     (`ContentHash`). Returning to draft clears it. Reviewers and approvers therefore sign the same hash.
@@ -434,6 +435,8 @@ ProtocolVersion contains:
 - **K-PROT-1** Every ProtocolVersion element has a stable element ID across versions, so a structural
   diff between versions is computable. An element is a JSON object with a non-empty string `id` (the USDM
   convention), and ids are unique within a version (ADR-2480 §4.6).
+  *Implemented (#4808, ADR-2472):* content is a protocol design document whose element ids are unique and whose
+  references between elements are checked by kind when it is written, so `ProtocolStructuralDiff` applies to it as is.
 - **K-PROT-2** **Amendment impact is computable**: given two ProtocolVersions, the kernel lists every
   downstream object that references a changed element (CollectionSpecs, mapping specifications, rules,
   RTSM configuration, monitoring plan, consent forms, TMF expected documents, open Proposals). An amendment
@@ -445,6 +448,10 @@ ProtocolVersion contains:
 - **K-PROT-3** The scientific chain `Objective → Endpoint → Estimand → required data → PlannedActivity →
   CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
   requirement or operational need is flagged at design time (a Quality finding, not a blocker).
+  *Implemented (#4808, ADR-2472 §4.4):* `ProtocolDesignReview` reports objectives without endpoints, primary
+  endpoints without estimands, unscheduled CollectionSpecs and items without a purpose. They become Quality findings
+  with #4812. Submitting a version for review also checks that every ConceptRef, pinned code-system version and
+  Artifact the design names exists in the tenant (K-SEM-1).
 - Statistical design (sample size, multiplicity, interim analyses, stopping boundaries, missing-data
   strategy, SAP) is **referenced** from ProtocolVersion as versioned Artifacts in v0.2; its detailed model
   belongs to the Statistics roadmap phase.

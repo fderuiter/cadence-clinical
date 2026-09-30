@@ -1,12 +1,4 @@
-using System;
-using System.Text.Json;
-
-using Cadence.Core.Domain;
 using Cadence.Ddf;
-using Cadence.Kernel;
-using Cadence.Kernel.Domain.Bitemporal;
-using Cadence.Kernel.Domain.Entities;
-using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -86,27 +78,6 @@ public class DdfCompilerTests
         // Deterministic form hash verification
         var secondRun = UsdmCompiler.CompileUsdm(SampleUsdmJson);
         secondRun.FormHash.Should().Be(result.FormHash);
-    }
-
-    /// <summary>
-    /// Validates that UsdmCompiler successfully compiles directly from a ProtocolVersion snapshot aggregate.
-    /// </summary>
-    [Fact(DisplayName = "UsdmCompiler_Compile_FromProtocolVersion_Succeeds")]
-    [Trait("Category", "GxP_OQ")]
-    public void UsdmCompilerCompileFromProtocolVersionSucceeds()
-    {
-        // Arrange
-        var protocol = ProtocolVersion.CreateFirst(ProtocolVersionId.New(), TenantId.New(), StudyId.New(), SampleUsdmJson).Value!;
-
-        // Act
-        var result = UsdmCompiler.Compile(protocol);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Status.Should().Be("COMPLETED");
-        result.StudyId.Should().Be("STUDY-USDM-701");
-        result.Name.Should().Be("Cardiovascular Outcomes Study");
-        result.FormHash.Should().NotBeNullOrWhiteSpace();
     }
 
     /// <summary>

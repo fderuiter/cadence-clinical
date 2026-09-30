@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Domain.Entities;
@@ -223,6 +224,14 @@ public class ProtocolVersion : AggregateRoot<ProtocolVersionId>
     private KernelError Transition(string change) =>
         ProtocolErrors.InvalidTransition.WithMessage($"Protocol version {Number} is {Status} and cannot be {change}.");
 
+    /// <summary>How many design problems one error message lists.</summary>
+    private const int MaxReportedProblems = 10;
+
+    /// <summary>The design this version holds. Content is checked on every change, so it always reads.</summary>
+    public ProtocolDesign Design() =>
+        ProtocolDesignDocument.Read(Content).Design
+        ?? throw new InvalidOperationException($"Protocol version {Number} holds content that is not a protocol design.");
+
     private static KernelError? CheckContent(string? content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -230,15 +239,17 @@ public class ProtocolVersion : AggregateRoot<ProtocolVersionId>
             return ProtocolErrors.ContentRequired;
         }
 
-        try
+        // The content is the executable protocol (ADR-2472): it must read as a design, with every reference inside it
+        // resolving to an element of the right kind.
+        var read = ProtocolDesignDocument.Read(content);
+        if (read.IsValid)
         {
-            using var document = JsonDocument.Parse(content, new JsonDocumentOptions { AllowDuplicateProperties = false });
-            return document.RootElement.ValueKind == JsonValueKind.Object ? null : ProtocolErrors.ContentInvalid;
+            return null;
         }
-        catch (JsonException)
-        {
-            return ProtocolErrors.ContentInvalid;
-        }
+
+        var more = read.Problems.Count > MaxReportedProblems ? $" (and {read.Problems.Count - MaxReportedProblems} more)" : string.Empty;
+        return ProtocolErrors.ContentInvalid.WithMessage(
+            $"{ProtocolErrors.ContentInvalid.Message} {string.Join(" ", read.Problems.Take(MaxReportedProblems))}{more}");
     }
 
     private static KernelError? CheckAmendment(ProtocolAmendment? amendment)

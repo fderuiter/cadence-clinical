@@ -6,7 +6,7 @@ The core clinical domain modular monolith (`Cadence.Kernel.*`) providing the uni
 
 As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and specified in [`CLINICAL_KERNEL_SPECIFICATION.md`](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), the Clinical Kernel consolidates:
 - **Identity & Ownership**: Tenant, Organization, Person, Study, Site, StudySite
-- **Executable Protocol**: ProtocolVersion lifecycle with content-hash freezing, attested approval and amendments (ADR-2452)
+- **Executable Protocol**: ProtocolVersion lifecycle with content-hash freezing, attested approval and amendments (ADR-2452); a typed protocol design document with stable element ids, a structural diff and design findings (ADR-2472)
 - **Clinical Subjects**: Participant, Enrollment, Cohort
 - **Clinical Truth**: Observations, Assertions, Sources, Provenance
 - **Authority**: Actors, Capabilities, Delegations, Attestations (21 CFR Part 11 electronic signatures bound to content hashes, ADR-2452)
@@ -107,7 +107,7 @@ A study's protocol is a series of numbered `ProtocolVersion`s (spec §6.2). Each
 `Draft → InReview → Approved → Superseded | Withdrawn`:
 
 ```csharp
-var draft = await sender.SendAsync(new CreateProtocolDraft(tenant, study, versionId, usdmJson, key1, "First draft"), cancellationToken: ct);
+var draft = await sender.SendAsync(new CreateProtocolDraft(tenant, study, versionId, ProtocolDesignDocument.Write(design), key1, "First draft"), cancellationToken: ct);
 var review = await sender.SendAsync(new SubmitProtocolVersionForReview(tenant, versionId, key2, "Ready for review"), cancellationToken: ct);
 var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, versionId.Value, review.Value!.ContentHash!);
 var signature = await sender.SendAsync(new Attest(tenant, AttestationId.New(), AttestationMeaning.Approved, target, authTime, "pwd+otp", key3, "Approve v1"), cancellationToken: ct);
@@ -137,6 +137,31 @@ await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.V
 - **Reading other aggregates.** A handler that needs another aggregate to decide (a parent version, the study's
   versions) reads it with `IKernelUnitOfWork.ReadAsync`/`ReadAllAsync`. These neither track nor claim it, so the
   command still changes one aggregate (K-TX-1).
+
+### Protocol design document (ADR-2472)
+
+A version's content is a `ProtocolDesign` (`Cadence.Kernel.Protocol.Design`): objectives, endpoints, estimands,
+populations, eligibility criteria, arms, epochs, cohorts, interventions, planned activities, collection specifications
+with their items, safety and discontinuation rules, and references to the randomization scheme and statistical design.
+CDISC USDM converts in and out of it; it is not the stored shape.
+
+```csharp
+var read = ProtocolDesignDocument.Read(version.Content);            // strict: every problem listed, never re-serialized
+var findings = ProtocolDesignReview.Findings(fork.Design());       // K-PROT-3 gaps; informs, never blocks
+var outside = fork.Design().ExternalReferences();                   // ConceptRefs, code-system versions, artifacts
+```
+
+- **Element ids (K-PROT-1).** Unique in the design, a letter then up to 127 letters, digits and `_ . : -`, and kept by
+  forks. References between elements are checked by kind, so an estimand's `populationId` must name a population.
+- **Strict reading.** Unknown properties, missing or null required values, duplicate properties, undefined enums, a
+  missing `schemaVersion` and references without a concept version are `K.Protocol.ContentInvalid`, with up to ten
+  problems in the message.
+- **References at submit (K-SEM-1).** `SubmitProtocolVersionForReview` refuses with `K.Protocol.ReferenceUnknown`
+  when a ConceptRef's concept does not exist at that version, or a code-system version or artifact is not in the
+  tenant. A draft may still name them before they are registered.
+- **Diff.** Every element is a JSON object with a unique `id`, so the simulation engine's `ProtocolStructuralDiff`
+  (ADR-2480 §4.6) compares two designs element by element. A collection item is its own element, so changing it does
+  not change its specification.
 
 ## Participants and enrollment (ADR-2453)
 

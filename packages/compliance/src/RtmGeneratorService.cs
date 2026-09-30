@@ -717,18 +717,27 @@ public static partial class RtmGeneratorService
         sb.AppendLine("## 1. Executive Summary & Verification Declaration\n");
         sb.AppendLine("This report documents the Installation Qualification (IQ) and Operational Qualification (OQ) for the Cadence Clinical platform.\n");
 
-        int totalRun = results.Count;
-        int passedRun = results.Values.Count(r => r.Status == TestStatus.Passed);
-        int failedRun = results.Values.Count(r => r.Status == TestStatus.Failed);
-        int skippedRun = results.Values.Count(r => r.Status == TestStatus.Skipped);
+        // Only the requirement-tagged methods listed in section 3 are counted. Whole-suite totals would change with
+        // every untagged test any branch adds, so two branches could never both merge without regenerating (ADR-2287).
+        var tagged = tests.Where(t => t.RequirementIds.Count > 0).OrderBy(t => t.FullName, StringComparer.Ordinal).ToList();
+        var taggedStatuses = tagged
+            .Select(t => (results.GetValueOrDefault(t.FullName) ?? new TestResultInfo()).Status)
+            .ToList();
+        int passedRun = taggedStatuses.Count(s => s == TestStatus.Passed);
+        int failedRun = taggedStatuses.Count(s => s == TestStatus.Failed);
+        int skippedRun = taggedStatuses.Count(s => s == TestStatus.Skipped);
+        int notRun = taggedStatuses.Count - passedRun - failedRun - skippedRun;
         int executed = passedRun + failedRun;
 
         sb.AppendLine("### Validation Result Summary\n");
-        sb.AppendLine($"- **Automated Test Methods Reported:** {totalRun}");
+        sb.AppendLine("Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under");
+        sb.AppendLine("`TestResults/gxp/`, so this report only changes when a tagged test or its result changes.\n");
+        sb.AppendLine($"- **Requirement-Tagged Test Methods:** {tagged.Count}");
         sb.AppendLine($"- **Passed:** {passedRun} 🟢");
         sb.AppendLine($"- **Failed/Errors:** {failedRun} 🔴");
         sb.AppendLine($"- **Skipped:** {skippedRun} ⚪");
-        sb.AppendLine($"- **Overall Operational Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
+        sb.AppendLine($"- **Not Run:** {notRun}");
+        sb.AppendLine($"- **Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
 
         sb.AppendLine("## 2. Installation Qualification (IQ)\n");
         sb.AppendLine("The Installation Qualification verifies that the software execution environment and static quality checks are fully compliant.\n");
@@ -739,7 +748,7 @@ public static partial class RtmGeneratorService
         sb.AppendLine("| Test Case Name | Class | Target Req | Status |");
         sb.AppendLine("| :--- | :--- | :--- | :--- |");
 
-        foreach (var test in tests.Where(t => t.RequirementIds.Count > 0).OrderBy(t => t.FullName, StringComparer.Ordinal))
+        foreach (var test in tagged)
         {
             var res = results.GetValueOrDefault(test.FullName) ?? new TestResultInfo();
             string className = test.FullName[..test.FullName.LastIndexOf('.')];

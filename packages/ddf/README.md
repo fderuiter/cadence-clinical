@@ -1,18 +1,18 @@
 # Cadence.Ddf
 
-Digital Data Flow compiler. It turns a CDISC USDM study (JSON) or a kernel `ProtocolVersion` into an intermediate representation and renders CDISC ODM XML and OpenRosa XForms from Liquid templates.
+Digital Data Flow compiler. It turns a CDISC USDM study (JSON) into an intermediate representation and renders CDISC ODM XML and OpenRosa XForms from Liquid templates. A kernel `ProtocolVersion` holds a protocol design document, not USDM ([ADR-2472](../../docs/adr/2026-09-30-executable-protocol-design-document.md)), so the compiler takes USDM only.
 
 ## Project
 
 - Project: `packages/ddf/src/Cadence.Ddf.csproj` (assembly `Cadence.Ddf`, namespace `Cadence.Ddf`).
-- `UsdmCompiler`: `Compile(ProtocolVersion, ...)` (compiles `Content`, version tag `v{Number}`), `CompileUsdm(usdmJson, studyId, versionTag, ...)`, `ParseUsdmToIr(...)`.
+- `UsdmCompiler`: `CompileUsdm(usdmJson, studyId, versionTag, ...)`, `ParseUsdmToIr(...)`.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
 - Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `ports.py`, `smart_blocks.py`, `tripartite.py`, `rules/`, `stages/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
-- Project references: `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Domain` (see [packages/kernel](../kernel/README.md)).
+- Project references: `Cadence.Kernel.Abstractions` (see [packages/kernel](../kernel/README.md)).
 - Package: `Fluid.Core`.
 
 ## Referenced by
