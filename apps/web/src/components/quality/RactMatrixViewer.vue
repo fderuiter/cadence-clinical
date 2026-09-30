@@ -916,6 +916,7 @@
 </template>
 
 <script setup lang="ts">
+import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
 
 interface RACTFactor {
@@ -1219,7 +1220,9 @@ async function saveRiskFactor() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "X-Change-Reason": riskForm.value.reason_for_change,
+            "X-Change-Reason": encodeChangeReason(
+              riskForm.value.reason_for_change
+            ),
           },
           body: JSON.stringify({
             risk_topic: riskForm.value.risk_topic,
@@ -1241,7 +1244,9 @@ async function saveRiskFactor() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Change-Reason": riskForm.value.reason_for_change,
+          "X-Change-Reason": encodeChangeReason(
+            riskForm.value.reason_for_change
+          ),
         },
         body: JSON.stringify({
           study_id: selectedStudyId.value,

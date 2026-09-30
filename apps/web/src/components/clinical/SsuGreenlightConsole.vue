@@ -830,6 +830,7 @@
 </template>
 
 <script setup>
+import { encodeChangeReason } from "../../api/changeReason";
 import { computed, onMounted, reactive, ref } from "vue";
 
 import { useToastStore } from "../../stores/toasts.js";
@@ -1106,7 +1107,7 @@ async function executeGreenlightCertification() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Change-Reason": sigForm.changeReason,
+          "X-Change-Reason": encodeChangeReason(sigForm.changeReason),
         },
       }
     );
@@ -1134,7 +1135,7 @@ async function executeExecutiveOverride() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Change-Reason": overrideForm.justification,
+          "X-Change-Reason": encodeChangeReason(overrideForm.justification),
         },
         body: JSON.stringify({
           study_id: activeStudyId.value,

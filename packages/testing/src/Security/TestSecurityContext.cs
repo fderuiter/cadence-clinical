@@ -75,7 +75,7 @@ public static class TestSecurityContext
         {
             var signed = identity with
             {
-                ChangeReason = FirstHeader(request, GatewayHeaders.ChangeReason) ?? identity.ChangeReason,
+                ChangeReason = DecodedChangeReason(request) ?? identity.ChangeReason,
                 SigToken = FirstHeader(request, GatewayHeaders.SigToken) ?? identity.SigToken,
             };
 
@@ -87,6 +87,10 @@ public static class TestSecurityContext
 
             return base.SendAsync(request, cancellationToken);
         }
+
+        // The gateway signs the decoded reason and re-encodes it on the forwarded header (ADR-2495).
+        private static string? DecodedChangeReason(HttpRequestMessage request) =>
+            ChangeReasonHeader.TryDecode(FirstHeader(request, GatewayHeaders.ChangeReason), out string? reason) ? reason : null;
 
         private static string? FirstHeader(HttpRequestMessage request, string name) =>
             request.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -221,7 +222,7 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> AdvanceSubjectStateAsync(
         string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
-        string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()
+        string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
         if (logger != null)
@@ -291,7 +292,7 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> UpdateSubjectDemographicsAsync(
         string subjectId, SubjectDemographicsUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
-        string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()!;
+        string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
         if (logger != null)
         {
@@ -311,7 +312,7 @@ public static partial class SubjectEndpoints
     public static async Task<IResult> DeleteSubjectDemographicsAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
-        string changeReason = http.Request.Headers["X-Change-Reason"].FirstOrDefault()!;
+        string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
         if (logger != null)
         {

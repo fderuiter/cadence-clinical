@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { openApiClient, unwrapResponse } from "./client";
 
@@ -413,7 +414,7 @@ export const knowledgeService = {
     return await unwrapResponse(
       openApiClient.DELETE("/api/v1/knowledge/categories/{category_id}", {
         params: { path: { category_id: categoryId } },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },

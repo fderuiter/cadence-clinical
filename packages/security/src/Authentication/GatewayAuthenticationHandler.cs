@@ -76,7 +76,11 @@ public sealed class GatewayAuthenticationHandler(
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
         string tenantHeader = headers[GatewayHeaders.TenantId].ToString();
         string tenantId = string.IsNullOrWhiteSpace(tenantHeader) ? GatewayIdentity.DefaultTenantId : tenantHeader;
-        string changeReason = headers[GatewayHeaders.ChangeReason].ToString();
+        if (!ChangeReasonHeader.TryDecode(headers[GatewayHeaders.ChangeReason].ToString(), out string? changeReason))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("X-Change-Reason is not a valid RFC 8187 UTF-8 value."));
+        }
+
         string sigToken = headers[GatewayHeaders.SigToken].ToString();
 
         bool verified = HmacSigner.VerifyGatewaySignature(

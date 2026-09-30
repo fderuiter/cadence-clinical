@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
 import { getBearerToken } from "./authorization.js";
 import type { paths } from "./types";
@@ -27,7 +28,7 @@ export const ingestionClient = {
       headers["Authorization"] = `Bearer ${token}`;
     }
     if (changeReason) {
-      headers["X-Change-Reason"] = changeReason;
+      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
     }
 
     const response = await fetch(url, {
@@ -54,7 +55,7 @@ export const ingestionClient = {
     return unwrapResponse(
       openApiClient.GET("/api/v1/designer/ingestion/jobs/{job_id}", {
         params: { path: { job_id: jobId } },
-        headers: { "X-Change-Reason": changeReason },
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
       })
     );
   },
@@ -69,7 +70,7 @@ export const ingestionClient = {
         "/api/v1/designer/ingestion/candidates/{candidate_id}",
         {
           params: { path: { candidate_id: candidateId } },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -102,7 +103,7 @@ export const ingestionClient = {
             reason,
             ...updatedFields,
           } as paths["/api/v1/designer/ingestion/candidates/{candidate_id}/items/{item_id}/transition"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -118,7 +119,7 @@ export const ingestionClient = {
         {
           params: { path: { candidate_id: candidateId } },
           body: { change_reason: changeReason },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );

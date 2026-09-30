@@ -117,4 +117,17 @@ describe("executionApi site activation", () => {
     expect(request.headers.get("X-Change-Reason")).toBe("IRB approved.");
     expect(await request.json()).toEqual({ study_id: "CAD-101" });
   });
+
+  it("sends a reason with an em dash and CJK encoded instead of failing in fetch (#4895)", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { status: "success", message: "ok" })
+    );
+
+    await executionApi.activateSite("SITE-7", "CAD-101", "IRB approved — 承認");
+
+    const request = fetchSpy.mock.calls[0][0];
+    expect(request.headers.get("X-Change-Reason")).toBe(
+      "UTF-8''IRB%20approved%20%E2%80%94%20%E6%89%BF%E8%AA%8D"
+    );
+  });
 });

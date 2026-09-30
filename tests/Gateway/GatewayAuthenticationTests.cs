@@ -118,6 +118,52 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
     }
 
     [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ProxiedRoute_WithEncodedNonLatinReason_ForwardsItEncodedAndSignsTheTypedText()
+    {
+        // #4895, ADR-2495: the browser sends RFC 8187 (lowercase hex here), the gateway signs what was typed
+        // and forwards the canonical ASCII form the downstream decodes back to the same text.
+        const string typed = "IRB approval — 治験";
+        var ct = TestContext.Current.CancellationToken;
+        using var client = fixture.Gateway.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, ProxiedPath);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayFixture.CreateToken("cra-01", ["CRA"]));
+        request.Headers.Add(GatewayHeaders.ChangeReason, "utf-8''IRB%20approval%20%e2%80%94%20%e6%b2%bb%e9%a8%93");
+
+        var response = await client.SendAsync(request, ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var echoed = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+        var headers = new Dictionary<string, string>(echoed!, StringComparer.OrdinalIgnoreCase);
+        headers[GatewayHeaders.ChangeReason].Should().Be(ChangeReasonHeader.Encode(typed));
+
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
+            changeReason: typed,
+            tenantId: headers[GatewayHeaders.TenantId]).Should().BeTrue();
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ProxiedRoute_WithMalformedEncodedReason_Returns400AndIsNotForwarded()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var client = fixture.Gateway.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, ProxiedPath);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayFixture.CreateToken("cra-01", ["CRA"]));
+        request.Headers.Add(GatewayHeaders.ChangeReason, "UTF-8''bad%ZZ");
+
+        var response = await client.SendAsync(request, ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(ct)).Should().Contain("RFC 8187");
+    }
+
+    [Fact]
     [Trait("Category", "GxP_IQ")]
     public void HostStartup_WithoutOidcAuthority_FailsFast()
     {
