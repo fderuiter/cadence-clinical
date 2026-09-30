@@ -11,6 +11,7 @@ using Cadence.Core.Domain.Audit;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Execution;
 using Cadence.UnitTests.Execution;
 
 using FluentAssertions;

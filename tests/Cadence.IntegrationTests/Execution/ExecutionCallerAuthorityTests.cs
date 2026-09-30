@@ -14,13 +14,14 @@ using FluentAssertions;
 
 using Xunit;
 
-namespace Cadence.UnitTests.Execution.Endpoints;
+namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
 /// #4920 through the real composition root: source data verification needs a verification role and a reason for
 /// change, and a query's responder and resolver are always the signed caller, whatever the request body names.
 /// </summary>
-public sealed class ExecutionCallerAuthorityTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
+[Trait("Category", "Integration")]
+public sealed class ExecutionCallerAuthorityTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
 {
     private const string Reason = "Caller authority check";
     private const string Study = "STUDY-AUTHORITY";
@@ -30,6 +31,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionApiFactory factory) :
     [Fact]
     public async Task Sdv_BySiteCoordinator_Returns403_AndTheObservationStaysUnverified()
     {
+        factory.SkipIfUnavailable();
         var coordinator = Caller("sdv-coordinator", "Site Coordinator");
         string observation = await CreateObservationAsync(coordinator);
 
@@ -46,6 +48,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionApiFactory factory) :
     [Fact]
     public async Task Sdv_ByMonitor_RecordsTheMonitorAsVerifier()
     {
+        factory.SkipIfUnavailable();
         var monitor = Caller("sdv-monitor", "CRA");
         string observation = await CreateObservationAsync(Caller("sdv-crc", "Site Coordinator"));
 
@@ -60,6 +63,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionApiFactory factory) :
     [Fact]
     public async Task Sdv_WithoutReasonForChange_Returns400()
     {
+        factory.SkipIfUnavailable();
         string observation = await CreateObservationAsync(Caller("sdv-crc2", "Site Coordinator"));
         var monitor = Caller("sdv-monitor2", "CRA") with { ChangeReason = null };
 
@@ -73,6 +77,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionApiFactory factory) :
     [Fact]
     public async Task QueryResponderAndResolver_AreTheSignedCaller_NotTheBodyFields()
     {
+        factory.SkipIfUnavailable();
         var monitor = Caller("query-monitor", "CRA");
         var investigator = Caller("query-investigator", "Site Investigator");
         using var monitorClient = factory.CreateSignedClient(monitor);

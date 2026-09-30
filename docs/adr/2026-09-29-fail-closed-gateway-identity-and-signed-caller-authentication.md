@@ -71,10 +71,11 @@ Under 21 CFR Part 11 an electronic record's author and signer must be the authen
 - **Verification Plan:**
   - `tests/Cadence.UnitTests/Execution/Endpoints/ExecutionAuthenticationTests.cs` covers:
     - anonymous, wrong-secret, tampered-role and stale requests return 401;
+    - startup fails fast without `GATEWAY_SECRET`.
+  - `tests/Cadence.IntegrationTests/Execution/ExecutionWriteAuthorizationTests.cs` (PostgreSQL) covers:
     - wrong role and body-only PI role return 403;
     - a mismatched signer returns 403;
-    - the caller is recorded as signer;
-    - startup fails fast without `GATEWAY_SECRET`.
+    - the caller is recorded as signer.
   - `tests/Cadence.UnitTests/Gateway/GatewayAuthenticationTests.cs` covers:
     - anonymous and untrusted-token requests return 401;
     - signed forwarding replaces spoofed client headers;

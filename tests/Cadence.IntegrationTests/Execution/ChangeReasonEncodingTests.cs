@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Execution;
 
 using FluentAssertions;
 
@@ -19,14 +20,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Cadence.UnitTests.Execution.Endpoints;
+namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
 /// A reason for change typed with an em dash and Japanese reaches the audit trail exactly as typed when the
 /// client sends it in the RFC 8187 header form (ADR-2495, #4895). Covers both readers of the header: the
 /// ambient audit context (the eTMF compliance webhook) and the subject routes that read it directly.
 /// </summary>
-public sealed class ChangeReasonEncodingTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
+[Trait("Category", "Integration")]
+public sealed class ChangeReasonEncodingTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
 {
     private const string Typed = "IRB approval — 治験審査委員会の承認";
 
@@ -40,6 +42,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionApiFactory factory) : ICl
     [GxPRequirement("PRD-SYS-001")]
     public async Task EtmfComplianceUpdate_StoresTheTypedReasonInTheAuditEntry()
     {
+        factory.SkipIfUnavailable();
         var caller = TestSecurityContext.Identity($"etmf-{_run}", "Integration");
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/execution/webhooks/etmf")
@@ -68,6 +71,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionApiFactory factory) : ICl
     [GxPRequirement("PRD-SYS-001")]
     public async Task SubjectStateChange_StoresTheTypedReasonInTheAuditEntry()
     {
+        factory.SkipIfUnavailable();
         string subject = $"SUBJ-ENC-{_run}";
         using (var scope = factory.Services.CreateSeedingScope())
         {
@@ -97,6 +101,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionApiFactory factory) : ICl
     [Trait("Category", "GxP_OQ")]
     public async Task MalformedEncodedReason_IsRefusedAndNothingIsAudited()
     {
+        factory.SkipIfUnavailable();
         var caller = TestSecurityContext.Identity($"malformed-{_run}", "Site Coordinator");
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/execution/subjects/SUBJ-NONE-{_run}/state")

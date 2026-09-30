@@ -4,7 +4,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cadence.UnitTests.Execution;
+namespace Cadence.TestSupport.Execution;
 
 /// <summary>
 /// Test seeding runs outside any request, so it has no caller to attribute writes to. These scopes declare a

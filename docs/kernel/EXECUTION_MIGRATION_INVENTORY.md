@@ -318,7 +318,7 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
    Today `Unblinded` counts as a lifecycle state in `IsPostRandomization()` (`ClinicalSubject.cs:112-113`).
 2. **§11 lists unblinding and withdrawal as reachable logic ("`Unblind`/`Withdraw` … keep logic").** No production
    code path calls them. Their only callers are `tests/Cadence.UnitTests/Execution/Subjects/ClinicalSubjectTests.cs` and
-   `tests/Cadence.UnitTests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs`. The generic `PATCH /state` can reach `WITHDRAWN`/
+   `tests/Cadence.IntegrationTests/Execution/SubjectGoldenMasterTests.cs`. The generic `PATCH /state` can reach `WITHDRAWN`/
    `UNBLINDED` without setting `WithdrawnAt`/`UnblindedBy`. Only the guard logic is worth migrating; the fields are not.
 3. **§11 says to replace `ProtocolVersionRef` "with Applicability".** `ProtocolVersionRef` is used only by `SubjectConsent`
    (`Domain/Subjects/SubjectConsent.cs:17`). It records *which protocol version a consent covers*, which is the
