@@ -102,6 +102,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | — | `X-Change-Reason` is printable ASCII or RFC 8187 `UTF-8''` encoded, decoded before audit | [ADR-2495](docs/adr/2026-09-30-reason-for-change-header-encoding.md) |
 | — | Routes require a `resource:action` permission from the permission matrix | [ADR-2510](docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md) |
 | — | Safety, Notifications and CTMS render routes need `safety_report:create`, `notification:send`, `ctms_monitoring_visit:create` | [ADR-2511](docs/adr/2026-09-30-template-render-routes-need-a-permission.md) |
+| — | Form approval `payload_hash` is SHA-256 of the RFC 8785 canonical payload, computed by the client from what it submitted | [ADR-2513](docs/adr/2026-09-30-form-approval-hashes-the-rfc-8785-canonical-payload.md) |
 | — | The kernel API host serves the Canvas's kernel reads (nodes, zoom path, children, command catalogue, CanI, search, protocol versions, Trace, dependents, amendment impact) under `/api/v1/kernel` | [ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) |
 | — | Web coverage is measured over all source with a ratchet floor | [ADR-2530](docs/adr/2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) |
 | — | Python reference sources are deleted once their C# port is tested | [ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) |

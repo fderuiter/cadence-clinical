@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -120,8 +121,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
             new { study_id = Study, subject_id = $"SUBJ-{_run}", form_id = "VS_FORM", payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 129}" },
             Ct)));
         await AuditedAsync(investigator, c => c.PutAsJsonAsync($"/api/v1/execution/forms/{form}", new { payload }, Ct));
-        string storedPayload = await ReadPayloadAsync(
-            await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct)));
+        await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));
         var signer = investigator with
         {
             SigToken = TestSecurityContext.CreateSigToken(investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction),
@@ -137,7 +137,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
                     signer_name = "Dr Audit",
                     signer_role = "Site Investigator",
                     signing_reason = "PI approval and sign-off.",
-                    payload_hash = FormSubmissionApplicationService.ComputeSha256(storedPayload),
+                    payload_hash = JsonCanonicalization.Sha256Hex(payload),
                     signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },
@@ -202,13 +202,6 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
             .Where(e => e.UserId == "system" || e.UserId == "")
             .CountAsync(Ct);
         anonymous.Should().Be(0);
-    }
-
-    /// <summary>The form payload as stored, which is what a signature covers (PostgreSQL normalizes <c>jsonb</c>).</summary>
-    private static async Task<string> ReadPayloadAsync(HttpResponseMessage response)
-    {
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
-        return body.RootElement.GetProperty("payload").GetString()!;
     }
 
     private static async Task<string> ReadIdAsync(HttpResponseMessage response)

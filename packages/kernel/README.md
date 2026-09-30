@@ -117,6 +117,10 @@ await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.V
 - **Freezing.** `SubmitProtocolVersionForReview` freezes the content and sets `ContentHash`: `sha256:` and lower-case
   hex SHA-256 of the canonical JSON (`Cadence.Kernel.Trust.ContentHash`, the same form as `CanonicalSigner`).
   `ReturnProtocolVersionToDraft` clears the hash so the draft can be revised.
+- **Client-computed hashes.** `JsonCanonicalization` is RFC 8785 (JCS): members sorted by UTF-16 code units and
+  numbers written as ECMAScript writes a double, so a hash matches the one a browser computes with
+  `canonicalSerialize` in `packages/ui/signing.js`. Execution's form approval uses it (ADR-2513). `ContentHash` keeps
+  number text as written and is unchanged.
 - **Signatures.** `Attest` records an append-only `Attestation`. Only a person can sign, the authentication must be at
   most five minutes old, and the target's current hash must equal the signed one.
 - **Approval and withdrawal.** `ApproveProtocolVersion` and `WithdrawProtocolVersion` name an attestation with meaning

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
+using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -78,10 +79,10 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         factory.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var cra = factory.CreateSignedClient(Cra);
 
-        var response = await ApproveAsync(cra, "cra-01", formId, ApproveBody(signerId: "cra-01", signerRole: "Site Investigator", storedPayload));
+        var response = await ApproveAsync(cra, "cra-01", formId, ApproveBody(signerId: "cra-01", signerRole: "Site Investigator", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync(ct));
     }
@@ -92,10 +93,10 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
     {
         factory.SkipIfUnavailable();
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 121}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 
-        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "someone-else", signerRole: "Site Investigator", storedPayload));
+        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "someone-else", signerRole: "Site Investigator", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -107,16 +108,58 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         factory.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 122}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
 
-        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "", signerRole: "whatever the client says", storedPayload));
+        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody(signerId: "", signerRole: "whatever the client says", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(ct));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var manifest = body.RootElement.GetProperty("signature_manifest");
         manifest.GetProperty("signer_id").GetString().Should().Be("pi-01");
         manifest.GetProperty("signer_role").GetString().Should().Be("investigator");
+    }
+
+    /// <summary>
+    /// A signer hashes the payload text it submitted. PostgreSQL returns that payload with its keys reordered, its
+    /// spacing changed and <c>1.2e2</c> written as <c>120</c>, and the approval still verifies, because both sides hash
+    /// the RFC 8785 canonical form (#5023).
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ApproveForm_WithTheHashOfTheSubmittedText_VerifiesAgainstTheStoredJsonb()
+    {
+        factory.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string payload = "{ \"vssbp\" : 1.2e2,\n  \"observation_date\":\"2026-01-01T08:00:00Z\" }";
+        string formId = await CreateCompletedFormAsync(payload);
+        using var investigator = factory.CreateSignedClient(Investigator);
+        using var stored = JsonDocument.Parse(await investigator.GetStringAsync($"{FormsPath}{formId}", ct));
+        stored.RootElement.GetProperty("payload").GetString().Should().NotBe(payload, "the database rewrites jsonb text");
+
+        var response = await ApproveAsync(investigator, "pi-01", formId, ApproveBody("", "", payload));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(ct));
+    }
+
+    /// <summary>A hash of other content is refused and the form stays unsigned.</summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ApproveForm_WithTheHashOfOtherContent_Returns400InvalidPayloadHash()
+    {
+        factory.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 126}";
+        string formId = await CreateCompletedFormAsync(payload);
+        using var investigator = factory.CreateSignedClient(Investigator);
+
+        var response = await ApproveAsync(
+            investigator, "pi-01", formId, ApproveBody("", "", "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 127}"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(ct)).Should().Contain("INVALID_PAYLOAD_HASH");
+        using var form = JsonDocument.Parse(await investigator.GetStringAsync($"{FormsPath}{formId}", ct));
+        form.RootElement.GetProperty("status").GetString().Should().NotBe("APPROVED");
     }
 
     /// <summary>
@@ -131,11 +174,11 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         factory.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 123}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
         string before = await investigator.GetStringAsync($"{FormsPath}{formId}", ct);
 
-        var response = await investigator.PostAsJsonAsync($"{FormsPath}{formId}/approve", ApproveBody("", "", storedPayload), ct);
+        var response = await investigator.PostAsJsonAsync($"{FormsPath}{formId}/approve", ApproveBody("", "", payload), ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await response.Content.ReadAsStringAsync(ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
@@ -157,7 +200,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
     {
         factory.SkipIfUnavailable();
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 124}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
         string token = mismatch switch
         {
@@ -166,7 +209,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
             _ => TestSecurityContext.CreateSigToken("cra-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction),
         };
 
-        var response = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", storedPayload));
+        var response = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", payload));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -183,12 +226,12 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         factory.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}";
-        (string formId, string storedPayload) = await CreateCompletedFormAsync(payload);
+        string formId = await CreateCompletedFormAsync(payload);
         using var investigator = factory.CreateSignedClient(Investigator);
         string token = TestSecurityContext.CreateSigToken("pi-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction);
 
-        var first = await SendApprovalAsync(investigator, $"/api/v1/forms/{formId}/approve", token, ApproveBody("", "", storedPayload));
-        var replay = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", storedPayload));
+        var first = await SendApprovalAsync(investigator, $"/api/v1/forms/{formId}/approve", token, ApproveBody("", "", payload));
+        var replay = await SendApprovalAsync(investigator, $"{FormsPath}{formId}/approve", token, ApproveBody("", "", payload));
 
         first.StatusCode.Should().Be(HttpStatusCode.OK, await first.Content.ReadAsStringAsync(ct));
         replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -206,11 +249,10 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
     }
 
     /// <summary>
-    /// Creates and completes a form, returning its id and the payload as the server stores and returns it. The
-    /// signature covers that stored form: PostgreSQL keeps the payload as <c>jsonb</c>, which normalizes key
-    /// order and spacing, so a hash of the submitted text would not match (#4990).
+    /// Creates and completes a form and returns its id. A signer hashes the payload it submitted: the hash is over the
+    /// RFC 8785 canonical form, so PostgreSQL's <c>jsonb</c> rewriting of key order and spacing does not matter (#5023).
     /// </summary>
-    private async Task<(string Id, string StoredPayload)> CreateCompletedFormAsync(string payload)
+    private async Task<string> CreateCompletedFormAsync(string payload)
     {
         var ct = TestContext.Current.CancellationToken;
         using var investigator = factory.CreateSignedClient(Investigator);
@@ -223,8 +265,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
 
         var completed = await investigator.PostAsync($"{FormsPath}{formId}/complete", content: null, ct);
         completed.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var body = JsonDocument.Parse(await completed.Content.ReadAsStringAsync(ct));
-        return (formId, body.RootElement.GetProperty("payload").GetString()!);
+        return formId;
     }
 
     private static Task<HttpResponseMessage> ApproveAsync(HttpClient client, string signerId, string formId, object body) =>
@@ -250,7 +291,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
             signer_name = "Dr Test",
             signer_role = signerRole,
             signing_reason = SigningReason,
-            payload_hash = FormSubmissionApplicationService.ComputeSha256(payload),
+            payload_hash = JsonCanonicalization.Sha256Hex(payload),
             signed_at = FakeClock.DefaultStart.UtcDateTime,
         },
     };
