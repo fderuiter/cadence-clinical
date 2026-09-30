@@ -11,6 +11,7 @@ using Cadence.Kernel.Trust;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -26,12 +27,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 public sealed class FormSubmissionStateTests
 {
     private static readonly AuthenticatedCaller PrincipalInvestigator = new("pi-user-01", ["PRINCIPAL_INVESTIGATOR"]);
-
-    private sealed class FakeAuditContextAccessor(string userId = "pi_investigator_01", string reason = "PI approval") : ICurrentAuditContextAccessor
-    {
-        public string UserId => userId;
-        public string ChangeReason => reason;
-    }
 
     /// <summary>The payload hash a signer computes: SHA-256 of the RFC 8785 canonical payload (ADR-2513).</summary>
     private static string ComputeHash(string payload) => JsonCanonicalization.Sha256Hex(payload);
@@ -178,7 +173,7 @@ public sealed class FormSubmissionStateTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor("pi_investigator_01", "PI approval");
 
         var service = new FormSubmissionApplicationService(
             formRepo,
@@ -264,7 +259,7 @@ public sealed class FormSubmissionStateTests
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor("pi_investigator_01", "PI approval");
 
         var service = new FormSubmissionApplicationService(
             formRepo,
