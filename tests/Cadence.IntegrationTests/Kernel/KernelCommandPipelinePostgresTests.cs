@@ -341,7 +341,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     /// <summary>
     /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology, lineage,
-    /// artifact version, role and work-queue definition tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
+    /// artifact version, role, work-queue definition and validation run tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
@@ -380,6 +380,11 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
             var artifact = new RegisterArtifact(
                 tenant.TenantId, ArtifactId.New(), ArtifactVersionId.New(), ArtifactKind.Other, null, "Evidence", content, $"key-{Guid.NewGuid():N}", Reason);
             (await fixture.Sender.SendAsync(artifact, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        }
+
+        if (table.StartsWith("validation_", StringComparison.Ordinal))
+        {
+            await ValidationFindingPostgresTests.SeedRunAsync(fixture, ct);
         }
 
         // The Standards Registry definition tables fill only when a standard version is registered.

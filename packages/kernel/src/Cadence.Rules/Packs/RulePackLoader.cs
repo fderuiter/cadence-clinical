@@ -29,6 +29,10 @@ public static class RuleErrors
     /// <summary>The stored content does not read as a rule pack.</summary>
     public static readonly KernelError PackInvalid =
         new("K.Rules.PackInvalid", 422, "The rule pack content is not valid.");
+
+    /// <summary>The study's standards profile pins no rule pack, so there is nothing to validate with.</summary>
+    public static readonly KernelError NoRulePacks =
+        new("K.Rules.NoRulePacks", 422, "The study pins no rule packs; pin released rule packs in its standards profile first.");
 }
 
 /// <summary>A loaded pack, or why it could not be loaded.</summary>

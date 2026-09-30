@@ -88,6 +88,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K019 | The activity stream is an asynchronous, payload-free projection of outbox envelopes, scoped by the subject's zoom path and masked per reader at read time; integration events are unchanged | [ADR-2485](docs/adr/2026-09-30-reader-facing-activity-stream-projection.md) |
 | K020 | Evidence artifacts are immutable, numbered versions described by hash, size, media type and storage reference; attestations sign a version | [ADR-2454](docs/adr/2026-09-30-evidence-artifacts-as-immutable-hash-addressed-versions.md) |
 | K021 | Authority is kernel grants of a capability or role at a scope with bitemporal validity; a delegation is a grant bounded by its parent; one evaluator reads them | [ADR-2455](docs/adr/2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) |
+| K022 | A validation finding keeps its identity across immutable runs; its status is derived from the runs and from attested decisions | [ADR-2462](docs/adr/2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) |
 | K023 | Work queues are versioned definitions keyed by a capability; a person's items are what a source reports as due and the evaluator permits them to act on now, so revoking a grant removes its items | [ADR-2486](docs/adr/2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
@@ -236,6 +237,9 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - `IKernelSearch` finds studies, sites, organizations, concepts, terminology codes, standards and library items by
     code or title, querying the source tables under the tenant's RLS with GIN full-text indexes (ADR-2484).
   - Rule packs are released library items evaluated through `IRuleEvaluator` in `Cadence.Rules` (ADR-2461).
+  - A validation run records what a study's pinned rule packs detected. Findings keep their identity across runs,
+    are resolved by the run that no longer detects them, and are accepted or explained only with an attestation
+    over the decision's text; their status is derived from the runs and decisions on read (ADR-2462).
   - A Participant is identity only. Each Enrollment in a study keeps a bitemporal status history, takes a
     gap-free enrollment number under the study's lock, and needs an attestation to withdraw (ADR-2453).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`

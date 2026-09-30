@@ -118,7 +118,10 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
             i.Status,
             i.StandardVersionIds,
             i.ApprovalAttestationId,
-            i.DeprecationAttestationId);
+            i.DeprecationAttestationId)
+        {
+            VersionIndex = i.VersionIndex,
+        };
     }
 }
 

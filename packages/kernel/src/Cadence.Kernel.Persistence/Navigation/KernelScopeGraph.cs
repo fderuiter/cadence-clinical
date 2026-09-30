@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -136,6 +138,36 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     : new ScopeNode(
                         new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
                         new NodeRef(attestation.TargetKind, attestation.TargetId));
+
+            case NodeKinds.ValidationRun:
+                // A validation run and its findings sit under their study (ADR-2462), so a study's activity shows them.
+                var runId = ValidationRunId.FromGuid(node.Id);
+                var run = await db.Set<ValidationRun>().AsNoTracking()
+                    .Where(r => r.TenantId == tenant && r.Id == runId)
+                    .Select(r => new { r.StudyId, r.Stage, r.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return run is null
+                    ? null
+                    : new ScopeNode(new NodeSummary(NodeRef.For(runId, run.VersionIndex), $"{run.Stage} validation run", Code: null), NodeRef.For(run.StudyId));
+
+            case NodeKinds.ValidationFinding:
+                var findingId = ValidationFindingId.FromGuid(node.Id);
+                var detection = await db.Set<ValidationDetectionRecord>().AsNoTracking()
+                    .Where(d => d.TenantId == tenant && d.FindingId == findingId)
+                    .Select(d => new { d.StudyId, d.RuleId, d.Dataset, d.TargetKey })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (detection is null)
+                {
+                    return null;
+                }
+
+                var decisions = await db.Set<ValidationFinding>().AsNoTracking()
+                    .Where(f => f.TenantId == tenant && f.Id == findingId)
+                    .Select(f => (long?)f.VersionIndex)
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
+                    NodeRef.For(detection.StudyId));
 
             default:
                 return null;

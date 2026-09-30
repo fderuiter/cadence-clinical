@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,9 +19,10 @@ namespace Cadence.Kernel.Application.Trust;
 
 /// <summary>
 /// Handles <see cref="Attest"/>: checks the signer, the freshness of their authentication and that the target's
-/// current content has the attested hash, then records the attestation.
+/// current content has the attested hash, then records the attestation. Kinds the kernel core does not know are
+/// checked by the <see cref="IAttestationTargetCheck"/> registered for them.
 /// </summary>
-internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
+internal sealed class AttestHandler(IEnumerable<IAttestationTargetCheck> checks) : ICommandHandler<Attest, AttestationId>
 {
     public async Task<CommandResult<AttestationId>> HandleAsync(Attest command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -65,7 +67,7 @@ internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
     /// after it is recorded; an enrollment is signed in its current state, which every change of status changes; an
     /// artifact version's bytes never change, so its hash is fixed.
     /// </summary>
-    private static async Task<KernelError?> CheckTargetAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken)
+    private async Task<KernelError?> CheckTargetAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken)
     {
         AttestationTarget? current;
         switch (target.Kind)
@@ -117,7 +119,9 @@ internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
                 current = artifacts[0].Version(versionId)!.SignableTarget;
                 break;
             default:
-                return TrustErrors.TargetKindUnsupported.WithMessage($"Attestations cannot target '{target.Kind}' records.");
+                return checks.FirstOrDefault(c => string.Equals(c.Kind, target.Kind, StringComparison.Ordinal)) is { } check
+                    ? await check.CheckAsync(target, context, cancellationToken).ConfigureAwait(false)
+                    : TrustErrors.TargetKindUnsupported.WithMessage($"Attestations cannot target '{target.Kind}' records.");
         }
 
         if (current is null)
@@ -127,6 +131,22 @@ internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
 
         return string.Equals(current.ContentHash, target.ContentHash, StringComparison.Ordinal) ? null : TrustErrors.TargetContentChanged;
     }
+}
+
+/// <summary>
+/// Checks that a record of one kind may be signed with the requested target, for kinds outside the kernel core (spec
+/// §9.5). Register one per kind with <c>TryAddEnumerable</c>; <see cref="Attest"/> consults it after the core kinds.
+/// </summary>
+public interface IAttestationTargetCheck
+{
+    /// <summary>The NodeRef kind this check signs (<see cref="AttestationTarget.Kind"/>).</summary>
+    string Kind { get; }
+
+    /// <summary>
+    /// Null when <paramref name="target"/> may be signed now; otherwise <see cref="TrustErrors.TargetUnknown"/>,
+    /// <see cref="TrustErrors.TargetNotSignable"/> or <see cref="TrustErrors.TargetContentChanged"/>.
+    /// </summary>
+    Task<KernelError?> CheckAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken);
 }
 
 /// <summary>Registers the trust command handlers (spec §9.5).</summary>

@@ -13,12 +13,15 @@ and release a pack: [docs/kernel/RULE_PACKS.md](../../../../docs/kernel/RULE_PAC
   `RulePack` library items when they are drafted) and `RulePackLoader`, which loads released packs from the Standards
   Registry by library item or by a study's pins.
 - `Evaluation/`: the `IRuleEvaluator` port and `DotNetRuleEvaluator`, which compiles each pack once and streams
-  records. A Rust runtime can replace it behind the same port (K-RULE-3).
+  records. A Rust runtime can replace it behind the same port (K-RULE-3). `ValidationRunner` evaluates a study's
+  pinned packs and records the result as a kernel validation run (`RecordValidationRun`, ADR-2462).
 
 ## Registration
 
-`services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader` and the content validator. `RulePackLoader`
-needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides.
+`services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader`, the content validator and the scoped
+`ValidationRunner`. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
+`ValidationRunner` also needs the kernel's `IKernelCommandSender` and `IClock`, and the kernel host registers the
+validation handlers with `AddKernelValidation()` and `AddKernelValidationPersistence()`.
 
 ## Benchmark
 

@@ -310,7 +310,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
-| Quality | `ValidationRunCompleted`, `FindingOpened`, `FindingResolved`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
+| Quality | `ValidationRunCompleted` (with counts of detected, new and resolved findings), `FindingInvestigationStarted`, `FindingClassified`, `FindingAccepted`, `FindingExplained`, `FindingReopened`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
 | Intelligence | `ProposalCreated`, `ProposalApproved`, `ProposalExecuted`, `ProposalRejected` |
 
 - **K-EVT-1** Event schemas are additive-only within a major version; consumers tolerate unknown fields.
@@ -361,8 +361,9 @@ conditions are the conditions whose `met` is false.
   producer names that version.
 
 Authorization implements this today: a denied command returns `K.auth.denied` with the explanation, and the
-`DecisionDenied` event and audit entry record every evaluated condition with its evidence. Applicability,
-Finding and Indicator producers follow as those slices land (#4896).
+`DecisionDenied` event and audit entry record every evaluated condition with its evidence. Findings produce theirs
+as `quality.finding/<rule-id>@<version>` (ADR-2462). Applicability and Indicator producers follow as those slices
+land (#4896).
 
 ---
 
@@ -945,6 +946,15 @@ classification: DataIssue | MappingIssue | MetadataIssue | RuleIssue | NotAnIssu
 - **K-FIND-3** Every finding links to lineage, so its root cause (data, mapping, metadata, CRF version,
   CT package) is traversable.
 
+Implemented by #4812 ([ADR-2462](../adr/2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md)):
+a run is an immutable, study-scoped aggregate holding its released rule pack versions, datasets, versioned inputs and
+one detection row per problem. A finding's identifier is derived from tenant, study, stage, pack, rule and target
+(not the rule version), and its status is derived on read from the study's runs and a per-finding decisions record,
+so re-running never duplicates a finding or rewrites a run. `Accepted` needs a `Responsibility` and `Explained` an
+`Approved` attestation over the decision's own text. A run links `DefinedBy` from its rule packs and `ValidatedBy`
+from its inputs; each decision links `DerivedFrom` its run. Per-finding opened and resolved events are replaced by
+the counts on `ValidationRunCompleted`; `agency_rule_version` is not modelled yet.
+
 ### 10.4 Quality by design and RBQM
 
 ```
@@ -1147,6 +1157,7 @@ kernel, is merged into another, or is retired.
 | K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
 | K020 | Evidence artifacts | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version | ADR-2454 |
 | K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
+| K022 | Validation findings | Immutable study-scoped runs; finding identity derived from rule and target; status derived from runs and attested decisions | ADR-2462 |
 | K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
 
 ---

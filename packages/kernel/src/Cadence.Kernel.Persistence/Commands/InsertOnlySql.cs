@@ -41,6 +41,9 @@ internal static class InsertOnlySql
 
         // Activity stream projection (ADR-2485): a projected event never changes.
         "activity_entries",
+
+        // Validation runs: fixed once recorded; findings are derived from them (spec §10.3).
+        "validation_runs", "validation_run_packs", "validation_run_datasets", "validation_run_inputs", "validation_detections",
     ];
 
     public static string CreateFunction(string schema) => $$"""

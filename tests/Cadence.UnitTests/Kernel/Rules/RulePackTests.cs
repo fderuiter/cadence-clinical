@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
@@ -26,7 +27,7 @@ public class RulePackTests
 {
     private static readonly DateOnly AsOf = new(2026, 9, 30);
 
-    private static readonly RuleEvaluationContext Standardization = new(RuleStage.Standardization, AsOf)
+    private static readonly RuleEvaluationContext Standardization = new(ValidationStage.Standardization, AsOf)
     {
         Standard = "SDTMIG",
         StandardVersion = "3.4",
@@ -106,7 +107,7 @@ public class RulePackTests
         // design-stage rule.
         violations.Select(v => (v.RecordKey, v.RuleId)).Should().Equal(("row-1", "R1"), ("row-1", "R2"), ("row-3", "R2"));
         violations[0].Observed.Should().Equal(new ObservedValue("SYS", RuleValue.FromNumber(90m)), new ObservedValue("DIA", RuleValue.FromNumber(100m)));
-        violations[0].Severity.Should().Be(RuleSeverity.Error);
+        violations[0].Severity.Should().Be(ValidationSeverity.Error);
         violations[0].Explanation.Should().Be("Systolic below diastolic.");
         violations[0].RuleVersion.Should().Be(3);
 
@@ -114,7 +115,7 @@ public class RulePackTests
             .Select(v => v.RuleId).Should().Contain("R3", "R3 is effective from 2027");
         new DotNetRuleEvaluator().Evaluate(SampleRulePacks.Sample(), Standardization with { Standard = "SENDIG" }, records)
             .Select(v => v.RuleId).Should().NotContain("R1", "R1 applies to SDTMIG only");
-        new DotNetRuleEvaluator().Evaluate(SampleRulePacks.Sample(), new RuleEvaluationContext(RuleStage.Design, AsOf), records)
+        new DotNetRuleEvaluator().Evaluate(SampleRulePacks.Sample(), new RuleEvaluationContext(ValidationStage.Design, AsOf), records)
             .Select(v => v.RuleId).Distinct().Should().Equal("R4");
     }
 
@@ -135,7 +136,7 @@ public class RulePackTests
             var pack = RandomRuleGenerator.Pack(random, rules: 8);
             var records = RandomRuleGenerator.Records(random, count: 40);
             var evaluator = new DotNetRuleEvaluator();
-            var context = new RuleEvaluationContext(RuleStage.Collection, AsOf);
+            var context = new RuleEvaluationContext(ValidationStage.Collection, AsOf);
 
             var expected = Describe(evaluator.Evaluate(pack, context, records));
 
@@ -159,7 +160,7 @@ public class RulePackTests
         {
             var random = new Random(seed);
             return new DotNetRuleEvaluator()
-                .Evaluate(RandomRuleGenerator.Pack(random, 8), new RuleEvaluationContext(RuleStage.Collection, AsOf), RandomRuleGenerator.Records(random, 40))
+                .Evaluate(RandomRuleGenerator.Pack(random, 8), new RuleEvaluationContext(ValidationStage.Collection, AsOf), RandomRuleGenerator.Records(random, 40))
                 .Count;
         });
 
@@ -198,8 +199,8 @@ internal static class RandomRuleGenerator
     [
         .. Enumerable.Range(1, rules).Select(i => new Rule(
             $"G{i}", 1 + random.Next(3), RuleAuthority.Sponsor, new SourceCitation("Generated sponsor rule", null, null),
-            new RuleApplicability(RuleStage.Collection, null, null, null, random.Next(3) == 0 ? Datasets[random.Next(Datasets.Length)] : null),
-            (RuleSeverity)random.Next(3), Expression(random, 0), $"Generated rule {i}.", null, EffectivePeriod.Always)),
+            new RuleApplicability(ValidationStage.Collection, null, null, null, random.Next(3) == 0 ? Datasets[random.Next(Datasets.Length)] : null),
+            (ValidationSeverity)random.Next(3), Expression(random, 0), $"Generated rule {i}.", null, EffectivePeriod.Always)),
     ]);
 
     public static List<RuleRecord> Records(Random random, int count) =>

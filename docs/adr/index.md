@@ -41,6 +41,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K019 | Reader-facing activity stream projection | [ADR-2485](2026-09-30-reader-facing-activity-stream-projection.md) |
 | K020 | Evidence artifacts as immutable, hash-addressed versions | [ADR-2454](2026-09-30-evidence-artifacts-as-immutable-hash-addressed-versions.md) |
 | K021 | Grants, roles and delegation as bitemporal kernel authority | [ADR-2455](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) |
+| K022 | Validation findings derived from immutable runs and attested decisions | [ADR-2462](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) |
 | K023 | Work queues as capability-keyed definitions | [ADR-2486](2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 
 ## Domain-Based Decisions Log
@@ -64,6 +65,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2455: Grants, Roles and Delegation as Bitemporal Kernel Authority](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
+- [ADR-2462: Validation Findings Derived from Immutable Runs and Attested Decisions](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) (2026-09-30)
 - [ADR-2470: Per-Tenant Terminology, Pinned Code-System Versions and Versioned Concepts](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) (2026-09-30)
 - [ADR-2471: Lineage Store and Masked Read Contract](2026-09-30-lineage-store-and-masked-read-contract.md) (2026-09-30)
 - [ADR-2472: Executable Protocol Design Document with Stable Element IDs](2026-09-30-executable-protocol-design-document.md) (2026-09-30)

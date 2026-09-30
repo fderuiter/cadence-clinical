@@ -63,6 +63,12 @@ public static class KernelEventFamilies
         ["DelegationSigned"] = EventFamily.Trust,
         ["GrantRevoked"] = EventFamily.Trust,
         ["WorkQueueDefined"] = EventFamily.Trust,
+        ["ValidationRunCompleted"] = EventFamily.Quality,
+        ["FindingInvestigationStarted"] = EventFamily.Quality,
+        ["FindingClassified"] = EventFamily.Quality,
+        ["FindingAccepted"] = EventFamily.Quality,
+        ["FindingExplained"] = EventFamily.Quality,
+        ["FindingReopened"] = EventFamily.Quality,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Every classified event type.</summary>

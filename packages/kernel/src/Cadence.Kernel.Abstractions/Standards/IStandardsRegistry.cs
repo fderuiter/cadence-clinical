@@ -62,7 +62,11 @@ public sealed record LibraryItemView(
     GovernanceStatus Status,
     IReadOnlyList<StandardVersionId> StandardVersions,
     AttestationId? ApprovalAttestation,
-    AttestationId? DeprecationAttestation);
+    AttestationId? DeprecationAttestation)
+{
+    /// <summary>The library item's version index (ADR-2481 §4.2), which pins a NodeRef to the version read.</summary>
+    public long VersionIndex { get; init; }
+}
 
 /// <summary>What a study declared: standards, terminology versions and pinned library item versions.</summary>
 public sealed record StudyStandardsProfileView(
