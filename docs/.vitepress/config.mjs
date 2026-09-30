@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { assertThemeLinksExist, repoLinksPlugin } from "./repoLinks.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -139,142 +141,156 @@ function getApiSidebarGroups() {
       ],
     },
     {
-      text: "Gateway & Platform Infrastructure",
+      text: "Gateway",
       collapsed: false,
       items: [
-        { text: "API Gateway Proxy (8000)", link: "/api/gateway" },
-        { text: "Compliance Engine", link: "/api/compliance" },
+        {
+          text: "API Gateway (8000)",
+          link: "https://github.com/fderuiter/cadence-clinical/blob/main/apps/gateway/README.md",
+        },
       ],
     },
   ];
 }
 
-export default withMermaid(
-  defineConfig({
-    title: "Cadence Clinical Portal",
-    description:
-      "Metadata-Driven Clinical Execution Platform Documentation Portal",
-    base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
-    outDir: path.resolve(__dirname, "dist"),
-    srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
-    ignoreDeadLinks: true,
-    vite: {
-      build: {
-        chunkSizeWarningLimit: 2000,
-      },
+const config = defineConfig({
+  title: "Cadence Clinical Portal",
+  description:
+    "Metadata-Driven Clinical Execution Platform Documentation Portal",
+  base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
+  outDir: path.resolve(__dirname, "dist"),
+  srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
+  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; any other dead link fails the build.
+  ignoreDeadLinks: false,
+  markdown: {
+    config(md) {
+      md.use(repoLinksPlugin, {
+        docsDir: path.resolve(__dirname, ".."),
+        repoRoot: path.resolve(__dirname, "../.."),
+      });
     },
-    themeConfig: {
-      search: {
-        provider: "local",
-      },
-      nav: [
-        { text: "Home", link: "/" },
-        { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
-        { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
-        { text: "Architecture", link: "/ARCHITECTURE" },
-        { text: "ADRs", link: "/adr/index" },
-        { text: "API Reference", link: "/api/index" },
-        { text: "CLI Reference", link: "/cli" },
-        { text: "Agents", link: "/AGENTS" },
-      ],
-      sidebar: [
-        {
-          text: "Overview & Guides",
-          items: [
-            { text: "Welcome & Readme", link: "/" },
-            { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
-            { text: "System Architecture", link: "/ARCHITECTURE" },
-            {
-              text: "Local Development Environment",
-              link: "/LOCAL_DEV_ENVIRONMENT",
-            },
-            { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
-            { text: "Database and Migrations", link: "/OPERATIONAL_DATABASE" },
-            { text: "Testing and Requirement Qualification", link: "/TESTING" },
-            { text: "CI and Quality Gates", link: "/CI" },
-            { text: "Developer CLI (`cadence`)", link: "/cli" },
-            { text: "Agent & Contributor Rules", link: "/AGENTS" },
-          ],
-        },
-        {
-          text: "Clinical Kernel",
-          items: [
-            {
-              text: "Kernel Specification v0.2",
-              link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
-            },
-            {
-              text: "Roadmap (§15)",
-              link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
-            },
-            {
-              text: "Execution Migration Inventory",
-              link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
-            },
-            {
-              text: "Clock Migration Backlog",
-              link: "/kernel/CLOCK_MIGRATION_BACKLOG",
-            },
-          ],
-        },
-        {
-          text: "Python-to-.NET Port (Historical)",
-          collapsed: true,
-          items: [
-            { text: "Modernization Hub Overview", link: "/migration/index" },
-            {
-              text: "Surface & Data Topology Audit",
-              link: "/migration/SYSTEM_TOPOLOGY_AUDIT",
-            },
-            {
-              text: "Dependency & Parity Catalog",
-              link: "/migration/DEPENDENCY_AND_PARITY_CATALOG",
-            },
-            {
-              text: "Bounded Context Migration Matrix",
-              link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX",
-            },
-            {
-              text: "Solution Scaffold Guide",
-              link: "/migration/SCAFFOLD_GUIDE",
-            },
-            {
-              text: "Migration Workflow Playbook",
-              link: "/MIGRATION_WORKFLOW",
-            },
-          ],
-        },
-        {
-          text: "REST API Reference",
-          items: getApiSidebarGroups(),
-        },
-        {
-          text: "Enterprise UI Components",
-          items: [
-            { text: "Component Catalog Overview", link: "/components/index" },
-            { text: "ClinicalDataTable", link: "/components/data-table" },
-            { text: "ClinicalModal", link: "/components/modal" },
-            { text: "PersonaSwitcher", link: "/components/persona-switcher" },
-            { text: "AuditLogViewer", link: "/components/audit-viewer" },
-          ],
-        },
-        {
-          text: "Baseline Specifications",
-          items: [
-            { text: "Data Lifecycle Management", link: "/DATA_LIFECYCLE" },
-            { text: "Feature Matrix", link: "/FEATURE_MATRIX" },
-            { text: "System Requirements Specification (SRS)", link: "/SRS" },
-          ],
-        },
-        {
-          text: "SDLC Compliance Guidelines",
-          items: getSdlcSidebar(),
-        },
-        {
-          text: "Architectural Decision Records (ADRs)",
-          items: getAdrSidebarGroups(),
-        },
-      ],
+  },
+  vite: {
+    build: {
+      chunkSizeWarningLimit: 2000,
     },
-  })
-);
+  },
+  themeConfig: {
+    search: {
+      provider: "local",
+    },
+    nav: [
+      { text: "Home", link: "/" },
+      { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
+      { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
+      { text: "Architecture", link: "/ARCHITECTURE" },
+      { text: "ADRs", link: "/adr/index" },
+      { text: "API Reference", link: "/api/index" },
+      { text: "CLI Reference", link: "/cli" },
+      { text: "Agents", link: "/AGENTS" },
+    ],
+    sidebar: [
+      {
+        text: "Overview & Guides",
+        items: [
+          { text: "Welcome & Readme", link: "/" },
+          { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
+          { text: "System Architecture", link: "/ARCHITECTURE" },
+          {
+            text: "Local Development Environment",
+            link: "/LOCAL_DEV_ENVIRONMENT",
+          },
+          { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
+          { text: "Database and Migrations", link: "/OPERATIONAL_DATABASE" },
+          { text: "Testing and Requirement Qualification", link: "/TESTING" },
+          { text: "CI and Quality Gates", link: "/CI" },
+          { text: "Developer CLI (`cadence`)", link: "/cli" },
+          { text: "Agent & Contributor Rules", link: "/AGENTS" },
+        ],
+      },
+      {
+        text: "Clinical Kernel",
+        items: [
+          {
+            text: "Kernel Specification v0.2",
+            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
+          },
+          {
+            text: "Roadmap (§15)",
+            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
+          },
+          {
+            text: "Execution Migration Inventory",
+            link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
+          },
+          {
+            text: "Clock Migration Backlog",
+            link: "/kernel/CLOCK_MIGRATION_BACKLOG",
+          },
+        ],
+      },
+      {
+        text: "Python-to-.NET Port (Historical)",
+        collapsed: true,
+        items: [
+          { text: "Modernization Hub Overview", link: "/migration/index" },
+          {
+            text: "Surface & Data Topology Audit",
+            link: "/migration/SYSTEM_TOPOLOGY_AUDIT",
+          },
+          {
+            text: "Dependency & Parity Catalog",
+            link: "/migration/DEPENDENCY_AND_PARITY_CATALOG",
+          },
+          {
+            text: "Bounded Context Migration Matrix",
+            link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX",
+          },
+          {
+            text: "Solution Scaffold Guide",
+            link: "/migration/SCAFFOLD_GUIDE",
+          },
+          {
+            text: "Migration Workflow Playbook",
+            link: "/MIGRATION_WORKFLOW",
+          },
+        ],
+      },
+      {
+        text: "REST API Reference",
+        items: getApiSidebarGroups(),
+      },
+      {
+        text: "Enterprise UI Components",
+        items: [
+          { text: "Component Catalog Overview", link: "/components/index" },
+          { text: "ClinicalDataTable", link: "/components/data-table" },
+          { text: "ClinicalModal", link: "/components/modal" },
+          { text: "PersonaSwitcher", link: "/components/persona-switcher" },
+          { text: "AuditLogViewer", link: "/components/audit-viewer" },
+        ],
+      },
+      {
+        text: "Baseline Specifications",
+        items: [
+          { text: "Data Lifecycle Management", link: "/DATA_LIFECYCLE" },
+          { text: "Feature Matrix", link: "/FEATURE_MATRIX" },
+          { text: "System Requirements Specification (SRS)", link: "/SRS" },
+        ],
+      },
+      {
+        text: "SDLC Compliance Guidelines",
+        items: getSdlcSidebar(),
+      },
+      {
+        text: "Architectural Decision Records (ADRs)",
+        items: getAdrSidebarGroups(),
+      },
+    ],
+  },
+});
+
+// VitePress checks links inside pages but not the nav and sidebar, so check those here.
+assertThemeLinksExist(config.themeConfig, path.resolve(__dirname, ".."));
+
+export default withMermaid(config);
