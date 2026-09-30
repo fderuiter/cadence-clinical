@@ -343,6 +343,11 @@ ConceptMapping(concept, code_system_version, code, relation: exact|broader|narro
 - **K-SEM-2** Licensed code-system content (MedDRA, WHODrug, SNOMED CT) is loaded per tenant under the
   tenant's licence; the platform ships the structure, not the licensed content.
 
+Implemented by ADR-2470 (#4807): every tenant loads the terminology releases it adopts, public ones included, through
+`ImportCodeSystemVersion` (or `TerminologyPackageLoader`, which checks the publisher's SHA-256 first). A
+code-system version and its entries, and each concept version, are insert-only; reads go through `IConceptRegistry`,
+which has no "latest" lookup. How to load a release: [`packages/kernel/README.md`](../../packages/kernel/README.md#concept-registry-adr-2470).
+
 ### 6.2 Executable protocol
 
 The protocol is a **machine-readable specification of the experiment**. The PDF, the CRF set, the SoA grid,
@@ -972,7 +977,7 @@ kernel, is merged into another, or is retired.
 | K002 | Bitemporal implementation | Hand-rolled `tstzrange` + exclusion constraints | ADR-2246 |
 | K003 | Tenant isolation | RLS in a shared schema; DB-per-tenant upgrade path | ADR-2250 |
 | K004 | Policy engine | Hand-coded evaluator behind `IAuthorizer`, authority computed from evidence | ADR-2251 |
-| K005 | Concept vocabulary | Concept Registry keyed by CDISC Biomedical Concepts with mapped external codes | ADR-2252 |
+| K005 | Concept vocabulary | Concept Registry keyed by CDISC Biomedical Concepts with mapped external codes; per-tenant, pinned terminology | ADR-2252, ADR-2470 |
 | K006 | Identity vault | Separate schema and key hierarchy, same deployment; layered identity | ADR-2253 |
 | K007 | Neo4j for designer | Dropped for v1 | ADR-2245 |
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |

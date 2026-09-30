@@ -9,6 +9,12 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
 | [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
 | [`kernel.audit_entries`](#kernelaudit_entries) | `AuditEntryRecord` | 14 |
+| [`kernel.code_system_entries`](#kernelcode_system_entries) | `CodeSystemEntry` | 9 |
+| [`kernel.code_system_versions`](#kernelcode_system_versions) | `CodeSystemVersion` | 15 |
+| [`kernel.code_systems`](#kernelcode_systems) | `CodeSystem` | 10 |
+| [`kernel.concept_mappings`](#kernelconcept_mappings) | `ConceptMapping` | 13 |
+| [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
+| [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
@@ -18,6 +24,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
+| [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
 
 ## kernel.audit_chain_heads
@@ -72,6 +79,168 @@ Indexes:
 
 - `IX_audit_entries_activity_id`: (`activity_id`)
 - `IX_audit_entries_tenant_id_sequence`: unique (`tenant_id`, `sequence`)
+
+## kernel.code_system_entries
+
+Entity: `CodeSystemEntry`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `code_system_version_id` | `uuid` | no |  | PK |
+| `ordinal` | `integer` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `code` | `character varying(64)` | no |  |  |
+| `definition` | `text` | yes |  |  |
+| `display` | `character varying(1000)` | no |  |  |
+| `group_code` | `character varying(64)` | yes |  |  |
+| `submission_value` | `character varying(255)` | yes |  |  |
+| `synonyms` | `text[]` | no |  |  |
+
+Foreign keys:
+
+- `FK_code_system_entries_code_system_versions_tenant_id_code_sys~`: (`tenant_id`, `code_system_version_id`) references `kernel.code_system_versions` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_code_system_entries_tenant_id_code_system_version_id_code`: (`tenant_id`, `code_system_version_id`, `code`)
+- `IX_code_system_entries_tenant_id_code_system_version_id_group_~`: unique (`tenant_id`, `code_system_version_id`, `group_code`, `code`)
+
+## kernel.code_system_versions
+
+Entity: `CodeSystemVersion`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `code_system_id` | `uuid` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `entry_count` | `integer` | no |  |  |
+| `package_byte_length` | `bigint` | no |  |  |
+| `package_file_name` | `character varying(255)` | no |  |  |
+| `package_format` | `character varying(64)` | no |  |  |
+| `package_sha256` | `character(64)` | no |  |  |
+| `package_source_uri` | `character varying(1024)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `released_on` | `date` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version` | `character varying(64)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_code_system_versions_code_systems_tenant_id_code_system_id`: (`tenant_id`, `code_system_id`) references `kernel.code_systems` (`tenant_id`, `id`), on delete restrict
+- `FK_code_system_versions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_code_system_versions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_code_system_versions_tenant_id_code_system_id_version`: unique (`tenant_id`, `code_system_id`, `version`)
+
+## kernel.code_systems
+
+Entity: `CodeSystem`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `license` | `character varying(32)` | no |  |  |
+| `name` | `character varying(255)` | no |  |  |
+| `publisher` | `character varying(255)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `uri` | `character varying(512)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_code_systems_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_code_systems_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_code_systems_tenant_id_uri`: unique (`tenant_id`, `uri`)
+
+## kernel.concept_mappings
+
+Entity: `ConceptMapping`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `code` | `character varying(64)` | no |  |  |
+| `code_system_version_id` | `uuid` | no |  |  |
+| `concept_id` | `uuid` | no |  |  |
+| `concept_version` | `integer` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `evidence` | `character varying(2000)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `relation` | `character varying(32)` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_concept_mappings_code_system_versions_tenant_id_code_system~`: (`tenant_id`, `code_system_version_id`) references `kernel.code_system_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_concept_mappings_concept_revisions_tenant_id_concept_id_con~`: (`tenant_id`, `concept_id`, `concept_version`) references `kernel.concept_revisions` (`tenant_id`, `concept_id`, `version`), on delete restrict
+- `FK_concept_mappings_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_concept_mappings_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_concept_mappings_tenant_id_code_system_version_id_code`: (`tenant_id`, `code_system_version_id`, `code`)
+- `IX_concept_mappings_tenant_id_concept_id`: (`tenant_id`, `concept_id`)
+- `IX_concept_mappings_tenant_id_concept_id_concept_version`: (`tenant_id`, `concept_id`, `concept_version`)
+
+## kernel.concept_revisions
+
+Entity: `ConceptRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `concept_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `version` | `integer` | no |  | PK |
+| `definition` | `text` | no |  |  |
+| `preferred_label` | `character varying(500)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+
+Foreign keys:
+
+- `FK_concept_revisions_concepts_tenant_id_concept_id`: (`tenant_id`, `concept_id`) references `kernel.concepts` (`tenant_id`, `id`), on delete restrict
+
+## kernel.concepts
+
+Entity: `Concept`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `definition` | `text` | no |  |  |
+| `external_code` | `character varying(64)` | yes |  |  |
+| `kind` | `character varying(32)` | no |  |  |
+| `origin` | `character varying(32)` | no |  |  |
+| `preferred_label` | `character varying(500)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version` | `integer` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_concepts_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_concepts_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_concepts_tenant_id_external_code`: unique (`tenant_id`, `external_code`) where `external_code IS NOT NULL`
 
 ## kernel.domain_events
 
@@ -133,6 +302,7 @@ Foreign keys:
 
 Indexes:
 
+- `AK_organizations_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_organizations_tenant_id_code`: unique (`tenant_id`, `code`)
 
 ## kernel.outbox_messages
@@ -223,13 +393,14 @@ Entity: `Site`
 
 Foreign keys:
 
-- `FK_sites_organizations_institution_id`: (`institution_id`) references `kernel.organizations` (`id`), on delete restrict
+- `FK_sites_organizations_tenant_id_institution_id`: (`tenant_id`, `institution_id`) references `kernel.organizations` (`tenant_id`, `id`), on delete restrict
 - `FK_sites_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
 
 Indexes:
 
+- `AK_sites_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_sites_institution_id_site_code`: unique (`institution_id`, `site_code`)
-- `IX_sites_tenant_id`: (`tenant_id`)
+- `IX_sites_tenant_id_institution_id`: (`tenant_id`, `institution_id`)
 
 ## kernel.studies
 
@@ -251,12 +422,13 @@ Entity: `Study`
 
 Foreign keys:
 
-- `FK_studies_organizations_sponsor_id`: (`sponsor_id`) references `kernel.organizations` (`id`), on delete restrict
+- `FK_studies_organizations_tenant_id_sponsor_id`: (`tenant_id`, `sponsor_id`) references `kernel.organizations` (`tenant_id`, `id`), on delete restrict
 - `FK_studies_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
 
 Indexes:
 
-- `IX_studies_sponsor_id`: (`sponsor_id`)
+- `AK_studies_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_studies_tenant_id_sponsor_id`: (`tenant_id`, `sponsor_id`)
 - `IX_studies_tenant_id_study_code`: unique (`tenant_id`, `study_code`)
 
 ## kernel.study_sites
@@ -278,15 +450,42 @@ Entity: `StudySite`
 
 Foreign keys:
 
-- `FK_study_sites_sites_site_id`: (`site_id`) references `kernel.sites` (`id`), on delete restrict
-- `FK_study_sites_studies_study_id`: (`study_id`) references `kernel.studies` (`id`), on delete restrict
+- `FK_study_sites_sites_tenant_id_site_id`: (`tenant_id`, `site_id`) references `kernel.sites` (`tenant_id`, `id`), on delete restrict
+- `FK_study_sites_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
 - `FK_study_sites_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
 
 Indexes:
 
-- `IX_study_sites_site_id`: (`site_id`)
+- `AK_study_sites_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_study_sites_study_id_site_id`: unique (`study_id`, `site_id`)
-- `IX_study_sites_tenant_id`: (`tenant_id`)
+- `IX_study_sites_tenant_id_site_id`: (`tenant_id`, `site_id`)
+- `IX_study_sites_tenant_id_study_id`: (`tenant_id`, `study_id`)
+
+## kernel.tenant_memberships
+
+Entity: `TenantMembership`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `is_active` | `boolean` | no |  |  |
+| `person_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_tenant_memberships_people_person_id`: (`person_id`) references `kernel.people` (`id`), on delete restrict
+- `FK_tenant_memberships_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_tenant_memberships_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_tenant_memberships_person_id`: (`person_id`)
+- `IX_tenant_memberships_tenant_id_person_id`: unique (`tenant_id`, `person_id`)
 
 ## kernel.tenants
 

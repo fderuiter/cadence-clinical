@@ -56,6 +56,36 @@ Connect the application with a separate login role that is not the owner and has
 no update on insert-only tables, no delete anywhere, and the tenant directory. A superuser bypasses RLS entirely, so
 never connect the application as one.
 
+## Concept Registry (ADR-2470)
+
+The Knowledge engine's semantic layer (spec §6.1, ADR-2252). Types live in the `Knowledge` namespaces of each assembly.
+
+| Concept | Table | Changes |
+| --- | --- | --- |
+| `CodeSystem` (URI, publisher, `LicenseClass`) | `code_systems` | registered once per tenant and URI |
+| `CodeSystemVersion` with its entries | `code_system_versions`, `code_system_entries` | insert-only |
+| `Concept` (current version, status) and its versions | `concepts`, `concept_revisions` | revisions insert-only |
+| `ConceptMapping` (concept version → `Coding`, relation, status, evidence) | `concept_mappings` | review status only |
+
+Every tenant loads the releases it adopts, public ones included; licensed content (MedDRA, WHODrug, SNOMED CT) is
+never in this repository. To load a release, register its code system once, then load the publisher's file:
+
+```csharp
+await sender.SendAsync(new RegisterCodeSystem(tenant, ctId, KnownCodeSystems.NciThesaurus, "CDISC CT", "CDISC/NCI EVS",
+    LicenseClass.Open, key, "Adopt CDISC CT"));
+var version = await new TerminologyPackageLoader(sender).LoadAsync(
+    new TerminologyRelease(tenant, ctId, CodeSystemVersionId.New(), "2026-06-27", new DateOnly(2026, 6, 27),
+        "SDTM Terminology.txt", "https://evs.nci.nih.gov/ftp1/CDISC/SDTM/", publishedSha256, "Adopt SDTM CT 2026-06-27"),
+    File.ReadAllBytes(path), new CdiscControlledTerminologyParser());
+```
+
+The loader refuses a file whose SHA-256 differs from the expected one; loading the same file again replays the import.
+Parsers exist for NCI EVS CDISC CT text (`CdiscControlledTerminologyParser`), `ucum-essence.xml` (`UcumEssenceParser`)
+and `Loinc.csv` (`LoincTableParser`); any other source can send `ImportCodeSystemVersion` with its entries.
+
+Read through `IConceptRegistry` (registered by `AddKernelPersistence`): every lookup names a concept version
+(`ConceptRef`) or a code-system version; there is no "latest". Only confirmed mappings resolve a code to a concept.
+
 ## Bitemporal tables (ADR-2246)
 
 A bitemporal entity implements `IBitemporalEntity` (`TemporalPeriod Period`, made of two half-open `TimeRange`s).

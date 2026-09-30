@@ -59,7 +59,7 @@ docs/CDISC/
 
 - **File**: `docs/CDISC/cdisc-library-api.json`
 - **Purpose**: OpenAPISpec/Swagger representation of the official CDISC Library API.
-- **Usage**: Used by Cadence Clinical metadata utilities (`apps/designer/` and `packages/core-models/`) to dynamically query standard codelists, domain structures, and variable definitions.
+- **Usage**: Reference description of the CDISC Library API. No code calls it yet; the kernel's Standards Registry ([#4809](https://github.com/fderuiter/cadence-clinical/issues/4809)) is where standard definitions will be loaded.
 
 ---
 
@@ -110,7 +110,7 @@ docs/CDISC/
   - `SDTM_v2.0.json`: Study Data Tabulation Model v2.0 core structure.
   - `SDTM_v2.1.json`: Study Data Tabulation Model v2.1 core structure.
   - `SDTMIG_v3.4.json`: SDTM Implementation Guide v3.4 domain definitions.
-- **Role in Cadence Clinical**: Underpins automated transformation of EDC observational data (`apps/execution/sdtm_mapper.py`) into regulatory-compliant SDTM domains (`DM`, `AE`, `VS`, `CM`, `LB`, `EX`, `DS`).
+- **Role in Cadence Clinical**: Reference for SDTM domains (`DM`, `AE`, `VS`, `CM`, `LB`, `EX`, `DS`). SDTM is a projection of clinical truth, never its source (K-TRUTH-1); the .NET projection is planned as kernel Phase 2 work ([#4810](https://github.com/fderuiter/cadence-clinical/issues/4810) mapping specifications, [#4814](https://github.com/fderuiter/cadence-clinical/issues/4814) the SDTM projection). The Python SDTM mapper it once fed has been removed.
 
 ---
 
@@ -126,7 +126,7 @@ docs/CDISC/
   - `ADaM_popPK_v1.0.json`: Population Pharmacokinetics Data Structure.
   - `ADaMIG_NCA_v1.0.json`: Non-Compartmental Analysis Implementation Guide.
   - `ADaMIG_MD_v1.0.json`: Medical Devices Implementation Guide.
-- **Role in Cadence Clinical**: Exposes biostatistical dataset generation endpoints for regulatory submission analysis pipelines (`packages/core-models/sdtm/`).
+- **Role in Cadence Clinical**: Reference for ADaM analysis datasets. No .NET code generates ADaM datasets yet; like SDTM, they will be projections built on the kernel's standards work (kernel specification §15).
 
 ---
 
@@ -181,22 +181,16 @@ Provides official CDISC Controlled Terminology packages (release version `2024-0
 
 ## 🛠️ Programmatic Usage in Cadence Clinical
 
-Developers and agents can utilize these schemas in Python service modules:
+The files are read at build time today, not at run time:
 
-```python
-import json
-from pathlib import Path
+- `packages/ui/scripts/generate-types.js` generates the shared UI's CDASH and CDASHIG TypeScript types from
+  `Library/Data_Collection/CDASH_Model_v1.3.json` and `Library/Data_Collection/CDASHIG_v2.3.json` before the
+  `packages/ui` build.
+- The detect-secrets baseline cleaner (`packages/tooling_core`) excludes `docs/CDISC/` from secret scanning.
 
-# Load CDASH implementation guide
-cdash_path = Path("docs/CDISC/Library/Data_Collection/CDASHIG_v2.3.json")
-with open(cdash_path, "r", encoding="utf-8") as f:
-    cdash_spec = json.load(f)
-
-# Load Controlled Terminology for SDTM
-ct_path = Path("docs/CDISC/Library/Terminology/SDTM_CT_2024-09-27.json")
-with open(ct_path, "r", encoding="utf-8") as f:
-    sdtm_ct = json.load(f)
-```
+Loading these definitions into the kernel (versioned standards and controlled terminology) is tracked in
+[#4807](https://github.com/fderuiter/cadence-clinical/issues/4807) and
+[#4809](https://github.com/fderuiter/cadence-clinical/issues/4809).
 
 ---
 

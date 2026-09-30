@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Kernel.Persistence.Commands;
 
@@ -36,6 +37,18 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
     public DbSet<Study> Studies => Set<Study>();
 
     public DbSet<StudySite> StudySites => Set<StudySite>();
+
+    public DbSet<CodeSystem> CodeSystems => Set<CodeSystem>();
+
+    public DbSet<CodeSystemVersion> CodeSystemVersions => Set<CodeSystemVersion>();
+
+    public DbSet<CodeSystemEntry> CodeSystemEntries => Set<CodeSystemEntry>();
+
+    public DbSet<Concept> Concepts => Set<Concept>();
+
+    public DbSet<ConceptRevision> ConceptRevisions => Set<ConceptRevision>();
+
+    public DbSet<ConceptMapping> ConceptMappings => Set<ConceptMapping>();
 
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 

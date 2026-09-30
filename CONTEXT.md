@@ -103,7 +103,7 @@ Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The cha
 
 ### Concept Registry
 
-The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation.
+The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation. Each tenant loads the terminology releases it adopts (ADR-2470); a release is a pinned **CodeSystemVersion**, and a **Coding** is a code in one such version. A concept's label or definition change is a new version; earlier versions keep resolving. A **ConceptMapping** links one concept version to one Coding with a relation and a review status.
 
 ### Rules, Validation Findings and Lineage
 
@@ -788,7 +788,7 @@ _Avoid_: Single HTTP status code assertions without audit trail verification
 
 ### 100% GxP RTM Synchronization
 
-A continuous compliance assurance protocol that automates synchronization of test execution results and `@req:` docstrings via `scripts/sync_gxp.py`, guaranteeing 100% traceability across all 226 system requirements (192 PRD + 34 SRS) with zero drift in CI/CD.
+A continuous compliance assurance protocol that regenerates the Requirements Traceability Matrix and IQ/OQ/PQ report from test results and the requirement IDs tests declare (`[GxPRequirement]` or `@req:`), via `pnpm cadence gxp sync`. A requirement counts as qualified only when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
 _Avoid_: Manual untracked Markdown table edits, partial requirement coverage
 
 ### Model Tiering Matrix

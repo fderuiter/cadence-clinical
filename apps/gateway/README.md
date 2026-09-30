@@ -34,6 +34,8 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 | `GATEWAY_PROXY_TIMEOUT_SECONDS` | no (default `30`) | Idle time after which a proxied request fails with 504. |
 | `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`) | How often each service's `/healthz/ready` is probed. |
 | `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | no (default `5`) | Time limit for one probe. |
+| `GATEWAY_RATE_LIMIT_PER_MINUTE` | no (default `600`) | Requests per caller per minute before 429. |
+| `CADENCE_TRUSTED_PROXIES` | behind a proxy | Proxies whose `X-Forwarded-For`/`-Proto` are honoured (IPs or CIDR ranges). |
 
 ## Routes
 
@@ -82,6 +84,17 @@ Every cluster gets the same policy from `src/GatewayClusters.cs`
   service without forwarding, until a probe succeeds again. Repeated connection failures also take a service out for
   30 seconds.
 - The gateway never retries a request, so a write is never sent twice.
+
+## Rate limiting and forwarded headers
+
+`src/GatewayRateLimiting.cs` gives every caller `GATEWAY_RATE_LIMIT_PER_MINUTE` requests (default 600) per one-minute
+window. An authenticated caller is counted by the token's subject, anyone else by client address. Over the limit the
+gateway answers **429** with `Retry-After` and forwards nothing. Health probes are not limited
+([ADR-2491](../../docs/adr/2026-09-30-http-edge-hardening-forwarded-headers-hsts-rate-limits.md)).
+
+The client address comes from `X-Forwarded-For`, which the gateway honours only from the proxies in
+`CADENCE_TRUSTED_PROXIES` (see [packages/telemetry](../../packages/telemetry/README.md)). Behind a front proxy, set it
+to the proxy's address; otherwise every caller behind the proxy shares one limit.
 
 ## Tests
 
