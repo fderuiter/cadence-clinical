@@ -56,7 +56,10 @@ fi
 if [ "$SDK_FOUND" = false ]; then
   read -r -p "  Download and install .NET 10 SDK automatically? [Y/n]: " INSTALL_SDK || true
   if [[ ! "$INSTALL_SDK" =~ ^[nN] ]]; then
-    bash "$(dirname "$0")/setup_dotnet_env.sh"
+    if ! bash "$(dirname "$0")/setup_dotnet_env.sh"; then
+      printf '  %s[ERROR] Environment setup failed. Aborting onboarding wizard.%s\n' "$YELLOW" "$RESET" >&2
+      exit 1
+    fi
   fi
 fi
 

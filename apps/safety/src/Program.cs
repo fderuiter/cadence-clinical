@@ -2,6 +2,7 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 using Cadence.Templating;
@@ -15,6 +16,7 @@ builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 FluidTemplateRenderer.RegisterType<IcsrHeader>();
 FluidTemplateRenderer.RegisterType<IcsrReportIdentifiers>();
@@ -33,7 +35,9 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Clinical Safety & Pharmacovigilance health probe.",
     "Returns Safety operational status.");
 
-app.MapGroup("/api/v1/safety").MapIcsrTemplateEndpoints();
+var safetyGroup = app.MapGroup("/api/v1/safety");
+safetyGroup.MapIcsrTemplateEndpoints();
+safetyGroup.MapDsurEndpoints();
 
 await app.RunAsync();
 

@@ -34,7 +34,7 @@ if [ "$SDK_INSTALLED" = false ]; then
         # .NET 10 GA is packaged in Ubuntu 24.04+/Debian 13+ apt feeds; prefer it
         # since it's faster and stays patched via the normal OS update path.
         echo "  [ACTION] Installing dotnet-sdk-10.0 via apt..."
-        if $SUDO apt-get update -qq && $SUDO apt-get install -y --no-install-recommends dotnet-sdk-10.0; then
+        if $SUDO apt-get -o Acquire::http::Timeout="3" -o Acquire::https::Timeout="3" update -qq && $SUDO apt-get install -y --no-install-recommends dotnet-sdk-10.0; then
             SDK_INSTALLED=true
         else
             echo "  [INFO] apt install failed or dotnet-sdk-10.0 unavailable; falling back to dotnet-install.sh."
@@ -44,7 +44,35 @@ if [ "$SDK_INSTALLED" = false ]; then
     if [ "$SDK_INSTALLED" = false ]; then
         echo "  [ACTION] Downloading official Microsoft dotnet-install script..."
         TEMP_SCRIPT="$(mktemp /tmp/dotnet-install.XXXXXX.sh)"
-        curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
+        curl -fsSL --connect-timeout 15 --retry 3 https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
+
+        PINNED_DOTNET_INSTALL_SH_SHA256="082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e"
+        EXPECTED_HASH="${DOTNET_INSTALL_SH_SHA256:-$PINNED_DOTNET_INSTALL_SH_SHA256}"
+
+        echo "  [ACTION] Verifying SHA256 checksum for dotnet-install.sh..."
+        if command -v sha256sum &>/dev/null; then
+            ACTUAL_HASH=$(sha256sum "$TEMP_SCRIPT" | awk '{print $1}')
+        elif command -v shasum &>/dev/null; then
+            ACTUAL_HASH=$(shasum -a 256 "$TEMP_SCRIPT" | awk '{print $1}')
+        else
+            echo -e "  \033[31m[ERROR] Neither sha256sum nor shasum is available to verify installer integrity.\033[0m" >&2
+            rm -f "$TEMP_SCRIPT"
+            exit 1
+        fi
+
+        EXPECTED_HASH_LOWER="$(echo "$EXPECTED_HASH" | tr '[:upper:]' '[:lower:]')"
+        ACTUAL_HASH_LOWER="$(echo "$ACTUAL_HASH" | tr '[:upper:]' '[:lower:]')"
+
+        if [ "$ACTUAL_HASH_LOWER" != "$EXPECTED_HASH_LOWER" ]; then
+            echo -e "  \033[31m[ERROR] Checksum verification failed for dotnet-install.sh!\033[0m" >&2
+            echo -e "    Expected: $EXPECTED_HASH_LOWER" >&2
+            echo -e "    Actual:   $ACTUAL_HASH_LOWER" >&2
+            echo -e "    To override, set environment variable DOTNET_INSTALL_SH_SHA256.\033[0m" >&2
+            rm -f "$TEMP_SCRIPT"
+            exit 1
+        fi
+
+        echo -e "  \033[32m[OK] SHA256 checksum verified ($ACTUAL_HASH_LOWER)\033[0m"
         chmod +x "$TEMP_SCRIPT"
 
         INSTALL_DIR="$HOME/.dotnet"
