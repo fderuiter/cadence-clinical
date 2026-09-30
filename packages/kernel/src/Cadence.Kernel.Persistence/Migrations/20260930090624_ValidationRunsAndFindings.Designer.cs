@@ -14,7 +14,7 @@ using NpgsqlTypes;
 namespace Cadence.Kernel.Persistence.Migrations
 {
     [DbContext(typeof(KernelDbContext))]
-    [Migration("20260930074717_ValidationRunsAndFindings")]
+    [Migration("20260930090624_ValidationRunsAndFindings")]
     partial class ValidationRunsAndFindings
     {
         /// <inheritdoc />
@@ -1119,6 +1119,84 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("tenant_memberships", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.WorkQueueDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Capability")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("capability");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("source");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("VerbClass")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("verb_class");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "Code", "Version")
+                        .IsUnique();
+
+                    b.ToTable("work_queue_definitions", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_work_queue_definitions_version", "version > 0");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Knowledge.CodeSystem", b =>
@@ -3084,6 +3162,15 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.WorkQueueDefinition", b =>
+                {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")

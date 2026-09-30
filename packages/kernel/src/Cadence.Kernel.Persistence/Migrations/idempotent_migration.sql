@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -2637,6 +2637,331 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930080359_WorkQueueDefinitions', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_runs (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        stage character varying(32) NOT NULL,
+        as_of date NOT NULL,
+        standard character varying(64),
+        standard_version character varying(64),
+        agency character varying(64),
+        started_at timestamp with time zone NOT NULL,
+        completed_at timestamp with time zone NOT NULL,
+        detection_count integer NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_validation_runs" PRIMARY KEY (id),
+        CONSTRAINT "AK_validation_runs_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_validation_runs_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_runs_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_findings (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        decision character varying(32),
+        decided_at timestamp with time zone,
+        decided_by character varying(255),
+        decision_text character varying(4000),
+        decided_on_run uuid,
+        attestation_id uuid,
+        classification character varying(32),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_validation_findings" PRIMARY KEY (id),
+        CONSTRAINT "AK_validation_findings_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_validation_findings_attestations_tenant_id_attestation_id" FOREIGN KEY (tenant_id, attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_findings_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_findings_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_findings_validation_runs_tenant_id_decided_on_run" FOREIGN KEY (tenant_id, decided_on_run) REFERENCES kernel.validation_runs (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_run_datasets (
+        tenant_id uuid NOT NULL,
+        run_id uuid NOT NULL,
+        dataset character varying(64) NOT NULL,
+        CONSTRAINT "PK_validation_run_datasets" PRIMARY KEY (tenant_id, run_id, dataset),
+        CONSTRAINT "FK_validation_run_datasets_validation_runs_tenant_id_run_id" FOREIGN KEY (tenant_id, run_id) REFERENCES kernel.validation_runs (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_run_inputs (
+        tenant_id uuid NOT NULL,
+        run_id uuid NOT NULL,
+        input character varying(128) NOT NULL,
+        CONSTRAINT "PK_validation_run_inputs" PRIMARY KEY (tenant_id, run_id, input),
+        CONSTRAINT "FK_validation_run_inputs_validation_runs_tenant_id_run_id" FOREIGN KEY (tenant_id, run_id) REFERENCES kernel.validation_runs (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_run_packs (
+        tenant_id uuid NOT NULL,
+        run_id uuid NOT NULL,
+        pack_key character varying(128) NOT NULL,
+        library_item_id uuid NOT NULL,
+        pack_version integer NOT NULL,
+        content_hash character varying(71) NOT NULL,
+        CONSTRAINT "PK_validation_run_packs" PRIMARY KEY (tenant_id, run_id, pack_key),
+        CONSTRAINT "FK_validation_run_packs_library_items_tenant_id_library_item_id" FOREIGN KEY (tenant_id, library_item_id) REFERENCES kernel.library_items (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_run_packs_validation_runs_tenant_id_run_id" FOREIGN KEY (tenant_id, run_id) REFERENCES kernel.validation_runs (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TABLE kernel.validation_detections (
+        tenant_id uuid NOT NULL,
+        run_id uuid NOT NULL,
+        finding_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        stage character varying(32) NOT NULL,
+        pack_key character varying(128) NOT NULL,
+        pack_item_id uuid NOT NULL,
+        rule_id character varying(64) NOT NULL,
+        rule_version integer NOT NULL,
+        severity character varying(16) NOT NULL,
+        target_kind character varying(32) NOT NULL,
+        dataset character varying(64) NOT NULL,
+        target_key character varying(200) NOT NULL,
+        variable character varying(64),
+        message character varying(2000) NOT NULL,
+        expected character varying(2000),
+        observed jsonb NOT NULL,
+        CONSTRAINT "PK_validation_detections" PRIMARY KEY (tenant_id, run_id, finding_id),
+        CONSTRAINT "FK_validation_detections_validation_run_datasets_tenant_id_run~" FOREIGN KEY (tenant_id, run_id, dataset) REFERENCES kernel.validation_run_datasets (tenant_id, run_id, dataset) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_detections_validation_run_packs_tenant_id_run_id~" FOREIGN KEY (tenant_id, run_id, pack_key) REFERENCES kernel.validation_run_packs (tenant_id, run_id, pack_key) ON DELETE RESTRICT,
+        CONSTRAINT "FK_validation_detections_validation_runs_tenant_id_run_id" FOREIGN KEY (tenant_id, run_id) REFERENCES kernel.validation_runs (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_detections_tenant_id_finding_id" ON kernel.validation_detections (tenant_id, finding_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_detections_tenant_id_run_id_dataset" ON kernel.validation_detections (tenant_id, run_id, dataset);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_detections_tenant_id_run_id_pack_key" ON kernel.validation_detections (tenant_id, run_id, pack_key);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_detections_tenant_id_study_id_stage" ON kernel.validation_detections (tenant_id, study_id, stage);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_findings_tenant_id_attestation_id" ON kernel.validation_findings (tenant_id, attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_findings_tenant_id_decided_on_run" ON kernel.validation_findings (tenant_id, decided_on_run);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_findings_tenant_id_study_id" ON kernel.validation_findings (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_run_packs_tenant_id_library_item_id" ON kernel.validation_run_packs (tenant_id, library_item_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE INDEX "IX_validation_runs_tenant_id_study_id_stage_created_at" ON kernel.validation_runs (tenant_id, study_id, stage, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_runs" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_runs" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_runs"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_run_packs" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_run_packs" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_run_packs"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_run_datasets" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_run_datasets" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_run_datasets"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_run_inputs" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_run_inputs" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_run_inputs"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_detections" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_detections" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_detections"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    ALTER TABLE "kernel"."validation_findings" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."validation_findings" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."validation_findings"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_runs_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."validation_runs"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_validation_runs_no_truncate" BEFORE TRUNCATE ON "kernel"."validation_runs"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_run_packs_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."validation_run_packs"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_validation_run_packs_no_truncate" BEFORE TRUNCATE ON "kernel"."validation_run_packs"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_run_datasets_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."validation_run_datasets"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_validation_run_datasets_no_truncate" BEFORE TRUNCATE ON "kernel"."validation_run_datasets"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_run_inputs_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."validation_run_inputs"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_validation_run_inputs_no_truncate" BEFORE TRUNCATE ON "kernel"."validation_run_inputs"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_detections_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."validation_detections"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_validation_detections_no_truncate" BEFORE TRUNCATE ON "kernel"."validation_detections"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    CREATE TRIGGER "trg_validation_findings_immutable" BEFORE UPDATE ON "kernel"."validation_findings"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'created_at', 'created_by');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930090624_ValidationRunsAndFindings') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930090624_ValidationRunsAndFindings', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;
