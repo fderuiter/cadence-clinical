@@ -243,7 +243,7 @@ To add a command:
    aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, declare the aggregate's
    inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
 3. Register the handler in `AddKernelCommandPipeline()`.
-4. Test it through the pipeline in `tests/Cadence.UnitTests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
+4. Test it through the pipeline in `tests/Cadence.IntegrationTests/Kernel` (see `KernelCommandPipelinePostgresTests`).
 
 A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
 `ICurrentActor`, an `IAuthorizer`, an `INodeVisibility` and logging; the container fails to resolve the sender or the

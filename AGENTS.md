@@ -30,7 +30,7 @@ clinical truth (K-TRUTH-1).
   `Participant`/`Subject`, `Observation`, `Organization`, `Person`, `Role`, `Delegation`, `Specimen`,
   `Estimand` or `*AuditLog` types, and never use `string` study/site/participant IDs. Reference kernel
   IDs (`StudyId`, `SiteId`, `ParticipantId`, … in `Cadence.Kernel.Abstractions`). Enforced by K-XS-1
-  in `tests/Architecture`; existing violations sit in a baseline that may only shrink.
+  in `tests/Cadence.ArchitectureTests/Architecture`; existing violations sit in a baseline that may only shrink.
 - **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` only, never kernel persistence.
 - **Time (K-TIME-3):** never call `DateTime.Now/UtcNow` or `DateTimeOffset.Now/UtcNow` (banned in
   [`BannedSymbols.txt`](BannedSymbols.txt), enforced in `packages/kernel` and `tests/`). Inject
