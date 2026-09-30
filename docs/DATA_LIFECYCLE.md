@@ -288,6 +288,9 @@ Every redaction operation creates a highly detailed, immutable cryptographic pap
 
 # Data Lifecycle Specification: Global Library & Clinical Study Instances
 
+> [!WARNING]
+> This section describes the retired Python designer, which stored library objects and protocol versions as Neo4j graph nodes. Neo4j is retired ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. The statuses and rules below are kept as the behavioural reference; the Neo4j storage, Cypher locking and in-memory fallback details no longer apply.
+
 ## 1. Overview
 
 The Global Library in the Metadata Designer (MDR/SDR) service (`apps/designer`) serves as the central, multi-tenant repository for reusable clinical protocol definitions. This specification defines the data lifecycle, retention rules, and strict tenant partitioning that separate shared global reference templates from trial-specific (study instance) execution data. It ensures system compliance under FDA 21 CFR Part 11, GxP standards, and GDPR multi-tenant guidelines, satisfying **Trace-3**.
@@ -357,6 +360,9 @@ The operational lifespan of library data and study data is governed by distinct 
 ---
 
 # Data Lifecycle Specification: Protocol Amendment Lifecycle
+
+> [!WARNING]
+> This section describes the retired Python designer, which stored library objects and protocol versions as Neo4j graph nodes. Neo4j is retired ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. The statuses and rules below are kept as the behavioural reference; the Neo4j storage, Cypher locking and in-memory fallback details no longer apply.
 
 ## 1. Overview
 

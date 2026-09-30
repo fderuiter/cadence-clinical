@@ -23,7 +23,7 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 
 ## Persistence
 
-None. Neo4j is retired (ADR-2245), and its unused `Neo4j.Driver` reference was removed in #4790.
+None. Neo4j is retired ([ADR-2245](../../docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)): the service no longer references a Neo4j driver, and protocol versions are to be stored as PostgreSQL snapshots in the kernel.
 
 ## Key dependencies
 

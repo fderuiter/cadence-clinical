@@ -51,7 +51,6 @@ Checks the local environment. It reports:
 - the .NET SDK version (from `dotnet --version`)
 - whether `Directory.Packages.props` exists in the current directory
 - whether PostgreSQL answers on `127.0.0.1:5432`
-- whether Neo4j Bolt answers on `127.0.0.1:7687`
 
 It always exits `0`.
 
@@ -182,7 +181,6 @@ Resets the local datastores:
 
 1. PostgreSQL: drops and re-creates the schemas. The connection string comes from `POSTGRES_CONNECTION_STRING`, then `DATABASE_URL`, then a localhost default.
 2. SQLite: deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.
-3. Neo4j: clears the graph and loads six sample studies. Uses `NEO4J_URI`, `NEO4J_USER` and `NEO4J_PASSWORD`, with localhost defaults.
 
 It refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` is `Production` or `Prod`. It also refuses connection strings that look remote (for example containing `prod`, `aws` or `azure`, or a non-local host). If a datastore cannot be reached, it prints a warning and continues. It exits `0` even when a reset step fails.
 

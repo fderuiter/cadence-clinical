@@ -35,7 +35,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 ## Key dependencies
 
 - Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`.
-- Packages: `Spectre.Console`, `Spectre.Console.Cli`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Sqlite`, `Neo4j.Driver`.
+- Packages: `Spectre.Console`, `Spectre.Console.Cli`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Sqlite`.
 
 ## Referenced by
 
