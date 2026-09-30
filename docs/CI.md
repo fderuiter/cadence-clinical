@@ -40,7 +40,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `readmes`             | Each project has a README                                                                  |
 | `imports`             | No cross-service persistence references                                                    |
 | `security`            | Static security audit and secret patterns                                                  |
-| `deid`                | PHI/PII in tracked files outside tests and docs (all 14 detector categories), ratcheted by `.deid-baseline.txt` |
+| `deid`                | PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment |
 | `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi` |
 | `api-clients`         | The web API clients typecheck against their generated OpenAPI types                        |
 | `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                   |

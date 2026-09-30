@@ -264,6 +264,7 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Formatting | `dotnet format Cadence.sln --verify-no-changes` |
 | All quality gates (pre-commit) | `pnpm cadence check` |
 | One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |
+| PHI/PII scan | `pnpm cadence check deid`; mark a line that is not PHI with a `deid-ignore` comment, and drop stale `.deid-baseline.txt` entries with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` ([CONTRIBUTING.md §6](CONTRIBUTING.md#6-repository-hygiene)) |
 | Auto-fix | `pnpm cadence fix` |
 | Diagnostics | `pnpm cadence doctor --auto-fix` |
 | Traceability matrix | `pnpm cadence gxp sync` (validate only: `pnpm cadence gxp validate`) |
