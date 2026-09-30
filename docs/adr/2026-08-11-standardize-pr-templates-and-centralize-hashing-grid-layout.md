@@ -1,4 +1,6 @@
-# ADR-85: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts
+# ADR-2364: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts
+
+Also known as: ADR-85 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

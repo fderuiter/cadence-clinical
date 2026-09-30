@@ -1,4 +1,6 @@
-# ADR-119: SDV Sign-Off Workflow & Automatic Verification Drop
+# ADR-2420: SDV Sign-Off Workflow & Automatic Verification Drop
+
+Also known as: ADR-119 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-28

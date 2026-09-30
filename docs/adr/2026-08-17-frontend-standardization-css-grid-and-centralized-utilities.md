@@ -1,4 +1,6 @@
-# ADR-097: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities
+# ADR-2382: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities
+
+Also known as: ADR-097 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-17

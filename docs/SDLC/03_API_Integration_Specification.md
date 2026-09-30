@@ -1,5 +1,8 @@
 # Cadence Clinical - API & Integration Specification
 
+> [!WARNING]
+> **Status: pre-kernel baseline.** Most endpoints described here are not implemented in the .NET services; only `apps/execution` has a substantial API. Authentication now follows [ADR-2256](../adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The generated [API reference](../api/index.md) and each service README describe what exists.
+
 **Document Version:** 1.0.0-PROD
 **Standards Compliance:** ISO 14155:2020, 21 CFR Part 11, ICH E6(R2), CDISC USDM v3.0/v4.0, CDISC ODM v2.0
 **Target Audience:** Integration Engineers, Solution Architects, Regulatory Auditors, Security Officers

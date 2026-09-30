@@ -1,4 +1,6 @@
-# ADR-251: Enforce Ruff Style and Formatting on API Gateway Routers
+# ADR-2307: Enforce Ruff Style and Formatting on API Gateway Routers
+
+Also known as: ADR-251 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

@@ -1,4 +1,6 @@
-# ADR-095: Bidirectional API Contract Enforcement and Legacy Whitelisting
+# ADR-2378: Bidirectional API Contract Enforcement and Legacy Whitelisting
+
+Also known as: ADR-095 (former number)
 
 - **Status:** Accepted
 - Date: 2026-08-15

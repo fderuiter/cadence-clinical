@@ -1,4 +1,6 @@
-# ADR-85: Gateway Signature Legacy V2 Fallback
+# ADR-2358: Gateway Signature Legacy V2 Fallback
+
+Also known as: ADR-85 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

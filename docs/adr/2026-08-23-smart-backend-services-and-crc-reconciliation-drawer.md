@@ -1,4 +1,6 @@
-# ADR-2199: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer
+# ADR-2395: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer
+
+Also known as: ADR-2199 (former number)
 
 - **Status:** Accepted
 - **Status**: Accepted

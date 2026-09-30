@@ -1,36 +1,24 @@
-# Contracts Package
+# Cadence.Contracts
 
-## Overview
+Cross-service DTOs and typed HTTP client interfaces for service-to-service calls.
 
-Shared domain and infrastructure component `contracts` within the Cadence Clinical research software platform.
+## Project
 
----
+- Project: `packages/contracts/src/Cadence.Contracts.csproj` (assembly `Cadence.Contracts`, namespace `Cadence.Contracts`).
+- `IExecutionApiClient` with `SubjectSummaryDto` and `ObservationSummaryDto`.
+- `IExecutionAmendmentApiClient` with `PublishAmendmentRequestDto`, `PublishAmendmentResponseDto`, `AmendmentSnapshotDto`, `AmendmentActivityDto`.
+- `IDesignerEligibilityApiClient` with `DesignerEligibilityCriterionDto`, `DesignerExpressionNodeDto`, `FieldReferenceDto`.
+- Only interfaces and records exist; there are no client implementations or DI registrations yet.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `contracts` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/contracts/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+- Project reference: `Cadence.Core.Domain`.
+- Packages: `Polly`, `Microsoft.Extensions.Http.Polly`.
 
----
+## Referenced by
 
-## Public APIs / Exports
+The scaffold services (`ai_gateway`, `ctms`, `econsent`, `eisf`, `etmf`, `fileshare`, `imaging`, `interop`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`). None of them uses these types in code yet; `execution`, `designer` and `gateway` do not reference the package.
 
-Exports shared utilities, domain interfaces, and models for `contracts`.
+## Tests
 
----
-
-## Dependencies
-
-This package is maintained as a standard shared library within `packages/contracts`.
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
-
-```bash
-uv run pytest packages/contracts
-```
+No tests exist for this package.

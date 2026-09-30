@@ -1,8 +1,11 @@
 # Specification: Domain-Specific MCP Tool Extensions, Graph Introspection & Autonomous Agent Sidecars
 
+> [!NOTE]
+> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence.
+
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-054
-- **ADR Reference:** [ADR-2193](../adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
+- **ADR Reference:** [ADR-2398](../adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)
 - **Triage Label:** `ready-for-agent`
 
 ---

@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Database Shadow Triggers
+# ADR-2269: Database Shadow Triggers
 
 ## Status
 

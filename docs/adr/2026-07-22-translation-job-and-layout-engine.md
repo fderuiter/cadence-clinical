@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Background Translation Job and Layout Engine Data Contract
+# ADR-2278: Background Translation Job and Layout Engine Data Contract
 
 ## Status
 

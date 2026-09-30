@@ -1,5 +1,8 @@
 # Specification: Unified Developer Tooling, Native MCP Server & Staged Guardrails
 
+> [!NOTE]
+> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence.
+
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-049
 - **ADR Reference:** [ADR-2189](../adr/2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md)

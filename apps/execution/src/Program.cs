@@ -209,7 +209,7 @@ builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplic
 // hook a pipeline this service never runs and would not affect these endpoints at all.
 builder.Services.AddValidatorsFromAssemblyContaining<SubjectCreateRequestValidator>();
 
-// MIG-SUBJ-021 (`02_technical_design.md` §5.2, ADR-2234 / Rule 8 / MIG-06): MassTransit plus
+// MIG-SUBJ-021 (`02_technical_design.md` §5.2, ADR-2428 / Rule 8 / MIG-06): MassTransit plus
 // AddEntityFrameworkOutbox<ExecutionDbContext>() close the legacy Redis pub/sub subscriber's documented
 // delivery-durability gap (MIG-06) for EConsentCompletedConsumer. The outbox/consumer registration itself is
 // transport-agnostic; UsingInMemory is the transport used here because no real broker package (RabbitMQ,

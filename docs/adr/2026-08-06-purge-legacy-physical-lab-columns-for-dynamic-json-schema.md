@@ -1,4 +1,6 @@
-# ADR-2159: Purge Legacy Physical Lab Columns for Dynamic JSON Schema
+# ADR-2345: Purge Legacy Physical Lab Columns for Dynamic JSON Schema
+
+Also known as: ADR-2159 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-06
@@ -9,7 +11,7 @@
 
 ## 1. Context & Problem Statement
 
-To prevent database schema bloating and align with the design in ADR-117, we need to purge the physical laboratory columns (such as `lab_source`, `lab_site_id`, `lab_indicator`, etc.) from the PostgreSQL `clinical_observations` table. To do this safely under GxP guidelines, we must run an inline data migration that preserves all existing records by serializing their values into the dynamic `additional_properties` JSON column before the physical columns are dropped. This satisfies requirement PRD-LAB-001.
+To prevent database schema bloating and align with the design in ADR-2332, we need to purge the physical laboratory columns (such as `lab_source`, `lab_site_id`, `lab_indicator`, etc.) from the PostgreSQL `clinical_observations` table. To do this safely under GxP guidelines, we must run an inline data migration that preserves all existing records by serializing their values into the dynamic `additional_properties` JSON column before the physical columns are dropped. This satisfies requirement PRD-LAB-001.
 
 ## 2. Decision Drivers & Constraints
 

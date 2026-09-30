@@ -1,46 +1,44 @@
-# Ai Gateway Microservice
+# AI gateway service
 
-## Overview
+Placeholder for the medical coding and AI proxy service. It currently maps only health and status endpoints; no AI, coding or de-identification logic exists in this project.
 
-Centralized AI routing, tier management, structured output extraction, and embeddings.
+**Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel, is merged, or is retired. The disposition of the scaffold services is tracked in issue #4787.
 
----
+## Project
 
-## Architectural Boundaries
+- Project: `apps/ai_gateway/src/Cadence.Apps.AiGateway.csproj` (assembly `Cadence.Apps.AiGateway`).
+- `Program.cs` is the only source file.
 
+## HTTP surface
 
-Conforms strictly to Enterprise Hexagonal standards with clean decoupling:
-- `ports/`: Port interfaces defining driving and driven contracts.
-- `adapters/`: Database, S3/blob, and HTTP adapter implementations.
-- `domain/`: Pure business entity domain models and core domain logic.
-- `application/`: Business use case drivers coordinating ports and entities.
-- `presentation/`: FastAPI / Minimal API router wrappers.
+- `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
+- `GET /api/v1/ai/status` (anonymous status payload).
+- OpenAPI and the Scalar reference UI are mapped in the Development environment only.
+- The gateway forwards `/api/v1/ai/**` here (default upstream `http://localhost:8017`, `AI_GATEWAY_SERVICE_URL`). Compose publishes host port 8017 (container port 8080).
 
-- **GxP Data Isolation:** Operates within isolated domain boundaries without direct cross-service database access.
-- **Gateway Interception:** All client traffic is routed via the API Gateway for authentication, rate-limiting, and audit logging.
+## Security
 
----
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-## Public APIs / Exports
+## Persistence
 
-Service routes and contract interfaces:
-- `HTTP` endpoints under `/api/v1/ai-gateway`
+None. The project references `Cadence.Database` and the EF Core/Npgsql packages but registers no `DbContext`.
 
----
+## Key dependencies
 
-## Dependencies
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
+- Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation`.
 
-This microservice includes the following module dependencies:
-- `fastapi>=0.139.2,<0.140.0`
-- `litellm>=1.97.0`
-- `pydantic>=2.6.0`
+## Tests
 
----
+- No service-specific tests exist yet.
+- Architecture rules (`tests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
 
-## Local Development & Testing
-
-Run microservice unit and integration tests:
+## Run locally
 
 ```bash
-uv run pytest apps/ai_gateway/tests
+export GATEWAY_SECRET="<at least 32 characters>"
+dotnet run --project apps/ai_gateway/src/Cadence.Apps.AiGateway.csproj
 ```
+
+This service is not wired into the Aspire AppHost ([apps/apphost](../apphost/README.md)).

@@ -1,4 +1,6 @@
-# ADR-2174: Unified Database Schema Introspection and Automated Type Synchronization Gating
+# ADR-2385: Unified Database Schema Introspection and Automated Type Synchronization Gating
+
+Also known as: ADR-2174 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-17

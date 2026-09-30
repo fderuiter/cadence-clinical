@@ -1,50 +1,28 @@
-# Storage Package
+# Cadence.Storage
 
-## Overview
+Object storage abstraction with integrity hashes and presigned URLs, plus an in-memory implementation.
 
-Storage utilities package
+## Project
 
----
+- Project: `packages/storage/src/Cadence.Storage.csproj` (assembly `Cadence.Storage`, namespace `Cadence.Storage`).
+- `StoragePort.cs`: `IStoragePort<T>` (`PutObjectAsync`, `GetObjectAsync` returning data and SHA-256, `ExistsAsync`, `DeleteObjectAsync`, `GeneratePresignedGetUrlAsync`, `GeneratePresignedPutUrlAsync`), `StorageObjectNotFoundException`, `StorageIntegrityException`.
+- `BlobStore.cs`: `InMemoryBlobStore`, the only implementation.
+- `DocumentModels.cs`: `DocumentMetadata`, `StorageLocation`.
+- The project references `AWSSDK.S3` and `Google.Apis.Drive.v3`, but no S3, MinIO or Google Drive adapter exists in C# yet.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `blob_store.py`, `s3_store.py`, `local_store.py`, `gdrive.py`, `factory.py`, `document_models.py`, `adapters/`, `ports/`, `tests/`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `storage` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/storage/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+Packages: `AWSSDK.S3`, `Google.Apis.Drive.v3` (both currently unused).
 
----
+## Referenced by
 
-## Public APIs / Exports
+The three test projects only. No service uses it yet (including [apps/fileshare](../../apps/fileshare/README.md)).
 
-Key exported interfaces and components:
-- ArchiveJobResponse
-- BlobStorageProvider
-- DocumentMetadataResponse
-- DocumentUploadResponse
-- LocalStorageProvider
-- MinioStorageAdapter
-- S3StorageAdapter
-- S3StorageProvider
+## Tests
 
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `aioboto3>=13.0.0`
-- `boto3>=1.34.0`
-- `google-api-python-client>=2.120.0`
-- `google-auth-httplib2>=0.2.0`
-- `google-auth>=2.28.0`
-- `pydantic>=2.6.0`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+Covered by `tests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-uv run pytest packages/storage
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

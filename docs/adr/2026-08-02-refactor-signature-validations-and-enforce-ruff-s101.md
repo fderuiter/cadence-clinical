@@ -1,4 +1,6 @@
-# ADR-120: Refactor Signature Validations and Enforce Ruff S101
+# ADR-2312: Refactor Signature Validations and Enforce Ruff S101
+
+Also known as: ADR-120 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

@@ -2,7 +2,7 @@
 # ==============================================================================
 # Cadence Clinical Research Software Platform - .NET 10 Baseline Solution Scaffold
 # Architecture: Clean Architecture / ASP.NET Core 10 Minimal APIs
-# Governing ADRs: ADR-2233, ADR-2234 | Standard: 21 CFR Part 11 (PRD-SYS-053)
+# Governing ADRs: ADR-2233, ADR-2428 | Standard: 21 CFR Part 11 (PRD-SYS-053)
 # ==============================================================================
 
 set -euo pipefail

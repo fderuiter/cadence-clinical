@@ -1,4 +1,4 @@
-# ADR 2026-07-23: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)
+# ADR-2281: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)
 
 ## Status
 

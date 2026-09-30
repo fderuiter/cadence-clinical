@@ -6,9 +6,9 @@
 
 ## 1. Architectural Overview & Component Boundaries
 
-### 1.1 Single-Assembly Clean Architecture (ADR-2233 / ADR-2234)
+### 1.1 Single-Assembly Clean Architecture (ADR-2233 / ADR-2428)
 
-In alignment with ADR-2234, the observation, form submission, and clinical query components are organized within the single `Cadence.Apps.Execution` assembly using file-scoped namespaces and strict layer boundaries:
+In alignment with ADR-2428, the observation, form submission, and clinical query components are organized within the single `Cadence.Apps.Execution` assembly using file-scoped namespaces and strict layer boundaries:
 
 ```
 apps/execution/src/
@@ -114,7 +114,7 @@ public sealed class ClinicalObservation : AggregateRootBase<ObservationId>, IGxP
     public string? ProtocolVersionTag { get; private set; }
     public int? ProtocolVersionIndex { get; private set; }
 
-    // Dynamic JSONB projection properties (ADR-0117)
+    // Dynamic JSONB projection properties (ADR-2332)
     public ObservationAdditionalProperties AdditionalProperties { get; private set; } = new();
 
     // Factory method enforcing invariants

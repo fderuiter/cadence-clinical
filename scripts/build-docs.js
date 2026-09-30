@@ -7,18 +7,25 @@ const repoRoot = path.resolve(__dirname, "..");
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
 if (!process.env.AUDIT_LOG_SECRET_KEY) {
-  process.env.AUDIT_LOG_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+  process.env.AUDIT_LOG_SECRET_KEY =
+    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 if (!process.env.INBOUND_EMAIL_HMAC_SECRET) {
-  process.env.INBOUND_EMAIL_HMAC_SECRET = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+  process.env.INBOUND_EMAIL_HMAC_SECRET =
+    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 if (!process.env.GATEWAY_SECRET_KEY) {
-  process.env.GATEWAY_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+  process.env.GATEWAY_SECRET_KEY =
+    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
 }
 
 // Ensure adequate heap allocation for large documentation bundles under VitePress
-if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes("--max-old-space-size")) {
-  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --max-old-space-size=16384`.trim();
+if (
+  !process.env.NODE_OPTIONS ||
+  !process.env.NODE_OPTIONS.includes("--max-old-space-size")
+) {
+  process.env.NODE_OPTIONS =
+    `${process.env.NODE_OPTIONS || ""} --max-old-space-size=16384`.trim();
 }
 
 let pnpmCmd = "pnpm";
@@ -231,7 +238,9 @@ function sweepAndPreprocessDocs(docsDir) {
         let newUrl = cleanUrl;
         if (cleanUrl.startsWith("docs/")) {
           const targetPathInDocs = cleanUrl.substring(5);
-          newUrl = path.relative(docSubDir, targetPathInDocs).replace(/\\/g, "/");
+          newUrl = path
+            .relative(docSubDir, targetPathInDocs)
+            .replace(/\\/g, "/");
         } else if (cleanUrl === "LICENSE") {
           newUrl = path.relative(docSubDir, "LICENSE.md").replace(/\\/g, "/");
         }
@@ -244,19 +253,31 @@ function sweepAndPreprocessDocs(docsDir) {
           fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
           !fs.existsSync(path.join(path.dirname(fullPath), rawTargetClean))
         ) {
-          const anchor = cleanUrl.includes("#") ? "#" + cleanUrl.split("#")[1] : "";
-          const relPath = path.relative(path.dirname(fullPath), path.join(repoRoot, rawTargetClean)).replace(/\\/g, "/");
+          const anchor = cleanUrl.includes("#")
+            ? "#" + cleanUrl.split("#")[1]
+            : "";
+          const relPath = path
+            .relative(
+              path.dirname(fullPath),
+              path.join(repoRoot, rawTargetClean)
+            )
+            .replace(/\\/g, "/");
           newUrl = relPath + anchor;
         }
 
         const targetClean = newUrl.split("#")[0].split("?")[0];
         if (targetClean) {
-          const resolvedPath = path.resolve(path.dirname(fullPath), targetClean);
+          const resolvedPath = path.resolve(
+            path.dirname(fullPath),
+            targetClean
+          );
           if (!fs.existsSync(resolvedPath)) {
             console.error(
               `[ERROR] Broken relative link in ${relToDocs}: '${cleanUrl}' resolves to non-existent file '${resolvedPath}'`
             );
-            throw new Error(`Broken relative link in ${relToDocs}: ${cleanUrl}`);
+            throw new Error(
+              `Broken relative link in ${relToDocs}: ${cleanUrl}`
+            );
           }
         }
 
@@ -276,44 +297,12 @@ function sweepAndPreprocessDocs(docsDir) {
   walkDir(docsDir);
 }
 
-// Run preflight checks before Step 1
-runPreflightChecks();
-
-try {
-  // 1. Run validation scripts
-  console.log("--- Step 1: Pre-Build Validation ---");
-  try {
-    console.log("Building shared UI primitives package first...");
-    runCommand(`${pnpmCmd} --filter ui build`);
-  } catch (err) {
-    console.warn(
-      "Warning: Shared UI primitives package build failed, continuing anyway..."
-    );
-  }
-  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check");
-  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown");
-  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc");
-  runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-api-docs");
-
-  // 2. Run compliance compiler
-  console.log("--- Step 2: Running Compliance Tracer ---");
-  const reportPath = path.join(repoRoot, "report.xml");
-  const hasReport =
-    fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
-  const envDraft = process.env.RTM_DRAFT || process.env.GENERATE_RTM_DRAFT;
-  const isEnvDraft =
-    envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
-
-  if (hasReport && !isEnvDraft) {
-    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm");
-  } else {
-    runCommand("dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --draft");
-  }
-
-  // 3. Prepare files for VitePress
-  console.log("--- Step 3: Preparing Documentation Files ---");
-  // Copy files with link preprocessing instead of straight copy to fix relative links
-  copyAndPreprocess("README.md", "index.md");
+/**
+ * Stages the root README.md, ARCHITECTURE.md, AGENTS.md and LICENSE into docs/ for VitePress.
+ * These copies are generated (gitignored). ARCHITECTURE.md and AGENTS.md are staged before
+ * README.md so the README's links to them resolve inside the docs site.
+ */
+function prepareRootDocs() {
   copyAndPreprocess("ARCHITECTURE.md", "ARCHITECTURE.md");
   copyAndPreprocess("AGENTS.md", "AGENTS.md");
 
@@ -331,6 +320,65 @@ try {
     console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
   }
 
+  copyAndPreprocess("README.md", "index.md");
+}
+
+// `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.
+if (process.argv.includes("--prepare-only")) {
+  prepareRootDocs();
+  process.exit(0);
+}
+
+// Run preflight checks before Step 1
+runPreflightChecks();
+
+try {
+  // 1. Run validation scripts
+  console.log("--- Step 1: Pre-Build Validation ---");
+  try {
+    console.log("Building shared UI primitives package first...");
+    runCommand(`${pnpmCmd} --filter ui build`);
+  } catch (err) {
+    console.warn(
+      "Warning: Shared UI primitives package build failed, continuing anyway..."
+    );
+  }
+  runCommand(
+    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check"
+  );
+  runCommand(
+    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown"
+  );
+  runCommand(
+    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc"
+  );
+  runCommand(
+    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-api-docs"
+  );
+
+  // 2. Run compliance compiler
+  console.log("--- Step 2: Running Compliance Tracer ---");
+  const reportPath = path.join(repoRoot, "report.xml");
+  const hasReport =
+    fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
+  const envDraft = process.env.RTM_DRAFT || process.env.GENERATE_RTM_DRAFT;
+  const isEnvDraft =
+    envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
+
+  if (hasReport && !isEnvDraft) {
+    runCommand(
+      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm"
+    );
+  } else {
+    runCommand(
+      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --draft"
+    );
+  }
+
+  // 3. Prepare files for VitePress
+  console.log("--- Step 3: Preparing Documentation Files ---");
+  prepareRootDocs();
+
   // Sweep and preprocess all docs files and subdirectories
   sweepAndPreprocessDocs(path.join(repoRoot, "docs"));
 
@@ -347,7 +395,9 @@ try {
   for (const [fullPath, originalContent] of originalFilesMap.entries()) {
     try {
       fs.writeFileSync(fullPath, originalContent, "utf8");
-      console.log(`Restored original content for ${path.relative(repoRoot, fullPath)}`);
+      console.log(
+        `Restored original content for ${path.relative(repoRoot, fullPath)}`
+      );
     } catch (err) {
       console.warn(`Could not restore ${fullPath}:`, err);
     }
