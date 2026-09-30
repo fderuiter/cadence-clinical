@@ -37,7 +37,7 @@ signatures and audit digests shared by every Cadence service.
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.
-- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `GxPAuditInterceptor`, `IAuditLogWriter`.
+- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
 - **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
   `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
   `AuditLogRecord.Timestamp` is `required` (#4784).

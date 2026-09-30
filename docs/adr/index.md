@@ -348,6 +348,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md) (2026-08-28)
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
+- [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
 
 ### 6. Frontend & Design System
 
