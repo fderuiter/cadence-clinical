@@ -13,18 +13,19 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 192
-- **Qualified (mapped tests passed):** 6
+- **Qualified (mapped tests passed):** 7
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 0
-- **Planned (no mapped tests):** 186
+- **Planned (no mapped tests):** 185
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 3.1%
+- **Qualified Coverage:** 3.6%
 
 ## 2. Requirements with Mapped Tests
 
 | Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantReadReturnsNothing` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`NoTenantCannotConnectAndSeesNothing` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PersonIsVisibleOnlyToTenantsWithAMembership` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` (tests/Kernel/KernelDbContextModelTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-DDF-001 | PRD | **AI-Native USDM Protocol Digitization & Automated eCRF/SoA Synthesis Engine** | `UsdmCompilerCompileUsdmGeneratesCompleteArtifacts` (tests/Packages/DdfCompilerTests.cs) 🟢<br>`UsdmCompilerCompileFromProtocolVersionSucceeds` (tests/Packages/DdfCompilerTests.cs) 🟢<br>`UsdmCompilerCompileWithAccessibilityValidationProducesReport` (tests/Packages/DdfCompilerTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-IMG-001 | PRD | **Zero-Footprint High-Performance Web DICOM & Multi-Planar Viewer** | `DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` (tests/Packages/DeidEngineUnitTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | `NominalScenario_MatchesGoldenMaster` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`EdgeCaseScenario_MatchesGoldenMaster` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`ErrorScenario_MatchesExpectedStatusAndDetail` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`Create_ProducesSubjectInScreeningWithSuppliedFields` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Create_TwoSubjects_ProduceDistinctIds` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`UpdateStratFactors_PreRandomization_Succeeds` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`UpdateDemographics_PreRandomization_Succeeds` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`IsPostRandomization_ForLockedStates_ReturnsTrue` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`IsPostRandomization_ForUnlockedStates_ReturnsFalse` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`UpdateDemographics_PostRandomization_FailsWithLockedFactorMutation` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`ClearDemographics_PreRandomization_Succeeds` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_SameState_NoOpSucceedsViaGuard` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Unblind_OnScreeningSubject_ReturnsFailureWithoutThrowing` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ToProblemResult_LockedFactorMutation_Returns422NotTheConflictDefaultOf409` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`GetStatusCode_HypotheticalConflictTypedCodeOtherThanLockedFactorMutation_MapsToDefault409` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ApplyKnownCodeStatus_NoCodeExtensionPresent_LeavesStatusUnchanged` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ApplyKnownCodeStatus_UnrecognizedCodeExtension_LeavesStatusUnchanged` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`ApplyKnownCodeStatus_SubjectNotFoundCode_ForcesStatusTo404` (tests/Execution/Subjects/DomainErrorHttpMappingTests.cs) 🟢<br>`AdvanceStateAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenNonCompliantSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesBlockedAudit` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenNoComplianceRowAtAll_TargetingEnrolled_IsTreatedAsNonCompliant` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenNoSiteId_TargetingEnrolled_IsBlockedRatherThanAutoCompliant` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_TargetingStateOtherThanEnrolled_NeverConsultsComplianceGate` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenSubjectNotFound_ReturnsNotFoundError` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_ResolvesSubjectByDomainCode_NotSurrogateId` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenEligibleAtNonCompliantSite_FailsIdenticallyToAdvanceStateAsync` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenNoEvaluatorConfigured_ThrowsRatherThanGuessingAVerdict` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`ToCode_RoundTripsThroughTryParse` (tests/Execution/Subjects/SubjectStateCodecTests.cs) 🟢<br>`TryParse_NormalizesCasingWhitespaceAndSpaces` (tests/Execution/Subjects/SubjectStateCodecTests.cs) 🟢<br>`TryParse_UnmappedOrEmptyInput_ReturnsFalseWithoutThrowing` (tests/Execution/Subjects/SubjectStateCodecTests.cs) 🟢<br>`Guard_FullTransitionMatrix_MatchesSpecGraph` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_SameStateNoOp_AlwaysSucceeds` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_NullCurrentTargetingScreening_Succeeds` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_ReconsentRequiredFanOut_CoversEveryOtherState` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢 | ✅ **Qualified** |
@@ -60,7 +61,6 @@ search: false
 | PRD-CRF-010 | PRD | **GxP Change-Reason Justification** | Sprint Roadmap |
 | PRD-CRF-011 | PRD | **Immutable Audit Attribution** | Sprint Roadmap |
 | PRD-CRF-012 | PRD | **Version Pinning and Lock Enforcement** | Sprint Roadmap |
-| PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | Sprint Roadmap |
 | PRD-CRF-014 | PRD | **Failure Recovery & High Availability** | Sprint Roadmap |
 | PRD-CRF-015 | PRD | **In-Memory Accessibility Auditing** | Sprint Roadmap |
 | PRD-CSM-001 | PRD | **Cross-Site Digit Preference (Benford's Law) & Rounding Bias Analysis** | Sprint Roadmap |
@@ -313,7 +313,7 @@ Aliases report their canonical parent's state. A test tagged only with an alias 
 | `Trace-29` | `PRD-CRF-011` | Immutable Audit Attribution | 📋 **Scheduled via Parent** |
 | `Trace-3` | `PRD-EDC-005` | Read-Only Trial Locks & Alert Routing | 📋 **Scheduled via Parent** |
 | `Trace-30` | `PRD-CRF-012` | Version Pinning and Lock Enforcement | 📋 **Scheduled via Parent** |
-| `Trace-31` | `PRD-CRF-013` | Site & Tenant Data Isolation | 📋 **Scheduled via Parent** |
+| `Trace-31` | `PRD-CRF-013` | Site & Tenant Data Isolation | ✅ **Verified via Parent** |
 | `Trace-32` | `PRD-CRF-014` | Failure Recovery & High Availability | 📋 **Scheduled via Parent** |
 | `Trace-33` | `PRD-CRF-015` | In-Memory Accessibility Auditing | 📋 **Scheduled via Parent** |
 | `Trace-34` | `PRD-SYS-041` | Label-Based Backlog Gating | 📋 **Scheduled via Parent** |
@@ -335,30 +335,30 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f1663aa398f9ee37d2052485adcd6c562b411e0e731f3793c94556c29097f936
+- **Cryptographic Hash (SHA-256):** f21df229fb75209d83e9774c17149ab837cba6933adf392edf6a3dd894fa631c
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAn2gAwIBAgIJAKfMKG/TEa1uMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
-AWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgMGgxIjAgBgNV
-BAoTGUNhZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2Ug
-R3hQIFZhbGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVy
-KTAeFw0yNjA5MjgyMzQ1MDJaFw0yNzA5MjkyMzQ1MDJaMGgxIjAgBgNVBAoTGUNh
-ZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2UgR3hQIFZh
-bGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVyKTCCASIw
-DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL09u2zxR9ypmKeMmqv6ULU4AZGc
-kCyU79QB1r0cTrHHIW0tNzqcHxRUBBG01IHDdITbVzGlHAhX+DPYbyVVJJ1qHAAK
-JzB8HFbh8Simsci7nXytiheUnRt+KNKVBtxBCPWK8+W8KTWOpArsJFD2J3Hya/1b
-KQHPU1zxMNQJYhXBOi11auIl8IIi28HvSVmbrjex4ZBQGHxwioJYOjn90eABONHm
-JQCq1qkwe1HVhf+AzZyt+f+q2LaSP/DxyuT8IRY0vz+Xn4kbciMcRUmpja0NjvPZ
-3NqCpAp0JjyniQ1J0qXCFFFn9nolFx5pdvpicn7Fp2XgOGpHdrQF1ze2XNMCAwEA
-AaMSMBAwDgYDVR0PAQH/BAQDAgbAMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZIAWUD
-BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQAlGIJEQ80F
-Yn5t8nns6ECvxPp7gIrqP36gYRVdbUO5ojrkdZvCObtCeLPfi01blElLb9LyLIor
-XoUAUkCmo/hwdorJt27kypMmy93W+cKTEoD/z+r38NwE8WJrqEwLUSA/Xr+oZyho
-TU3Cszq3iGdCWMczq+VBIFwuOU9EGjmMS6/Elzd0O4XJykfnNUcDmdLl+9hoIRnL
-lGZB8yLUEch9kV2+hZBNVHS/0Lvk4zV9JMad+xpGjYenOOG8zLmQeldAMmAtg/Pu
-x+phkMb9yQuPdGW07orKbp58oILqFF2qjbrtLy8Sf+XoYTuMwiiYWokfRJHolEpu
-HJ8nu0DYv+Rt
+MIIDxDCCAnygAwIBAgIISriE+8zi064wPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
+ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
+eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
+MB4XDTI2MDkyOTAxMTUyMFoXDTI3MDkzMDAxMTUyMFowaDEiMCAGA1UEChMZQ2Fk
+ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
+aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv82oCAviHNPFEYVYVWX+d7/tQUxO
+ZLpBv5Y4b2ihVYFioq8t9NyoS8tN69SqBPCx2j27w/jmruR9+lEITHtVQz0s2SNn
+hl38ahvWeLxki9wdhm7hFxzpLGj3qm/oBs+wF5JViSehahnNO0WjIkL27dRv+1HI
+7zBKxlx3Ao9wA12+jxr91nqlPmK7QW4Qg5Uz1NOuVy6HHfOzSaqwwcqHf1j1tqr+
+ADNtMfy8xe8GNGI1xrz4DpReUK1DnYsUilsWU4nLZoNryCUgFj5skoLzWrCk0+y8
+0LMMGfhFJ0xxgobGkI4W2DVP2Fiy4ULWLaGxksphOGCPIR3TwbMl+uQ3MQIDAQAB
+oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAE9w2kH88XM4
+C+TcekLY33TSM4FAXBzmkLlTOo1biV1+8MRN8uGGA6HZ9xGf9VJaaj2cmFQSD3+1
+hO50fjumKe38ESfJ7JGCQRiSstGu+oEdYmZcwomLA0U/IgO5gX6o5SOusa8DuCNU
+SN6QXUhUgj7N4VxAqQxY7MhHNoDQvfB6k3eZFlAgCEXUysceG37+S2IufmGQHxS8
+Rlxs2xtcpsN6r7++jT8X9L7R19urfTP6Z/r4HBDuyXhta5F7zKjZBM/OEGVu7lou
+vGRHYqEKqZ2mhWn5HHgUCpzB+kmbRnE7PScZ4io4wkwVwpWqoVtPFXY8pf+7xzJM
+qp0EdrcQh1Y=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-JQRFc+jFYC34OkynHSHoxwWfUoTWrZN+z0Xl/n5hV79mKBm70+YKTCYsk526PIhDZ2nHk20wNkxePUmSPoKzRbDd1DBcEJiDg7kr3pZmU/AFILNK/bSkctIWqVxn42Vva/RzO3QlwJ1ygMt3Glol2KiDCsaGzwPJuCRLNqpQ1vswsSbYJhaTT+/W6Auh2k8stc5VI2IH8lU70L+WppSIBHMmvVEXOzWFPZjWt9NwkuCgPyWuUgYE6fsUgDkspT/bdBtTa1E5L30eEnvSznP91o7eFySfm3VnAT0CgX9gngzPZ/oN8c9zI+8Go9FfmWRvh8iS+3DXeDQNRniqGPRFEw==
+DzgSHt3WSUPdVa0zmgZIxo9vy8Q1MSUt7hnqeCzqugOcZlRw5a86wbQX3+bVc/dpBSD0O8TJmjelQDloaSuxJtlZtltHCfeXMfuMVqn4JRdcN9rZrxOddZEmVZs5r1KWRG2C/0mHQtpoVTUUzXeaUhr11C8kY03ofV7PaEmWVIV8r16ErcWjWzZ0FKf58xeK9m3Jo61UlVC4PR3wkB3tLQh1yPR/IBYnaJBfciZOKpuUJdzvfAElQuMFfAknuxDNnUgSpBWlH46Q0T8+pw47B7+zg39vcgTXqsG2BLNUilyD4q/F1h73OfiY4kk/7JdiqstjwacVftMLBYTs7YJNhA==
 -----END SIGNATURE-----

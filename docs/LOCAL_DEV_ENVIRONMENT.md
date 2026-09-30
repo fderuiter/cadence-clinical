@@ -77,6 +77,10 @@ needed; those values are for local use only.
   app, or request one from `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
 - **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only with
   `--profile storage`; no service reads them yet.
+- **Pinned images:** `docker/Dockerfile.dotnet` and the compose file pin every image to a version and a
+  `sha256` digest, so builds are reproducible. Dependabot (`.github/dependabot.yml`) opens weekly pull
+  requests to update them, together with NuGet, npm and GitHub Actions dependencies. When updating the .NET
+  images by hand, move the SDK and the ASP.NET runtime to the same release and replace both digests.
 - **Reset:** `docker compose -f docker/docker-compose.yml down -v` removes the database volume. Do this once
   if your database predates the schema-per-service layout (ADR-2447).
 

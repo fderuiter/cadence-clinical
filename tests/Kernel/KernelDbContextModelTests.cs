@@ -50,9 +50,11 @@ public class KernelDbContextModelTests
     /// <c>TenantId</c>, and every foreign key between two tenant-scoped entities is composite, leading with
     /// <c>TenantId</c> on both sides, so it can never point into another tenant. A plain foreign key to a tenant-scoped
     /// table fails here before any migration is written.
+    /// @req:PRD-CRF-013
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_TenantScopedEntities_UseCompositeTenantForeignKeys")]
     [Trait("Category", "Unit")]
+    [GxPRequirement("PRD-CRF-013")]
     public void KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys()
     {
         using var context = CreateContext();
