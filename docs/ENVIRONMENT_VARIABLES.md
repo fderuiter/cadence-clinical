@@ -119,13 +119,13 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
-| `GATEWAY_SECRET` | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:60`, `packages/security/src/Authentication/SigTokenVerifier.cs:130` | none | yes, 32+ characters; services refuse to start without it |
-| `OIDC_AUTHORITY` | `apps/gateway/src/Program.cs:28` | none | yes (gateway) |
-| `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:32` | none | no |
-| `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:31` | none; validated when set | set it in production |
-| `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:43` | `true` | no |
-| `OIDC_SIGNATURE_CLIENT_ID` | `apps/gateway/src/Program.cs:73` | `cadence-esignature` | no; Keycloak client with only direct access grants, used for e-signature re-authentication |
-| `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:76` | none | only if that client is confidential |
+| `GATEWAY_SECRET` | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:68`, `packages/security/src/Authentication/SigTokenVerifier.cs:130` | none | yes, 32+ characters; services refuse to start without it |
+| `OIDC_AUTHORITY` | `apps/gateway/src/Program.cs:30` | none | yes (gateway) |
+| `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:40` | none | no |
+| `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:33` | none; validated when set | yes outside Development (gateway); `cadence-api`, the audience the realm gives `cadence-web` tokens, so tokens from other realm clients are refused (#5037) |
+| `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:51` | `true` | no |
+| `OIDC_SIGNATURE_CLIENT_ID` | `apps/gateway/src/Program.cs:81` | `cadence-esignature` | no; Keycloak client with only direct access grants, used for e-signature re-authentication |
+| `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:84` | none | only if that client is confidential |
 | `OIDC_TOKEN_ENDPOINT` | `apps/gateway/src/Program.cs:72` | `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY` | no |
 | `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`) | none | yes; signing or verifying the audit chain throws without it |
 | `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:67` (release signing with `SignGxpMarkdown` only; `gxp sync` stamps, it does not sign) | `cadence-validation-runner` | no |

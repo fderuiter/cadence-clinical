@@ -45,7 +45,9 @@ public sealed class GatewayServiceUrlValidationTests
     private static WebApplicationFactory<Cadence.Apps.Gateway.Program> CreateGateway(Action<IWebHostBuilder> configure) =>
         new WebApplicationFactory<Cadence.Apps.Gateway.Program>().WithWebHostBuilder(host =>
         {
-            host.UseSetting("OIDC_AUTHORITY", "https://keycloak.test/realms/cadence").UseTestGatewaySecret();
+            host.UseSetting("OIDC_AUTHORITY", "https://keycloak.test/realms/cadence")
+                .UseSetting("OIDC_AUDIENCE", "cadence-api")
+                .UseTestGatewaySecret();
             configure(host);
         });
 }

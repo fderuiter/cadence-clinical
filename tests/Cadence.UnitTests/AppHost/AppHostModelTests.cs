@@ -90,7 +90,7 @@ public sealed class AppHostModelTests
 
         var variables = await EnvironmentNamesAsync(projects["gateway"]);
 
-        variables.Should().Contain("OIDC_AUTHORITY");
+        variables.Should().Contain("OIDC_AUTHORITY").And.Contain("OIDC_AUDIENCE");
         foreach (string service in ServicePorts.Keys.Where(s => s != "gateway"))
         {
             variables.Should().Contain($"{service.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL");
@@ -152,6 +152,7 @@ public sealed class AppHostModelTests
         var gateway = await EnvironmentAsync(resources["gateway"]);
         gateway["OIDC_AUTHORITY"].Should().Be("https://id.example.test/realms/trial");
         gateway["OIDC_REQUIRE_HTTPS_METADATA"].Should().Be("true");
+        gateway["OIDC_AUDIENCE"].Should().Be("cadence-api");
         var web = await EnvironmentAsync(resources["web"]);
         web["VITE_KEYCLOAK_URL"].Should().Be("https://id.example.test");
         web["VITE_KEYCLOAK_REALM"].Should().Be("trial");

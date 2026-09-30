@@ -201,6 +201,8 @@ services:
       OIDC_AUTHORITY: http://localhost:8080/realms/cadence
       OIDC_METADATA_ADDRESS: http://keycloak:8080/realms/cadence/.well-known/openid-configuration
       OIDC_REQUIRE_HTTPS_METADATA: "false"
+      # Only cadence-web tokens carry this audience (realm audience mapper, #5037).
+      OIDC_AUDIENCE: cadence-api
     depends_on:
       keycloak:
         condition: service_healthy
