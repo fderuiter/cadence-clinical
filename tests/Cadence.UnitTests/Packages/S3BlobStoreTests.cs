@@ -183,6 +183,16 @@ public sealed class S3BlobStoreTests : IDisposable
     }
 
     [Theory]
+    [InlineData(1)]
+    [InlineData(S3BlobStore.MaxPresignedUrlSeconds)]
+    public async Task PresignedUrls_KeepTheExactLifetime_AtTheLimits(int seconds)
+    {
+        string get = await Store().GeneratePresignedGetUrlAsync("a", seconds, ct: Ct);
+
+        get.Should().Contain($"X-Amz-Expires={seconds}&");
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(S3BlobStore.MaxPresignedUrlSeconds + 1)]
     public async Task PresignedUrls_RefuseALifetimeS3Rejects(int seconds)

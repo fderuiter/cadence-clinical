@@ -278,8 +278,11 @@ public sealed class S3BlobStore : IStoragePort<byte[]>
             Key = key,
             Verb = verb,
             // S3 checks a presigned URL against its own time, so the lifetime is counted from the SDK's signing clock
-            // (the one that writes X-Amz-Date), not from the application's IClock.
-            Expires = AWSSDKUtils.CorrectedUtcNow.AddSeconds(expiresIn),
+            // (the one that writes X-Amz-Date), not from the application's IClock. The SDK writes X-Amz-Expires as Expires
+            // minus a second read of that clock, rounded to the nearest second, so a slow signing call would shorten the
+            // lifetime by a second. The extra 499 ms keeps it exactly expiresIn for up to about a second between the two
+            // reads, and can never make it longer.
+            Expires = AWSSDKUtils.CorrectedUtcNow.AddSeconds(expiresIn).AddMilliseconds(499),
         };
 
         // The SDK signs https URLs unless told otherwise, which breaks a plain-http MinIO endpoint.
