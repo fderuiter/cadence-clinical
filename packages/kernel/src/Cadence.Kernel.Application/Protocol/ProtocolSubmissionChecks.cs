@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Application.Protocol;
 
@@ -15,6 +16,13 @@ namespace Cadence.Kernel.Application.Protocol;
 /// </summary>
 public interface IProtocolSubmissionCheck
 {
-    /// <summary>Why <paramref name="design"/> of <paramref name="study"/> cannot be submitted, or null when it passes.</summary>
-    Task<KernelError?> CheckAsync(StudyId study, ProtocolDesign design, ICommandContext context, CancellationToken cancellationToken);
+    /// <summary>Why <paramref name="submission"/> cannot be submitted, or null when it passes.</summary>
+    Task<KernelError?> CheckAsync(ProtocolSubmission submission, ICommandContext context, CancellationToken cancellationToken);
 }
+
+/// <summary>A draft protocol version being submitted for review.</summary>
+/// <param name="Study">The study.</param>
+/// <param name="Version">The protocol version.</param>
+/// <param name="Node">The version's lineage node at the content being submitted: its id and version index before submission.</param>
+/// <param name="Design">The design being submitted.</param>
+public sealed record ProtocolSubmission(StudyId Study, ProtocolVersionId Version, NodeRef Node, ProtocolDesign Design);

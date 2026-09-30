@@ -91,6 +91,10 @@ in the canonical form.
    evaluates every pack the study pins and sends one `RecordValidationRun`, whose findings `IValidationFindings` reads
    (ADR-2462). Stages and severities are the kernel's `ValidationStage` and `ValidationSeverity`.
 
+`Cadence.Rules` ships one pack, the design-stage `cadence-design-conformance` (`DesignConformancePack`), which judges
+the facts design-time conformance derives from a protocol design; `DesignConformanceRunner` runs it
+([DESIGN_CONFORMANCE.md](DESIGN_CONFORMANCE.md), ADR-2464).
+
 To change a rule, raise its `version`, draft the pack again (the library item's next version) and release it. Studies
 keep their pinned version until their standards profile is revised.
 

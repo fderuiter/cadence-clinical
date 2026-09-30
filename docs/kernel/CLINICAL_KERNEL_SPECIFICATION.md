@@ -520,6 +520,19 @@ its CollectionSpec items record must be mapped in the study's pinned specificati
 Design finding (`MappingGap`); the protocol version records the mapping versions it relies on as `MappedBy` inputs.
 The format is described in [MAPPING_SPECIFICATIONS.md](MAPPING_SPECIFICATIONS.md).
 
+**Implemented (#4813, [ADR-2464](../adr/2026-09-30-design-time-conformance-as-rule-packs-over-design-facts.md), K030):** design-time
+conformance (K-STD-2). A CollectionSpec is published as part of a protocol version, so K-STD-2 blocks submitting the
+version for review. `DesignConformance` derives facts from the design, the study's resolved mapping specifications,
+the declared standards' registered packages and CT: one `CollectionSpec` record per collected Concept (is it mapped)
+and one `CollectionItem` record per item (can each covering mapping write a conformant unit, variable type, codelist,
+value and length; does the item have a purpose, K-PROT-3). A released design-stage rule pack judges the facts;
+`Cadence.Rules` ships one (`cadence-design-conformance`, rules DC-001 to DC-008). `DesignConformanceRunner` records the
+run, on drafts only, with the draft's node as it was last saved as an input. Submitting needs such a run of the draft
+as it is, covering every pinned rule pack and mapping specification, and none of the `Error` findings that run detected
+still undecided; an accepted or explained finding does not block, and a run of another version cannot clear the
+block. A study that pins no rule pack submits as before. The facts and the pack are described in
+[DESIGN_CONFORMANCE.md](DESIGN_CONFORMANCE.md).
+
 ---
 
 ## 7. Execution Engine
@@ -959,7 +972,7 @@ pins. Rule packs are described in [RULE_PACKS.md](RULE_PACKS.md).
 
 | Stage | Examples | Blocking effect |
 | --- | --- | --- |
-| Design | Protocol completeness, CollectionSpec ↔ Concept ↔ standard mapping, CT and UCUM checks (K-STD-2) | `Error` blocks publishing the design object |
+| Design | Protocol completeness, CollectionSpec ↔ Concept ↔ standard mapping, CT and UCUM checks (K-STD-2) | `Error` blocks publishing the design object (submitting the protocol version for review, ADR-2464) |
 | Collection | Edit checks, semantic and unit validation, cross-domain checks | Never blocks a kernel write of a clinical fact (below) |
 | Standardization | SDTM/SEND conformance, CT, sponsor and agency rules | Blocks release of a dataset Artifact at `Error` unless explained |
 | Analysis | ADaM conformance, derivation provenance, traceability | Same |
@@ -1153,7 +1166,7 @@ Applications are compositions of engine concepts. This table fixes ownership, no
    mapping specification and CT versions.
 7. Architecture tests K-XS-1/2 and K-MOD-1 fail on a deliberately introduced duplicate `Site` entity.
 8. Publish a CollectionSpec item whose unit has no conformant SDTM representation: publishing is blocked with
-   a design-stage finding (K-STD-2).
+   a design-stage finding (K-STD-2). Covered by `DesignConformancePostgresTests` (ADR-2464).
 9. Trace an ADaM value backward to its CollectionSpec, ProtocolVersion, site Applicability and source audit
    history, and an Objective forward to the datasets that serve it (K-LIN).
 10. Re-run validation after a mapping fix: the finding is resolved by the run, not duplicated (K-FIND-1).
@@ -1226,6 +1239,7 @@ kernel, is merged into another, or is retired.
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 | K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
 | K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
+| K030 | Design-time conformance | Facts derived from the design, mappings, standard packages and CT, judged by a released design-stage rule pack; submission needs a run of the draft as it is and no blocking finding | ADR-2464 |
 
 ---
 

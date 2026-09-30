@@ -25,6 +25,12 @@ public interface IValidationFindings
 
     /// <summary>One run, or null when it does not exist.</summary>
     Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The study's most recently recorded run at <paramref name="stage"/> that names <paramref name="input"/> among its
+    /// inputs, or null when none does. Inputs are version-pinned, so a run of an older version of the input never matches.
+    /// </summary>
+    Task<ValidationRunSummary?> FindLatestRunAsync(TenantId tenant, StudyId study, ValidationStage stage, NodeRef input, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -56,6 +62,9 @@ public sealed record FindingQuery(StudyId Study)
 
     /// <summary>Only findings that block their stage (<see cref="FindingBlocking.Blocks"/>).</summary>
     public bool BlockingOnly { get; init; }
+
+    /// <summary>Only findings this run detected.</summary>
+    public ValidationRunId? DetectedBy { get; init; }
 
     /// <summary>How many matching findings to skip.</summary>
     public int Skip { get; init; }

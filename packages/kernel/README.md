@@ -369,6 +369,14 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
   neither mapped nor accepted gaps (`MappingGap`), and links the mapping versions used as `MappedBy`. It reads findings
   through `IValidationFindings`, so a host that calls `AddKernelStandards()` also calls
   `AddKernelValidationPersistence()`.
+- K-STD-2 (ADR-2464, K030, namespace `Cadence.Kernel.Standards.Conformance`): `AddKernelStandards()` also registers
+  `DesignConformanceCheck`. For a study that pins a rule pack, it refuses a submission with
+  `K.Standards.ConformanceNotRun` unless the latest design-stage run naming the draft as last saved
+  (`IValidationFindings.FindLatestRunAsync`) evaluated every pinned pack over both fact datasets with every pinned
+  mapping specification, and with `K.Standards.DesignNotConformant` while an `Error` finding that run detected
+  (`FindingQuery.DetectedBy`) is undecided. `DesignConformance` derives the facts the packs judge;
+  `Cadence.Rules` runs them (`DesignConformanceRunner`). `IProtocolDesignReader` reads a draft's design with its
+  lineage node. See [Design-time conformance](../../docs/kernel/DESIGN_CONFORMANCE.md).
 
 A host that uses the registry also calls `AddKernelStandards()` (handlers) and `AddKernelStandardsPersistence()`
 (`IStandardsRegistry`). Approval and deprecation name an attestation recorded with `Attest` on the `standard_version`
@@ -391,7 +399,7 @@ A validation run records what a study's pinned rule packs detected at one stage 
   rule version. Targets that are kernel objects use a NodeRef without `@version`.
 - Status is derived on read by `FindingLedger`: a run covering the finding's stage, pack and dataset that no longer
   detects it resolves it, and a decision made before a resolution is void if the finding recurs.
-- `IValidationFindings` finds, lists (filters and `BlockingOnly`) and explains findings, and reads runs.
+- `IValidationFindings` finds, lists (filters, `BlockingOnly` and `DetectedBy`) and explains findings, and reads runs (by id, or the latest naming an input).
 - Run tables are insert-only (`KA001`); a decisions record keeps its finding, study and author (`KS001`).
 - A run is `[DerivedObject]`, linked `DefinedBy` its pack versions and `ValidatedBy` its inputs; decisions link
   `DerivedFrom` their run.

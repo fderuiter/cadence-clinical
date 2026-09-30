@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K029 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K030 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -96,6 +96,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K027 | Visibility is computed from the reader's grants in effect: what they cover, the scope path above them, participants and sites through their study sites, and reference data; everything else is masked | [ADR-2457](docs/adr/2026-09-30-grant-backed-node-visibility.md) |
 | K028 | A mapping specification is a governed library item pinned to one standard version, CT versions and Concept versions; a protocol version is submitted only when every collected Concept is mapped or its gap is an accepted finding (K-STD-1); the engine sits behind `IMappingEngine` | [ADR-2463](docs/adr/2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | Direct identifiers live only in the IdentityVault: sealed per record under a per-tenant key, reached through its own functions, and recorded, revealed, erased and linked by audited kernel commands; residency is a tenant property | [ADR-2458](docs/adr/2026-09-30-identity-vault.md) |
+| K030 | Design-time conformance: the kernel derives facts from a design, its mappings, the standard packages and CT, and a released design-stage rule pack judges them; a protocol version is submitted only after a run of the draft as it is, with no blocking finding (K-STD-2) | [ADR-2464](docs/adr/2026-09-30-design-time-conformance-as-rule-packs-over-design-facts.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
@@ -236,6 +237,10 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - Mapping specifications map Concepts to standard variables before first data capture: a protocol version is
     submitted only when every collected Concept is mapped in the study's pinned specifications or its gap is an
     accepted finding (K-STD-1); `IMappingEngine` applies them, with a .NET engine in `Cadence.Standards` (ADR-2463).
+  - Design-time conformance runs a released design-stage rule pack over facts derived from a draft design: whether
+    each collected Concept is mapped, and whether each mapping can write a conformant unit, variable type, codelist,
+    value and length. A study that pins a rule pack submits a protocol version only after such a run of the draft as
+    it is, with no undecided `Error` finding from that run (K-STD-2, ADR-2464).
   - Protocol versions move Draft, InReview, Approved, then Superseded or Withdrawn. Submitting freezes the content
     under a SHA-256 hash, and approval or withdrawal needs a person's attestation on that hash (ADR-2452).
   - Every kernel object has a public `NodeRef` (`kind:id@version`), and `IKernelNavigator` resolves one to a summary

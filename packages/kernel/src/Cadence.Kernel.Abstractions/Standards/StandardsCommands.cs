@@ -174,4 +174,18 @@ public static class StandardsErrors
     /// </summary>
     public static readonly KernelError MappingMissing =
         new("K.Standards.MappingMissing", 422, "Every collected concept needs a mapping in the study's declared standards (K-STD-1).");
+
+    /// <summary>
+    /// K-STD-2: the study pins rule packs, but no design-stage validation run has evaluated this draft with them
+    /// (ADR-2464). Run design conformance on the draft as it is now, then submit.
+    /// </summary>
+    public static readonly KernelError ConformanceNotRun =
+        new("K.Standards.ConformanceNotRun", 422, "Run design conformance on this draft with the study's pinned rule packs before submitting it (K-STD-2).");
+
+    /// <summary>
+    /// K-STD-2: a design-stage Error finding is open, so the design cannot produce a conformant downstream representation
+    /// (ADR-2464). Fix the design, or accept the finding with a Responsibility attestation (K-FIND-2).
+    /// </summary>
+    public static readonly KernelError DesignNotConformant =
+        new("K.Standards.DesignNotConformant", 422, "Design-stage Error findings are open: the design cannot produce a conformant representation (K-STD-2).");
 }

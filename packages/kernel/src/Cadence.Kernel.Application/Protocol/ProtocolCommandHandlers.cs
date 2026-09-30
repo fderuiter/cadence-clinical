@@ -135,9 +135,10 @@ internal sealed class SubmitProtocolVersionForReviewHandler(IEnumerable<IProtoco
 
         if (version.Status == ProtocolVersionStatus.Draft)
         {
+            var submission = new ProtocolSubmission(version.StudyId, version.Id, NodeRef.For(version.Id, version.VersionIndex), version.Design());
             foreach (var check in checks)
             {
-                if (await check.CheckAsync(version.StudyId, version.Design(), context, cancellationToken).ConfigureAwait(false) is { } refused)
+                if (await check.CheckAsync(submission, context, cancellationToken).ConfigureAwait(false) is { } refused)
                 {
                     return refused;
                 }

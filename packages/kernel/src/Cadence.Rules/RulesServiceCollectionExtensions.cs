@@ -1,4 +1,5 @@
 using Cadence.Kernel.Standards;
+using Cadence.Rules.Design;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
@@ -15,7 +16,9 @@ public static class RulesServiceCollectionExtensions
     /// Registers the rules subsystem: the .NET <see cref="IRuleEvaluator"/> (replace the registration to swap engines),
     /// the <see cref="RulePackLoader"/> (needs an <see cref="IStandardsRegistry"/>, from
     /// <c>AddKernelStandardsPersistence()</c>), the rule pack content validator that <c>DraftLibraryItem</c> runs, and the
-    /// <see cref="ValidationRunner"/> (needs the kernel's <c>IKernelCommandSender</c> and <c>IClock</c>), and the indicator
+    /// <see cref="ValidationRunner"/> (needs the kernel's <c>IKernelCommandSender</c> and <c>IClock</c>), the
+    /// <see cref="DesignConformanceRunner"/> (also needs <c>IProtocolDesignReader</c> and <c>IConceptRegistry</c>, from
+    /// <c>AddKernelPersistence()</c>), and the indicator
     /// set loader, content validator, <see cref="IndicatorEvaluator"/> and the scoped <see cref="StudyIndicators"/>, which
     /// needs the host's <c>INodeVisibility</c> and the population sources kernel persistence registers (ADR-2488).
     /// </summary>
@@ -24,6 +27,7 @@ public static class RulesServiceCollectionExtensions
         services.TryAddSingleton<IRuleEvaluator, DotNetRuleEvaluator>();
         services.TryAddSingleton<RulePackLoader>();
         services.TryAddScoped<ValidationRunner>();
+        services.TryAddScoped<DesignConformanceRunner>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, RulePackContentValidator>());
         services.TryAddSingleton<IndicatorSetLoader>();
         services.TryAddSingleton<IndicatorEvaluator>();

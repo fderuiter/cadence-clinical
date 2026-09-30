@@ -137,35 +137,9 @@ internal static class MappingSpecificationReferences
 /// <summary>Reads the mapping specifications a study pinned.</summary>
 internal static class PinnedMappings
 {
-    /// <summary>
-    /// The <see cref="LibraryItemKind.MappingSpecification"/> items among <paramref name="pins"/>, with their content
-    /// read, and why any of them cannot be used (an item drafted before its content was validated, ADR-2463).
-    /// </summary>
-    public static (IReadOnlyList<PinnedMappingSpecification> Pins, IReadOnlyList<string> Problems) Of(IEnumerable<LibraryItemView> pins)
-    {
-        var read = new List<PinnedMappingSpecification>();
-        var problems = new List<string>();
-        foreach (var pin in pins.Where(p => p.Kind == LibraryItemKind.MappingSpecification).OrderBy(p => p.Key, StringComparer.Ordinal))
-        {
-            var (specification, invalid) = MappingSpecificationJson.Read(pin.Content);
-            if (specification is null || pin.StandardVersions.Count != 1)
-            {
-                problems.Add($"Mapping specification {pin.Key} v{pin.Version} is not a usable mapping specification{(invalid.Count > 0 ? ": " + invalid[0] : "; it must map into exactly one standard version.")}");
-                continue;
-            }
-
-            read.Add(new PinnedMappingSpecification(pin.Id, pin.Key, pin.Version, pin.VersionIndex, pin.StandardVersions[0], specification));
-        }
-
-        return (read, problems);
-    }
-
-    /// <summary>Resolves a study's pinned mapping specifications over its declared standards (<see cref="StudyMappings.Resolve"/>).</summary>
-    public static (StudyMappings? Mappings, IReadOnlyList<string> Problems) Resolve(IEnumerable<LibraryItemView> pins, IEnumerable<StandardVersionId> declaredStandards)
-    {
-        var (read, problems) = Of(pins);
-        return problems.Count > 0 ? (null, problems) : StudyMappings.Resolve(read, [.. declaredStandards.Distinct()]);
-    }
+    /// <summary>Resolves a study's pinned mapping specifications over its declared standards (<see cref="StudyMappings.ResolvePins"/>).</summary>
+    public static (StudyMappings? Mappings, IReadOnlyList<string> Problems) Resolve(IEnumerable<LibraryItemView> pins, IEnumerable<StandardVersionId> declaredStandards) =>
+        StudyMappings.ResolvePins(pins, declaredStandards);
 
     /// <summary>Reads the study's pinned library items.</summary>
     public static async Task<IReadOnlyList<LibraryItemView>> LoadAsync(
@@ -195,9 +169,10 @@ internal sealed class MappingCoverageCheck(IStandardsRegistry registry, IValidat
     /// <summary>The most uncovered items one refusal lists.</summary>
     private const int MaxListed = 10;
 
-    public async Task<KernelError?> CheckAsync(StudyId study, ProtocolDesign design, ICommandContext context, CancellationToken cancellationToken)
+    public async Task<KernelError?> CheckAsync(ProtocolSubmission submission, ICommandContext context, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(submission);
+        var (study, design) = (submission.Study, submission.Design);
         if (await registry.FindStudyStandardsAsync(context.TenantId, study, cancellationToken).ConfigureAwait(false) is not { } profile)
         {
             return null;

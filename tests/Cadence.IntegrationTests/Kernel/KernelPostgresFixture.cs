@@ -33,6 +33,7 @@ using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
 using Cadence.Rules;
+using Cadence.Rules.Design;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
@@ -226,6 +227,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The validation runner, resolved from a fresh scope as a request would get one.</summary>
     public ValidationRunner Validation => Scope().GetRequiredService<ValidationRunner>();
+
+    /// <summary>Design-time conformance runs (ADR-2464).</summary>
+    public DesignConformanceRunner DesignConformance => Scope().GetRequiredService<DesignConformanceRunner>();
+
+    /// <summary>Reads a protocol version's design as it is stored (ADR-2464).</summary>
+    public IProtocolDesignReader ProtocolDesigns => Scope().GetRequiredService<IProtocolDesignReader>();
 
     /// <summary>The findings read model, as applications get it.</summary>
     public IValidationFindings Findings => Scope().GetRequiredService<IValidationFindings>();

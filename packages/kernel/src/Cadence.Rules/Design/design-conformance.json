@@ -1,0 +1,193 @@
+{
+  "authority": "Sponsor",
+  "title": "Design-time conformance of collection specifications",
+  "rules": [
+    {
+      "id": "DC-001",
+      "version": 1,
+      "citation": {
+        "document": "Clinical Kernel Specification v0.2",
+        "section": "6.3 K-STD-1"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionSpec"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "==",
+        "args": [
+          {
+            "var": "MAPPED"
+          },
+          "N"
+        ]
+      },
+      "explanation": "No mapping specification the study pins maps this concept, so the data collected for it has no standard representation.",
+      "remediation": "Pin a mapping specification that maps the concept, or accept the gap with a Responsibility attestation."
+    },
+    {
+      "id": "DC-002",
+      "version": 1,
+      "authority": "CDISC",
+      "citation": {
+        "document": "CDISC Study Data Tabulation Model Implementation Guide v3.4",
+        "section": "4.5.1"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "UNIT_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "The item's unit has no conformant representation: original and standardised results need a controlled-terminology unit term and a conversion into the standard unit.",
+      "remediation": "Collect the result in a unit the mapping converts, or add the unit's term and conversion to the mapping specification."
+    },
+    {
+      "id": "DC-003",
+      "version": 1,
+      "authority": "CDISC",
+      "citation": {
+        "document": "CDISC Study Data Tabulation Model v2.0"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "TYPE_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "A variable the mapping writes has a type that cannot hold the value the mapping writes to it.",
+      "remediation": "Map the value to a variable of the right type (Char or Num)."
+    },
+    {
+      "id": "DC-004",
+      "version": 1,
+      "authority": "CDISC",
+      "citation": {
+        "document": "CDISC Controlled Terminology"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "CT_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "The item's codes cannot be decoded as the mapping decodes them: the item records a different codelist or terminology version.",
+      "remediation": "Bind the item to the codelist and terminology version the mapping decodes with."
+    },
+    {
+      "id": "DC-005",
+      "version": 1,
+      "authority": "CDISC",
+      "citation": {
+        "document": "CDISC Study Data Tabulation Model Implementation Guide v3.4"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "VALUE_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "A value the mapping assigns is not one of the values the standard lists for its variable.",
+      "remediation": "Assign one of the values the standard lists."
+    },
+    {
+      "id": "DC-006",
+      "version": 1,
+      "authority": "FDA",
+      "citation": {
+        "document": "FDA Study Data Technical Conformance Guide"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Error",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "LENGTH_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "A value the mapping assigns is longer than a character variable of a submission dataset holds (200 bytes).",
+      "remediation": "Shorten the value."
+    },
+    {
+      "id": "DC-007",
+      "version": 1,
+      "citation": {
+        "document": "Clinical Kernel Specification v0.2",
+        "section": "6.2 K-PROT-3"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Warning",
+      "condition": {
+        "op": "==",
+        "args": [
+          {
+            "var": "PURPOSE"
+          },
+          "N"
+        ]
+      },
+      "explanation": "The item has no path to an endpoint, estimand, safety rule or operational need.",
+      "remediation": "Link the item, its collection specification or an activity that collects it to the need it serves, or remove it."
+    },
+    {
+      "id": "DC-008",
+      "version": 1,
+      "authority": "CDISC",
+      "citation": {
+        "document": "CDISC Controlled Terminology"
+      },
+      "applicability": {
+        "stage": "Design",
+        "dataset": "CollectionItem"
+      },
+      "severity": "Warning",
+      "condition": {
+        "op": "is_not_empty",
+        "args": [
+          {
+            "var": "TERM_PROBLEM"
+          }
+        ]
+      },
+      "explanation": "A value the mapping writes is not a term of the codelist its variable takes values from, in the terminology versions the mapping specification uses. The codelist may be extensible.",
+      "remediation": "Use a term of the codelist, or confirm the value is a permitted extension and record why."
+    }
+  ]
+}

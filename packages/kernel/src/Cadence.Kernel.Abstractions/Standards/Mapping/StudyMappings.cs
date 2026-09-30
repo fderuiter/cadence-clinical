@@ -119,6 +119,39 @@ public sealed class StudyMappings
         return problems.Count > 0 ? (null, problems) : (new StudyMappings(mappings, ordered), []);
     }
 
+    /// <summary>
+    /// The <see cref="LibraryItemKind.MappingSpecification"/> items among <paramref name="pins"/>, with their content read,
+    /// and why any of them cannot be used: content that is not a valid specification (an item drafted before its content
+    /// was validated), or an item that does not map into exactly one standard version.
+    /// </summary>
+    public static (IReadOnlyList<PinnedMappingSpecification> Pins, IReadOnlyList<string> Problems) Read(IEnumerable<LibraryItemView> pins)
+    {
+        ArgumentNullException.ThrowIfNull(pins);
+        var read = new List<PinnedMappingSpecification>();
+        var problems = new List<string>();
+        foreach (var pin in pins.Where(p => p.Kind == LibraryItemKind.MappingSpecification).OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var (specification, invalid) = MappingSpecificationJson.Read(pin.Content);
+            if (specification is null || pin.StandardVersions.Count != 1)
+            {
+                problems.Add($"Mapping specification {pin.Key} v{pin.Version} is not a usable mapping specification{(invalid.Count > 0 ? ": " + invalid[0] : "; it must map into exactly one standard version.")}");
+                continue;
+            }
+
+            read.Add(new PinnedMappingSpecification(pin.Id, pin.Key, pin.Version, pin.VersionIndex, pin.StandardVersions[0], specification));
+        }
+
+        return (read, problems);
+    }
+
+    /// <summary>Reads a study's pinned library items (<see cref="Read"/>) and resolves them over its declared standards (<see cref="Resolve"/>).</summary>
+    public static (StudyMappings? Mappings, IReadOnlyList<string> Problems) ResolvePins(IEnumerable<LibraryItemView> pins, IEnumerable<StandardVersionId> declaredStandards)
+    {
+        ArgumentNullException.ThrowIfNull(declaredStandards);
+        var (read, problems) = Read(pins);
+        return problems.Count > 0 ? (null, problems) : Resolve(read, [.. declaredStandards.Distinct()]);
+    }
+
     /// <summary>The mapping for <paramref name="concept"/> in each standard version that maps it, ordered by specification key.</summary>
     public IReadOnlyList<CoveringMapping> For(ConceptId concept) =>
         [.. _mappings.Where(m => m.Key.Concept == concept).Select(m => m.Value).OrderBy(m => m.Specification.Key, StringComparer.Ordinal)];

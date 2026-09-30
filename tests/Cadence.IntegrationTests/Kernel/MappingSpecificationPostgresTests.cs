@@ -15,6 +15,7 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Standards.Conformance;
 using Cadence.Kernel.Standards.Mapping;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -133,9 +134,11 @@ public sealed class MappingSpecificationPostgresTests(KernelPostgresFixture fixt
             (await db.ProtocolVersions.AsNoTracking().SingleAsync(v => v.Id == version, ct)).Status.Should().Be(ProtocolVersionStatus.Draft);
         }
 
+        // The run names the draft as it is, as a design-time conformance run does (ADR-2464).
+        var draft = (await fixture.ProtocolDesigns.GetDesignAsync(world.Tenant, version, ct))!.Node;
         var run = await SendAsync(new RecordValidationRun(
-            world.Tenant, ValidationRunId.New(), world.Study, ValidationStage.Design, [pack], new DateOnly(2026, 9, 30), "SDTMIG", "3.4", null, [],
-            [MappingGap.Dataset], fixture.Clock.UtcNow.AddMinutes(-1), fixture.Clock.UtcNow,
+            world.Tenant, ValidationRunId.New(), world.Study, ValidationStage.Design, [pack], new DateOnly(2026, 9, 30), "SDTMIG", "3.4", null, [draft],
+            DesignConformance.Datasets, fixture.Clock.UtcNow.AddMinutes(-1), fixture.Clock.UtcNow,
             [new ValidationDetection("sample-vitals-rules", "R4", 1, ValidationSeverity.Error, MappingGap.Target(world.Systolic.ConceptId),
                 "Systolic blood pressure has no SDTM mapping.", "A mapping in the declared standards", [])],
             Key(), Reason), ct);

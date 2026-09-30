@@ -59,7 +59,11 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
 
         await using var db = contexts.Create(tenant);
         var data = await LoadStudyAsync(db, query.Study, query.Stage, cancellationToken).ConfigureAwait(false);
+        var detectedBy = query.DetectedBy is { } run
+            ? data.Detections.Where(d => d.Run == run).Select(d => d.Finding).ToHashSet()
+            : null;
         var matching = data.Derive()
+            .Where(f => detectedBy is null || detectedBy.Contains(f.Finding))
             .Where(f => query.Severity is null || f.Severity == query.Severity)
             .Where(f => query.Statuses is null || query.Statuses.Contains(f.Status))
             .Where(f => query.Classification is null || f.Classification == query.Classification)
@@ -81,26 +85,49 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
         var found = await db.Set<ValidationRun>().AsNoTracking().AsSplitQuery()
             .Include(r => r.Packs).Include(r => r.Datasets).Include(r => r.Inputs)
             .SingleOrDefaultAsync(r => r.Id == run, cancellationToken).ConfigureAwait(false);
-        return found is null
-            ? null
-            : new ValidationRunSummary(
-                found.Id,
-                found.StudyId,
-                found.Stage,
-                found.AsOf,
-                found.Standard,
-                found.StandardVersion,
-                found.Agency,
-                [.. found.Packs.OrderBy(p => p.PackKey, StringComparer.Ordinal)
-                    .Select(p => new ValidationRunPackView(p.LibraryItemId, p.PackKey, p.PackVersion, p.ContentHash))],
-                [.. found.Datasets.Select(d => d.Dataset).Order(StringComparer.Ordinal)],
-                [.. found.Inputs.Select(i => i.Input).Order(StringComparer.Ordinal).Select(NodeRef.Parse)],
-                found.StartedAt,
-                found.CompletedAt,
-                Utc(found.CreatedAt),
-                found.CreatedBy,
-                found.DetectionCount);
+        return found is null ? null : Summary(found);
     }
+
+    public async Task<ValidationRunSummary?> FindLatestRunAsync(
+        TenantId tenant, StudyId study, ValidationStage stage, NodeRef input, CancellationToken cancellationToken)
+    {
+        var inputText = input.ToString();
+        await using var db = contexts.Create(tenant);
+        var latest = await db.Set<ValidationRunInput>().AsNoTracking()
+            .Where(i => i.Input == inputText)
+            .Join(db.Set<ValidationRun>().Where(r => r.StudyId == study && r.Stage == stage), i => i.RunId, r => r.Id, (i, r) => r)
+            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+            .Select(r => (ValidationRunId?)r.Id)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (latest is not { } id)
+        {
+            return null;
+        }
+
+        var found = await db.Set<ValidationRun>().AsNoTracking().AsSplitQuery()
+            .Include(r => r.Packs).Include(r => r.Datasets).Include(r => r.Inputs)
+            .SingleAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false);
+        return Summary(found);
+    }
+
+    private static ValidationRunSummary Summary(ValidationRun found) =>
+        new(
+            found.Id,
+            found.StudyId,
+            found.Stage,
+            found.AsOf,
+            found.Standard,
+            found.StandardVersion,
+            found.Agency,
+            [.. found.Packs.OrderBy(p => p.PackKey, StringComparer.Ordinal)
+                .Select(p => new ValidationRunPackView(p.LibraryItemId, p.PackKey, p.PackVersion, p.ContentHash))],
+            [.. found.Datasets.Select(d => d.Dataset).Order(StringComparer.Ordinal)],
+            [.. found.Inputs.Select(i => i.Input).Order(StringComparer.Ordinal).Select(NodeRef.Parse)],
+            found.StartedAt,
+            found.CompletedAt,
+            Utc(found.CreatedAt),
+            found.CreatedBy,
+            found.DetectionCount);
 
     /// <summary>The runs, detections and decisions of a study, at one stage or at every stage.</summary>
     private static async Task<ValidationLedgerData> LoadStudyAsync(

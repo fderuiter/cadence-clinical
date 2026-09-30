@@ -23,15 +23,21 @@ and release a pack: [docs/kernel/RULE_PACKS.md](../../../../docs/kernel/RULE_PAC
   `IRuleEvaluator` and returns values with hashes, contributing objects and an explanation. `StudyIndicators` evaluates
   a study's pinned sets over the populations its registered `IIndicatorPopulationSource`s read, leaving out the
   records the reader may not see (`INodeVisibility`) and marking such values partial.
+- `Design/`: design-time conformance (K-STD-2,
+  [ADR-2464](../../../../docs/adr/2026-09-30-design-time-conformance-as-rule-packs-over-design-facts.md),
+  [docs/kernel/DESIGN_CONFORMANCE.md](../../../../docs/kernel/DESIGN_CONFORMANCE.md)). `DesignConformancePack` is the
+  embedded, checksum-verified design-stage rule pack (DC-001 to DC-008), and `DesignConformanceRunner` reads a protocol
+  draft, derives its design facts and records a design-stage run of the study's pinned packs through `ValidationRunner`.
 
 ## Registration
 
 `services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader`, `IndicatorSetLoader`, `IndicatorEvaluator`,
-the two content validators and the scoped `ValidationRunner` and `StudyIndicators`. `StudyIndicators` also needs
+the two content validators and the scoped `ValidationRunner`, `DesignConformanceRunner` and `StudyIndicators`. `StudyIndicators` also needs
 `INodeVisibility` and the population sources, which `AddKernelPersistence()` and `AddKernelValidationPersistence()`
 register. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
 `ValidationRunner` also needs the kernel's `IKernelCommandSender` and `IClock`, and the kernel host registers the
-validation handlers with `AddKernelValidation()` and `AddKernelValidationPersistence()`.
+validation handlers with `AddKernelValidation()` and `AddKernelValidationPersistence()`. `DesignConformanceRunner`
+also needs `IProtocolDesignReader` and `IConceptRegistry`, which `AddKernelPersistence()` registers.
 
 ## Benchmark
 

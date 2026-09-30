@@ -16,7 +16,9 @@ the .NET engine is `MappingEngine` in [`Cadence.Standards`](../../packages/kerne
 3. Approve it with `ApproveLibraryItem` and an `Approved` attestation over its content hash.
 4. Pin it in the study's `DeclareStudyStandards`, alongside the standard version it maps into.
 5. Submit the protocol version. K-STD-1 checks that every Concept its CollectionSpec items record has a mapping (see
-   [K-STD-1](#k-std-1-mapping-before-first-data-capture)).
+   [K-STD-1](#k-std-1-mapping-before-first-data-capture)). When the study pins a rule pack, run
+   [design-time conformance](DESIGN_CONFORMANCE.md) on the draft first; it also checks that each mapping can write a
+   conformant unit, type, codelist and value for the items it covers (K-STD-2).
 
 A change is a new version of the same key. Approved content never changes.
 
@@ -146,7 +148,8 @@ CollectionSpec items record has a mapping in the pinned specifications. The subm
 `K.Standards.MappingMissing` otherwise.
 
 A gap may be accepted instead. Record it as a Design-stage finding on `MappingGap.Target(concept)`: a `DesignElement`
-target with dataset `CollectionSpec` and the Concept's NodeRef without a version. Then accept it with `AcceptFinding`
+target with dataset `CollectionSpec` and the Concept's NodeRef without a version. Design-time conformance records
+exactly this finding (rule DC-001, [DESIGN_CONFORMANCE.md](DESIGN_CONFORMANCE.md)). Then accept it with `AcceptFinding`
 and a `Responsibility` attestation. The acceptance covers the Concept in every protocol version of the study.
 
 When the check passes, the protocol version records each mapping specification version it relies on as a `MappedBy`

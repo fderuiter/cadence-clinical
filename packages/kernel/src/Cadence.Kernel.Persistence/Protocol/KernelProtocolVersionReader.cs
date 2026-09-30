@@ -6,15 +6,17 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Kernel.Persistence.Protocol;
 
 /// <summary>
-/// Reads protocol versions through a context bound to the caller's tenant (ADR-2250). Read-only: no tracking.
+/// Reads protocol versions and their designs through a context bound to the caller's tenant (ADR-2250). Read-only: no
+/// tracking.
 /// </summary>
-internal sealed class KernelProtocolVersionReader(KernelTenantDbContextFactory contexts) : IProtocolVersionReader
+internal sealed class KernelProtocolVersionReader(KernelTenantDbContextFactory contexts) : IProtocolVersionReader, IProtocolDesignReader
 {
     public async Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
     {
@@ -32,6 +34,14 @@ internal sealed class KernelProtocolVersionReader(KernelTenantDbContextFactory c
         var found = await db.ProtocolVersions.AsNoTracking()
             .SingleOrDefaultAsync(v => v.TenantId == tenant && v.Id == version, cancellationToken).ConfigureAwait(false);
         return found is null ? null : Summary(found);
+    }
+
+    public async Task<ProtocolDesignSnapshot?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var found = await db.ProtocolVersions.AsNoTracking()
+            .SingleOrDefaultAsync(v => v.TenantId == tenant && v.Id == version, cancellationToken).ConfigureAwait(false);
+        return found is null ? null : new ProtocolDesignSnapshot(Summary(found), NodeRef.For(found.Id, found.VersionIndex), found.Design());
     }
 
     private static ProtocolVersionSummary Summary(ProtocolVersion version) =>

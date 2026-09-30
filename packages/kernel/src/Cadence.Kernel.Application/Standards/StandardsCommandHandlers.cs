@@ -341,9 +341,9 @@ public static class KernelStandardsServiceCollectionExtensions
     /// Registers the standards command handlers. The host must also register kernel persistence's
     /// <see cref="IStandardsRegistry"/> (<c>AddKernelStandardsPersistence</c>); <c>AddKernelPersistence</c> provides the
     /// <see cref="IAttestationVerifier"/> that approval and deprecation check and the <see cref="IConceptRegistry"/> that
-    /// terminology bindings resolve through. It also registers the mapping specification content validator and the K-STD-1
-    /// protocol submission check (ADR-2463), which reads findings through <see cref="IValidationFindings"/>
-    /// (<c>AddKernelValidationPersistence</c>).
+    /// terminology bindings resolve through. It also registers the mapping specification content validator and the
+    /// protocol submission checks for K-STD-1 (ADR-2463) and K-STD-2 (ADR-2464), which read runs and findings through
+    /// <see cref="IValidationFindings"/> (<c>AddKernelValidationPersistence</c>).
     /// </summary>
     public static IServiceCollection AddKernelStandards(this IServiceCollection services)
     {
@@ -357,6 +357,7 @@ public static class KernelStandardsServiceCollectionExtensions
         services.AddTransient<ICommandHandler<DeclareStudyStandards, StudyStandardsProfileId>, DeclareStudyStandardsHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, MappingSpecificationContentValidator>());
         services.TryAddEnumerable(ServiceDescriptor.Transient<IProtocolSubmissionCheck, MappingCoverageCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IProtocolSubmissionCheck, DesignConformanceCheck>());
         return services;
     }
 }
