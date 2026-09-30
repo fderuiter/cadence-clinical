@@ -6,6 +6,7 @@ using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.WorkQueues;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Audit;
@@ -72,6 +73,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
         services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
+        services.TryAddSingleton<IEffectivityReader, KernelEffectivityReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();

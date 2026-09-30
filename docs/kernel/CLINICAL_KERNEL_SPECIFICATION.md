@@ -307,7 +307,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 | Family | Examples |
 | --- | --- |
 | Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
-| Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
+| Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityDeclared`, `EffectivityStatusChanged`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
 | Quality | `ValidationRunCompleted` (with counts of detected, new and resolved findings), `FindingInvestigationStarted`, `FindingClassified`, `FindingAccepted`, `FindingExplained`, `FindingReopened`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
@@ -524,6 +524,14 @@ Scopes resolve most-specific-first: `StudySite → Country → Study`.
   (IRB/EC approval, CTA acknowledgement), so eTMF evidence directly gates activation.
 - Start-up dependencies (contracts executed, essential documents present, site initiation completed) are
   expressed as the same kind of evidence conditions on activation; their workflows live in CTMS/start-up.
+- **Implemented** (ADR-2456, #4777): `Effectivity` is an aggregate per protocol version and scope, with
+  bitemporal `EffectivityStatusPeriod` rows that each name the `ArtifactVersionId`s evidencing them (a version, not
+  an artifact, so the evidence cannot change after the fact). `DeclareEffectivity` starts it `Pending`;
+  `ChangeEffectivityStatus` moves it, accepting an ethics approval for `EthicsApproved`, a regulatory approval or CTA
+  acknowledgement for `RegulatoryApproved`, and any of them for `Effective` (K-TIME-5), which also needs an approved
+  version. `ActivateStudySite` refuses a site where no version is in force (K-TIME-4). `IEffectivityReader` resolves
+  the versions in force at a study site as of any valid and known time. The other start-up conditions are not yet
+  checked.
 
 ### 7.2 Vendors and responsibilities
 
@@ -1166,6 +1174,7 @@ kernel, is merged into another, or is retired.
 | K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
 | K022 | Validation findings | Immutable study-scoped runs; finding identity derived from rule and target; status derived from runs and attested decisions | ADR-2462 |
 | K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
+| K024 | Effectivity and study-site activation | Bitemporal effectivity per version and scope on artifact-version evidence; most specific scope decides; activation needs a version in force | ADR-2456 |
 | K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
 
 ---

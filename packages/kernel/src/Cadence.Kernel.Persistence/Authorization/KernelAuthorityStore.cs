@@ -113,6 +113,19 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     .SingleOrDefaultAsync(ct).ConfigureAwait(false);
                 return scope is null ? null : await ScopePathAsync(db, tenant, new AuthorityScope(scope.ScopeLevel, scope.ScopeTargetId, scope.ScopeCountry), ct).ConfigureAwait(false);
 
+            case NodeKinds.Effectivity:
+                var effectivityId = EffectivityId.FromGuid(id);
+                var effectivity = await db.Effectivities.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.Id == effectivityId)
+                    .Select(e => new { e.StudyId, e.ScopeCountry, e.ScopeStudySiteId })
+                    .SingleOrDefaultAsync(ct).ConfigureAwait(false);
+                return effectivity switch
+                {
+                    null => null,
+                    { ScopeStudySiteId: { } scopedSite } => await StudySitePathAsync(db, tenant, scopedSite, ct).ConfigureAwait(false),
+                    _ => await StudyPathAsync(db, tenant, effectivity.StudyId, effectivity.ScopeCountry, ct).ConfigureAwait(false),
+                };
+
             default:
                 // Tenants, participants (who may be in several studies), roles, attestations and reference data belong
                 // to no organization or study.

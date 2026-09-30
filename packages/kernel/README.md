@@ -438,7 +438,9 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Recording.** Each decision names its conditions (`grant.active`, `grant.delegable`, `grant.delegator`,
   `actor.platform_operator`, `actor.agent_verb`). The command's provenance activity stores them in
   `authorization`.
-- **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards.
+- **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards. `kernel.grants`
+  checks that exactly one of capability and role is set and that the scope columns fit the level, a `StudyCountry`
+  scope included.
 - **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
 ## Work queues (ADR-2486)
@@ -463,6 +465,29 @@ var queues = await workQueues.ReadAsync(tenant, new WorkQueueQuery(Within: NodeR
 - **Sources.** `AddKernelPersistence` registers `protocol.versions_in_review` (due since submission). Applications
   register their own with `services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, …>())`.
 - Register `AddKernelWorkQueues()` for the read; the `DefineWorkQueue` handler comes with `AddKernelCommandPipeline()`.
+
+## Effectivity and study-site activation (ADR-2456)
+
+Approval of a protocol version is not effectiveness. An `Effectivity` says whether a version is in force in one
+scope of its study, and `ActivateStudySite` checks it.
+
+- **Scopes.** `EffectivityScope.Study()`, `InCountry("DE")` (ISO 3166-1 alpha-2) or `At(studySite)`. A version has
+  at most one effectivity per scope.
+- **Lifecycle.** `DeclareEffectivity` starts it `Pending`. `ChangeEffectivityStatus` moves it to
+  `RegulatoryApproved`, `EthicsApproved`, `Effective` or `Withdrawn` (terminal), from `EffectiveAt` in valid time.
+  An `Effective` status is only left by withdrawal.
+- **Evidence (K-TIME-5).** Each move names `ArtifactVersionId`s. `EthicsApproved` takes an ethics approval,
+  `RegulatoryApproved` a regulatory approval or CTA acknowledgement, and `Effective` needs at least one of the three
+  and an approved version. Evidence must belong to the version's study or be tenant-wide.
+- **Resolution.** For each version the most specific effectivity covering the site decides (study site, then
+  country, then study), as of any `(valid, known)` pair. `IEffectivityReader.EffectiveAtAsync` returns the versions
+  in force at a study site, highest number first.
+- **Activation (K-TIME-4).** `ActivateStudySite` refuses a study site where no version is in force when it is
+  recorded, and raises `StudySiteActivated` with the versions that were.
+- **Tables.** `kernel.effectivities` checks the scope columns and holds one row per version and scope.
+  `kernel.effectivity_status_periods` carries the bitemporal guards.
+- **Not yet:** the other start-up conditions of §7.1 (contracts, essential documents, site initiation) and the
+  authority evaluator's StudySite condition.
 
 ## Search (ADR-2484)
 

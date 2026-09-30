@@ -209,6 +209,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelEvidenceHandlers();
         services.AddKernelAuthorityHandlers();
         services.AddKernelWorkQueueHandlers();
+        services.AddKernelEffectivityHandlers();
         return services;
     }
 }

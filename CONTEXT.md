@@ -28,9 +28,17 @@ by the draft forked from an approved version, and the parent stays approved (ADR
 **protocol design document** (ADR-2472): typed elements (objectives, endpoints, estimands, arms, epochs, planned
 activities, collection specifications and more), each with an **element id** that stays the same across versions, so
 two versions can be diffed element by element (K-PROT-1). A **design finding** is a gap in the scientific chain, such
-as a collected item with no purpose (K-PROT-3); it informs and never blocks. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
-StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
-ethics approval (K-TIME-4, K-TIME-5).
+as a collected item with no purpose (K-PROT-3); it informs and never blocks.
+
+**Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or StudySite): approval
+is not effectiveness. It moves `Pending → RegulatoryApproved | EthicsApproved → Effective`, with `Withdrawn`
+terminal, and each status names the artifact versions that evidence it. `Effective` requires an ethics approval,
+regulatory approval or CTA acknowledgement of the study (K-TIME-5). At a study site the most specific effectivity of
+each version decides (StudySite, then Country, then Study), so a site-level withdrawal keeps a version out of force
+there even when it is effective study-wide. A StudySite is **activated** only when a version is in force there
+(K-TIME-4, ADR-2456).
+_Avoid_: site compliance cache, "approved" to mean "in force"
+
 The **expected schedule** is computed from the design, never stored (K-TIME-7, ADR-2487): each timed planned
 activity is a planned visit on a **study day**, where day 1 is the reference start, day -1 the day before and there
 is no day 0 (the SDTM `--DY` convention), with a window of days before and after.
