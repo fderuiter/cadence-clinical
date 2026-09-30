@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Simulation;
 
 namespace Cadence.Kernel.Protocol;
@@ -24,12 +25,18 @@ namespace Cadence.Kernel.Protocol;
 /// The elements the amended content adds, changes or removes relative to the parent, by the structural diff (ADR-2480
 /// §4.6), sorted by element id. Compare with <paramref name="ImpactedElements"/> to see what was changed but not declared.
 /// </param>
+/// <param name="Schedule">
+/// The typed Schedule of Activities directives (ADR-2475): visits added, removed, moved or re-windowed, activities added,
+/// removed or collected more or less often, and eligibility criteria changed, with the elements and concepts each one
+/// touches. Null when the amended content is not a typed protocol design.
+/// </param>
 public sealed record AmendmentImpact(
     ProtocolVersionId Amended,
     ProtocolVersionId Parent,
     IReadOnlyList<string> ImpactedElements,
     DependentsReport Dependents,
-    IReadOnlyList<ElementChange> ChangedElements);
+    IReadOnlyList<ElementChange> ChangedElements,
+    SoaAmendmentDiff? Schedule);
 
 /// <summary>
 /// Computes amendment impact (spec §6.2, K-PROT-2) as a caller of <see cref="IKernelLineage.DependentsAsync"/>, so the

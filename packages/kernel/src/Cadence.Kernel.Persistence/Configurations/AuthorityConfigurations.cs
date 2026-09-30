@@ -92,6 +92,123 @@ internal sealed class GrantPeriodConfiguration : IEntityTypeConfiguration<GrantP
 }
 
 /// <summary>
+/// EF Core mapping for <c>kernel.qualifications</c> (spec §9.3, K-AUTH-5). A qualification's evidence is an artifact
+/// version and protocol training names a protocol version, both in the same tenant. The validity history in
+/// <c>qualification_periods</c> is always loaded with the qualification.
+/// </summary>
+internal sealed class QualificationConfiguration : IEntityTypeConfiguration<Qualification>
+{
+    public void Configure(EntityTypeBuilder<Qualification> builder)
+    {
+        builder.ToTable("qualifications", t =>
+        {
+            t.HasCheckConstraint("ck_qualifications_code", "code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'");
+            t.HasCheckConstraint("ck_qualifications_protocol_version", "(kind = 'ProtocolTraining') = (protocol_version_id IS NOT NULL)");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.HolderKind).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.HolderId).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Code).HasMaxLength(Qualification.MaxCodeLength).IsRequired();
+        builder.Property(x => x.RecordedBy).HasMaxLength(300).IsRequired();
+        builder.Ignore(x => x.Holder);
+        builder.Ignore(x => x.CurrentValidity);
+        builder.HasIndex(x => new { x.TenantId, x.HolderKind, x.HolderId });
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProtocolVersion>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ProtocolVersionId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ArtifactVersion>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.EvidenceArtifactVersionId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Periods).WithOne()
+            .HasForeignKey(x => new { x.TenantId, x.QualificationId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(x => x.Periods).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+        AuditColumns.Configure(builder);
+    }
+}
+
+/// <summary>
+/// EF Core mapping for <c>kernel.qualification_periods</c>, the bitemporal validity of a qualification (ADR-2246). The
+/// migration adds the K-TIME-1 and K-TIME-2 guards keyed by qualification.
+/// </summary>
+internal sealed class QualificationPeriodConfiguration : IEntityTypeConfiguration<QualificationPeriod>
+{
+    public void Configure(EntityTypeBuilder<QualificationPeriod> builder)
+    {
+        builder.ToTable("qualification_periods");
+        builder.HasKey(x => x.Id);
+
+        // Rows are created with their id; without this EF would treat a new row added to a loaded qualification as an
+        // existing one to update.
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasBitemporalPeriod();
+        builder.HasIndex(x => new { x.TenantId, x.QualificationId });
+    }
+}
+
+/// <summary>
+/// EF Core mapping for <c>kernel.qualification_requirements</c> (spec §9.3 step 3): which qualification code a capability
+/// needs within a scope. Looked up by capability; the validity history in <c>qualification_requirement_periods</c> is
+/// always loaded with the requirement.
+/// </summary>
+internal sealed class QualificationRequirementConfiguration : IEntityTypeConfiguration<QualificationRequirement>
+{
+    public void Configure(EntityTypeBuilder<QualificationRequirement> builder)
+    {
+        builder.ToTable("qualification_requirements", t =>
+        {
+            t.HasCheckConstraint("ck_qualification_requirements_code", "qualification_code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'");
+            t.HasCheckConstraint(
+                "ck_qualification_requirements_scope",
+                "(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL)"
+                + " OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL)"
+                + " OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Capability).HasMaxLength(96).IsRequired();
+        builder.Property(x => x.QualificationCode).HasMaxLength(Qualification.MaxCodeLength).IsRequired();
+        builder.Property(x => x.ScopeLevel).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.ScopeCountry).HasMaxLength(2);
+        builder.Property(x => x.DefinedBy).HasMaxLength(300).IsRequired();
+        builder.Ignore(x => x.Scope);
+        builder.Ignore(x => x.CurrentValidity);
+        builder.HasIndex(x => new { x.TenantId, x.Capability });
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ProtocolVersion>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ProtocolVersionId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Periods).WithOne()
+            .HasForeignKey(x => new { x.TenantId, x.RequirementId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(x => x.Periods).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+        AuditColumns.Configure(builder);
+    }
+}
+
+/// <summary>
+/// EF Core mapping for <c>kernel.qualification_requirement_periods</c>, the bitemporal validity of a qualification
+/// requirement (ADR-2246). The migration adds the K-TIME-1 and K-TIME-2 guards keyed by requirement.
+/// </summary>
+internal sealed class QualificationRequirementPeriodConfiguration : IEntityTypeConfiguration<QualificationRequirementPeriod>
+{
+    public void Configure(EntityTypeBuilder<QualificationRequirementPeriod> builder)
+    {
+        builder.ToTable("qualification_requirement_periods");
+        builder.HasKey(x => x.Id);
+
+        // Rows are created with their id; without this EF would treat a new row added to a loaded requirement as an
+        // existing one to update.
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasBitemporalPeriod();
+        builder.HasIndex(x => new { x.TenantId, x.RequirementId });
+    }
+}
+
+/// <summary>
 /// EF Core mapping for <c>kernel.work_queue_definitions</c> (Canvas D10, ADR-2486): one row per version of a queue
 /// code, unique in its tenant. Insert-only in the database, so a version never changes after it is defined.
 /// </summary>

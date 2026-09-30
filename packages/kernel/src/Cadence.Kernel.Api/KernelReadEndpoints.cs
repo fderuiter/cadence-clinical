@@ -104,6 +104,15 @@ public static class KernelReadEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        reads.MapGet("/protocol-versions/{versionRef}/schedule-of-activities", GetScheduleOfActivitiesAsync)
+            .WithName("KernelGetScheduleOfActivities")
+            .WithSummary("A protocol version's Schedule of Activities, compiled from its design.")
+            .WithDescription("Planned activities as columns grouped by epoch, collection specifications as rows (ADR-2475). A version the caller may not see is refused.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         KernelLineageEndpoints.Map(reads);
         KernelActivityEndpoints.Map(reads);
         return kernel;
@@ -309,6 +318,44 @@ public static class KernelReadEndpoints
         var versionNode = NodeRef.For(version.Id);
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(KernelProtocolVersionResponse.From(version, masks.For(versionNode)));
+    }
+
+    internal static async Task<Results<Ok<KernelScheduleOfActivitiesResponse>, ProblemHttpResult>> GetScheduleOfActivitiesAsync(
+        string versionRef,
+        HttpContext context,
+        IProtocolVersionReader reader,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (!NodeRef.TryParse(versionRef, out var node))
+        {
+            return KernelProblems.InvalidNodeRef(versionRef);
+        }
+
+        if (node.Kind != NodeKinds.ProtocolVersion)
+        {
+            return KernelProblems.WrongKind(node, NodeKinds.ProtocolVersion);
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var id = ProtocolVersionId.FromGuid(node.Id);
+        if (await reader.GetAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } version)
+        {
+            return KernelProblems.NotFound(node);
+        }
+
+        // The schedule is the version's content, so a version the caller may not see is refused, not masked.
+        var versionNode = NodeRef.For(version.Id);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
+        if (masks.For(versionNode) is { } mask)
+        {
+            return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so its Schedule of Activities is not shown.");
+        }
+
+        return await reader.GetScheduleOfActivitiesAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } matrix
+            ? TypedResults.Ok(KernelScheduleOfActivitiesResponse.From(version, matrix))
+            : KernelProblems.BadRequest("Not a typed design", $"{node} holds content that is not a typed protocol design, so it has no Schedule of Activities.");
     }
 
     /// <summary>

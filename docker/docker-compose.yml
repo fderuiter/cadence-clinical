@@ -44,7 +44,7 @@ x-db-depends: &db-depends
 
 services:
   postgres:
-    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     container_name: cadence-postgres
     restart: unless-stopped
     environment:
@@ -62,7 +62,7 @@ services:
       retries: 10
 
   keycloak:
-    image: quay.io/keycloak/keycloak:22.0.3
+    image: quay.io/keycloak/keycloak:26.7.4
     container_name: cadence-keycloak
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
       retries: 5
 
   front-proxy:
-    image: nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
+    image: nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
     container_name: cadence-front-proxy
     restart: unless-stopped
     ports:
@@ -137,7 +137,7 @@ services:
         condition: service_healthy
 
   subject-portal:
-    image: node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+    image: node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80
     container_name: cadence-subject-portal
     working_dir: /app
     command:

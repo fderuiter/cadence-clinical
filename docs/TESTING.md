@@ -102,7 +102,7 @@ Rules for web tests:
 Use `packages/testing/src` rather than writing ad-hoc fakes:
 
 - `InMemoryRepository<T>`: a repository fake for application-service tests.
-- `TestSecurityContext`: `CreateHmacHeaders(...)`, `CreatePrincipal(...)` and `Identity(...)` for gateway identities.
+- `TestSecurityContext`: `CreateHmacHeaders(...)`, `CreatePrincipal(...)` and `Identity(...)` for gateway identities. Test identities carry the tenant code `TestSecurityContext.TenantCode`; there is no fallback tenant (ADR-2514).
 - The `factory.CreateSignedClient()` and `builder.UseTestGatewaySecret()` extensions, for signed calls into a
   `WebApplicationFactory` host.
 - `FakeClock` (`Cadence.Testing.Time`): a settable `IClock`, frozen at `FakeClock.DefaultStart`
