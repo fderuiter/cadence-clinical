@@ -18,9 +18,9 @@ public class ImagingStudyEnvelope
     public string Status { get; set; } = "STORED";
     public string AdjudicationStatus { get; set; } = "UNASSIGNED";
     public string TenantId { get; set; } = "tenant_default";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -81,7 +81,7 @@ public class DeidentificationCertificate
     public string OperatorIdentity { get; set; } = "cadence.imaging.pipeline";
     public string Timestamp { get; set; } = string.Empty;
     public string Signature { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
 }
 
 public class ImagingAuditLog
@@ -92,7 +92,7 @@ public class ImagingAuditLog
     public string ActorId { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public string? DetailsJson { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
 }
 
 public class ImagingAnnotation
@@ -121,9 +121,9 @@ public class ImagingAnnotation
     public string? HounsfieldStatsJson { get; set; }
     public required string ReaderId { get; set; }
     public string? Notes { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -154,14 +154,14 @@ public class TumorResponseAssessment
     public int? MaxDeauvilleScore { get; set; }
     public string OverallResponse { get; set; } = string.Empty;
     public bool IsLocked { get; set; }
-    public DateTime? LockedAt { get; set; }
+    public DateTimeOffset? LockedAt { get; set; }
     public string? LockedBy { get; set; }
     public required string ReaderId { get; set; }
     public string ManifestSha256 { get; set; } = string.Empty;
     public string Signature { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -195,13 +195,13 @@ public class ImagingAdjudicationSession
     public string? BindingReader { get; set; }
     public string? AdjudicationRationale { get; set; }
     public string? ElectronicSignatureJson { get; set; }
-    public DateTime? LockedAt { get; set; }
+    public DateTimeOffset? LockedAt { get; set; }
     public string? LockedBy { get; set; }
     public string SessionDigest { get; set; } = string.Empty;
     public string TenantId { get; set; } = "tenant_default";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
