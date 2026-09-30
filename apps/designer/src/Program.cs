@@ -34,13 +34,23 @@ protocols.MapPost("/compile", (CompileProtocolRequest request) =>
     return TypedResults.Ok(result);
 })
 .WithName("CompileProtocol")
-.WithSummary("Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.");
+.WithSummary("Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.")
+.ProducesProblem(StatusCodes.Status403Forbidden)
+// Compiling a protocol is study design work: sponsor designers and system administrators (#4958, ADR-2510).
+.RequirePermission(DesignerPermissions.CompileProtocol);
 
 await app.RunAsync();
 
 namespace Cadence.Apps.Designer
 {
     public record CompileProtocolRequest(string UsdmJson, string? StudyId = null, string? VersionTag = null);
+
+    /// <summary>The permissions Designer's routes require, from the permission matrix.</summary>
+    public static class DesignerPermissions
+    {
+        /// <summary>Compiling a protocol is study design work.</summary>
+        public const string CompileProtocol = "study_design:create";
+    }
 
     public partial class Program
     {

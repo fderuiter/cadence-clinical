@@ -19,7 +19,7 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 
 ## Security
 
-`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity. `POST /api/v1/protocols/compile` also requires `study_design:create` from the permission matrix (sponsor designers and system administrators) and answers `403` to anyone else (`.RequirePermission`, [ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md), #4958). `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
 ## Persistence
 
@@ -32,7 +32,7 @@ None. Neo4j is retired ([ADR-2245](../../docs/adr/2026-09-29-native-postgresql-p
 
 ## Tests
 
-- No service-specific tests. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
+- `tests/Cadence.UnitTests/Designer/DesignerCompileAuthorityTests.cs` checks through the real host that only study designers may compile. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
 - Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
