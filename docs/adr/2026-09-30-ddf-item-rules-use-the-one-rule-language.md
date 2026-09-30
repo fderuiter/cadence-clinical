@@ -77,6 +77,14 @@ implements it (ADR-2461).
 - **Appearance:** a column width of 1 to 4 (`cols`, `column_span` or `span`, on the item or in `layout` or `grid`)
   becomes the Enketo appearance `w1` to `w4`.
 
+### Amendment: item text (2026-09-30)
+
+An item's `label`, `description` and `hint` are in the compile's default language, and its `localizations` object
+adds languages (`{"fr": {"label": …}}`, BCP 47 tags). The form carries one label and hint per language, and the
+accessibility check fails a form where an item lacks a language that others have. The ODM `ItemDef` carries the label
+as `Question` and the description as `Description`, with `xml:lang` on each `TranslatedText` as ODM 1.3 requires.
+The label is never the XML element name.
+
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**

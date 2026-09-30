@@ -18,7 +18,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
-| [packages/ddf](#packagesddf) | 6 | 0 | 5 |
+| [packages/ddf](#packagesddf) | 3 | 0 | 8 |
 | [packages/engine_core](#packagesengine_core) | 22 | 0 | 0 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 2 | 0 | 4 |
@@ -27,7 +27,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `packages/ddf/src/UsdmCompiler.cs` (runs the accessibility stage fail-closed; has no normalizer, IR builder or rule stages) | Port missing | Goes with `stages/normalizer.py` and `stages/ir_builder.py` |
+| `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `UsdmCompiler.CompileUsdm`: reads the study, builds the IR with rules and item text, renders ODM and OpenRosa, runs the accessibility check fail-closed | Ported, deletion pending | ADR-2501, ADR-2502 |
 | `models.py` | Pydantic IR, report, options and result models | `packages/ddf/src/Models.cs` (`DDFItemIR`, `DDFStudyIR`, `AccessibilityReport`, `CompileOptions`, `DDFCompilationResult`, `CompilerWarning`, `ItemLocalization`) | Ported, deletion pending | Covered through `DdfCompilerTests` and `DdfRulesTests` |
 | `dataset_json_etl.py` | eCRF observations → SDTM Dataset-JSON | none | Port missing |  |
 | `ports.py` | `AccessibilityValidatorPort` | `IAccessibilityValidator` (`packages/ddf/src/Accessibility.cs`) | Ported, deletion pending | `DdfCompilerTests` |
@@ -35,8 +35,8 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `rules/compiler.py` | `sanitize_identifier`, `extract_appearance`, condition → XPath compiler | `DdfIdentifier.Sanitize` (deterministic, no random fallback), `RuleXPathCompiler` (safe literals), column width → appearance in `UsdmCompiler` | Ported, deletion pending | ADR-2502; `DdfRulesTests` |
 | `smart_blocks.py` | Catalog of reusable form blocks (vitals, hematology, ConMeds, AE) and instantiation | none | Port missing |  |
 | `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | `UsdmCompiler.CompileUsdm` throws `AccessibilityValidationException`; `XFormsAccessibilityValidator` is the built-in check | Ported, deletion pending | `DdfCompilerTests`, `XFormsAccessibilityValidatorTests` |
-| `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | `UsdmCompiler.ParseUsdmToIr` compiles rules and appearance (ADR-2502) | Port missing | Multi-language labels, hints and descriptions from USDM narrative content are not ported |
-| `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | none | Port missing |  |
+| `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | `UsdmCompiler.ParseUsdmToIr`: rules, appearance, and item `label`, `description`, `hint` and `localizations` (`ItemText`) | Ported, deletion pending | ADR-2502; `DdfRulesTests`. Guessing item text from USDM narrative content by name is not carried forward: the text comes from the item's own fields |
+| `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | `UsdmCompiler.ParseUsdmToIr`: a missing study id or name and an item without an id are filled in and reported as warnings; duplicate item ids and element names fail the compile | Ported, deletion pending | `DdfRulesTests`. Placeholder UUIDs for USDM `documentedBy` fields are not carried forward: nothing validates them against a schema |
 | `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec |
 
 ## packages/engine_core

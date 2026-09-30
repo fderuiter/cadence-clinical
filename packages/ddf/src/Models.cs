@@ -8,8 +8,10 @@ public record CompilerWarning(
     string WarningReason
 );
 
+/// <summary>An item's text in one language (a BCP 47 tag); the templates write one label and hint per language.</summary>
 public record ItemLocalization(
-    string? Label = null,
+    string Language,
+    string Label,
     string? Description = null,
     string? Hint = null
 );
@@ -23,7 +25,7 @@ public record DDFItemIR(
     string? Relevant = null,
     string? Constraint = null,
     string? ConstraintMessage = null,
-    IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>>? Localizations = null
+    IReadOnlyList<ItemLocalization>? Localizations = null
 );
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S101:Types should name in PascalCase", Justification = "DDF acronym naming convention")]

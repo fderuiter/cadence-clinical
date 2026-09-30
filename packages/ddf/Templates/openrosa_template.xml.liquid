@@ -26,8 +26,8 @@
     <input ref="/data/{{ item.name }}"{% if item.appearance != null and item.appearance != "" %} appearance="{{ item.appearance }}"{% endif %}>
       {% if item.localizations != null and item.localizations.size > 0 %}
       {% for loc in item.localizations %}
-      {% if loc.value.label != null and loc.value.label != "" %}
-      <label xml:lang="{{ loc.key }}">{{ loc.value.label }}</label>
+      {% if loc.label != null and loc.label != "" %}
+      <label xml:lang="{{ loc.language }}">{{ loc.label }}</label>
       {% endif %}
       {% endfor %}
       {% else %}
@@ -35,8 +35,8 @@
       {% endif %}
       {% if item.localizations != null and item.localizations.size > 0 %}
       {% for loc in item.localizations %}
-      {% if loc.value.hint != null and loc.value.hint != "" %}
-      <hint xml:lang="{{ loc.key }}">{{ loc.value.hint }}</hint>
+      {% if loc.hint != null and loc.hint != "" %}
+      <hint xml:lang="{{ loc.language }}">{{ loc.hint }}</hint>
       {% endif %}
       {% endfor %}
       {% endif %}

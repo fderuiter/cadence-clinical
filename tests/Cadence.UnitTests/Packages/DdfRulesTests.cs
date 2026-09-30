@@ -183,6 +183,69 @@ public class DdfRulesTests
             .And.Contain("""<input ref="/data/D">""");
     }
 
+    [Fact]
+    public void CompileUsdm_WritesTheItemTextInEachLanguage()
+    {
+        const string usdm = """
+            {"study":{"id":"S-1","name":"Text"},"items":[
+              {"id":"AGE","name":"Age","label":"Age at consent","hint":"Whole years","description":"Age in completed years",
+               "localizations":{"fr":{"label":"Âge au consentement","hint":"Années révolues"}}},
+              {"id":"SEX","name":"Sex","localizations":{"fr":{"label":"Sexe"}}}
+            ]}
+            """;
+
+        var result = UsdmCompiler.CompileUsdm(usdm);
+
+        result.OpenRosaXml.Should().Contain("""<label xml:lang="en">Age at consent</label>""")
+            .And.Contain("""<label xml:lang="fr">Âge au consentement</label>""")
+            .And.Contain("""<hint xml:lang="en">Whole years</hint>""")
+            .And.Contain("""<hint xml:lang="fr">Années révolues</hint>""")
+            .And.Contain("""<label xml:lang="en">Sex</label>""")
+            .And.Contain("""<label xml:lang="fr">Sexe</label>""");
+        result.OdmXml.Should().Contain("""<TranslatedText xml:lang="en">Age in completed years</TranslatedText>""")
+            .And.Contain("""<TranslatedText xml:lang="fr">Âge au consentement</TranslatedText>""");
+        result.AccessibilityReport!.Passes!.Select(p => p["id"]).Should().Contain("label-language");
+    }
+
+    [Fact]
+    public void CompileUsdm_RefusesAFormWithAnItemMissingALanguageOthersHave()
+    {
+        const string usdm = """
+            {"study":{"id":"S-1","name":"Text"},"items":[
+              {"id":"AGE","name":"Age","localizations":{"fr":{"label":"Âge"}}},
+              {"id":"SEX","name":"Sex"}
+            ]}
+            """;
+
+        var compile = () => UsdmCompiler.CompileUsdm(usdm);
+
+        compile.Should().Throw<AccessibilityValidationException>()
+            .Which.Report.Violations.Should().ContainSingle().Which["id"].Should().Be("label-language");
+    }
+
+    [Theory]
+    [InlineData("""{"en_US":{"label":"x"}}""", "Item 'A' localization 'en_US': not a BCP 47 language tag.")]
+    [InlineData("""{"fr":{"hint":"x"}}""", "Item 'A' localization 'fr': a 'label' is required.")]
+    [InlineData("""{"fr":{"label":"x","tooltip":"y"}}""", "Item 'A' localization 'fr': unknown property 'tooltip'.")]
+    [InlineData("""["fr"]""", "Item 'A': 'localizations' must be an object keyed by language.")]
+    public void CompileUsdm_RefusesAMalformedLocalization(string localizations, string problem)
+    {
+        string usdm = $$"""{"study":{"id":"S-1","name":"Text"},"items":[{"id":"A","name":"A","localizations":{{localizations}}}]}""";
+
+        var compile = () => UsdmCompiler.CompileUsdm(usdm);
+
+        compile.Should().Throw<DdfCompilationException>().Which.Problems.Should().Contain(problem);
+    }
+
+    [Fact]
+    public void CompileUsdm_ReportsAFilledInStudyIdAndName()
+    {
+        var result = UsdmCompiler.CompileUsdm("""{"items":[{"id":"A","name":"A"}]}""", fallbackStudyId: "S-FALLBACK");
+
+        result.StudyId.Should().Be("S-FALLBACK");
+        result.Warnings!.Select(w => w["field"]).Should().Equal("study.id", "study.name");
+    }
+
     private static RuleExpression Parse(string json)
     {
         using var document = JsonDocument.Parse(json);

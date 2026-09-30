@@ -243,3 +243,84 @@ public sealed record DdfItemRules(string? Relevant, string? Constraint, string? 
             reads);
     }
 }
+
+/// <summary>
+/// The text a form item shows: its label, description and hint. An item's <c>label</c>, <c>description</c> and
+/// <c>hint</c> are in the compile's default language (the label defaults to the item's own name, never the element
+/// name); its <c>localizations</c> object adds or replaces languages:
+/// <c>{"fr": {"label": "…", "description": "…", "hint": "…"}}</c>.
+/// </summary>
+public sealed partial record ItemText(string Label, string? Description, string? Hint)
+{
+    private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) { "label", "description", "hint" };
+
+    /// <summary>
+    /// The item's text in each language, ordered by language tag. Problems (a language tag that is not BCP 47, a language
+    /// without a label, an unknown property) are added to <paramref name="problems"/>.
+    /// </summary>
+    public static IReadOnlyList<ItemLocalization> Localize(
+        string itemId,
+        ItemText text,
+        JsonElement? localizations,
+        string defaultLanguage,
+        List<string> problems)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(problems);
+        var result = new SortedDictionary<string, ItemLocalization>(StringComparer.Ordinal)
+        {
+            [defaultLanguage] = new ItemLocalization(defaultLanguage, text.Label, text.Description, text.Hint),
+        };
+
+        if (localizations is not { } languages || languages.ValueKind == JsonValueKind.Null)
+        {
+            return [.. result.Values];
+        }
+
+        if (languages.ValueKind != JsonValueKind.Object)
+        {
+            problems.Add($"Item '{itemId}': 'localizations' must be an object keyed by language.");
+            return [.. result.Values];
+        }
+
+        foreach (var language in languages.EnumerateObject())
+        {
+            string where = $"Item '{itemId}' localization '{language.Name}'";
+            if (!LanguageTagRegex().IsMatch(language.Name))
+            {
+                problems.Add($"{where}: not a BCP 47 language tag.");
+                continue;
+            }
+
+            if (language.Value.ValueKind != JsonValueKind.Object)
+            {
+                problems.Add($"{where}: must be an object with a 'label'.");
+                continue;
+            }
+
+            foreach (var property in language.Value.EnumerateObject().Where(p => !Keys.Contains(p.Name)))
+            {
+                problems.Add($"{where}: unknown property '{property.Name}'.");
+            }
+
+            string? label = Value(language.Value, "label");
+            if (label is null)
+            {
+                problems.Add($"{where}: a 'label' is required.");
+                continue;
+            }
+
+            result[language.Name] = new ItemLocalization(language.Name, label, Value(language.Value, "description"), Value(language.Value, "hint"));
+        }
+
+        return [.. result.Values];
+    }
+
+    private static string? Value(JsonElement entry, string key) =>
+        entry.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString())
+            ? value.GetString()
+            : null;
+
+    [GeneratedRegex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")]
+    private static partial Regex LanguageTagRegex();
+}

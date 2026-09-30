@@ -6,18 +6,25 @@
       {% for item in items %}
       {% if item.localizations or item.relevant or item.constraint %}
       <ItemDef OID="{{ item.id }}" Name="{{ item.name }}" DataType="{{ item.type }}">
-        {% if item.localizations %}
+        {% assign described = false %}
+        {% for loc in item.localizations %}
+        {% if loc.description != null and loc.description != "" %}{% assign described = true %}{% endif %}
+        {% endfor %}
+        {% if described %}
         <Description>
           {% for loc in item.localizations %}
-          {% assign desc = loc.value.description %}
-          {% if desc == null or desc == "" %}
-            {% assign desc = loc.value.label %}
-          {% endif %}
-          {% if desc != null and desc != "" %}
-          <TranslatedText Language="{{ loc.key }}">{{ desc }}</TranslatedText>
+          {% if loc.description != null and loc.description != "" %}
+          <TranslatedText xml:lang="{{ loc.language }}">{{ loc.description }}</TranslatedText>
           {% endif %}
           {% endfor %}
         </Description>
+        {% endif %}
+        {% if item.localizations %}
+        <Question>
+          {% for loc in item.localizations %}
+          <TranslatedText xml:lang="{{ loc.language }}">{{ loc.label }}</TranslatedText>
+          {% endfor %}
+        </Question>
         {% endif %}
         {% if item.relevant != null and item.relevant != "" %}
         <Alias Context="relevant" Name="{{ item.relevant }}"/>
