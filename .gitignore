@@ -98,6 +98,8 @@ logs/
 # Playwright & End-to-End Test Artifacts
 # ------------------------------------------
 playwright-report/
+playwright-report.xml
+playwright-report*.xml
 test-results/
 playwright/
 .auth/

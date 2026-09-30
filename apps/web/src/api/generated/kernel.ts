@@ -195,6 +195,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * A protocol version's Schedule of Activities, compiled from its design.
+     * @description Planned activities as columns grouped by epoch, collection specifications as rows (ADR-2475). A version the caller may not see is refused.
+     */
+    get: operations["KernelGetScheduleOfActivities"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/nodes/{nodeRef}/lineage": {
     parameters: {
       query?: never;
@@ -306,6 +326,8 @@ export interface components {
       impacted_elements: string[];
       dependents: components["schemas"]["Kernel_KernelDependentsResponse"];
       changed_elements: components["schemas"]["Kernel_KernelElementChangeResponse"][];
+      schedule:
+        null | components["schemas"]["Kernel_KernelSoaAmendmentDiffResponse"];
     };
     Kernel_KernelChildResponse: {
       node: components["schemas"]["Kernel_KernelNodeResponse"];
@@ -426,6 +448,16 @@ export interface components {
       withdrawal_reason: null | string;
       mask: null | string;
     };
+    Kernel_KernelScheduleOfActivitiesResponse: {
+      version: string;
+      content_hash: null | string;
+      hash: string;
+      title: string;
+      epochs: components["schemas"]["Kernel_KernelSoaEpochResponse"][];
+      columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
+      rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
+      footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
     Kernel_KernelSearchHitResponse: {
       ref: string;
       kind: string;
@@ -435,6 +467,77 @@ export interface components {
       exact_code: boolean;
       /** Format: double */
       rank: number | string;
+    };
+    Kernel_KernelSoaAmendmentDiffResponse: {
+      directives: components["schemas"]["Kernel_KernelSoaDirectiveResponse"][];
+      impacted_elements: string[];
+      impacted_concepts: string[];
+      undeclared: string[];
+      changes_schedule: boolean;
+      changes_eligibility: boolean;
+    };
+    Kernel_KernelSoaColumnResponse: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      study_day: null | number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
+      locations: string[];
+      footnotes: (number | string)[];
+    };
+    Kernel_KernelSoaDirectiveResponse: {
+      kind: string;
+      element_id: string;
+      impacted_elements: string[];
+      impacted_concepts: string[];
+      before: null | components["schemas"]["Kernel_KernelSoaVisitResponse"];
+      after: null | components["schemas"]["Kernel_KernelSoaVisitResponse"];
+      /** Format: int32 */
+      frequency_before: null | number | string;
+      /** Format: int32 */
+      frequency_after: null | number | string;
+      collected_at_added: null | string[];
+      collected_at_removed: null | string[];
+    };
+    Kernel_KernelSoaEpochResponse: {
+      epoch_id: string;
+      name: string;
+      /** Format: int32 */
+      order: number | string;
+      /** Format: int32 */
+      first_column: number | string;
+      /** Format: int32 */
+      column_count: number | string;
+    };
+    Kernel_KernelSoaFootnoteResponse: {
+      /** Format: int32 */
+      number: number | string;
+      kind: string;
+      text: string;
+    };
+    Kernel_KernelSoaRowResponse: {
+      collection_spec_id: string;
+      name: string;
+      item_ids: string[];
+      concepts: string[];
+      columns: (number | string)[];
+      /** Format: int32 */
+      frequency: number | string;
+      footnotes: (number | string)[];
+    };
+    Kernel_KernelSoaVisitResponse: {
+      epoch_id: string;
+      /** Format: int32 */
+      study_day: null | number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
+      locations: string[];
     };
     Kernel_KernelZoomStepResponse: {
       level: string;
@@ -899,6 +1002,64 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelProtocolVersionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetScheduleOfActivities: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScheduleOfActivitiesResponse"];
         };
       };
       /** @description Bad Request */

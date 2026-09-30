@@ -29,8 +29,8 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// Grants, roles and delegation through the command pipeline with the production authorization (spec §9.3,
-/// ADR-2455, #4781), against PostgreSQL. Includes spec §14 acceptance scenario 3. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// ADR-2455, #4781) and the qualifications that gate them (K-AUTH-5, ADR-2459), against PostgreSQL. Includes spec §14
+/// acceptance scenarios 3 and 12. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresFixture>, IDisposable
@@ -38,6 +38,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
     private static readonly Actor Platform = Actor.ServiceAccount("platform");
     private static readonly Actor Pi = Actor.Person("pi@site.test");
     private static readonly Actor Crc = Actor.Person("crc@site.test");
+    private static readonly Actor Admin = Actor.Person("training@sponsor.test");
 
     private readonly KernelPostgresFixture _fixture;
     private readonly KernelProtocolScenario _scenario;
@@ -204,6 +205,168 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
             var act = () => ExecuteAsAdminAsync(statement, ct);
             (await act.Should().ThrowAsync<PostgresException>(statement)).Which.SqlState.Should().Be(sqlState);
         }
+    }
+
+    /// <summary>
+    /// Spec §14 scenario 12 (K-AUTH-5, K-AUTH-6): a coordinator holds the grant to sign eligibility, but a requirement
+    /// names training on the current protocol version. While the training is current the signature is permitted with
+    /// the training record as evidence; once it has expired the signature is denied and the denial names the expired
+    /// qualification and the day it expired.
+    /// </summary>
+    [Fact(DisplayName = "Scenario12_ExpiredProtocolTraining_DeniesEligibilitySignatureNamingIt")]
+    public async Task Scenario12ExpiredProtocolTrainingDeniesEligibilitySignatureNamingIt()
+    {
+        _fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, _) = await NewStudyWithArtifactAsync(ct);
+        var (version, _) = await _scenario.ApprovedAsync(tenant, study, ct);
+        var trainingRecord = await TrainingRecordAsync(tenant, study, ct);
+        UseProductionAuthorization();
+        await AppointQualificationAdminAsync(tenant, ct);
+        await As(Platform, new IssueGrant(tenant, GrantId.New(), Crc, "eligibility.sign", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, Key(), "Coordinator appointed"), ct);
+        var requirement = await As(Admin, new DefineQualificationRequirement(
+            tenant, QualificationRequirementId.New(), "eligibility.sign", "protocol_training", version.ProtocolVersionId, AuthorityScope.Study(study),
+            _fixture.Clock.UtcNow, null, Key(), "Protocol training before eligibility sign-off"), ct);
+        Tick();
+
+        var trainedAt = _fixture.Clock.UtcNow;
+        var expiresAt = trainedAt.AddDays(1);
+        var training = await As(Admin, new RecordQualification(
+            tenant, QualificationId.New(), Crc, QualificationKind.ProtocolTraining, "protocol_training", version.ProtocolVersionId,
+            trainingRecord, trainedAt, expiresAt, Key(), "Training completed"), ct);
+        Tick();
+
+        var current = await EvaluateAsync(tenant, Crc, "eligibility.sign", NodeRef.For(study), _fixture.Clock.UtcNow, _fixture.Clock.UtcNow, ct);
+        current.Permitted.Should().BeTrue(current.Reason);
+        current.Conditions.Should().ContainSingle(c => c.Code == AuthorityEvaluator.QualificationCondition)
+            .Which.Evidence.Should().Equal(NodeRef.For(requirement.RequirementId), NodeRef.For(training.QualificationId), NodeRef.For(trainingRecord));
+
+        _fixture.Clock.Advance(TimeSpan.FromDays(2));
+        var expired = await EvaluateAsync(tenant, Crc, "eligibility.sign", NodeRef.For(study), _fixture.Clock.UtcNow, _fixture.Clock.UtcNow, ct);
+
+        expired.Permitted.Should().BeFalse();
+        expired.Reason.Should().Be(
+            $"{Crc.Id} is not qualified to eligibility.sign: Renew protocol_training for protocol version {version.ProtocolVersionId}; it expired on {expiresAt:yyyy-MM-dd}.");
+        expired.Conditions.Should().ContainSingle(c => !c.Met)
+            .Which.Evidence.Should().Equal(NodeRef.For(requirement.RequirementId), NodeRef.For(training.QualificationId));
+    }
+
+    /// <summary>
+    /// A requirement gates a kernel command through the pipeline: the coordinator's add-version is denied and audited
+    /// naming the qualification to obtain, and permitted with the qualification as evidence once it is recorded.
+    /// Retiring the requirement lifts the gate for later decisions.
+    /// </summary>
+    [Fact(DisplayName = "QualificationRequirement_GatesCommandsThroughThePipeline")]
+    public async Task QualificationRequirementGatesCommandsThroughThePipeline()
+    {
+        _fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, artifact) = await NewStudyWithArtifactAsync(ct);
+        var certificate = await TrainingRecordAsync(tenant, study, ct);
+        UseProductionAuthorization();
+        await AppointQualificationAdminAsync(tenant, ct);
+        await As(Platform, new IssueGrant(tenant, GrantId.New(), Crc, "artifact.add_version", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, Key(), "Coordinator appointed"), ct);
+        var requirement = await As(Admin, new DefineQualificationRequirement(
+            tenant, QualificationRequirementId.New(), "artifact.add_version", "gcp", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, Key(), "GCP first"), ct);
+        Tick();
+
+        var denied = await SendAs(Crc, AddVersion(tenant, artifact, "v2"), ct);
+        denied.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
+        denied.Error.Explanation!.Conditions.Should().ContainSingle(c => !c.Met).Which.Should().BeEquivalentTo(new
+        {
+            Code = AuthorityEvaluator.QualificationCondition,
+            Description = "Obtain gcp",
+            Evidence = new[] { NodeRef.For(requirement.RequirementId) },
+        });
+
+        Tick();
+        var gcp = await As(Admin, new RecordQualification(
+            tenant, QualificationId.New(), Crc, QualificationKind.Certificate, "gcp", null, certificate, _fixture.Clock.UtcNow, null, Key(), "GCP certificate filed"), ct);
+        Tick();
+        (await SendAs(Crc, AddVersion(tenant, artifact, "v2"), ct)).IsSuccess.Should().BeTrue();
+
+        await using (var db = _fixture.CreateContext(tenant))
+        {
+            var decisions = await db.ProvenanceActivities.AsNoTracking()
+                .Where(a => a.CommandType == nameof(AddArtifactVersion))
+                .OrderBy(a => a.RecordedAt)
+                .Select(a => a.Authorization!)
+                .ToListAsync(ct);
+            decisions.Should().HaveCount(2);
+            decisions[0].Should().Contain("\"permitted\": false").And.Contain("Obtain gcp");
+            decisions[1].Should().Contain("\"permitted\": true").And.Contain($"qualification:{gcp.QualificationId}");
+            (await db.DomainEvents.AsNoTracking().CountAsync(e => e.Type == "QualificationRecorded", ct)).Should().Be(1);
+            (await db.DomainEvents.AsNoTracking().CountAsync(e => e.Type == "QualificationRequirementDefined", ct)).Should().Be(1);
+        }
+
+        // Revoking the certificate denies again; retiring the requirement lifts the gate.
+        Tick();
+        (await As(Admin, new RevokeQualification(tenant, gcp.QualificationId, _fixture.Clock.UtcNow, Key(), "Filed in error"), ct)).ValidTo.Should().NotBeNull();
+        Tick();
+        (await SendAs(Crc, AddVersion(tenant, artifact, "v3"), ct)).Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
+        (await As(Admin, new RetireQualificationRequirement(tenant, requirement.RequirementId, _fixture.Clock.UtcNow, Key(), "No longer required"), ct)).ValidTo.Should().NotBeNull();
+        Tick();
+        (await SendAs(Crc, AddVersion(tenant, artifact, "v3"), ct)).IsSuccess.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Validates the qualification handlers and database guards: evidence must be a training record or credential,
+    /// a protocol version and a requirement's scope must exist, validity rows are append-only (KT001), and only
+    /// protocol training names a protocol version.
+    /// </summary>
+    [Fact(DisplayName = "Qualification_HandlersAndDatabaseGuards_RefuseBadRecords")]
+    public async Task QualificationHandlersAndDatabaseGuardsRefuseBadRecords()
+    {
+        _fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, _) = await NewStudyWithArtifactAsync(ct);
+        var ethicsApproval = ArtifactVersionId.New();
+        await _scenario.OkAsync(
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsApproval, ArtifactKind.EthicsApproval, study, "IRB approval", Content("irb"), Key(), "Filed"), ct);
+        var record = await TrainingRecordAsync(tenant, study, ct);
+        var from = _fixture.Clock.UtcNow;
+
+        RecordQualification Qualification(ArtifactVersionId evidence, QualificationKind kind = QualificationKind.Training, ProtocolVersionId? version = null) =>
+            new(tenant, QualificationId.New(), Crc, kind, "gcp", version, evidence, from, null, Key(), "Filed");
+
+        (await _fixture.Sender.SendAsync(Qualification(ethicsApproval), cancellationToken: ct)).Error.Should().Be(QualificationErrors.EvidenceInvalid);
+        (await _fixture.Sender.SendAsync(Qualification(ArtifactVersionId.New()), cancellationToken: ct)).Error.Should().Be(QualificationErrors.EvidenceInvalid);
+        (await _fixture.Sender.SendAsync(Qualification(record, QualificationKind.ProtocolTraining, ProtocolVersionId.New()), cancellationToken: ct)).Error
+            .Should().Be(QualificationErrors.ProtocolVersionUnknown);
+        (await _fixture.Sender.SendAsync(new DefineQualificationRequirement(
+            tenant, QualificationRequirementId.New(), "eligibility.sign", "gcp", null, AuthorityScope.Study(StudyId.New()), from, null, Key(), "Unknown study"), cancellationToken: ct)).Error
+            .Should().Be(AuthorityErrors.ScopeUnknown);
+        var gcp = await _scenario.OkAsync(Qualification(record), ct);
+
+        foreach (var (statement, sqlState) in new[]
+        {
+            ($"UPDATE kernel.qualification_periods SET valid_period = tstzrange(now() - interval '1 year', NULL) WHERE qualification_id = '{gcp.QualificationId.Value}'", BitemporalSql.AppendOnlyViolationSqlState),
+            ($"DELETE FROM kernel.qualification_periods WHERE qualification_id = '{gcp.QualificationId.Value}'", BitemporalSql.AppendOnlyViolationSqlState),
+            ($"UPDATE kernel.qualifications SET kind = 'ProtocolTraining' WHERE id = '{gcp.QualificationId.Value}'", PostgresErrorCodes.CheckViolation),
+            ($"UPDATE kernel.qualifications SET code = 'GCP' WHERE id = '{gcp.QualificationId.Value}'", PostgresErrorCodes.CheckViolation),
+        })
+        {
+            var act = () => ExecuteAsAdminAsync(statement, ct);
+            (await act.Should().ThrowAsync<PostgresException>(statement)).Which.SqlState.Should().Be(sqlState);
+        }
+    }
+
+    private async Task<ArtifactVersionId> TrainingRecordAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    {
+        var version = ArtifactVersionId.New();
+        await _scenario.OkAsync(
+            new RegisterArtifact(tenant, ArtifactId.New(), version, ArtifactKind.TrainingRecord, study, "Training record", Content($"training-{version}"), Key(), "Filed"), ct);
+        return version;
+    }
+
+    /// <summary>The platform grants <see cref="Admin"/> the tenant-wide qualification capabilities.</summary>
+    private async Task AppointQualificationAdminAsync(TenantId tenant, CancellationToken ct)
+    {
+        var role = await As(Platform, new DefineRole(
+            tenant, RoleId.New(), "QUAL_ADMIN", "Training administrator",
+            ["qualification.record", "qualification.revoke", "qualification_requirement.define", "qualification_requirement.retire"], Key(), "Set up roles"), ct);
+        await As(Platform, new IssueGrant(tenant, GrantId.New(), Admin, null, role.RoleId, AuthorityScope.Tenant(), _fixture.Clock.UtcNow, null, false, Key(), "Administrator appointed"), ct);
+        Tick();
     }
 
     private void UseProductionAuthorization() =>
