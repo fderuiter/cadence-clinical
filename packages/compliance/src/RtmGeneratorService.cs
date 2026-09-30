@@ -192,6 +192,15 @@ public static partial class RtmGeneratorService
             }
         }
 
+        foreach (string generatedDoc in new[] { checkedInRtm, Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md") })
+        {
+            if (File.Exists(generatedDoc) && !GxPSigner.VerifyStamp(File.ReadAllText(generatedDoc)))
+            {
+                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} does not match its integrity stamp: it was edited by hand or predates the stamp. Run `dotnet cadence gxp sync`.");
+                exitCode = 1;
+            }
+        }
+
         var failedReqs = allRequirements.Values
             .Where(r => Classify(r.Id, testMappings, testResults) == RequirementState.Failed)
             .Select(r => r.Id)
@@ -679,8 +688,8 @@ public static partial class RtmGeneratorService
             }
         }
 
-        string signedContent = GxPSigner.SignGxpMarkdown(sb.ToString(), timestamp: timestamp);
-        File.WriteAllText(outputPath, signedContent);
+        string stampedContent = GxPSigner.StampGxpMarkdown(sb.ToString());
+        File.WriteAllText(outputPath, stampedContent);
     }
 
     private static string SourceDoc(RequirementInfo req) => req.Source.Contains("SRS", StringComparison.Ordinal) ? "SRS" : "PRD";
@@ -749,8 +758,8 @@ public static partial class RtmGeneratorService
         sb.AppendLine("Director of Clinical Quality Assurance: ___________________________   Date: _______________");
         sb.AppendLine("```\n");
 
-        string signedContent = GxPSigner.SignGxpMarkdown(sb.ToString(), timestamp: timestamp);
-        File.WriteAllText(outputPath, signedContent);
+        string stampedContent = GxPSigner.StampGxpMarkdown(sb.ToString());
+        File.WriteAllText(outputPath, stampedContent);
     }
 
     private static string GetRelativePath(string fullPath, string basePath)
