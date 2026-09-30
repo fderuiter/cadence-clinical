@@ -42,6 +42,12 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
         // application-level advisory lock in MIG-SUBJ-013's EnrollNextIndexAsync. See §4.2.
         builder.HasIndex(x => new { x.StudyCode, x.EnrollmentIndex }).IsUnique();
 
+        builder.HasIndex(x => new { x.StudyCode, x.SiteCode, x.Status, x.EnrollmentIndex })
+            .HasDatabaseName("IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex");
+
+        builder.HasIndex(x => new { x.StudyCode, x.Status, x.EnrollmentIndex })
+            .HasDatabaseName("IX_clinical_subjects_StudyCode_Status_EnrollmentIndex");
+
         builder.Property(x => x.SiteCode).HasConversion(
             c => c.HasValue ? c.Value.Value : null,
             v => v == null ? (SiteCode?)null : new SiteCode(v));

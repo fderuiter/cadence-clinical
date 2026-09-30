@@ -102,6 +102,28 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
+    public void Configure_HasCompositeIndexOnStudyCodeSiteCodeStatusAndEnrollmentIndex()
+    {
+        using var connection = OpenSqliteConnection();
+        using var context = CreateSqliteContext(connection);
+        var entityType = RequireEntityType(context);
+
+        entityType.GetIndexes().Should().Contain(i =>
+            !i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "StudyCode", "SiteCode", "Status", "EnrollmentIndex" }));
+    }
+
+    [Fact]
+    public void Configure_HasCompositeIndexOnStudyCodeStatusAndEnrollmentIndex()
+    {
+        using var connection = OpenSqliteConnection();
+        using var context = CreateSqliteContext(connection);
+        var entityType = RequireEntityType(context);
+
+        entityType.GetIndexes().Should().Contain(i =>
+            !i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "StudyCode", "Status", "EnrollmentIndex" }));
+    }
+
+    [Fact]
     public void Configure_MapsStratFactorsBackingFieldToJsonbColumn()
     {
         using var connection = OpenSqliteConnection();
