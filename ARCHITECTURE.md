@@ -88,6 +88,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | — | Trusted forwarded headers, HSTS and per-caller rate limits at the edge | [ADR-2491](docs/adr/2026-09-30-http-edge-hardening-forwarded-headers-hsts-rate-limits.md) |
 | — | The web app signs in only through Keycloak | [ADR-2493](docs/adr/2026-09-30-keycloak-only-web-sign-in.md) |
 | — | Field-level encryption and keyed lookup hashes for secrets at rest | [ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md) |
+| — | `X-Change-Reason` is printable ASCII or RFC 8187 `UTF-8''` encoded, decoded before audit | [ADR-2495](docs/adr/2026-09-30-reason-for-change-header-encoding.md) |
 | — | Python reference sources are deleted once their C# port is tested | [ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) |
 | — | .NET 10 platform standards (C# 14, Minimal APIs, EF Core 10, CPM) | [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) |
 
@@ -172,6 +173,10 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
   as keyed HMAC-SHA256 lookup hashes (`FIELD_LOOKUP_HASH_KEY`), and consent signature captures only
   as a SHA-256 binding to the signed content
   ([ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md)).
+- A reason for change in any language travels in `X-Change-Reason` as printable ASCII or an RFC 8187
+  `UTF-8''` percent-encoded value; the gateway rejects a malformed value with 400, and services decode it
+  so the audit trail stores exactly what the user typed
+  ([ADR-2495](docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
 - Forwarded headers are honoured only from proxies listed in `CADENCE_TRUSTED_PROXIES`, responses outside
   Development carry HSTS, and the gateway limits each caller to `GATEWAY_RATE_LIMIT_PER_MINUTE` requests (default
   600) and answers 429 with `Retry-After` above it
