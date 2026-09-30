@@ -11,6 +11,8 @@ using Cadence.Core.Domain;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Lineage;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
@@ -324,6 +326,10 @@ public sealed partial class KernelCommandPipelineTests
         }
 
         public void Raise(object domainEvent, DateTimeOffset? occurredValid = null)
+        {
+        }
+
+        public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
         {
         }
 

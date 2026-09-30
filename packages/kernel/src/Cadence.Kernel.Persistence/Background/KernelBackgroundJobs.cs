@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Persistence.Audit;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,9 @@ public sealed class KernelBackgroundOptions
 
     /// <summary>How often every tenant's audit chain is verified and sealed.</summary>
     public TimeSpan SealInterval { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>How often every tenant's lineage is checked for derived objects without inputs (K-LIN-1).</summary>
+    public TimeSpan LineageCheckInterval { get; set; } = TimeSpan.FromHours(1);
 }
 
 /// <summary>Runs <see cref="KernelOutboxRelay"/> continuously: back to back while there is a backlog, then on an interval.</summary>
@@ -91,5 +95,32 @@ internal sealed partial class KernelAuditSealingService(
     }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Kernel audit sealing pass failed; retrying after the seal interval.")]
+    private static partial void LogPassFailed(ILogger logger, Exception exception);
+}
+
+/// <summary>Runs <see cref="KernelLineageOrphanCheck.CheckAllAsync"/> on <see cref="KernelBackgroundOptions.LineageCheckInterval"/>.</summary>
+internal sealed partial class KernelLineageCheckService(
+    KernelLineageOrphanCheck check,
+    KernelBackgroundOptions options,
+    ILogger<KernelLineageCheckService> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await check.CheckAllAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                LogPassFailed(logger, ex);
+            }
+
+            await KernelOutboxRelayService.Delay(options.LineageCheckInterval, stoppingToken).ConfigureAwait(false);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Kernel lineage check pass failed; retrying after the check interval.")]
     private static partial void LogPassFailed(ILogger logger, Exception exception);
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 
 namespace Cadence.Kernel.Domain.Knowledge;
 
@@ -145,8 +146,10 @@ public class ConceptRevision
 
 /// <summary>
 /// A mapping from one concept version to a code in a pinned code-system version, with its relation, review status and
-/// evidence (spec §6.1). Only confirmed mappings resolve an incoming code to a concept.
+/// evidence (spec §6.1). Only confirmed mappings resolve an incoming code to a concept. Derived: every version is
+/// defined by the concept version and the code-system version it maps (spec §9.6).
 /// </summary>
+[DerivedObject]
 public class ConceptMapping : AggregateRoot<ConceptMappingId>
 {
     public TenantId TenantId { get; private set; }

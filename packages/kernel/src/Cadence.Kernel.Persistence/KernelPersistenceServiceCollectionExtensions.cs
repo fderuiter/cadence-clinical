@@ -5,11 +5,13 @@ using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Execution;
 using Cadence.Kernel.Persistence.Knowledge;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Trust;
@@ -64,12 +66,19 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
 
+        // Lineage reads need the host's INodeVisibility (ADR-2471); none is registered here, so resolving
+        // IKernelLineage in a host that has not decided visibility fails instead of showing every object.
+        services.TryAddSingleton<IKernelLineage, KernelLineageStore>();
+        services.TryAddSingleton<ILineageOrphanSink, LoggingLineageOrphanSink>();
+        services.TryAddSingleton<KernelLineageOrphanCheck>();
+
         return services;
     }
 
     /// <summary>
     /// Runs the kernel's background jobs in the host: the outbox relay (delivers events to the host's
-    /// <see cref="IKernelEventPublisher"/>) and the hourly verify-and-seal pass over every tenant's audit chain. Call
+    /// <see cref="IKernelEventPublisher"/>), the hourly verify-and-seal pass over every tenant's audit chain and the
+    /// hourly K-LIN-1 lineage check (reported to <see cref="ILineageOrphanSink"/>). Call
     /// after <see cref="AddKernelPersistence"/> in exactly one host per deployment.
     /// </summary>
     public static IServiceCollection AddKernelBackgroundJobs(
@@ -85,6 +94,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelOutboxRelay>();
         services.AddHostedService<KernelOutboxRelayService>();
         services.AddHostedService<KernelAuditSealingService>();
+        services.AddHostedService<KernelLineageCheckService>();
         return services;
     }
 }

@@ -21,6 +21,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
 | [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
+| [`kernel.lineage_edges`](#kernellineage_edges) | `LineageEdgeRecord` | 12 |
+| [`kernel.lineage_nodes`](#kernellineage_nodes) | `LineageNodeRecord` | 7 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
@@ -425,6 +427,56 @@ Indexes:
 
 - `AK_library_items_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_library_items_tenant_id_kind_key_item_version`: unique (`tenant_id`, `kind`, `key`, `item_version`)
+
+## kernel.lineage_edges
+
+Entity: `LineageEdgeRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `activity_id` | `uuid` | no |  |  |
+| `from_id` | `uuid` | no |  |  |
+| `from_kind` | `character varying(48)` | no |  |  |
+| `from_version` | `bigint` | no |  |  |
+| `kind` | `character varying(32)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `to_id` | `uuid` | no |  |  |
+| `to_kind` | `character varying(48)` | no |  |  |
+| `to_version` | `bigint` | no |  |  |
+| `valid_from` | `timestamp with time zone` | yes |  |  |
+
+Foreign keys:
+
+- `FK_lineage_edges_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_lineage_edges_tenant_id_from_id_from_kind_from_version_to_i~`: unique (`tenant_id`, `from_id`, `from_kind`, `from_version`, `to_id`, `to_kind`, `to_version`, `kind`)
+- `IX_lineage_edges_tenant_id_to_id_to_kind_to_version`: (`tenant_id`, `to_id`, `to_kind`, `to_version`)
+
+## kernel.lineage_nodes
+
+Entity: `LineageNodeRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `kind` | `character varying(48)` | no |  | PK |
+| `node_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `version` | `bigint` | no |  | PK |
+| `activity_id` | `uuid` | no |  |  |
+| `derived` | `boolean` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+
+Foreign keys:
+
+- `FK_lineage_nodes_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_lineage_nodes_tenant_id_derived`: (`tenant_id`, `derived`)
 
 ## kernel.organizations
 

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Application.Commands;
@@ -129,6 +130,17 @@ public interface IKernelUnitOfWork
 
     /// <summary>Raises an event; <paramref name="domainEvent"/>'s type must carry <see cref="KernelEventAttribute"/>.</summary>
     void Raise(object domainEvent, DateTimeOffset? occurredValid = null);
+
+    /// <summary>
+    /// Declares that the aggregate this command writes, at the version the commit stamps, was produced from
+    /// <paramref name="input"/> (spec §9.6). The edge <c>input → aggregate</c> is written in the command's transaction
+    /// (K-LIN-2). <paramref name="input"/> must name a version. The pipeline adds the <see cref="LineageEdgeKind.Supersedes"/>
+    /// edge from an updated aggregate's previous version itself.
+    /// </summary>
+    /// <param name="input">The upstream object version.</param>
+    /// <param name="kind">How the aggregate depends on it.</param>
+    /// <param name="validFrom">When the dependency takes effect in valid time; null when it always holds.</param>
+    void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null);
 }
 
 /// <summary>Creates one unit of work per command. Implemented by kernel persistence.</summary>

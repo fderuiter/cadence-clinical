@@ -215,7 +215,7 @@ replay.
 
 ### After the commit: relay and seals
 
-`AddKernelBackgroundJobs()` runs two jobs in the host (call it in exactly one host per deployment):
+`AddKernelBackgroundJobs()` runs three jobs in the host (call it in exactly one host per deployment):
 
 - **Outbox relay** (`KernelOutboxRelay`): visits each tenant in turn and delivers up to `RelayBatchSize` of its
   events' envelopes to the host's `IKernelEventPublisher`, at least once, oldest first per tenant. A failed delivery is retried after 2^attempts seconds (capped at one hour)
@@ -224,6 +224,8 @@ replay.
 - **Verify and seal** (`KernelAuditChainSealer`, hourly): verifies every tenant's chain and seals each intact one at
   its head in `audit_chain_seals`, as `svc:audit-sealer`. A broken chain is logged as critical and never sealed. A
   chain later cut back below a seal fails verification.
+- **Lineage check** (`KernelLineageOrphanCheck`, hourly): reports each tenant's derived object versions that have no
+  inbound lineage edge (K-LIN-1) to `ILineageOrphanSink`. The default sink logs a warning.
 
 Intervals and batch size are set through `KernelBackgroundOptions`.
 
@@ -233,14 +235,15 @@ To add a command:
    with `[KernelEvent("Name", 1)]` in `Events/`, and any new errors as `public static readonly KernelError` fields
    with a `K.<Area>.<Name>` code.
 2. Implement `ICommandHandler<TCommand, TResult>` in `Cadence.Kernel.Application/Commands`: load or add **one**
-   aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, return a `CommandResult`.
-   Never save.
+   aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, declare the aggregate's
+   inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
 3. Register the handler in `AddKernelCommandPipeline()`.
 4. Test it through the pipeline in `tests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
 
 A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
-`ICurrentActor`, an `IAuthorizer` and logging; the container fails to resolve the sender if any is missing. The host
-that runs `AddKernelBackgroundJobs()` also registers an `IKernelEventPublisher`.
+`ICurrentActor`, an `IAuthorizer`, an `INodeVisibility` and logging; the container fails to resolve the sender or the
+lineage reader if any is missing. The host that runs `AddKernelBackgroundJobs()` also registers an
+`IKernelEventPublisher`.
 
 ## Object references and navigation (ADR-2481)
 
@@ -335,6 +338,37 @@ Search queries the source tables with PostgreSQL full-text search (`simple` conf
 tenant-bound context, so RLS applies. To make a new table searchable, add a `KernelSearchSource` to
 `KernelSearchStore.BuiltInSources` (code and title columns of alias `t`) and a migration calling
 `KernelSearchSql.CreateIndexes`. `SearchExpressionsUseTheIndexes` fails if the query cannot use the index.
+
+## Lineage (ADR-2471)
+
+Lineage is written by the command pipeline and read through `IKernelLineage` (`Cadence.Kernel.Lineage`).
+
+**Writing.** In a handler, declare each object the aggregate was produced from:
+
+```csharp
+context.Work.Add(mapping);
+context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Version), LineageEdgeKind.DefinedBy);
+```
+
+- The edge runs from the input to the aggregate at the version the commit stamps. It is written in the command's
+  transaction, together with a `lineage_nodes` row for that version.
+- Updates get a `Supersedes` edge from the previous version automatically.
+- Mark an aggregate `[DerivedObject]` when every version must have inputs. The commit then throws `K-LIN-1` if a
+  handler declared none.
+- Inputs must be pinned (`@version`).
+
+**Reading.**
+
+```csharp
+var graph = await lineage.TraceAsync(tenant, reader, new LineageQuery(node, LineageDirection.Backward, Depth: 10));
+var dossier = await lineage.DossierAsync(tenant, reader, node);
+```
+
+- `LineageQuery` also takes edge kinds and `ValidAt`/`KnownAt`.
+- Each result node has a distance from the start. `Truncated` is set when the depth or the 10,000-edge limit cut the
+  walk.
+- Objects the reader may not see (the host's `INodeVisibility`) come back masked: no `Ref`, a `masked:n` handle and a
+  `MaskReason`. They are never dropped.
 
 ## Migrations
 

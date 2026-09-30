@@ -333,8 +333,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
-    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal and attestation tables reject UPDATE,
-    /// DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
+    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology and lineage
+    /// tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]

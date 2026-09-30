@@ -139,6 +139,10 @@ The Standards Registry holds each standard version a tenant uses (SDTMIG, ADaMIG
 
 Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254). A **Rule** has an ID, a version, an authority, a citation of the public or sponsor document it implements, an applicability (lifecycle stage, standard, standard version, agency, dataset), a severity and a condition that is true when a record violates it. A **RulePack** groups rules and is a Metadata Registry item: approving it is its release, and a study uses the versions it pins (ADR-2461). Evaluation produces `ValidationFinding`s with workflow and stable identity across runs. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).
 
+### Lineage trace and masked objects
+
+A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward (toward dependents) from one object version, to a depth and as of `(valid_at, known_at)`. It returns every object reached with its distance, and sets `truncated` when the walk was cut off. An object the reader may not see is **masked**: it stays in the result as its kind and a reason (not permitted, blinded, identity vault) with a `masked:n` handle, never dropped, so a trace never looks shorter than it is. The **evidence dossier** is both walks of one object, grouped by kind.
+
 ### Clinical Kernel Modular Monolith
 
 An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).
