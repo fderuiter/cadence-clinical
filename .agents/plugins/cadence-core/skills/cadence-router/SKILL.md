@@ -25,12 +25,12 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 ### 1. Clinical Protocol & Architecture
 - **[`usdm-protocol-designer`](../usdm-protocol-designer/SKILL.md)**: CDISC USDM v3/v4 study design authoring, SoA matrix editing, and biomedical concepts with `generate_image` wireframes.
 - **[`domain-modeling`](../domain-modeling/SKILL.md)**: Build and sharpen clinical domain models, validate against `CONTEXT.md`, and refine terminology using `grep_search` and `replace_file_content`.
-- **[`codebase-design`](../codebase-design/SKILL.md)**: Deep module design principles for Python 3.14 (PEP 695 generics, Pydantic v2 domain schemas) and Vue 3 vanilla CSS tokens.
+- **[`codebase-design`](../codebase-design/SKILL.md)**: Deep module design principles for C# 14 / .NET 10 (ports, records, kernel IDs) and Vue 3 vanilla CSS tokens.
 - **[`cadence-adr`](../cadence-adr/SKILL.md)**: Scaffold, author, and auto-index Architecture Decision Records under `docs/adr/`.
 
 ### 2. Development & Testing
-- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `dotnet cadence test --fast`, `packages.testing` factories/fakes, and `@req:` docstring tags.
-- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix --all`, `cadence test`, `scripts/sync_gxp.py`).
+- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `dotnet cadence test --fast`, `Cadence.Testing` fakes (`FakeClock`, `InMemoryRepository<T>`), and `[GxPRequirement]` tags.
+- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix --all`, `cadence test`, `cadence gxp sync`).
 - **[`prototype`](../prototype/SKILL.md)**: Rapid exploratory prototyping using `generate_image` and ephemeral scratch directories.
 - **[`diagnosing-bugs`](../diagnosing-bugs/SKILL.md)**: Systematic root-cause debugging using `manage_task` and `schedule` watchdog timers.
 

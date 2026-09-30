@@ -247,6 +247,17 @@ Not implemented yet. The USDM JSON schemas in `packages/usdm-schemas/src` are ma
 
 Not implemented yet.
 
+### `cadence hook`
+
+Agent lifecycle hooks (PRD-SYS-053). `.agents/hooks.json` runs them from the published binary (`make build` writes `bin/cadence`). Each hook reads the runtime's JSON payload on standard input, exits `0` to allow the step, and exits `2` with the reason on standard error to block it. The banner is not printed.
+
+| Command                       | Phase           | What it does                                                                                                                                                                                                       |
+| ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cadence hook pre-tool`       | `PreToolUse`    | Blocks `--no-verify`, force-pushing or deleting `main`/`master`, `git filter-branch`/`filter-repo`, `rm -rf` of `/`, `~` or the repository, `git clean -x`, and any write to the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/`. An unreadable payload is blocked. |
+| `cadence hook post-write`     | `PostToolUse`   | Runs the query-style lint on the edited `.cs` files and blocks on `== true`/`== false` comparisons.                                                                                                             |
+| `cadence hook pre-invocation` | `PreInvocation` | Prints the GxP working rules from `AGENTS.md`.                                                                                                                                                                    |
+| `cadence hook stop`           | `Stop`          | Blocks finishing while the traceability matrix is out of date with the requirement tags; run `cadence gxp sync`.                                                                                                 |
+
 ### `cadence wizard`
 
 Interactive wizards. Each one runs a script in `scripts/` from the repository root: the `.sh` script with `bash`, or the `.ps1` script with PowerShell on Windows. The command returns the script's exit code, or `1` if the script is missing.

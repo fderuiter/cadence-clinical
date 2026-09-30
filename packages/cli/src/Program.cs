@@ -18,13 +18,22 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        // Hooks talk to an agent runtime over standard streams, so they print no banner.
+        if (args is not ["hook", ..])
+        {
+            WriteBanner();
+        }
+
+        return BuildRootCommand().Parse(args).Invoke();
+    }
+
+    private static void WriteBanner()
+    {
         AnsiConsole.Write(
             new FigletText("Cadence")
                 .Color(Color.Cyan1));
 
         AnsiConsole.MarkupLine("[bold cyan]Cadence Clinical Research Software Platform[/] [grey](.NET 10 / C# 14)[/]\n");
-
-        return BuildRootCommand().Parse(args).Invoke();
     }
 
     /// <summary>Builds the full command tree; exposed so tests can parse arguments without running a command.</summary>
@@ -105,6 +114,16 @@ public static class Program
         var mcp = AddBranch(root, "mcp", "Model Context Protocol (MCP) AI integration server");
         AddCommand(mcp, "server", "Not implemented yet: starts an MCP stdio JSON-RPC server",
             () => NotImplemented("'mcp server' is not implemented yet."));
+
+        var hook = AddBranch(root, "hook", "Agent lifecycle hooks: read the hook payload on stdin, exit 2 to block (PRD-SYS-053)");
+        AddCommand(hook, "pre-tool", "Blocks destructive git and shell commands and hand edits to generated GxP documents",
+            () => HookCommands.PreTool(Console.In, Console.Error));
+        AddCommand(hook, "post-write", "Lints the query style of an edited C# file",
+            () => HookCommands.PostWrite(Console.In, Console.Error));
+        AddCommand(hook, "pre-invocation", "Prints the GxP working rules for the agent",
+            () => HookCommands.PreInvocation(Console.Out));
+        AddCommand(hook, "stop", "Blocks finishing while the traceability matrix is out of date",
+            () => HookCommands.Stop(Console.Error));
 
         var wizard = AddBranch(root, "wizard", "Interactive onboarding and scaffolding wizards");
         AddCommand(wizard, "onboarding", "Interactive full-stack developer setup wizard", () => WizardCommands.Run("setup_wizard"));

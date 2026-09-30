@@ -29,6 +29,7 @@ Common commands:
 | `scaffold service`, `scaffold adr`                                            | Scaffolding.                                                                                                        |
 | `wizard onboarding`, `wizard migrate`, `wizard dotnet` | Interactive wizards.                                                                                                |
 | `mcp server`                                                                  | Not implemented: prints a message and exits `1`.                                                                    |
+| `hook pre-tool`, `hook post-write`, `hook pre-invocation`, `hook stop`        | Agent lifecycle hooks run by `.agents/hooks.json` from `bin/cadence` (PRD-SYS-053); exit `2` blocks the step.      |
 
 Validation commands such as `validate-readmes`, `validate-markdown`, `validate-imports`, `sync-openapi-spec` and `check-ports` are also available as top-level commands.
 
@@ -53,4 +54,6 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
   checks that unknown input, missing arguments and bare groups are rejected and that every command has an action and
   a description.
 - `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
+- `tests/Cadence.UnitTests/Packages/AgentHookGuardTests.cs`: which commands and payloads the `hook` commands block or allow
+  (`Services/AgentHookGuard.cs`).
 - Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.

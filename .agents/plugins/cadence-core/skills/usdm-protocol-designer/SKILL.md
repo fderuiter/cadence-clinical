@@ -15,16 +15,16 @@ Author and validate CDISC Unified Study Data Model (USDM v3/v4) clinical study d
 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
-| **Schema Discovery** | `grep_search` / `view_file` | Query USDM models in `apps/designer/domain/` | Inspect entity structures, relations, and enums |
+| **Schema Discovery** | `grep_search` / `view_file` | Query the USDM compiler in `packages/ddf/src/` and the kernel protocol model in `packages/kernel/src/Cadence.Kernel.Domain/Entities/ProtocolVersion.cs` | Inspect entity structures, relations, and enums |
 | **Visual Wireframing** | `generate_image` | `Prompt="High-density Schedule of Activities (SoA) matrix table..."`, `AspectRatio="16:9"` | Generate visual matrix layouts for clinical review |
 | **Interactive Design** | `ask_question` | `questions=[{"question": "Select Study Design Phase", "options": [...]}]` | Prompt user for clinical trial parameters and arm branches |
-| **Model Authoring** | `replace_file_content` | Target: `apps/designer/domain/...`, surgical model updates | Add or modify USDM entities with strict Pydantic v2 types |
+| **Model Authoring** | `replace_file_content` | Target: `packages/ddf/src/...` or the kernel protocol commands, surgical model updates | Add or modify USDM entities as strictly typed C# records |
 | **Artifact Emission** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/study_protocol_spec.md` | Emit structured USDM JSON and protocol definition artifact |
 | **Schema Export & Parity**| `run_command` | `CommandLine="dotnet cadence check"` | Re-verify architecture contracts and sentinel parity |
 
 ## Domain Model Architecture
 
-- **Designer Backend**: `apps/designer/` (Async Neo4j .NET 10 Driver, CDISC USDM schemas).
+- **Designer Backend**: `apps/designer/` (.NET 10 minimal API on PostgreSQL, CDISC USDM schemas; Neo4j is retired, ADR-2245).
 - **Core Entities**:
   - `Study`: The root clinical trial definition.
   - `StudyVersion` / `StudyProtocol`: Versioned protocol representation with amendment indexing.
@@ -38,7 +38,7 @@ Author and validate CDISC Unified Study Data Model (USDM v3/v4) clinical study d
 
 ### 1. Authoring Protocol Entities
 When creating or modifying study entities in `apps/designer`:
-- Ensure all models strictly use Pydantic v2 with explicit type annotations (no `Any`).
+- Model entities as C# `record` types with nullable reference types on (no `object` or `dynamic` payloads).
 - Adhere to immutable graph branching patterns: historical published versions remain immutable; amendments branch via predecessor relationships.
 - Preserve 21 CFR Part 11 audit properties: `created_at`, `created_by`, `reason_for_change`, `version_index`.
 
