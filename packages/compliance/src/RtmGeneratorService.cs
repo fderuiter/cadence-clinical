@@ -69,7 +69,7 @@ public enum RequirementState
 /// documents, the requirement tags on test methods (<see cref="RequirementTagScanner"/>) and TRX results.
 /// A requirement is reported as qualified only when a test that declares it actually ran and passed.
 /// </summary>
-public static class RtmGeneratorService
+public static partial class RtmGeneratorService
 {
     public const string StableTimestamp = "2026-07-23 22:38:25 UTC";
 
@@ -88,14 +88,18 @@ public static class RtmGeneratorService
         bool draft = false,
         bool validateOnly = false,
         bool dynamicTimestamp = false,
-        string? repoRoot = null)
+        string? repoRoot = null,
+        bool honorDraftEnvironment = true)
     {
         repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
         Directory.CreateDirectory(outputDir);
 
-        if (Environment.GetEnvironmentVariable("RTM_DRAFT") == "true" ||
-            Environment.GetEnvironmentVariable("GENERATE_RTM_DRAFT") == "true")
+        // `gxp sync` passes honorDraftEnvironment: false, so an RTM_DRAFT left set in a shell or CI job can't
+        // turn the documents it regenerates from real results into drafts.
+        if (honorDraftEnvironment &&
+            (Environment.GetEnvironmentVariable("RTM_DRAFT") == "true" ||
+             Environment.GetEnvironmentVariable("GENERATE_RTM_DRAFT") == "true"))
         {
             draft = true;
         }
@@ -167,6 +171,27 @@ public static class RtmGeneratorService
             exitCode = 1;
         }
 
+        string checkedInRtm = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
+        if (File.Exists(checkedInRtm))
+        {
+            var drift = FindMappingDrift(File.ReadAllText(checkedInRtm), tests, allRequirements);
+            if (drift.Count > 0)
+            {
+                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} is out of date: its test mapping differs from the tags in tests/ ({drift.Count}). Run `dotnet cadence gxp sync`.");
+                foreach (string entry in drift.Take(20))
+                {
+                    Console.WriteLine($"  {entry}");
+                }
+
+                if (drift.Count > 20)
+                {
+                    Console.WriteLine($"  ... and {drift.Count - 20} more");
+                }
+
+                exitCode = 1;
+            }
+        }
+
         var failedReqs = allRequirements.Values
             .Where(r => Classify(r.Id, testMappings, testResults) == RequirementState.Failed)
             .Select(r => r.Id)
@@ -232,6 +257,69 @@ public static class RtmGeneratorService
 
         return unknown;
     }
+
+    /// <summary>
+    /// Compares the test-to-requirement mapping in a checked-in RTM with the tags the tests declare now. Each
+    /// entry names a requirement and a test that one side lists and the other doesn't. An empty result means
+    /// the RTM lists exactly the tests that declare each requirement; it says nothing about test results.
+    /// </summary>
+    public static IReadOnlyList<string> FindMappingDrift(
+        string rtmMarkdown,
+        IEnumerable<DiscoveredTest> tests,
+        IReadOnlyDictionary<string, RequirementInfo> requirements)
+    {
+        var expected = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var test in tests)
+        {
+            foreach (var id in test.RequirementIds)
+            {
+                if (requirements.TryGetValue(id, out var req) && !req.IsLegacyAlias)
+                {
+                    expected.Add(MappingKey(req.Id, test.MethodName, test.File));
+                }
+            }
+        }
+
+        var listed = new SortedSet<string>(StringComparer.Ordinal);
+        bool inMappedSection = false;
+        foreach (string line in rtmMarkdown.Split('\n'))
+        {
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                inMappedSection = line.StartsWith("## 2.", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (!inMappedSection || !line.StartsWith("| ", StringComparison.Ordinal) || line.StartsWith("| :", StringComparison.Ordinal)
+                || line.StartsWith("| Requirement ID", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            // | ID | Source | **Title** | `Test` (file) 🟢<br>... | Status |. The title can contain anything, so
+            // the tests column is read from the right.
+            string[] cells = line.Trim().Trim('|').Split(" | ");
+            if (cells.Length < 5)
+            {
+                continue;
+            }
+
+            string id = cells[0].Trim();
+            listed.UnionWith(MappedTestPattern().Matches(cells[^2])
+                .Select(m => MappingKey(id, m.Groups["name"].Value, m.Groups["file"].Value)));
+        }
+
+        var drift = new List<string>();
+        drift.AddRange(expected.Except(listed).Select(k => $"missing from the RTM: {k}"));
+        drift.AddRange(listed.Except(expected).Select(k => $"listed in the RTM but no longer declared: {k}"));
+        return drift;
+    }
+
+    private static string MappingKey(string requirementId, string testName, string file) =>
+        $"{requirementId.ToUpperInvariant()} <- {testName} ({file.Replace('\\', '/')})";
+
+    [GeneratedRegex(@"`(?<name>[^`]+)` \((?<file>[^)]+)\)")]
+    private static partial Regex MappedTestPattern();
 
     public static RequirementState Classify(
         string requirementId,

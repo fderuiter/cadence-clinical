@@ -94,8 +94,8 @@ Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClu
 | --- | --- | --- |
 | `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
-| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:59-60` | off |
-| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:152` | off |
+| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
+| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:205` | off |
 | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | `packages/cli/src/Services/DatabaseResetService.cs:44-46` (Neo4j is being retired, #4790) | `bolt://localhost:7687`, `neo4j`, `password123` |
 | `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
