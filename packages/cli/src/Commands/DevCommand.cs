@@ -3,15 +3,14 @@ using System.Diagnostics;
 using Cadence.Cli.Services;
 
 using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cadence.Cli.Commands;
 
-public class DevCommand : Command
+public static class DevCommand
 {
     private const string AppHostProject = "apps/apphost/src/Cadence.AppHost.csproj";
 
-    public override int Execute(CommandContext context)
+    public static int Execute()
     {
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
         if (!File.Exists(Path.Combine(repoRoot, AppHostProject)))

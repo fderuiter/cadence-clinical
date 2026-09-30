@@ -13,7 +13,7 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 
 ### `ci.yml` jobs
 
-1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
+1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
 2. **Security and Vulnerability Audit**: static security audit, secret detection, DEID scan and NuGet/npm vulnerability audit.
 3. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, architecture and E2E test projects.
 4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
@@ -81,6 +81,7 @@ CI runs in `.github/workflows/ci.yml`. Every check can be reproduced locally wit
 | Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
 | Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |
 | Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests.csproj`                                                             |
+| Style › Publish the CLI as Native AOT                        | The CLI, or code it calls, raised a trim or AOT warning (IL2xxx/IL3xxx)           | `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`; fix the call, never add `NoWarn`   |
 | Style › Run Hadolint or ShellCheck                           | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                                   |
 | Style › Verify OpenAPI specification drift                   | An endpoint changed without regenerating the specs                                | `pnpm cadence sync-openapi-spec` and `pnpm cadence generate-api-docs`, then commit `docs/openapi` and `docs/api` |
 | Style › Run ADR validation                                   | ADR missing, malformed or not indexed                                             | `pnpm cadence scaffold adr`, then `pnpm cadence check adrs`                                                      |

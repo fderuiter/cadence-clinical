@@ -8,7 +8,8 @@ namespace Cadence.ToolingCore.Services;
 
 public static partial class CliDocsGeneratorService
 {
-    [GeneratedRegex(@"Add(?:Command<\w+>|Branch)\(\s*""([^""]+)""")]
+    // Matches the registrations in packages/cli/src/Program.cs: AddCommand(parent, "name", ...) and AddBranch(parent, "name", ...).
+    [GeneratedRegex(@"Add(?:Command|Branch)\(\s*\w+,\s*""([^""]+)""")]
     private static partial Regex CommandRegistrationRegex();
 
     public static int GenerateCliDocs(bool check = false, string? repoRoot = null)

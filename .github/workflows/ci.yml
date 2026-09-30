@@ -29,6 +29,7 @@ jobs:
       openapi_drift_outcome: ${{ steps.run_openapi_drift.outcome }}
       markdown_outcome: ${{ steps.run_markdown.outcome }}
       architecture_outcome: ${{ steps.run_architecture.outcome }}
+      cli_aot_outcome: ${{ steps.run_cli_aot.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -82,6 +83,12 @@ jobs:
         id: run_architecture
         if: always()
         run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
+
+      # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
+      - name: Publish the CLI as Native AOT
+        id: run_cli_aot
+        if: always()
+        run: dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o "$RUNNER_TEMP/cadence-cli"
 
       - name: Run hexagonal contract verification
         id: run_contracts
