@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 using Amazon;
 using Amazon.Runtime;
@@ -50,10 +51,11 @@ public static class StorageServiceCollectionExtensions
 
     /// <summary>
     /// Registers <see cref="IStoragePort{T}"/> for <c>byte[]</c> from <c>Storage:Provider</c>: <c>s3</c> or
-    /// <c>minio</c> (an <see cref="S3BlobStore"/>), or <c>memory</c> (an <see cref="InMemoryBlobStore"/>, Development
-    /// only). Fails at registration when the provider is missing or unknown, the bucket is missing, only half of an
-    /// access key pair is set, or the in-memory store is asked for outside Development: a service never falls back to
-    /// a store it was not configured for.
+    /// <c>minio</c> (an <see cref="S3BlobStore"/>), <c>filesystem</c> (a <see cref="FileSystemBlobStore"/> under
+    /// <c>Storage:RootPath</c>), or <c>memory</c> (an <see cref="InMemoryBlobStore"/>, Development only). Fails at
+    /// registration when the provider is missing or unknown, the bucket or an absolute root path is missing, only half
+    /// of an access key pair is set, or the in-memory store is asked for outside Development: a service never falls back
+    /// to a store it was not configured for.
     /// </summary>
     public static IServiceCollection AddCadenceStorage(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
@@ -73,6 +75,16 @@ public static class StorageServiceCollectionExtensions
 
                 services.TryAddSingleton<IStoragePort<byte[]>, InMemoryBlobStore>();
                 return services;
+            case "filesystem":
+                var fileSystem = section.Get<FileSystemStorageOptions>() ?? new FileSystemStorageOptions();
+                if (string.IsNullOrWhiteSpace(fileSystem.RootPath) || !Path.IsPathFullyQualified(fileSystem.RootPath))
+                {
+                    throw new InvalidOperationException("Storage:Provider 'filesystem' needs Storage:RootPath, an absolute directory.");
+                }
+
+                services.TryAddSingleton(fileSystem);
+                services.TryAddSingleton<IStoragePort<byte[]>>(_ => new FileSystemBlobStore(fileSystem));
+                return services;
             case "s3":
             case "minio":
                 var options = section.Get<S3StorageOptions>() ?? new S3StorageOptions();
@@ -85,8 +97,8 @@ public static class StorageServiceCollectionExtensions
             default:
                 throw new InvalidOperationException(
                     provider.Length == 0
-                        ? "Storage:Provider is not set; use 's3', 'minio' or (Development only) 'memory'."
-                        : $"Storage:Provider '{provider}' is unknown; use 's3', 'minio' or (Development only) 'memory'.");
+                        ? "Storage:Provider is not set; use 's3', 'minio', 'filesystem' or (Development only) 'memory'."
+                        : $"Storage:Provider '{provider}' is unknown; use 's3', 'minio', 'filesystem' or (Development only) 'memory'.");
         }
     }
 

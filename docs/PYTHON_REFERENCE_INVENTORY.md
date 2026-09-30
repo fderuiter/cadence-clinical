@@ -21,7 +21,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
 | [packages/engine_core](#packagesengine_core) | 19 | 0 | 3 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
-| [packages/storage](#packagesstorage) | 2 | 0 | 4 |
+| [packages/storage](#packagesstorage) | 1 | 0 | 5 |
 
 ## packages/ddf
 
@@ -104,5 +104,5 @@ that they are dropped.
 | `adapters/s3_adapter.py` | S3 put/get with SHA-256 check, SSE, presigned get/put URLs, multipart | `packages/storage/src/S3BlobStore.cs` | Ported, deletion pending | `S3BlobStoreTests` |
 | `factory.py` | Picks the local, S3 or MinIO adapter from environment | `AddCadenceStorage` (`StorageServiceCollectionExtensions.cs`); the provider is named, never guessed from the endpoint | Ported, deletion pending | `StorageRegistrationTests` |
 | `gdrive.py` | Google Drive run-manifest upload for GxP recordings | none (`pnpm cadence record setup-gdrive` prints "not implemented yet", `packages/cli/src/Commands/RecordCommands.cs:10`) | Port missing |  |
-| `local_store.py` | Filesystem provider with checksum and path-traversal guard | none | Port missing |  |
+| `local_store.py` | Filesystem provider with checksum and path-traversal guard | `packages/storage/src/FileSystemBlobStore.cs` (`Storage:Provider` `filesystem`); unlike the reference, every read is checked against the hash recorded at write time | Ported, deletion pending | `FileSystemBlobStoreTests` |
 | `s3_store.py` | Older S3 provider | `S3BlobStore` (a duplicate of `adapters/s3_adapter.py`) | Ported, deletion pending | `S3BlobStoreTests` |
