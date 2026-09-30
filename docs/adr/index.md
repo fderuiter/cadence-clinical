@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K031 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K032 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -50,10 +50,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K028 | Mapping specifications as governed concept-to-variable maps | [ADR-2463](2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | IdentityVault | [ADR-2458](2026-09-30-identity-vault.md) |
 | K031 | Qualifications gate capabilities | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md) |
+| K032 | Visit timing, anchored visits and cycles on the expected schedule | [ADR-2507](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K031)
+### 0. Clinical Kernel (K001–K032)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -92,6 +93,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2486: Work Queues as Capability-Keyed Definitions](2026-09-30-work-queues-as-capability-keyed-definitions.md) (2026-09-30)
 - [ADR-2487: Expected Schedule as a Pure Function of the Protocol Design](2026-09-30-expected-schedule-as-a-pure-function.md) (2026-09-30)
 - [ADR-2488: Study Pulse Metrics and Attention Rules as Versioned Indicators](2026-09-30-study-pulse-metrics-as-versioned-indicators.md) (2026-09-30)
+- [ADR-2590: Counts Limited to the Reader's Visible Scope](2026-09-30-counts-limited-to-the-readers-visible-scope.md) (2026-09-30)
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
@@ -505,9 +507,12 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2503: Reusable Form Blocks Are Collection Specification Library Items](2026-09-30-reusable-form-blocks-are-collection-specification-library-items.md) (2026-09-30)
 - [ADR-2504: The Tripartite Form Definition Is Not Carried Forward](2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md) (2026-09-30)
 - [ADR-2505: Recording Evidence Goes to Controlled Object Storage, Not Google Drive](2026-09-30-recording-evidence-goes-to-controlled-object-storage.md) (2026-09-30)
+- [ADR-2506: The engine_core Rule AST Is Superseded by the One Rule Language](2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md) (2026-09-30)
+- [ADR-2507: Visit Timing, Anchored Visits and Cycles on the Expected Schedule](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) (2026-09-30)
 - [ADR-2510: Endpoint Permissions from the Permission Matrix](2026-09-30-endpoint-permissions-from-the-permission-matrix.md) (2026-09-30)
 - [ADR-2511: Template Render Routes Need a Permission](2026-09-30-template-render-routes-need-a-permission.md) (2026-09-30)
 - [ADR-2512: Security and Compliance Take Time From IClock](2026-09-30-security-and-compliance-take-time-from-iclock.md) (2026-09-30)
 - [ADR-2513: Form Approval Hashes the RFC 8785 Canonical Payload](2026-09-30-form-approval-hashes-the-rfc-8785-canonical-payload.md) (2026-09-30)
+- [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)

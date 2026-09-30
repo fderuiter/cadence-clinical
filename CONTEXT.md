@@ -1020,6 +1020,8 @@ _Avoid_: Hardcoded Python if/else statements for protocol-specific rules, ad-hoc
 A sandboxed, AST-based expression evaluation engine for cross-form edit checks, dynamic skip logic, and protocol feasibility without executing arbitrary un-sandboxed code.
 _Avoid_: Unsafe Python eval() or exec() calls in clinical data pipelines
 
+> Retired by ADR-2506. The one rule language behind `IRuleEvaluator` (ADR-2461, K-RULE-3) replaces it, with its static checks in rule parsing and the DDF compile.
+
 ### Vector-Based Clinical Timeline Engine
 
 A mathematical scheduling engine that computes clinical encounter visit dates, permissible protocol windows, and automated out-of-window deviation flags dynamically from relative anchor event offsets.
@@ -1074,6 +1076,8 @@ _Avoid_: Disconnected single-analyte lab flags missing multi-parameter DILI tria
 
 A structured temporal boundary model defining permissible before ($w_b$) and after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day $28 [-3, +5]$ days), outputting deterministic deviation classifications (`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`, `MISSED_VISIT`).
 _Avoid_: Symmetric window approximations or untracked protocol visit deviations
+
+> Replaced by ADR-2507. `ExpectedSchedule.Assess` measures an actual visit as early, in window or late, with the days outside the window; how important a deviation is, is a Quality rule, and a missed visit is a closed window with no actual date.
 
 ### Cycle-Based Template Expansion
 

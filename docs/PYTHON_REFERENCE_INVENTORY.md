@@ -19,7 +19,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
-| [packages/engine_core](#packagesengine_core) | 13 | 0 | 9 |
+| [packages/engine_core](#packagesengine_core) | 7 | 0 | 15 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 0 | 0 | 6 |
 
@@ -55,15 +55,15 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `operations/engine.py` | Site startup greenlight facade | none | Port missing |  |
 | `operations/evaluator.py` | Greenlight rules: IRB, contract, staff qualification, facility, IP depot | none | Port missing | Spec K-TIME-4/5 and K-AUTH-5 are the target |
 | `operations/models.py` | Greenlight models | none | Port missing |  |
-| `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | `packages/engine_core/src/Rules/RuleAst.cs` (plain classes, no validation) | Port missing | Node validation not ported |
-| `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | none | Port missing |  |
+| `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | Not carried forward ([ADR-2506](adr/2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md)): strict `RuleExpressionJson` parsing in the one rule language (K-RULE-3). The unused `Cadence.Core.Domain.Rules` engine goes with the approved deletion | Ported, deletion pending | `RuleExpressionTests` |
+| `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | Not carried forward ([ADR-2506](adr/2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md)): `RuleExpressionJson.MaxDepth`/`MaxNodes`; unknown items and skip-logic cycles in the DDF compile (ADR-2502); pack references to the `CollectionSpec` in #4728; derived-variable cycles in #5043 | Ported, deletion pending | `RuleExpressionTests`, `DdfRulesTests` |
 | `sla/engine.py` | SLA countdown clocks with business hours and escalation tiers | `SlaEngine` (`packages/engine_core/src/Sla/`), tested by `SlaEngineTests`; the caller passes the instant a clock is read at | Ported, deletion pending | A schedule that can never run is refused (the Python looped forever) |
 | `sla/models.py` | SLA models | records in `packages/engine_core/src/Sla/SlaModels.cs`; `SlaPolicy.ComputeChecksum` matches the Python checksum | Ported, deletion pending | Audit fields left to the store's GxP audit interceptor |
-| `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none | Port missing |  |
-| `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | models only in `SupplyModels.cs` | Port missing |  |
-| `supply/models.py` | Supply node, roll-up, forecast, DTP and unblinding models | `packages/engine_core/src/Supply/SupplyModels.cs` (shapes; only the forecast models are used) | Port missing | Goes with `supply/hierarchy.py` and `supply/unblinding.py` |
-| `supply/unblinding.py` | Emergency unblinding authorisation | models only in `SupplyModels.cs` | Port missing | Spec Appendix A.1 (Attestation-bearing event) is the target |
-| `timeline/engine.py` | Visit-window schedule and deviation assessment | `ExpectedSchedule` (kernel, [ADR-2487](adr/2026-09-30-expected-schedule-as-a-pure-function.md)) places timed activities with their windows and window status from the reference start (K-TIME-7) | Port missing | Not in the kernel yet: repeating cycle templates, visits anchored on another event or on the previous visit, and early/late/major deviation classification of an actual visit |
+| `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none: callers use the engines directly | Ported, deletion pending | Not carried forward (ADR-2520) |
+| `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | `MultiEchelonHierarchyEngine` (`packages/engine_core/src/Supply/MultiEchelonHierarchyEngine.cs`), tested by `MultiEchelonHierarchyEngineTests` | Ported, deletion pending | #5046 |
+| `supply/models.py` | Supply node, roll-up, forecast, DTP and unblinding models | `packages/engine_core/src/Supply/SupplyModels.cs`; the unblinding shapes are `[Obsolete]` | Ported, deletion pending | Goes with `supply/engine.py`, `supply/hierarchy.py` and `supply/unblinding.py` |
+| `supply/unblinding.py` | Emergency unblinding authorisation | none: Execution's `UNBLINDED` state change (PRD-SUB-005, #4982) is the only unblinding path | Ported, deletion pending | Not carried forward (ADR-2520); the kernel target is an Attestation-bearing event (spec Appendix A.1) |
+| `timeline/engine.py` | Visit-window schedule and deviation assessment | `ExpectedSchedule` (kernel, [ADR-2487](adr/2026-09-30-expected-schedule-as-a-pure-function.md)) places timed activities with their windows and window status from the reference start (K-TIME-7) | Port missing | Early/late classification of an actual visit is `ExpectedSchedule.Assess` ([ADR-2507](adr/2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md)); major/minor is a Quality rule, not a fixed 7 days. Not in the kernel yet (#5045, ADR-2507): repeating cycle templates and visits anchored on another visit |
 | `timeline/models.py` | Timeline models | none | Port missing |  |
 
 ## packages/security

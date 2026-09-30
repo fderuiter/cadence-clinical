@@ -634,6 +634,10 @@ When a new version becomes Effective at the StudySite, the Amendment's Transitio
     there is no day 0 (a day-0 timing is day 1). Activities without a timing are event-driven and not scheduled.
   - The first anchor is the reference start, passed by the caller as a site-calendar date; each visit gets a
     target date, a window and its status (`NotYetOpen`, `Open`, `Closed`) at the as-of date.
+  - `Assess` measures an actual visit date against its expected visit: days from target, `Early`, `InWindow` or
+    `Late`, and days outside the window (ADR-2507, K032). It carries no severity; a derived out-of-window deviation
+    takes its importance from the study's Quality rules. Visits anchored on another visit and repeating cycles
+    follow under the same ADR.
 - **K-TIME-8** An observation's governing version is resolved from Applicability at its valid time and
   stamped into its provenance. `ActiveProtocolVersion`, `ProtocolVersionTag/Index` and
   `FormSubmission.ProtocolVersion` are replaced by this (inventory §3 item 3).
@@ -1236,6 +1240,7 @@ kernel, is merged into another, or is retired.
 | K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
 | K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
 | K031 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
+| K032 | Visit timing, anchors and cycles | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences | ADR-2507 |
 
 ---
 

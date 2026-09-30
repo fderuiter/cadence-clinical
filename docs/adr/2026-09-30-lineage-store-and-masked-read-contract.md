@@ -123,6 +123,10 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
 
 ### 4.4 Masking (#4840, Canvas PX-20)
 
+> [!NOTE]
+> Amended by [ADR-2590](2026-09-30-counts-limited-to-the-readers-visible-scope.md) §4.2: a `Blinded` placeholder carries
+> no kind, and masked siblings reached over the same edge kind collapse into one "one or more" placeholder.
+
 - Every lineage read names its reader (an `Actor`). The kernel asks the host's `INodeVisibility.MaskAsync(tenant,
   reader, nodes)` once per read. It returns the objects the reader may not see and a `MaskReason` for each:
   `NotPermitted`, `Blinded` (K-AUTH-4) or `IdentityVault` (K-IDN-1).
@@ -138,6 +142,11 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
   blinded or identity-layer content. The navigator (ADR-2481 §4.3) adopts it next.
 
 ### 4.5 Dependents and amendment impact (#4841, Canvas D2)
+
+> [!NOTE]
+> Amended by [ADR-2590](2026-09-30-counts-limited-to-the-readers-visible-scope.md) §4.1: dependents and impact count
+> only the objects the reader may see and report the rest as "more exist" with the mask reasons, never as a count.
+> The "counted and listed masked" rule below is replaced.
 
 - `DependentsAsync(tenant, reader, DependentsQuery(node, depth, edge_kinds, valid_at, known_at))` is a forward walk
   that the kernel aggregates:
