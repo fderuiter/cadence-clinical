@@ -73,14 +73,14 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         var first = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
         var second = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
 
-        first.Should().Be(new OutboxRelayResult(2, 0));
-        second.Should().Be(new OutboxRelayResult(0, 0));
+        first.Should().Be(new OutboxRelayResult(2, 0, MoreDue: false));
+        second.Should().Be(new OutboxRelayResult(0, 0, MoreDue: false));
         var delivered = fixture.Publisher.Delivered;
         delivered.Select(e => e.Type).Should().Equal("TenantProvisioned", "OrganizationRegistered");
         delivered.Should().OnlyContain(e => e.Tenant == tenant.TenantId && e.Actor == KernelPostgresFixture.ActorId);
         delivered[1].Payload.GetProperty("code").GetString().Should().Be(organization.Code);
 
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         var outbox = await db.OutboxMessages.AsNoTracking().Where(o => o.TenantId == tenant.TenantId).ToListAsync(ct);
         outbox.Should().HaveCount(2).And.OnlyContain(o => o.DispatchedAt != null && o.Attempts == 0);
         var eventIds = await db.DomainEvents.AsNoTracking().Where(e => e.TenantId == tenant.TenantId).Select(e => e.EventId).ToListAsync(ct);
@@ -106,10 +106,10 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         var failed = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
         var held = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
 
-        failed.Should().Be(new OutboxRelayResult(1, 1));
-        held.Should().Be(new OutboxRelayResult(0, 0), "the failed event is backing off and its tenant's next event waits behind it");
+        failed.Should().Be(new OutboxRelayResult(1, 1, MoreDue: false));
+        held.Should().Be(new OutboxRelayResult(0, 0, MoreDue: false), "the failed event is backing off and its tenant's next event waits behind it");
         fixture.Publisher.Delivered.Should().ContainSingle().Which.Tenant.Should().Be(healthy.TenantId);
-        await using (var db = fixture.CreateContext())
+        await using (var db = fixture.CreateAdminContext())
         {
             var retry = await db.OutboxMessages.AsNoTracking()
                 .SingleAsync(o => o.TenantId == failing.TenantId && o.Type == "TenantProvisioned", ct);
@@ -123,7 +123,7 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         fixture.Clock.Advance(TimeSpan.FromSeconds(3));
         var recovered = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
 
-        recovered.Should().Be(new OutboxRelayResult(2, 0));
+        recovered.Should().Be(new OutboxRelayResult(2, 0, MoreDue: false));
         fixture.Publisher.Delivered.Where(e => e.Tenant == failing.TenantId).Select(e => e.Type)
             .Should().Equal("TenantProvisioned", "OrganizationRegistered");
     }
@@ -189,7 +189,7 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         repeat.Outcome.Should().Be(SealOutcome.UpToDate);
         grown.Outcome.Should().Be(SealOutcome.Sealed);
 
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         var seals = await db.AuditChainSeals.AsNoTracking().Where(s => s.TenantId == tenant.TenantId).OrderBy(s => s.Sequence).ToListAsync(ct);
         var links = await db.AuditEntries.AsNoTracking().Where(a => a.TenantId == tenant.TenantId).OrderBy(a => a.Sequence).ToListAsync(ct);
         seals.Select(s => s.Sequence).Should().Equal(1, 2);
@@ -217,7 +217,7 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
 
         result.Outcome.Should().Be(SealOutcome.Broken);
         result.Verification.BrokenAtSequence.Should().Be(1);
-        await using var db = fixture.CreateContext();
+        await using var db = fixture.CreateAdminContext();
         (await db.AuditChainSeals.AnyAsync(s => s.TenantId == tenant.TenantId, ct)).Should().BeFalse();
     }
 
@@ -235,7 +235,7 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         (await fixture.Sender.SendAsync(NewOrganization(tenant.TenantId), cancellationToken: ct)).IsSuccess.Should().BeTrue();
         (await fixture.AuditChainSealer.SealAsync(tenant.TenantId, ct)).Outcome.Should().Be(SealOutcome.Sealed);
 
-        await using (var db = fixture.CreateContext())
+        await using (var db = fixture.CreateAdminContext())
         {
             var first = await db.AuditEntries.AsNoTracking().SingleAsync(a => a.TenantId == tenant.TenantId && a.Sequence == 1, ct);
             await BypassInsertOnlyAsync(
@@ -276,6 +276,34 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         (await fixture.AuditChainVerifier.VerifyAsync(tenant.TenantId, ct)).EntriesChecked.Should().Be(21);
     }
 
+    /// <summary>
+    /// Validates that the batch size applies per tenant, so one tenant's backlog cannot starve another, and that a pass
+    /// in which a tenant fills its batch reports more work due.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact(DisplayName = "OutboxRelay_BatchesPerTenant_AndReportsMoreDue")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task OutboxRelayBatchesPerTenantAndReportsMoreDue()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var busy = NewTenant();
+        var quiet = NewTenant();
+        (await fixture.Sender.SendAsync(busy, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(NewOrganization(busy.TenantId), cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(quiet, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        var first = await fixture.OutboxRelay.RelayBatchAsync(1, ct);
+        var firstTenants = fixture.Publisher.Delivered.Select(e => e.Tenant).ToList();
+        var second = await fixture.OutboxRelay.RelayBatchAsync(1, ct);
+        var third = await fixture.OutboxRelay.RelayBatchAsync(1, ct);
+
+        first.Should().Be(new OutboxRelayResult(2, 0, MoreDue: true));
+        firstTenants.Should().BeEquivalentTo([busy.TenantId, quiet.TenantId]);
+        second.Should().Be(new OutboxRelayResult(1, 0, MoreDue: true));
+        third.Should().Be(new OutboxRelayResult(0, 0, MoreDue: false));
+    }
+
     private static ProvisionTenant NewTenant()
     {
         var suffix = Guid.NewGuid().ToString("N")[..10];
@@ -293,7 +321,7 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     private async Task BypassInsertOnlyAsync(string table, string sql, CancellationToken ct)
     {
         var trigger = InsertOnlySql.RowTriggerName(table);
-        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
         await connection.OpenAsync(ct);
         await using var command = new NpgsqlCommand(
             $"ALTER TABLE kernel.{table} DISABLE TRIGGER {trigger}; {sql}; ALTER TABLE kernel.{table} ENABLE TRIGGER {trigger};",

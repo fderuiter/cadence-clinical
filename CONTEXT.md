@@ -97,6 +97,10 @@ The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` 
 
 The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users work inside a study, never inside a named product: navigation follows the lifecycle (Design, Start, Conduct, Data, Analyze, Submit), the study is zoomable from portfolio down to a single observation, and every screen uses one navigator, workspace and inspector layout. Six verbs apply to any object: Search, Trace (backward through lineage), Impact (forward through lineage), Explain (why a state, number or denial holds, from evidence), Simulate (evaluate a change without writing) and Act (an authorised, audited command). Role lenses change emphasis, never access.
 
+### Simulation (candidate version)
+
+Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.
+
 ### Concept Registry
 
 The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation.
@@ -113,6 +117,11 @@ An architectural paradigm establishing a single, unified body of clinical truth 
 
 A persistence consolidation standard aligning .NET Aspire AppHost (`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto a single logical PostgreSQL database (`cadence`) with schema-level isolation (`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys, and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11 without distributed transactions.
 
+
+### Kernel Tenant Isolation
+
+The database-enforced separation of Cadence tenants in the `kernel` schema (ADR-2250, K-ID-1, K-ID-2). Every tenant-scoped table carries `tenant_id`, every reference between them is a composite `(tenant_id, id)` foreign key, and PostgreSQL Row-Level Security is enabled and forced on every table. The tenant is set on each kernel connection in one place (`KernelTenantConnectionInterceptor`); a connection without one sees nothing. `Person` is tenant-independent and visible to a tenant through a `TenantMembership`.
+_Avoid_: `WHERE tenant_id = …` as the only protection, schema-per-tenant `search_path`, connecting the application as the schema owner or a superuser
 ### Two-Tier Regulatory Traceability Standard
 
 A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `dotnet cadence gxp sync` to pass in strict mode.
