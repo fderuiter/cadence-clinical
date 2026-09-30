@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -118,9 +119,9 @@ public static class UsdmCompiler
             if (root.TryGetProperty("name", out var nameProp)) studyName = nameProp.GetString() ?? studyName;
         }
 
-        var items = new List<DDFItemIR>();
+        var sources = new List<ItemSource>();
 
-        // Parse activities / biomedical concepts if present
+        // Items of activities are named "<activity>_<item>"; items at the top level keep their own name.
         if (root.TryGetProperty("activities", out var actElem) && actElem.ValueKind == JsonValueKind.Array)
         {
             foreach (var act in actElem.EnumerateArray())
@@ -128,40 +129,17 @@ public static class UsdmCompiler
                 string actName = act.TryGetProperty("name", out var an) ? an.GetString() ?? "Activity" : "Activity";
                 if (act.TryGetProperty("items", out var itemsElem) && itemsElem.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var it in itemsElem.EnumerateArray())
-                    {
-                        string itemId = it.TryGetProperty("id", out var ip) ? ip.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
-                        string itemName = it.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
-                        string itemType = it.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
-                        string? constraint = it.TryGetProperty("constraint", out var cp) ? cp.GetString() : null;
-
-                        items.Add(new DDFItemIR(
-                            Id: itemId,
-                            Name: $"{actName}_{itemName}".Replace(" ", "_"),
-                            Type: itemType,
-                            Constraint: constraint));
-                    }
+                    sources.AddRange(itemsElem.EnumerateArray().Select(it => ItemSource.Read(it, actName)));
                 }
             }
         }
 
-        // If items are specified at the top level
         if (root.TryGetProperty("items", out var topItems) && topItems.ValueKind == JsonValueKind.Array)
         {
-            foreach (var it in topItems.EnumerateArray())
-            {
-                string itemId = it.TryGetProperty("id", out var ip) ? ip.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
-                string itemName = it.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
-                string itemType = it.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
-                string? constraint = it.TryGetProperty("constraint", out var cp) ? cp.GetString() : null;
-
-                items.Add(new DDFItemIR(
-                    Id: itemId,
-                    Name: itemName.Replace(" ", "_"),
-                    Type: itemType,
-                    Constraint: constraint));
-            }
+            sources.AddRange(topItems.EnumerateArray().Select(it => ItemSource.Read(it, activity: null)));
         }
+
+        var items = BuildItems(sources, warnings);
 
         var studyIr = new DDFStudyIR(
             StudyId: studyId,
@@ -175,6 +153,121 @@ public static class UsdmCompiler
             });
 
         return (studyIr, warnings);
+    }
+
+    // One item as the USDM input gives it, before names and rules are resolved.
+    private sealed record ItemSource(string? Id, string Name, string Type, JsonElement? Rules, bool HasRawConstraint, string? Appearance)
+    {
+        private static readonly string[] WidthKeys = ["cols", "column_span", "span"];
+
+        public static ItemSource Read(JsonElement item, string? activity)
+        {
+            string? id = item.TryGetProperty("id", out var ip) ? ip.GetString() : null;
+            string name = item.TryGetProperty("name", out var np) ? np.GetString() ?? "Item" : "Item";
+            string type = item.TryGetProperty("type", out var tp) ? tp.GetString() ?? "string" : "string";
+            JsonElement? rules = item.TryGetProperty("rules", out var rp) ? rp.Clone() : null;
+            return new ItemSource(
+                string.IsNullOrWhiteSpace(id) ? null : id,
+                activity is null ? name : $"{activity}_{name}",
+                type,
+                rules,
+                item.TryGetProperty("constraint", out _),
+                Width(item) ?? Width(item, "layout") ?? Width(item, "grid"));
+        }
+
+        // A width of 1 to 4 columns, on the item or in its "layout" or "grid" object, becomes the Enketo
+        // appearance w1 to w4.
+        private static string? Width(JsonElement item, string? container = null)
+        {
+            if (container is not null && !(item.TryGetProperty(container, out item) && item.ValueKind == JsonValueKind.Object))
+            {
+                return null;
+            }
+
+            foreach (string key in WidthKeys)
+            {
+                if (item.TryGetProperty(key, out var value))
+                {
+                    string text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : value.GetRawText();
+                    return text is "1" or "2" or "3" or "4" ? $"w{text}" : null;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    // Names each item, compiles its skip logic and constraints to XPath, and refuses the study when an item is
+    // duplicated, a rule does not parse or names an unknown item, or skip logic makes a cycle.
+    private static List<DDFItemIR> BuildItems(List<ItemSource> sources, List<IReadOnlyDictionary<string, object?>> warnings)
+    {
+        var problems = new List<string>();
+        var named = new List<(string Id, string Element, ItemSource Source)>();
+        var elementById = new Dictionary<string, string>(StringComparer.Ordinal);
+        var idByElement = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        for (int index = 0; index < sources.Count; index++)
+        {
+            var source = sources[index];
+            string element = DdfIdentifier.Sanitize(source.Name) ?? $"item_{index + 1}";
+            string id = source.Id ?? element;
+            if (source.Id is null)
+            {
+                warnings.Add(new Dictionary<string, object?>
+                {
+                    ["field"] = $"items[{index}].id",
+                    ["generated_value"] = id,
+                    ["warning_reason"] = "The item has no id; its element name is used.",
+                });
+            }
+
+            if (!elementById.TryAdd(id, element))
+            {
+                problems.Add($"Item id '{id}' is used more than once.");
+            }
+
+            if (!idByElement.TryAdd(element, id))
+            {
+                problems.Add($"Items '{idByElement[element]}' and '{id}' both become the form element '{element}'.");
+            }
+
+            if (source.HasRawConstraint)
+            {
+                problems.Add($"Item '{id}': 'constraint' is no longer accepted; write a rule of type 'constraint' in 'rules'.");
+            }
+
+            named.Add((id, element, source));
+        }
+
+        string? Resolve(string variable) => elementById.TryGetValue(variable, out string? element) ? $"/data/{element}" : null;
+
+        var dependsOn = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var items = new List<DDFItemIR>();
+        foreach (var (id, element, source) in named)
+        {
+            var itemRules = DdfItemRules.Read(id, source.Rules, Resolve, problems);
+            if (itemRules.SkipLogicReads.Count > 0)
+            {
+                dependsOn[id] = itemRules.SkipLogicReads;
+            }
+
+            items.Add(new DDFItemIR(
+                Id: id,
+                Name: element,
+                Type: source.Type,
+                Appearance: source.Appearance,
+                Relevant: itemRules.Relevant,
+                Constraint: itemRules.Constraint,
+                ConstraintMessage: itemRules.ConstraintMessage));
+        }
+
+        problems.AddRange(DdfDependencyGraph.FindCycles(dependsOn).Select(cycle => $"Skip logic makes a cycle: {cycle}."));
+        if (problems.Count > 0)
+        {
+            throw new DdfCompilationException(problems);
+        }
+
+        return items;
     }
 
     private static string ComputeSha256Hash(string rawData)

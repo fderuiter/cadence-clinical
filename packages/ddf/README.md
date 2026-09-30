@@ -21,15 +21,16 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 
 - Project: `packages/ddf/src/Cadence.Ddf.csproj` (assembly `Cadence.Ddf`, namespace `Cadence.Ddf`).
 - `UsdmCompiler`: `CompileUsdm(usdmJson, studyId, versionTag, options, templateRenderer, accessibilityValidator)`, `ParseUsdmToIr(...)`. Unless `CompileOptions.ValidateAccessibility` is off, every rendered OpenRosa form is checked and a form that fails throws `AccessibilityValidationException` instead of being returned ([ADR-2501](../../docs/adr/2026-09-30-the-ddf-compiler-refuses-forms-that-fail-the-accessibility-check.md)).
+- Item rules (`DdfRules.cs`, `RuleXPathCompiler.cs`, [ADR-2502](../../docs/adr/2026-09-30-ddf-item-rules-use-the-one-rule-language.md)): an item's `rules` array holds `skip_logic` rules (`action` `show` or `hide`) and `constraint` rules (with a `query_message`), each with a `Cadence.Rules` condition whose variables are item ids. `RuleXPathCompiler` compiles them to the form's `relevant` and `constraint`; `DdfDependencyGraph` finds skip-logic cycles; `DdfIdentifier` makes item names into XML element names the same way every time. A rule that does not parse, names an unknown item or makes a cycle, a duplicate item, or the old raw `constraint` string fails the compile with `DdfCompilationException`, which lists every problem. A column width of 1 to 4 (`cols`, `column_span` or `span`) becomes the Enketo appearance `w1` to `w4`.
 - `IAccessibilityValidator`, `AccessibilityStatus`, `AccessibilityValidationException` (`Accessibility.cs`) and `XFormsAccessibilityValidator`: the accessibility check. The built-in validator is a structural WCAG 2.1 review of the XForm (title, labels, label languages, choice labels, and every control bound once); pass another `IAccessibilityValidator` to replace it.
 - `UsdmDesignImporter` (with `UsdmImportOptions`, `UsdmImportResult`, `UsdmImportNote`, `BiomedicalConceptResolver`): USDM 4 into a `ProtocolDesign`. `UsdmDesignReader`, `UsdmSchedule` and `UsdmDuration` (`UsdmJson.cs`) are internal.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `smart_blocks.py`, `tripartite.py`, `rules/`, `stages/`, with their `__init__.py` files and `pyproject.toml`. `ports.py` and `stages/accessibility.py` are ported and tested and wait only for a maintainer to approve their deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `smart_blocks.py`, `tripartite.py`, `stages/`, with their `__init__.py` files and `pyproject.toml`. `ports.py`, `stages/accessibility.py` and `rules/` are ported and tested and wait only for a maintainer to approve their deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
-- Project references: `Cadence.Kernel.Abstractions` (see [packages/kernel](../kernel/README.md)).
+- Project references: `Cadence.Kernel.Abstractions` and `Cadence.Rules` (see [packages/kernel](../kernel/README.md)).
 - Package: `Fluid.Core`.
 
 ## Referenced by
@@ -39,7 +40,7 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests|FullyQualifiedName~Cadence.UnitTests.Packages.XFormsAccessibilityValidatorTests|FullyQualifiedName~Cadence.UnitTests.Packages.UsdmDesignImporterTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests|FullyQualifiedName~Cadence.UnitTests.Packages.XFormsAccessibilityValidatorTests|FullyQualifiedName~Cadence.UnitTests.Packages.DdfRulesTests|FullyQualifiedName~Cadence.UnitTests.Packages.UsdmDesignImporterTests"
 ```
 
 The import's golden test compares the CDISC example study ([tests/fixtures/usdm](../../tests/fixtures/usdm/README.md)) with a checked-in expected design. After an intended mapping change, rerun it with `CADENCE_UPDATE_GOLDEN=1` and review the diff.

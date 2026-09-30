@@ -13,7 +13,7 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 
 - `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
 - `GET /api/v1/studies/`: returns an empty array.
-- `POST /api/v1/protocols/compile`: body `{ usdmJson, studyId?, versionTag? }`; returns the DDF compilation result with its accessibility report. A form that fails the compiler's accessibility check is not returned: the route answers `422` problem details with `violations` and `layoutErrors` ([ADR-2501](../../docs/adr/2026-09-30-the-ddf-compiler-refuses-forms-that-fail-the-accessibility-check.md)).
+- `POST /api/v1/protocols/compile`: body `{ usdmJson, studyId?, versionTag? }`; returns the DDF compilation result with its accessibility report. A study whose item rules do not compile (a rule that does not parse, names an unknown item or makes a skip-logic cycle, or a duplicated item) gets `422` problem details with `problems` ([ADR-2502](../../docs/adr/2026-09-30-ddf-item-rules-use-the-one-rule-language.md)). A form that fails the compiler's accessibility check is not returned: the route answers `422` problem details with `violations` and `layoutErrors` ([ADR-2501](../../docs/adr/2026-09-30-the-ddf-compiler-refuses-forms-that-fail-the-accessibility-check.md)).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/studies/**` and `/api/v1/protocols/**` here. Compose publishes host port 8001 (container port 8080).
 
@@ -32,7 +32,7 @@ None. Neo4j is retired ([ADR-2245](../../docs/adr/2026-09-29-native-postgresql-p
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Designer/DesignerCompileAuthorityTests.cs` checks through the real host that only study designers may compile and that a form failing the accessibility check gets `422`. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
+- `tests/Cadence.UnitTests/Designer/DesignerCompileAuthorityTests.cs` checks through the real host that only study designers may compile and that a study with a rule problem or a form failing the accessibility check gets `422`. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
 - Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally

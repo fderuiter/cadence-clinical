@@ -954,6 +954,11 @@ _Avoid_: Promoting pre-release development environments as production-qualified 
 The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol definitions (ProtocolVersion snapshots in PostgreSQL, ADR-2245) to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
 _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
+### Form Item Rules
+
+The skip logic and constraints of a DDF form item, written in the one rule language (K-RULE-3) with item ids as variables and compiled to OpenRosa XPath `relevant` and `constraint` expressions. A skip-logic condition says when the item shows (or, with `hide`, when it hides); a constraint condition says what a valid value satisfies, unlike a rule-pack rule whose condition is the violation. Skip-logic cycles fail the compile (ADR-2502).
+_Avoid_: Raw XPath strings in a protocol definition, a separate DDF rule AST
+
 ### Form Accessibility Check
 
 The last step of a DDF compile: the rendered OpenRosa form goes through an `IAccessibilityValidator` (by default `XFormsAccessibilityValidator`, a structural WCAG 2.1 review of titles, labels, label languages, choice labels and bindings), and a form whose report lists any violation or layout error is refused with `AccessibilityValidationException` rather than returned (ADR-2501).
