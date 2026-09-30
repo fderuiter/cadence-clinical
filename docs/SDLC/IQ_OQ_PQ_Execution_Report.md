@@ -94,6 +94,7 @@ out so the report only changes when results change; they are in the TRX files un
 | `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
 | `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
 | `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
+| `HostStartup_WithoutAValidDemographicsKey_FailsFast` | `Cadence.UnitTests.Execution.Security.DemographicsKeyStartupValidationTests` | PRD-SYS-190 | 🟢 PASSED |
 | `Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
 | `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
 | `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
@@ -116,6 +117,14 @@ out so the report only changes when results change; they are in the TRX files un
 | `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `CallerOverTheLimit_Gets429WithRetryAfter_WhileOtherCallersAreServed` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | 🟢 PASSED |
+| `HealthProbes_AreNeverRateLimited` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | 🟢 PASSED |
+| `EveryCluster_HasTimeoutAndActiveAndPassiveHealthChecks` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
+| `ServiceThatIsNotReady_Gets503WithoutForwarding_UntilItIsReadyAgain` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
+| `ServiceThatStopsResponding_Gets504AfterTheProxyTimeout` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
+| `EveryRoute_LeadsToMappedEndpoints_AndEveryServiceApiIsRouted` | `Cadence.UnitTests.Gateway.GatewayRouteCoverageTests` | PRD-SYS-191 | 🟢 PASSED |
+| `HostStartup_OutsideDevelopment_WithoutServiceUrls_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | 🟢 PASSED |
+| `HostStartup_WithARelativeServiceUrl_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | 🟢 PASSED |
 | `KeycloakVerifier_MapsIdentityProviderAnswers` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `KeycloakVerifier_UsesADirectGrantThenEndsThatSession` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `SignatureVerification_ForAnAuditor_Returns403WithoutCheckingCredentials` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
@@ -145,6 +154,10 @@ out so the report only changes when results change; they are in the TRX files un
 | `ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
 | `LifecycleAllowsOnlyTheSpecifiedTransitions` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
 | `SubmitForReviewSetsTheContentHashReturnToDraftClearsIt` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
+| `ForwardedHttps_FromATrustedProxyOnly_GetsHsts` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
+| `HttpsResponses_CarryHsts_OutsideDevelopment` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
+| `TrustedProxies_AcceptAddressesAndCidrRanges` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
+| `TrustedProxies_WithAnInvalidEntry_Throw` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
 | `Issue_ForAnAuditor_IsRefused` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_AcceptsABoundTokenOnce` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
@@ -156,7 +169,7 @@ out so the report only changes when results change; they are in the TRX files un
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 4 of 192
+Qualified Requirements: 7 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -170,4 +183,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** e5bfcbedaad6c92cf9aa290a99f07aab32539270132b1d8ead16ef357957f926
+- **Content Hash (SHA-256):** 13b09ea45d790bf2f512f969795248e07a5c6f3e637e767a933c38307fdf4e99

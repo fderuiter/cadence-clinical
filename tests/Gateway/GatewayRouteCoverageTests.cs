@@ -52,6 +52,7 @@ public sealed class GatewayRouteCoverageTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-191")]
     public async Task EveryRoute_LeadsToMappedEndpoints_AndEveryServiceApiIsRouted()
     {
         var routes = await GatewayRoutesAsync();

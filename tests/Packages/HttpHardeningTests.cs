@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Cadence.Telemetry;
+using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -27,6 +28,7 @@ public sealed class HttpHardeningTests
     private const string HstsHeader = "Strict-Transport-Security";
 
     [Fact]
+    [GxPRequirement("PRD-SYS-189")]
     public void TrustedProxies_AcceptAddressesAndCidrRanges()
     {
         var options = new ForwardedHeadersOptions();
@@ -43,6 +45,7 @@ public sealed class HttpHardeningTests
     [Theory]
     [InlineData("gateway")]
     [InlineData("10.0.0.0/33")]
+    [GxPRequirement("PRD-SYS-189")]
     public void TrustedProxies_WithAnInvalidEntry_Throw(string entry)
     {
         Action configure = () => CadenceHttpHardening.ConfigureForwardedHeaders(new ForwardedHeadersOptions(), entry);
@@ -54,6 +57,7 @@ public sealed class HttpHardeningTests
     [Trait("Category", "GxP_OQ")]
     [InlineData("10.1.2.3", true)]
     [InlineData("192.0.2.1", false)]
+    [GxPRequirement("PRD-SYS-189")]
     public async Task ForwardedHttps_FromATrustedProxyOnly_GetsHsts(string proxyAddress, bool expectHsts)
     {
         await using var service = CreateService("Production", ("CADENCE_TRUSTED_PROXIES", "10.0.0.0/8"));
@@ -76,6 +80,7 @@ public sealed class HttpHardeningTests
     [Trait("Category", "GxP_OQ")]
     [InlineData("Production", true)]
     [InlineData("Development", false)]
+    [GxPRequirement("PRD-SYS-189")]
     public async Task HttpsResponses_CarryHsts_OutsideDevelopment(string environment, bool expectHsts)
     {
         await using var service = CreateService(environment);

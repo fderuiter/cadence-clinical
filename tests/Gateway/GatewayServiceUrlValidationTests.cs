@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Testing;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -19,6 +20,7 @@ public sealed class GatewayServiceUrlValidationTests
 {
     [Fact]
     [Trait("Category", "GxP_IQ")]
+    [GxPRequirement("PRD-SYS-190")]
     public void HostStartup_OutsideDevelopment_WithoutServiceUrls_FailsFast()
     {
         using var gateway = CreateGateway(host => host.UseEnvironment("Production"));
@@ -30,6 +32,7 @@ public sealed class GatewayServiceUrlValidationTests
 
     [Fact]
     [Trait("Category", "GxP_IQ")]
+    [GxPRequirement("PRD-SYS-190")]
     public void HostStartup_WithARelativeServiceUrl_FailsFast()
     {
         using var gateway = CreateGateway(host => host.UseSetting("EXECUTION_SERVICE_URL", "execution:8080"));
