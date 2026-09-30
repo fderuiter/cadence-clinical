@@ -273,7 +273,7 @@ public sealed class ClinicalQueryApplicationService(
         }
 
         // The resolver is the authenticated caller; the request cannot name someone else (#4920).
-        var closeResult = query.Close(auditContextAccessor.UserId, clock.UtcNow.DateTime);
+        var closeResult = query.Close(auditContextAccessor.UserId, clock.UtcNow);
         if (closeResult.IsFailure)
         {
             return closeResult.Error!;
@@ -386,9 +386,9 @@ public sealed class ClinicalQueryApplicationService(
             CreatedBy: q.CreatedBy,
             Responder: q.Responder,
             Resolver: q.Resolver,
-            ResolvedAt: q.ResolvedAt,
+            ResolvedAt: q.ResolvedAt?.UtcDateTime,
             CancellationReason: q.CancellationReason,
-            EscalatedAt: q.EscalatedAt,
+            EscalatedAt: q.EscalatedAt?.UtcDateTime,
             FormId: q.FormId,
             FieldId: q.FieldId,
             QueryType: q.QueryType,

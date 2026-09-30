@@ -9,6 +9,7 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
 - Project: `apps/ctms/src/Cadence.Apps.Ctms.csproj` (assembly `Cadence.Apps.Ctms`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (monitoring visits, site milestones, delegation records, investigator grants, budget line items, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `CtmsDbContext`, a design-time `CtmsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144609_InitialCreate`.
 - `../Templates/`: Liquid templates (`confirmation_letter.liquid`, `follow_up_letter.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.

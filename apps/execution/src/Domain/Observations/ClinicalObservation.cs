@@ -32,7 +32,7 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
     public bool IsOutlier { get; private set; }
     public bool IsSdvVerified { get; private set; }
     public string? SdvVerifiedBy { get; private set; }
-    public DateTime? SdvVerifiedAt { get; private set; }
+    public DateTimeOffset? SdvVerifiedAt { get; private set; }
     public string? PageId { get; private set; }
     public bool IsSdvFlagged { get; private set; }
     public string? SdvFlagReason { get; private set; }
@@ -148,7 +148,13 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
             Value = value,
             ValueString = valueString,
             Unit = unit,
-            ObservationDate = observationDate.Kind == DateTimeKind.Local ? observationDate.ToUniversalTime() : observationDate,
+            // timestamptz holds UTC only. A time without an offset is read as UTC, as the form path reads it.
+            ObservationDate = observationDate.Kind switch
+            {
+                DateTimeKind.Local => observationDate.ToUniversalTime(),
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(observationDate, DateTimeKind.Utc),
+                _ => observationDate,
+            },
             SiteId = siteId,
             VisitId = visitId,
             PageId = pageId,
@@ -165,7 +171,7 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         return observation;
     }
 
-    public Result<bool> VerifySdv(string verifierUserId, DateTime verifiedAt)
+    public Result<bool> VerifySdv(string verifierUserId, DateTimeOffset verifiedAt)
     {
         if (string.IsNullOrWhiteSpace(verifierUserId))
         {
@@ -179,7 +185,7 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
 
         IsSdvVerified = true;
         SdvVerifiedBy = verifierUserId;
-        SdvVerifiedAt = verifiedAt;
+        SdvVerifiedAt = verifiedAt.ToUniversalTime();
         return true;
     }
 

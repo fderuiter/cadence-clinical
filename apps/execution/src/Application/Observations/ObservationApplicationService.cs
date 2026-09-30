@@ -224,7 +224,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.NotFound(id);
         }
 
-        var verifyResult = observation.VerifySdv(verifier.UserId, clock.UtcNow.DateTime);
+        var verifyResult = observation.VerifySdv(verifier.UserId, clock.UtcNow);
         if (verifyResult.IsFailure)
         {
             return verifyResult.Error!;
@@ -302,7 +302,7 @@ public sealed class ObservationApplicationService(
             IsOutlier: o.IsOutlier,
             IsSdvVerified: o.IsSdvVerified,
             SdvVerifiedBy: o.SdvVerifiedBy,
-            SdvVerifiedAt: o.SdvVerifiedAt,
+            SdvVerifiedAt: o.SdvVerifiedAt?.UtcDateTime,
             LabSource: o.LabSource,
             LabSiteId: o.LabSiteId,
             LabIndicator: o.LabIndicator,

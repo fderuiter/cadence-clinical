@@ -6,7 +6,7 @@ namespace Cadence.Apps.Ctms.Domain;
 
 public sealed class CtmsAuditLog : AggregateRoot<string>
 {
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string UserRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
@@ -34,8 +34,8 @@ public sealed class CtmsCraAllocation : AggregateRoot<string>
     public string SiteId { get; set; } = string.Empty;
     public string StudyId { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
-    public DateTime EffectiveStartDate { get; set; }
-    public DateTime? EffectiveEndDate { get; set; }
+    public DateTimeOffset EffectiveStartDate { get; set; }
+    public DateTimeOffset? EffectiveEndDate { get; set; }
 
     public CtmsCraAllocation() : base(Guid.NewGuid().ToString()) { }
     public CtmsCraAllocation(string id) : base(id) { }
@@ -44,9 +44,9 @@ public sealed class CtmsCraAllocation : AggregateRoot<string>
 public sealed class CtmsDefeatedMonitoringVisit : AggregateRoot<string>
 {
     public string VisitId { get; set; } = string.Empty;
-    public DateTime? ActualDate { get; set; }
+    public DateTimeOffset? ActualDate { get; set; }
     public string? Findings { get; set; }
-    public DateTime DeviceTimestamp { get; set; }
+    public DateTimeOffset DeviceTimestamp { get; set; }
     public string OfflineSyncMarkers { get; set; } = "{}";
     public string Status { get; set; } = string.Empty;
 
@@ -109,12 +109,12 @@ public sealed class CtmsMonitoringVisit : AggregateRoot<string>
     public string SiteId { get; set; } = string.Empty;
     public string CraId { get; set; } = string.Empty;
     public string VisitType { get; set; } = string.Empty;
-    public DateTime ScheduledDate { get; set; }
-    public DateTime? ActualDate { get; set; }
+    public DateTimeOffset ScheduledDate { get; set; }
+    public DateTimeOffset? ActualDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? SignatureManifestation { get; set; }
     public string? Signer { get; set; }
-    public DateTime? SigningTimestamp { get; set; }
+    public DateTimeOffset? SigningTimestamp { get; set; }
     public string? OfflineSyncMarkers { get; set; }
     public string? SyncStatus { get; set; }
 
@@ -129,7 +129,7 @@ public sealed class CtmsRecruitmentRecord : AggregateRoot<string>
     public int ScreenedCount { get; set; }
     public int EnrolledCount { get; set; }
     public int TargetCount { get; set; }
-    public DateTime AsOfDate { get; set; }
+    public DateTimeOffset AsOfDate { get; set; }
 
     public CtmsRecruitmentRecord() : base(Guid.NewGuid().ToString()) { }
     public CtmsRecruitmentRecord(string id) : base(id) { }
@@ -144,7 +144,7 @@ public sealed class CtmsRegulatoryForm : AggregateRoot<string>
     public string ApprovalStatus { get; set; } = string.Empty;
     public string? SignatureManifestation { get; set; }
     public string? Signer { get; set; }
-    public DateTime? SigningTimestamp { get; set; }
+    public DateTimeOffset? SigningTimestamp { get; set; }
 
     public CtmsRegulatoryForm() : base(Guid.NewGuid().ToString()) { }
     public CtmsRegulatoryForm(string id) : base(id) { }
@@ -155,8 +155,8 @@ public sealed class CtmsSiteMilestone : AggregateRoot<string>
     public string SiteId { get; set; } = string.Empty;
     public string StudyId { get; set; } = string.Empty;
     public string MilestoneType { get; set; } = string.Empty;
-    public DateTime? PlannedDate { get; set; }
-    public DateTime? ActualDate { get; set; }
+    public DateTimeOffset? PlannedDate { get; set; }
+    public DateTimeOffset? ActualDate { get; set; }
     public string Status { get; set; } = string.Empty;
 
     public CtmsSiteMilestone() : base(Guid.NewGuid().ToString()) { }
@@ -182,7 +182,7 @@ public sealed class CtmsPaymentMilestone : AggregateRoot<string>
     public string TriggerCondition { get; set; } = string.Empty;
     public double Amount { get; set; }
     public bool IsTriggered { get; set; }
-    public DateTime? TriggeredAt { get; set; }
+    public DateTimeOffset? TriggeredAt { get; set; }
 
     public CtmsPaymentMilestone() : base(Guid.NewGuid().ToString()) { }
     public CtmsPaymentMilestone(string id) : base(id) { }
@@ -193,11 +193,11 @@ public sealed class DoaDelegationRecord : AggregateRoot<string>
     public string SiteId { get; set; } = string.Empty;
     public string StaffUserId { get; set; } = string.Empty;
     public string TaskCode { get; set; } = string.Empty;
-    public DateTime StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset? EndDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? PiSignatureHash { get; set; }
-    public DateTime? PiApprovedAt { get; set; }
+    public DateTimeOffset? PiApprovedAt { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }
 
@@ -211,8 +211,8 @@ public sealed class CtmsInvestigatorPayable : AggregateRoot<string>
     public string? MilestoneId { get; set; }
     public double Amount { get; set; }
     public string PaymentStatus { get; set; } = string.Empty;
-    public DateTime? DueDate { get; set; }
-    public DateTime? PaidAt { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
+    public DateTimeOffset? PaidAt { get; set; }
 
     public CtmsInvestigatorPayable() : base(Guid.NewGuid().ToString()) { }
     public CtmsInvestigatorPayable(string id) : base(id) { }

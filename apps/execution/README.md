@@ -9,6 +9,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 - Project: `apps/execution/src/Cadence.Apps.Execution.csproj` (assembly `Cadence.Apps.Execution`).
 - `Program.cs`: composition root (DI registrations, ProblemDetails mapping, MassTransit, route groups).
 - `Domain/`: subjects, observations, forms, queries and compliance models, domain errors, and repository ports (`Domain/Ports/`).
+  Times the service stamps (SDV verification, query resolution and escalation) are `DateTimeOffset` values taken from `Cadence.Kernel.Time.IClock`; an observation time sent without an offset is stored as UTC. The project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784).
 - `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
 - `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
 - `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).

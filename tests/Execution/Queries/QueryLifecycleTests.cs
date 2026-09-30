@@ -70,7 +70,7 @@ public sealed class QueryLifecycleTests
         query.Responder.Should().Be("investigator-01");
 
         // 2. Close
-        var closeTime = FakeClock.DefaultStart.UtcDateTime;
+        var closeTime = FakeClock.DefaultStart;
         var closeRes = query.Close("cra-01", closeTime);
         closeRes.IsSuccess.Should().BeTrue();
         query.Status.Should().Be(QueryStatus.Closed);
@@ -88,7 +88,7 @@ public sealed class QueryLifecycleTests
         query.Status.Should().Be(QueryStatus.Answered);
 
         // 5. Final Close
-        query.Close("cra-01", FakeClock.DefaultStart.UtcDateTime).IsSuccess.Should().BeTrue();
+        query.Close("cra-01", FakeClock.DefaultStart).IsSuccess.Should().BeTrue();
         query.Status.Should().Be(QueryStatus.Closed);
     }
 
