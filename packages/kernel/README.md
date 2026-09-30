@@ -284,6 +284,18 @@ public sealed record ReviseConcept(TenantId TenantId, ConceptId ConceptId, /* â€
 lists the commands offered on an object with their decisions and explanations. Dry runs write nothing to the audit
 chain; they are logged as event `2483 AuthorizationDryRun`.
 
+## Search (ADR-2484)
+
+`IKernelSearch.SearchAsync(tenant, new SearchRequest("blood press", Kinds: [NodeKinds.Concept]))` returns `SearchHit`s
+(NodeRef, title, code, detail), exact code matches first. Register `AddKernelSearch()` (Application) and
+`AddKernelSearchStore()` (Persistence); search asks `IAuthorizationProbe` before searching a source that needs a reveal
+capability.
+
+Search queries the source tables with PostgreSQL full-text search (`simple` configuration, prefix words) through a
+tenant-bound context, so RLS applies. To make a new table searchable, add a `KernelSearchSource` to
+`KernelSearchStore.BuiltInSources` (code and title columns of alias `t`) and a migration calling
+`KernelSearchSql.CreateIndexes`. `SearchExpressionsUseTheIndexes` fails if the query cannot use the index.
+
 ## Migrations
 
 ```bash
