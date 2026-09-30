@@ -6,7 +6,7 @@ import {
   type Observation,
   type SubjectSummary,
 } from "../api/executionApi";
-import { PARTICIPANT_STATES } from "../canvas/lifecycle";
+import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import { useToastStore } from "./toasts.js";
 
 /** Participants shown per page in the Participants section. */
@@ -187,6 +187,122 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === pulseRequest) this.pulseLoading = false;
       }
+    },
+
+    /**
+     * Adds a participant to the study in screening, then refreshes the list and the counts. `participant` is
+     * the new participant as the list reports it, or null when the list can't place it yet.
+     */
+    async addParticipant(
+      subjectCode: string,
+      siteId: string,
+      reason: string
+    ): Promise<{ added: boolean; participant: SubjectSummary | null }> {
+      const studyId = this.studyCode;
+      const toasts = useToastStore();
+      if (!studyId) return { added: false, participant: null };
+      try {
+        await executionApi.addSubject({
+          studyId,
+          subjectCode,
+          siteId,
+          reason,
+        });
+      } catch (err) {
+        toasts.apiError(`${subjectCode} was not added`, err);
+        return { added: false, participant: null };
+      }
+      toasts.push({
+        tone: "success",
+        title: `${subjectCode} added in screening`,
+        message: "",
+      });
+      const [participant] = await Promise.all([
+        this.findNewestParticipant(studyId, subjectCode),
+        // Added from the participant list, which may have been empty until now.
+        this.refreshAfterChange({ list: true }),
+      ]);
+      return { added: true, participant };
+    },
+
+    /**
+     * The participant just added, read back from the list: Execution lists in enrollment order, so it is the
+     * last one unless someone else added a participant in between, in which case this returns null.
+     */
+    async findNewestParticipant(
+      studyId: string,
+      subjectCode: string
+    ): Promise<SubjectSummary | null> {
+      try {
+        const { total } = await executionApi.listSubjects({
+          studyId,
+          limit: 1,
+        });
+        const last = toCount(total) - 1;
+        if (last < 0) return null;
+        const page = await executionApi.listSubjects({
+          studyId,
+          limit: 1,
+          offset: last,
+        });
+        const newest = page.items[0];
+        if (studyId !== this.studyCode || newest?.subject_id !== subjectCode) {
+          return null;
+        }
+        this.knownParticipants[newest.id] = newest;
+        return newest;
+      } catch {
+        return null;
+      }
+    },
+
+    /**
+     * Moves a participant to another state with the reason given. On success the participant shows its new
+     * state everywhere the canvas lists it, and the list and counts are read again.
+     */
+    async changeParticipantState(
+      participant: SubjectSummary,
+      state: string,
+      reason: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      const label = participantStateLabel(state);
+      try {
+        const updated = await executionApi.changeSubjectState(
+          participant.id,
+          state,
+          reason
+        );
+        const changed = { ...participant, status: updated.status };
+        this.knownParticipants[participant.id] = changed;
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) this.participants.splice(index, 1, changed);
+        toasts.push({
+          tone: "success",
+          title: `${participant.subject_id} is now ${label.toLowerCase()}`,
+          message: "",
+        });
+      } catch (err) {
+        toasts.apiError(
+          `${participant.subject_id} was not moved to ${label.toLowerCase()}`,
+          err
+        );
+        return false;
+      }
+      await this.refreshAfterChange();
+      return true;
+    },
+
+    /** Reads the participant list and the counts again, where the canvas has already read them. */
+    async refreshAfterChange({ list = false } = {}): Promise<void> {
+      const listed =
+        list || this.participants.length > 0 || this.participantsTotal > 0;
+      await Promise.all([
+        listed ? this.loadParticipants(this.participantsFilter) : null,
+        this.pulse ? this.loadPulse() : null,
+      ]);
     },
 
     /** Loads a participant's observations, form submissions and queries together. */
