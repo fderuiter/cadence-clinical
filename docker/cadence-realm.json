@@ -89,6 +89,20 @@
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
+        },
+        {
+          "name": "tenant",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
         }
       ]
     },
@@ -120,7 +134,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Sponsor Designer"]
+      "realmRoles": ["Sponsor Designer"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "designer.lead",
@@ -135,7 +150,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Sponsor Designer", "Data Manager", "Sponsor Admin"]
+      "realmRoles": ["Sponsor Designer", "Data Manager", "Sponsor Admin"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "crc.site101",
@@ -150,7 +166,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Site Investigator"]
+      "realmRoles": ["Site Investigator"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "cra.monitor",
@@ -165,7 +182,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["CRA", "Monitor", "Sponsor Admin"]
+      "realmRoles": ["CRA", "Monitor", "Sponsor Admin"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "dm.lead",
@@ -180,7 +198,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Data Manager", "Sponsor Designer", "Sponsor Admin"]
+      "realmRoles": ["Data Manager", "Sponsor Designer", "Sponsor Admin"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "safety.officer",
@@ -195,7 +214,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Sponsor Admin"]
+      "realmRoles": ["Sponsor Admin"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     },
     {
       "username": "auditor.lead",
@@ -210,7 +230,8 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Auditor", "Sponsor Admin"]
+      "realmRoles": ["Auditor", "Sponsor Admin"],
+      "attributes": { "tenant_id": ["cadence-local"] }
     }
   ]
 }
