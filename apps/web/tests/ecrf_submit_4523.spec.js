@@ -58,6 +58,7 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
   let alertSpy;
 
   beforeEach(() => {
+    vi.useRealTimers();
     pinia = createPinia();
     setActivePinia(pinia);
     store = useClinicalStore();
@@ -95,6 +96,7 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
       status: "COMPLETED",
     });
 
+    const pushSpy = vi.spyOn(useToastStore(pinia), "push");
     const wrapper = mountView();
     await flushPromises();
 
@@ -117,13 +119,14 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
 
     expect(alertSpy).not.toHaveBeenCalled();
 
-    const toasts = useToastStore().toasts;
-    expect(toasts).toContainEqual(
-      expect.objectContaining({
-        tone: "success",
-        title: "eCRF Form Submitted",
-      })
-    );
+    await vi.waitFor(() => {
+      expect(pushSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tone: "success",
+          title: "eCRF Form Submitted",
+        })
+      );
+    });
 
     const submitBlock = store.ledgerBlocks.find(
       (b) => b.action === "SESSION_SUBMIT"
@@ -154,7 +157,7 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     expect(store.formValues.VSSBP).toBe("120");
     expect(alertSpy).not.toHaveBeenCalled();
 
-    expect(useToastStore().toasts).toContainEqual(
+    expect(useToastStore(pinia).toasts).toContainEqual(
       expect.objectContaining({
         tone: "error",
         title: "eCRF Form Submission Failed",
@@ -175,7 +178,7 @@ describe("EcrfView submitEcrf API integration and failure handling (#4523)", () 
     expect(store.ledgerBlocks.some((b) => b.action === "SUBJECT_SCREEN")).toBe(
       false
     );
-    expect(useToastStore().toasts[0]).toMatchObject({
+    expect(useToastStore(pinia).toasts[0]).toMatchObject({
       tone: "error",
       title: "Screening a subject isn't available yet",
     });

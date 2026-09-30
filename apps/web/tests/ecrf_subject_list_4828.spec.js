@@ -52,8 +52,9 @@ describe("eCRF subject list from Execution (#4828)", () => {
   let pinia;
 
   beforeEach(() => {
+    vi.useRealTimers();
     routeQuery.value = {};
-    vi.mocked(executionApi.listSubjects).mockReset();
+    vi.clearAllMocks();
     vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -319,7 +320,7 @@ describe("eCRF subject list from Execution (#4828)", () => {
     it("submits the form to Execution API and completes submission", async () => {
       routeQuery.value = { studyId: "CAD-101", subjectId: "CAD-001" };
       const store = createStore();
-      vi.mocked(executionApi.listSubjects).mockResolvedValueOnce(
+      vi.mocked(executionApi.listSubjects).mockResolvedValue(
         page([summary("CAD-001")])
       );
       vi.mocked(executionApi.createFormSubmission).mockResolvedValueOnce({
@@ -331,9 +332,14 @@ describe("eCRF subject list from Execution (#4828)", () => {
         status: "COMPLETED",
       });
 
-      store.ecrfFields = [];
       const wrapper = mountView();
       await flushPromises();
+      setActivePinia(pinia);
+      store.ecrfFields = [];
+      store.formValues = {};
+
+      const toastStore = useToastStore(pinia);
+      const pushSpy = vi.spyOn(toastStore, "push");
 
       wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
       await flushPromises();
@@ -348,12 +354,14 @@ describe("eCRF subject list from Execution (#4828)", () => {
       expect(executionApi.completeFormSubmission).toHaveBeenCalledWith(
         "form-sub-001"
       );
-      expect(useToastStore(pinia).toasts).toContainEqual(
-        expect.objectContaining({
-          tone: "success",
-          title: "eCRF Form Submitted",
-        })
-      );
+      await vi.waitFor(() => {
+        expect(pushSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tone: "success",
+            title: "eCRF Form Submitted",
+          })
+        );
+      });
       expect(store.ledgerBlocks.map((b) => b.action)).toContain(
         "SESSION_SUBMIT"
       );
