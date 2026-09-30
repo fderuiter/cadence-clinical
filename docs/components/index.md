@@ -38,3 +38,16 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
   color: var(--color-text);
 }
 ```
+
+### Side-Over Drawer Width Tokens
+
+Viewport-relative design tokens defined in `packages/ui/tokens.css` specify standard widths for side-over panel drawers:
+
+| Token               | Semantic Token               | Formula             | Target Max Width |
+| :------------------ | :--------------------------- | :------------------ | :--------------- |
+| `--drawer-width-sm` | `--semantic-drawer-width-sm` | `min(100vw, 420px)` | 420px            |
+| `--drawer-width-md` | `--semantic-drawer-width-md` | `min(100vw, 560px)` | 560px            |
+| `--drawer-width-lg` | `--semantic-drawer-width-lg` | `min(100vw, 720px)` | 720px            |
+| `--drawer-width-xl` | `--semantic-drawer-width-xl` | `min(100vw, 920px)` | 920px            |
+
+Responsive utilities in `packages/ui/responsive.css` provide `.drawer-panel-mobile-full` for expanding drawer panels to full viewport width on mobile viewports ($\le 640\text{px}$).
