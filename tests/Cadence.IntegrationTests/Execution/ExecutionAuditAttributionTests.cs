@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Forms;
-using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
@@ -21,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Cadence.UnitTests.Execution.Endpoints;
+namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
 /// Drives every mutating execution route through the real composition root as a signed caller and checks that
@@ -29,7 +28,8 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// against an anonymous "system" actor (#4767, 21 CFR 11.10(e)).
 /// @req:PRD-SYS-001
 /// </summary>
-public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
+[Trait("Category", "Integration")]
+public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
 {
     private const string Reason = "Audit attribution check";
     private const string Study = "STUDY-AUDIT";
@@ -41,21 +41,18 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     [GxPRequirement("PRD-SYS-001")]
     public async Task SubjectWrites_AreEachAuditedAgainstTheCaller()
     {
+        factory.SkipIfUnavailable();
         var coordinator = Caller("coordinator", "Site Coordinator");
         string subject = $"SUBJ-{_run}";
 
-        // Enrollment takes a relational advisory lock and consent lookup queries a complex type, neither of
-        // which the in-memory provider can run; ENROLL_SUBJECT and RECORD_CONSENT are covered by the
-        // SQLite-backed golden masters and the service tests. Seed the subject and drive the rest over HTTP.
-        using (var scope = factory.Services.CreateSeedingScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
-            db.ClinicalSubjects.Add(ClinicalSubject.Create(
-                new SubjectCode(subject), new StudyCode(Study), siteCode: null, enrollmentIndex: 0,
-                encryptedDemographics: "seed-ciphertext", stratFactors: null));
-            await db.SaveChangesAsync(Ct);
-        }
-
+        await AuditedAsync(coordinator, c => c.PostAsJsonAsync(
+            "/api/v1/execution/subjects/",
+            new { subject_id = subject, study_id = Study, demographics = new { name = "Audit Participant", birthdate = "1980-01-01" } },
+            Ct));
+        await AuditedAsync(coordinator, c => c.PostAsJsonAsync(
+            $"/api/v1/execution/subjects/{subject}/consent",
+            new { protocol_version = new { study_id = Study, version_tag = "1.0", version_index = 1 }, icf_signed = true, icf_signed_date = "2026-01-01" },
+            Ct));
         await AuditedAsync(coordinator, c => c.PutAsJsonAsync(
             $"/api/v1/execution/subjects/{subject}/demographics",
             new { strat_factors = new { site = "B" } },
@@ -74,6 +71,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     [GxPRequirement("PRD-SYS-001")]
     public async Task SiteComplianceWrites_AreEachAuditedAgainstTheCaller()
     {
+        factory.SkipIfUnavailable();
         var etmf = Caller("etmf-integration", "Integration");
         var manager = Caller("site-manager", "Study Manager");
         string site = $"SITE-{_run}";
@@ -95,6 +93,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     [GxPRequirement("PRD-SYS-001")]
     public async Task ObservationWrites_AreEachAuditedAgainstTheCaller()
     {
+        factory.SkipIfUnavailable();
         var coordinator = Caller("obs-coordinator", "Site Coordinator");
         var monitor = Caller("obs-monitor", "CRA");
         object observation = new { subject_id = $"SUBJ-{_run}", domain = "VS", test_code = "SYSBP", test_name = "Systolic BP", study_id = Study, value = 120, unit = "mmHg", observation_date = "2026-01-01T08:00:00Z" };
@@ -112,6 +111,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     [GxPRequirement("PRD-SYS-001")]
     public async Task FormWrites_AreEachAuditedAgainstTheCaller()
     {
+        factory.SkipIfUnavailable();
         var investigator = Caller("form-pi", "Site Investigator");
         const string payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}";
 
@@ -120,7 +120,8 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
             new { study_id = Study, subject_id = $"SUBJ-{_run}", form_id = "VS_FORM", payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 129}" },
             Ct)));
         await AuditedAsync(investigator, c => c.PutAsJsonAsync($"/api/v1/execution/forms/{form}", new { payload }, Ct));
-        await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));
+        string storedPayload = await ReadPayloadAsync(
+            await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct)));
         var signer = investigator with
         {
             SigToken = TestSecurityContext.CreateSigToken(investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction),
@@ -136,7 +137,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
                     signer_name = "Dr Audit",
                     signer_role = "Site Investigator",
                     signing_reason = "PI approval and sign-off.",
-                    payload_hash = FormSubmissionApplicationService.ComputeSha256(payload),
+                    payload_hash = FormSubmissionApplicationService.ComputeSha256(storedPayload),
                     signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },
@@ -151,6 +152,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
     [GxPRequirement("PRD-SYS-001")]
     public async Task QueryWrites_AreEachAuditedAgainstTheCaller()
     {
+        factory.SkipIfUnavailable();
         var monitor = Caller("query-cra", "CRA");
         var investigator = Caller("query-pi", "Site Investigator");
 
@@ -200,6 +202,13 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
             .Where(e => e.UserId == "system" || e.UserId == "")
             .CountAsync(Ct);
         anonymous.Should().Be(0);
+    }
+
+    /// <summary>The form payload as stored, which is what a signature covers (PostgreSQL normalizes <c>jsonb</c>).</summary>
+    private static async Task<string> ReadPayloadAsync(HttpResponseMessage response)
+    {
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        return body.RootElement.GetProperty("payload").GetString()!;
     }
 
     private static async Task<string> ReadIdAsync(HttpResponseMessage response)

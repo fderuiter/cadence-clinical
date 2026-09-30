@@ -62,4 +62,4 @@ After ADR-2256 the gateway forwarded `X-Sig-Token` inside the signed identity, b
 - **Verification Plan:**
   - `tests/Cadence.UnitTests/Packages/SignatureTokenTests.cs`: contract claims and lifetime; auditors refused; single use; wrong signer, action, semantic action or batch rejected without consuming the token; expired, wrong-key, pre-v3, over-long and auditor tokens rejected.
   - `tests/Cadence.UnitTests/Gateway/SignatureTokenEndpointTests.cs`: sign-in required; right password issues a verifiable single-use token; wrong password, auditor, other username and unbound action are refused; rate limit; token endpoint derivation; the Keycloak grant, logout and error mapping.
-  - `tests/Cadence.UnitTests/Execution/Endpoints/ExecutionAuthenticationTests.cs`: approval without a token is 401 and changes nothing; tokens for another form, action or signer are 401; replay is 401 across route aliases.
+  - `tests/Cadence.IntegrationTests/Execution/ExecutionWriteAuthorizationTests.cs` (PostgreSQL): approval without a token is 401 and changes nothing; tokens for another form, action or signer are 401; replay is 401 across route aliases.

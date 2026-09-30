@@ -24,7 +24,7 @@ using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
 using Cadence.Testing.Security;
-using Cadence.UnitTests.Execution;
+using Cadence.TestSupport.Execution;
 
 using FluentAssertions;
 
@@ -34,7 +34,6 @@ using MassTransit.Testing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -42,13 +41,14 @@ using Microsoft.Extensions.Logging;
 
 using Xunit;
 
-namespace Cadence.UnitTests.Execution.GoldenMaster;
+namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
 /// `MIG-SUBJ-026` -- the slice's actual acceptance test: replays every fixture scenario in
 /// `docs/migration/slices/execution-subjects/fixtures/` against the live API/application-service/domain
 /// layer (`MIG-SUBJ-018` through `-024`) via the harness built by `MIG-SUBJ-025`
-/// (<see cref="GoldenMasterFixtureLoader"/>/<see cref="GoldenMasterAssert"/>/<see cref="ExecutionApiFactory"/>).
+/// (<see cref="GoldenMasterFixtureLoader"/>/<see cref="GoldenMasterAssert"/>), on the real host over PostgreSQL
+/// (<see cref="ExecutionPostgresApiFactory"/>, #4990).
 /// <para>
 /// <b>Verified scenario counts (re-checked directly against the real fixture files, not the ticket text's
 /// stale "17/11/21" range references):</b> <c>input_valid_nominal.json</c> declares <b>19</b> <c>SCN-*</c>
@@ -64,7 +64,7 @@ namespace Cadence.UnitTests.Execution.GoldenMaster;
 /// <see cref="ReplayBackgroundHandlerScenarioAsync"/> below do that: resolving the real, DI-registered
 /// <see cref="ISubjectApplicationService"/>/<see cref="IDemographicsNormalizationService"/>/domain
 /// aggregates/<see cref="EConsentCompletedConsumer"/> from a scope off the SAME shared
-/// <see cref="ExecutionApiFactory"/>/database every <c>"http"</c> scenario also uses, so state seeded or
+/// <see cref="ExecutionPostgresApiFactory"/>/database every <c>"http"</c> scenario also uses, so state seeded or
 /// mutated by one dispatch kind is visible to a later one exactly as a real system would behave.
 /// </para>
 /// <para>
@@ -99,7 +99,8 @@ namespace Cadence.UnitTests.Execution.GoldenMaster;
 /// @req:PRD-SUB-001
 /// </summary>
 [GxPRequirement("PRD-SUB-001")]
-public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory>
+[Trait("Category", "Integration")]
+public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresApiFactory>
 {
     private const string NominalInputPath = "docs/migration/slices/execution-subjects/fixtures/input_valid_nominal.json";
     private const string NominalOutputPath = "docs/migration/slices/execution-subjects/fixtures/output_expected_nominal.json";
@@ -108,221 +109,18 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private const string ErrorOutputPath = "docs/migration/slices/execution-subjects/fixtures/output_expected_errors.json";
 
     /// <summary>
-    /// Test-only, obviously-non-secret AES-256 key (32 zero bytes): <c>AesGcmDemographicsEncryptionService</c>
-    /// (Program.cs's own registration) resolves cleanly with no "DemographicsEncryption" configuration
-    /// section at all -- <c>DemographicsEncryptionOptions.KeyBase64</c> defaults to <c>""</c>, a valid
-    /// zero-length key per <c>Convert.FromBase64String</c> -- but <c>Program.cs</c>'s own registration
-    /// comment is explicit that "an actual Encrypt/Decrypt call with no real key configured would fail
-    /// downstream at the AesGcm layer, which is a deployment-configuration concern outside this ticket's
-    /// [MIG-SUBJ-024's] scope." No `appsettings.json`/environment-variable test configuration supplies one
-    /// anywhere in this repo either (confirmed by a solution-wide search). Every fixture scenario that
-    /// actually encrypts real demographics content (SCN-001-A, SCN-006-A, SCN-010-A, INV-011, ...) needs a
-    /// working key to exercise the real, already-merged encryption code at all -- supplied here via the
-    /// standard, supported <see cref="WebApplicationFactory{TEntryPoint}.WithWebHostBuilder"/> layering
-    /// (which still invokes <see cref="ExecutionApiFactory"/>'s own <c>ConfigureWebHost</c> override first,
-    /// preserving its one shared in-memory database, and adds only this one extra registration on top) --
-    /// not by modifying <see cref="ExecutionApiFactory"/> itself, which is this slice's own Target File for
-    /// a different, already-merged ticket (MIG-SUBJ-025).
+    /// The real <c>Program.cs</c> host on a throwaway PostgreSQL database (#4990), shared by every scenario in this
+    /// class so multi-step scenarios (SCN-001-A then SCN-001-B, whose <c>enrollment_index</c> must be sequential
+    /// across the pair) see each other's writes. Until #4990 this suite ran on an in-memory SQLite database with
+    /// the provider swapped under <c>Program.cs</c>, which hid PostgreSQL-only behaviour such as the UTC
+    /// timestamp rule fixed in #4946.
     /// </summary>
-    private const string TestEncryptionKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    private readonly ExecutionPostgresApiFactory _testApi;
 
-    /// <summary>
-    /// Bundles the key-/provider-overridden derived host together with the one open "anchor"
-    /// <see cref="SqliteConnection"/> that keeps its <see cref="ExecutionDbContext"/>'s shared-cache in-memory
-    /// database alive -- that connection must outlive every scenario replayed against <see cref="Factory"/>
-    /// (a SQLite shared-cache in-memory database is torn down the instant zero connections reference it), so
-    /// it is cached alongside the host it belongs to rather than opened-and-discarded per call. See
-    /// <see cref="BuildTestApi"/> for why SQLite, not the <see cref="ExecutionApiFactory"/>-default
-    /// <c>Microsoft.EntityFrameworkCore.InMemory</c> provider, is substituted for this entire suite, and for
-    /// why this connection is a dedicated anchor rather than the one <see cref="ExecutionDbContext"/> instances
-    /// actually query through.
-    /// </summary>
-    private sealed record TestApi(WebApplicationFactory<Cadence.Apps.Execution.Program> Factory, SqliteConnection Connection);
-
-    /// <summary>
-    /// Caches the built <see cref="TestApi"/> per shared <see cref="ExecutionApiFactory"/> instance (reference
-    /// identity -- <see cref="IClassFixture{TFixture}"/> hands this constructor the SAME instance for every
-    /// <c>[Theory]</c> case in this class's run). Essential, not an optimization:
-    /// <see cref="WebApplicationFactory{TEntryPoint}.WithWebHostBuilder"/> builds a genuinely new host (and a
-    /// new backing database/connection) on every call, and this constructor runs once per Theory case, not
-    /// once per class run -- calling it uncached was verified directly to silently give every scenario its
-    /// own isolated, empty database, breaking the cumulative-state guarantee every multi-step scenario (and
-    /// every db/audit assertion checking a prior step's write) in this suite depends on. The <see cref="Lazy{T}"/>
-    /// wrapper (rather than caching <see cref="TestApi"/> directly via <see cref="ConcurrentDictionary{TKey,TValue}.GetOrAdd(TKey,Func{TKey,TValue})"/>)
-    /// guarantees <see cref="BuildTestApi"/> -- which opens a SQLite connection and creates its schema -- runs
-    /// at most once per factory even if xUnit ever constructs this test class concurrently for two Theory
-    /// cases sharing one fixture instance, rather than merely guaranteeing at-most-one of several racing
-    /// connections is kept.
-    /// </summary>
-    private static readonly ConcurrentDictionary<ExecutionApiFactory, Lazy<TestApi>> TestApiCache = new();
-
-    /// <summary>DIAGNOSTIC ONLY -- captures server-side Warning+/Error+ log lines (which
-    /// <c>UseExceptionHandler()</c>'s own middleware writes before producing a redacted, detail-free 500
-    /// response) so a status-mismatch assertion failure can surface the real, otherwise-invisible
-    /// server-side exception instead of a bare status-code diff.</summary>
-    private static readonly ConcurrentQueue<string> DiagnosticLog = new();
-
-    private sealed class DiagnosticLoggerProvider : ILoggerProvider
+    public SubjectGoldenMasterTests(ExecutionPostgresApiFactory factory)
     {
-        public ILogger CreateLogger(string categoryName) => new DiagnosticLogger(categoryName);
-
-        public void Dispose()
-        {
-        }
-
-        private sealed class DiagnosticLogger(string categoryName) : ILogger
-        {
-            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-                Exception? exception, Func<TState, Exception?, string> formatter)
-            {
-                if (IsEnabled(logLevel))
-                {
-                    DiagnosticLog.Enqueue($"[{logLevel}] {categoryName}: {formatter(state, exception)} {exception}");
-                }
-            }
-        }
-    }
-
-    private readonly WebApplicationFactory<Cadence.Apps.Execution.Program> _testApi;
-
-    public SubjectGoldenMasterTests(ExecutionApiFactory factory) =>
-        _testApi = TestApiCache.GetOrAdd(factory, f => new Lazy<TestApi>(() => BuildTestApi(f))).Value.Factory;
-
-    /// <summary>
-    /// Layers two overrides onto <see cref="ExecutionApiFactory"/>'s own <c>ConfigureWebHost</c> (which is
-    /// this suite's Target File, not <see cref="ExecutionApiFactory"/> itself -- MIG-SUBJ-025's file is left
-    /// untouched) via the standard, additive <see cref="WebApplicationFactory{TEntryPoint}.WithWebHostBuilder"/>
-    /// mechanism:
-    /// <list type="number">
-    /// <item><description>a working AES-256 demographics-encryption key (see
-    /// <see cref="TestEncryptionKeyBase64"/>'s own remarks) and this suite's diagnostic log capture.</description></item>
-    /// <item><description>replaces <see cref="ExecutionDbContext"/>'s underlying provider a second time --
-    /// from <see cref="ExecutionApiFactory"/>'s own <c>Microsoft.EntityFrameworkCore.InMemory</c> database to
-    /// an in-memory SQLite one -- for a reason specific to this suite alone and not a defect in
-    /// <see cref="ExecutionApiFactory"/>'s own (already-merged, read-only) design: <c>ConsentRepository</c>
-    /// (<c>GetAsync</c>/<c>ExistsAsync</c>, MIG-SUBJ-012/018) queries combine <c>SubjectConsent.SubjectCode</c>
-    /// (a value-converted scalar) with <c>SubjectConsent.ProtocolVersion.StudyCode</c>/<c>.VersionIndex</c> (an
-    /// EF Core 10 Complex Type member that itself carries a value converter) in one predicate -- a shape EF
-    /// Core 10.0.11's InMemory provider cannot translate at all (verified directly:
-    /// <c>InvalidOperationException</c>, "Translation of member 'ProtocolVersion' ... failed"), which is fatal
-    /// here because it throws from PRODUCTION code (<c>SubjectApplicationService.RecordConsentAsync</c>'s own
-    /// call to <c>consents.GetAsync(...)</c>), not merely from a test-authored query this suite could rewrite
-    /// around. This is a pre-existing, already-documented InMemory-provider gap, not something newly
-    /// discovered here: <c>ConsentRepositoryTests</c> and <c>SubjectConsentConfigurationTests</c>
-    /// (`MIG-SUBJ-012`/`-018`, both already-merged) already run every <c>SubjectConsent</c> test against
-    /// SQLite instead of InMemory for this exact, explicitly-documented reason. SQLite is a genuine relational
-    /// provider (unlike the non-relational InMemory one) and translates the identical predicate correctly, as
-    /// those two already-passing test classes independently prove. Extending that same, already-established
-    /// substitution to this suite's <see cref="ExecutionApiFactory"/>-hosted database -- rather than
-    /// inventing a new workaround -- is the smallest change consistent with prior precedent, and additionally
-    /// means <c>SubjectRepository.EnrollNextIndexAsync</c>'s <see cref="System.Data.IsolationLevel.RepeatableRead"/>
-    /// transaction now genuinely begins/commits (SQLite fully supports transactions, unlike the InMemory
-    /// provider, whose default behavior of throwing on `BeginTransactionAsync` this suite no longer needs to
-    /// suppress) -- <c>SubjectRepositoryTests</c> (MIG-SUBJ-013) already proves that exact method, isolation
-    /// level included, correct against SQLite, including genuine parallel-caller concurrency. Confirmed safe
-    /// for the one other thing an all-scenarios-shared context touches that is not itself under test:
-    /// `Program.cs`'s MassTransit EF outbox polling query (<c>o.UsePostgres()</c> lock-statement SQL,
-    /// unmodified, still configured for Postgres syntax) throws a contained, logged-not-rethrown
-    /// <c>Microsoft.Data.Sqlite.SqliteException</c> ("near 'FOR': syntax error") against SQLite exactly the
-    /// same harmless way <see cref="ExecutionApiFactory"/>'s own remarks already document it throwing a
-    /// (differently-typed) contained error against InMemory -- verified empirically with a standalone host
-    /// probe before adopting this fix, not assumed.
-    /// </description></item>
-    /// </list>
-    /// A SQLite in-memory database only lasts as long as at least one connection to it stays open, and (in
-    /// its default, non-shared-cache mode) is visible only to the single connection that opened it -- unlike
-    /// EF Core's InMemory provider (named/keyed, so any number of independently-opened contexts against the
-    /// same name transparently share one store). Passing <see cref="ExecutionDbContext"/> one already-open
-    /// <see cref="SqliteConnection"/> object directly (rather than a connection string) -- the pattern
-    /// <c>ConsentRepositoryTests</c>/<c>SubjectConsentConfigurationTests</c> both use -- was tried here first
-    /// and rejected: those two tests only ever drive one repository at a time against that one connection, but
-    /// this suite's shared <see cref="ExecutionDbContext"/> also backs `Program.cs`'s own, unmodified
-    /// MassTransit EF outbox background delivery service, which independently opens its own transactions
-    /// against whatever connection its own resolved <c>ExecutionDbContext</c> instance uses -- and
-    /// <c>Microsoft.Data.Sqlite</c> allows only one active transaction per connection OBJECT at a time,
-    /// throwing "SqliteConnection does not support nested transactions" the moment that background poll and
-    /// this method's own <c>EnsureCreated()</c> (or, later, any scenario's own write) contend for the one
-    /// shared connection object (verified directly). The fix is SQLite's own documented pattern for exactly
-    /// this multi-connection-same-data need: a shared-cache in-memory database
-    /// (<c>mode=memory&amp;cache=shared</c>), addressed by a connection STRING rather than a connection
-    /// OBJECT, so EF Core opens/closes its own independent connection per unit of work (as it does against a
-    /// normal on-disk database) while every one of those independent connections still reads/writes the same
-    /// named in-memory store -- eliminating the single-connection transaction bottleneck entirely. A
-    /// shared-cache database is still torn down the instant zero connections reference it, so one dedicated
-    /// "anchor" connection (never itself queried) is opened here and kept alive for this whole class's
-    /// cumulative-state run purely to hold the store open between scenarios; it, not a connection actually
-    /// used for queries, is what <see cref="TestApi.Connection"/> caches. <see cref="Microsoft.EntityFrameworkCore.DbContext.Database"/>'s
-    /// <c>EnsureCreated()</c> must be called explicitly exactly once against this database before any scenario
-    /// runs -- SQLite, unlike the InMemory provider, is a real relational database with no schema until one is
-    /// created, and (confirmed directly) nothing in `Program.cs` itself ever calls
-    /// <c>EnsureCreated</c>/<c>Migrate</c> at startup (migrations are an out-of-band operational concern for
-    /// the real Npgsql deployment target).
-    /// </summary>
-    private static TestApi BuildTestApi(ExecutionApiFactory factory)
-    {
-        string connectionString = $"DataSource=file:golden-master-{Guid.NewGuid():N}?mode=memory&cache=shared";
-        var anchorConnection = new SqliteConnection(connectionString);
-        anchorConnection.Open();
-
-        WebApplicationFactory<Cadence.Apps.Execution.Program> derived = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-        {
-            services.Configure<DemographicsEncryptionOptions>(o => o.KeyBase64 = TestEncryptionKeyBase64);
-            services.AddLogging(b => b.AddProvider(new DiagnosticLoggerProvider()));
-
-            // See this method's own remarks: swaps ExecutionApiFactory's own InMemory-backed ExecutionDbContext
-            // registration a second time for a SQLite one. `services.AddDbContext<ExecutionDbContext>(...)` a
-            // SECOND time -- what ExecutionApiFactory's own override, and this override's own first attempt,
-            // both used -- was verified directly NOT to be enough here: AddDbContext's own optionsAction
-            // composes onto the SAME already-built DbContextOptionsBuilder rather than starting a fresh one
-            // (exactly the mechanism this suite's own BuildTestApi doc already relies on for layering
-            // ConfigureWarnings-style config additively) -- harmless when composing with InMemory (not a
-            // RelationalOptionsExtension, so Program.cs's own still-present, never-actually-removed Npgsql
-            // extension is simply unused dead weight InMemory's own non-relational code path never inspects),
-            // but fatal composing with SQLite: EF Core throws "Multiple relational database provider
-            // configurations found" the moment two RelationalOptionsExtension-derived extensions (Npgsql's and
-            // SQLite's) are both present on one options instance, which a relational provider's own
-            // RelationalExecutionStrategyFactory construction (SQLite's, unlike InMemory's, needs one) actually
-            // exercises. The fix: bypass AddDbContext's own accumulating options-factory entirely and register
-            // DbContextOptions&lt;ExecutionDbContext&gt; as a plain singleton built from a brand-new
-            // DbContextOptionsBuilder -- which starts with a genuinely empty extensions dictionary -- so no
-            // earlier layer's provider choice can leak into it regardless of how many prior AddDbContext calls
-            // ran. UseInternalServiceProvider still isolates SQLite's own provider services in their own
-            // container, exactly as ExecutionApiFactory's own ConfigureWebHost already isolates InMemory's.
-            // Scoped, deliberately NOT Singleton: AddDbContext's own DbContextOptions<TContext> registration
-            // is itself scoped by default (each scope gets its own ExecutionDbContext instance, matching the
-            // one-DbContext-per-HTTP-request/per-unit-of-work pattern), and GxPAuditInterceptor's own
-            // constructor argument is a DEFERRED accessor invoked only when SaveChanges actually runs, not
-            // when this factory runs -- capturing a SINGLETON-scoped `sp` here would permanently close over
-            // the ROOT provider, and ICurrentAuditContextAccessor is itself scoped, so the deferred call would
-            // fail with "Cannot resolve scoped service ... from root provider" (verified directly) the moment
-            // any scenario's SaveChangesAsync actually needed to read the current audit user id. A Scoped
-            // registration gives every scope's own `sp` here instead, exactly like AddDbContext's own.
-            var sqliteServices = new ServiceCollection().AddEntityFrameworkSqlite().BuildServiceProvider();
-            services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
-            services.RemoveAll<DbContextOptions>();
-            services.AddScoped(sp =>
-            {
-                var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
-                optionsBuilder.UseSqlite(connectionString);
-                optionsBuilder.UseInternalServiceProvider(sqliteServices);
-                optionsBuilder.AddInterceptors(
-                    new ConcurrencyTokenIncrementInterceptor(),
-                    new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
-                return optionsBuilder.Options;
-            });
-            services.AddScoped<DbContextOptions>(sp => sp.GetRequiredService<DbContextOptions<ExecutionDbContext>>());
-        }));
-
-        using (IServiceScope scope = derived.Services.CreateSeedingScope())
-        {
-            scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.EnsureCreated();
-        }
-
-        return new TestApi(derived, anchorConnection);
+        factory.SkipIfUnavailable();
+        _testApi = factory;
     }
 
     public static IEnumerable<object[]> NominalScenarios() =>
@@ -432,7 +230,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         response.StatusCode.Should().Be(ResolveExpectedStatus(scenario),
             $"scenario '{scenario.ScenarioId}' expected a different HTTP status -- actual response body: {rawBody}. " +
-            $"Diagnostic log: {string.Join(" | ", DiagnosticLog)}");
+            $"Server log: {string.Join(" | ", _testApi.ServerWarnings)}");
 
         JsonElement body = JsonSerializer.Deserialize<JsonElement>(rawBody);
         try
@@ -1422,7 +1220,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
     /// <summary>
     /// Per-<see cref="StudyCode"/> cursor backing <see cref="AllocatePreconditionEnrollmentIndex"/> --
-    /// <see langword="static"/> (not per-instance) for the exact same reason <see cref="TestApiCache"/> is:
+    /// <see langword="static"/> (not per-instance) because
     /// this class is constructed once per <c>[Theory]</c> case, not once per class run, and every case must
     /// share one view of which negative indices have already been handed out for a given study.
     /// </summary>
@@ -1511,7 +1309,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     /// <summary>
     /// Finds the precondition's named subject, or -- when no prior step of this same multi-step scenario
     /// has already created it (<see cref="GoldenMasterFixtureLoader"/> preserves fixture file order, and
-    /// this class's shared <see cref="ExecutionApiFactory"/> gives every scenario in a Theory method's run
+    /// this class's shared <see cref="ExecutionPostgresApiFactory"/> gives every scenario in a Theory method's run
     /// a consistent, cumulative view of the database per that factory's own doc comment) -- builds and
     /// stages one matching the declared fields, using only public domain-model API
     /// (<see cref="ClinicalSubject.Create"/> plus repeated <see cref="ClinicalSubject.TransitionTo"/> calls
@@ -1555,10 +1353,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         // A hardcoded enrollmentIndex: 0 here was never actually validated by EF Core's InMemory provider
         // (which does not enforce ClinicalSubjectConfiguration's Rule 5 composite-unique index at all), but
-        // this suite's SQLite-backed ExecutionDbContext (see BuildTestApi's own remarks) is a genuine
+        // PostgreSQL (SQLite before #4990) is a genuine
         // relational database that DOES enforce it for real -- multiple precondition-seeded subjects sharing
         // one study_id (several fixture entries default to "STUDY-001") each hardcoded to index 0 collided
-        // with each other, and with SCN-001-A/B's own really-enrolled subjects, throwing SQLite Error 19
+        // with each other, and with SCN-001-A/B's own really-enrolled subjects, throwing a unique-constraint violation
         // (verified directly). A live MAX(EnrollmentIndex)+1 mirror of SubjectRepository.EnrollNextIndexAsync's
         // own computation (MIG-SUBJ-013) fixed THAT crash but -- verified directly as this suite's own real,
         // reproducible "SCN-001-A/B enrollment_index off by +2" bug -- only replaced it with an
@@ -1598,9 +1396,8 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         var subjectCodeKey = new SubjectCode(subjectCodeValue);
         var studyCodeKey = new StudyCode(studyCodeValue);
 
-        // Whole-value-object comparisons (not `.Value`-unwrapped member access -- see BuildTestApi's own
-        // remarks: that shape does not translate against this suite's SQLite-backed ExecutionDbContext, even
-        // though it translated fine under EF Core's InMemory provider) -- this is the exact predicate shape
+        // Whole-value-object comparisons (not `.Value`-unwrapped member access, which EF Core does not
+        // translate for these value-converted members) -- this is the exact predicate shape
         // ConsentRepository.ExistsAsync's own already-merged production query uses.
         bool alreadyExists = await db.SubjectConsents.AsNoTracking().AnyAsync(c => c.SubjectCode == subjectCodeKey
             && c.ProtocolVersion.StudyCode == studyCodeKey && c.ProtocolVersion.VersionIndex == versionIndex, ct);
@@ -1751,10 +1548,8 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     /// <summary>
     /// A translated <c>Where</c>/<c>SingleAsync</c> query touching <see cref="SubjectConsent.ProtocolVersion"/>'s
     /// nested <c>VersionIndex</c> member, comparing <see cref="SubjectConsent.SubjectCode"/> as a whole
-    /// value object rather than unwrapping its <c>.Value</c> -- see <see cref="BuildTestApi"/>'s own remarks
-    /// for why only the whole-object-comparison shape (matching the real, already-merged
-    /// <c>ConsentRepository</c>'s (MIG-SUBJ-012) own query) translates against this suite's SQLite-backed
-    /// <see cref="ExecutionDbContext"/>.
+    /// value object rather than unwrapping its <c>.Value</c>: only the whole-object-comparison shape (matching the
+    /// real <c>ConsentRepository</c>'s (MIG-SUBJ-012) own query) translates for these value-converted members.
     /// </summary>
     private static async Task<SubjectConsent> FindConsentByVersionIndexAsync(
         ExecutionDbContext db, string subjectCode, int versionIndex, bool tracked, CancellationToken ct)

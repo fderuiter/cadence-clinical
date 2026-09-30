@@ -52,6 +52,14 @@ These tests currently use it:
 
 - `tests/Cadence.IntegrationTests/Execution/` (`ExecutionPostgresFixture`): enrollment index concurrency, the audit chain
   round trip, and migrations.
+- `tests/Cadence.IntegrationTests/Execution/` (`ExecutionPostgresApiFactory`): the execution API through its real
+  `Program.cs`, on a throwaway database that the service's own migration hosted service migrates. Only configuration is
+  supplied (`ConnectionStrings:cadence`, `Database:MigrateOnStartup`); nothing replaces the `DbContext` provider. The
+  subject golden masters, audit attribution, reason-for-change encoding, caller authority, subject route authority and
+  form e-signature tests run here (#4990). The unit project's `ExecutionApiFactory` runs the same host on the EF Core
+  in-memory provider, which has no transactions, advisory locks, schemas or timestamp rules; it is only for tests whose
+  assertions never depend on what is stored, such as authentication rejections, routing and OpenAPI. A test that
+  writes through the API and checks the result belongs on `ExecutionPostgresApiFactory`.
 - `tests/Cadence.IntegrationTests/Kernel/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
   pipeline. This fixture honours only `CADENCE_TEST_POSTGRES`.
 - `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed

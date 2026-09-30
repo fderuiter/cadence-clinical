@@ -90,7 +90,7 @@ the audit trail (21 CFR 11.10(e)). The header had no declared encoding (#4895):
 - **Verification Plan:**
   - `tests/Cadence.UnitTests/Packages/ChangeReasonHeaderTests.cs` checks the encoding, round trips in several scripts, and rejection of
     malformed values, with the same strings as `apps/web/tests/api/changeReason.test.js`.
-  - `tests/Cadence.UnitTests/Execution/Endpoints/ChangeReasonEncodingTests.cs` sends a reason with an em dash and Japanese as a signed
+  - `tests/Cadence.IntegrationTests/Execution/ChangeReasonEncodingTests.cs` sends a reason with an em dash and Japanese as a signed
     caller and checks that the audit entry stores exactly that text, for both header readers.
   - `tests/Cadence.UnitTests/Gateway/GatewayAuthenticationTests.cs` checks that the gateway forwards the canonical encoding, signs the
     decoded text, and answers `400` to a malformed value.

@@ -19,34 +19,20 @@ using Microsoft.Extensions.Logging;
 namespace Cadence.UnitTests.Execution;
 
 /// <summary>
-/// `MIG-SUBJ-025`'s formalization, for golden-master fixture-replay use, of the
-/// <see cref="WebApplicationFactory{TEntryPoint}"/> override
-/// <c>ExecutionProgramStartupTests.ExecutionProgramTestFactory</c> (`MIG-SUBJ-024`,
-/// `tests/Cadence.UnitTests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs`) first proved out: boots the REAL,
-/// unmodified <c>Program.cs</c> composition root, overriding only <see cref="ExecutionDbContext"/>'s
-/// underlying provider (Npgsql to a uniquely-named <c>Microsoft.EntityFrameworkCore.InMemory</c> database) so
-/// tests can exercise the real API surface without a live PostgreSQL instance. Every other <c>Program.cs</c>
-/// registration (validators, MassTransit's in-memory transport, the audit/concurrency interceptors) is left
-/// completely untouched.
+/// Boots the real execution <c>Program.cs</c> with <see cref="ExecutionDbContext"/> moved onto a uniquely named
+/// <c>Microsoft.EntityFrameworkCore.InMemory</c> database, so tests can reach the API without PostgreSQL.
 /// <para>
-/// A dedicated, isolated <c>Microsoft.EntityFrameworkCore.InMemory</c> internal service provider
-/// (<c>UseInternalServiceProvider</c>) is required, not just a swapped <c>UseXxx(...)</c> call on the ambient
-/// one: EF Core refuses to build a context once two relational providers' services are both present in the
-/// same container, and <c>Program.cs</c>'s own Npgsql registration is not removable via a
-/// <c>DbContextOptions&lt;T&gt;</c> descriptor swap alone. See <c>ExecutionProgramStartupTests</c>' own
-/// remarks (`MIG-SUBJ-024`) for the full empirical account of why a same-relational-family swap (Sqlite) was
-/// tried first and rejected there, and why the non-relational InMemory provider is the one that actually
-/// coexists safely.
+/// Use it only for tests whose assertions never depend on what is stored or how it is queried: authentication
+/// rejections that happen before any read, routing, OpenAPI, dependency-injection wiring and the golden-master
+/// harness's own assert helpers. The in-memory provider has no transactions, advisory locks, complex-type queries,
+/// schemas or timestamp rules, so it passes code that fails on PostgreSQL (the UTC timestamp bug fixed in #4946).
+/// Anything that writes through the API and asserts the result runs in <c>Cadence.IntegrationTests.Execution</c> on
+/// <c>ExecutionPostgresApiFactory</c> instead (#4990).
 /// </para>
 /// <para>
-/// Unlike `MIG-SUBJ-024`'s own factory (freshly constructed, unshared, once per test method), each
-/// <see cref="ExecutionApiFactory"/> instance generates its own uniquely-named in-memory database in its
-/// constructor -- so xUnit fixture usage that shares one instance across an entire test class or collection
-/// (e.g. <c>IClassFixture&lt;ExecutionApiFactory&gt;</c>, per <c>02_technical_design.md</c> §6.1's
-/// <c>SubjectGoldenMasterTests</c>) gives every scenario replayed against that one shared instance a
-/// consistent, cumulative view of the database -- required for the fixtures' multi-step scenarios (e.g.
-/// `SCN-001-A` then `SCN-001-B`, whose `enrollment_index` must be sequential across the pair, not
-/// independently zero) -- while two different test classes/collections, each with their own factory instance,
+/// A dedicated in-memory internal service provider (<c>UseInternalServiceProvider</c>) is required, not just a
+/// swapped <c>UseXxx(...)</c> call: EF Core refuses to build a context once two providers' services share one
+/// container. Each instance has its own database, so a class fixture sees one cumulative database and two classes
 /// never see each other's rows.
 /// </para>
 /// </summary>

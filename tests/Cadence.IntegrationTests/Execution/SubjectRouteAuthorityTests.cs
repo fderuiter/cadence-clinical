@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Execution;
 
 using FluentAssertions;
 
@@ -19,18 +20,21 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Cadence.UnitTests.Execution.Endpoints;
+namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
 /// #4943 through the real composition root: only site roles change a participant's record (not data managers, #4981),
 /// only an unblinding authority breaks the blind, and nobody sees the treatment group without the gateway-signed
 /// unblinded-access claim.
 /// </summary>
-public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
+[Trait("Category", "Integration")]
+public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
 {
     private const string Reason = "Subject authority check: SAE needs the allocation to decide the treatment.";
     private const string Study = "STUDY-SUBJ-AUTH";
     private const string Arm = "ARM-B";
+
+    private static int _nextEnrollmentIndex;
 
     private readonly string _run = Guid.NewGuid().ToString("N")[..8];
 
@@ -42,6 +46,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [InlineData("Sponsor Admin")]
     public async Task ParticipantWrites_ByARoleWithoutSiteAuthority_Return403_AndChangeNothing(string role)
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
         using var client = factory.CreateSignedClient(Caller($"no-site-{role}", role));
 
@@ -75,6 +80,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [Fact]
     public async Task StateChange_ByASiteCoordinator_Succeeds()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
         using var client = factory.CreateSignedClient(Caller("crc", "Site Coordinator"));
 
@@ -92,6 +98,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [InlineData("Lead Investigator")]
     public async Task Unblinding_WithoutUnblindingAuthority_Returns403_AndTheParticipantStaysBlinded(string role)
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         using var client = factory.CreateSignedClient(Caller($"no-unblind-{role}", role));
 
@@ -107,6 +114,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [InlineData("Authorized ER Physician")]
     public async Task Unblinding_ByThePiOrAnErPhysician_RecordsWhoUnblindedAndWhy(string role)
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         var unblinder = Caller($"unblinder-{role}", role);
         using var client = factory.CreateSignedClient(unblinder);
@@ -125,6 +133,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [Fact]
     public async Task Unblinding_WithoutReasonForChange_Returns400()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         using var client = factory.CreateSignedClient(Caller("unblinder-noreason", "Principal Investigator") with { ChangeReason = null });
 
@@ -152,6 +161,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [Fact]
     public async Task SubjectDetail_IsBlindedWithoutTheUnblindedAccessClaim()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
 
         using var blinded = factory.CreateSignedClient(Caller("pi-blinded", "Principal Investigator"));
@@ -167,6 +177,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     [Fact]
     public async Task StateChangeResponse_WithholdsTheTreatmentGroupFromABlindedCaller()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         using var client = factory.CreateSignedClient(Caller("crc-active", "Site Coordinator"));
 
@@ -186,8 +197,9 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     private async Task<string> SeedAsync(SubjectState state)
     {
         string code = $"SUBJ-{Guid.NewGuid().ToString("N")[..10]}";
+        // Each seeded participant takes the next index: (study, enrollment_index) is unique in PostgreSQL.
         var subject = ClinicalSubject.Create(
-            new SubjectCode(code), new StudyCode(Study), siteCode: null, enrollmentIndex: 0,
+            new SubjectCode(code), new StudyCode(Study), siteCode: null, enrollmentIndex: Interlocked.Increment(ref _nextEnrollmentIndex),
             encryptedDemographics: "seed-ciphertext", stratFactors: null, treatmentGroup: Arm);
         if (state == SubjectState.Randomized)
         {

@@ -12,6 +12,7 @@ using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.TestSupport.Execution;
 using Cadence.UnitTests.Execution;
 
 using FluentAssertions;
