@@ -54,6 +54,8 @@ public static class KernelEventFamilies
         ["ParticipantEnrolled"] = EventFamily.Execution,
         ["EnrollmentStatusChanged"] = EventFamily.Execution,
         ["ParticipantWithdrawn"] = EventFamily.Execution,
+        ["ArtifactRegistered"] = EventFamily.Evidence,
+        ["ArtifactVersioned"] = EventFamily.Evidence,
         ["AttestationRecorded"] = EventFamily.Trust,
         ["DecisionDenied"] = EventFamily.Trust,
     }.ToFrozenDictionary(StringComparer.Ordinal);

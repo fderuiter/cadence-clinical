@@ -13,7 +13,8 @@ namespace Cadence.Kernel.Trust;
 /// <summary>
 /// The kernel's content hash, which an attestation binds to (spec §9.5, 21 CFR 11.70): <c>sha256:</c> followed by the
 /// lower-case hex SHA-256 of the canonical form of a JSON document. The algorithm prefix lets a later algorithm sit
-/// beside this one without ambiguity. Protocol versions, standard versions and library items all hash this way. The canonical form sorts object keys by ordinal comparison at every depth, keeps array
+/// beside this one without ambiguity. Protocol versions, standard versions and library items all hash this way; artifact versions hash their raw bytes with
+/// <see cref="OfBytes"/>. The canonical form sorts object keys by ordinal comparison at every depth, keeps array
 /// order, drops insignificant whitespace and uses relaxed escaping, the same form as
 /// <c>Cadence.Security.CanonicalSigner</c>. Two serialisations of the same document therefore hash the same, and any
 /// change to a value, key or array element changes the hash.
@@ -56,6 +57,12 @@ public static class ContentHash
         ArgumentNullException.ThrowIfNull(canonical);
         return Prefix + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
+
+    /// <summary>
+    /// The content hash of raw bytes, for content that is not JSON (an artifact version's file): <c>sha256:</c> and the
+    /// lower-case hex SHA-256 of the bytes as stored.
+    /// </summary>
+    public static string OfBytes(ReadOnlySpan<byte> content) => Prefix + Convert.ToHexStringLower(SHA256.HashData(content));
 
     /// <summary>True when <paramref name="value"/> has the shape of a hash from <see cref="Compute"/>.</summary>
     public static bool IsWellFormed(string? value) =>

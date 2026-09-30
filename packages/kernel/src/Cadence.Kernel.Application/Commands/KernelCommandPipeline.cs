@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Application.Protocol;
@@ -203,6 +204,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelProtocolHandlers();
         services.AddKernelTrustHandlers();
         services.AddKernelExecutionHandlers();
+        services.AddKernelEvidenceHandlers();
         return services;
     }
 }

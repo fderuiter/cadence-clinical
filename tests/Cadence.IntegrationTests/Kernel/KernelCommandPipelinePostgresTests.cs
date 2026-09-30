@@ -9,6 +9,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Background;
@@ -16,6 +17,7 @@ using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 using Cadence.Standards;
 using Cadence.Testing;
 
@@ -337,8 +339,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
-    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology and lineage
-    /// tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
+    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology, lineage
+    /// and artifact version tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
@@ -355,6 +357,14 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
             var scenario = new KernelProtocolScenario(fixture);
             var (studyTenant, study) = await scenario.NewStudyAsync(ct);
             await scenario.ApprovedAsync(studyTenant, study, ct);
+        }
+
+        if (table == "artifact_versions")
+        {
+            var content = new ArtifactContent(ContentHash.OfBytes([1, 2, 3]), 3, "application/pdf", "blob://evidence/1");
+            var artifact = new RegisterArtifact(
+                tenant.TenantId, ArtifactId.New(), ArtifactVersionId.New(), ArtifactKind.Other, null, "Evidence", content, $"key-{Guid.NewGuid():N}", Reason);
+            (await fixture.Sender.SendAsync(artifact, cancellationToken: ct)).IsSuccess.Should().BeTrue();
         }
 
         // The Standards Registry definition tables fill only when a standard version is registered.
