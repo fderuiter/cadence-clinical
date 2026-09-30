@@ -241,7 +241,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 | Health | `packages/telemetry` | `/healthz/live` (no checks) and `/healthz/ready` (every `DbContext` reachable); `/healthz` returns a static payload |
 | Telemetry | `packages/telemetry` | OpenTelemetry traces, metrics and logs named after the service (`OTEL_SERVICE_NAME`); OTLP export when `OTEL_EXPORTER_OTLP_ENDPOINT` is set |
 | Time | `Cadence.Kernel.Abstractions` `IClock` | `DateTime.Now/UtcNow` are banned ([`BannedSymbols.txt`](BannedSymbols.txt)); take time from `IClock` (K-TIME-3). Remaining call sites: [clock migration backlog](docs/kernel/CLOCK_MIGRATION_BACKLOG.md) |
-| Architecture tests | `tests/Architecture` | K-XS-1, K-XS-2 and K-MOD-1 with a checked-in baseline that may only shrink (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/`) |
+| Architecture tests | `tests/Cadence.ArchitectureTests/Architecture` | K-XS-1, K-XS-2 and K-MOD-1 with a checked-in baseline that may only shrink (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/`) |
 | Security | `packages/security` | Gateway authentication scheme, HMAC signing, audit digest, e-signature tokens, field encryption and lookup hashes (`Cadence.Security.FieldProtection`) |
 | Build | `Directory.Build.props`, `Directory.Packages.props` | `net10.0`, nullable enabled, warnings as errors, Central Package Management |
 | Contracts | `packages/contracts` | Typed cross-service DTOs and HTTP clients |
