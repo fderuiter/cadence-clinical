@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-The Cadence platform requires strict 21 CFR Part 11 regulatory compliance and audit trail integrity (@req:PRD-SYS-053). Previously, two duplicate implementations of `GxPAuditInterceptor` existed in the codebase: `Cadence.Database.GxPAuditInterceptor` and `Cadence.Security.Audit.GxPAuditInterceptor`.
+The Cadence platform requires strict 21 CFR Part 11 regulatory compliance and audit trail integrity (@req:PRD-SYS-001). Previously, two duplicate implementations of `GxPAuditInterceptor` existed in the codebase: `Cadence.Database.GxPAuditInterceptor` and `Cadence.Security.Audit.GxPAuditInterceptor`.
 
 The security package interceptor delegated logging out-of-band to an `AuditDigestEngine`, lacked EF Core transactional integration, required HTTP context principals, and was never attached to any `DbContext`. In contrast, `Cadence.Database.GxPAuditInterceptor` is the authoritative single audit writer mandated by ADR-2446 and is actively registered in application composition roots.
 
