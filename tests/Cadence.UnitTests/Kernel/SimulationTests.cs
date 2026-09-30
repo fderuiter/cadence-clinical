@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -126,6 +127,7 @@ public sealed class SimulationTests
         var changed = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(renamed.Id));
 
         unchanged.IsEmpty.Should().BeTrue();
+        unchanged.Dependents.Should().BeNull("a candidate that changes nothing affects nothing");
         changed.Scope.Should().Be(NodeRef.For(Study));
         changed.Candidate.Should().Be(new CandidateSummary(
             CandidateKind.ProtocolVersion,
@@ -134,8 +136,10 @@ public sealed class SimulationTests
             ContentHash.Compute(renamed.Content),
             parent.ContentHash));
         changed.StructuralDiff.Should().ContainSingle().Which.ElementId.Should().Be("Arm_A");
-        changed.EngineVersions.Should().Equal(ProtocolStructuralDiff.Engine);
+        changed.EngineVersions.Should().Equal(ProtocolStructuralDiff.Engine, SimulationEngine.DependentsEngine);
         changed.AsOf.Should().Be(new SimulationAsOf(Now, Now));
+        changed.Dependents!.Total.Should().Be(1);
+        inputs.DependentsAsked.Should().Equal((parent.Id, (ProtocolVersionId?)renamed.Id, new SimulationAsOf(Now, Now)));
     }
 
     /// <summary>
@@ -161,6 +165,7 @@ public sealed class SimulationTests
         other.ResultHash.Should().NotBe(first.ResultHash);
         other.IsEmpty.Should().BeTrue();
         first.Candidate.Version.Should().BeNull("unsaved content has no stored version");
+        inputs.DependentsAsked.Should().AllSatisfy(asked => asked.Candidate.Should().BeNull("unsaved content has nothing to exclude"));
     }
 
     /// <summary>
@@ -181,7 +186,11 @@ public sealed class SimulationTests
         var hiddenAfterChange = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
 
         hidden.StructuralDiff.Should().BeEmpty();
-        hidden.Masked.Should().Equal(new MaskedPart(SimulationEngine.StructuralDiffPart, MaskReason.Blinded));
+        hidden.Masked.Should().Equal(
+            new MaskedPart(SimulationEngine.DependentsPart, MaskReason.Blinded),
+            new MaskedPart(SimulationEngine.StructuralDiffPart, MaskReason.Blinded));
+        hidden.Dependents.Should().BeNull();
+        inputs.DependentsAsked.Should().BeEmpty("nothing is read about what depends on a hidden version");
         hidden.Candidate.Should().Be(new CandidateSummary(CandidateKind.ProtocolVersion, null, null, null, null));
         hidden.IsEmpty.Should().BeFalse("a withheld diff is not an empty one");
         hiddenAfterChange.ResultHash.Should().Be(hidden.ResultHash);
@@ -267,8 +276,21 @@ public sealed class SimulationTests
 
         public void Replace(ProtocolVersionSnapshot version) => _versions[version.Id] = version;
 
+        public List<(ProtocolVersionId Base, ProtocolVersionId? Candidate, SimulationAsOf AsOf)> DependentsAsked { get; } = [];
+
         public Task<ProtocolVersionSnapshot?> FindProtocolVersionAsync(TenantId tenant, ProtocolVersionId id, CancellationToken cancellationToken) =>
             Task.FromResult(_versions.GetValueOrDefault(id));
+
+        public Task<DependentsReport> DependentsAsync(
+            TenantId tenant, Actor reader, ProtocolVersionId baseVersion, ProtocolVersionId? candidate, SimulationAsOf asOf, CancellationToken cancellationToken)
+        {
+            DependentsAsked.Add((baseVersion, candidate, asOf));
+            var dependent = NodeRef.For(Study, 1);
+            return Task.FromResult(new DependentsReport(
+                NodeRef.For(baseVersion).ToString(), LineageQuery.DefaultDepth, asOf.ValidAt, asOf.KnownAt,
+                [new DependentGroup(NodeKinds.Study, 1, [new LineageNode(dependent.ToString(), NodeKinds.Study, dependent, null, 1)])],
+                1, false));
+        }
     }
 
     private sealed class Probe(bool permitted) : IAuthorizationProbe

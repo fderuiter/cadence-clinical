@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Simulation;
@@ -158,6 +159,11 @@ public sealed record MaskedPart(string Part, MaskReason Reason);
 /// <param name="ResultHash">Hash of this result without itself. The same inputs always give the same hash (K-SIM-3).</param>
 /// <param name="StructuralDiff">Elements added, removed or changed, sorted by element id (K-PROT-1).</param>
 /// <param name="Masked">Sections withheld from this actor (K-SIM-4).</param>
+/// <param name="Dependents">
+/// What depends on the base version, at <paramref name="AsOf"/>, through the one dependents read (Canvas D2); objects
+/// the actor may not see are counted and masked. Null when the candidate changes nothing, has no base, or is masked.
+/// Until protocol elements are nodes of their own (#4808) the changed object is the base version as a whole.
+/// </param>
 public sealed record SimulationResult(
     NodeRef Scope,
     SimulationAsOf AsOf,
@@ -166,7 +172,8 @@ public sealed record SimulationResult(
     string InputHash,
     string ResultHash,
     IReadOnlyList<ElementChange> StructuralDiff,
-    IReadOnlyList<MaskedPart> Masked)
+    IReadOnlyList<MaskedPart> Masked,
+    DependentsReport? Dependents = null)
 {
     /// <summary>True when the candidate changes nothing this actor may see.</summary>
     public bool IsEmpty => StructuralDiff.Count == 0 && Masked.Count == 0;

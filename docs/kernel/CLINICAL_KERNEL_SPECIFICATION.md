@@ -1000,7 +1000,8 @@ Simulate(scope, candidate, as_of, actor) → SimulationResult{ as_of, candidate,
   the real commands run through the pipeline against current state.
 
 A result has only the sections whose pure functions exist; its `engine_versions` name them. The structural diff
-of a protocol candidate reports each element once, by id, with the JSON Pointers of its changed values. When the
+of a protocol candidate reports each element once, by id, with the JSON Pointers of its changed values. Its
+dependents come from the one dependents read, as amendment impact's do (K-PROT-2). When the
 actor may not see the study or a version, the diff is withheld as a masked part and the hashes are computed from the
 mask, not the content (ADR-2480 §4.6).
 

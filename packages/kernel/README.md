@@ -468,8 +468,10 @@ compares a protocol version with the version it was forked from and returns a `S
 - Register `AddKernelSimulation()` (Application) and `AddKernelSimulationInputs()` (Persistence).
 - `SimulationBoundaryTests` keeps `Cadence.Kernel.Application.Simulation` away from the command sender, the unit of
   work and persistence, and keeps its persistence reads from calling `SaveChanges`.
-- Schedule changes, projection changes, the validation delta, dependents and saving a result as a Proposal come
-  later, each when the function behind it exists (#4866).
+- When something changed, `Dependents` lists what depends on the base version at the as-of, from the same
+  dependents read as amendment impact (the stored candidate itself is left out).
+- Schedule changes, projection changes, the validation delta and saving a result as a Proposal come later, each
+  when the function behind it exists (#4866).
 
 ## Migrations
 
