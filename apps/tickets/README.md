@@ -9,6 +9,7 @@ Support ticket scaffold. It holds the ticket, comment, attachment and audit log 
 - Project: `apps/tickets/src/Cadence.Apps.Tickets.csproj` (assembly `Cadence.Apps.Tickets`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (tickets, comments, attachments, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `TicketsDbContext`, a design-time `TicketsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145604_InitialCreate`.
 
