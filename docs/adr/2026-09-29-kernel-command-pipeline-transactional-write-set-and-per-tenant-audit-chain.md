@@ -79,8 +79,10 @@ events, outbox, idempotency or chain.
 8. **Idempotency (K-TX-3):** `idempotency_records` is keyed by `(tenant_id, idempotency_key)` and stores a SHA-256
    request hash and the serialised result. The same key and payload returns the stored result with
    `Replayed = true`; the same key with a different payload returns `K.Command.IdempotencyConflict` (409). When two
-   sends with one key race, the loser's unique violation (on the key or on the aggregate) is resolved by reading the
-   winner's stored outcome.
+   sends with one key race, the winner's stored outcome is the loser's answer. The loser checks for it again whenever
+   it would otherwise fail: when its handler refuses (the winner's aggregate is already visible, so it sees
+   `AlreadyExists`), and when its commit hits a unique violation (on the key or on the aggregate) or a concurrency
+   conflict. Only when no outcome is stored under the key does the loser's own error stand.
 9. **First commands:** `ProvisionTenant` and `RegisterOrganization`, registered by `AddKernelCommandPipeline()`.
 10. **Migration `CommandPipeline`** creates the six tables and the triggers and drops `audit_log_entries`, which no
     deployment has written to (the kernel is not yet hosted).

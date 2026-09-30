@@ -103,6 +103,10 @@ rejects a used idempotency key (K-TX-3), runs the handler, and commits in one Po
 Insert-only tables (these, plus `audit_chain_seals`) reject `UPDATE`, `DELETE` and `TRUNCATE` with SQLSTATE
 `KA001`. `KernelAuditChainVerifier` re-derives a tenant's chain and reports the first broken link.
 
+If the handler refuses or the commit conflicts, the pipeline checks the idempotency key again before returning the
+error: a concurrent send with the same key may have committed in between, and its stored result is returned as a
+replay.
+
 ### After the commit: relay and seals
 
 `AddKernelBackgroundJobs()` runs two jobs in the host (call it in exactly one host per deployment):
