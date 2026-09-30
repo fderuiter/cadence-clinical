@@ -22,7 +22,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 - `/api/v1/execution/subjects`, `/api/v1/execution/observations`, `/api/v1/execution/forms`, `/api/v1/execution/queries` (route groups).
 - `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id` and `status` narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list carries no treatment group or demographics, so a blinded caller can see it; the detail is `GET /api/v1/execution/subjects/{subjectId}`.
 - `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
-- Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`.
+- Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`. The gateway proxies them, so each alias carries the same filters as its documented route: a form update or unlock, or a query reopen or cancel, without `X-Change-Reason` gets `400` on either path (#5060, `LegacyAliasChangeReasonTests`).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/execution/**`, `/api/v1/observations/**`, `/api/v1/forms/**` and `/api/v1/queries/**` here. Compose publishes port 8002.
 
