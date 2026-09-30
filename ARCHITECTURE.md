@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K009 and their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K014 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -70,19 +70,24 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K002 | Bitemporality with hand-rolled `tstzrange` and exclusion constraints | [ADR-2246](docs/adr/2026-09-29-postgresql-native-bitemporal-interval-standard-via-tstzrange-and-gist.md) |
 | K003 | Tenant isolation through row-level security in a shared schema | [ADR-2250](docs/adr/2026-09-29-kernel-tenant-isolation-via-row-level-security.md) |
 | K004 | Authority computed from evidence by a hand-coded policy evaluator | [ADR-2251](docs/adr/2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md) |
-| K005 | Concept Registry keyed by CDISC Biomedical Concepts | [ADR-2252](docs/adr/2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md) |
+| K005 | Concept Registry keyed by CDISC Biomedical Concepts; per-tenant terminology with pinned code-system versions | [ADR-2252](docs/adr/2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md), [ADR-2470](docs/adr/2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
 | K006 | Identity vault and layered participant identity | [ADR-2253](docs/adr/2026-09-29-identity-vault-and-layered-participant-identity.md) |
 | K007 | Neo4j dropped; ProtocolVersion snapshots in PostgreSQL with an attested lifecycle | [ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [ADR-2452](docs/adr/2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md) |
 | K008 | Rules as versioned data over one AST; public standards only; Rust runtime seam later | [ADR-2254](docs/adr/2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
 | K009 | Lineage graph in the kernel schema, written transactionally | [ADR-2255](docs/adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
-| — | Kernel command pipeline: one transactional write set, per-tenant audit chain, outbox | [ADR-2449](docs/adr/2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
-| — | Per-tenant terminology with pinned code-system versions | [ADR-2470](docs/adr/2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
-| — | Standards Registry and MDR as governed, tenant-scoped reference data | [ADR-2460](docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
-| — | Simulation evaluates candidate versions and never writes | [ADR-2480](docs/adr/2026-09-30-evaluate-only-simulation-over-candidate-versions.md) |
+| K010 | Kernel command pipeline: one transactional write set, per-tenant audit chain, outbox | [ADR-2449](docs/adr/2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
+| K011 | Simulation evaluates candidate versions and never writes | [ADR-2480](docs/adr/2026-09-30-evaluate-only-simulation-over-candidate-versions.md) |
+| K012 | Every kernel object has a public `NodeRef`; the kernel computes its zoom path | [ADR-2481](docs/adr/2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) |
+| K013 | Standards Registry and MDR as governed, tenant-scoped reference data | [ADR-2460](docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
+| K014 | Anything that decides also explains, with one `Explanation` type produced by the rule owner | [ADR-2482](docs/adr/2026-09-30-explanation-model-produced-by-the-rule-owner.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
 | — | Services fail startup on missing required settings | [ADR-2490](docs/adr/2026-09-30-fail-fast-startup-validation-of-required-settings.md) |
+| — | Trusted forwarded headers, HSTS and per-caller rate limits at the edge | [ADR-2491](docs/adr/2026-09-30-http-edge-hardening-forwarded-headers-hsts-rate-limits.md) |
+| — | The web app signs in only through Keycloak | [ADR-2493](docs/adr/2026-09-30-keycloak-only-web-sign-in.md) |
+| — | Field-level encryption and keyed lookup hashes for secrets at rest | [ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md) |
+| — | Python reference sources are deleted once their C# port is tested | [ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) |
 | — | .NET 10 platform standards (C# 14, Minimal APIs, EF Core 10, CPM) | [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) |
 
 The full list is in the [ADR index](docs/adr/index.md).
@@ -166,6 +171,10 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
   as keyed HMAC-SHA256 lookup hashes (`FIELD_LOOKUP_HASH_KEY`), and consent signature captures only
   as a SHA-256 binding to the signed content
   ([ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md)).
+- Forwarded headers are honoured only from proxies listed in `CADENCE_TRUSTED_PROXIES`, responses outside
+  Development carry HSTS, and the gateway limits each caller to `GATEWAY_RATE_LIMIT_PER_MINUTE` requests (default
+  600) and answers 429 with `Retry-After` above it
+  ([ADR-2491](docs/adr/2026-09-30-http-edge-hardening-forwarded-headers-hsts-rate-limits.md)).
 
 In the target architecture, authority is computed from evidence (training, delegation,
 qualification) by the kernel's policy evaluator (ADR-2251), not from role strings.
@@ -192,6 +201,12 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   - A Concept Registry holds pinned terminology (ADR-2470).
   - A Standards Registry holds standard versions (datasets, variables, value-level definitions) and a governed
     library of versioned items that studies pin; approval and deprecation need an attestation (ADR-2460).
+  - Protocol versions move Draft, InReview, Approved, then Superseded or Withdrawn. Submitting freezes the content
+    under a SHA-256 hash, and approval or withdrawal needs a person's attestation on that hash (ADR-2452).
+  - Every kernel object has a public `NodeRef` (`kind:id@version`), and `IKernelNavigator` resolves one to a summary
+    and its zoom path (ADR-2481).
+  - A decision, such as a denied command, carries an `Explanation`: the claim, every evaluated condition with its
+    evidence and the next actions, produced by the component that owns the rule (ADR-2482).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
   and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`
@@ -230,4 +245,5 @@ Work is tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/is
 Python-to-.NET port that preceded this is complete; its playbook remains in
 [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md) for porting the remaining Python reference
 sources listed in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md)
-([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
+([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)); each is deleted once its port is tested
+([ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md)).
