@@ -1259,3 +1259,347 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.library_items (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        kind character varying(64) NOT NULL,
+        key character varying(128) NOT NULL,
+        item_version integer NOT NULL,
+        title character varying(500) NOT NULL,
+        content text NOT NULL,
+        content_hash character varying(71) NOT NULL,
+        standard_version_ids uuid[] NOT NULL,
+        status character varying(32) NOT NULL,
+        approval_attestation_id uuid,
+        deprecation_attestation_id uuid,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_library_items" PRIMARY KEY (id),
+        CONSTRAINT "AK_library_items_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_library_items_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.standard_versions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        standard_code character varying(64) NOT NULL,
+        version character varying(64) NOT NULL,
+        name character varying(500) NOT NULL,
+        publisher character varying(255) NOT NULL,
+        source character varying(1000),
+        effective_date date,
+        content_hash character varying(71) NOT NULL,
+        status character varying(32) NOT NULL,
+        approval_attestation_id uuid,
+        deprecation_attestation_id uuid,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_standard_versions" PRIMARY KEY (id),
+        CONSTRAINT "AK_standard_versions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_standard_versions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.study_standards_profiles (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        standard_version_ids uuid[] NOT NULL,
+        controlled_terminology text[] NOT NULL,
+        library_pins uuid[] NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_study_standards_profiles" PRIMARY KEY (id),
+        CONSTRAINT "AK_study_standards_profiles_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_study_standards_profiles_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_study_standards_profiles_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.standard_datasets (
+        tenant_id uuid NOT NULL,
+        standard_version_id uuid NOT NULL,
+        name character varying(64) NOT NULL,
+        label character varying(500) NOT NULL,
+        class character varying(255),
+        structure character varying(1000),
+        ordinal integer NOT NULL,
+        CONSTRAINT "PK_standard_datasets" PRIMARY KEY (tenant_id, standard_version_id, name),
+        CONSTRAINT "FK_standard_datasets_standard_versions_tenant_id_standard_vers~" FOREIGN KEY (tenant_id, standard_version_id) REFERENCES kernel.standard_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.standard_terminology (
+        tenant_id uuid NOT NULL,
+        standard_version_id uuid NOT NULL,
+        code_system character varying(64) NOT NULL,
+        version character varying(64) NOT NULL,
+        CONSTRAINT "PK_standard_terminology" PRIMARY KEY (tenant_id, standard_version_id, code_system, version),
+        CONSTRAINT "FK_standard_terminology_standard_versions_tenant_id_standard_v~" FOREIGN KEY (tenant_id, standard_version_id) REFERENCES kernel.standard_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.standard_variables (
+        tenant_id uuid NOT NULL,
+        standard_version_id uuid NOT NULL,
+        dataset_name character varying(64) NOT NULL,
+        name character varying(64) NOT NULL,
+        label character varying(500) NOT NULL,
+        ordinal integer NOT NULL,
+        data_type character varying(16) NOT NULL,
+        role character varying(255),
+        core character varying(16) NOT NULL,
+        codelists text[] NOT NULL,
+        value_list text[] NOT NULL,
+        described_value_domain character varying(255),
+        description text,
+        CONSTRAINT "PK_standard_variables" PRIMARY KEY (tenant_id, standard_version_id, dataset_name, name),
+        CONSTRAINT "FK_standard_variables_standard_datasets_tenant_id_standard_ver~" FOREIGN KEY (tenant_id, standard_version_id, dataset_name) REFERENCES kernel.standard_datasets (tenant_id, standard_version_id, name) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TABLE kernel.standard_value_level_definitions (
+        tenant_id uuid NOT NULL,
+        standard_version_id uuid NOT NULL,
+        ordinal integer NOT NULL,
+        dataset character varying(64) NOT NULL,
+        variable character varying(64) NOT NULL,
+        "where" jsonb NOT NULL,
+        data_type character varying(16) NOT NULL,
+        length integer,
+        codelists text[] NOT NULL,
+        value_list text[] NOT NULL,
+        description text,
+        CONSTRAINT "PK_standard_value_level_definitions" PRIMARY KEY (tenant_id, standard_version_id, ordinal),
+        CONSTRAINT "FK_standard_value_level_definitions_standard_variables_tenant_~" FOREIGN KEY (tenant_id, standard_version_id, dataset, variable) REFERENCES kernel.standard_variables (tenant_id, standard_version_id, dataset_name, name) ON DELETE RESTRICT,
+        CONSTRAINT "FK_standard_value_level_definitions_standard_versions_tenant_i~" FOREIGN KEY (tenant_id, standard_version_id) REFERENCES kernel.standard_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE UNIQUE INDEX "IX_library_items_tenant_id_kind_key_item_version" ON kernel.library_items (tenant_id, kind, key, item_version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE INDEX "IX_standard_value_level_definitions_tenant_id_standard_version~" ON kernel.standard_value_level_definitions (tenant_id, standard_version_id, dataset, variable);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE UNIQUE INDEX "IX_standard_versions_tenant_id_standard_code_version" ON kernel.standard_versions (tenant_id, standard_code, version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE UNIQUE INDEX "IX_study_standards_profiles_tenant_id_study_id" ON kernel.study_standards_profiles (tenant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."standard_versions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."standard_versions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."standard_versions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."standard_datasets" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."standard_datasets" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."standard_datasets"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."standard_variables" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."standard_variables" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."standard_variables"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."standard_value_level_definitions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."standard_value_level_definitions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."standard_value_level_definitions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."standard_terminology" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."standard_terminology" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."standard_terminology"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."library_items" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."library_items" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."library_items"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    ALTER TABLE "kernel"."study_standards_profiles" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."study_standards_profiles" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."study_standards_profiles"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_standard_datasets_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."standard_datasets"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_standard_datasets_no_truncate" BEFORE TRUNCATE ON "kernel"."standard_datasets"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_standard_variables_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."standard_variables"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_standard_variables_no_truncate" BEFORE TRUNCATE ON "kernel"."standard_variables"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_standard_value_level_definitions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."standard_value_level_definitions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_standard_value_level_definitions_no_truncate" BEFORE TRUNCATE ON "kernel"."standard_value_level_definitions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_standard_terminology_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."standard_terminology"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_standard_terminology_no_truncate" BEFORE TRUNCATE ON "kernel"."standard_terminology"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_immutable_columns() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    DECLARE
+        col text;
+    BEGIN
+        FOREACH col IN ARRAY TG_ARGV LOOP
+            IF (to_jsonb(OLD) -> col) IS DISTINCT FROM (to_jsonb(NEW) -> col) THEN
+                RAISE EXCEPTION 'K-STD: %.%.% is fixed once registered', TG_TABLE_SCHEMA, TG_TABLE_NAME, col
+                    USING ERRCODE = 'KS001';
+            END IF;
+        END LOOP;
+        RETURN NEW;
+    END;
+    $fn$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_standard_versions_immutable" BEFORE UPDATE ON "kernel"."standard_versions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'standard_code', 'version', 'name', 'publisher', 'source', 'effective_date', 'content_hash', 'created_at', 'created_by');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    CREATE TRIGGER "trg_library_items_immutable" BEFORE UPDATE ON "kernel"."library_items"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'kind', 'key', 'item_version', 'title', 'content', 'content_hash', 'standard_version_ids', 'created_at', 'created_by');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930014016_StandardsRegistry', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

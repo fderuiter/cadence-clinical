@@ -1,0 +1,2415 @@
+{
+  "name": "ADaMIG v1.3",
+  "label": "Analysis Data Model Implementation Guide Version 1.3 (Final)",
+  "description": "Subset of ADaMIG v1.3 (ADSL) for the Cadence Standards Registry seed.",
+  "source": "Prepared by the CDISC Analysis Data Model Team",
+  "effectiveDate": "2021-02-12",
+  "registrationStatus": "Final",
+  "version": "1.3",
+  "_links": {
+    "self": {
+      "href": "/mdr/adam/adamig-1-3",
+      "title": "Analysis Data Model Implementation Guide Version 1.3 (Final)",
+      "type": "Implementation Guide"
+    }
+  },
+  "dataStructures": [
+    {
+      "ordinal": 1,
+      "name": "ADSL",
+      "label": "Subject-Level Analysis Dataset Structure",
+      "description": "One record per subject.",
+      "className": "SUBJECT LEVEL ANALYSIS DATASET",
+      "_links": {
+        "self": {
+          "href": "/mdr/adam/adamig-1-3/datastructures/ADSL",
+          "title": "Subject-Level Analysis Dataset Structure",
+          "type": "Data Structure"
+        }
+      },
+      "analysisVariableSets": [
+        {
+          "ordinal": 1,
+          "name": "Identifier",
+          "label": "Identifier",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "STUDYID",
+              "label": "Study Identifier",
+              "description": "DM.STUDYID",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STUDYID",
+                  "title": "Study Identifier",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "description": "DM.USUBJID",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/USUBJID",
+                  "title": "Unique Subject Identifier",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "SUBJID",
+              "label": "Subject Identifier for the Study",
+              "description": "DM.SUBJID. SUBJID is required in ADSL, but permissible in other datasets.",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SUBJID",
+                  "title": "Subject Identifier for the Study",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "SITEID",
+              "label": "Study Site Identifier",
+              "description": "DM.SITEID. SITEID is required in ADSL, but permissible in other datasets.",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SITEID",
+                  "title": "Study Site Identifier",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "SITEGRy",
+              "label": "Pooled Site Group y",
+              "description": "Character description of a grouping or pooling of clinical sites for analysis purposes. For example, SITEGR3 is the name of a variable containing site group (pooled site) names, where the grouping has been done according to the third site grouping algorithm, defined in variable metadata; SITEGR3 does not mean the third group of sites.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SITEGRy",
+                  "title": "Pooled Site Group y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "SITEGRyN",
+              "label": "Pooled Site Group y (N)",
+              "description": "Numeric representation of SITEGRy. There must be a one-to-one relationship between SITEGRyN and SITEGRy within a study. \\n SITEGRyN cannot be present unless SITEGRy is also present. When SITEGRy and SITEGRyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SITEGRyN",
+                  "title": "Pooled Site Group y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "REGIONy",
+              "label": "Geographic Region y",
+              "description": "Character description of geographical region. For example, REGION1 might have values of \"Asia\", \"Europe\", \"North America\", \"Rest of World\"; REGION2 might have values of \"United States\", \"Rest of World\".",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/REGIONy",
+                  "title": "Geographic Region y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "REGIONyN",
+              "label": "Geographic Region y (N)",
+              "description": "Numeric representation of REGIONy. Orders REGIONy for analysis and reporting.There must be a one-to-one relationship between REGIONyN and REGIONy within a study. \\n REGIONyN cannot be present unless REGIONy is also present. When REGIONy and REGIONyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/REGIONyN",
+                  "title": "Geographic Region y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 2,
+          "name": "Subject Demographics",
+          "label": "Subject Demographics",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "AGE",
+              "label": "Age",
+              "description": "DM.AGE. If analysis needs require a derived age that does not match DM.AGE, then AAGE must be added",
+              "core": "Req",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/AGE",
+                  "title": "Age",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "AGEU",
+              "label": "Age Units",
+              "description": "DM.AGEU",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/AGEU",
+                  "title": "Age Units",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C66781",
+                    "title": "C66781",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "AGEGRy",
+              "label": "Pooled Age Group y",
+              "description": "Character description of a grouping or pooling of the subject's age for analysis purposes. For example, AGEGR1 might have values of \"<18\", \"18-65\", and \">65\"; AGEGR2 might have values of \"Less than 35 y old\" and \"At least 35 y old\".",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/AGEGRy",
+                  "title": "Pooled Age Group y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "AGEGRyN",
+              "label": "Pooled Age Group y (N)",
+              "description": "Numeric representation of AGEGRy. Orders the grouping or pooling of subject age for analysis and reporting. There must be a one-to-one relationship between AGEGRyN and AGEGRy within a study. \\n AGEGRyN cannot be present unless AGEGRy is also present. When AGEGRy and AGEGRyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/AGEGRyN",
+                  "title": "Pooled Age Group y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "AAGE",
+              "label": "Analysis Age",
+              "description": "Age used for analysis that may be derived differently than DM.AGE. AAGE is required if age is calculated differently than DM.AGE.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/AAGE",
+                  "title": "Analysis Age",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "SEX",
+              "label": "Sex",
+              "description": "DM.SEX.",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SEX",
+                  "title": "Sex",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C66731",
+                    "title": "C66731",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "RACE",
+              "label": "Race",
+              "description": "DM.RACE.",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RACE",
+                  "title": "Race",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C74457",
+                    "title": "C74457",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "RACEGRy",
+              "label": "Pooled Race Group y",
+              "description": "Character description of a grouping or pooling of the subject's race for analysis purposes.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RACEGRy",
+                  "title": "Pooled Race Group y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "RACEGRyN",
+              "label": "Pooled Race Group y (N)",
+              "description": "Numeric representation of RACEGRy. Orders the grouping or pooling of subject race for analysis and reporting. There must be a one-to-one relationship between RACEGRyN and RACEGRy within a study. \\n RACEGRyN cannot be present unless RACEGRy is also present. When RACEGRy and RACEGRyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RACEGRyN",
+                  "title": "Pooled Race Group y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 3,
+          "name": "Population Indicator",
+          "label": "Population Indicator",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "FASFL",
+              "label": "Full Analysis Set Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/FASFL",
+                  "title": "Full Analysis Set Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "SAFFL",
+              "label": "Safety Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/SAFFL",
+                  "title": "Safety Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "ITTFL",
+              "label": "Intent-To-Treat Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ITTFL",
+                  "title": "Intent-To-Treat Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "PPROTFL",
+              "label": "Per-Protocol Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PPROTFL",
+                  "title": "Per-Protocol Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "COMPLFL",
+              "label": "Completers Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/COMPLFL",
+                  "title": "Completers Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "RANDFL",
+              "label": "Randomized Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RANDFL",
+                  "title": "Randomized Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "ENRLFL",
+              "label": "Enrolled Population Flag",
+              "description": "These flags identify whether or not the subject is included in the specified population. A minimum of one subject-level population flag variable is required in ADSL. \\n Not all of the indicators listed here need to be included in ADSL. As stated in Section 3.1.4, Flag Variable Conventions, only those indicators corresponding to populations defined in the statistical analysis plan or populations used as a basis for analysis need be included in ADSL. \\n This list of flags is not meant to be all-inclusive. Additional population flags may be added. \\n The values of subject-level population flags cannot be blank. If a flag is used, the corresponding numeric version (*FN, where 0 = No and 1 = Yes) of the population flag can also be included. Please also refer to Section 3.1.4, Flag Variable Conventions.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "valueList": ["Y", "N"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ENRLFL",
+                  "title": "Enrolled Population Flag",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 4,
+          "name": "Treatment",
+          "label": "Treatment",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "ARM",
+              "label": "Description of Planned Arm",
+              "description": "DM.ARM",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ARM",
+                  "title": "Description of Planned Arm",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "ACTARM",
+              "label": "Description of Actual Arm",
+              "description": "DM.ACTARM",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ACTARM",
+                  "title": "Description of Actual Arm",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "TRTxxP",
+              "label": "Planned Treatment for Period xx",
+              "description": "Subject-level identifier that represents the planned treatment for period xx. In a one-period randomized trial, TRT01P would be the treatment to which the subject was randomized. TRTxxP might be derived from the SDTM DM variable ARM. At least TRT01P is required.",
+              "core": "Req",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTxxP",
+                  "title": "Planned Treatment for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "TRTxxPN",
+              "label": "Planned Treatment for Period xx (N)",
+              "description": "Numeric representation of TRTxxP. There must be a one-to-one relationship between TRTxxPN and TRTxxP within a study. \\n TRTxxPN cannot be present unless TRTxxP is also present. When TRTxxP and TRTxxPN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTxxPN",
+                  "title": "Planned Treatment for Period xx (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "TRTxxA",
+              "label": "Actual Treatment for Period xx",
+              "description": "Subject-level identifier that represents the actual treatment for the subject for period xx. Required when actual treatment does not match planned and there is an analysis of the data as treated.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTxxA",
+                  "title": "Actual Treatment for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "TRTxxAN",
+              "label": "Actual Treatment for Period xx (N)",
+              "description": "Numeric representation of TRTxxA. There must be a one-to-one relationship between TRTxxAN and TRTxxA within a study. \\n TRTxxAN cannot be present unless TRTxxA is also present. When TRTxxA and TRTxxAN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTxxAN",
+                  "title": "Actual Treatment for Period xx (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "TRTSEQP",
+              "label": "Planned Sequence of Treatments",
+              "description": "Required when there is an analysis based on the sequence of treatments, for example in a crossover design. TRTSEQP is not necessarily equal to ARM, for example if ARM contains elements that are not relevant to analysis of treatments or ARM is not fully descriptive (e.g., \"GROUP 1,\" \"GROUP 2\"). When analyzing based on the sequence of treatments, TRTSEQP is required even if identical to ARM.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSEQP",
+                  "title": "Planned Sequence of Treatments",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "TRTSEQPN",
+              "label": "Planned Sequence of Treatments (N)",
+              "description": "Numeric representation of TRTSEQP. There must be a one-to-one relationship between TRTSEQPN and TRTSEQP within a study. \\n TRTSEQPN cannot be present unless TRTSEQP is also present. When TRTSEQP and TRTSEQPN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSEQPN",
+                  "title": "Planned Sequence of Treatments (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "TRTSEQA",
+              "label": "Actual Sequence of Treatments",
+              "description": "TRTSEQA is required if a situation occurred in the conduct of the trial where a subject received a sequence of treatments other than what was planned and there is an analysis based on the sequence of treatments.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSEQA",
+                  "title": "Actual Sequence of Treatments",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "TRTSEQAN",
+              "label": "Actual Sequence of Treatments (N)",
+              "description": "Numeric representation of TRTSEQA. There must be a one-to-one relationship between TRTSEQAN and TRTSEQA within a study. \\n TRTSEQAN cannot be present unless TRTSEQA is also present. When TRTSEQA and TRTSEQAN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSEQAN",
+                  "title": "Actual Sequence of Treatments (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "TRxxPGy",
+              "label": "Planned Pooled Treatment y for Period xx",
+              "description": "Planned pooled treatment y for period xx. Useful when planned treatments (TRTxxP) in the specified period xx are pooled together for analysis according to pooling algorithm y. For example when in period 2 the first pooling algorithm dictates that all doses of Drug A (TR02PG1=\"All doses of Drug A\") are pooled together for comparison to all doses of Drug B (TR02PG1=\"All doses of Drug B\"). Each value of TRTxxP is pooled within at most one value of TRxxPGy.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxPGy",
+                  "title": "Planned Pooled Treatment y for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "TRxxPGyN",
+              "label": "Planned Pooled Trt y for Period xx (N)",
+              "description": "Numeric representation of TRxxPGy. There must be a one-to-one relationship between TRxxPGyN and TRxxPGy within a study. \\n TRxxPGyN cannot be present unless TRxxPGy is also present. When TRxxPGy and TRxxPGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxPGyN",
+                  "title": "Planned Pooled Trt y for Period xx (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "TRxxAGy",
+              "label": "Actual Pooled Treatment y for Period xx",
+              "description": "Actual pooled treatment y for period xx. Required when TRxxPGy is present and TRTxxA is present.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxAGy",
+                  "title": "Actual Pooled Treatment y for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "TRxxAGyN",
+              "label": "Actual Pooled Trt y for Period xx (N)",
+              "description": "Numeric representation of TRxxAGy. There must be a one-to-one relationship between TRxxAGyN and TRxxAGy within a study. \\n TRxxAGyN cannot be present unless TRxxAGy is also present. When TRxxAGy and TRxxAGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxAGyN",
+                  "title": "Actual Pooled Trt y for Period xx (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "TSEQPGy",
+              "label": "Planned Pooled Treatment Sequence y",
+              "description": "Planned pooled treatment sequence y. Useful when planned treatment sequences (TRTSEQP) are pooled together for analysis according to pooling algorithm y. For example, this might be used in an analysis of an extension study when the analysis is based on what the subject received in the parent study as well as in the extension study.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TSEQPGy",
+                  "title": "Planned Pooled Treatment Sequence y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "TSEQPGyN",
+              "label": "Planned Pooled Treatment Sequence y (N)",
+              "description": "Numeric representation of TSEQPGy. There must be a one-to-one relationship between TSEQPGyN and TSEQPGy within a study. \\n TSEQPGyN cannot be present unless TSEQPGy is also present. When TSEQPGy and TSEQPGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TSEQPGyN",
+                  "title": "Planned Pooled Treatment Sequence y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "TSEQAGy",
+              "label": "Actual Pooled Treatment Sequence y",
+              "description": "Actual pooled treatment sequence y. Required when TSEQPGy is present and TRTSEQA is present.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TSEQAGy",
+                  "title": "Actual Pooled Treatment Sequence y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "TSEQAGyN",
+              "label": "Actual Pooled Treatment Sequence y (N)",
+              "description": "Numeric representation of TSEQAGy. There must be a one-to-one relationship between TSEQAGyN and TSEQAGy within a study. \\n TSEQAGyN cannot be present unless TSEQAGy is also present. When TSEQAGy and TSEQAGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TSEQAGyN",
+                  "title": "Actual Pooled Treatment Sequence y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 5,
+          "name": "Dose",
+          "label": "Dose",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "DOSExxP",
+              "label": "Planned Treatment Dose for Period xx",
+              "description": "Subject-level identifier that represents the planned treatment dosage for period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DOSExxP",
+                  "title": "Planned Treatment Dose for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "DOSExxA",
+              "label": "Actual Treatment Dose for Period xx",
+              "description": "Subject-level identifier that represents the actual treatment dosage for period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DOSExxA",
+                  "title": "Actual Treatment Dose for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "DOSExxU",
+              "label": "Units for Dose for Period xx",
+              "description": "The units for DOSExxP and DOSExxA. It is permissible to use suffixes such as \"P\" and \"A\" if needed, with labels modified accordingly.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DOSExxU",
+                  "title": "Units for Dose for Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 6,
+          "name": "Treatment Timing",
+          "label": "Treatment Timing",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "TRTSDT",
+              "label": "Date of First Exposure to Treatment",
+              "description": "Date of first exposure to treatment for a subject in a study. TRTSDT and/or TRTSDTM are required if there is an investigational product. Note that TRTSDT is not required to have the same value as the SDTM DM variable RFXSTDTC. While both of these dates reflect the concept of first exposure, the ADaM date may be derived to support the analysis which may not necessarily be the very first date in the SDTM EX domain.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSDT",
+                  "title": "Date of First Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "TRTSTM",
+              "label": "Time of First Exposure to Treatment",
+              "description": "Time of first exposure to treatment for a subject in a study.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSTM",
+                  "title": "Time of First Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "TRTSDTM",
+              "label": "Datetime of First Exposure to Treatment",
+              "description": "Datetime of first exposure to treatment for a subject in a study. TRTSDT and/or TRTSDTM are required if there is an investigational product.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSDTM",
+                  "title": "Datetime of First Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "TRTSDTF",
+              "label": "Date of First Exposure Imput. Flag",
+              "description": "The level of imputation of date of first exposure to treatment. If TRTSDT (or the date part of TRTSDTM) was imputed, TRTSDTF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSDTF",
+                  "title": "Date of First Exposure Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "TRTSTMF",
+              "label": "Time of First Exposure Imput. Flag",
+              "description": "The level of imputation of time of first exposure to treatment. If TRTSTM (or the time part of TRTSDTM) was imputed, TRTSTMF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTSTMF",
+                  "title": "Time of First Exposure Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "TRTEDT",
+              "label": "Date of Last Exposure to Treatment",
+              "description": "Date of last exposure to treatment for a subject in a study. TRTEDT and/or TRTEDTM are required if there is an investigational product. Note that TRTEDT is not required to have the same value as the SDTM DM variable RFXENDTC. While both of these dates reflect the concept of last exposure, the ADaM date may be derived to support the analysis which may not necessarily be the very last date in the SDTM EX domain.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTEDT",
+                  "title": "Date of Last Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "TRTETM",
+              "label": "Time of Last Exposure to Treatment",
+              "description": "Time of last exposure to treatment for a subject in a study.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTETM",
+                  "title": "Time of Last Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "TRTEDTM",
+              "label": "Datetime of Last Exposure to Treatment",
+              "description": "Datetime of last exposure to treatment for a subject in a study. TRTEDT and/or TRTEDTM are required if there is an investigational product.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTEDTM",
+                  "title": "Datetime of Last Exposure to Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "TRTEDTF",
+              "label": "Date of Last Exposure Imput. Flag",
+              "description": "The level of imputation of date of last exposure to treatment. If TRTEDT (or the date part of TRTEDTM) was imputed, TRTEDTF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTEDTF",
+                  "title": "Date of Last Exposure Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "TRTETMF",
+              "label": "Time of Last Exposure Imput. Flag",
+              "description": "The level of imputation of time of last exposure to treatment. If TRTETM (or the time part of TRTEDTM) was imputed, TRTETMF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTETMF",
+                  "title": "Time of Last Exposure Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "TRxxSDT",
+              "label": "Date of First Exposure in Period xx",
+              "description": "Date of first exposure to treatment in period xx. TRxxSDT and/or TRxxSDTM are only required in trial designs where multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P). Examples include crossover designs or designs where multiple periods exist for the same treatment.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxSDT",
+                  "title": "Date of First Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "TRxxSTM",
+              "label": "Time of First Exposure in Period xx",
+              "description": "Starting time of exposure to treatment in period xx. TRxxSTM and/or TRxxSDTM are only required in trial designs where starting time is important to the analysis and multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P).",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxSTM",
+                  "title": "Time of First Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "TRxxSDTM",
+              "label": "Datetime of First Exposure in Period xx",
+              "description": "Datetime of first exposure to treatment in period xx. TRxxSDTM is only required in trial designs where multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P).",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxSDTM",
+                  "title": "Datetime of First Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "TRxxSDTF",
+              "label": "Date 1st Exposure Period xx Imput. Flag",
+              "description": "The level of imputation of date of first exposure to treatment in period xx. If TRxxSDT (or the date part of TRxxSDTM) was imputed, TRxxSDTF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxSDTF",
+                  "title": "Date 1st Exposure Period xx Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "TRxxSTMF",
+              "label": "Time 1st Exposure Period xx Imput. Flag",
+              "description": "The level of imputation of time of first exposure to treatment in period xx. If TRxxSTM (or the time part of TRxxSDTM) was imputed, TRxxSTMF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxSTMF",
+                  "title": "Time 1st Exposure Period xx Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "TRxxEDT",
+              "label": "Date of Last Exposure in Period xx",
+              "description": "Date of last exposure to treatment in period xx. TRxxEDT and/or TRxxEDTM are only required in trial designs where multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P).",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxEDT",
+                  "title": "Date of Last Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "TRxxETM",
+              "label": "Time of Last Exposure in Period xx",
+              "description": "Ending time of exposure to treatment in period xx. TRxxETM and/or TRxxEDTM are only required in trial designs where ending time is important to the analysis and multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P).",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxETM",
+                  "title": "Time of Last Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "TRxxEDTM",
+              "label": "Datetime of Last Exposure in Period xx",
+              "description": "Datetime of last exposure to treatment in period xx. TRxxEDTM is only required in trial designs where multiple treatment periods are defined (i.e., required when there is a TRTxxP other than TRT01P).",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxEDTM",
+                  "title": "Datetime of Last Exposure in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "TRxxEDTF",
+              "label": "Date Last Exposure Period xx Imput. Flag",
+              "description": "The level of imputation of date of last exposure to treatment in period xx. If TRxxEDT (or the date part of TRxxEDTM) was imputed, TRxxEDTF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxEDTF",
+                  "title": "Date Last Exposure Period xx Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "TRxxETMF",
+              "label": "Time Last Exposure Period xx Imput. Flag",
+              "description": "The level of imputation of time of last exposure to treatment in period xx. If TRxxETM (or the time part of TRxxEDTM) was imputed, TRxxETMF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxETMF",
+                  "title": "Time Last Exposure Period xx Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 7,
+          "name": "Period, Subperiod, and Phase Timing",
+          "label": "Period, Subperiod, and Phase Timing",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "APxxSDT",
+              "label": "Period xx Start Date",
+              "description": "The starting date of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxSDT",
+                  "title": "Period xx Start Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "APxxSTM",
+              "label": "Period xx Start Time",
+              "description": "The starting time of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxSTM",
+                  "title": "Period xx Start Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "APxxSDTM",
+              "label": "Period xx Start Datetime",
+              "description": "The starting datetime of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxSDTM",
+                  "title": "Period xx Start Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "APxxSDTF",
+              "label": "Period xx Start Date Imput. Flag",
+              "description": "The level of imputation of period xx start date. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxSDTF",
+                  "title": "Period xx Start Date Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "APxxSTMF",
+              "label": "Period xx Start Time Imput. Flag",
+              "description": "The level of imputation of period xx start time. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxSTMF",
+                  "title": "Period xx Start Time Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "APxxEDT",
+              "label": "Period xx End Date",
+              "description": "The ending date of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxEDT",
+                  "title": "Period xx End Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "APxxETM",
+              "label": "Period xx End Time",
+              "description": "The ending time of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxETM",
+                  "title": "Period xx End Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "APxxEDTM",
+              "label": "Period xx End Datetime",
+              "description": "The ending datetime of period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxEDTM",
+                  "title": "Period xx End Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "APxxEDTF",
+              "label": "Period xx End Date Imput. Flag",
+              "description": "The level of imputation of period xx end date. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxEDTF",
+                  "title": "Period xx End Date Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "APxxETMF",
+              "label": "Period xx End Time Imput. Flag",
+              "description": "The level of imputation of period xx end time. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APxxETMF",
+                  "title": "Period xx End Time Imput. Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "PxxSw",
+              "label": "Description of Period xx Subperiod w",
+              "description": "Description of analysis subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSw",
+                  "title": "Description of Period xx Subperiod w",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "PxxSwSDT",
+              "label": "Period xx Subperiod w Start Date",
+              "description": "The starting date of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwSDT",
+                  "title": "Period xx Subperiod w Start Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "PxxSwSTM",
+              "label": "Period xx Subperiod w Start Time",
+              "description": "The starting time of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwSTM",
+                  "title": "Period xx Subperiod w Start Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "PxxSwSDM",
+              "label": "Period xx Subperiod w Start Datetime",
+              "description": "The starting datetime of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwSDM",
+                  "title": "Period xx Subperiod w Start Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "PxxSwSDF",
+              "label": "Period xx Subper w Start Date Imput Flag",
+              "description": "The level of imputation of the start date for subperiod w within period xx. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwSDF",
+                  "title": "Period xx Subper w Start Date Imput Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "PxxSwSTF",
+              "label": "Period xx Subper w Start Time Imput Flag",
+              "description": "The level of imputation of the start time for subperiod w within period xx. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwSTF",
+                  "title": "Period xx Subper w Start Time Imput Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "PxxSwEDT",
+              "label": "Period xx Subperiod w End Date",
+              "description": "The ending date of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwEDT",
+                  "title": "Period xx Subperiod w End Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "PxxSwETM",
+              "label": "Period xx Subperiod w End Time",
+              "description": "The ending time of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwETM",
+                  "title": "Period xx Subperiod w End Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "PxxSwEDM",
+              "label": "Period xx Subperiod w End Datetime",
+              "description": "The ending datetime of subperiod w within period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwEDM",
+                  "title": "Period xx Subperiod w End Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "PxxSwEDF",
+              "label": "Period xx Subper w End Date Imput Flag",
+              "description": "The level of imputation of the end date for subperiod w within period xx. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwEDF",
+                  "title": "Period xx Subper w End Date Imput Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "PxxSwETF",
+              "label": "Period xx Subper w End Time Imput Flag",
+              "description": "The level of imputation of the end time for subperiod w within period xx. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PxxSwETF",
+                  "title": "Period xx Subper w End Time Imput Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "APHASEw",
+              "label": "Description of Phase w",
+              "description": "Description of analysis phase w. Analysis phase is independent of TRTxxP within ADSL, and may be populated for spans of time where a subject is not on treatment.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/APHASEw",
+                  "title": "Description of Phase w",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "PHwSDT",
+              "label": "Phase w Start Date",
+              "description": "The starting date of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwSDT",
+                  "title": "Phase w Start Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "PHwSTM",
+              "label": "Phase w Start Time",
+              "description": "The starting time of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwSTM",
+                  "title": "Phase w Start Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "PHwSDTM",
+              "label": "Phase w Start Datetime",
+              "description": "The starting datetime of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwSDTM",
+                  "title": "Phase w Start Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "PHwSDTF",
+              "label": "Phase w Start Date Imputation Flag",
+              "description": "The level of imputation of the start date for phase w. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwSDTF",
+                  "title": "Phase w Start Date Imputation Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "PHwSTMF",
+              "label": "Phase w Start Time Imputation Flag",
+              "description": "The level of imputation of the start time for phase w. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwSTMF",
+                  "title": "Phase w Start Time Imputation Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "PHwEDT",
+              "label": "Phase w End Date",
+              "description": "The ending date of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwEDT",
+                  "title": "Phase w End Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "PHwETM",
+              "label": "Phase w End Time",
+              "description": "The ending time of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwETM",
+                  "title": "Phase w End Time",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "PHwEDTM",
+              "label": "Phase w End Datetime",
+              "description": "The ending datetime of phase w.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwEDTM",
+                  "title": "Phase w End Datetime",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "PHwEDTF",
+              "label": "Phase w End Date Imputation Flag",
+              "description": "The level of imputation of the end date for phase w. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwEDTF",
+                  "title": "Phase w End Date Imputation Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "PHwETMF",
+              "label": "Phase w End Time Imputation Flag",
+              "description": "The level of imputation of the end time for phase w. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/PHwETMF",
+                  "title": "Phase w End Time Imputation Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81226",
+                    "title": "C81226",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 8,
+          "name": "Trial Experience",
+          "label": "Trial Experience",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "EOSSTT",
+              "label": "End of Study Status",
+              "description": "The subject's status as of the end of study or data cutoff. Examples: COMPLETED, DISCONTINUED, ONGOING.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/EOSSTT",
+                  "title": "End of Study Status",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C124296",
+                    "title": "C124296",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "EOSDT",
+              "label": "End of Study Date",
+              "description": "Date subject ended the study - either date of completion or date of discontinuation or data cutoff date for interim analyses.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/EOSDT",
+                  "title": "End of Study Date",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "DCSREAS",
+              "label": "Reason for Discontinuation from Study",
+              "description": "Reason for subject's discontinuation from study. The source would most likely be the SDTM DS dataset. Null for subjects who completed the study.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCSREAS",
+                  "title": "Reason for Discontinuation from Study",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "DCSREASP",
+              "label": "Reason Spec for Discont from Study",
+              "description": "Additional detail regarding subject's discontinuation from study (e.g., description of \"other\").",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCSREASP",
+                  "title": "Reason Spec for Discont from Study",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "EOTSTT",
+              "label": "End of Treatment Status",
+              "description": "The subject's status as of the end of treatment or data cutoff. Examples: COMPLETED, DISCONTINUED, ONGOING.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/EOTSTT",
+                  "title": "End of Treatment Status",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C124296",
+                    "title": "C124296",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "DCTREAS",
+              "label": "Reason for Discontinuation of Treatment",
+              "description": "If a subject discontinued treatment in the study, then this variable indicates the reason for discontinuation. This is for discontinuation of treatment in the overall study and not to be used for discontinuation reason within individual treatment periods.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCTREAS",
+                  "title": "Reason for Discontinuation of Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "DCTREASP",
+              "label": "Reason Specify for Discont of Treatment",
+              "description": "Additional detail regarding subject's discontinuation from treatment (e.g., description of \"other\").",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCTREASP",
+                  "title": "Reason Specify for Discont of Treatment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "EOTxxSTT",
+              "label": "End of Treatment Status in Period xx",
+              "description": "The subject's treatment status as of the end of period xx, or data cutoff if within period xx. Examples: COMPLETED, DISCONTINUED, ONGOING.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/EOTxxSTT",
+                  "title": "End of Treatment Status in Period xx",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C124296",
+                    "title": "C124296",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "DCTxxRS",
+              "label": "Reason for Discont of Treat in Period xx",
+              "description": "Reason for discontinuing treatment in period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCTxxRS",
+                  "title": "Reason for Discont of Treat in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "DCTxxRSP",
+              "label": "Reason Spec for Disc of Trt in Period xx",
+              "description": "Additional detail regarding subject's discontinuation of treatment in period xx (e.g., description of \"other\").",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCTxxRSP",
+                  "title": "Reason Spec for Disc of Trt in Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "EOPxxSTT",
+              "label": "End of Period xx Status",
+              "description": "The subject's status as of the end of period xx, or data cutoff if within period xx. Examples: COMPLETED, DISCONTINUED, ONGOING.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/EOPxxSTT",
+                  "title": "End of Period xx Status",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C124296",
+                    "title": "C124296",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "DCPxxRS",
+              "label": "Reason for Discont from Period xx",
+              "description": "Reason for discontinuing analysis period xx.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCPxxRS",
+                  "title": "Reason for Discont from Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "DCPxxRSP",
+              "label": "Reason Spec for Discont from Period xx",
+              "description": "Additional detail regarding subject's discontinuation from period xx (e.g., description of \"other\").",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DCPxxRSP",
+                  "title": "Reason Spec for Discont from Period xx",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "RFICDT",
+              "label": "Date of Informed Consent",
+              "description": "Date subject gave informed consent. Generally equivalent to DM.RFICDTC.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RFICDT",
+                  "title": "Date of Informed Consent",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "ENRLDT",
+              "label": "Date of Enrollment",
+              "description": "Date of subject's enrollment into trial.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ENRLDT",
+                  "title": "Date of Enrollment",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "RANDDT",
+              "label": "Date of Randomization",
+              "description": "Required in randomized trials.",
+              "core": "Cond",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RANDDT",
+                  "title": "Date of Randomization",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "RFICyDT",
+              "label": "Date of Informed Consent y",
+              "description": "This variable may be used in the case where there are multiple consent dates within a study. This date does not need to repeat the date in RFICDT. \"y\" can start with 1 but it is not required to start with 1.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RFICyDT",
+                  "title": "Date of Informed Consent y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "ENRLyDT",
+              "label": "Date of Enrollment y",
+              "description": "This variable may be used in the case where there are multiple enrollment dates within a study. This date does not need to repeat the date in ENRLDT. \"y\" can start with 1 but it is not required to start with 1.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/ENRLyDT",
+                  "title": "Date of Enrollment y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "RANDyDT",
+              "label": "Date of Randomization y",
+              "description": "This variable may be used in the case where there are multiple randomization dates within a study. This date does not need to repeat the date in RANDDT. \"y\" can start with 1 but it is not required to start with 1.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/RANDyDT",
+                  "title": "Date of Randomization y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "LSTALVDT",
+              "label": "Date Last Known Alive",
+              "description": "If this variable is included in ADSL, the best practice is to populate it for everyone. If the derivation for subjects who died differs from the derivation for subjects who are not known to have died, the differences should be noted in metadata.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/LSTALVDT",
+                  "title": "Date Last Known Alive",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "TRCMP",
+              "label": "Treatment Compliance (%)",
+              "description": "Overall percent compliance with treatment in the trial. TRCMP may be useful for inclusion in ADSL for reasons such as defining subgroups and/or populations.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRCMP",
+                  "title": "Treatment Compliance (%)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "TRCMPGy",
+              "label": "Treatment Compliance (%) Group y",
+              "description": "Grouping \"y\" of TRCMP, treatment compliance percentage.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRCMPGy",
+                  "title": "Treatment Compliance (%) Group y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "TRCMPGyN",
+              "label": "Treatment Compliance (%) Group y (N)",
+              "description": "Numeric representation of treatment compliance (%) grouping \"y\". There must be a one-to-one relationship between TRCMPGyN and TRCMPGy within a study. \\n TRCMPGyN cannot be present unless TRCMPGy is also present. When TRCMPGy and TRCMPGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRCMPGyN",
+                  "title": "Treatment Compliance (%) Group y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "TRxxDURD",
+              "label": "Treatment Duration in Period xx (Days)",
+              "description": "Treatment duration for period xx as measured in days. More than one of TRxxDURD, TRxxDURM, and TRxxDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxDURD",
+                  "title": "Treatment Duration in Period xx (Days)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "TRxxDURM",
+              "label": "Treatment Duration in Period xx (Months)",
+              "description": "Treatment duration for period xx, as measure in months. More than one of TRxxDURD, TRxxDURM, and TRxxDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxDURM",
+                  "title": "Treatment Duration in Period xx (Months)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "TRxxDURY",
+              "label": "Treatment Duration in Period xx (Years)",
+              "description": "Treatment duration for period xx, as measured in years. More than one of TRxxDURD, TRxxDURM, and TRxxDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRxxDURY",
+                  "title": "Treatment Duration in Period xx (Years)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "TRTDURD",
+              "label": "Total Treatment Duration (Days)",
+              "description": "Total treatment duration, as measured in days. More than one of TRTDURD, TRTDURM, and TRTDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTDURD",
+                  "title": "Total Treatment Duration (Days)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "TRTDURM",
+              "label": "Total Treatment Duration (Months)",
+              "description": "Total treatment duration, as measured in months. More than one of TRTDURD, TRTDURM, and TRTDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTDURM",
+                  "title": "Total Treatment Duration (Months)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "TRTDURY",
+              "label": "Total Treatment Duration (Years)",
+              "description": "Total treatment duration, as measured in years. More than one of TRTDURD, TRTDURM, and TRTDURY can be populated, but each represents the entire duration in its respective units.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/TRTDURY",
+                  "title": "Total Treatment Duration (Years)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "DTHDT",
+              "label": "Date of Death",
+              "description": "Date of subject's death. Derived from DM.DTHDTC.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHDT",
+                  "title": "Date of Death",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "DTHDTF",
+              "label": "Date of Death Imputation Flag",
+              "description": "Imputation flag for date of subject's death. If DTHDT was imputed, DTHDTF must be populated and is required. See Section 3.1.3, Date and Time Imputation Flag Variables.",
+              "core": "Cond",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHDTF",
+                  "title": "Date of Death Imputation Flag",
+                  "type": "Analysis Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/adamct-2024-09-27/codelists/C81223",
+                    "title": "C81223",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "DTHCAUS",
+              "label": "Cause of Death",
+              "description": "Cause of Death.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHCAUS",
+                  "title": "Cause of Death",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 33,
+              "name": "DTHCAUSN",
+              "label": "Cause of Death (N)",
+              "description": "Numeric representation of cause of death. There must be a one-to-one relationship between DTHCAUSN and DTHCAUS within a study. \\n DTHCAUSN cannot be present unless DTHCAUS is also present. When DTHCAUS and DTHCAUSN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHCAUSN",
+                  "title": "Cause of Death (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 34,
+              "name": "DTHCGRy",
+              "label": "Cause of Death Group y",
+              "description": "Grouping \"y\" of DTHCAUS, the subject's cause of death.",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHCGRy",
+                  "title": "Cause of Death Group y",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 35,
+              "name": "DTHCGRyN",
+              "label": "Cause of Death Group y (N)",
+              "description": "Numeric representation of grouping \"y\" of the subject's cause of death. There must be a one-to-one relationship between DTHCGRyN and DTHCGRy within a study. \\n DTHCGyN cannot be present unless DTHCGy is also present. When DTHCGy and DTHCGyN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/DTHCGRyN",
+                  "title": "Cause of Death Group y (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 9,
+          "name": "Stratification",
+          "label": "Stratification",
+          "analysisVariables": [
+            {
+              "ordinal": 1,
+              "name": "STRATAR",
+              "label": "Strata Used for Randomization",
+              "description": "STRATAR contains the combination of values of the individual stratification factors used for randomization. The exact format should be determined by the sponsor. \\n This variable is intended for studies that use stratified randomization. \\n For example, \">=50, Treatment experienced, N\"",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATAR",
+                  "title": "Strata Used for Randomization",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "STRATARN",
+              "label": "Strata Used for Randomization (N)",
+              "description": "Numeric representation of STRATAR. For example, STRATARN=3 when STRATAR=\">=50, Treatment experienced, N\". There must be a one-to-one relationship between STRATARN and STRATAR within a study. \\n STRATARN cannot be present unless STRATAR is also present. When STRATAR and STRATARN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATARN",
+                  "title": "Strata Used for Randomization (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "STRATwD",
+              "label": "Description of Stratification Factor w",
+              "description": "STRATwD is a full text description of the stratification factor \"w\". This text description will remain constant for all subjects. These descriptive variables are included to quickly and clearly communicate critical study design information as well as to facilitate integration. \\n For example, STRAT3D=\"Hypertension\"",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATwD",
+                  "title": "Description of Stratification Factor w",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "STRATwR",
+              "label": "Strat Factor w Value Used for Rand",
+              "description": "STRATwR is the subject-level value of the \"w'th\" stratification factor used for randomization. \\n For example, STRAT3R=\"N\"",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATwR",
+                  "title": "Strat Factor w Value Used for Rand",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "STRATwRN",
+              "label": "Strat Factor w Value Used for Rand (N)",
+              "description": "Numeric representation of STRATwR. For example, STRAT3RN=0 when STRAT3R=\"N\". There must be a one-to-one relationship between STRATwRN and STRATwR within a study. \\n STRATwRN cannot be present unless STRATwR is also present. When STRATwR and STRATwRN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATwRN",
+                  "title": "Strat Factor w Value Used for Rand (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "STRATAV",
+              "label": "Strata from Verification Source",
+              "description": "STRATAV contains the entire string value represents the combination of values of the individual stratification factors that should have been used and represents the \"as verified\" value. The STRATAV variables are based on the source documentation and are determined after randomization. If the values used for the randomization of a given subject were all correct, then STRATAV will equal STRATAR. Otherwise, one or more components of the text string for STRATAR and STRATAV will be different. \\n The exact format should be determined by the sponsor. \\n For example, \">=50, Treatment experienced, Y\"",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATAV",
+                  "title": "Strata from Verification Source",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "STRATAVN",
+              "label": "Strata from Verification Source (N)",
+              "description": "Numeric representation of STRATAV. For example, STRATAVN=4 when STRATVR=\">=50, Treatment experienced, Y\". There must be a one-to-one relationship between STRATAVN and STRATAV within a study. \\n STRATAVN cannot be present unless STRATAV is also present. When STRATAV and STRATAVN are present, then on a given record, either both must be populated or both must be null.",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATAVN",
+                  "title": "Strata from Verification Source (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "STRATwV",
+              "label": "Strat Factor w Value from Verif Source",
+              "description": "STRATwV is the \"as verified\" subject-level value of the \"w'th\" stratification factor. If the value based on randomization was correct, then STRATwV will equal STRATwR. \\n For example, STRAT3V=\"Y\"",
+              "core": "Perm",
+              "simpleDatatype": "Char",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATwV",
+                  "title": "Strat Factor w Value from Verif Source",
+                  "type": "Analysis Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "STRATwVN",
+              "label": "Strat Fact w Val from Verif Source (N)",
+              "description": "Numeric representation of STRATwV. For example, STRAT3VN=1 when STRAT3V=\"Y\". There must be a one-to-one relationship between STRATwVN and STRATwV within a study. \\n STRATwVN cannot be present unless STRATwV is also present. When STRATwV and STRATwVN are present, then on a given record, either both must be populated or both must be null. \\n",
+              "core": "Perm",
+              "simpleDatatype": "Num",
+              "_links": {
+                "self": {
+                  "href": "/mdr/adam/adamig-1-3/datastructures/ADSL/variables/STRATwVN",
+                  "title": "Strat Fact w Val from Verif Source (N)",
+                  "type": "Analysis Variable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

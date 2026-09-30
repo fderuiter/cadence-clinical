@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Automated Test Methods Reported:** 827
-- **Passed:** 827 🟢
+- **Automated Test Methods Reported:** 870
+- **Passed:** 870 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate (of executed):** 100.00%
@@ -48,6 +48,9 @@ out so the report only changes when results change; they are in the TRX files un
 | `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ApproveForm_ReplayingAUsedToken_Returns401` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests` | SRS-SYS-005 | 🟢 PASSED |
+| `ApproveForm_WithATokenIssuedForSomethingElse_Returns401` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests` | SRS-SYS-005 | 🟢 PASSED |
+| `ApproveForm_WithoutESignatureToken_Returns401AndLeavesTheFormUnsigned` | `Cadence.UnitTests.Execution.Endpoints.ExecutionAuthenticationTests` | SRS-SYS-005 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
@@ -146,6 +149,16 @@ out so the report only changes when results change; they are in the TRX files un
 | `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `KeycloakVerifier_MapsIdentityProviderAnswers` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `KeycloakVerifier_UsesADirectGrantThenEndsThatSession` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_ForAnAuditor_Returns403WithoutCheckingCredentials` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_NamingAnotherUser_Returns403` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_RepeatedAttempts_AreRateLimitedPerSigner` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_WithAWrongPassword_Returns401WithoutAToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_WithTheCallersPassword_IssuesAVerifiableSingleUseToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_WithoutABoundAction_Returns400` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.UnitTests.Kernel.Integration.ConceptRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
 | `NavigationNeverCrossesTenants` | `Cadence.UnitTests.Kernel.Integration.KernelNavigationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
 | `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
@@ -156,6 +169,7 @@ out so the report only changes when results change; they are in the TRX files un
 | `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
 | `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
 | `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `RegisterAndApproveStandardVersionAreAuditedAndReadBackExactly` | `Cadence.UnitTests.Kernel.Integration.StandardsRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
 | `KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` | `Cadence.UnitTests.Kernel.KernelDbContextModelTests` | PRD-CRF-013 | 🟢 PASSED |
 | `ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator` | `Cadence.UnitTests.Packages.ComplianceUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
 | `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
@@ -173,6 +187,13 @@ out so the report only changes when results change; they are in the TRX files un
 | `DeidTransforms_ShiftDateString_PreservesFormats` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
 | `DeidTransforms_SubjectDateShift_And_CapAge` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-SYS-051 | 🟢 PASSED |
 | `DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate` | `Cadence.UnitTests.Packages.DeidEngineUnitTests` | PRD-IMG-001 | 🟢 PASSED |
+| `Issue_ForAnAuditor_IsRefused` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_AcceptsABoundTokenOnce` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_ExpiredToken_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_TokenSignedWithAnotherSecret_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_TokensOutsideTheV3Contract_AreRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | PRD-SYS-001 | 🟢 PASSED |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
@@ -193,30 +214,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 2583f3e56f54fc89ab59658417d1e466efc7df71ab9460e9a83bd69fdad649d6
+- **Cryptographic Hash (SHA-256):** 6e063b5dbdd3b535713cee620622b151b9cf6fdd98810c0d73cd7e40f024cc5d
 -----BEGIN CERTIFICATE-----
-MIIDxDCCAnygAwIBAgIIBmWeY8nAu60wPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+MIIDxDCCAnygAwIBAgIICXyFeu8aHFAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
 ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
 ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
 eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
-MB4XDTI2MDkyOTAxMzYzMVoXDTI3MDkzMDAxMzYzMVowaDEiMCAGA1UEChMZQ2Fk
+MB4XDTI2MDkyOTAxNTU0NloXDTI3MDkzMDAxNTU0NlowaDEiMCAGA1UEChMZQ2Fk
 ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
 aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
-BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0lPadgs51WbtySAKt21oKpwQE9gI
-1vAh0/hkpbi8acxy0q5vX9x9wF5SwLjR1dMWrJj2jaeXVtM7zt2dgb53g5YLRBzZ
-KGEB8jeHTMy0m1IQgKuVl3gtQgW+B2oyVQYLHJxGYed2CZMBtP0dxyG0uzpx9v04
-xOYVaDka7pq16YcZULkUyzLe7+WmeLu0Id2wEo5TdykSHrxbUrfUlqQRPfojOneF
-L32Jy91iJXZ3sRciJ7LGGbju7jQMjLy7FsjaSG7NL9hYYunmqpkjlzmFA5GalT18
-e6AYP5TmFty+cquuD9JaNNkD2X9OB7gGLmxx+sFxB/mj8lfCMuupak0I9QIDAQAB
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuvdpt7ZcV92ZGsK8R5JrFNKddHs+
+/Y+4XGvjtBOAK8L56cOdgJXHB6Gk/rjzde/lAETDaHmHBdCQQUfFAc6QHK1aZA9a
+CCeaZ2YhQsOgHfv/TxUlB1JCllJW3kk+PMFtW1/7SdH94LvpDfMYZiVjZ4ODqV5g
+4zijVrcKOY/lAtguMa8R4WiUnOmsQxukli5fsmFRIePV48jF3v+ciB0J7V1DBld/
+dLghsarp3/MmUQUaxPN/KpO8KkorcyLouK/SS5a8cENPTo0JVWBhOxQ7WRWH4uv6
+xE52uIUacfxf16QhzAeuEciK9Kl14TO0yQrQWnZwDz8r5zVGk7WUDUoTZwIDAQAB
 oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
-AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAHBawasF6V6/
-yMCjaZie7EkrqAPnM4BCS+jvtrrY4jZWAR6IKJVbnzf4b34pM/49YX9jWX3UnT7C
-Rtxw7JDOPIQ/iBwPdUbLHB6ZWvqgE4OSr0GDirrdsNa3FKp18GK6Uns7KR4C88qO
-4Y2iqGgBEWqOVp4OBcxKYD38GGHoTdiI4fh94J2hSq0LO/knBXr9TMTOg3FplGCo
-1tqVBBKSD0iYXWw2nbgWs9OdjmL/zsxQj6LHdOOT0YqO7cZ+w5xQcgRQODt1hdrC
-OAPdyy+hsyX9iA03xqkdeZgWCfJQfzSKmoNncvt/pWlObImyByfvs2pq55afkNXr
-8bSZwqDSP4E=
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAExjU/7WJP6j
+tQ7x9+2iB5ktd8pp8ApwYrn2Eh5fEwsAXJSB81Pyq5rWKSao1G5Pu5eo7JSdu4UV
+X23BnIQyRFnboqpHdVUARwGV4BlQQlyregJEAgRIXKK41MqoFnmcfVt8EDY8W9ka
+apt+cdF2TmkorglQWquYb4I39tJVXBDsbqQ4ggou9BQPiHQvDgJkclF1LSLEIQV3
+p9M67fklZlLRroNii/W0XeuQAua89aMIhTdhNE2VAeRO87nANzKZEEjNpAn+KxHH
+ExcO5PrJiktMEnCr3wwk4YfHjJ6rQekiRrTIR2gWH1MNEWcyXk+9s2IANsk9c+Z+
+rtGkwnkruQk=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-R9TR09LMy3sSLqqYWyQHjTH+FvD45qkqGD8arZm3y9enaOGPyBgSw29ZpqtKtmkFgmGu0jz88jsx96BL2chukD75buXFeOiR//y85hxgHQt3zn+1DXzdnvgZJJm40QyVqp1aqX5nZR6SedJoLjcxWdRKjtVaLmFt9aIk6N7CdG7/c5W/aKTTpmk50gWGbi2EY/GFIHGHNLKgo7h8jwidk/fIEaBsL6Yf9Tu3ZCu6IjBa3MrFwEfF5kwCuDpC3oBM+nMc45St2JdDG6pru1BHtWMNzOSyGSf9Bf4IcXoj/lCDMp8rS0un7zKHeEFu28m4arZKm3T5MMs6isJDkZpURA==
+YWwirUKayhC7jyI27wcMPNvKhCxqkPQFXpZ3wgGWPlSME5ss7FRT1JUF9GGTWFVdWCTCoMhVYv9BjYaDnwVbBCJBRyDxDlRq4Ecesm53zFwdyYdfz8ihbdmu2kKsEJ83fjsB/UACv8DRLmVPDQelk0FKszslNIoo+YPzwr3Q33pE+QC23uawcBL7d1/pN95u06r8J0XgiHp/HdmOKJoQvdl/FjtOOLuuQiEp4b7RQPbC7IvHWlhryLJgqFKz6+x9SCllZMFGEln7CzaVKoUKWMP9B6Iy9HCj8F0/LWNF5/u/td75gfuiXW8eLE9tWUTwOp6booEpVyGL8C6a+gRFwA==
 -----END SIGNATURE-----

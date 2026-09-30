@@ -22,6 +22,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/Kern
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers. Policy evaluation arrives with #4781.
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to.
+- `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
 
@@ -180,6 +181,34 @@ to a `NodeSummary`, computes its zoom path (`tenant → study → country → st
 `tenant → organization → site`) and lists its children with counts. A participant with no responsible study site
 sits directly under its study (`ZoomRules.ParticipantParent`). When a slice maps a new kind, add its case to
 `KernelScopeGraph` with the kind's zoom parent.
+
+## Standards Registry and MDR (ADR-2460)
+
+Standard definitions and the governed library are tenant-scoped kernel data (spec §6.3, #4809). Code lives under
+`Standards/` in each layer; the read port `IStandardsRegistry` and the commands are in
+`Cadence.Kernel.Abstractions` (`Cadence.Kernel.Standards` namespace), so applications can use them.
+
+| Command | Does |
+| --- | --- |
+| `RegisterStandardVersion` | Registers a `StandardPackage` (datasets, variables, value-level definitions, CT bindings) once per `(tenant, code, version)`; optional `ExpectedContentHash` pins the content |
+| `ApproveStandardVersion`, `DeprecateStandardVersion` | Draft → Approved → Deprecated, each needing an attestation (`Approved`, `Responsibility`) |
+| `DraftLibraryItem` | Adds the next version of a keyed library item (collection spec, mapping spec, rule pack, codelist subset) |
+| `ApproveLibraryItem`, `DeprecateLibraryItem` | Same governance as standard versions |
+| `DeclareStudyStandards` | Sets a study's approved standard versions, CT versions and library pins (one profile per study, revised in place) |
+
+- The content hash (`sha256:` + 64 hex) is over canonical JSON: sorted keys, datasets and variables in ordinal order.
+  `IStandardsRegistry.GetStandardPackageAsync` returns the package in that order, so it re-hashes to the stored hash.
+- Deprecating a standard version or library item stops new pins; it never changes a study that already pinned it.
+- Dataset, variable, value-level and terminology rows are insert-only (`KA001`); the identity and content columns of
+  `standard_versions` and `library_items` are immutable (`KS001`, `ImmutableColumnsSql`).
+- Library content is validated per kind by any registered `ILibraryContentValidator`; kinds without one accept any
+  JSON object. Rule packs and mapping specifications add their validators with #4811 and #4810.
+- CT bindings are `CodeSystemVersionRef(code system, version)` until the Concept Registry (#4807) resolves them.
+
+A host that uses the registry also calls `AddKernelStandards()` (handlers), `AddKernelStandardsPersistence()`
+(`IStandardsRegistry`) and registers an `IAttestationVerifier`; the Trust engine provides one with #4729/#4781.
+Load public content with `StandardSeeds.LoadAll()` or `CdiscLibraryProductReader.Read(...)` and send each package in
+a `RegisterStandardVersion` command.
 
 ## Migrations
 

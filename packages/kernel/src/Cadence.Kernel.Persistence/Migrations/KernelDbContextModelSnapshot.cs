@@ -840,6 +840,449 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("concept_revisions", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.LibraryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ApprovalAttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approval_attestation_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("content_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("DeprecationAttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deprecation_attestation_id");
+
+                    b.Property<int>("ItemVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("item_version");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.PrimitiveCollection<Guid[]>("StandardVersionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("standard_version_ids");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "Kind", "Key", "ItemVersion")
+                        .IsUnique();
+
+                    b.ToTable("library_items", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardDataset", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("StandardVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("standard_version_id");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Class")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("class");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("label");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordinal");
+
+                    b.Property<string>("Structure")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("structure");
+
+                    b.HasKey("TenantId", "StandardVersionId", "Name");
+
+                    b.ToTable("standard_datasets", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardTerminologyBinding", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("StandardVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("standard_version_id");
+
+                    b.Property<string>("CodeSystem")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code_system");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("version");
+
+                    b.HasKey("TenantId", "StandardVersionId", "CodeSystem", "Version");
+
+                    b.ToTable("standard_terminology", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardValueLevelDefinition", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("StandardVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("standard_version_id");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordinal");
+
+                    b.PrimitiveCollection<string[]>("Codelists")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("codelists");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("Dataset")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("dataset");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("Length")
+                        .HasColumnType("integer")
+                        .HasColumnName("length");
+
+                    b.PrimitiveCollection<string[]>("ValueList")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("value_list");
+
+                    b.Property<string>("Variable")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("variable");
+
+                    b.Property<string>("Where")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("where");
+
+                    b.HasKey("TenantId", "StandardVersionId", "Ordinal");
+
+                    b.HasIndex("TenantId", "StandardVersionId", "Dataset", "Variable");
+
+                    b.ToTable("standard_value_level_definitions", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardVariable", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("StandardVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("standard_version_id");
+
+                    b.Property<string>("DatasetName")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("dataset_name");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
+                    b.PrimitiveCollection<string[]>("Codelists")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("codelists");
+
+                    b.Property<string>("Core")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("core");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("DescribedValueDomain")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("described_value_domain");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("label");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordinal");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("role");
+
+                    b.PrimitiveCollection<string[]>("ValueList")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("value_list");
+
+                    b.HasKey("TenantId", "StandardVersionId", "DatasetName", "Name");
+
+                    b.ToTable("standard_variables", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ApprovalAttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approval_attestation_id");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("content_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("DeprecationAttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deprecation_attestation_id");
+
+                    b.Property<DateOnly?>("EffectiveDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Publisher")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("publisher");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("StandardCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("standard_code");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("version");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "StandardCode", "Version")
+                        .IsUnique();
+
+                    b.ToTable("standard_versions", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StudyStandardsProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<string[]>("ControlledTerminology")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("controlled_terminology");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.PrimitiveCollection<Guid[]>("LibraryPins")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("library_pins");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.PrimitiveCollection<Guid[]>("StandardVersionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("standard_version_ids");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "StudyId")
+                        .IsUnique();
+
+                    b.ToTable("study_standards_profiles", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.AuditChainHead", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -1378,6 +1821,85 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.LibraryItem", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardDataset", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Standards.StandardVersion", null)
+                        .WithMany("Datasets")
+                        .HasForeignKey("TenantId", "StandardVersionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardTerminologyBinding", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Standards.StandardVersion", null)
+                        .WithMany("Terminology")
+                        .HasForeignKey("TenantId", "StandardVersionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardValueLevelDefinition", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Standards.StandardVersion", null)
+                        .WithMany("ValueLevelDefinitions")
+                        .HasForeignKey("TenantId", "StandardVersionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Standards.StandardVariable", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StandardVersionId", "Dataset", "Variable")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardVariable", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Standards.StandardDataset", null)
+                        .WithMany("Variables")
+                        .HasForeignKey("TenantId", "StandardVersionId", "DatasetName")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardVersion", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StudyStandardsProfile", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Knowledge.CodeSystemVersion", b =>
                 {
                     b.Navigation("Entries");
@@ -1386,6 +1908,20 @@ namespace Cadence.Kernel.Persistence.Migrations
             modelBuilder.Entity("Cadence.Kernel.Domain.Knowledge.Concept", b =>
                 {
                     b.Navigation("Revisions");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardDataset", b =>
+                {
+                    b.Navigation("Variables");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Standards.StandardVersion", b =>
+                {
+                    b.Navigation("Datasets");
+
+                    b.Navigation("Terminology");
+
+                    b.Navigation("ValueLevelDefinitions");
                 });
 #pragma warning restore 612, 618
         }

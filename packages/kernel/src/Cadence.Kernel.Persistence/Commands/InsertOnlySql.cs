@@ -23,8 +23,13 @@ internal static class InsertOnlySql
     /// never changes an applied migration; the schema test checks each table in this list carries the guards.
     /// </summary>
     public static readonly string[] Tables =
-        ["audit_entries", "domain_events", "provenance_activities", "idempotency_records", "audit_chain_seals",
-         "code_system_versions", "code_system_entries", "concept_revisions"];
+    [
+        "audit_entries", "domain_events", "provenance_activities", "idempotency_records", "audit_chain_seals",
+        "code_system_versions", "code_system_entries", "concept_revisions",
+
+        // Standards Registry definitions: fixed once their standard version is registered (spec §6.3).
+        "standard_datasets", "standard_variables", "standard_value_level_definitions", "standard_terminology",
+    ];
 
     public static string CreateFunction(string schema) => $$"""
         CREATE OR REPLACE FUNCTION {{SqlIdentifier.Quote(schema)}}.{{FunctionName}}() RETURNS trigger

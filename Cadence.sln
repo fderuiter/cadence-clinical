@@ -111,6 +111,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.Templating", "packa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.SchemaDocExporter", "packages\tooling_core\src\Cadence.SchemaDocExporter\Cadence.SchemaDocExporter.csproj", "{86258D24-77D1-40C8-A825-0ED5AB44EB17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cadence.Standards", "packages\kernel\src\Cadence.Standards\Cadence.Standards.csproj", "{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -661,6 +663,18 @@ Global
 		{86258D24-77D1-40C8-A825-0ED5AB44EB17}.Release|x64.Build.0 = Release|Any CPU
 		{86258D24-77D1-40C8-A825-0ED5AB44EB17}.Release|x86.ActiveCfg = Release|Any CPU
 		{86258D24-77D1-40C8-A825-0ED5AB44EB17}.Release|x86.Build.0 = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|x64.Build.0 = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Debug|x86.Build.0 = Debug|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|x64.ActiveCfg = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|x64.Build.0 = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|x86.ActiveCfg = Release|Any CPU
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -711,5 +725,6 @@ Global
 		{2428EB19-8B8C-4AC9-B5A0-39DC61B06250} = {D0000000-0000-0000-0000-000000000001}
 		{A4E60326-392B-46C1-BD61-340C11C7EC95} = {F9DF34EE-B937-4EBE-B5AE-48566FFDFE73}
 		{86258D24-77D1-40C8-A825-0ED5AB44EB17} = {F9DF34EE-B937-4EBE-B5AE-48566FFDFE73}
+		{B18B4CAD-8637-48D8-AA98-56AACCB0EA96} = {D0000000-0000-0000-0000-000000000001}
 	EndGlobalSection
 EndGlobal

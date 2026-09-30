@@ -17,13 +17,20 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
+| [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.people`](#kernelpeople) | `Person` | 9 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 13 |
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
+| [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
+| [`kernel.standard_terminology`](#kernelstandard_terminology) | `StandardTerminologyBinding` | 4 |
+| [`kernel.standard_value_level_definitions`](#kernelstandard_value_level_definitions) | `StandardValueLevelDefinition` | 11 |
+| [`kernel.standard_variables`](#kernelstandard_variables) | `StandardVariable` | 13 |
+| [`kernel.standard_versions`](#kernelstandard_versions) | `StandardVersion` | 16 |
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
+| [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
 
@@ -279,6 +286,38 @@ Entity: `IdempotencyRecord`
 | `request_hash` | `character varying(64)` | no |  |  |
 | `result_json` | `text` | no |  |  |
 
+## kernel.library_items
+
+Entity: `LibraryItem`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `approval_attestation_id` | `uuid` | yes |  |  |
+| `content` | `text` | no |  |  |
+| `content_hash` | `character varying(71)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `deprecation_attestation_id` | `uuid` | yes |  |  |
+| `item_version` | `integer` | no |  |  |
+| `key` | `character varying(128)` | no |  |  |
+| `kind` | `character varying(64)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `standard_version_ids` | `uuid[]` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `title` | `character varying(500)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_library_items_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_library_items_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_library_items_tenant_id_kind_key_item_version`: unique (`tenant_id`, `kind`, `key`, `item_version`)
+
 ## kernel.organizations
 
 Entity: `Organization`
@@ -402,6 +441,122 @@ Indexes:
 - `IX_sites_institution_id_site_code`: unique (`institution_id`, `site_code`)
 - `IX_sites_tenant_id_institution_id`: (`tenant_id`, `institution_id`)
 
+## kernel.standard_datasets
+
+Entity: `StandardDataset`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `name` | `character varying(64)` | no |  | PK |
+| `standard_version_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `class` | `character varying(255)` | yes |  |  |
+| `label` | `character varying(500)` | no |  |  |
+| `ordinal` | `integer` | no |  |  |
+| `structure` | `character varying(1000)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_standard_datasets_standard_versions_tenant_id_standard_vers~`: (`tenant_id`, `standard_version_id`) references `kernel.standard_versions` (`tenant_id`, `id`), on delete restrict
+
+## kernel.standard_terminology
+
+Entity: `StandardTerminologyBinding`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `code_system` | `character varying(64)` | no |  | PK |
+| `standard_version_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `version` | `character varying(64)` | no |  | PK |
+
+Foreign keys:
+
+- `FK_standard_terminology_standard_versions_tenant_id_standard_v~`: (`tenant_id`, `standard_version_id`) references `kernel.standard_versions` (`tenant_id`, `id`), on delete restrict
+
+## kernel.standard_value_level_definitions
+
+Entity: `StandardValueLevelDefinition`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `ordinal` | `integer` | no |  | PK |
+| `standard_version_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `codelists` | `text[]` | no |  |  |
+| `data_type` | `character varying(16)` | no |  |  |
+| `dataset` | `character varying(64)` | no |  |  |
+| `description` | `text` | yes |  |  |
+| `length` | `integer` | yes |  |  |
+| `value_list` | `text[]` | no |  |  |
+| `variable` | `character varying(64)` | no |  |  |
+| `where` | `jsonb` | no |  |  |
+
+Foreign keys:
+
+- `FK_standard_value_level_definitions_standard_variables_tenant_~`: (`tenant_id`, `standard_version_id`, `dataset`, `variable`) references `kernel.standard_variables` (`tenant_id`, `standard_version_id`, `dataset_name`, `name`), on delete restrict
+- `FK_standard_value_level_definitions_standard_versions_tenant_i~`: (`tenant_id`, `standard_version_id`) references `kernel.standard_versions` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_standard_value_level_definitions_tenant_id_standard_version~`: (`tenant_id`, `standard_version_id`, `dataset`, `variable`)
+
+## kernel.standard_variables
+
+Entity: `StandardVariable`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `dataset_name` | `character varying(64)` | no |  | PK |
+| `name` | `character varying(64)` | no |  | PK |
+| `standard_version_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `codelists` | `text[]` | no |  |  |
+| `core` | `character varying(16)` | no |  |  |
+| `data_type` | `character varying(16)` | no |  |  |
+| `described_value_domain` | `character varying(255)` | yes |  |  |
+| `description` | `text` | yes |  |  |
+| `label` | `character varying(500)` | no |  |  |
+| `ordinal` | `integer` | no |  |  |
+| `role` | `character varying(255)` | yes |  |  |
+| `value_list` | `text[]` | no |  |  |
+
+Foreign keys:
+
+- `FK_standard_variables_standard_datasets_tenant_id_standard_ver~`: (`tenant_id`, `standard_version_id`, `dataset_name`) references `kernel.standard_datasets` (`tenant_id`, `standard_version_id`, `name`), on delete restrict
+
+## kernel.standard_versions
+
+Entity: `StandardVersion`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `approval_attestation_id` | `uuid` | yes |  |  |
+| `content_hash` | `character varying(71)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `deprecation_attestation_id` | `uuid` | yes |  |  |
+| `effective_date` | `date` | yes |  |  |
+| `name` | `character varying(500)` | no |  |  |
+| `publisher` | `character varying(255)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `source` | `character varying(1000)` | yes |  |  |
+| `standard_code` | `character varying(64)` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version` | `character varying(64)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_standard_versions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_standard_versions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_standard_versions_tenant_id_standard_code_version`: unique (`tenant_id`, `standard_code`, `version`)
+
 ## kernel.studies
 
 Entity: `Study`
@@ -460,6 +615,33 @@ Indexes:
 - `IX_study_sites_study_id_site_id`: unique (`study_id`, `site_id`)
 - `IX_study_sites_tenant_id_site_id`: (`tenant_id`, `site_id`)
 - `IX_study_sites_tenant_id_study_id`: (`tenant_id`, `study_id`)
+
+## kernel.study_standards_profiles
+
+Entity: `StudyStandardsProfile`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `controlled_terminology` | `text[]` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `library_pins` | `uuid[]` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `standard_version_ids` | `uuid[]` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_study_standards_profiles_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_study_standards_profiles_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_study_standards_profiles_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_study_standards_profiles_tenant_id_study_id`: unique (`tenant_id`, `study_id`)
 
 ## kernel.tenant_memberships
 

@@ -10,7 +10,9 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Standards;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -340,9 +342,23 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        (await fixture.Sender.SendAsync(NewTenant(), cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        var tenant = NewTenant();
+        (await fixture.Sender.SendAsync(tenant, cancellationToken: ct)).IsSuccess.Should().BeTrue();
         await ConceptRegistryPostgresTests.SeedAsync(fixture, ct);
         await fixture.AuditChainSealer.SealAllAsync(ct);
+
+        // The Standards Registry definition tables fill only when a standard version is registered.
+        var package = StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package with
+        {
+            ValueLevelDefinitions =
+            [
+                new ValueLevelDefinitionData(
+                    "VS", "VSORRES", [new WhereCondition("VSTESTCD", ["SYSBP"])], StandardDataType.Num, 8, [], [], null),
+            ],
+        };
+        var register = new RegisterStandardVersion(
+            tenant.TenantId, StandardVersionId.New(), package, null, $"key-{Guid.NewGuid():N}", Reason);
+        (await fixture.Sender.SendAsync(register, cancellationToken: ct)).IsSuccess.Should().BeTrue();
 
         foreach (var statement in new[]
         {

@@ -1,0 +1,3685 @@
+{
+  "name": "SDTMIG v3.4",
+  "label": "Study Data Tabulation Model Implementation Guide: Human Clinical Trials Version 3.4 (Final)",
+  "description": "Subset of SDTMIG v3.4 (DM, AE, VS, LB) for the Cadence Standards Registry seed.",
+  "source": "Prepared by the CDISC Submission Data Standards Team",
+  "effectiveDate": "2021-11-29",
+  "registrationStatus": "Final",
+  "version": "3.4",
+  "_links": {
+    "self": {
+      "href": "/mdr/sdtmig/3-4",
+      "title": "Study Data Tabulation Model Implementation Guide: Human Clinical Trials Version 3.4 (Final)",
+      "type": "SDTM Implementation Guide"
+    }
+  },
+  "classes": [
+    {
+      "ordinal": 1,
+      "name": "Special-Purpose",
+      "label": "Special-Purpose",
+      "_links": {
+        "self": {
+          "href": "/mdr/sdtmig/3-4/classes/Special-Purpose",
+          "title": "Special-Purpose",
+          "type": "Class"
+        }
+      },
+      "datasets": [
+        {
+          "ordinal": 48,
+          "name": "DM",
+          "label": "Demographics",
+          "datasetStructure": "One record per subject",
+          "_links": {
+            "self": {
+              "href": "/mdr/sdtmig/3-4/datasets/DM",
+              "title": "Demographics",
+              "type": "SDTM Dataset"
+            }
+          },
+          "datasetVariables": [
+            {
+              "ordinal": 1,
+              "name": "STUDYID",
+              "label": "Study Identifier",
+              "description": "Unique identifier for a study.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/STUDYID",
+                  "title": "Study Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "DOMAIN",
+              "label": "Domain Abbreviation",
+              "description": "Two-character abbreviation for the domain.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "valueList": ["DM"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/DOMAIN",
+                  "title": "Domain Abbreviation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "description": "Identifier used to uniquely identify a subject across all studies for all applications or submissions involving the product. This must be a unique value, and could be a compound identifier formed by concatenating STUDYID-SITEID-SUBJID.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/USUBJID",
+                  "title": "Unique Subject Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "SUBJID",
+              "label": "Subject Identifier for the Study",
+              "description": "Subject identifier, which must be unique within the study. Often the ID of the subject as recorded on a CRF.",
+              "role": "Topic",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/SUBJID",
+                  "title": "Subject Identifier for the Study",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "RFSTDTC",
+              "label": "Subject Reference Start Date/Time",
+              "description": "Reference start date/time for the subject in ISO 8601 character format. Usually equivalent to date/time when subject was first exposed to study treatment. See assumption 9 for additional detail on when RFSTDTC may be null.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFSTDTC",
+                  "title": "Subject Reference Start Date/Time",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "RFENDTC",
+              "label": "Subject Reference End Date/Time",
+              "description": "Reference end date/time for the subject in ISO 8601 character format. Usually equivalent to the date/time when subject was determined to have ended the trial, and often equivalent to date/time of last exposure to study treatment. Required for all randomized subjects; null for screen failures or unassigned subjects.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFENDTC",
+                  "title": "Subject Reference End Date/Time",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "RFXSTDTC",
+              "label": "Date/Time of First Study Treatment",
+              "description": "First date/time of exposure to any protocol-specified treatment or therapy, equal to the earliest value of EXSTDTC.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFXSTDTC",
+                  "title": "Date/Time of First Study Treatment",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "RFXENDTC",
+              "label": "Date/Time of Last Study Treatment",
+              "description": "Last date/time of exposure to any protocol-specified treatment or therapy, equal to the latest value of EXENDTC (or the latest value of EXSTDTC if EXENDTC was not collected or is missing).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFXENDTC",
+                  "title": "Date/Time of Last Study Treatment",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "RFCSTDTC",
+              "label": "Date/Time of First Challenge Agent Admin",
+              "description": "Used only when protocol specifies a challenge agent to induce a condition that the investigational treatment is intended to cure, mitigate, treat, or prevent. Equal to the earliest value of AGSTDTC for the challenge agent.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFCSTDTC",
+                  "title": "Date/Time of First Challenge Agent Admin",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "RFCENDTC",
+              "label": "Date/Time of Last Challenge Agent Admin",
+              "description": "Used only when protocol specifies a challenge agent to induce a condition that the investigational treatment is intended to cure, mitigate, treat, or prevent. Equal to the latest value of AGENDTC for the challenge agent (or the latest value of AGSTDTC if AGENDTC was not collected or is missing).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFCENDTC",
+                  "title": "Date/Time of Last Challenge Agent Admin",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "RFICDTC",
+              "label": "Date/Time of Informed Consent",
+              "description": "Date/time of informed consent in ISO 8601 character format. This will be the same as the date of informed consent in the Disposition domain, if that protocol milestone is documented. Would be null only in studies not collecting the date of informed consent.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFICDTC",
+                  "title": "Date/Time of Informed Consent",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "RFPENDTC",
+              "label": "Date/Time of End of Participation",
+              "description": "Date/time when subject ended participation or follow-up in a trial, as defined in the protocol, in ISO 8601 character format. Should correspond to the last known date of contact. Examples include completion date, withdrawal date, last follow-up, date recorded for lost to follow up, and death date.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RFPENDTC",
+                  "title": "Date/Time of End of Participation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "DTHDTC",
+              "label": "Date/Time of Death",
+              "description": "Date/time of death for any subject who died, in ISO 8601 format. Should represent the date/time that is captured in the clinical-trial database.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/DTHDTC",
+                  "title": "Date/Time of Death",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "DTHFL",
+              "label": "Subject Death Flag",
+              "description": "Indicates the subject died. Should be \"Y\" or null. Should be populated even when the death date is unknown.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/DTHFL",
+                  "title": "Subject Death Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "SITEID",
+              "label": "Study Site Identifier",
+              "description": "Unique identifier for a site within a study.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/SITEID",
+                  "title": "Study Site Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "INVID",
+              "label": "Investigator Identifier",
+              "description": "An identifier to describe the Investigator for the study. May be used in addition to SITEID. Not needed if SITEID is equivalent to INVID.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/INVID",
+                  "title": "Investigator Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "INVNAM",
+              "label": "Investigator Name",
+              "description": "Name of the investigator for a site.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/INVNAM",
+                  "title": "Investigator Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "BRTHDTC",
+              "label": "Date/Time of Birth",
+              "description": "Date/time of birth of the subject.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/BRTHDTC",
+                  "title": "Date/Time of Birth",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "AGE",
+              "label": "Age",
+              "description": "Age expressed in AGEU. May be derived from RFSTDTC and BRTHDTC, but BRTHDTC may not be available in all cases (due to subject privacy concerns).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/AGE",
+                  "title": "Age",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "AGEU",
+              "label": "Age Units",
+              "description": "Units associated with AGE.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/AGEU",
+                  "title": "Age Units",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66781",
+                    "title": "C66781",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "SEX",
+              "label": "Sex",
+              "description": "Sex of the subject.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/SEX",
+                  "title": "Sex",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66731",
+                    "title": "C66731",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "RACE",
+              "label": "Race",
+              "description": "Race of the subject. Sponsors should refer to the FDA guidance2 regarding the collection of race. See assumption below regarding RACE.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/RACE",
+                  "title": "Race",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C74457",
+                    "title": "C74457",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "ETHNIC",
+              "label": "Ethnicity",
+              "description": "The ethnicity of the subject. Sponsors should refer to the FDA guidance1 regarding the collection of ethnicity.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ETHNIC",
+                  "title": "Ethnicity",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66790",
+                    "title": "C66790",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "ARMCD",
+              "label": "Planned Arm Code",
+              "description": "ARMCD is limited to 20 characters. It is not subject to the character restrictions that apply to TESTCD. The maximum length of ARMCD is longer than for other \"short\" variables to accommodate the kind of values that are likely to be needed for crossover trials. For example, if ARMCD values for a 7-period crossover were constructed using 2-character abbreviations for each treatment and separating hyphens, the length of ARMCD values would be 20. If the subject was not assigned to a trial arm, ARMCD is null and ARMNRS is populated. \\n With the exception of studies which use multistage arm assignments, must be a value of ARMCD in the Trial Arms dataset.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ARMCD",
+                  "title": "Planned Arm Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "ARM",
+              "label": "Description of Planned Arm",
+              "description": "Name of the arm to which the subject was assigned. If the subject was not assigned to an arm, ARM is null and ARMNRS is populated. \\n With the exception of studies which use multistage arm assignments, must be a value of ARM in the Trial Arms dataset.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ARM",
+                  "title": "Description of Planned Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "ACTARMCD",
+              "label": "Actual Arm Code",
+              "description": "Code of actual arm. ACTARMCD is limited to 20 characters. It is not subject to the character restrictions that apply to TESTCD. The maximum length of ACTARMCD is longer than for other short variables to accommodate the kind of values that are likely to be needed for crossover trials. \\n With the exception of studies which use multistage arm assignments, must be a value of ARMCD in the Trial Arms dataset. \\n If the subject was not assigned to an arm or followed a course not described by any planned arm, ACTARMCD is null and ARMNRS is populated.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ACTARMCD",
+                  "title": "Actual Arm Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "ACTARM",
+              "label": "Description of Actual Arm",
+              "description": "Description of actual arm. \\n With the exception of studies which use multistage arm assignments, must be a value of ARM in the Trial Arms dataset. \\n If the subject was not assigned to an arm or followed a course not described by any planned arm, ACTARM is null and ARMNRS is populated.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ACTARM",
+                  "title": "Description of Actual Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "ARMNRS",
+              "label": "Reason Arm and/or Actual Arm is Null",
+              "description": "A coded reason that arm variables (ARM and ARMCD) and/or actual arm variables (ACTARM and ACTARMCD) are null. Examples: \"SCREEN FAILURE\", \"NOT ASSIGNED\", \"ASSIGNED, NOT TREATED\", \"UNPLANNED TREATMENT\". It is assumed that if the arm and actual arm variables are null, the same reason applies to both arm and actual arm.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ARMNRS",
+                  "title": "Reason Arm and/or Actual Arm is Null",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C142179",
+                    "title": "C142179",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "ACTARMUD",
+              "label": "Description of Unplanned Actual Arm",
+              "description": "A description of actual treatment for a subject who did not receive treatment described in a planned trial arm.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/ACTARMUD",
+                  "title": "Description of Unplanned Actual Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "COUNTRY",
+              "label": "Country",
+              "description": "Country of the investigational site in which the subject participated in the trial. \\n \\n Generally represented using ISO 3166-1 Alpha-3. Note that regulatory agency specific requirements (e.g., US FDA) may require other terminologies; in such cases, follow regulatory requirements.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/COUNTRY",
+                  "title": "Country",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "DMDTC",
+              "label": "Date/Time of Collection",
+              "description": "Date/time of demographic data collection.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/DMDTC",
+                  "title": "Date/Time of Collection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "DMDY",
+              "label": "Study Day of Collection",
+              "description": "Study day of collection measured as integer days.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/DM/variables/DMDY",
+                  "title": "Study Day of Collection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ordinal": 3,
+      "name": "Events",
+      "label": "Events",
+      "_links": {
+        "self": {
+          "href": "/mdr/sdtmig/3-4/classes/Events",
+          "title": "Events",
+          "type": "Class"
+        }
+      },
+      "datasets": [
+        {
+          "ordinal": 8,
+          "name": "AE",
+          "label": "Adverse Events",
+          "datasetStructure": "One record per adverse event per subject",
+          "_links": {
+            "self": {
+              "href": "/mdr/sdtmig/3-4/datasets/AE",
+              "title": "Adverse Events",
+              "type": "SDTM Dataset"
+            }
+          },
+          "datasetVariables": [
+            {
+              "ordinal": 1,
+              "name": "STUDYID",
+              "label": "Study Identifier",
+              "description": "Unique identifier for a study.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/STUDYID",
+                  "title": "Study Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "DOMAIN",
+              "label": "Domain Abbreviation",
+              "description": "Two-character abbreviation for the domain.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "valueList": ["AE"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/DOMAIN",
+                  "title": "Domain Abbreviation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "description": "Identifier used to uniquely identify a subject across all studies for all applications or submissions involving the product.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/USUBJID",
+                  "title": "Unique Subject Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "SPDEVID",
+              "label": "Sponsor Device Identifier",
+              "description": "A sequence of characters used by the sponsor to uniquely identify a specific device. Used to represent a device associated in some way with the adverse event. SPDEVID values are defined in the Device Identifiers (DI) domain.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/SPDEVID",
+                  "title": "Sponsor Device Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "AESEQ",
+              "label": "Sequence Number",
+              "description": "Sequence number given to ensure uniqueness of subject records within a domain. May be any valid number.",
+              "role": "Identifier",
+              "simpleDatatype": "Num",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESEQ",
+                  "title": "Sequence Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "AEGRPID",
+              "label": "Group ID",
+              "description": "Used to tie together a block of related records in a single domain for a subject.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEGRPID",
+                  "title": "Group ID",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "AEREFID",
+              "label": "Reference ID",
+              "description": "Internal or external identifier such as a serial number on an SAE reporting form.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEREFID",
+                  "title": "Reference ID",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "AESPID",
+              "label": "Sponsor-Defined Identifier",
+              "description": "Sponsor-defined identifier. It may be preprinted on the CRF as an explicit line identifier or defined in the sponsor's operational database. Example: Line number on an Adverse Events CRF page.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESPID",
+                  "title": "Sponsor-Defined Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "AETERM",
+              "label": "Reported Term for the Adverse Event",
+              "description": "Verbatim name of the event.",
+              "role": "Topic",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AETERM",
+                  "title": "Reported Term for the Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "AEMODIFY",
+              "label": "Modified Reported Term",
+              "description": "If AETERM is modified to facilitate coding, then AEMODIFY will contain the modified text.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEMODIFY",
+                  "title": "Modified Reported Term",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "AELLT",
+              "label": "Lowest Level Term",
+              "description": "Dictionary-derived text description of the lowest level term.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AELLT",
+                  "title": "Lowest Level Term",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "AELLTCD",
+              "label": "Lowest Level Term Code",
+              "description": "Dictionary-derived code for the lowest level term.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AELLTCD",
+                  "title": "Lowest Level Term Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "AEDECOD",
+              "label": "Dictionary-Derived Term",
+              "description": "Dictionary-derived text description of AETERM or AEMODIFY. Equivalent to the Preferred Term (PT in MedDRA). The sponsor is expected to provide the dictionary name and version used to map the terms utilizing the external codelist element in the Define-XML document.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEDECOD",
+                  "title": "Dictionary-Derived Term",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "AEPTCD",
+              "label": "Preferred Term Code",
+              "description": "Dictionary-derived code for the preferred term.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEPTCD",
+                  "title": "Preferred Term Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "AEHLT",
+              "label": "High Level Term",
+              "description": "Dictionary-derived text description of the high level term for the primary system organ class (SOC).",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEHLT",
+                  "title": "High Level Term",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "AEHLTCD",
+              "label": "High Level Term Code",
+              "description": "Dictionary-derived code for the high level term for the primary SOC.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEHLTCD",
+                  "title": "High Level Term Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "AEHLGT",
+              "label": "High Level Group Term",
+              "description": "Dictionary-derived text description of the high level group term for the primary SOC.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEHLGT",
+                  "title": "High Level Group Term",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "AEHLGTCD",
+              "label": "High Level Group Term Code",
+              "description": "Dictionary-derived code for the high level group term for the primary SOC.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEHLGTCD",
+                  "title": "High Level Group Term Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "AECAT",
+              "label": "Category for Adverse Event",
+              "description": "Used to define a category of related records. Examples: \"BLEEDING\", \"NEUROPSYCHIATRIC\".",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AECAT",
+                  "title": "Category for Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "AESCAT",
+              "label": "Subcategory for Adverse Event",
+              "description": "A further categorization of adverse event. Example: \"NEUROLOGIC\".",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESCAT",
+                  "title": "Subcategory for Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "AEPRESP",
+              "label": "Pre-Specified Adverse Event",
+              "description": "A value of \"Y\" indicates that this adverse event was prespecified on the CRF. Values are null for spontaneously reported events (i.e., those collected as free-text verbatim terms).",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEPRESP",
+                  "title": "Pre-Specified Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "AEBODSYS",
+              "label": "Body System or Organ Class",
+              "description": "Dictionary derived. Body system or organ class used by the sponsor from the coding dictionary (e.g., MedDRA). When using a multi-axial dictionary such as MedDRA, this should contain the SOC used for the sponsor's analyses and summary tables, which may not necessarily be the primary SOC.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEBODSYS",
+                  "title": "Body System or Organ Class",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "AEBDSYCD",
+              "label": "Body System or Organ Class Code",
+              "description": "Dictionary derived. Code for the body system or organ class used by the sponsor. When using a multi-axial dictionary such as MedDRA, this should contain the SOC used for the sponsor's analyses and summary tables, which may not necessarily be the primary SOC.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEBDSYCD",
+                  "title": "Body System or Organ Class Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "AESOC",
+              "label": "Primary System Organ Class",
+              "description": "Dictionary-derived text description of the primary SOC. Will be the same as AEBODSYS if the primary SOC was used for analysis.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESOC",
+                  "title": "Primary System Organ Class",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "AESOCCD",
+              "label": "Primary System Organ Class Code",
+              "description": "Dictionary-derived code for the primary SOC. Will be the same as AEBDSYCD if the primary SOC was used for analysis.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "describedValueDomain": "MedDRA",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESOCCD",
+                  "title": "Primary System Organ Class Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "AELOC",
+              "label": "Location of Event",
+              "description": "Describes anatomical location relevant for the event (e.g., \"ARM\" for skin rash).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AELOC",
+                  "title": "Location of Event",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C74456",
+                    "title": "C74456",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "AESEV",
+              "label": "Severity/Intensity",
+              "description": "The severity or intensity of the event. Examples: \"MILD\", \"MODERATE\", \"SEVERE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESEV",
+                  "title": "Severity/Intensity",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66769",
+                    "title": "C66769",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "AESER",
+              "label": "Serious Event",
+              "description": "Is this a serious event? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESER",
+                  "title": "Serious Event",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "AEACN",
+              "label": "Action Taken with Study Treatment",
+              "description": "Describes changes to the study treatment as a result of the event. AEACN is specifically for the relationship to study treatment. AEACNOTH is for actions unrelated to dose adjustments of study treatment. Examples of AEACN values include ICH E2B values: \"DRUG WITHDRAWN\", \"DOSE REDUCED\", \"DOSE INCREASED\", \"DOSE NOT CHANGED\", \"UNKNOWN\" and \"NOT APPLICABLE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEACN",
+                  "title": "Action Taken with Study Treatment",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66767",
+                    "title": "C66767",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "AEACNOTH",
+              "label": "Other Action Taken",
+              "description": "Describes other actions taken as a result of the event that are unrelated to dose adjustments of study treatment. Usually reported as free text. Example: \"TREATMENT UNBLINDED. PRIMARY CARE PHYSICIAN NOTIFIED\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEACNOTH",
+                  "title": "Other Action Taken",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "AEACNDEV",
+              "label": "Action Taken with Device",
+              "description": "An action taken with a device as the result of the event. The device may or may not be a device under study.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEACNDEV",
+                  "title": "Action Taken with Device",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C111110",
+                    "title": "C111110",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "AEREL",
+              "label": "Causality",
+              "description": "Records the investigator's opinion as to the causality of the event to the treatment. ICH does not establish any required or recommended terms for non-device relatedness. ICH E2A and E2B examples include (up-cased here for alignment to SDTM conventions) terms such as \"NOT RELATED\", \"UNLIKELY RELATED\", \"POSSIBLY RELATED\", \"RELATED\", but these example terms do not establish any conventions or expectations. Controlled terminology may be defined in the future. Check with regulatory authority for population of this variable.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEREL",
+                  "title": "Causality",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 33,
+              "name": "AERLDEV",
+              "label": "Relationship of Event to Device",
+              "description": "A judgment as to the likelihood that the device caused the adverse event. The relationship is to a device identified in the data (i.e., has an SPDEVID). The device may be ancillary or under study. \\n Terminology: \\n * In the EU, follow the European Commission Guidelines on Medical Devices, Clinical Investigations: SAE Reporting (MEDDEV 2.7/3) (e.g., Not Related, Unlikely, Possible, Probable, Causal Relationship), with device-specific definitions. \\n * No required Controlled Terminology in US.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AERLDEV",
+                  "title": "Relationship of Event to Device",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 34,
+              "name": "AERELNST",
+              "label": "Relationship to Non-Study Treatment",
+              "description": "Records the investigator's opinion as to whether the event may have been due to a treatment other than study drug. May be reported as free text. Example: \"MORE LIKELY RELATED TO ASPIRIN USE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AERELNST",
+                  "title": "Relationship to Non-Study Treatment",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 35,
+              "name": "AEPATT",
+              "label": "Pattern of Adverse Event",
+              "description": "Used to indicate the pattern of the event over time. Examples: \"INTERMITTENT\", \"CONTINUOUS\", \"SINGLE EVENT\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEPATT",
+                  "title": "Pattern of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 36,
+              "name": "AEOUT",
+              "label": "Outcome of Adverse Event",
+              "description": "Description of the outcome of an event.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEOUT",
+                  "title": "Outcome of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66768",
+                    "title": "C66768",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 37,
+              "name": "AESCAN",
+              "label": "Involves Cancer",
+              "description": "Was the serious event associated with the development of cancer? Valid values are \"Y\" and \"N\". This is a legacy seriousness criterion. It is not included in ICH E2A or E2B.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESCAN",
+                  "title": "Involves Cancer",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 38,
+              "name": "AESCONG",
+              "label": "Congenital Anomaly or Birth Defect",
+              "description": "Was the serious event associated with congenital anomaly or birth defect? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESCONG",
+                  "title": "Congenital Anomaly or Birth Defect",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 39,
+              "name": "AESDISAB",
+              "label": "Persist or Signif Disability/Incapacity",
+              "description": "Did the serious event result in persistent or significant disability/incapacity? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESDISAB",
+                  "title": "Persist or Signif Disability/Incapacity",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 40,
+              "name": "AESDTH",
+              "label": "Results in Death",
+              "description": "Did the serious event result in death? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESDTH",
+                  "title": "Results in Death",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 41,
+              "name": "AESHOSP",
+              "label": "Requires or Prolongs Hospitalization",
+              "description": "Did the serious event require or prolong hospitalization? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESHOSP",
+                  "title": "Requires or Prolongs Hospitalization",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 42,
+              "name": "AESLIFE",
+              "label": "Is Life Threatening",
+              "description": "Was the serious event life-threatening? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESLIFE",
+                  "title": "Is Life Threatening",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 43,
+              "name": "AESOD",
+              "label": "Occurred with Overdose",
+              "description": "Did the serious event occur with an overdose? Valid values are \"Y\" and \"N\". This is a legacy seriousness criterion. It is not included in ICH E2A or E2B.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESOD",
+                  "title": "Occurred with Overdose",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 44,
+              "name": "AESMIE",
+              "label": "Other Medically Important Serious Event",
+              "description": "Do additional categories for seriousness apply? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESMIE",
+                  "title": "Other Medically Important Serious Event",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 45,
+              "name": "AESINTV",
+              "label": "Needs Intervention to Prevent Impairment",
+              "description": "Records whether medical or surgical intervention was necessary to preclude permanent impairment of a body function, or to prevent permanent damage to a body structure, with either situation suspected to be due to the use of a medical product. This variable is used in conjunction with the other \"seriousness\" variables (e.g., fatal, life-threatening). It is part of the US federal government definition of a serious adverse event; see 21 CFR Part 803.3(w)(3).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESINTV",
+                  "title": "Needs Intervention to Prevent Impairment",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 46,
+              "name": "AEUNANT",
+              "label": "Unanticipated Adverse Device Effect",
+              "description": "Any serious adverse effect on health or safety or any life-threatening problem or death caused by or associated with a device, if that effect, problem, or death was not previously identified in nature, severity, or degree of incidence in the investigational plan or application (including a supplementary plan or application), \\n or \\n any other unanticipated serious problem associated with a device that relates to the rights, safety, or welfare of subjects. (21 CFR Part 812.3(s)). \\n This variable applies only to serious AEs and should hold collected data; if the value is derived, it should be held in ADaM.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEUNANT",
+                  "title": "Unanticipated Adverse Device Effect",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 47,
+              "name": "AERLPRT",
+              "label": "Rel of AE to Non-Dev-Rel Study Activity",
+              "description": "The investigator's opinion as to the causality of the event as related to other protocol-required activities, actions, or assessments (e.g., medication changes, tests/assessments, other procedures). The relationship is to a protocol-specified, non-device-related activity where the device is identified in the data (i.e., has an SPDEVID). The device may be ancillary or under study. \\n Terminology: \\n * In the EU, follow the European Commission Guidelines on Medical Devices, Clinical Investigations: SAE Reporting (MEDDEV 2.7/3) (e.g., Not Related, Unlikely, Possible, Probable, Causal Relationship), with device-specific definitions. \\n * No required Controlled Terminology in US.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AERLPRT",
+                  "title": "Rel of AE to Non-Dev-Rel Study Activity",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 48,
+              "name": "AERLPRC",
+              "label": "Rel of AE to Device-Related Procedure",
+              "description": "The investigator's opinion as to the likelihood that the device-related study procedure (e.g., implant/insertion, revision/adjustment, explant/removal) caused the AE. The relationship is to a device-related procedure where the device is identified in the data (i.e., has an SPDEVID). The device may be ancillary or under study. \\n Terminology: \\n * In the EU, follow the European Commission Guidelines on Medical Devices, Clinical Investigations: SAE Reporting (MEDDEV 2.7/3) (e.g., Not Related, Unlikely, Possible, Probable, Causal Relationship), with device-specific definitions. \\n * No required Controlled Terminology in US.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AERLPRC",
+                  "title": "Rel of AE to Device-Related Procedure",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 49,
+              "name": "AECONTRT",
+              "label": "Concomitant or Additional Trtmnt Given",
+              "description": "Was another treatment given because of the occurrence of the event? Valid values are \"Y\" and \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AECONTRT",
+                  "title": "Concomitant or Additional Trtmnt Given",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 50,
+              "name": "AETOXGR",
+              "label": "Standard Toxicity Grade",
+              "description": "Toxicity grade according to a standard toxicity scale (e.g., Common Terminology Criteria for Adverse Events, CTCAE). Sponsors should specify the name of the scale and version used in the metadata (see assumption 7d). If value is from a numeric scale, represent only the number (e.g., \"2\", not \"Grade 2\").",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AETOXGR",
+                  "title": "Standard Toxicity Grade",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 51,
+              "name": "TAETORD",
+              "label": "Planned Order of Element within Arm",
+              "description": "Number that gives the planned order of the element within the arm.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/TAETORD",
+                  "title": "Planned Order of Element within Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 52,
+              "name": "EPOCH",
+              "label": "Epoch",
+              "description": "Epoch associated with the start date/time of the adverse event. Examples: \"SCREENING\", \"TREATMENT\", \"FOLLOW-UP\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/EPOCH",
+                  "title": "Epoch",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C99079",
+                    "title": "C99079",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 53,
+              "name": "AESTDTC",
+              "label": "Start Date/Time of Adverse Event",
+              "description": "Start date/time of the adverse event represented in ISO 8601 character format.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESTDTC",
+                  "title": "Start Date/Time of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 54,
+              "name": "AEENDTC",
+              "label": "End Date/Time of Adverse Event",
+              "description": "End date/time of the adverse event represented in ISO 8601 character format.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEENDTC",
+                  "title": "End Date/Time of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 55,
+              "name": "AESTDY",
+              "label": "Study Day of Start of Adverse Event",
+              "description": "Study day of start of adverse event relative to the sponsor-defined RFSTDTC.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AESTDY",
+                  "title": "Study Day of Start of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 56,
+              "name": "AEENDY",
+              "label": "Study Day of End of Adverse Event",
+              "description": "Study day of end of event relative to the sponsor-defined RFSTDTC.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEENDY",
+                  "title": "Study Day of End of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 57,
+              "name": "AEDUR",
+              "label": "Duration of Adverse Event",
+              "description": "Collected duration and unit of an adverse event. Used only if collected on the CRF and not derived from start and end date/times. Example: \"P1DT2H\" (for 1 day, 2 hours).",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 duration",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEDUR",
+                  "title": "Duration of Adverse Event",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 58,
+              "name": "AEENRF",
+              "label": "End Relative to Reference Period",
+              "description": "Describes the end of the event relative to the sponsor-defined reference period. The sponsor-defined reference period is a continuous period of time defined by a discrete starting point (RFSTDTC) and a discrete ending point (RFENDTC) of the trial. \\n Not all values of the codelist are allowable for this variable. See Section 4.4.7, Use of Relative Timing Variables.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEENRF",
+                  "title": "End Relative to Reference Period",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66728",
+                    "title": "C66728",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 59,
+              "name": "AEENRTPT",
+              "label": "End Relative to Reference Time Point",
+              "description": "Identifies the end of the event as being before or after the reference time point defined by variable AEENTPT. \\n Not all values of the codelist are allowable for this variable. See Section 4.4.7, Use of Relative Timing Variables.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEENRTPT",
+                  "title": "End Relative to Reference Time Point",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66728",
+                    "title": "C66728",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 60,
+              "name": "AEENTPT",
+              "label": "End Reference Time Point",
+              "description": "Description of date/time in ISO 8601 character format of the reference point referred to by AEENRTPT. Examples: \"2003-12-25\", \"VISIT 2\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/AE/variables/AEENTPT",
+                  "title": "End Reference Time Point",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ordinal": 4,
+      "name": "Findings",
+      "label": "Findings",
+      "_links": {
+        "self": {
+          "href": "/mdr/sdtmig/3-4/classes/Findings",
+          "title": "Findings",
+          "type": "Class"
+        }
+      },
+      "datasets": [
+        {
+          "ordinal": 25,
+          "name": "LB",
+          "label": "Laboratory Test Results",
+          "datasetStructure": "One record per lab test per time point per visit per subject",
+          "_links": {
+            "self": {
+              "href": "/mdr/sdtmig/3-4/datasets/LB",
+              "title": "Laboratory Test Results",
+              "type": "SDTM Dataset"
+            }
+          },
+          "datasetVariables": [
+            {
+              "ordinal": 1,
+              "name": "STUDYID",
+              "label": "Study Identifier",
+              "description": "Unique identifier for a study.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/STUDYID",
+                  "title": "Study Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "DOMAIN",
+              "label": "Domain Abbreviation",
+              "description": "Two-character abbreviation for the domain.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "valueList": ["LB"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/DOMAIN",
+                  "title": "Domain Abbreviation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "description": "Identifier used to uniquely identify a subject across all studies for all applications or submissions involving the product.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/USUBJID",
+                  "title": "Unique Subject Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "LBSEQ",
+              "label": "Sequence Number",
+              "description": "Sequence number given to ensure uniqueness of subject records within a domain. May be any valid number.",
+              "role": "Identifier",
+              "simpleDatatype": "Num",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSEQ",
+                  "title": "Sequence Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "LBGRPID",
+              "label": "Group ID",
+              "description": "Used to tie together a block of related records in a single domain for a subject.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBGRPID",
+                  "title": "Group ID",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "LBREFID",
+              "label": "Specimen ID",
+              "description": "Internal or external specimen identifier. Example: specimen ID.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBREFID",
+                  "title": "Specimen ID",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "LBSPID",
+              "label": "Sponsor-Defined Identifier",
+              "description": "Sponsor-defined reference number. May be preprinted on the CRF as an explicit line identifier or defined in the sponsor's operational database. Example: Line number on the Lab page.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSPID",
+                  "title": "Sponsor-Defined Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "LBTESTCD",
+              "label": "Lab Test or Examination Short Name",
+              "description": "Short name of the measurement, test, or examination described in LBTEST. It can be used as a column name when converting a dataset from a vertical to a horizontal format. The value in LBTESTCD cannot be longer than 8 characters, nor can it start with a number (e.g., \"1TEST\" is not valid). LBTESTCD cannot contain characters other than letters, numbers, or underscores. Examples: \"ALT\", \"LDH\".",
+              "role": "Topic",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTESTCD",
+                  "title": "Lab Test or Examination Short Name",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C65047",
+                    "title": "C65047",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "LBTEST",
+              "label": "Lab Test or Examination Name",
+              "description": "Verbatim name of the test or examination used to obtain the measurement or finding. Note: Any test normally performed by a clinical laboratory is considered a lab test. The value in LBTEST cannot be longer than 40 characters. Examples: \"Alanine Aminotransferase\", \"Lactate Dehydrogenase\".",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTEST",
+                  "title": "Lab Test or Examination Name",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C67154",
+                    "title": "C67154",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "LBTSTCND",
+              "label": "Test Condition",
+              "description": "Identifies any planned condition imposed by the assay system on the specimen at the time the test is performed.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTSTCND",
+                  "title": "Test Condition",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C181175",
+                    "title": "C181175",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "LBBDAGNT",
+              "label": "Binding Agent",
+              "description": "The textual description of the agent that is binding to the entity in the LBTEST variable. The LBBDAGNT variable is used to indicate that there is a binding relationship between the entities in the LBTEST and LBBDAGNT variables, regardless of direction. \\n LBBDAGNT is not a method qualifier. It should only be used when the actual interest of the measurement is the binding interaction between the 2 entities in LBTEST and LBBDAGNT. In other words, the combination of LBTEST and LBBDAGNT should describe the thing, the entity, or the analyte being measured, without the need for additional variables. \\n The binding agent may be (but is not limited to) a test article, a portion of the test article, a related compound, or an endogenous molecule.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBBDAGNT",
+                  "title": "Binding Agent",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "LBTSTOPO",
+              "label": "Test Operational Objective",
+              "description": "Text description of the high-level purpose of the test at the operational level.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTSTOPO",
+                  "title": "Test Operational Objective",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C181170",
+                    "title": "C181170",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "LBCAT",
+              "label": "Category for Lab Test",
+              "description": "Used to define a category of related records across subjects. Examples: \"HEMATOLOGY\", \"URINALYSIS\", \"CHEMISTRY\".",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBCAT",
+                  "title": "Category for Lab Test",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "LBSCAT",
+              "label": "Subcategory for Lab Test",
+              "description": "A further categorization of a test category. Examples: \"DIFFERENTIAL\", \"COAGULATION\", \"LIVER FUNCTION\", \"ELECTROLYTES\".",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSCAT",
+                  "title": "Subcategory for Lab Test",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "LBORRES",
+              "label": "Result or Finding in Original Units",
+              "description": "Result of the measurement or finding as originally received or collected.",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBORRES",
+                  "title": "Result or Finding in Original Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "LBORRESU",
+              "label": "Original Units",
+              "description": "Original units in which the data were collected. The unit for LBORRES. Example: \"g/L\".",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBORRESU",
+                  "title": "Original Units",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C71620",
+                    "title": "C71620",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "LBRESSCL",
+              "label": "Result Scale",
+              "description": "Classifies the scale of the original result value; for example, whether the result is ordinal, nominal, quantitative, or narrative.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBRESSCL",
+                  "title": "Result Scale",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C177910",
+                    "title": "C177910",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "LBRESTYP",
+              "label": "Result Type",
+              "description": "Classifies the kind of result (i.e., property type) originally reported for the test. Examples include substance concentration, proportion, mass rate, and arbitrary concentration.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBRESTYP",
+                  "title": "Result Type",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C179588",
+                    "title": "C179588",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "LBCOLSRT",
+              "label": "Collected Summary Result Type",
+              "description": "Used to indicate the type of collected summary result. This includes source summary results collected on a CRF or provided by an external vendor (e.g., central lab). If the summary result is derived by the sponsor using individual source data records from SDTM, the derived summary result is represented in ADaM. If the summary result is produced and reported by the lab, the collected summary result is represented in SDTM.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBCOLSRT",
+                  "title": "Collected Summary Result Type",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C177908",
+                    "title": "C177908",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "LBORNRLO",
+              "label": "Reference Range Lower Limit in Orig Unit",
+              "description": "Lower end of reference range for continuous measurement in original units. Should be populated only for continuous results.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBORNRLO",
+                  "title": "Reference Range Lower Limit in Orig Unit",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "LBORNRHI",
+              "label": "Reference Range Upper Limit in Orig Unit",
+              "description": "Upper end of reference range for continuous measurement in original units. Should be populated only for continuous results.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBORNRHI",
+                  "title": "Reference Range Upper Limit in Orig Unit",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "LBLLOD",
+              "label": "Lower Limit of Detection",
+              "description": "The lowest threshold (as originally received or collected) for reliably detecting the presence or absence of substance measured by a specific test. The value for the field will be as described in documentation from the instrument or lab vendor.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBLLOD",
+                  "title": "Lower Limit of Detection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "LBSTRESC",
+              "label": "Character Result/Finding in Std Format",
+              "description": "Contains the result value for all findings, copied or derived from LBORRES in a standard format or standard units. LBSTRESC should store all results or findings in character format; if results are numeric, they should also be stored in numeric format in LBSTRESN. For example, if a test has results \"NONE\", \"NEG\", and \"NEGATIVE\" in LBORRES and these results effectively have the same meaning, they could be represented in standard format in LBSTRESC as \"NEGATIVE\". For other examples, see Original and Standardized Results.",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTRESC",
+                  "title": "Character Result/Finding in Std Format",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C102580",
+                    "title": "C102580",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "LBSTRESN",
+              "label": "Numeric Result/Finding in Standard Units",
+              "description": "Used for continuous or numeric results or findings in standard format; copied in numeric format from LBSTRESC. LBSTRESN should store all numeric test results or findings.",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTRESN",
+                  "title": "Numeric Result/Finding in Standard Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "LBSTRESU",
+              "label": "Standard Units",
+              "description": "Standardized unit used for LBSTRESC or LBSTRESN.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTRESU",
+                  "title": "Standard Units",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C71620",
+                    "title": "C71620",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "LBSTNRLO",
+              "label": "Reference Range Lower Limit-Std Units",
+              "description": "Lower end of reference range for continuous measurements for LBSTRESC/LBSTRESN in standardized units. Should be populated only for continuous results.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTNRLO",
+                  "title": "Reference Range Lower Limit-Std Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "LBSTNRHI",
+              "label": "Reference Range Upper Limit-Std Units",
+              "description": "Upper end of reference range for continuous measurements in standardized units. Should be populated only for continuous results.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTNRHI",
+                  "title": "Reference Range Upper Limit-Std Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "LBSTNRC",
+              "label": "Reference Range for Char Rslt-Std Units",
+              "description": "For normal range values that are character in ordinal scale or if categorical ranges were supplied. Examples: \"-1 to +1\", \"NEGATIVE TO TRACE\".",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTNRC",
+                  "title": "Reference Range for Char Rslt-Std Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "LBNRIND",
+              "label": "Reference Range Indicator",
+              "description": "Indicates where the value falls with respect to reference range defined by LBORNRLO and LBORNRHI, LBSTNRLO and LBSTNRHI, or by LBSTNRC. Examples: \"NORMAL\", \"ABNORMAL\", \"HIGH\", \"LOW\". Sponsors should specify in the study metadata (Comments column in the Define-XML document) whether LBNRIND refers to the original or standard reference ranges and results. LBNRIND is not used to indicate clinical significance.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBNRIND",
+                  "title": "Reference Range Indicator",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C78736",
+                    "title": "C78736",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "LBSTAT",
+              "label": "Completion Status",
+              "description": "Used to indicate exam not done. Should be null if a result exists in LBORRES.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSTAT",
+                  "title": "Completion Status",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66789",
+                    "title": "C66789",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "LBREASND",
+              "label": "Reason Test Not Done",
+              "description": "Describes why a measurement or test was not performed. Examples: \"BROKEN EQUIPMENT\", \"SUBJECT REFUSED\", or \"SPECIMEN LOST\". Used in conjunction with LBSTAT when value is \"NOT DONE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBREASND",
+                  "title": "Reason Test Not Done",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "LBNAM",
+              "label": "Vendor Name",
+              "description": "The name or identifier of the laboratory that performed the test.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBNAM",
+                  "title": "Vendor Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 33,
+              "name": "LBLOINC",
+              "label": "LOINC Code",
+              "description": "Code for the lab test from the LOINC code system. The sponsor is expected to provide the dictionary name and version used to map the terms utilizing the Define-XML external codelist attributes.",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "LOINC",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBLOINC",
+                  "title": "LOINC Code",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 34,
+              "name": "LBSPEC",
+              "label": "Specimen Type",
+              "description": "Defines the type of specimen used for a measurement. Examples: \"SERUM\", \"PLASMA\", \"URINE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSPEC",
+                  "title": "Specimen Type",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C78734",
+                    "title": "C78734",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 35,
+              "name": "LBSPCCND",
+              "label": "Specimen Condition",
+              "description": "The physical state or quality of a sample for an assessment. Examples: \"HEMOLYZED\", \"ICTERIC\", \"LIPEMIC\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSPCCND",
+                  "title": "Specimen Condition",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C78733",
+                    "title": "C78733",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 36,
+              "name": "LBSPCUFL",
+              "label": "Specimen Usability for the Test",
+              "description": "Describes the usability of the specimen for the test. The value will be \"N\" if the specimen is not usable, and null if the specimen is usable.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBSPCUFL",
+                  "title": "Specimen Usability for the Test",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 37,
+              "name": "LBMETHOD",
+              "label": "Method of Test or Examination",
+              "description": "Method of the test or examination. Examples: \"EIA\" (enzyme immunoassay), \"ELECTROPHORESIS\", \"DIPSTICK\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBMETHOD",
+                  "title": "Method of Test or Examination",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C85492",
+                    "title": "C85492",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 38,
+              "name": "LBANMETH",
+              "label": "Analysis Method",
+              "description": "Analysis method applied to obtain a summarized result. Analysis method describes the method of secondary processing applied to a complex observation result (e.g., a calculation used to measure eGFR).",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBANMETH",
+                  "title": "Analysis Method",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C160922",
+                    "title": "C160922",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 39,
+              "name": "LBTMTHSN",
+              "label": "Test Method Sensitivity",
+              "description": "The sensitivity of the test methodology with respect to observation, detection, or quantification.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTMTHSN",
+                  "title": "Test Method Sensitivity",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C179589",
+                    "title": "C179589",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 40,
+              "name": "LBLOBXFL",
+              "label": "Last Observation Before Exposure Flag",
+              "description": "Operationally derived indicator used to identify the last non-missing value prior to RFXSTDTC. The value should be \"Y\" or null.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBLOBXFL",
+                  "title": "Last Observation Before Exposure Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 41,
+              "name": "LBBLFL",
+              "label": "Baseline Flag",
+              "description": "Indicator used to identify a baseline value. Should be \"Y\" or null. Note that LBBLFL is retained for backward compatibility. The authoritative baseline for statistical analysis is in an ADaM dataset.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBBLFL",
+                  "title": "Baseline Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 42,
+              "name": "LBFAST",
+              "label": "Fasting Status",
+              "description": "Indicator used to identify fasting status. Examples: \"Y\", \"N\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBFAST",
+                  "title": "Fasting Status",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 43,
+              "name": "LBDRVFL",
+              "label": "Derived Flag",
+              "description": "Used to indicate a derived record. The value should be \"Y\" or null. Records that represent the average of other records, or do not come from the CRF, or are not as originally received or collected are examples of records that might be derived for the submission datasets. If LBDRVFL=\"Y\", then LBORRES may be null, with LBSTRESC and (if numeric) LBSTRESN having the derived value.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBDRVFL",
+                  "title": "Derived Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 44,
+              "name": "LBTOX",
+              "label": "Toxicity",
+              "description": "Description of toxicity quantified by LBTOXGR. The sponsor is expected to provide the name of the scale and version used to map the terms, utilizing the external codelist element in the Define-XML document.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTOX",
+                  "title": "Toxicity",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 45,
+              "name": "LBTOXGR",
+              "label": "Standard Toxicity Grade",
+              "description": "Records toxicity grade value using a standard toxicity scale (e.g., the NCI CTCAE). If value is from a numeric scale, represent only the number (e.g., \"2\" not \"Grade 2\"). The sponsor is expected to provide the name of the scale and version used to map the terms, utilizing the external codelist element in the Define-XML document.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTOXGR",
+                  "title": "Standard Toxicity Grade",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 46,
+              "name": "LBCLSIG",
+              "label": "Clinically Significant, Collected",
+              "description": "Used to indicate whether a collected observation is clinically significant based on judgment.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBCLSIG",
+                  "title": "Clinically Significant, Collected",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 47,
+              "name": "VISITNUM",
+              "label": "Visit Number",
+              "description": "Clinical encounter number. Numeric version of VISIT, used for sorting.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/VISITNUM",
+                  "title": "Visit Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 48,
+              "name": "VISIT",
+              "label": "Visit Name",
+              "description": "Protocol-defined description of clinical encounter. May be used in addition to VISITNUM and/or VISITDY.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/VISIT",
+                  "title": "Visit Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 49,
+              "name": "VISITDY",
+              "label": "Planned Study Day of Visit",
+              "description": "Planned study day of the visit based upon RFSTDTC in Demographics.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/VISITDY",
+                  "title": "Planned Study Day of Visit",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 50,
+              "name": "TAETORD",
+              "label": "Planned Order of Element within Arm",
+              "description": "Number that gives the planned order of the element within the arm.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/TAETORD",
+                  "title": "Planned Order of Element within Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 51,
+              "name": "EPOCH",
+              "label": "Epoch",
+              "description": "Epoch associated with the start date/time of the observation, or the date/time of collection if start date/time is not collected.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/EPOCH",
+                  "title": "Epoch",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C99079",
+                    "title": "C99079",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 52,
+              "name": "LBDTC",
+              "label": "Date/Time of Specimen Collection",
+              "description": "Date/time of specimen collection represented in ISO 8601 character format.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBDTC",
+                  "title": "Date/Time of Specimen Collection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 53,
+              "name": "LBENDTC",
+              "label": "End Date/Time of Specimen Collection",
+              "description": "End date/time of specimen collection represented in ISO 8601 character format.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBENDTC",
+                  "title": "End Date/Time of Specimen Collection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 54,
+              "name": "LBDY",
+              "label": "Study Day of Specimen Collection",
+              "description": "Study day of specimen collection, measured as integer days. Algorithm for calculations must be relative to the sponsor-defined RFSTDTC variable in Demographics. This formula should be consistent across the submission.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBDY",
+                  "title": "Study Day of Specimen Collection",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 55,
+              "name": "LBENDY",
+              "label": "Study Day of End of Observation",
+              "description": "Actual study day of end of observation expressed in integer days relative to the sponsor-defined RFSTDTC in Demographics.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBENDY",
+                  "title": "Study Day of End of Observation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 56,
+              "name": "LBTPT",
+              "label": "Planned Time Point Name",
+              "description": "Text description of time when specimen should be taken. This may be represented as an elapsed time relative to a fixed reference point, such as time of last dose. See LBTPTNUM and LBTPTREF. Examples: \"Start\", \"5 min post\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTPT",
+                  "title": "Planned Time Point Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 57,
+              "name": "LBTPTNUM",
+              "label": "Planned Time Point Number",
+              "description": "Numerical version of LBTPT to aid in sorting.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTPTNUM",
+                  "title": "Planned Time Point Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 58,
+              "name": "LBELTM",
+              "label": "Planned Elapsed Time from Time Point Ref",
+              "description": "Planned elapsed time (in ISO 8601) relative to a planned fixed reference (LBTPTREF). This variable is useful where there are repetitive measures. Not a clock time or a date/time variable. Represented as ISO 8601 duration. Examples: \"-PT15M\" to represent the period of 15 minutes prior to the reference point indicated by LBTPTREF, \"PT8H\" to represent the period of 8 hours after the reference point indicated by LBTPTREF.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 duration",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBELTM",
+                  "title": "Planned Elapsed Time from Time Point Ref",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 59,
+              "name": "LBTPTREF",
+              "label": "Time Point Reference",
+              "description": "Name of the fixed reference point referred to by LBELTM, LBTPTNUM, and LBTPT. Examples: \"PREVIOUS DOSE\", \"PREVIOUS MEAL\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBTPTREF",
+                  "title": "Time Point Reference",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 60,
+              "name": "LBRFTDTC",
+              "label": "Date/Time of Reference Time Point",
+              "description": "Date/time of the reference time point, LBTPTREF.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBRFTDTC",
+                  "title": "Date/Time of Reference Time Point",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 61,
+              "name": "LBPTFL",
+              "label": "Point in Time Flag",
+              "description": "An indication that the specimen was collected at a single point in time. The value is \"Y\" or null. The intent of this variable in the LB domain is to aid mapping to LOINC codes in the dataset, when LOINC part \"Time Aspect\" = \"Pt\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBPTFL",
+                  "title": "Point in Time Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 62,
+              "name": "LBPDUR",
+              "label": "Planned Duration",
+              "description": "Planned duration of specimen collection. If LBPTFL is \"Y\" then LBPDUR is null.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 duration",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/LB/variables/LBPDUR",
+                  "title": "Planned Duration",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 44,
+          "name": "VS",
+          "label": "Vital Signs",
+          "datasetStructure": "One record per vital sign measurement per time point per visit per subject",
+          "_links": {
+            "self": {
+              "href": "/mdr/sdtmig/3-4/datasets/VS",
+              "title": "Vital Signs",
+              "type": "SDTM Dataset"
+            }
+          },
+          "datasetVariables": [
+            {
+              "ordinal": 1,
+              "name": "STUDYID",
+              "label": "Study Identifier",
+              "description": "Unique identifier for a study.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/STUDYID",
+                  "title": "Study Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 2,
+              "name": "DOMAIN",
+              "label": "Domain Abbreviation",
+              "description": "Two-character abbreviation for the domain.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "valueList": ["VS"],
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/DOMAIN",
+                  "title": "Domain Abbreviation",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 3,
+              "name": "USUBJID",
+              "label": "Unique Subject Identifier",
+              "description": "Identifier used to uniquely identify a subject across all studies for all applications or submissions involving the product.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/USUBJID",
+                  "title": "Unique Subject Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 4,
+              "name": "VSSEQ",
+              "label": "Sequence Number",
+              "description": "Sequence number given to ensure uniqueness of subject records within a domain. May be any valid number.",
+              "role": "Identifier",
+              "simpleDatatype": "Num",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSEQ",
+                  "title": "Sequence Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 5,
+              "name": "VSGRPID",
+              "label": "Group ID",
+              "description": "Used to tie together a block of related records in a single domain for a subject.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSGRPID",
+                  "title": "Group ID",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 6,
+              "name": "VSSPID",
+              "label": "Sponsor-Defined Identifier",
+              "description": "Sponsor-defined reference number. May be preprinted on the CRF as an explicit line identifier or defined in the sponsor's operational database.",
+              "role": "Identifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSPID",
+                  "title": "Sponsor-Defined Identifier",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 7,
+              "name": "VSTESTCD",
+              "label": "Vital Signs Test Short Name",
+              "description": "Short name of the measurement, test, or examination described in VSTEST. It can be used as a column name when converting a dataset from a vertical to a horizontal format. The value in VSTESTCD cannot be longer than 8 characters, nor can it start with a number (e.g., \"1TEST\" is not valid). VSTESTCD cannot contain characters other than letters, numbers, or underscores. Examples: \"SYSBP\", \"DIABP\", \"BMI\".",
+              "role": "Topic",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTESTCD",
+                  "title": "Vital Signs Test Short Name",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66741",
+                    "title": "C66741",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 8,
+              "name": "VSTEST",
+              "label": "Vital Signs Test Name",
+              "description": "Verbatim name of the test or examination used to obtain the measurement or finding. The value in VSTEST cannot be longer than 40 characters. Examples: \"Systolic Blood Pressure\", \"Diastolic Blood Pressure\", \"Body Mass Index\".",
+              "role": "Synonym Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Req",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTEST",
+                  "title": "Vital Signs Test Name",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C67153",
+                    "title": "C67153",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 9,
+              "name": "VSCAT",
+              "label": "Category for Vital Signs",
+              "description": "Used to define a category of related records.",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSCAT",
+                  "title": "Category for Vital Signs",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 10,
+              "name": "VSSCAT",
+              "label": "Subcategory for Vital Signs",
+              "description": "A further categorization of a measurement or examination.",
+              "role": "Grouping Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSCAT",
+                  "title": "Subcategory for Vital Signs",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 11,
+              "name": "VSPOS",
+              "label": "Vital Signs Position of Subject",
+              "description": "Position of the subject during a measurement or examination. Examples: \"SUPINE\", \"STANDING\", \"SITTING\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSPOS",
+                  "title": "Vital Signs Position of Subject",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C71148",
+                    "title": "C71148",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 12,
+              "name": "VSORRES",
+              "label": "Result or Finding in Original Units",
+              "description": "Result of the vital signs measurement as originally received or collected.",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSORRES",
+                  "title": "Result or Finding in Original Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 13,
+              "name": "VSORRESU",
+              "label": "Original Units",
+              "description": "Original units in which the data were collected. The unit for VSORRES. Examples: \"in\", \"LB\", \"beats/min\".",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSORRESU",
+                  "title": "Original Units",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66770",
+                    "title": "C66770",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 14,
+              "name": "VSSTRESC",
+              "label": "Character Result/Finding in Std Format",
+              "description": "Contains the result value for all findings, copied or derived from VSORRES in a standard format or standard units. VSSTRESC should store all results or findings in character format; if results are numeric, they should also be stored in numeric format in VSSTRESN. For example, if a test has results \"NONE\", \"NEG\", and \"NEGATIVE\" in VSORRES, and these results effectively have the same meaning, they could be represented in standard format in VSSTRESC as \"NEGATIVE\".",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSTRESC",
+                  "title": "Character Result/Finding in Std Format",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 15,
+              "name": "VSSTRESN",
+              "label": "Numeric Result/Finding in Standard Units",
+              "description": "Used for continuous or numeric results or findings in standard format; copied in numeric format from VSSTRESC. VSSTRESN should store all numeric test results or findings.",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSTRESN",
+                  "title": "Numeric Result/Finding in Standard Units",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 16,
+              "name": "VSSTRESU",
+              "label": "Standard Units",
+              "description": "Standardized unit used for VSSTRESC and VSSTRESN.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSTRESU",
+                  "title": "Standard Units",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66770",
+                    "title": "C66770",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 17,
+              "name": "VSSTAT",
+              "label": "Completion Status",
+              "description": "Used to indicate that a vital sign measurement was not done. Should be null if a result exists in VSORRES.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSSTAT",
+                  "title": "Completion Status",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66789",
+                    "title": "C66789",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 18,
+              "name": "VSREASND",
+              "label": "Reason Not Performed",
+              "description": "Describes why a measurement or test was not performed. Examples: \"BROKEN EQUIPMENT\", \"SUBJECT REFUSED\". Used in conjunction with VSSTAT when value is \"NOT DONE\".",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSREASND",
+                  "title": "Reason Not Performed",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 19,
+              "name": "VSLOC",
+              "label": "Location of Vital Signs Measurement",
+              "description": "Location relevant to the collection of vital signs measurement. Example: \"ARM\" for blood pressure.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSLOC",
+                  "title": "Location of Vital Signs Measurement",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C74456",
+                    "title": "C74456",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 20,
+              "name": "VSLAT",
+              "label": "Laterality",
+              "description": "Qualifier for anatomical location or specimen further detailing laterality. Examples: \"RIGHT\", \"LEFT\", \"BILATERAL\".",
+              "role": "Result Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSLAT",
+                  "title": "Laterality",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C99073",
+                    "title": "C99073",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 21,
+              "name": "VSLOBXFL",
+              "label": "Last Observation Before Exposure Flag",
+              "description": "Operationally derived indicator used to identify the last non-missing value prior to RFXSTDTC. Should be \"Y\" or null.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSLOBXFL",
+                  "title": "Last Observation Before Exposure Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 22,
+              "name": "VSBLFL",
+              "label": "Baseline Flag",
+              "description": "Indicator used to identify a baseline value. Should be \"Y\" or null. Note that VSBLFL is retained for backward compatibility. The authoritative baseline for statistical analysis is in an ADaM dataset.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSBLFL",
+                  "title": "Baseline Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 23,
+              "name": "VSDRVFL",
+              "label": "Derived Flag",
+              "description": "Used to indicate a derived record. The value should be \"Y\" or null. Records that represent the average of other records or that do not come from the CRF are examples of records that would be derived for the submission datasets. If VSDRVFL = \"Y,\" then VSORRES may be null, with VSSTRESC and (if numeric) VSSTRESN having the derived value.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSDRVFL",
+                  "title": "Derived Flag",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 24,
+              "name": "VSTOX",
+              "label": "Toxicity",
+              "description": "Description of toxicity quantified by VSTOXGR. The sponsor is expected to provide the name of the scale and version used to map the terms, utilizing the external codelist element in the Define-XML document.",
+              "role": "Variable Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTOX",
+                  "title": "Toxicity",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 25,
+              "name": "VSTOXGR",
+              "label": "Standard Toxicity Grade",
+              "description": "Records toxicity grade value using a standard toxicity scale (e.g., NCI CTCAE). If value is from a numeric scale, represent only the number (e.g., \"2\", not \"Grade 2\"). The sponsor is expected to provide the name of the scale and version used to map the terms, utilizing the external codelist element in the Define-XML document.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTOXGR",
+                  "title": "Standard Toxicity Grade",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 26,
+              "name": "VSCLSIG",
+              "label": "Clinically Significant, Collected",
+              "description": "Used to indicate whether a collected observation is clinically significant based on judgment.",
+              "role": "Record Qualifier",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSCLSIG",
+                  "title": "Clinically Significant, Collected",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66742",
+                    "title": "C66742",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 27,
+              "name": "VISITNUM",
+              "label": "Visit Number",
+              "description": "Clinical encounter number. Numeric version of VISIT, used for sorting.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Exp",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VISITNUM",
+                  "title": "Visit Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 28,
+              "name": "VISIT",
+              "label": "Visit Name",
+              "description": "Protocol-defined description of clinical encounter. May be used in addition to VISITNUM and/or VISITDY.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VISIT",
+                  "title": "Visit Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 29,
+              "name": "VISITDY",
+              "label": "Planned Study Day of Visit",
+              "description": "Planned study day of the visit based upon RFSTDTC in Demographics.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VISITDY",
+                  "title": "Planned Study Day of Visit",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 30,
+              "name": "TAETORD",
+              "label": "Planned Order of Element within Arm",
+              "description": "Number that gives the planned order of the element within the arm.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/TAETORD",
+                  "title": "Planned Order of Element within Arm",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 31,
+              "name": "EPOCH",
+              "label": "Epoch",
+              "description": "Epoch associated with the start date/time at which the assessment was made.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/EPOCH",
+                  "title": "Epoch",
+                  "type": "SDTM Dataset Variable"
+                },
+                "codelist": [
+                  {
+                    "href": "/mdr/ct/packages/sdtmct-2024-09-27/codelists/C99079",
+                    "title": "C99079",
+                    "type": "Code List"
+                  }
+                ]
+              }
+            },
+            {
+              "ordinal": 32,
+              "name": "VSDTC",
+              "label": "Date/Time of Measurements",
+              "description": "Date and time of the vital signs assessment represented in ISO 8601 character format.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Exp",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSDTC",
+                  "title": "Date/Time of Measurements",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 33,
+              "name": "VSDY",
+              "label": "Study Day of Vital Signs",
+              "description": "Study day of vital signs measurements, measured as integer days. Algorithm for calculations must be relative to the sponsor-defined RFSTDTC variable in Demographics.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSDY",
+                  "title": "Study Day of Vital Signs",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 34,
+              "name": "VSTPT",
+              "label": "Planned Time Point Name",
+              "description": "Text description of time when measurement should be taken. This may be represented as an elapsed time relative to a fixed reference point (e.g., time of last dose). See VSTPTNUM and VSTPTREF. Examples: \"START\", \"5 MIN POST\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTPT",
+                  "title": "Planned Time Point Name",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 35,
+              "name": "VSTPTNUM",
+              "label": "Planned Time Point Number",
+              "description": "Numerical version of VSTPT to aid in sorting.",
+              "role": "Timing",
+              "simpleDatatype": "Num",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTPTNUM",
+                  "title": "Planned Time Point Number",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 36,
+              "name": "VSELTM",
+              "label": "Planned Elapsed Time from Time Point Ref",
+              "description": "Planned elapsed time (in ISO 8601) relative to a planned fixed reference (VSTPTREF). This variable is useful where there are repetitive measures. Not a clock time or a date time variable. Represented as an ISO 8601 Duration. Examples: \"-PT15M\" to represent the period of 15 minutes prior to the reference point indicated by VSTPTREF, \"PT8H\" to represent the period of 8 hours after the reference point indicated by VSTPTREF.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 duration",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSELTM",
+                  "title": "Planned Elapsed Time from Time Point Ref",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 37,
+              "name": "VSTPTREF",
+              "label": "Time Point Reference",
+              "description": "Name of the fixed reference point referred to by VSELTM, VSTPTNUM, and VSTPT. Examples: \"PREVIOUS DOSE\", \"PREVIOUS MEAL\".",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSTPTREF",
+                  "title": "Time Point Reference",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            },
+            {
+              "ordinal": 38,
+              "name": "VSRFTDTC",
+              "label": "Date/Time of Reference Time Point",
+              "description": "Date/time of the reference time point, VSTPTREF.",
+              "role": "Timing",
+              "simpleDatatype": "Char",
+              "core": "Perm",
+              "describedValueDomain": "ISO 8601 datetime or interval",
+              "_links": {
+                "self": {
+                  "href": "/mdr/sdtmig/3-4/datasets/VS/variables/VSRFTDTC",
+                  "title": "Date/Time of Reference Time Point",
+                  "type": "SDTM Dataset Variable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

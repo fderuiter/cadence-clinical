@@ -12,3 +12,6 @@
 *.secrets.baseline merge=custom-metadata-driver
 *.md merge=custom-metadata-driver
 .cadence/snapshots/*.tar.gz merge=custom-metadata-driver
+
+# Checksum-verified standards seed content: never normalise line endings (Seed/manifest.json pins each file's SHA-256)
+packages/kernel/src/Cadence.Standards/Seed/*.json -text

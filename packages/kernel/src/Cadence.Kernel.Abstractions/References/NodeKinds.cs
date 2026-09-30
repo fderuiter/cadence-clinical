@@ -2,6 +2,8 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Standards;
+
 namespace Cadence.Kernel.References;
 
 /// <summary>
@@ -26,6 +28,9 @@ public static class NodeKinds
     public const string CodeSystemVersion = "code_system_version";
     public const string Concept = "concept";
     public const string ConceptMapping = "concept_mapping";
+    public const string StandardVersion = "standard_version";
+    public const string LibraryItem = "library_item";
+    public const string StudyStandardsProfile = "study_standards_profile";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -44,6 +49,9 @@ public static class NodeKinds
         [typeof(CodeSystemVersionId)] = CodeSystemVersion,
         [typeof(ConceptId)] = Concept,
         [typeof(ConceptMappingId)] = ConceptMapping,
+        [typeof(StandardVersionId)] = StandardVersion,
+        [typeof(LibraryItemId)] = LibraryItem,
+        [typeof(StudyStandardsProfileId)] = StudyStandardsProfile,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =
