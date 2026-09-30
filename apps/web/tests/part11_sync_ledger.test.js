@@ -8,7 +8,7 @@ const { mockFetch } = vi.hoisted(() => {
 });
 
 import { createPinia, setActivePinia } from "pinia";
-import { useClinicalStore } from "../src/stores/clinical";
+import { useClinicalStore, getStorageKey } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth.js";
 import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
@@ -54,9 +54,15 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     expect(block.synced).toBe(false);
 
     // Verify localStorage persistence
-    const savedValues = JSON.parse(window.localStorage.getItem("formValues"));
-    const savedQueries = JSON.parse(window.localStorage.getItem("formQueries"));
-    const savedBlocks = JSON.parse(window.localStorage.getItem("ledgerBlocks"));
+    const savedValues = JSON.parse(
+      window.localStorage.getItem(getStorageKey("formValues"))
+    );
+    const savedQueries = JSON.parse(
+      window.localStorage.getItem(getStorageKey("formQueries"))
+    );
+    const savedBlocks = JSON.parse(
+      window.localStorage.getItem(getStorageKey("ledgerBlocks"))
+    );
 
     expect(savedValues.vssbp).toBe("220");
     expect(savedQueries.vssbp.status).toBe("OPEN");
