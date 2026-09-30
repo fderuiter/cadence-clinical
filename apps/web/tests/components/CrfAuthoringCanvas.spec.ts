@@ -11,7 +11,15 @@ vi.mock("vuedraggable", () => {
   return {
     default: {
       name: "draggable",
-      props: ["modelValue", "itemKey"],
+      props: [
+        "modelValue",
+        "itemKey",
+        "forceFallback",
+        "fallbackTolerance",
+        "scrollSensitivity",
+        "handle",
+        "group",
+      ],
       emits: ["update:modelValue", "change"],
       template: `
         <div class="mock-draggable">
@@ -482,6 +490,139 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await wrapper.vm.$nextTick();
 
       expect(inputElement.classes()).toContain("touch-target-interactive");
+    });
+  });
+
+  describe("Touch Drag Fallbacks & Action Button Reordering", () => {
+    it("configures touch drag fallback properties on draggable instances", () => {
+      const formSchema = {
+        id: "form-touch-1",
+        name: "Touch Fallback Test Form",
+        sections: [
+          {
+            id: "sec-1",
+            name: "Section 1",
+            items: [{ id: "f-1", label: "Field 1", type: "text" }],
+          },
+        ],
+      };
+
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: { formSchema, selectedFieldId: null },
+      });
+
+      const draggables = wrapper.findAllComponents({ name: "draggable" });
+      expect(draggables.length).toBeGreaterThanOrEqual(2);
+
+      draggables.forEach((drg) => {
+        expect(drg.props("forceFallback")).toBe(true);
+        expect(drg.props("fallbackTolerance")).toBe(5);
+        expect(drg.props("scrollSensitivity")).toBe("30");
+      });
+    });
+
+    it("reorders form sections when move action buttons are clicked and respects boundary limits", async () => {
+      const store = useDesignerStore();
+      const formSchema = {
+        id: "form-section-reorder",
+        name: "Section Reorder Test",
+        sections: [
+          { id: "sec-1", name: "Section 1", items: [] },
+          { id: "sec-2", name: "Section 2", items: [] },
+          { id: "sec-3", name: "Section 3", items: [] },
+        ],
+      };
+      store.activeForm = JSON.parse(JSON.stringify(formSchema));
+
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      const sectionContainers = wrapper.findAllComponents(FormSectionContainer);
+      expect(sectionContainers.length).toBe(3);
+
+      // Verify boundary disabled states
+      const firstMoveUp = sectionContainers[0].find(".btn-section-move-up");
+      expect(firstMoveUp.attributes("disabled")).toBeDefined();
+
+      const lastMoveDown = sectionContainers[2].find(".btn-section-move-down");
+      expect(lastMoveDown.attributes("disabled")).toBeDefined();
+
+      // Click Move Up on Section 2 (index 1)
+      const sec2MoveUp = sectionContainers[1].find(".btn-section-move-up");
+      await sec2MoveUp.trigger("click");
+
+      // Verify order changed to Sec 2, Sec 1, Sec 3
+      expect(store.activeForm.sections[0].id).toBe("sec-2");
+      expect(store.activeForm.sections[1].id).toBe("sec-1");
+      expect(store.activeForm.sections[2].id).toBe("sec-3");
+
+      // Now click Move Down on Section 2 (which is now at index 0)
+      const sec2MoveDown = wrapper.findAllComponents(FormSectionContainer)[0].find(".btn-section-move-down");
+      await sec2MoveDown.trigger("click");
+
+      // Verify order restored to Sec 1, Sec 2, Sec 3
+      expect(store.activeForm.sections[0].id).toBe("sec-1");
+      expect(store.activeForm.sections[1].id).toBe("sec-2");
+      expect(store.activeForm.sections[2].id).toBe("sec-3");
+    });
+
+    it("reorders field widgets when move action buttons are clicked and respects boundary limits", async () => {
+      const section = {
+        id: "sec-field-reorder",
+        name: "Fields Section",
+        isCollapsed: false,
+        items: [
+          { id: "f-1", label: "Field One", type: "text" },
+          { id: "f-2", label: "Field Two", type: "text" },
+          { id: "f-3", label: "Field Three", type: "text" },
+        ],
+      };
+
+      const store = useDesignerStore();
+      store.activeForm = {
+        id: "form-fields",
+        name: "Fields Form",
+        sections: [section],
+      };
+
+      const wrapper = mount(FormSectionContainer, {
+        props: {
+          section,
+          selectedFieldId: null,
+        },
+      });
+
+      const fieldWidgets = wrapper.findAllComponents(CanvasFieldWidget);
+      expect(fieldWidgets.length).toBe(3);
+
+      // Verify boundary disabled states
+      const firstFieldMoveUp = fieldWidgets[0].find(".btn-field-move-up");
+      expect(firstFieldMoveUp.attributes("disabled")).toBeDefined();
+
+      const lastFieldMoveDown = fieldWidgets[2].find(".btn-field-move-down");
+      expect(lastFieldMoveDown.attributes("disabled")).toBeDefined();
+
+      // Click Move Up on Field 2 (index 1)
+      const field2MoveUp = fieldWidgets[1].find(".btn-field-move-up");
+      await field2MoveUp.trigger("click");
+
+      // Verify items order is now f-2, f-1, f-3
+      expect(section.items[0].id).toBe("f-2");
+      expect(section.items[1].id).toBe("f-1");
+      expect(section.items[2].id).toBe("f-3");
+
+      // Click Move Down on Field 2 (now at index 0)
+      const field2MoveDown = wrapper.findAllComponents(CanvasFieldWidget)[0].find(".btn-field-move-down");
+      await field2MoveDown.trigger("click");
+
+      // Verify items order restored to f-1, f-2, f-3
+      expect(section.items[0].id).toBe("f-1");
+      expect(section.items[1].id).toBe("f-2");
+      expect(section.items[2].id).toBe("f-3");
     });
   });
 });

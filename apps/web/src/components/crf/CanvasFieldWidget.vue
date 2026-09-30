@@ -23,6 +23,27 @@
         >
           ⋮⋮
         </span>
+        <!-- Field Reorder Controls -->
+        <div class="field-reorder-controls" @click.stop>
+          <button
+            class="btn-move-up btn-field-move-up"
+            :disabled="isFirst"
+            title="Move field up"
+            aria-label="Move field up"
+            @click.stop="$emit('move-field-up')"
+          >
+            ▲
+          </button>
+          <button
+            class="btn-move-down btn-field-move-down"
+            :disabled="isLast"
+            title="Move field down"
+            aria-label="Move field down"
+            @click.stop="$emit('move-field-down')"
+          >
+            ▼
+          </button>
+        </div>
         <span class="field-label-text">
           {{ field.label || "Untitled Field" }}
           <span v-if="field.required" class="field-required-star">*</span>
@@ -315,9 +336,31 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  fieldIndex: {
+    type: Number,
+    default: 0,
+  },
+  totalFields: {
+    type: Number,
+    default: 1,
+  },
+  isFirst: {
+    type: Boolean,
+    default: false,
+  },
+  isLast: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["select-field", "duplicate-field", "delete-field"]);
+const emit = defineEmits([
+  "select-field",
+  "duplicate-field",
+  "delete-field",
+  "move-field-up",
+  "move-field-down",
+]);
 
 const isSelected = computed(() => {
   return props.selectedFieldId === props.field.id;
