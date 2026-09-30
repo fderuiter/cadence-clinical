@@ -6,7 +6,9 @@ caller's identity to backend services as HMAC-signed headers.
 ## Authentication
 
 1. The gateway validates the `Authorization: Bearer` token against the OIDC provider (Keycloak) named by
-   `OIDC_AUTHORITY` (and audience `OIDC_AUDIENCE` when set). Anonymous or invalid tokens get `401`.
+   `OIDC_AUTHORITY`, with the API audience `OIDC_AUDIENCE`. Anonymous or invalid tokens get `401`. The realm gives
+   only `cadence-web` tokens the `cadence-api` audience, so a token a caller gets from another realm client, such as
+   the password-grant `cadence-esignature` client, is refused (#5037).
 2. It strips every identity header the client sent (`X-User-Id`, `X-User-Roles`, `X-User-Role`,
    `X-Gateway-Signature`, ...) and the bearer token, then adds its own set built from the token's claims
    (`sub`, Keycloak realm roles, site/sponsor/tenant scope) plus the client's `X-Change-Reason` and
@@ -51,7 +53,7 @@ The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptograph
 | --- | --- | --- |
 | `GATEWAY_SECRET` | yes (gateway and every service) | Shared HMAC key, at least 32 characters. No default; startup fails without it. |
 | `OIDC_AUTHORITY` | yes | Token issuer, e.g. `https://idp.example.com/realms/cadence`. |
-| `OIDC_AUDIENCE` | no | Expected `aud` claim; validated when set. |
+| `OIDC_AUDIENCE` | yes outside Development | Expected `aud` claim (`cadence-api`); startup fails without it outside Development, and it is validated whenever set. |
 | `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
 | `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
 | `OIDC_SIGNATURE_CLIENT_ID` | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords. |

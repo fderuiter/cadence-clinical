@@ -24,11 +24,19 @@ builder.AddCadenceWebDefaults();
 
 // Callers authenticate with a Keycloak-issued bearer token. OIDC_AUTHORITY (the issuer browsers see) is
 // required and the host refuses to start without it. OIDC_METADATA_ADDRESS optionally points discovery at
-// an internal URL (for example the Keycloak container), and OIDC_AUDIENCE is validated whenever it is set.
+// an internal URL (for example the Keycloak container). OIDC_AUDIENCE is the API audience only the web
+// client's tokens carry; outside Development it is required, so a token issued to another client in the
+// realm (such as the password-grant e-signature client) is refused (#5037). It is validated whenever set.
 string oidcAuthority = builder.Configuration["OIDC_AUTHORITY"] is { Length: > 0 } authority
     ? authority
     : throw new InvalidOperationException("OIDC_AUTHORITY must be set to the Keycloak realm URL (for example http://keycloak:8080/realms/cadence).");
 string? oidcAudience = builder.Configuration["OIDC_AUDIENCE"];
+if (string.IsNullOrWhiteSpace(oidcAudience) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "OIDC_AUDIENCE must be set outside Development to the API audience the web client's tokens carry (for example cadence-api).");
+}
+
 string? oidcMetadataAddress = builder.Configuration["OIDC_METADATA_ADDRESS"];
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

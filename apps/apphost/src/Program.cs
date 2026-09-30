@@ -52,7 +52,10 @@ else
 
 // Identity. With AppHost:OidcAuthority set to an existing Keycloak realm URL (http://host:port/realms/<realm>), the
 // gateway and the web app use it and no container starts; otherwise the AppHost runs Keycloak with the same realm
-// docker compose imports: clients, roles and local test users (docs/LOCAL_DEV_ENVIRONMENT.md).
+// docker compose imports: clients, roles and local test users (docs/LOCAL_DEV_ENVIRONMENT.md). The gateway accepts
+// only tokens with the API audience the realm gives cadence-web tokens (#5037); AppHost:OidcAudience overrides it for
+// an existing realm.
+const string ApiAudience = "cadence-api";
 Action<IResourceBuilder<ProjectResource>> useOidcOnGateway;
 Action<IResourceBuilder<ViteAppResource>> useOidcOnWeb;
 if (builder.Configuration["AppHost:OidcAuthority"] is { Length: > 0 } authority)
@@ -71,6 +74,7 @@ if (builder.Configuration["AppHost:OidcAuthority"] is { Length: > 0 } authority)
     string keycloakUrl = authority[..realmStart];
     useOidcOnGateway = gateway => gateway
         .WithEnvironment("OIDC_AUTHORITY", authority.TrimEnd('/'))
+        .WithEnvironment("OIDC_AUDIENCE", builder.Configuration["AppHost:OidcAudience"] is { Length: > 0 } audience ? audience : ApiAudience)
         .WithEnvironment("OIDC_REQUIRE_HTTPS_METADATA", (authorityUri.Scheme == "https").ToString().ToLowerInvariant());
     useOidcOnWeb = web => web
         .WithEnvironment("VITE_KEYCLOAK_URL", keycloakUrl)
@@ -91,6 +95,7 @@ else
     var keycloakHttp = keycloak.GetEndpoint("http");
     useOidcOnGateway = gateway => gateway
         .WithEnvironment("OIDC_AUTHORITY", ReferenceExpression.Create($"{keycloakHttp}/realms/cadence"))
+        .WithEnvironment("OIDC_AUDIENCE", ApiAudience)
         .WithEnvironment("OIDC_REQUIRE_HTTPS_METADATA", "false");
     useOidcOnWeb = web => web
         .WithEnvironment("VITE_KEYCLOAK_URL", keycloakHttp)
