@@ -22,7 +22,6 @@ namespace Cadence.UnitTests.Packages;
 public class DeidEngineUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-IMG-001")]
     public void DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate()
     {
         var dataset = new DicomDataset
@@ -97,7 +96,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidTransforms_AppliesMaskPseudonymizeDateShiftAndAgeCap()
     {
         var detector = new DeidDetector();
@@ -135,7 +133,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidTransforms_ShiftDateString_PreservesFormats()
     {
         DeidTransforms.ShiftDateString("2026-01-15", 10).Should().Be("2026-01-25");
@@ -147,7 +144,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidTransforms_SubjectDateShift_And_CapAge()
     {
         string salt = "test-salt-123";
@@ -172,7 +168,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidTransforms_ScrubErrorMessage_StripsIdentifiersAndQuotedValues()
     {
         string rawMsg = "Failed processing SUBJ-101 at SITE-01 for STUDY-2026: SSN 123-45-6789, email john@example.com with value 'secret_token'";
@@ -190,7 +185,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidAirGapVault_DeidentifiesAndRehydratesTextStructuredDataAndChatMessages()
     {
         using var vault = new DeidAirGapVault();
@@ -229,7 +223,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-051")]
     public void DeidAirGapVault_IDisposable_PurgesInMemoryMappings()
     {
         DeidAirGapVault vault = new DeidAirGapVault();

@@ -12,7 +12,6 @@ namespace Cadence.UnitTests.Packages;
 public class ConfigAndCoreModelsUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
     public void ProtocolRAG_FormatCitationMarker_ProducesCanonicalFormat()
     {
         var marker1 = ProtocolRAGEvaluator.FormatCitationMarker("2.1", "7.3", 42);
@@ -23,7 +22,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
     public void ProtocolRAG_FormatGroundedRagPrompt_FormatsPromptWithExcerpts()
     {
         var chunk = new ProtocolRAGContextChunk(
@@ -44,8 +42,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ProtocolRAG_EvaluateFaithfulness_ValidatesGroundedAnswer()
     {
         var chunk = new ProtocolRAGContextChunk(
@@ -72,8 +68,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation()
     {
         var chunk = new ProtocolRAGContextChunk(
@@ -94,8 +88,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations()
     {
         var chunk = new ProtocolRAGContextChunk(

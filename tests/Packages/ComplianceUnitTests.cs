@@ -134,11 +134,8 @@ public class ComplianceUnitTests
 
     /// <summary>
     /// Validates that ProtocolRagService.EvaluateFaithfulness produces outputs matching ProtocolRAGEvaluator.
-    /// @req:PRD-TCK-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-TCK-005")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator()
     {
         var chunk = new ProtocolRAGContextChunk(

@@ -66,7 +66,6 @@ public class ClinicalSubjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Create_WithNullSiteCodeAndNullStratFactors_LeavesThemEmpty()
     {
         var subject = ClinicalSubject.Create(
@@ -83,7 +82,6 @@ public class ClinicalSubjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Create_TwoSubjects_ProduceDistinctIds()
     {
         var first = CreateScreeningSubject();
@@ -95,7 +93,6 @@ public class ClinicalSubjectTests
     // -- Pre/post-randomization mutation lock matrix (SCN-004) ---------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void UpdateStratFactors_PreRandomization_Succeeds()
     {
         var subject = CreateScreeningSubject();
@@ -108,7 +105,6 @@ public class ClinicalSubjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void UpdateDemographics_PreRandomization_Succeeds()
     {
         var subject = CreateScreeningSubject();
@@ -130,7 +126,6 @@ public class ClinicalSubjectTests
 
     [Theory]
     [MemberData(nameof(PostRandomizationStates))]
-    [GxPRequirement("PRD-SUB-001")]
     public void IsPostRandomization_ForLockedStates_ReturnsTrue(SubjectState state)
     {
         var subject = DriveToState(state);
@@ -141,7 +136,6 @@ public class ClinicalSubjectTests
     [Theory]
     [InlineData(SubjectState.Screening)]
     [InlineData(SubjectState.Enrolled)]
-    [GxPRequirement("PRD-SUB-001")]
     public void IsPostRandomization_ForUnlockedStates_ReturnsFalse(SubjectState state)
     {
         var subject = DriveToState(state);
@@ -151,7 +145,6 @@ public class ClinicalSubjectTests
 
     [Theory]
     [MemberData(nameof(PostRandomizationStates))]
-    [GxPRequirement("PRD-SUB-001")]
     public void UpdateStratFactors_PostRandomization_FailsWithLockedFactorMutation(SubjectState state)
     {
         var subject = DriveToState(state);
@@ -166,7 +159,6 @@ public class ClinicalSubjectTests
 
     [Theory]
     [MemberData(nameof(PostRandomizationStates))]
-    [GxPRequirement("PRD-SUB-001")]
     public void UpdateDemographics_PostRandomization_FailsWithLockedFactorMutation(SubjectState state)
     {
         var subject = DriveToState(state);
@@ -180,7 +172,6 @@ public class ClinicalSubjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ClearDemographics_PreRandomization_Succeeds()
     {
         var subject = CreateScreeningSubject();
@@ -193,7 +184,6 @@ public class ClinicalSubjectTests
 
     [Theory]
     [MemberData(nameof(PostRandomizationStates))]
-    [GxPRequirement("PRD-SUB-001")]
     public void ClearDemographics_PostRandomization_FailsWithSoftDeleteBlocked(SubjectState state)
     {
         var subject = DriveToState(state);
@@ -206,7 +196,6 @@ public class ClinicalSubjectTests
 
     [Theory]
     [MemberData(nameof(PostRandomizationStates))]
-    [GxPRequirement("PRD-SUB-001")]
     public void ClearDemographics_And_UpdateStratFactors_ProduceDistinctErrorCodes(SubjectState state)
     {
         var clearSubject = DriveToState(state);
@@ -263,7 +252,6 @@ public class ClinicalSubjectTests
     // -- Unblind/Withdraw field capture (SCN-008) using a fake IClock --------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Unblind_OnRandomizedSubject_SetsAllUnblindFieldsFromClock()
     {
         var subject = DriveToState(SubjectState.Randomized);
@@ -310,7 +298,6 @@ public class ClinicalSubjectTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Unblind_OnScreeningSubject_ReturnsFailureWithoutThrowing()
     {
         var subject = CreateScreeningSubject();
