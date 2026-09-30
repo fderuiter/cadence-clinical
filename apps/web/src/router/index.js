@@ -47,9 +47,11 @@ const routes = [
         return { name: preferred };
       }
       // The preferred screen has no .NET backend yet: land on the first
-      // screen that does and that the user may open.
+      // screen that does and that the user may open. The Clinical Canvas is
+      // opened from the header until it holds each role's work (#4833).
       const fallback = routes.find(
         (route) =>
+          route.name !== "study" &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -74,6 +76,13 @@ const routes = [
     name: "unavailable",
     component: () => import("../views/UnavailableView.vue"),
     meta: { requiresAuth: false },
+  },
+  {
+    // The Clinical Canvas (docs/ux/CLINICAL_CANVAS.md): one study, lifecycle navigation, three panes.
+    path: "/studies/:studyCode?",
+    name: "study",
+    component: () => import("../views/StudyCanvasView.vue"),
+    meta: { requiresAuth: true, layout: "canvas" },
   },
   {
     path: "/mdr",

@@ -6,7 +6,7 @@
 | **Scope**        | The primary interaction model of the Cadence web experience, and the kernel and API capabilities that model needs                                                       |
 | **Builds on**    | [Kernel specification v0.2](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) (cited below as `§n`), its [§15 roadmap](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) |
 | **Mockup**       | [Clinical Canvas primary screen](https://claude.ai/artifact/YJJUUy1LaUz8mYRN4P9jDT) (clickable, ONC-401 sample data, light and dark)                                    |
-| **Related work** | Epic #4833 (move `apps/web` onto the .NET API). This document does not change `apps/web`; it sets the target the migrated client grows toward.                          |
+| **Related work** | Epic #4833 (move `apps/web` onto the .NET API). This document sets the target the migrated client grows toward; §8 says what `apps/web` has built so far.                |
 
 Rules tagged `UX-…` are design invariants. Rules tagged `K-…` are the kernel invariants they rely on.
 Requirements tagged `PX-…` (platform exposure) are what the kernel and its APIs must provide for the screen to
@@ -348,6 +348,14 @@ work to change course. It adds three constraints for any screen built or rebuilt
 1. Use the three-pane model (UX-3) and study-centric navigation (UX-1) for new screens.
 2. Read clinical facts, explanations and lineage from the kernel; never reconstruct them in the client.
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9, §5).
+
+The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). It has the lifecycle
+rail, the three panes, the zoom path and the `⌘K` palette, and shows only what Execution serves today:
+participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
+Indicators, D6), the Participants section and Site activation. Selections are addressed by NodeRef in the
+URL. Trace, Impact, Explain, Simulate and Act are shown disabled, each naming the decision it waits on, and
+stages with no service are empty (§6.1). [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md) tracks what it
+adds next.
 
 ---
 

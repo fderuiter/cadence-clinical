@@ -12,14 +12,16 @@
       aria-label="Study and site"
       @submit.prevent="checkStatus"
     >
-      <label for="site-activation-study">Study</label>
-      <input
-        id="site-activation-study"
-        v-model="studyCode"
-        type="text"
-        autocomplete="off"
-        placeholder="Study code"
-      />
+      <template v-if="!props.studyCode">
+        <label for="site-activation-study">Study</label>
+        <input
+          id="site-activation-study"
+          v-model="studyCode"
+          type="text"
+          autocomplete="off"
+          placeholder="Study code"
+        />
+      </template>
       <label for="site-activation-site">Site</label>
       <input
         id="site-activation-site"
@@ -100,7 +102,7 @@
       </button>
     </div>
 
-    <p class="unavailable-note">
+    <p v-if="!props.studyCode" class="unavailable-note">
       Milestones, monitoring visits, delegation, financials, start-up and RTSM
       aren't available yet: no Cadence service serves them. See
       <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
@@ -111,7 +113,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { executionApi } from "../../api/executionApi";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
@@ -122,10 +124,15 @@ import { UNAVAILABLE_SCREENS_ISSUE } from "../../router/availability.js";
  * it is complete. Execution refuses activation for an incomplete site and audits every attempt, with the
  * reason given here as the change reason.
  */
+const props = defineProps({
+  /** Fixes the study (the Clinical Canvas passes the study it shows); without it the user types the study. */
+  studyCode: { type: String, default: "" },
+});
+
 const store = useClinicalStore();
 const toasts = useToastStore();
 
-const studyCode = ref(store.activeStudyId);
+const studyCode = ref(props.studyCode || store.activeStudyId);
 const siteCode = ref(store.activeSiteId);
 const compliance = ref(null);
 const checked = ref(false);
@@ -133,6 +140,18 @@ const loading = ref(false);
 const loadError = ref(false);
 const reason = ref("");
 const activating = ref(false);
+
+// The canvas switched study: the status shown was for the previous one.
+watch(
+  () => props.studyCode,
+  (value) => {
+    if (!value) return;
+    studyCode.value = value;
+    compliance.value = null;
+    checked.value = false;
+    loadError.value = false;
+  }
+);
 
 const canCheck = computed(
   () => Boolean(studyCode.value.trim()) && Boolean(siteCode.value.trim())
