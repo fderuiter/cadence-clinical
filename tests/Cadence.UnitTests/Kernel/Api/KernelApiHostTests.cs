@@ -344,7 +344,7 @@ public sealed class KernelApiHostTests : IDisposable
 
     /// <summary>
     /// An object the caller may not see keeps its place and kind but nothing that identifies it: the node read, the
-    /// path (with the country above it) and the child list mask it, and search leaves it out. Visibility is asked for
+    /// path (with the country above it) mask it, and search leaves it out. Visibility is asked for
     /// the signed-in person.
     /// </summary>
     [Fact]
@@ -371,17 +371,49 @@ public sealed class KernelApiHostTests : IDisposable
                 (ZoomLevels.Country, null, "Blinded"),
                 (NodeKinds.StudySite, null, "Blinded"));
 
-        using var children = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}/children", ct);
+        using var hits = await ReadJsonAsync(client, "/api/v1/kernel/search?q=CAD", ct);
+        hits.RootElement.GetArrayLength().Should().Be(0);
+
+        _visibility.Readers.Should().NotBeEmpty().And.OnlyContain(r => r == Actor.Person(TestSecurityContext.DefaultIdentity.UserId));
+    }
+
+    /// <summary>
+    /// A hidden child of a visible node keeps its place in the list with only its kind and mask; its child count and
+    /// group are withheld.
+    /// </summary>
+    [Fact]
+    public async Task Children_MaskAHiddenChildInPlace()
+    {
+        _visibility.Hidden[StudySite.AtVersion(1)] = MaskReason.Blinded;
+        using var client = Client();
+
+        using var children = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}/children", TestContext.Current.CancellationToken);
+
         var child = children.RootElement.EnumerateArray().Should().ContainSingle().Subject;
         child.GetProperty("node").GetProperty("mask").GetString().Should().Be("Blinded");
         child.GetProperty("node").GetProperty("ref").ValueKind.Should().Be(JsonValueKind.Null);
         child.GetProperty("child_count").ValueKind.Should().Be(JsonValueKind.Null);
         child.GetProperty("group").ValueKind.Should().Be(JsonValueKind.Null);
+    }
 
-        using var hits = await ReadJsonAsync(client, "/api/v1/kernel/search?q=CAD", ct);
-        hits.RootElement.GetArrayLength().Should().Be(0);
+    /// <summary>
+    /// The children of a node the caller may not see are refused, not listed masked: the list would still say how many
+    /// there are, such as the participants another site has enrolled (#5033). Nothing about the children is read.
+    /// </summary>
+    [Fact]
+    public async Task Children_OfAHiddenNode_AreRefused()
+    {
+        _visibility.Hidden[Study.AtVersion(3)] = MaskReason.NotPermitted;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
 
-        _visibility.Readers.Should().NotBeEmpty().And.OnlyContain(r => r == Actor.Person(TestSecurityContext.DefaultIdentity.UserId));
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/nodes/{Study}/children", UriKind.Relative), ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        var body = await response.Content.ReadAsStringAsync(ct);
+        body.Should().NotContain("Hamburg").And.NotContain(StudySite.Id.ToString());
+        _navigator.ChildReads.Should().Be(0);
     }
 
     /// <summary>Until visibility is decided from the authority model, the host masks every object it reads.</summary>
@@ -805,9 +837,12 @@ public sealed class KernelApiHostTests : IDisposable
             return Task.FromResult(path);
         }
 
+        public int ChildReads { get; private set; }
+
         public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             Tenants.Add(tenant);
+            ChildReads++;
             IReadOnlyList<ScopeChild>? children = Find(node) is null ? null : [new ScopeChild(SiteSummary, 4, "DE")];
             return Task.FromResult(children);
         }

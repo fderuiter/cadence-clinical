@@ -19,6 +19,9 @@ internal static class KernelProblems
     internal static ProblemHttpResult WrongKind(NodeRef node, string expected) =>
         BadRequest("Wrong kind", $"{node} is a {node.Kind}; this endpoint takes a {expected}.");
 
+    internal static ProblemHttpResult NotVisible(string detail) =>
+        TypedResults.Problem(title: "Not visible", detail: detail, statusCode: StatusCodes.Status403Forbidden);
+
     internal static ProblemHttpResult NotFound(NodeRef node) =>
         TypedResults.Problem(title: "Not found", detail: $"{node} does not exist in your tenant.", statusCode: StatusCodes.Status404NotFound);
 }

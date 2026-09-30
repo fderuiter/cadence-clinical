@@ -25,7 +25,7 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 | --- | --- |
 | `nodes/{nodeRef}` | Summary of one object: `ref`, `kind`, `title`, `code`, `status`. |
 | `nodes/{nodeRef}/path` | Zoom path from the tenant down to the object (ADR-2481). |
-| `nodes/{nodeRef}/children` | Zoom children with their own child counts. |
+| `nodes/{nodeRef}/children` | Zoom children with their own child counts. A hidden node is refused with 403, since even masked its list would say how many children it has (#5033); a hidden child is masked in place. |
 | `nodes/{nodeRef}/commands` | Kernel commands offered on the object's kind, each with the caller's dry-run decision and explanation (ADR-2483). |
 | `authorization/can-i?capability=&resource=` | The caller's dry-run decision on one capability and object, with its explanation (ADR-2482). |
 | `search?q=&kind=&limit=` | Search hits by code or title (ADR-2484); `kind` repeats, `limit` is 1 to 50. |

@@ -85,7 +85,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** The children of a scope node, with their own child counts. */
+    /**
+     * The children of a scope node, with their own child counts.
+     * @description A node the caller may not see is refused; a child the caller may not see is masked in place (ADR-2471).
+     */
     get: operations["KernelGetChildren"];
     put?: never;
     post?: never;
