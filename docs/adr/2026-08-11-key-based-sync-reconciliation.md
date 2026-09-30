@@ -1,4 +1,6 @@
-# ADR-2167: Key-Based Sync Reconciliation
+# ADR-2359: Key-Based Sync Reconciliation
+
+Also known as: ADR-2167 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

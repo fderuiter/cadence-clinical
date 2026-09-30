@@ -1,5 +1,8 @@
 # Specification: Mathematical Relational & Tensor-Algebraic MDR (Neo4j Decommissioning)
 
+> [!NOTE]
+> **Status: decided.** Neo4j retirement is recorded in [ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) and the kernel specification (K007). Removal from compose is tracked in #4790.
+
 ## Problem Statement
 
 Clinical protocol metadata in Cadence Clinical was previously persisted using a Neo4j property graph database. While clinical protocol standards (such as CDISC USDM) refer to study definitions as "protocol graphs," the actual data structure is not an arbitrary-scale graph; it is a **stratified hierarchy (Poset)** coupled with a **bipartite incidence matrix** (Schedule of Activities) and an **acyclic version lineage tree (DAG)**.

@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Transactional SQL Engine with Standard GxP Auditing
+# ADR-2277: Transactional SQL Engine with Standard GxP Auditing
 
 ## Status
 

@@ -1,5 +1,8 @@
 # Cadence Clinical: Competitive Analysis, Market Superiority & Full-Spectrum Feature Blueprint
 
+> [!NOTE]
+> **Status: product vision, not a statement of implemented features.** For what exists see [ARCHITECTURE.md](../ARCHITECTURE.md); for the direction see the [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md).
+
 ## 1. Executive Summary & Market Transformation
 
 The global eClinical software market (exceeding $16 Billion annually) is dominated by legacy incumbents: **Veeva Vault Clinical Suite**, **Medidata Clinical Cloud (Dassault Systèmes)**, and **Oracle Life Sciences (Clinical One / Argus / DMW)**. 

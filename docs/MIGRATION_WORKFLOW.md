@@ -1,7 +1,7 @@
 # Cadence Clinical Platform: .NET 10 Migration Workflow & Playbook
 
 **Target Architecture:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
-**Governing ADRs:** [ADR-2233](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+**Governing ADRs:** [ADR-2233](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
 
 ---
@@ -302,7 +302,7 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 - Remove the decommissioned service path from `pyproject.toml` under `[tool.uv.workspace] members`.
 - Remove legacy Python test paths from pytest configurations.
-- Execute `dotnet cadence check` and `python scripts/sync_gxp.py` to confirm clean builds and 100% RTM compliance.
+- Execute `pnpm cadence check` and `pnpm cadence gxp sync` to confirm clean builds and 100% RTM compliance.
 
 ---
 

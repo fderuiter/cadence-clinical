@@ -1,4 +1,6 @@
-# ADR-2185: MSW Mock Gateway Simulator and Browser HMAC Verification Engine
+# ADR-2442: MSW Mock Gateway Simulator and Browser HMAC Verification Engine
+
+Also known as: ADR-2185 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-12

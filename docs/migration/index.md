@@ -1,7 +1,10 @@
 # .NET 10 Modernization Hub: Phase 0 Architectural Baseline
 
+> [!NOTE]
+> **Status: historical.** The Python-to-.NET 10 port this hub planned is complete. Current work is the kernel roadmap ([spec §15](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)). The documents in this folder are kept for traceability and for porting the remaining Python reference sources (#4789).
+
 **Platform Target:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
-**Governing Architecture Records:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), [ADR-2238](../adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)
+**Governing Architecture Records:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), [ADR-2238](../adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
 **Implementation Playbook:** [MIGRATION_WORKFLOW.md](../MIGRATION_WORKFLOW.md)
 
@@ -67,7 +70,7 @@ graph TD
    All 18 platform microservices (including the 7 operational services previously utilizing SQLite—safety, interop, tickets, notifications, econsent, eisf, fileshare) standardize on PostgreSQL 14+ with logical database or schema-level multi-tenant isolation. This enables uniform deployment of Entity Framework Core 10, compiled models, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing under 21 CFR Part 11.
 2. **Hybrid Strongly-Typed JSONB Record Projection ([ADR-2238](../adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md)):**
    Dynamic clinical observation fields (`ClinicalObservation.additional_properties`) and eCRF submissions (`FormSubmission.form_data`) are mapped to strongly-typed C# 14 record hierarchies serialized to PostgreSQL `jsonb` via `System.Text.Json` source generation, paired with fallback unmapped property dictionaries for forward compatibility.
-3. **MassTransit Transactional Outbox Event Spine ([ADR-2234](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)):**
+3. **MassTransit Transactional Outbox Event Spine ([ADR-2428](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)):**
    Domain entity state mutations and outbound event messages are committed atomically into PostgreSQL within the same EF Core database transaction, eliminating dual-write failure windows under 21 CFR Part 11.
 4. **Single-Assembly Clean Architecture ([ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md)):**
    Each microservice encapsulates internal namespace layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) in a single project assembly (`Cadence.Apps.<Service>.csproj`), preventing multi-assembly bloat while strictly enforcing unidirectional dependency flow via `ArchUnitNET`.

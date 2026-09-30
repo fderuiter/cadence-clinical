@@ -1,4 +1,6 @@
-# ADR-062: eTMF Filterable and Paginated Audit Log API
+# ADR-2351: eTMF Filterable and Paginated Audit Log API
+
+Also known as: ADR-062 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-09

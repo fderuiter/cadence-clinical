@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: Separate Monolithic Clinical Workflows into Modular Sub-routers
+# ADR-2370: Separate Monolithic Clinical Workflows into Modular Sub-routers
 
 - **Status:** Accepted
 - **Date:** 2026-08-12

@@ -1,4 +1,6 @@
-# ADR-2170: Unified Cryptographic Fingerprint Verification API
+# ADR-2371: Unified Cryptographic Fingerprint Verification API
+
+Also known as: ADR-2170 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-12

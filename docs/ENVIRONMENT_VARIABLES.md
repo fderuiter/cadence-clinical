@@ -27,7 +27,7 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
 | `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext | none | yes (or `POSTGRES_CONNECTION_STRING`) |
-| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every design-time `*DbContextFactory.cs` via `ResolveDesignTimeConnectionString` (`dotnet ef`); `packages/cli/src/Services/DatabaseResetService.cs` | none | yes (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need it |
+| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every design-time `*DbContextFactory.cs` (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`); `packages/cli/src/Services/DatabaseResetService.cs` | none | yes (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need it |
 | `Database__MigrateOnStartup` | `packages/database/src/CadenceMigrationHostedService.cs` (every service with a DbContext) | `false` | no; applies migrations before serving |
 | `Database__MigrateOnly` | same | `false` | no; applies migrations and exits 0 (deployment job) |
 | `DATABASE_URL` | `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts `postgresql+asyncpg://` URLs) | none | no |
@@ -98,6 +98,7 @@ Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClu
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:59-60` | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:152` | off |
 | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | `packages/cli/src/Services/DatabaseResetService.cs:44-46` (Neo4j is being retired, #4790) | `bolt://localhost:7687`, `neo4j`, none (`db reset` requires `NEO4J_PASSWORD`) |
+| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
 ## Web apps
 

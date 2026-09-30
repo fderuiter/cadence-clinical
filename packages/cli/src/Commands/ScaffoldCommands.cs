@@ -140,10 +140,12 @@ Describe the background, architectural context, and the specific technical or bu
         if (File.Exists(indexFile))
         {
             string indexContent = File.ReadAllText(indexFile);
-            string entry = $"- [{todayStr}: {title}]({filename})";
+            string entry = $"- [ADR-{adrNum}: {title}]({filename}) ({todayStr})";
             if (!indexContent.Contains(filename))
             {
-                File.AppendAllText(indexFile, $"\n{entry}\n");
+                // Append directly under the last list so the index keeps no blank-line gaps inside lists.
+                string separator = indexContent.EndsWith('\n') ? "" : "\n";
+                File.AppendAllText(indexFile, $"{separator}{entry}\n");
                 AnsiConsole.MarkupLine($"[green]Successfully indexed {filename} in {indexFile}[/]");
             }
         }

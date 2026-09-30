@@ -1,4 +1,6 @@
-# ADR-2184: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing
+# ADR-2387: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing
+
+Also known as: ADR-2184 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-18

@@ -1,4 +1,6 @@
-# ADR-256: Centralized layout utilities and 48px touch targets
+# ADR-2328: Centralized layout utilities and 48px touch targets
+
+Also known as: ADR-256 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

@@ -1,4 +1,6 @@
-# ADR-134: Interactive SoA Builder Web Client (Phase 19)
+# ADR-2432: Interactive SoA Builder Web Client (Phase 19)
+
+Also known as: ADR-134 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-04
