@@ -6,6 +6,7 @@ using Cadence.Core.Domain.Rules;
 using Cadence.Core.Domain.Supply;
 using Cadence.Core.Domain.Toxicity;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -137,11 +138,13 @@ public class DomainEngineUnitTests
         var auth = DTPLogisticsEngine.EvaluateDtpDispatch(
             studyId: "STUDY-01", siteId: "SITE-01", subjectId: "SUBJ-01",
             kitNumber: "KIT-999", lotNumber: "LOT-100", daysUntilExpiry: 60,
+            authorizedAt: FakeClock.DefaultStart,
             temperatureReadings: readings
         );
 
         auth.IsEligibleForDispatch.Should().BeTrue();
         auth.TamperSealId.Should().StartWith("SEAL-");
+        auth.AuthorizedTimestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
     }
 
     [Fact]
@@ -152,6 +155,7 @@ public class DomainEngineUnitTests
             testCode: "ALT",
             value: 300.0,
             unit: "U/L",
+            evaluatedAt: FakeClock.DefaultStart,
             refHigh: 50.0
         );
 
@@ -159,6 +163,8 @@ public class DomainEngineUnitTests
         result.IsCriticalAeTrigger.Should().BeTrue();
         result.AeDraft.Should().NotBeNull();
         result.AeDraft!.Severity.Should().Be("SEVERE");
+        result.EvalTimestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
+        result.AeDraft.DraftTimestamp.Should().Be(result.EvalTimestamp);
     }
 
     [Fact]
@@ -166,17 +172,19 @@ public class DomainEngineUnitTests
     {
         var eval = LabToxicityGradingEngine.EvaluateHysLaw(
             alt: 200, ast: 180, tbil: 4.5, alkp: 100,
-            altUln: 50, astUln: 50, tbilUln: 1.2, alkpUln: 120
+            altUln: 50, astUln: 50, tbilUln: 1.2, alkpUln: 120,
+            evaluatedAt: FakeClock.DefaultStart
         );
 
         eval.IsHysLawMet.Should().BeTrue();
         eval.AlertLevel.Should().Be("HYS_LAW_CRITICAL");
+        eval.EvalTimestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
     }
 
     [Fact]
     public void RuleEvaluator_EvaluatesAstAndJsonLogic()
     {
-        var evaluator = new RuleEvaluator();
+        var evaluator = new RuleEvaluator(FakeClock.DefaultStart.UtcDateTime);
 
         var astNode = new ExpressionNode
         {

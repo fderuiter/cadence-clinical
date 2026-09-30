@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Open (`apps/` done; `packages/engine_core` left) |
+| **Status** | Open (`apps/` and `packages/engine_core` done; `packages/database` interceptor and other shared packages left) |
 | **Date** | 2026-09-29 |
 | **Spec** | `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` §4.1 K-TIME-3, §10 |
 | **Issue** | #4784 |
@@ -34,50 +34,32 @@
 
 ## What is left
 
-The analyzer is **not** yet enabled for `packages/engine_core` or the other shared packages under `packages/`
-outside `packages/kernel/`. Enabling it there today would break the build. Each follow-up below removes one group
-of violations. Once a group is clean, that project sets `<CadenceBanWallClock>true</CadenceBanWallClock>` in its
-`.csproj`. The kernel slices thread owns this remainder.
+The analyzer is **not** yet enabled for `packages/database` or the other shared packages under `packages/`
+outside `packages/kernel/` and `packages/engine_core/`. Once a project is clean, it sets
+`<CadenceBanWallClock>true</CadenceBanWallClock>` in its `.csproj`.
+
+- `packages/database`: `GxPAuditInterceptor` falls back to `DateTime.UtcNow` when no clock is passed. The security
+  thread owns this change (audit code): take a required `IClock`, then opt the project in.
+- `packages/compliance`, `packages/deid`, `packages/hexagonal`, `packages/security`, `packages/tooling_core`,
+  `packages/cli` and `packages/testing` still read the wall clock (find them with the grep below over `packages/`).
 
 The counts below are from `main` at the base of this change and exclude EF `Migrations/`.
 
-### `apps/*/src` (done: 110 property initializers in 14 apps and 2 fallbacks in execution)
+### `packages/engine_core` (done)
 
-| App | Violations | File | Kind |
-| --- | ---: | --- | --- |
-| payments | ~~22~~ 0 | `Domain/PaymentEntities.cs` | Done |
-| interop | ~~19~~ 0 | `Domain/InteropEntities.cs` | Done: `DeviceTimestamp` and `ServerTimestamp` no longer both default to server now (spec §10) |
-| econsent | ~~16~~ 0 | `Domain/EconsentEntities.cs` | Done |
-| safety | ~~15~~ 0 | `Domain/SafetyEntities.cs` | Done |
-| imaging | ~~10~~ 0 | `Domain/ImagingEntities.cs` | Done |
-| knowledge | ~~6~~ 0 | `Domain/KnowledgeEntities.cs` | Done |
-| etmf | ~~4~~ 0 | `Domain/EtmfEntities.cs` | Done |
-| org | ~~4~~ 0 | `Domain/OrgEntities.cs` | Done |
-| tickets | ~~4~~ 0 | `Domain/TicketEntities.cs` | Done |
-| eisf | ~~3~~ 0 | `Domain/EisfEntities.cs` | Done |
-| fileshare | ~~3~~ 0 | `Domain/FileshareEntities.cs` | Done |
-| notifications | ~~2~~ 0 | `Domain/NotificationEntities.cs` | Done |
-| ctms | ~~1~~ 0 | `Domain/CtmsEntities.cs` | Done |
-| quality | ~~1~~ 0 | `Domain/QualityEntities.cs` | Done |
-| execution | ~~2~~ 0 | `Domain/Queries/ClinicalQuery.cs:141` | Done. `ClinicalQuery.Close` now requires the time, and SDV verification, query resolution and escalation are `DateTimeOffset`. Before this, the service passed `IClock.UtcNow.DateTime` (`DateTimeKind.Unspecified`), which Npgsql refuses for `timestamptz`, so SDV and query close failed on PostgreSQL. An observation time without an offset is now stored as UTC. `ObservationDate` stays `DateTime` (valid time from the caller) |
+The project opts into the ban. None of these changes needed a migration or changes the audit hash format.
 
-Per app, the follow-up is the same: remove the initializer, make the property a `required DateTimeOffset`
-(`timestamptz`), set the value from `IClock` wherever the app creates the row, opt the project in, and add an EF
-migration if `has-pending-model-changes` reports one.
-
-### `packages/engine_core` (deferred: changing these cascades)
-
-| File | Violations | Why it is deferred |
+| File | Violations | Change |
 | --- | ---: | --- |
-| `AggregateRootBase.cs:10` | 1 | `CreatedAt` is `DateTime` and implements `IGxPAuditable.CreatedAt` (`DateTime`). Moving to `DateTimeOffset` changes the interface, `GxPAuditInterceptor`, and the aggregates in execution, ctms, etmf, fileshare, quality, `packages/database`, `packages/hexagonal` and `packages/kernel`, with EF column-type migrations. |
-| `Audit/AuditLogEntry.cs:17` | 1 | `Timestamp` is `DateTime` and feeds `ComputeBlockHash` as `{timestamp:O}`. Moving to `DateTimeOffset` changes the hashed text (`Z` becomes `+00:00`) and breaks Merkle-chain verification of rows already written. There are 18 `new AuditLogEntry` call sites in 17 files (15 of them under `apps/`). This needs its own ADR and a hash-version field. |
-| `Rules/RuleAst.cs:45` | 1 | `CreatedAt` initializer (JSON-serialised rule metadata) |
-| `Rules/RuleEvaluator.cs:34` | 1 | `asOf ?? DateTime.UtcNow` fallback |
-| `Toxicity/LabToxicityGradingEngine.cs` | 8 | `EvalTimestamp`/`DraftTimestamp` strings |
-| `Supply/DTPLogisticsEngine.cs:107` | 1 | `AuthorizedTimestamp` string |
+| `AggregateRootBase.cs` | ~~1~~ 0 | `CreatedAt` has no default. Every save path already stamps it from its clock: the kernel command transaction, and `GxPAuditInterceptor` for execution. It stays `DateTime`, so `IGxPAuditable` and the columns do not change. No code in quality, ctms, etmf or fileshare writes their aggregates yet. The first writer there needs a save path that stamps `CreatedAt`, such as `GxPAuditInterceptor`. |
+| `Audit/AuditLogEntry.cs` | ~~1~~ 0 | `Timestamp` is `required` and stays `DateTime`, so the hashed `{timestamp:O}` text does not change. The only writer, `GxPAuditInterceptor`, already set it. |
+| `Rules/RuleAst.cs` | ~~1~~ 0 | `RuleDefinition.CreatedAt` is a `required DateTimeOffset` |
+| `Rules/RuleEvaluator.cs` | ~~1~~ 0 | `asOf` is a required constructor argument |
+| `Toxicity/LabToxicityGradingEngine.cs` | ~~8~~ 0 | `EvaluateObservation` and `EvaluateHysLaw` take `evaluatedAt` |
+| `Supply/DTPLogisticsEngine.cs` | ~~1~~ 0 | `EvaluateDtpDispatch` takes `authorizedAt` |
 
 ## How to count again
 
 ```bash
-grep -rEn 'DateTime(Offset)?\.(Utc)?Now\b' --include=*.cs apps/*/src/Domain packages/engine_core/src
+grep -rEn 'DateTime(Offset)?\.(Utc)?Now\b' --include=*.cs --exclude-dir=Migrations apps packages
 ```

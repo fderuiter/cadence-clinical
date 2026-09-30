@@ -5,6 +5,7 @@ using System.Text.Json;
 
 using Cadence.Core.Domain.Rules;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -19,6 +20,7 @@ public class RuleChecksumTests
         RuleId = "RULE-001",
         StudyId = "STUDY-001",
         RuleType = "edit_check",
+        CreatedAt = FakeClock.DefaultStart,
         Condition = new ExpressionNode
         {
             Type = "comparison",

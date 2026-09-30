@@ -47,6 +47,7 @@ public static class DTPLogisticsEngine
         string kitNumber,
         string lotNumber,
         int daysUntilExpiry,
+        DateTimeOffset authorizedAt,
         bool isQuarantined = false,
         bool isRecalled = false,
         IReadOnlyList<TemperatureReading>? temperatureReadings = null,
@@ -105,7 +106,7 @@ public static class DTPLogisticsEngine
             RejectionReasons: rejectionReasons,
             CalculatedMktCelsius: calculatedMkt,
             TamperSealId: tamperSealId,
-            AuthorizedTimestamp: DateTime.UtcNow.ToString("o")
+            AuthorizedTimestamp: authorizedAt.UtcDateTime.ToString("o")
         );
     }
 }

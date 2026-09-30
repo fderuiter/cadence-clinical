@@ -39,7 +39,7 @@ public class RuleEvaluatorTests
         Node("function", op, values.Select(C).ToArray());
 
     private static object? Eval(ExpressionNode node, Dictionary<string, object?>? context = null, bool strict = false) =>
-        new RuleEvaluator(strict, AsOf).Evaluate(node, context ?? []);
+        new RuleEvaluator(AsOf, strict).Evaluate(node, context ?? []);
 
     // ---------------------------------------------------------------- Node types
 

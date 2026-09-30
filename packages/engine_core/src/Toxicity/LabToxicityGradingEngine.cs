@@ -127,6 +127,7 @@ public class LabToxicityGradingEngine
         string testCode,
         double value,
         string unit,
+        DateTimeOffset evaluatedAt,
         double? refLow = null,
         double? refHigh = null,
         double? baselineValue = null,
@@ -158,7 +159,7 @@ public class LabToxicityGradingEngine
                 RefHigh: refHigh,
                 BaselineValue: baselineValue,
                 Grade: CTCAEGrade.GRADE_0,
-                EvalTimestamp: DateTime.UtcNow.ToString("o")
+                EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -233,7 +234,7 @@ public class LabToxicityGradingEngine
                 MeddraTerm: rule.MeddraTerm ?? $"{testTitle} abnormal",
                 IsSerious: true,
                 HysLawIndicated: false,
-                DraftTimestamp: DateTime.UtcNow.ToString("o")
+                DraftTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -252,20 +253,21 @@ public class LabToxicityGradingEngine
             IsDeltaCheckAlert: isDeltaAlert,
             DeltaPercentage: deltaPct,
             AeDraft: aeDraft,
-            EvalTimestamp: DateTime.UtcNow.ToString("o")
+            EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
         );
     }
 
     public static HysLawEvaluation EvaluateHysLaw(
         double alt, double ast, double tbil, double alkp,
-        double altUln, double astUln, double tbilUln, double alkpUln)
+        double altUln, double astUln, double tbilUln, double alkpUln,
+        DateTimeOffset evaluatedAt)
     {
         if (altUln <= 0 || astUln <= 0 || tbilUln <= 0 || alkpUln <= 0)
         {
             return new HysLawEvaluation(
                 AltAstRatioUln: 0.0, TbilRatioUln: 0.0, AlkpRatioUln: 0.0,
                 AlertLevel: "NORMAL", Rationale: "ULN reference bounds not fully defined for all hepatic analytes",
-                EvalTimestamp: DateTime.UtcNow.ToString("o")
+                EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -289,7 +291,7 @@ public class LabToxicityGradingEngine
                 IsHysLawMet: true,
                 Rationale: $"Hy's Law DILI Criteria MET: ALT/AST {maxTransaminaseRatio:F2}x ULN (>=3.0x), " +
                            $"Total Bilirubin {tbilRatio:F2}x ULN (>=2.0x), and ALKP {alkpRatio:F2}x ULN (<2.0x).",
-                EvalTimestamp: DateTime.UtcNow.ToString("o")
+                EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -302,7 +304,7 @@ public class LabToxicityGradingEngine
                 AlertLevel: "POTENTIAL_DILI_WARNING",
                 Rationale: $"Potential DILI with Cholestasis: ALT/AST {maxTransaminaseRatio:F2}x ULN (>=3.0x) " +
                            $"and TBIL {tbilRatio:F2}x ULN (>=2.0x), but ALKP is elevated ({alkpRatio:F2}x ULN >= 2.0x).",
-                EvalTimestamp: DateTime.UtcNow.ToString("o")
+                EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -314,7 +316,7 @@ public class LabToxicityGradingEngine
                 AlkpRatioUln: Math.Round(alkpRatio, 2),
                 AlertLevel: "BORDERLINE_HEPATIC",
                 Rationale: $"Borderline hepatic elevation: Transaminases {maxTransaminaseRatio:F2}x ULN, TBIL {tbilRatio:F2}x ULN.",
-                EvalTimestamp: DateTime.UtcNow.ToString("o")
+                EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
             );
         }
 
@@ -324,7 +326,7 @@ public class LabToxicityGradingEngine
             AlkpRatioUln: Math.Round(alkpRatio, 2),
             AlertLevel: "NORMAL",
             Rationale: "Hepatic biomarkers within acceptable non-DILI boundaries.",
-            EvalTimestamp: DateTime.UtcNow.ToString("o")
+            EvalTimestamp: evaluatedAt.UtcDateTime.ToString("o")
         );
     }
 }
