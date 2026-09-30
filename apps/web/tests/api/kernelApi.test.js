@@ -107,6 +107,71 @@ describe("kernelApi (ADR-2540)", () => {
     expect(lastRequest().url.searchParams.has("kind")).toBe(false);
   });
 
+  it("traces backward by default and sends nothing it wasn't given", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { nodes: [], edges: [] }));
+
+    await kernelApi.trace(STUDY);
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe(
+      `/api/v1/kernel/nodes/${encodeURIComponent(STUDY)}/lineage`
+    );
+    expect(url.search).toBe("");
+  });
+
+  it("traces with the direction, depth, each edge kind and both times", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { nodes: [], edges: [] }));
+
+    await kernelApi.trace(STUDY, {
+      direction: "Forward",
+      depth: 3,
+      edgeKinds: ["DerivedFrom", "GovernedBy"],
+      validAt: "2026-06-01T00:00:00Z",
+      knownAt: "2026-07-01T00:00:00Z",
+    });
+
+    const { url } = lastRequest();
+    expect(url.searchParams.get("direction")).toBe("Forward");
+    expect(url.searchParams.get("depth")).toBe("3");
+    expect(url.searchParams.getAll("edge_kind")).toEqual([
+      "DerivedFrom",
+      "GovernedBy",
+    ]);
+    expect(url.searchParams.get("valid_at")).toBe("2026-06-01T00:00:00Z");
+    expect(url.searchParams.get("known_at")).toBe("2026-07-01T00:00:00Z");
+  });
+
+  it("reads an object's dependents, with no edge kind when none is asked for", async () => {
+    const report = { start: STUDY, groups: [], total: 0, truncated: false };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, report));
+
+    await expect(
+      kernelApi.dependents(STUDY, { depth: 5, edgeKinds: [] })
+    ).resolves.toEqual(report);
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe(
+      `/api/v1/kernel/nodes/${encodeURIComponent(STUDY)}/dependents`
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({ depth: "5" });
+  });
+
+  it("reads a protocol amendment's impact", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { amended: VERSION }));
+
+    await kernelApi.amendmentImpact(VERSION, {
+      validAt: "2026-06-01T00:00:00Z",
+    });
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe(
+      `/api/v1/kernel/protocol-versions/${encodeURIComponent(VERSION)}/impact`
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      valid_at: "2026-06-01T00:00:00Z",
+    });
+  });
+
   it.each([
     [403, "Your sign-in's tenant is not an active kernel tenant."],
     [404, "study:x does not exist in your tenant."],

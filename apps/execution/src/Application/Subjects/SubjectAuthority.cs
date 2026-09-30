@@ -34,9 +34,14 @@ public static class SubjectAuthority
     }
 
     /// <summary>
-    /// Whether <paramref name="role"/> may move a participant to <see cref="SubjectState.Unblinded"/>: the roles the
-    /// permission matrix grants <c>rtsm_unblind</c> (emergency unblinder, principal investigator, authorized ER
-    /// physician, lead investigator).
+    /// The shortest clinical justification an emergency unblinding accepts, in characters (PRD-SUB-005, #4982).
+    /// </summary>
+    public const int MinimumUnblindingReasonLength = 50;
+
+    /// <summary>
+    /// Whether <paramref name="role"/> may move a participant to <see cref="SubjectState.Unblinded"/>: the principal
+    /// investigator or an authorized ER physician, the only roles PRD-SUB-005 allows to trigger emergency
+    /// unblinding (#4982).
     /// </summary>
     public static bool CanUnblind(string role)
     {
@@ -46,10 +51,8 @@ public static class SubjectAuthority
         }
 
         var normalized = role.Trim().ToLowerInvariant();
-        return normalized is "emergency_unblinder" or "emergency unblinder"
-            or "principal_investigator" or "principal investigator" or "pi"
-            or "authorized_er_physician" or "authorized er physician"
-            or "lead_investigator" or "lead investigator";
+        return normalized is "principal_investigator" or "principal investigator" or "pi"
+            or "authorized_er_physician" or "authorized er physician";
     }
 
     /// <summary>

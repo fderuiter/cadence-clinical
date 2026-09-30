@@ -18,7 +18,13 @@ vi.mock("../../src/api/executionApi", () => ({
 }));
 
 vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: { getCommands: vi.fn(), search: vi.fn() },
+  kernelApi: {
+    getCommands: vi.fn(),
+    search: vi.fn(),
+    trace: vi.fn(),
+    dependents: vi.fn(),
+  },
+  isMasked: (object) => object.mask !== null,
 }));
 
 const ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
@@ -94,7 +100,7 @@ function permitted(command, capability) {
   };
 }
 
-describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
+describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540)", () => {
   let pinia;
   let router;
   let wrapper;
@@ -122,6 +128,8 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
     });
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     vi.mocked(kernelApi.getCommands).mockReset();
+    vi.mocked(kernelApi.trace).mockReset();
+    vi.mocked(kernelApi.dependents).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -233,6 +241,141 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
     );
   });
 
+  const SITE = "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000000c@2";
+  const node = (handle, kind, distance, mask = null) => ({
+    handle,
+    kind,
+    ref: mask ? null : handle,
+    mask,
+    distance,
+  });
+
+  it("traces where the participant came from, showing hidden objects in place", async () => {
+    vi.mocked(kernelApi.trace).mockResolvedValue({
+      start: REF,
+      direction: "Backward",
+      depth: 10,
+      nodes: [
+        node(REF, "participant", 0),
+        node(SITE, "study_site", 1),
+        node("masked:1", "consent", 1, "Blinded"),
+      ],
+      edges: [
+        { from: REF, to: SITE, kind: "GovernedBy" },
+        { from: REF, to: "masked:1", kind: "RequiredBy" },
+      ],
+      truncated: true,
+    });
+    await openParticipant();
+    expect(kernelApi.trace).not.toHaveBeenCalled();
+
+    await wrapper.find("#verb-trace").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.trace).toHaveBeenCalledWith(REF);
+    expect(wrapper.find("#verb-trace").attributes("aria-pressed")).toBe("true");
+    const edges = wrapper.findAll("#kernel-trace-list .lineage-edge");
+    expect(edges.map((e) => e.text().replace(/\s+/g, " "))).toEqual([
+      `${REF} governed by ${SITE}`,
+      `${REF} required by Hidden consent (blinded)`,
+    ]);
+    expect(wrapper.find("#kernel-trace").text()).toContain(
+      "The lineage goes further than the 10 steps shown."
+    );
+  });
+
+  it("counts what depends on the participant by kind, hidden objects included", async () => {
+    vi.mocked(kernelApi.dependents).mockResolvedValue({
+      start: REF,
+      depth: 10,
+      groups: [
+        {
+          kind: "observation",
+          count: 2,
+          objects: [
+            node(
+              "observation:0192f3c4-5e6a-7b8c-9d0e-00000000000d",
+              "observation",
+              1
+            ),
+            node("masked:1", "observation", 1, "NotPermitted"),
+          ],
+        },
+      ],
+      total: 2,
+      truncated: false,
+    });
+    await openParticipant();
+
+    await wrapper.find("#verb-impact").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.dependents).toHaveBeenCalledWith(REF);
+    expect(wrapper.find("#kernel-impact-total").text()).toBe(
+      "2 dependent objects"
+    );
+    const group = wrapper.find('#kernel-impact-list [data-kind="observation"]');
+    expect(group.find("summary").text().replace(/\s+/g, " ")).toBe(
+      "observation: 2"
+    );
+    expect(group.text()).toContain("Hidden observation (not permitted)");
+  });
+
+  it("says the count is a lower bound when the kernel cut the walk short", async () => {
+    vi.mocked(kernelApi.dependents).mockResolvedValue({
+      start: REF,
+      depth: 10,
+      groups: [{ kind: "observation", count: 1, objects: [] }],
+      total: 1,
+      truncated: true,
+    });
+    await openParticipant();
+
+    await wrapper.find("#verb-impact").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#kernel-impact-total").text()).toBe(
+      "At least 1 dependent object"
+    );
+  });
+
+  it.each([
+    ["trace", "The kernel records nothing this came from."],
+    ["impact", "Nothing the kernel records depends on this."],
+  ])("says when %s finds nothing", async (verb, message) => {
+    vi.mocked(kernelApi.trace).mockResolvedValue({
+      nodes: [node(REF, "participant", 0)],
+      edges: [],
+      truncated: false,
+    });
+    vi.mocked(kernelApi.dependents).mockResolvedValue({
+      groups: [],
+      total: 0,
+      truncated: false,
+    });
+    await openParticipant();
+
+    await wrapper.find(`#verb-${verb}`).trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(`#kernel-${verb}`).text()).toContain(message);
+  });
+
+  it("reports a lineage refusal as it is", async () => {
+    vi.mocked(kernelApi.trace).mockRejectedValue(
+      new ApiError("Lineage reads name their reader.", 403)
+    );
+    await openParticipant();
+
+    await wrapper.find("#verb-trace").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#kernel-trace [role=alert]").text()).toBe(
+      "The kernel couldn't answer: Lineage reads name their reader."
+    );
+    expect(wrapper.find("#kernel-trace-list").exists()).toBe(false);
+  });
+
   it("goes back to Details when another object is selected", async () => {
     vi.mocked(kernelApi.getCommands).mockResolvedValue([]);
     await openParticipant();
@@ -254,7 +397,7 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
 });
 
 describe("CanvasInspector on an observation", () => {
-  it("keeps Act and Explain disabled, since an observation has no kernel reference yet", async () => {
+  it("keeps the kernel verbs disabled, since an observation has no kernel reference yet", async () => {
     const wrapper = mount(CanvasInspector, {
       props: {
         studyCode: "CAD-101",
@@ -275,7 +418,7 @@ describe("CanvasInspector on an observation", () => {
       global: { stubs: { RouterLink: true } },
     });
 
-    for (const verb of ["act", "explain"]) {
+    for (const verb of ["trace", "impact", "act", "explain"]) {
       const button = wrapper.find(`#verb-${verb}`);
       expect(button.attributes("aria-disabled")).toBe("true");
       await button.trigger("click");
@@ -284,6 +427,8 @@ describe("CanvasInspector on an observation", () => {
       );
     }
     expect(kernelApi.getCommands).not.toHaveBeenCalled();
+    expect(kernelApi.trace).not.toHaveBeenCalled();
+    expect(kernelApi.dependents).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 });

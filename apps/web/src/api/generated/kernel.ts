@@ -192,6 +192,63 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/nodes/{nodeRef}/lineage": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Walks an object's lineage backward to its inputs or forward to its dependents.
+     * @description direction is Backward (default) or Forward; depth 1 to 50 (default 10); edge_kind repeats (for example DerivedFrom); valid_at and known_at read the graph as it was.
+     */
+    get: operations["KernelTrace"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/nodes/{nodeRef}/dependents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * What depends on an object, grouped by kind with counts.
+     * @description Masked objects are counted like any other, so a count never depends on the reader. depth 1 to 50 (default 10); edge_kind repeats; valid_at and known_at read the graph as it was.
+     */
+    get: operations["KernelDependents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocol-versions/{versionRef}/impact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** What depends on the version a protocol amendment changes (K-PROT-2). */
+    get: operations["KernelAmendmentImpact"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -199,6 +256,12 @@ export interface components {
     Kernel_AnonymousTypeOfstringAndstring: {
       status: null | string;
       service: null | string;
+    };
+    Kernel_KernelAmendmentImpactResponse: {
+      amended: string;
+      parent: string;
+      impacted_elements: string[];
+      dependents: components["schemas"]["Kernel_KernelDependentsResponse"];
     };
     Kernel_KernelChildResponse: {
       node: components["schemas"]["Kernel_KernelNodeResponse"];
@@ -224,6 +287,25 @@ export interface components {
       reason: null | string;
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
     };
+    Kernel_KernelDependentGroupResponse: {
+      kind: string;
+      /** Format: int32 */
+      count: number | string;
+      objects: components["schemas"]["Kernel_KernelLineageNodeResponse"][];
+    };
+    Kernel_KernelDependentsResponse: {
+      start: string;
+      /** Format: int32 */
+      depth: number | string;
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      groups: components["schemas"]["Kernel_KernelDependentGroupResponse"][];
+      /** Format: int32 */
+      total: number | string;
+      truncated: boolean;
+    };
     Kernel_KernelExplanationResponse: {
       subject: null | string;
       claim: string;
@@ -235,6 +317,38 @@ export interface components {
     Kernel_KernelExplanationStepResponse: {
       claim: string;
       evidence: string[];
+    };
+    Kernel_KernelLineageEdgeResponse: {
+      from: string;
+      to: string;
+      kind: string;
+      /** Format: uuid */
+      activity: null | string;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: date-time */
+      valid_from: null | string;
+    };
+    Kernel_KernelLineageNodeResponse: {
+      handle: string;
+      kind: string;
+      ref: null | string;
+      mask: null | string;
+      /** Format: int32 */
+      distance: number | string;
+    };
+    Kernel_KernelLineageResponse: {
+      start: string;
+      direction: string;
+      /** Format: int32 */
+      depth: number | string;
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      nodes: components["schemas"]["Kernel_KernelLineageNodeResponse"][];
+      edges: components["schemas"]["Kernel_KernelLineageEdgeResponse"][];
+      truncated: boolean;
     };
     Kernel_KernelNextActionResponse: {
       description: string;
@@ -735,6 +849,177 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelProtocolVersionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelTrace: {
+    parameters: {
+      query?: {
+        direction?: string;
+        depth?: number | string;
+        edge_kind?: string[];
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path: {
+        nodeRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelLineageResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelDependents: {
+    parameters: {
+      query?: {
+        depth?: number | string;
+        edge_kind?: string[];
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path: {
+        nodeRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelDependentsResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelAmendmentImpact: {
+    parameters: {
+      query?: {
+        depth?: number | string;
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelAmendmentImpactResponse"];
         };
       };
       /** @description Bad Request */

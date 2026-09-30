@@ -21,6 +21,27 @@ export type KernelCommand = Schemas["Kernel_KernelCommandResponse"];
 export type KernelSearchHit = Schemas["Kernel_KernelSearchHitResponse"];
 export type KernelProtocolVersion =
   Schemas["Kernel_KernelProtocolVersionResponse"];
+export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
+export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
+export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
+export type KernelDependentGroup =
+  Schemas["Kernel_KernelDependentGroupResponse"];
+export type KernelDependents = Schemas["Kernel_KernelDependentsResponse"];
+export type KernelAmendmentImpact =
+  Schemas["Kernel_KernelAmendmentImpactResponse"];
+
+/** How far and along which edges a lineage read goes, and as of when (ADR-2471). The host's defaults apply to anything left out. */
+export interface KernelLineageWindow {
+  depth?: number;
+  edgeKinds?: string[];
+  validAt?: string;
+  knownAt?: string;
+}
+
+export interface KernelTraceQuery extends KernelLineageWindow {
+  /** `Backward` toward inputs (the default) or `Forward` toward dependents. */
+  direction?: "Backward" | "Forward";
+}
 
 export interface KernelSearchQuery {
   text: string;
@@ -34,6 +55,20 @@ export function isMasked(object: { mask: string | null }): boolean {
 }
 
 const client = createOpenApiClient<paths>();
+
+function windowQuery({
+  depth,
+  edgeKinds,
+  validAt,
+  knownAt,
+}: KernelLineageWindow) {
+  return {
+    depth,
+    edge_kind: edgeKinds && edgeKinds.length > 0 ? edgeKinds : undefined,
+    valid_at: validAt,
+    known_at: knownAt,
+  };
+}
 
 export const kernelApi = {
   /** Summary of one object at its current version (GET /api/v1/kernel/nodes/{nodeRef}). */
@@ -114,6 +149,43 @@ export const kernelApi = {
     return unwrapResponse(
       client.GET("/api/v1/kernel/protocol-versions/{versionRef}", {
         params: { path: { versionRef } },
+      })
+    );
+  },
+
+  /** Trace: the object's lineage walk, backward to its inputs by default. Masked objects keep their place (ADR-2471). */
+  trace(nodeRef: string, query: KernelTraceQuery = {}): Promise<KernelLineage> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/nodes/{nodeRef}/lineage", {
+        params: {
+          path: { nodeRef },
+          query: { direction: query.direction, ...windowQuery(query) },
+        },
+      })
+    );
+  },
+
+  /** Impact: what depends on the object, grouped by kind; masked objects are counted like any other (Canvas D2). */
+  dependents(
+    nodeRef: string,
+    window: KernelLineageWindow = {}
+  ): Promise<KernelDependents> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/nodes/{nodeRef}/dependents", {
+        params: { path: { nodeRef }, query: windowQuery(window) },
+      })
+    );
+  },
+
+  /** What depends on the version a protocol amendment changes (K-PROT-2). A first version amends nothing and is refused. */
+  amendmentImpact(
+    versionRef: string,
+    window: Omit<KernelLineageWindow, "edgeKinds"> = {}
+  ): Promise<KernelAmendmentImpact> {
+    const { depth, valid_at, known_at } = windowQuery(window);
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/protocol-versions/{versionRef}/impact", {
+        params: { path: { versionRef }, query: { depth, valid_at, known_at } },
       })
     );
   },

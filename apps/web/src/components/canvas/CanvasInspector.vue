@@ -70,6 +70,14 @@
         @explain="explainCommand"
       />
 
+      <KernelLineagePanel
+        v-else-if="
+          (currentVerb === 'trace' || currentVerb === 'impact') && kernelRef
+        "
+        :node-ref="kernelRef"
+        :mode="currentVerb"
+      />
+
       <section
         v-else-if="currentVerb === 'explain' && kernelRef"
         id="kernel-explain"
@@ -286,14 +294,15 @@ import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
+import KernelLineagePanel from "./KernelLineagePanel.vue";
 import type { KernelCommand } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
- * title and node reference, its verbs and its details. Act and Explain read the kernel's command catalogue and its
- * explanations for a selected participant (ADR-2540); Trace, Impact and Simulate, and Act and Explain on an
- * observation (which has no kernel reference yet), are shown disabled, each saying what it waits on. Nothing here is
+ * title and node reference, its verbs and its details. Trace, Impact, Act and Explain read the kernel's lineage,
+ * dependents, command catalogue and explanations for a selected participant (ADR-2540); Simulate, and those four
+ * verbs on an observation (which has no kernel reference yet), are shown disabled, each saying what it waits on. Nothing here is
  * computed in the browser (§6.1).
  */
 const props = defineProps<{
@@ -345,14 +354,14 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "trace",
     label: "Trace",
-    live: false,
-    note: "Trace needs the kernel's lineage over the API (#4840), which the kernel host doesn't serve yet.",
+    live: Boolean(kernelRef.value),
+    note: `Trace walks the kernel's lineage (ADR-2471), but ${NO_KERNEL_REF}`,
   },
   {
     id: "impact",
     label: "Impact",
-    live: false,
-    note: "Impact needs the kernel's dependents query over the API (#4841), which the kernel host doesn't serve yet.",
+    live: Boolean(kernelRef.value),
+    note: `Impact counts what depends on this in the kernel's lineage (Canvas D2), but ${NO_KERNEL_REF}`,
   },
   {
     id: "explain",
@@ -374,7 +383,7 @@ const verbs = computed<Verb[]>(() => [
   },
 ]);
 
-type VerbId = "details" | "act" | "explain";
+type VerbId = "details" | "trace" | "impact" | "act" | "explain";
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);

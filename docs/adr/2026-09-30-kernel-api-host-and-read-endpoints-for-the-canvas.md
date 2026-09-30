@@ -94,9 +94,15 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 | `search?q=&kind=&limit=` | Search hits (limit 1 to 50, default 20). |
 | `studies/{studyRef}/protocol-versions` | The study's protocol versions, newest first, without content: number, parent, status, content hash, amendment intent, approving attestation, withdrawal reason. |
 | `protocol-versions/{versionRef}` | One protocol version, the same way. |
+| `nodes/{nodeRef}/lineage?direction=&depth=&edge_kind=&valid_at=&known_at=` | Trace: the lineage walk from the object, backward (default) or forward, with every object reached and every edge followed (ADR-2471). |
+| `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=` | Impact: what depends on the object, grouped by kind with counts (Canvas D2). |
+| `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=` | Amendment impact (K-PROT-2): the dependents of the version the amendment changes, with the elements it declares it changes. A first version is a 400; it amends nothing. |
 
 - NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one, or one of the wrong kind for the
   endpoint, is a 400.
+- Lineage reads take `depth` from 1 to 50 (default 10), `edge_kind` by name and repeatable (`DerivedFrom`, `GovernedBy`,
+  …, any case), and `direction` as `Backward` or `Forward`; anything else is a 400. They read through `IKernelLineage`
+  and `IAmendmentImpact` as the signed-in person, so a request with no accountable person is a 403.
 - CanI takes the capability token only. Its verb class comes from the kernel command that declares it; a token no
   command declares is a 400. The caller cannot choose the verb class.
 - The wire is snake_case, like Execution, and the host exports its OpenAPI document to
@@ -142,7 +148,10 @@ Every read runs under the tenant's Row-Level Security, and every object it retur
 - A protocol version list is refused with 403 when its study is masked, since listing the versions would describe the
   study; a masked version in a visible study keeps its place with only its mask. The protocol version reader does not
   authorize, so this masking is the read's authority check.
-- A request with no accountable actor sees every object masked.
+- A lineage walk, a dependents read and an amendment impact keep a masked object in place as its kind, its mask and
+  an opaque `masked:n` handle, and count it like any other (ADR-2471), so a count never depends on the reader. An
+  edge touching a masked object withholds its activity.
+- A request with no accountable actor sees every object masked, and lineage reads refuse it.
 
 Until visibility is decided from the authority model (#4781) and the IdentityVault (#4782), the host's
 `INodeVisibility` masks every object as `NotPermitted`. #4781 replaces that registration too.
@@ -168,11 +177,13 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
   `UnavailableNodeVisibility`, `KernelDatabaseHealthCheck`,
   `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
-  `KernelTenantResolution`.
+  `KernelTenantResolution`, `KernelLineageEndpoints`, `KernelLineageResponses`, `KernelProblems`.
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
   does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, protocol
   versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and
   permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue,
-  and search.
+  search, and the lineage reads: a Trace as the reader with masked objects in place, the default backward walk,
+  dependents grouped by kind with masked ones counted, an amendment's impact, 400 for bad lineage parameters or a
+  first version, 404 for an unknown one, and 403 with no accountable reader.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` and
   `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` cover the route and the port.

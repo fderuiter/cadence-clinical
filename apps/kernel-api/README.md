@@ -19,7 +19,7 @@ The endpoints, response records and tenant filter live in [`packages/kernel/src/
 
 ## HTTP surface
 
-All reads are `GET`, need the gateway-signed caller identity, run in the caller's kernel tenant, and answer RFC 9457 problem details on failure. The wire is snake_case. Objects the caller may not see are masked (ADR-2471): node reads, paths and child lists keep them in place with only `kind` and `mask`; search leaves them out.
+All reads are `GET`, need the gateway-signed caller identity, run in the caller's kernel tenant, and answer RFC 9457 problem details on failure. The wire is snake_case. Objects the caller may not see are masked (ADR-2471): node reads, paths and child lists keep them in place with only `kind` and `mask`; search leaves them out; lineage reads keep them as a `masked:n` handle with their kind and count them like any other.
 
 | Route (`/api/v1/kernel/…`) | Answers |
 | --- | --- |
@@ -31,6 +31,9 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 | `search?q=&kind=&limit=` | Search hits by code or title (ADR-2484); `kind` repeats, `limit` is 1 to 50. |
 | `studies/{studyRef}/protocol-versions` | The study's protocol versions, newest first, without content. A hidden study is refused with 403; a hidden version is masked in place. |
 | `protocol-versions/{versionRef}` | One protocol version, without content. |
+| `nodes/{nodeRef}/lineage?direction=&depth=&edge_kind=&valid_at=&known_at=` | Trace: the lineage walk, `Backward` (default) or `Forward`, depth 1 to 50 (default 10), `edge_kind` repeats (ADR-2471). |
+| `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=` | Impact: what depends on the object, grouped by kind with counts. |
+| `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=` | Amendment impact (K-PROT-2): the dependents of the version it amends. A first version is a 400. |
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 

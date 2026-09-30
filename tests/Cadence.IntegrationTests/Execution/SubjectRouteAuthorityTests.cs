@@ -30,7 +30,7 @@ namespace Cadence.IntegrationTests.Execution;
 [Trait("Category", "Integration")]
 public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
 {
-    private const string Reason = "Subject authority check";
+    private const string Reason = "Subject authority check: SAE needs the allocation to decide the treatment.";
     private const string Study = "STUDY-SUBJ-AUTH";
     private const string Arm = "ARM-B";
 
@@ -94,6 +94,8 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     [InlineData("Site Coordinator")]
     [InlineData("Site Investigator")]
     [InlineData("Data Manager")]
+    [InlineData("Emergency Unblinder")]
+    [InlineData("Lead Investigator")]
     public async Task Unblinding_WithoutUnblindingAuthority_Returns403_AndTheParticipantStaysBlinded(string role)
     {
         factory.SkipIfUnavailable();
@@ -107,12 +109,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
-    [Fact]
-    public async Task Unblinding_ByAnEmergencyUnblinder_RecordsWhoUnblindedAndWhy()
+    [Theory]
+    [InlineData("Principal Investigator")]
+    [InlineData("Authorized ER Physician")]
+    public async Task Unblinding_ByThePiOrAnErPhysician_RecordsWhoUnblindedAndWhy(string role)
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        var unblinder = Caller("unblinder", "Emergency Unblinder");
+        var unblinder = Caller($"unblinder-{role}", role);
         using var client = factory.CreateSignedClient(unblinder);
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
@@ -131,12 +135,27 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder-noreason", "Emergency Unblinder") with { ChangeReason = null });
+        using var client = factory.CreateSignedClient(Caller("unblinder-noreason", "Principal Investigator") with { ChangeReason = null });
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
+    }
+
+    [Fact]
+    public async Task Unblinding_WithAReasonUnder50Characters_Returns400_AndTheParticipantStaysBlinded()
+    {
+        string subject = await SeedAsync(SubjectState.Randomized);
+        using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
+
+        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+
+        state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLINDING_REASON_TOO_SHORT");
+        var stored = await ReadSubjectAsync(subject);
+        stored.Status.Should().Be(SubjectState.Randomized);
+        stored.IsUnblinded.Should().BeFalse();
     }
 
     [Fact]

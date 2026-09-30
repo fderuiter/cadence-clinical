@@ -30,10 +30,13 @@ public sealed class SubjectAuthorityTests
         SubjectAuthority.CanManageParticipants(role).Should().Be(expected);
 
     [Theory]
-    [InlineData("emergency_unblinder", true)]
     [InlineData("principal_investigator", true)]
+    [InlineData("Principal Investigator", true)]
+    [InlineData("pi", true)]
     [InlineData("authorized_er_physician", true)]
-    [InlineData("lead_investigator", true)]
+    [InlineData("Authorized ER Physician", true)]
+    [InlineData("emergency_unblinder", false)]
+    [InlineData("lead_investigator", false)]
     [InlineData("investigator", false)]
     [InlineData("crc", false)]
     [InlineData("sponsor_dm", false)]
@@ -46,7 +49,7 @@ public sealed class SubjectAuthorityTests
     public void AuthorizeStateChange_ToUnblinded_NeedsAnUnblindingAuthority_EvenForASiteRole()
     {
         var coordinator = new AuthenticatedCaller("crc-1", ["crc"]);
-        var unblinder = new AuthenticatedCaller("eu-1", ["emergency_unblinder"]);
+        var unblinder = new AuthenticatedCaller("er-1", ["authorized_er_physician"]);
 
         SubjectAuthority.AuthorizeStateChange(coordinator, "UNBLINDED")!.Code.Should().Be("UNAUTHORIZED_UNBLIND_ROLE");
         SubjectAuthority.AuthorizeStateChange(unblinder, "UNBLINDED").Should().BeNull();

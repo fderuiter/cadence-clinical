@@ -21,7 +21,8 @@ namespace Cadence.Kernel.Api;
 
 /// <summary>
 /// The kernel's read endpoints for the Clinical Canvas (ADR-2540): navigation (ADR-2481), dry-run authorization and
-/// the command catalogue with their explanations (ADR-2482, ADR-2483), search (ADR-2484) and protocol versions. They only read: nothing
+/// the command catalogue with their explanations (ADR-2482, ADR-2483), search (ADR-2484), protocol versions, and
+/// lineage, dependents and amendment impact (<see cref="KernelLineageEndpoints"/>). They only read: nothing
 /// here sends a command. Objects the caller may not see are masked (ADR-2471): kept in place in paths and child
 /// lists, left out of search. Every endpoint acts in the tenant resolved from the caller's verified claims and, for
 /// authorization, as the caller.
@@ -101,6 +102,7 @@ public static class KernelReadEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        KernelLineageEndpoints.Map(reads);
         return kernel;
     }
 
@@ -110,13 +112,13 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
-            return InvalidNodeRef(nodeRef);
+            return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         if (await navigator.ResolveAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } summary)
         {
-            return NotFound(node);
+            return KernelProblems.NotFound(node);
         }
 
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [summary.Ref], cancellationToken).ConfigureAwait(false);
@@ -129,13 +131,13 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
-            return InvalidNodeRef(nodeRef);
+            return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         if (await navigator.GetZoomPathAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } path)
         {
-            return NotFound(node);
+            return KernelProblems.NotFound(node);
         }
 
         var masks = await KernelReadMasking.MaskAsync(
@@ -149,13 +151,13 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
-            return InvalidNodeRef(nodeRef);
+            return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         if (await navigator.GetChildrenAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } children)
         {
-            return NotFound(node);
+            return KernelProblems.NotFound(node);
         }
 
         var masks = await KernelReadMasking.MaskAsync(
@@ -168,7 +170,7 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
-            return InvalidNodeRef(nodeRef);
+            return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
         var commands = await probe.GetCommandsAsync(KernelRequestTenant.Get(context), node, cancellationToken).ConfigureAwait(false);
@@ -185,17 +187,14 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(resource, out var node))
         {
-            return InvalidNodeRef(resource);
+            return KernelProblems.InvalidNodeRef(resource);
         }
 
         // The verb class comes from the command that declares the capability, never from the caller.
         if (catalog.Entries.Select(e => e.Capability).FirstOrDefault(c => string.Equals(c.Token, capability, StringComparison.Ordinal))
             is not { } declared)
         {
-            return TypedResults.Problem(
-                title: "Unknown capability",
-                detail: $"No kernel command declares the capability '{capability}'.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return KernelProblems.BadRequest("Unknown capability", $"No kernel command declares the capability '{capability}'.");
         }
 
         var decision = await probe.CanIAsync(KernelRequestTenant.Get(context), declared, node, cancellationToken).ConfigureAwait(false);
@@ -215,10 +214,7 @@ public static class KernelReadEndpoints
         var pageSize = limit ?? 20;
         if (pageSize is < 1 or > SearchRequest.MaxLimit)
         {
-            return TypedResults.Problem(
-                title: "Invalid limit",
-                detail: $"limit must be between 1 and {SearchRequest.MaxLimit}.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return KernelProblems.BadRequest("Invalid limit", $"limit must be between 1 and {SearchRequest.MaxLimit}.");
         }
 
         var request = new SearchRequest(q, kind is { Length: > 0 } ? kind : null, pageSize);
@@ -242,18 +238,18 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(studyRef, out var node))
         {
-            return InvalidNodeRef(studyRef);
+            return KernelProblems.InvalidNodeRef(studyRef);
         }
 
         if (node.Kind != NodeKinds.Study)
         {
-            return WrongKind(node, NodeKinds.Study);
+            return KernelProblems.WrongKind(node, NodeKinds.Study);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         if (await navigator.ResolveAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } study)
         {
-            return NotFound(node);
+            return KernelProblems.NotFound(node);
         }
 
         // Listing a hidden study's versions would describe the study, so the list is refused, not masked.
@@ -283,18 +279,18 @@ public static class KernelReadEndpoints
     {
         if (!NodeRef.TryParse(versionRef, out var node))
         {
-            return InvalidNodeRef(versionRef);
+            return KernelProblems.InvalidNodeRef(versionRef);
         }
 
         if (node.Kind != NodeKinds.ProtocolVersion)
         {
-            return WrongKind(node, NodeKinds.ProtocolVersion);
+            return KernelProblems.WrongKind(node, NodeKinds.ProtocolVersion);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         if (await reader.GetAsync(tenant, ProtocolVersionId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false) is not { } version)
         {
-            return NotFound(node);
+            return KernelProblems.NotFound(node);
         }
 
         var versionNode = NodeRef.For(version.Id);
@@ -310,22 +306,4 @@ public static class KernelReadEndpoints
         path[index].Ref is { } own
             ? masks.For(own)
             : masks.For(path.Skip(index + 1).Select(s => s.Ref).FirstOrDefault(r => r is not null));
-
-    private static ProblemHttpResult InvalidNodeRef(string text) =>
-        TypedResults.Problem(
-            title: "Invalid NodeRef",
-            detail: $"'{text}' is not a NodeRef: expected kind:id or kind:id@version with a registered kind and a lower-case UUID.",
-            statusCode: StatusCodes.Status400BadRequest);
-
-    private static ProblemHttpResult WrongKind(NodeRef node, string expected) =>
-        TypedResults.Problem(
-            title: "Wrong kind",
-            detail: $"{node} is a {node.Kind}; this endpoint takes a {expected}.",
-            statusCode: StatusCodes.Status400BadRequest);
-
-    private static ProblemHttpResult NotFound(NodeRef node) =>
-        TypedResults.Problem(
-            title: "Not found",
-            detail: $"{node} does not exist in your tenant.",
-            statusCode: StatusCodes.Status404NotFound);
 }
