@@ -8,6 +8,7 @@ manifest generation for GxP UI video recordings and verification reports.
 import hashlib
 import logging
 import mimetypes
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -136,13 +137,10 @@ class GoogleDriveClient:
             credentials_path: Optional path to Google Service Account JSON file.
             service_account_info: Optional dictionary containing service account key payload.
         """
-        from packages.config import get_storage_settings
-
-        settings = get_storage_settings()
         self._credentials_path = (
             credentials_path
-            or settings.google_application_credentials
-            or settings.google_drive_service_account_path
+            or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            or os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_PATH")
         )
         self._service_account_info = service_account_info
         self._service: Resource | None = None
