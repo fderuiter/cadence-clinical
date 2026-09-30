@@ -154,7 +154,7 @@ public static class ImagingAdjudicationEndpoints
             BindingReader = isDiscordant ? null : "CONCORDANT_READERS",
             SessionDigest = sessionDigest,
             CreatedAt = now,
-            CreatedBy = "system",
+            CreatedBy = "svc:imaging",
             UpdatedAt = now
         };
 

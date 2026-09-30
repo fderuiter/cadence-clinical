@@ -1606,6 +1606,126 @@
           }
         }
       }
+    },
+    "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
+      "post": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "ChairAdjudicateDossier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ChairAdjudicateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ChairAdjudicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{id}": {
+      "get": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "GetCecDossierById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CecDossier"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1635,6 +1755,254 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_CecDossier": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "masked_subject_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked_site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidate_event_type": {
+            "type": "string"
+          },
+          "reported_term": {
+            "type": "string"
+          },
+          "reported_onset_date": {
+            "type": "string"
+          },
+          "workflow_status": {
+            "type": "string"
+          },
+          "is_discordant": {
+            "type": "boolean"
+          },
+          "discordance_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "final_consensus_classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_consensus_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudication_rationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reader1_status": {
+            "type": "string"
+          },
+          "reader2_status": {
+            "type": "string"
+          },
+          "signature_manifest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_SignatureManifest"
+              }
+            ]
+          },
+          "finalized_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Execution_ChairAdjudicateRequest": {
+        "required": [
+          "final_classification",
+          "final_subtype",
+          "final_adjudicated_onset_date"
+        ],
+        "type": "object",
+        "properties": {
+          "final_classification": {
+            "type": "string"
+          },
+          "final_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string"
+          },
+          "binding_reader": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "CHAIR_CUSTOM_DETERMINATION"
+          },
+          "criteria_confirmed": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "adjudication_rationale": {
+            "type": "string",
+            "default": ""
+          },
+          "signature_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_ChairAdjudicationResponse": {
+        "required": [
+          "determination_id",
+          "dossier_id",
+          "chair_id",
+          "chair_name",
+          "final_classification",
+          "final_subtype",
+          "final_adjudicated_onset_date",
+          "binding_reader",
+          "criteria_confirmed",
+          "adjudication_rationale",
+          "electronic_signature",
+          "finalized_at"
+        ],
+        "type": "object",
+        "properties": {
+          "determination_id": {
+            "type": "string"
+          },
+          "dossier_id": {
+            "type": "string"
+          },
+          "chair_id": {
+            "type": "string"
+          },
+          "chair_name": {
+            "type": "string"
+          },
+          "final_classification": {
+            "type": "string"
+          },
+          "final_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string"
+          },
+          "binding_reader": {
+            "type": "string"
+          },
+          "criteria_confirmed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "adjudication_rationale": {
+            "type": "string"
+          },
+          "electronic_signature": {
+            "$ref": "#/components/schemas/Execution_SignatureManifest"
+          },
+          "finalized_at": {
+            "type": "string"
           }
         }
       },
@@ -3127,6 +3495,9 @@
     },
     {
       "name": "Queries"
+    },
+    {
+      "name": "CecEndpoints"
     }
   ]
 }

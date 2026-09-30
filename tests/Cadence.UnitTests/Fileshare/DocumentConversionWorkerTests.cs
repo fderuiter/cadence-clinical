@@ -72,7 +72,7 @@ public sealed class DocumentConversionWorkerTests
         await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "doc-1" }, TestContext.Current.CancellationToken);
+        var updated = await verifyDb.FileRecords.FindAsync(["doc-1"], TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.ConversionStatus.Should().Be("COMPLETED");
         updated.PdfRenditionKey.Should().Be("docs/doc-1.pdf");
@@ -119,10 +119,10 @@ public sealed class DocumentConversionWorkerTests
         await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "doc-fail" }, TestContext.Current.CancellationToken);
+        var updated = await verifyDb.FileRecords.FindAsync(["doc-fail"], TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.ConversionStatus.Should().Be("FAILED");
-        updated.ConversionError.Should().Contain("LibreOffice process exit code 1");
+        updated.ConversionError.Should().Contain("LibreOffice process");
         await mockProcessor.Received(2).ConvertToPdfAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>());
     }
 

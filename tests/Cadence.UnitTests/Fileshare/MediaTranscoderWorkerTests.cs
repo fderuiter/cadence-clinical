@@ -72,7 +72,7 @@ public sealed class MediaTranscoderWorkerTests
         await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "video-1" }, TestContext.Current.CancellationToken);
+        var updated = await verifyDb.FileRecords.FindAsync(["video-1"], TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.TranscodeStatus.Should().Be("COMPLETED");
         updated.HlsManifestKey.Should().Be("videos/video-1/master.m3u8");
@@ -119,7 +119,7 @@ public sealed class MediaTranscoderWorkerTests
         await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "video-fail" }, TestContext.Current.CancellationToken);
+        var updated = await verifyDb.FileRecords.FindAsync(["video-fail"], TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.TranscodeStatus.Should().Be("FAILED");
         updated.TranscodeError.Should().Contain("FFmpeg error");
