@@ -24,6 +24,8 @@ migration application.
 - `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11), and is
   the only writer of audit entries: one Merkle-chained `AuditLogEntry` per changed entity, one chain per aggregate type
   (ADR-2446). Audited changes must be saved with `SaveChangesAsync`; a synchronous save of them throws.
+- `SchemaDocumentation`: renders a DbContext's EF Core model as Markdown (tables, columns, keys, foreign keys, indexes,
+  check constraints) without a database. `Cadence.SchemaDocExporter` uses it to generate [docs/schema](../../docs/schema/README.md).
 - `AuditActions`: lets application code label the next save with a semantic action, actor and reason; the interceptor
   puts it on the matching entry, or writes an action-only entry when no row changed.
 
@@ -46,6 +48,9 @@ For DBA review and GxP qualification, generate an idempotent script instead:
 ```bash
 scripts/manage_migrations.sh script <service>   # or scripts/manage_migrations.ps1
 ```
+
+After changing an entity or its configuration, run `pnpm cadence generate-schema-doc` and commit `docs/schema`; the
+`schema-doc` gate in `pnpm cadence check` and CI fails while it is out of date.
 
 `tests/Packages/MigrationUnitTests.cs` fails when a DbContext model has changes that no migration captures, which
 would otherwise surface as `PendingModelChangesWarning` at deploy time.

@@ -46,6 +46,12 @@ public static class KernelBoundaryRules
         "Cadence.ArchitectureTests", "Cadence.UnitTests", "Cadence.E2ETests",
     ];
 
+    /// <summary>
+    /// Build-time developer tools that read the kernel's EF model to generate documentation. They are never deployed
+    /// and no application references them, so they may reference Kernel.Persistence like the tests do.
+    /// </summary>
+    private static readonly string[] ToolingAssemblyNames = ["Cadence.SchemaDocExporter"];
+
     /// <summary>True for any assembly that belongs to the kernel (<c>Cadence.Kernel.*</c>).</summary>
     public static bool IsKernelAssembly(string? assemblyName) =>
         assemblyName is not null &&
@@ -116,11 +122,12 @@ public static class KernelBoundaryRules
     // ---------------------------------------------------------------- K-XS-2
 
     /// <summary>
-    /// K-XS-2 applies to product modules and packages. The kernel itself and the test projects (which verify the
-    /// kernel model and migrations) may reference Kernel.Persistence.
+    /// K-XS-2 applies to product modules and packages. The kernel itself, the test projects (which verify the
+    /// kernel model and migrations) and the build-time documentation tools may reference Kernel.Persistence.
     /// </summary>
     private static bool IsExemptFromKXs2(string? name) =>
-        IsKernelAssembly(name) || TestAssemblyNames.Contains(name, StringComparer.Ordinal);
+        IsKernelAssembly(name) || TestAssemblyNames.Contains(name, StringComparer.Ordinal)
+        || ToolingAssemblyNames.Contains(name, StringComparer.Ordinal);
 
     /// <summary>
     /// K-XS-2 (spec §2/§9), compiled form: no non-kernel assembly references <c>Cadence.Kernel.Persistence</c>.

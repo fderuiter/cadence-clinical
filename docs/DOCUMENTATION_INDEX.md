@@ -120,7 +120,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | --- | --- |
 | [docs/CDISC](CDISC/README.md) | CDISC Library API description and USDM compliance data |
 | [docs/NCI](NCI/) | NCI EVS REST API description |
-| [docs/schema](schema/) | Generated USDM schema documentation (`pnpm cadence generate-schema-doc`) |
+| [docs/schema](schema/README.md) | Generated database schema of every module, from the EF Core models (`pnpm cadence generate-schema-doc`) |
 
 ## Repository policies
 
