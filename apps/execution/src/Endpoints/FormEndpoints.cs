@@ -82,17 +82,18 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
-        // Undocumented alias for legacy Python router compatibility
+        // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
+        // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
         var legacyGroup = app.MapGroup("/api/v1/forms")
             .ExcludeFromDescription();
 
         legacyGroup.MapPost("/", CreateFormSubmissionAsync);
         legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync);
-        legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync);
+        legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync);
         legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
             .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
-        legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync);
+        legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }

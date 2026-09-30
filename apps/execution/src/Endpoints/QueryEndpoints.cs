@@ -74,7 +74,8 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
-        // Undocumented alias for legacy Python router compatibility
+        // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
+        // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
         var legacyGroup = app.MapGroup("/api/v1/queries")
             .ExcludeFromDescription();
 
@@ -83,8 +84,8 @@ public static class QueryEndpoints
         legacyGroup.MapGet("/", ListQueriesAsync);
         legacyGroup.MapPost("/{id}/respond", AnswerQueryAsync);
         legacyGroup.MapPost("/{id}/close", CloseQueryAsync);
-        legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync);
-        legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync);
+        legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }
