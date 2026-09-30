@@ -26,7 +26,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K004 | Policy engine (authority computed from evidence) | [ADR-2251](2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md) |
 | K005 | Concept vocabulary (Concept Registry keyed by CDISC Biomedical Concepts) | [ADR-2252](2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md), [ADR-2470](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
 | K006 | Identity vault and layered identity | [ADR-2253](2026-09-29-identity-vault-and-layered-participant-identity.md) |
-| K007 | Neo4j for the designer (dropped for v1); protocol version lifecycle | [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [ADR-2452](2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md), [ADR-2472](2026-09-30-executable-protocol-design-document.md) |
+| K007 | Neo4j for the designer (dropped for v1); protocol version lifecycle | [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [ADR-2452](2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md), [ADR-2472](2026-09-30-executable-protocol-design-document.md), [ADR-2473](2026-09-30-usdm-4-import-into-the-protocol-design.md) |
 | K008 | Rules and standards (rules as versioned data) | [ADR-2254](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
 | K009 | Lineage graph | [ADR-2255](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md), [ADR-2471](2026-09-30-lineage-store-and-masked-read-contract.md) |
 | K010 | Command pipeline and per-tenant audit chain | [ADR-2449](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
@@ -67,6 +67,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2470: Per-Tenant Terminology, Pinned Code-System Versions and Versioned Concepts](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) (2026-09-30)
 - [ADR-2471: Lineage Store and Masked Read Contract](2026-09-30-lineage-store-and-masked-read-contract.md) (2026-09-30)
 - [ADR-2472: Executable Protocol Design Document with Stable Element IDs](2026-09-30-executable-protocol-design-document.md) (2026-09-30)
+- [ADR-2473: CDISC USDM 4 Import into the Protocol Design](2026-09-30-usdm-4-import-into-the-protocol-design.md) (2026-09-30)
 - [ADR-2480: Evaluate-Only Simulation over Candidate Versions](2026-09-30-evaluate-only-simulation-over-candidate-versions.md) (2026-09-30)
 - [ADR-2481: Public NodeRef and Kernel-Computed Zoom Path](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) (2026-09-30)
 - [ADR-2482: Explanation Model Produced by the Rule Owner](2026-09-30-explanation-model-produced-by-the-rule-owner.md) (2026-09-30)

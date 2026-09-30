@@ -8,6 +8,9 @@
     <ProjectReference Include="..\..\templating\src\Cadence.Templating.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="..\Templates\**\*.liquid" Link="Templates\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

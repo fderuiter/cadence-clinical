@@ -155,6 +155,7 @@ public static partial class ProtocolDesignDocument
             .Concat(design.Estimands.OfType<Estimand>().Select(e => (Name: $"{e.Id}.intercurrentEvents", Items: (IEnumerable<object?>)e.IntercurrentEvents)))
             .Concat(design.Arms.OfType<Arm>().Select(a => (Name: $"{a.Id}.interventionIds", Items: (IEnumerable<object?>)a.InterventionIds)))
             .Concat(design.Estimands.OfType<Estimand>().Select(e => (Name: $"{e.Id}.armIds", Items: (IEnumerable<object?>)e.ArmIds)))
+            .Concat(design.Estimands.OfType<Estimand>().Select(e => (Name: $"{e.Id}.interventionIds", Items: (IEnumerable<object?>)(e.InterventionIds ?? []))))
             .Concat(design.Populations.OfType<Population>().Select(p => (Name: $"{p.Id}.criterionIds", Items: (IEnumerable<object?>)p.CriterionIds)))
             .Concat(design.Cohorts.OfType<Cohort>().Select(c => (Name: $"{c.Id}.armIds", Items: (IEnumerable<object?>)c.ArmIds)))
             .Concat(design.PlannedActivities.OfType<PlannedActivity>().Select(a => (Name: $"{a.Id}.collectionSpecIds", Items: (IEnumerable<object?>)a.CollectionSpecIds)));
@@ -211,6 +212,11 @@ public static partial class ProtocolDesignDocument
             check.Ref(e.Id, "endpointId", e.EndpointId, ProtocolElementKind.Endpoint);
             check.Ref(e.Id, "populationId", e.PopulationId, ProtocolElementKind.Population);
             check.Refs(e.Id, "armIds", e.ArmIds, ProtocolElementKind.Arm);
+            if (e.InterventionIds is not null)
+            {
+                check.Refs(e.Id, "interventionIds", e.InterventionIds, ProtocolElementKind.Intervention);
+            }
+
             check.Text(e.Id, "variable", e.Variable);
             check.Text(e.Id, "summaryMeasure", e.SummaryMeasure);
             foreach (var ice in e.IntercurrentEvents ?? [])
@@ -219,6 +225,10 @@ public static partial class ProtocolDesignDocument
                 if (ice is not null)
                 {
                     check.Defined(e.Id, ice.Strategy);
+                    if (ice.Strategy == IntercurrentEventStrategy.Other)
+                    {
+                        check.Text(e.Id, "intercurrentEvents.strategyText", ice.StrategyText);
+                    }
                 }
             }
         }

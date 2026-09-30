@@ -141,8 +141,9 @@ Findings inform and never block. They become Quality `ValidationFinding`s once #
 
 ### 4.6 What is left for later slices of #4808
 
-- The USDM v4 adapter in `packages/ddf`, with golden round-trip tests. Until it lands, the DDF compiler takes USDM JSON
-  only; its `Compile(ProtocolVersion)` overload is removed because the content is no longer USDM.
+- The USDM v4 adapter in `packages/ddf`. The import landed in ADR-2473; export back to USDM is still to come. The
+  DDF compiler takes USDM JSON only; its `Compile(ProtocolVersion)` overload is removed because the content is no
+  longer USDM.
 - Protocol elements as lineage nodes (`protocol-element:<version>/<id>`), so amendment impact narrows to the objects
   that reference a changed element (ADR-2471 §4.5).
 - Eligibility evaluation over Observations with the rule expression language (ADR-2461).

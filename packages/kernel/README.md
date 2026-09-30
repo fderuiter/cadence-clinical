@@ -162,6 +162,9 @@ var outside = fork.Design().ExternalReferences();                   // ConceptRe
 - **Diff.** Every element is a JSON object with a unique `id`, so the simulation engine's `ProtocolStructuralDiff`
   (ADR-2480 §4.6) compares two designs element by element. A collection item is its own element, so changing it does
   not change its specification.
+- **USDM import (ADR-2473).** `UsdmDesignImporter.ImportAsync` in `packages/ddf` reads a CDISC USDM 4 study into a
+  design, keeping USDM ids as element ids and resolving each Biomedical Concept in the tenant's Concept Registry. It
+  fails when a concept is missing and lists everything it leaves out as notes.
 
 ## Participants and enrollment (ADR-2453)
 
