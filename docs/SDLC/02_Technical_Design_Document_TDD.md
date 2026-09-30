@@ -1081,7 +1081,7 @@ The platform implements a sandboxed, deterministic Abstract Syntax Tree (AST) ev
 
 #### 6.1.1 Abstract Syntax Tree (AST) & Lexical Parsing
 
-As governed by **ADR-053**, dynamic expressions such as `eCRF.DM.AGE >= 18` are processed using service-local, decentralized recursive-descent parsers, such as the one defined in `apps/designer/domain/eligibility/parser.py`. The parser decomposes expressions into a structured Pydantic `ExpressionNode` AST defined locally in `apps/designer/domain/eligibility/models.py`.
+As governed by **[ADR-2306](../adr/2026-08-02-eligibility-criteria-evaluation-engine.md)** (formerly ADR-053), dynamic expressions such as `eCRF.DM.AGE >= 18` are processed using service-local, decentralized recursive-descent parsers, such as the one defined in `apps/designer/domain/eligibility/parser.py`. The parser decomposes expressions into a structured Pydantic `ExpressionNode` AST defined locally in `apps/designer/domain/eligibility/models.py`.
 
 - **Parsing Flow:** Tokenizer parses characters into typed tokens (field references, constants, operators, logical keywords).
 - **AST Generation:** Build recursive comparison or logical nodes. No arbitrary Python execution is permitted, establishing a robust security boundary.
