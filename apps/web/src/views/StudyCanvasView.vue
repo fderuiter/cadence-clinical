@@ -169,6 +169,7 @@
             :status="statusFilter"
             :site-id="siteFilter"
             :selected-id="selectedNode?.id ?? ''"
+            :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
           />
@@ -229,6 +230,7 @@
           :verify-sdv="canvas.verifySdv"
           :flag-sdv="canvas.flagSdv"
           :can-manage="canManage"
+          :can-manage-participants="canChangeParticipants"
           :observation-queries="observationQueries"
           :raise-query="canvas.raiseQuery"
         />
@@ -291,7 +293,11 @@ import {
   tryNodeRef,
   type NodeRef,
 } from "../canvas/nodeRef";
-import { canManageQueries, canVerifySource } from "../canvas/authority";
+import {
+  canManageParticipants,
+  canManageQueries,
+  canVerifySource,
+} from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { UNAVAILABLE_SCREENS_ISSUE } from "../router/availability.js";
 import { useAuthStore } from "../stores/auth";
@@ -386,6 +392,7 @@ const observationQueries = computed(() =>
     : []
 );
 const canManage = computed(() => canManageQueries(authStore));
+const canChangeParticipants = computed(() => canManageParticipants(authStore));
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)

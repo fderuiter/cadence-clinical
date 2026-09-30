@@ -3,6 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts.js";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
@@ -82,8 +83,15 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
     ];
     for (const fn of Object.values(executionApi)) vi.mocked(fn).mockReset();
     serveParticipants();
+    signInWith(["crc"]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
+
+  function signInWith(roles) {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = roles;
+  }
 
   afterEach(() => {
     wrapper?.unmount();
@@ -274,5 +282,37 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
         (t) => t.title === "017-0002 was not moved to enrolled"
       )
     ).toBe(true);
+  });
+
+  it.each([
+    ["a monitor", ["cra"]],
+    ["an auditor", ["auditor"]],
+    [
+      "a sponsor admin, whom Execution does not treat as site staff",
+      ["sponsor_admin"],
+    ],
+  ])(
+    "offers %s no participant changes, since Execution would refuse them",
+    async (_, roles) => {
+      signInWith(roles);
+      await open(
+        `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[1]}`
+      );
+
+      expect(wrapper.find("#participant-017-0002").exists()).toBe(true);
+      expect(wrapper.find("#btn-add-participant").exists()).toBe(false);
+      expect(wrapper.find("#inspector-state").text()).toBe("Screening");
+      expect(wrapper.find("#inspector-state-change").exists()).toBe(false);
+    }
+  );
+
+  it("offers participant changes to site staff and data managers as Execution names them", async () => {
+    signInWith(["Site Investigator"]);
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[1]}`
+    );
+
+    expect(wrapper.find("#btn-add-participant").exists()).toBe(true);
+    expect(wrapper.find("#inspector-state-change").exists()).toBe(true);
   });
 });
