@@ -7,6 +7,7 @@ import { useToastStore } from "../src/stores/toasts.js";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import SubjectEnrollmentForm from "../src/components/clinical/SubjectEnrollmentForm.vue";
+import { executionApi } from "../src/api/executionApi";
 
 vi.mock("vue-router", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -20,7 +21,7 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
-// Outside a demo build the eCRF lists the study's subjects from Execution (#4828).
+// Mock Execution API endpoints for subject listing and form submission
 vi.mock("../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn().mockResolvedValue({
@@ -39,6 +40,8 @@ vi.mock("../src/api/executionApi", () => ({
       limit: 200,
       offset: 0,
     }),
+    createFormSubmission: vi.fn(),
+    completeFormSubmission: vi.fn(),
   },
 }));
 
@@ -48,13 +51,14 @@ function httpError(status) {
   return err;
 }
 
-// #4523: a failed eCRF submission must never be recorded or announced as submitted.
-describe("EcrfView submitEcrf API failure handling (#4523)", () => {
+// #4523: eCRF submission integration with Execution API & failure handling
+describe("EcrfView submitEcrf API integration and failure handling (#4523)", () => {
   let pinia;
   let store;
   let alertSpy;
 
   beforeEach(() => {
+    vi.useRealTimers();
     pinia = createPinia();
     setActivePinia(pinia);
     store = useClinicalStore();
@@ -64,6 +68,7 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     authStore.rawRoles = ["Site Investigator"];
     store.ecrfFields = [];
     alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -75,45 +80,89 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     return mount(EcrfView, { global: { plugins: [pinia] } });
   }
 
-  it("refuses the submission outside a demo build: no SESSION_SUBMIT block, no success alert (#4828)", async () => {
+  it("dispatches createFormSubmission and completeFormSubmission on submit, adds ledger block with submission ID and synced: true, and shows success toast", async () => {
+    vi.mocked(executionApi.createFormSubmission).mockResolvedValueOnce({
+      id: "form-sub-xyz-123",
+      study_id: "TEST-STUDY",
+      subject_id: "SUBJ-001",
+      form_id: "VS_DEMO",
+      status: "DRAFT",
+    });
+    vi.mocked(executionApi.completeFormSubmission).mockResolvedValueOnce({
+      id: "form-sub-xyz-123",
+      study_id: "TEST-STUDY",
+      subject_id: "SUBJ-001",
+      form_id: "VS_DEMO",
+      status: "COMPLETED",
+    });
+
+    const pushSpy = vi.spyOn(useToastStore(pinia), "push");
     const wrapper = mountView();
     await flushPromises();
+
+    wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
+    await flushPromises();
+
+    expect(executionApi.createFormSubmission).toHaveBeenCalledWith({
+      studyId: "TEST-STUDY",
+      subjectId: "SUBJ-001",
+      formId: "VS_DEMO",
+      siteId: "TEST-SITE",
+      visitId: "Week2",
+      protocolVersion: "1.0.0",
+      payload: "{}",
+    });
+
+    expect(executionApi.completeFormSubmission).toHaveBeenCalledWith(
+      "form-sub-xyz-123"
+    );
+
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(pushSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tone: "success",
+          title: "eCRF Form Submitted",
+        })
+      );
+    });
+
+    const submitBlock = store.ledgerBlocks.find(
+      (b) => b.action === "SESSION_SUBMIT"
+    );
+    expect(submitBlock).toBeDefined();
+    expect(submitBlock.synced).toBe(true);
+    expect(submitBlock.submissionId).toBe("form-sub-xyz-123");
+    expect(submitBlock.details.submissionId).toBe("form-sub-xyz-123");
+    expect(submitBlock.details.synced).toBe(true);
+  });
+
+  it("handles failed network/API request: triggers error toast, records no ledger block, and preserves form fields", async () => {
+    vi.mocked(executionApi.createFormSubmission).mockRejectedValueOnce(
+      httpError(500)
+    );
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    store.formValues.VSSBP = "120";
+
     const ledgerBefore = store.ledgerBlocks.length;
 
     wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
     await flushPromises();
 
     expect(store.ledgerBlocks.length).toBe(ledgerBefore);
+    expect(store.formValues.VSSBP).toBe("120");
     expect(alertSpy).not.toHaveBeenCalled();
-    expect(useToastStore().toasts).toEqual([
+
+    expect(useToastStore(pinia).toasts).toContainEqual(
       expect.objectContaining({
         tone: "error",
-        title: "Submitting the form isn't available yet",
-      }),
-    ]);
-  });
-
-  it("records and announces a submission on sample data in a demo build", async () => {
-    vi.stubEnv("VITE_DEMO_MODE", "true");
-    const wrapper = mountView();
-    await flushPromises();
-
-    wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
-
-    // EcrfView hashes the submission with crypto.subtle, which can outlast one
-    // flushPromises() when the whole suite runs in parallel.
-    await vi.waitFor(
-      () => {
-        expect(
-          store.ledgerBlocks.some((b) => b.action === "SESSION_SUBMIT")
-        ).toBe(true);
-        expect(alertSpy).toHaveBeenCalledWith(
-          expect.stringContaining("successfully submitted")
-        );
-      },
-      { timeout: 2000 }
+        title: "eCRF Form Submission Failed",
+      })
     );
-    expect(useToastStore().toasts).toHaveLength(0);
   });
 
   it("refuses screening, which no service evaluates, and shows no result", async () => {
@@ -129,7 +178,7 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
     expect(store.ledgerBlocks.some((b) => b.action === "SUBJECT_SCREEN")).toBe(
       false
     );
-    expect(useToastStore().toasts[0]).toMatchObject({
+    expect(useToastStore(pinia).toasts[0]).toMatchObject({
       tone: "error",
       title: "Screening a subject isn't available yet",
     });

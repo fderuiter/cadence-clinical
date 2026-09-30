@@ -17,7 +17,11 @@ vi.mock("vue-router", () => ({
 }));
 
 vi.mock("../src/api/executionApi", () => ({
-  executionApi: { listSubjects: vi.fn() },
+  executionApi: {
+    listSubjects: vi.fn(),
+    createFormSubmission: vi.fn(),
+    completeFormSubmission: vi.fn(),
+  },
 }));
 
 function summary(code, overrides = {}) {
@@ -48,8 +52,9 @@ describe("eCRF subject list from Execution (#4828)", () => {
   let pinia;
 
   beforeEach(() => {
+    vi.useRealTimers();
     routeQuery.value = {};
-    vi.mocked(executionApi.listSubjects).mockReset();
+    vi.clearAllMocks();
     vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -312,26 +317,59 @@ describe("eCRF subject list from Execution (#4828)", () => {
       );
     });
 
-    it("submits nothing: the form is sample content until form definitions are served (#4727)", async () => {
+    it("submits the form to Execution API and completes submission", async () => {
+      routeQuery.value = { studyId: "CAD-101", subjectId: "CAD-001" };
       const store = createStore();
-      store.ecrfFields = [];
+      vi.mocked(executionApi.listSubjects).mockResolvedValue(
+        page([summary("CAD-001")])
+      );
+      vi.mocked(executionApi.createFormSubmission).mockResolvedValueOnce({
+        id: "form-sub-001",
+        status: "DRAFT",
+      });
+      vi.mocked(executionApi.completeFormSubmission).mockResolvedValueOnce({
+        id: "form-sub-001",
+        status: "COMPLETED",
+      });
+
       const wrapper = mountView();
       await flushPromises();
-      // Assert on the push itself: the toast dismisses itself after 8 s, which a slow run can outlast.
-      const push = vi.spyOn(useToastStore(), "push");
+      setActivePinia(pinia);
+      store.ecrfFields = [];
+      store.formValues = {};
+
+      const toastStore = useToastStore(pinia);
+      const pushSpy = vi.spyOn(toastStore, "push");
 
       wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
       await flushPromises();
 
-      expect(push).toHaveBeenCalledWith(
+      expect(executionApi.createFormSubmission).toHaveBeenCalledWith(
         expect.objectContaining({
-          tone: "error",
-          title: "Submitting the form isn't available yet",
+          studyId: expect.any(String),
+          subjectId: expect.any(String),
+          formId: "VS_DEMO",
         })
       );
-      expect(store.ledgerBlocks.map((b) => b.action)).not.toContain(
+      expect(executionApi.completeFormSubmission).toHaveBeenCalledWith(
+        "form-sub-001"
+      );
+      await vi.waitFor(() => {
+        expect(pushSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tone: "success",
+            title: "eCRF Form Submitted",
+          })
+        );
+      });
+      expect(store.ledgerBlocks.map((b) => b.action)).toContain(
         "SESSION_SUBMIT"
       );
+      const submitBlock = store.ledgerBlocks.find(
+        (b) => b.action === "SESSION_SUBMIT"
+      );
+      expect(submitBlock.synced).toBe(true);
+      expect(submitBlock.submissionId).toBe("form-sub-001");
     });
 
     it("shows no study bar in a demo build", async () => {
