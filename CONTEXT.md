@@ -964,6 +964,11 @@ _Avoid_: Raw XPath strings in a protocol definition, a separate DDF rule AST
 The last step of a DDF compile: the rendered OpenRosa form goes through an `IAccessibilityValidator` (by default `XFormsAccessibilityValidator`, a structural WCAG 2.1 review of titles, labels, label languages, choice labels and bindings), and a form whose report lists any violation or layout error is refused with `AccessibilityValidationException` rather than returned (ADR-2501).
 _Avoid_: An accessibility report that says PASS without a check having run
 
+### Form Block
+
+A reusable collection specification, such as a vital signs panel: a Metadata Registry library item of kind `CollectionSpecification` whose items name CDISC Biomedical Concepts by C-code, with a UCUM unit or pinned terminology where they need one. It is drafted, approved with an attestation and pinned like a rule pack, and instantiated into a protocol design's `CollectionSpec` by resolving each code in the tenant's Concept Registry (ADR-2503). Shipped blocks are checksum-verified data in `Cadence.Standards`.
+_Avoid_: Hard-coded form catalogues, SDTM domains or CDASH OIDs inside a block, calling it a "smart block"
+
 ### Programmatic API Documentation Engine
 
 An automated static analysis pipeline that inspects OpenAPI 3.1.0 schemas and FastAPI route metadata across all monorepo microservices (`apps/*`), compiling rich, searchable VitePress Markdown reference documents (`docs/api/*`) with request/response schema tables, GxP role authorizations, RFC 7807 problem detail models, and step-up signature parameters without requiring live runtime databases.

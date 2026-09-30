@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Standards</RootNamespace>
     <AssemblyName>Cadence.Standards</AssemblyName>
-    <Description>Standards subsystem (spec §6.3): loaders for public standards content (CDISC Library) into Standards Registry packages. Depends on Cadence.Kernel.Abstractions only.</Description>
+    <Description>Standards subsystem (spec §6.3): loaders for public standards content (CDISC Library) into Standards Registry packages, and reusable collection specifications (form blocks). Depends on Cadence.Kernel.Abstractions only.</Description>
     <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
     <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>
@@ -14,12 +14,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
   </ItemGroup>
 
-  <!-- Seed content ships inside the assembly and is checksum-verified against Seed/manifest.json when loaded. -->
+  <!-- Seed content and form blocks ship inside the assembly and are checksum-verified against their manifest.json when loaded. -->
   <ItemGroup>
     <EmbeddedResource Include="Seed\*.json" LogicalName="Cadence.Standards.Seed.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Blocks\*.json" LogicalName="Cadence.Standards.Blocks.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

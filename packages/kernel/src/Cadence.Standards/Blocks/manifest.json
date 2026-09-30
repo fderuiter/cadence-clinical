@@ -1,0 +1,11 @@
+{
+  "description": "Reusable collection specifications (form blocks) that ship with the platform. Each file is checksum-verified before it is read.",
+  "files": [
+    {
+      "file": "vital-signs.json",
+      "key": "cadence.vital-signs",
+      "title": "Vital Signs",
+      "sha256": "b881a4f134d91416ab2b1b1558b06342baa4c483bab6dc4af9b76bc58063d355"
+    }
+  ]
+}

@@ -34,6 +34,7 @@ using Cadence.Rules;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
+using Cadence.Standards;
 using Cadence.Testing.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -138,6 +139,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelValidationPersistence()
             .AddKernelValidation()
             .AddCadenceRules()
+            .AddCadenceStandards()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 

@@ -18,8 +18,8 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
-| [packages/ddf](#packagesddf) | 3 | 0 | 8 |
-| [packages/engine_core](#packagesengine_core) | 22 | 0 | 0 |
+| [packages/ddf](#packagesddf) | 2 | 0 | 9 |
+| [packages/engine_core](#packagesengine_core) | 19 | 0 | 3 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 2 | 0 | 4 |
 
@@ -33,11 +33,11 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `ports.py` | `AccessibilityValidatorPort` | `IAccessibilityValidator` (`packages/ddf/src/Accessibility.cs`) | Ported, deletion pending | `DdfCompilerTests` |
 | `rules/ast.py` | DDF rule AST (skip logic, constraint, cross-form), node validation, `detect_circular_dependencies` | Replaced by the one rule language (K-RULE-3): item rules are `Cadence.Rules` expressions (`DdfItemRules`); cycles by `DdfDependencyGraph` | Ported, deletion pending | ADR-2502; `DdfRulesTests`. ODM paths (`field_ref` with form or visit, `indexed-repeat`) are not carried forward |
 | `rules/compiler.py` | `sanitize_identifier`, `extract_appearance`, condition → XPath compiler | `DdfIdentifier.Sanitize` (deterministic, no random fallback), `RuleXPathCompiler` (safe literals), column width → appearance in `UsdmCompiler` | Ported, deletion pending | ADR-2502; `DdfRulesTests` |
-| `smart_blocks.py` | Catalog of reusable form blocks (vitals, hematology, ConMeds, AE) and instantiation | none | Port missing |  |
+| `smart_blocks.py` | Catalog of reusable form blocks (vital signs, AE log) and instantiation into a tripartite form | `CollectionSpecification` library items: content format and validator (`CollectionSpecificationJson`), the shipped vital signs block (`FormBlocks`) and instantiation into a protocol design `CollectionSpec` (`CollectionSpecificationInstantiator`), in `Cadence.Standards` | Ported, deletion pending | ADR-2503; `FormBlockTests`, `FormBlockPostgresTests`. Not carried forward: CDASH OIDs and SDTM domains (mapping specifications), widget layout, min/max ranges (rule-pack edit checks) and the AE log block |
 | `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | `UsdmCompiler.CompileUsdm` throws `AccessibilityValidationException`; `XFormsAccessibilityValidator` is the built-in check | Ported, deletion pending | `DdfCompilerTests`, `XFormsAccessibilityValidatorTests` |
 | `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | `UsdmCompiler.ParseUsdmToIr`: rules, appearance, and item `label`, `description`, `hint` and `localizations` (`ItemText`) | Ported, deletion pending | ADR-2502; `DdfRulesTests`. Guessing item text from USDM narrative content by name is not carried forward: the text comes from the item's own fields |
 | `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | `UsdmCompiler.ParseUsdmToIr`: a missing study id or name and an item without an id are filled in and reported as warnings; duplicate item ids and element names fail the compile | Ported, deletion pending | `DdfRulesTests`. Placeholder UUIDs for USDM `documentedBy` fields are not carried forward: nothing validates them against a schema |
-| `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec |
+| `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec: the data schema part is the protocol design's `CollectionSpec` (ADR-2503); the UI and logic schemas, migration matrix and UAT report remain |
 
 ## packages/engine_core
 
@@ -49,9 +49,9 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `financial/engine.py` | Event-triggered payable engine | none | Port missing |  |
 | `financial/ledger.py` | Payable ledger with holdback reserve accounting | none | Port missing |  |
 | `financial/models.py` | Fee matrix, grant contract, payable models | entity shapes only in `apps/payments` | Port missing |  |
-| `fsm/engine.py` | Generic DAG state machine with Part 11 envelope | none | Port missing |  |
-| `fsm/models.py` | State and transition models, `Part11AuditEnvelope` | none | Port missing |  |
-| `fsm/validator.py` | Graph validation (reachability, terminal states) | none | Port missing |  |
+| `fsm/engine.py` | Generic DAG state machine with Part 11 envelope | Superseded: lifecycles are state machines on kernel aggregates in `Cadence.Kernel.Domain` (spec §3), with authorization (`IAuthorizer`), reason for change and audit from the kernel command pipeline | Ported, deletion pending | No generic runtime state machine is carried forward |
+| `fsm/models.py` | State and transition models, `Part11AuditEnvelope` | Superseded with `fsm/engine.py`; the kernel audit log records each command | Ported, deletion pending |  |
+| `fsm/validator.py` | Graph validation (reachability, terminal states) | Superseded with `fsm/engine.py`; each aggregate's transitions are fixed in code and covered by its tests | Ported, deletion pending |  |
 | `operations/engine.py` | Site startup greenlight facade | none | Port missing |  |
 | `operations/evaluator.py` | Greenlight rules: IRB, contract, staff qualification, facility, IP depot | none | Port missing | Spec K-TIME-4/5 and K-AUTH-5 are the target |
 | `operations/models.py` | Greenlight models | none | Port missing |  |
