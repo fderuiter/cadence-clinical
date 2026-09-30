@@ -7,6 +7,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`kernel.activity_entries`](#kernelactivity_entries) | `ActivityEntryRecord` | 11 |
+| [`kernel.artifact_versions`](#kernelartifact_versions) | `ArtifactVersion` | 9 |
+| [`kernel.artifacts`](#kernelartifacts) | `Artifact` | 9 |
 | [`kernel.attestations`](#kernelattestations) | `Attestation` | 15 |
 | [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
 | [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
@@ -68,6 +70,64 @@ Indexes:
 
 - `IX_activity_entries_scope`: (`scope`)
 - `IX_activity_entries_tenant_id_recorded_event_id`: (`tenant_id`, `recorded`, `event_id`)
+
+## kernel.artifact_versions
+
+Entity: `ArtifactVersion`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `artifact_id` | `uuid` | no |  |  |
+| `content_hash` | `character varying(71)` | no |  |  |
+| `media_type` | `character varying(255)` | no |  |  |
+| `number` | `integer` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `size_bytes` | `bigint` | no |  |  |
+| `storage_ref` | `character varying(1024)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_artifact_versions_artifacts_tenant_id_artifact_id`: (`tenant_id`, `artifact_id`) references `kernel.artifacts` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `AK_artifact_versions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_artifact_versions_tenant_id_artifact_id_content_hash`: unique (`tenant_id`, `artifact_id`, `content_hash`)
+- `IX_artifact_versions_tenant_id_artifact_id_number`: unique (`tenant_id`, `artifact_id`, `number`)
+
+Check constraints:
+
+- `ck_artifact_versions_content_hash`: `content_hash ~ '^sha256:[0-9a-f]{64}$'`
+- `ck_artifact_versions_number`: `number > 0`
+- `ck_artifact_versions_size`: `size_bytes > 0`
+
+## kernel.artifacts
+
+Entity: `Artifact`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `kind` | `character varying(32)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `study_id` | `uuid` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `title` | `character varying(500)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_artifacts_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_artifacts_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_artifacts_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_artifacts_tenant_id_study_id_kind`: (`tenant_id`, `study_id`, `kind`)
 
 ## kernel.attestations
 

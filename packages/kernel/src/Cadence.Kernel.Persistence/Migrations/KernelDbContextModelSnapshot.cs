@@ -26,6 +26,124 @@ namespace Cadence.Kernel.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "btree_gist");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid?>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "StudyId", "Kind");
+
+                    b.ToTable("artifacts", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.ArtifactVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArtifactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("artifact_id");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)")
+                        .HasColumnName("content_hash");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("media_type");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("storage_ref");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "ArtifactId", "ContentHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "ArtifactId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("artifact_versions", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_artifact_versions_content_hash", "content_hash ~ '^sha256:[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("ck_artifact_versions_number", "number > 0");
+
+                            t.HasCheckConstraint("ck_artifact_versions_size", "size_bytes > 0");
+                        });
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Attestation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2206,6 +2324,31 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("lineage_nodes", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.ArtifactVersion", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Artifact", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("TenantId", "ArtifactId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Attestation", b =>
                 {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
@@ -2556,6 +2699,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Enrollment", b =>

@@ -27,6 +27,9 @@ internal static class InsertOnlySql
         "audit_entries", "domain_events", "provenance_activities", "idempotency_records", "audit_chain_seals",
         "code_system_versions", "code_system_entries", "concept_revisions", "attestations", "lineage_nodes", "lineage_edges",
 
+        // Evidence: an artifact version names its bytes by hash and never changes (spec §8.3).
+        "artifact_versions",
+
         // Standards Registry definitions: fixed once their standard version is registered (spec §6.3).
         "standard_datasets", "standard_variables", "standard_value_level_definitions", "standard_terminology",
 

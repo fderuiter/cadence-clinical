@@ -52,7 +52,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             "standard_versions", "standard_datasets", "standard_variables", "standard_value_level_definitions",
             "standard_terminology", "library_items", "study_standards_profiles",
             "protocol_versions", "attestations", "participants", "enrollments", "enrollment_status_periods",
-            "lineage_nodes", "lineage_edges", "activity_entries");
+            "lineage_nodes", "lineage_edges", "activity_entries", "artifacts", "artifact_versions");
     }
 
     /// <summary>

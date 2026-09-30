@@ -2269,3 +2269,111 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE TABLE kernel.artifacts (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        kind character varying(32) NOT NULL,
+        study_id uuid,
+        title character varying(500) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_artifacts" PRIMARY KEY (id),
+        CONSTRAINT "AK_artifacts_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_artifacts_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_artifacts_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE TABLE kernel.artifact_versions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        artifact_id uuid NOT NULL,
+        number integer NOT NULL,
+        content_hash character varying(71) NOT NULL,
+        size_bytes bigint NOT NULL,
+        media_type character varying(255) NOT NULL,
+        storage_ref character varying(1024) NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_artifact_versions" PRIMARY KEY (id),
+        CONSTRAINT "AK_artifact_versions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_artifact_versions_content_hash CHECK (content_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT ck_artifact_versions_number CHECK (number > 0),
+        CONSTRAINT ck_artifact_versions_size CHECK (size_bytes > 0),
+        CONSTRAINT "FK_artifact_versions_artifacts_tenant_id_artifact_id" FOREIGN KEY (tenant_id, artifact_id) REFERENCES kernel.artifacts (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE UNIQUE INDEX "IX_artifact_versions_tenant_id_artifact_id_content_hash" ON kernel.artifact_versions (tenant_id, artifact_id, content_hash);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE UNIQUE INDEX "IX_artifact_versions_tenant_id_artifact_id_number" ON kernel.artifact_versions (tenant_id, artifact_id, number);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE INDEX "IX_artifacts_tenant_id_study_id_kind" ON kernel.artifacts (tenant_id, study_id, kind);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    ALTER TABLE "kernel"."artifact_versions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."artifact_versions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."artifact_versions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    ALTER TABLE "kernel"."artifacts" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."artifacts" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."artifacts"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    CREATE TRIGGER "trg_artifact_versions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."artifact_versions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_artifact_versions_no_truncate" BEFORE TRUNCATE ON "kernel"."artifact_versions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930055034_ArtifactsAndVersions') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930055034_ArtifactsAndVersions', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

@@ -60,6 +60,16 @@ public class EnrollmentIdValueConverter() : ValueConverter<EnrollmentId, Guid>(
     guid => new EnrollmentId(guid)
 );
 
+public class ArtifactIdValueConverter() : ValueConverter<ArtifactId, Guid>(
+    id => id.Value,
+    guid => new ArtifactId(guid)
+);
+
+public class ArtifactVersionIdValueConverter() : ValueConverter<ArtifactVersionId, Guid>(
+    id => id.Value,
+    guid => new ArtifactVersionId(guid)
+);
+
 public class ObservationIdValueConverter() : ValueConverter<ObservationId, Guid>(
     id => id.Value,
     guid => new ObservationId(guid)

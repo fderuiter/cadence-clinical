@@ -308,7 +308,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 | --- | --- |
 | Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
-| Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactVersioned`, `IngestionBatchAccepted` |
+| Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
 | Quality | `ValidationRunCompleted`, `FindingOpened`, `FindingResolved`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
 | Intelligence | `ProposalCreated`, `ProposalApproved`, `ProposalExecuted`, `ProposalRejected` |
@@ -645,6 +645,10 @@ coordinates (inventory §3 item 10).
 - `Artifact` is versioned, hash-addressed content (signed ICF, IRB letter, lab report, DICOM series,
   generated dataset, protocol rendering). Classification (e.g. TMF artifact type) is an Assertion, so eTMF
   filing can be re-projected without touching the artifact.
+- **Implemented** (ADR-2454, #4729): `Artifact(kind, study?, title)` with insert-only, numbered `ArtifactVersion`s
+  that record the content hash, size, media type and storage reference of bytes kept in object storage. Attestations
+  can target an `artifact_version`. `Source`, range sets and the TMF classification Assertion are not yet
+  implemented.
 
 ### 8.4 Specimen
 
@@ -1101,6 +1105,7 @@ kernel, is merged into another, or is retired.
 | K017 | Participants and enrollment | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal | ADR-2453 |
 | K018 | Rule language and evaluator | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules` | ADR-2461 |
 | K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
+| K020 | Evidence artifacts | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version | ADR-2454 |
 
 ---
 

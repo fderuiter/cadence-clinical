@@ -77,7 +77,10 @@ columns on the Observation. Queries target an `ObservationId`.
 ### Source, Artifact and Specimen
 
 A **Source** says where an Observation came from (manual entry, device, lab feed, ingestion batch).
-An **Artifact** is a versioned document or file (approval letter, image, dataset). A **Specimen** links
+An **Artifact** is a versioned document or file (approval letter, signed consent, lab report, dataset). Each
+**ArtifactVersion** is immutable and named by the SHA-256 hash of its bytes, which live in object storage; a new file
+is a new version, and signatures and evidence name a version. Its declared kind (for example `EthicsApproval`) is
+what kernel rules check; a TMF filing is an Assertion about it (ADR-2454). A **Specimen** links
 a participant, its collection event, chain of custody, consent scope and derived results.
 
 ### Attestation

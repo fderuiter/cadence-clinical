@@ -166,6 +166,29 @@ var enrolled = await sender.SendAsync(
   `ex_enrollment_status_periods_one_active` keeps one active enrollment per participant and study site.
 - **Not yet:** eligibility gating (#4727), StudySite activation gating (#4777) and per-StudySite numbering.
 
+## Evidence artifacts (ADR-2454)
+
+An `Artifact` is versioned evidence content (spec §8.3). The bytes go to object storage first; the kernel records
+what they are:
+
+```csharp
+var content = new ArtifactContent(ContentHash.OfBytes(bytes), bytes.Length, "application/pdf", storageRef);
+var registered = await sender.SendAsync(
+    new RegisterArtifact(tenant, artifactId, versionId, ArtifactKind.EthicsApproval, studyId, "IRB approval", content, key1, "Filed approval"),
+    cancellationToken: ct);
+var amended = await sender.SendAsync(
+    new AddArtifactVersion(tenant, artifactId, ArtifactVersionId.New(), amendedContent, key2, "Amended approval"), cancellationToken: ct);
+```
+
+- **Versions.** Version 1 comes with registration; later versions are numbered on. Content an existing version
+  already has is refused (`K.Evidence.ContentUnchanged`). `study` is null for tenant-wide evidence.
+- **Content.** `ArtifactContent.Problem()` checks the `sha256:` hash, a positive size, a lower-case `type/subtype`
+  media type and a storage reference. `ContentHash.OfBytes` computes the hash the storage adapter records.
+- **Signing.** `Attest` accepts `artifact_version` targets with the version's content hash.
+- **Database.** `artifacts` and `artifact_versions` are tenant-isolated; `artifact_versions` is insert-only
+  (`KA001`) with check constraints on the hash, size and number.
+- **Not yet:** `Source`, lab range sets and the TMF classification Assertion.
+
 ## Bitemporal tables (ADR-2246)
 
 A bitemporal entity implements `IBitemporalEntity` (`TemporalPeriod Period`, made of two half-open `TimeRange`s).
