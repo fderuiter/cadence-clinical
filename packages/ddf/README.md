@@ -26,7 +26,7 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 - `UsdmDesignImporter` (with `UsdmImportOptions`, `UsdmImportResult`, `UsdmImportNote`, `BiomedicalConceptResolver`): USDM 4 into a `ProtocolDesign`. `UsdmDesignReader`, `UsdmSchedule` and `UsdmDuration` (`UsdmJson.cs`) are internal.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `smart_blocks.py`, `tripartite.py`, `stages/`, with their `__init__.py` files and `pyproject.toml`. `ports.py`, `stages/accessibility.py` and `rules/` are ported and tested and wait only for a maintainer to approve their deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `smart_blocks.py`, `tripartite.py`, `stages/`, with their `__init__.py` files and `pyproject.toml`. `models.py`, `ports.py`, `stages/accessibility.py` and `rules/` are ported and tested and wait only for a maintainer to approve their deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
