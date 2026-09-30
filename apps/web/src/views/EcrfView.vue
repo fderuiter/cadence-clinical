@@ -862,12 +862,16 @@ function commitChange(field, oldValue, newValue, reason) {
 }
 
 // Query Operations
+// Queries here live on the sample form, and their only sync target (/queries/sync) exists in the demo mock API
+// alone, so outside demo builds they are refused (#4827). They move onto Execution's query endpoints once the
+// eCRF renders real form definitions (#4828).
 function createQuery(fieldId, msgFromComponent = null) {
   const msg = msgFromComponent !== null ? msgFromComponent : "";
   if (!msg) {
     alert("Please enter a discrepancy message!");
     return;
   }
+  if (!allowUnbackedAction("Raising a query")) return;
 
   const queryObj = {
     status: "OPEN",
@@ -895,6 +899,7 @@ function respondQuery(fieldId, respFromComponent = null) {
     alert("Please enter a response!");
     return;
   }
+  if (!allowUnbackedAction("Answering a query")) return;
 
   const queryObj = store.formQueries[fieldId];
   queryObj.status = "ANSWERED";
@@ -915,6 +920,8 @@ function respondQuery(fieldId, respFromComponent = null) {
 }
 
 function closeQuery(fieldId) {
+  // The re-authentication prompt below verifies nothing, so outside demo builds it is never shown.
+  if (!allowUnbackedAction("Closing a query")) return;
   pendingCloseQueryFieldId.value = fieldId;
   reauthAction.value = "CLOSE_QUERY";
   reauthUsername.value =
@@ -926,6 +933,7 @@ function closeQuery(fieldId) {
 }
 
 function reopenQuery(fieldId) {
+  if (!allowUnbackedAction("Reopening a query")) return;
   const queryObj = store.formQueries[fieldId];
   queryObj.status = "REOPENED";
   queryObj.message =
