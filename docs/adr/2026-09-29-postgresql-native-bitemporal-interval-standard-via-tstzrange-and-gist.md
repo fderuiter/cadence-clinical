@@ -72,4 +72,4 @@ Standard relational models use simple `created_at` / `updated_at` columns or ove
   - The exclusion constraint follows spec §4.1 K-TIME-2 rather than the partial-index example in Option 1. It rejects overlapping `(tenant, entity, valid, recorded)` rectangles, so closed history rows are protected too. It is `DEFERRABLE INITIALLY DEFERRED`, so a correction's close-and-insert pair can be saved in one transaction in either order.
   - The `BitemporalFoundation` migration enables `btree_gist` and creates `kernel.enforce_bitemporal_append_only()`.
   - Each bitemporal table adds its guards in the migration that creates it. The first is Observation (#4729).
-  - Verified against PostgreSQL 16 by `tests/Kernel/Integration/BitemporalPostgresTests.cs`, covering overlap rejection, correction plus `AsOf` reconstruction, and append-only enforcement.
+  - Verified against PostgreSQL 16 by `tests/Cadence.IntegrationTests/Kernel/BitemporalPostgresTests.cs`, covering overlap rejection, correction plus `AsOf` reconstruction, and append-only enforcement.

@@ -54,5 +54,5 @@ To complete the decommissioning of Python execution runtime dependencies in favo
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `Cadence.Deid` (`packages/deid/src/`), `Cadence.Security` (`packages/security/src/`), `Cadence.UnitTests` (`tests/Packages/DeidEngineUnitTests.cs`).
+- **Affected Repositories / Services:** `Cadence.Deid` (`packages/deid/src/`), `Cadence.Security` (`packages/security/src/`), `Cadence.UnitTests` (`tests/Cadence.UnitTests/Packages/DeidEngineUnitTests.cs`).
 - **Verification Plan:** Unit tests in `Cadence.UnitTests` verify 100% pass rate across text transforms, DICOM header stripping, pixel masking, surrogate vaulting, and signed manifests.

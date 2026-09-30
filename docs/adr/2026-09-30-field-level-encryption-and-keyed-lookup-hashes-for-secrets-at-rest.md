@@ -131,12 +131,12 @@ still holds it. `Down` restores the old columns empty.
   (`TestFieldProtection`, `StoredRowReader`), `apps/payments`, `apps/interop`, `apps/econsent`, `.env.example`,
   `docs/ENVIRONMENT_VARIABLES.md`, `docker/docker-compose.yml`.
 - **Verification Plan:**
-  - `tests/Packages/FieldProtectionTests.cs`: round trip, randomised ciphertext, wrong purpose/key/tampering/plaintext
+  - `tests/Cadence.UnitTests/Packages/FieldProtectionTests.cs`: round trip, randomised ciphertext, wrong purpose/key/tampering/plaintext
     rejected, invalid keys rejected, keyed and purpose-separated hashes, host start fails without keys.
-  - `tests/Packages/FieldProtectionHostWiringTests.cs`: the real payments, econsent and interop composition roots
+  - `tests/Cadence.UnitTests/Packages/FieldProtectionHostWiringTests.cs`: the real payments, econsent and interop composition roots
     resolve the configured encryptor/hasher and register fail-closed validation for their key.
-  - `tests/Payments/ParticipantWalletSecretsAtRestTests.cs`, `tests/Econsent/ConsentSignatureSecretsAtRestTests.cs`,
-    `tests/Interop/DeviceTokenAtRestTests.cs`: rows read back with raw SQL (bypassing converters) never contain the
+  - `tests/Cadence.UnitTests/Payments/ParticipantWalletSecretsAtRestTests.cs`, `tests/Cadence.UnitTests/Econsent/ConsentSignatureSecretsAtRestTests.cs`,
+    `tests/Cadence.UnitTests/Interop/DeviceTokenAtRestTests.cs`: rows read back with raw SQL (bypassing converters) never contain the
     plaintext; the model has no raw-secret column; wrong-key reads fail; hashes find rows across tables; the
     signature binding matches an independently computed SHA-256 vector.
   - The three migrations were applied to PostgreSQL 16 over seeded plaintext rows, rolled back and re-applied; after

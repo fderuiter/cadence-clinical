@@ -59,4 +59,4 @@ A fallback credential turns a configuration mistake into a running system that i
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/database`, `packages/security`, `packages/compliance`, `packages/config` (deleted since, #4867), `packages/cli`, `packages/testing`, every `apps/*` design-time factory, `apps/apphost`, `apps/web`, `docker/nginx`.
-- **Verification Plan:** Unit tests in `tests/Packages/DatabaseUnitTests.cs` and `tests/Packages/CadenceSecurityUnitTests.cs` cover the missing-configuration failures and the shared digest key; the Execution and E2E host tests supply their connection string through `UseTestPostgresConnectionString()`.
+- **Verification Plan:** Unit tests in `tests/Cadence.UnitTests/Packages/DatabaseUnitTests.cs` and `tests/Cadence.UnitTests/Packages/CadenceSecurityUnitTests.cs` cover the missing-configuration failures and the shared digest key; the Execution and E2E host tests supply their connection string through `UseTestPostgresConnectionString()`.

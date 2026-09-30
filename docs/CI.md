@@ -35,7 +35,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `adrs`                | ADR schema and `docs/adr/index.md` consistency                                             |
 | `arch-drift`          | Architecture diagrams match the solution                                                   |
 | `sanitizer`           | Requirement tag prefixes in tests                                                          |
-| `markdown`            | Markdown structure and links                                                               |
+| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist |
 | `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                        |
 | `readmes`             | Each project has a README                                                                  |
 | `imports`             | No cross-service persistence references                                                    |

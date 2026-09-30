@@ -87,7 +87,7 @@ ADR-2247 decided that every module uses one PostgreSQL database (`cadence`) with
   - Migrations: ctms and org (`SyncModelWithSnapshot`), interop (`InitialCreate` fix).
   - `scripts/manage_migrations.ps1`.
 - **Verification Plan:**
-  - `tests/Packages/MigrationUnitTests.cs`:
+  - `tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs`:
     - No DbContext has model changes without a migration.
     - Each factory and its service use the same schema.
     - Invalid schema names are rejected.

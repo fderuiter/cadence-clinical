@@ -60,12 +60,12 @@ upgrade does not fix it.
   - Commands are registered with `AddCommand`/`AddBranch` in `Program.cs`, which the `cli-docs` gate reads.
 - **Negative Impact / Technical Debt:** A free positional argument accepts option-like tokens; `cadence check`
   validates its arguments so a mistyped option is rejected rather than run as a gate name.
-- **Mitigation Strategy:** `tests/Packages/CliCommandLineTests.cs` parses the documented invocations and the
+- **Mitigation Strategy:** `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs` parses the documented invocations and the
   rejected ones through `Program.BuildRootCommand()`.
 
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/cli`, `packages/tooling_core` (`CliDocsGeneratorService`),
   `.github/workflows/ci.yml`, `Directory.Packages.props`.
-- **Verification Plan:** CLI parser tests and the CLI docs parity tests in `tests/Packages`; the Native AOT publish
+- **Verification Plan:** CLI parser tests and the CLI docs parity tests in `tests/Cadence.UnitTests/Packages`; the Native AOT publish
   in CI; a smoke run of the published binary (`--help`, `doctor`, `check markdown`, error paths).

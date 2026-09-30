@@ -76,7 +76,7 @@ HTTP hardening:
   - `apps/gateway/src/GatewayRateLimiting.cs`, `apps/gateway/src/Program.cs`
   - `docker/docker-compose.yml`, `docs/ENVIRONMENT_VARIABLES.md`, `packages/telemetry/README.md`, `apps/gateway/README.md`
 - **Verification Plan:**
-  - `tests/Packages/HttpHardeningTests.cs` checks proxy list parsing, HSTS on HTTPS outside Development only, and that
+  - `tests/Cadence.UnitTests/Packages/HttpHardeningTests.cs` checks proxy list parsing, HSTS on HTTPS outside Development only, and that
     `X-Forwarded-Proto` is honoured from a trusted proxy and ignored from anyone else.
-  - `tests/Gateway/GatewayRateLimitingTests.cs` checks that a caller over the limit gets 429 with `Retry-After`,
+  - `tests/Cadence.UnitTests/Gateway/GatewayRateLimitingTests.cs` checks that a caller over the limit gets 429 with `Retry-After`,
     another caller is still served, and health probes are never limited.

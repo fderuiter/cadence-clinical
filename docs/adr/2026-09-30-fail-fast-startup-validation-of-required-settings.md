@@ -66,5 +66,5 @@ Two settings still failed late or silently:
   - `packages/testing/src/Security/TestSecurityContext.cs`, `packages/tooling_core/src/Cadence.OpenApiExporter/Program.cs`
   - `docs/ENVIRONMENT_VARIABLES.md`, `apps/execution/README.md`, `apps/gateway/README.md`, `.env.example`
 - **Verification Plan:**
-  - `tests/Execution/Security/DemographicsKeyStartupValidationTests.cs` checks that an empty, non-Base64 or wrong-length key stops the host at startup.
-  - `tests/Gateway/GatewayServiceUrlValidationTests.cs` checks that the gateway will not start outside Development without service addresses, or with a relative address.
+  - `tests/Cadence.UnitTests/Execution/Security/DemographicsKeyStartupValidationTests.cs` checks that an empty, non-Base64 or wrong-length key stops the host at startup.
+  - `tests/Cadence.UnitTests/Gateway/GatewayServiceUrlValidationTests.cs` checks that the gateway will not start outside Development without service addresses, or with a relative address.

@@ -52,7 +52,14 @@ public static class MarkdownValidatorService
             issuesCount++;
         }
 
-        // Rule 2: Heading space validation
+        // Rule 2: Paths into .NET test project folders must exist
+        foreach (var issue in MarkdownParser.ValidateTestProjectPaths(repoRoot, mdFiles))
+        {
+            Console.WriteLine($"[MARKDOWN TEST PATH] {issue.Message}");
+            issuesCount++;
+        }
+
+        // Rule 3: Heading space validation
         foreach (var file in mdFiles)
         {
             string[] lines;

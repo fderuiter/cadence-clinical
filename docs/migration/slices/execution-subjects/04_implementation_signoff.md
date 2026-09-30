@@ -11,7 +11,7 @@
   - `apps/execution/src/Domain/Exceptions/LockedFactorMutationException.cs`
   - `apps/execution/src/Domain/Rules/SubjectStateMachine.cs`
   - `tests/SubjectStateMachineTests.cs`
-  - `tests/Cadence.UnitTests.csproj` (added `ProjectReference` to `Cadence.Apps.Execution` so unit tests can exercise the new Domain namespace)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (added `ProjectReference` to `Cadence.Apps.Execution` so unit tests can exercise the new Domain namespace)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 114 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes
@@ -34,8 +34,8 @@
   - `apps/execution/src/Domain/Subjects/SubjectCode.cs`
   - `apps/execution/src/Domain/Subjects/StudyCode.cs`
   - `apps/execution/src/Domain/Subjects/SiteCode.cs`
-  - `tests/Execution/Subjects/ValueObjectTests.cs`
-  - `tests/Cadence.UnitTests.csproj` (added `ProjectReference` to `Cadence.Database`, per the ticket's explicit instruction to wire it now so later persistence-layer tickets' tests can compile — `Cadence.Apps.Execution` was already referenced from the prior ticket)
+  - `tests/Cadence.UnitTests/Execution/Subjects/ValueObjectTests.cs`
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (added `ProjectReference` to `Cadence.Database`, per the ticket's explicit instruction to wire it now so later persistence-layer tickets' tests can compile — `Cadence.Apps.Execution` was already referenced from the prior ticket)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 131 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`) — 114 pre-existing + 17 new `ValueObjectTests`
@@ -55,7 +55,7 @@
 - **Scope Note:** `03_tickets.md`'s WBS Dependencies column lists `MIG-SUBJ-002` ("`SubjectState` Enum, Codec & Transition Graph") as the next zero-dependency ticket ahead of this one in numbering, but `02_technical_design.md` §2.2's authoritative `SubjectTransitionGraph.Guard` code shape calls `SubjectErrors.InvalidStateTransition(...)` directly — a real compile-time dependency the WBS table does not surface (MIG-SUBJ-002 has no listed dependency on MIG-SUBJ-003, yet cannot be implemented per its own Technical Implementation Details without `SubjectErrors` existing first). Implementing MIG-SUBJ-002 now would have forced a choice between defining `SubjectErrors` inline (scope creep into this ticket's explicit territory) or diverging from the design doc's `Guard` signature. `MIG-SUBJ-003` itself has no dependencies of its own (domain layer only, no aggregate/HTTP surface) and is independently listed as zero-dependency/startable-immediately in the roadmap, so it was implemented first to unblock MIG-SUBJ-002 cleanly for the next pass.
 - **Target Files Modified:**
   - `apps/execution/src/Domain/Subjects/SubjectErrors.cs`
-  - `tests/Execution/Subjects/SubjectErrorsTests.cs`
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectErrorsTests.cs`
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 139 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`) — 131 pre-existing + 8 new `SubjectErrorsTests`
@@ -79,8 +79,8 @@
   - `apps/execution/src/Domain/Subjects/SubjectState.cs`
   - `apps/execution/src/Domain/Subjects/SubjectStateCodec.cs`
   - `apps/execution/src/Domain/Subjects/SubjectTransitionGraph.cs`
-  - `tests/Execution/Subjects/SubjectTransitionGraphTests.cs`
-  - `tests/Execution/Subjects/SubjectStateCodecTests.cs`
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectTransitionGraphTests.cs`
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectStateCodecTests.cs`
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 258 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests` — the two test projects build the same shared test sources and report identical totals, consistent with this slice's existing dual-project setup) — 118 new: 99 in `SubjectTransitionGraphTests` (81-permutation full transition matrix via `[Theory]`/`[MemberData]`, 9 same-state no-op cases, 1 null-current-targeting-Screening case, 7 null-current-targeting-non-Screening failure cases, 1 `ReconsentRequired` 7-state fan-out check) + 19 in `SubjectStateCodecTests` (9 `ToCode`/`TryParse` round-trips, 4 casing/whitespace/space-normalization cases, 6 unmapped-or-empty-input false-not-throw cases).
@@ -103,8 +103,8 @@
   - `packages/engine_core/src/AggregateRootBase.cs` (new)
   - `packages/engine_core/src/AggregateRoot.cs` (now `: AggregateRootBase`; the four audit properties moved to the new base, `Id`/constructors unchanged)
   - `packages/database/src/GxPAuditInterceptor.cs` (pattern-match generalized from `AggregateRoot<string>` to `AggregateRootBase`; added the per-`EntityName` Merkle-chained `AuditLogEntry` write path)
-  - `tests/Execution/Persistence/GxPAuditInterceptorMerkleChainTests.cs` (new)
-  - `tests/Cadence.UnitTests.csproj` / `tests/Cadence.ArchitectureTests.csproj` (both added `PackageReference Include="Microsoft.EntityFrameworkCore.InMemory"` — both test projects glob-compile the same `tests/` source tree, so the new EF-Core-backed interceptor test needed the provider package available to both, matching this repo's existing dual-project-shared-sources setup)
+  - `tests/Cadence.UnitTests/Execution/Persistence/GxPAuditInterceptorMerkleChainTests.cs` (new)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` / `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (both added `PackageReference Include="Microsoft.EntityFrameworkCore.InMemory"` — both test projects glob-compile the same `tests/` source tree, so the new EF-Core-backed interceptor test needed the provider package available to both, matching this repo's existing dual-project-shared-sources setup)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — full-solution build per the ticket's own AC, confirming `Cadence.Apps.Gateway`/`Cadence.Apps.Designer` (neither currently declares an `AggregateRoot<TId>` subclass) are unaffected.
 - **Tests Executed:** 263 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 5 new in `GxPAuditInterceptorMerkleChainTests`: non-`string`-`TId` (`AggregateRoot<Guid>`) field-stamping regression; `CreatedBy` preserved (not overwritten) plus `VersionIndex` increment on a second `Modified` save; two-sequential-saves same-`EntityName` predecessor-chain assertion; two-different-`EntityName`s-in-one-call independent-chain assertion; a raw `IGxPAuditable`-only (non-`AggregateRootBase`) entity still gets an `AuditLogEntry` written without field-stamping. (`rm -rf obj bin` was run before both the build and the test invocation per this project's documented obj-collision race between the two test projects sharing `tests/`.)
@@ -130,7 +130,7 @@
   - `apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs` (new)
   - `apps/execution/src/Infrastructure/Security/DemographicsEncryptionOptions.cs` (new)
   - `apps/execution/src/Infrastructure/Security/DemographicsDecryptionFailedException.cs` (new)
-  - `tests/Execution/Security/AesGcmDemographicsEncryptionServiceTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Security/AesGcmDemographicsEncryptionServiceTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 271 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 8 new in `AesGcmDemographicsEncryptionServiceTests`: round-trip fidelity (string/long/bool/null value shapes); three separate tamper-detection cases (bit-flip in nonce, in ciphertext body, in tag — each asserting a wrapped `CryptographicException`); malformed-base64 (wrapped `FormatException`); non-object-JSON-payload (bare `[1,2,3]` array, asserting the exact required message); wrong-key decryption; no-PII-leak assertion on the failure-path exception message. (`rm -rf obj bin` was run before both the build and the test invocation per this project's documented obj-collision race between the two test projects sharing `tests/`.)
@@ -156,7 +156,7 @@
   - `apps/execution/src/Infrastructure/SystemClock.cs` (new)
   - `apps/execution/src/Application/Abstractions/IDemographicsNormalizationService.cs` (new)
   - `apps/execution/src/Infrastructure/Security/DemographicsNormalizationService.cs` (new)
-  - `tests/Execution/Security/DemographicsNormalizationServiceTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Security/DemographicsNormalizationServiceTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)
 - **Tests Executed:** 308 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 37 new in `DemographicsNormalizationServiceTests`: 17 `[Theory]` rows over the full Rule 7 gender-mapping table (asserted for both `preserveCustom` values per row); 3 unmapped-input/null-input `NormalizeGender` cases; 4 `CalculateAge` cases (exact 20-year and 1-day fixed-divisor values, null-birth-date, null-observation-date); 13 `GetSafeDemographics` cases covering all three legacy input shapes (raw ciphertext string, `IReadOnlyDictionary` with an `"encrypted_demographics"` key, and a duck-typed object exposing an `EncryptedDemographics` property), the `gender`/`sex` key fallback, `preserveCustom` forwarding, the decrypt-failure/null-subject/empty-ciphertext/no-birthdate-key default-shape cases, and both date-string-parsing fallback paths (ISO-8601-with-`T`-and-`Z`, and the whitespace-split leading-token fallback) plus the both-attempts-fail-returns-null case. (`rm -rf obj bin` was run before both the build and the test invocation per this project's documented obj-collision race between the two test projects sharing `tests/`.)
@@ -180,7 +180,7 @@
 - **Scope Note:** With `MIG-SUBJ-016` landed, all of `MIG-SUBJ-004`'s WBS-listed dependencies (001/002/003) and its real, WBS-unlisted `IClock` dependency (flagged in the two prior sign-off entries) are satisfied. `MIG-SUBJ-005` (`SubjectConsent`) and `MIG-SUBJ-006` (`SiteComplianceCache`) are independently unblocked the same way (both need only `MIG-SUBJ-001`, plus `IClock` for 005) and share no target files with this ticket, so all three were implemented in parallel by independent agents working in isolated git worktrees off this branch, then merged sequentially (004 → 005 → 006) with a full clean build/test/format re-verification after each merge and again after the final merge — no conflicts occurred, confirming the three tickets' own "Parallelizable With" annotations. `MIG-SUBJ-008`, `MIG-SUBJ-009`, and `MIG-SUBJ-010` remain independently available zero-hidden-dependency alternatives for the next pass.
 - **Target Files Modified:**
   - `apps/execution/src/Domain/Subjects/ClinicalSubject.cs` (new)
-  - `tests/Execution/Subjects/ClinicalSubjectTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/ClinicalSubjectTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state (all three of MIG-SUBJ-004/005/006 present together), not just in the implementing agent's isolated worktree.
 - **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`, re-run on the final merged branch state after all three tickets landed) — 41 of these are `ClinicalSubjectTests`. (`rm -rf obj bin` was run before both the build and the test invocation per this project's documented obj-collision race between the two test projects sharing `tests/` — the race reproduced exactly as documented on the first post-merge `dotnet test` run, immediately after a `dotnet build` had populated `obj`, and cleaning + re-running resolved it.)
@@ -203,7 +203,7 @@
 - **Target Files Modified:**
   - `apps/execution/src/Domain/Subjects/SubjectConsent.cs` (new)
   - `apps/execution/src/Domain/Subjects/ProtocolVersionRef.cs` (new)
-  - `tests/Execution/Subjects/SubjectConsentTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectConsentTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state.
 - **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both test projects, re-run on the final merged branch state) — 21 of these are `SubjectConsentTests`, covering `Create`'s `IcfSignedDate` defaulting, the full 3-way `IcfSignedDate` matrix (existing-date-preserved / existing-date-replaced / no-prior-date-defaults-to-now), `incomingProtocolVersion` null-vs-supplied, each of the four unconditional-replace fields (including equal-value cases proving no no-op-on-equal shortcut), and `ClearReconsentRequirement`. (`rm -rf obj bin` was run before build/test per the documented obj-collision race.)
@@ -224,7 +224,7 @@
 - **Scope Note:** Implemented in parallel with `MIG-SUBJ-004` and `MIG-SUBJ-005` — see `MIG-SUBJ-004`'s entry for the parallelization/merge methodology. This ticket's only WBS-listed dependency (`MIG-SUBJ-001`) was already satisfied, and it has no `IClock` dependency (unlike 004/005), since `SiteComplianceCache` has no timestamp-capturing methods.
 - **Target Files Modified:**
   - `apps/execution/src/Domain/Compliance/SiteComplianceCache.cs` (new)
-  - `tests/Execution/Compliance/SiteComplianceCacheTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Compliance/SiteComplianceCacheTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state (all three of MIG-SUBJ-004/005/006 present together).
 - **Tests Executed:** 376 passed, 0 failed (`dotnet test Cadence.sln --configuration Release`, both test projects, re-run on the final merged branch state) — 5 of these are `SiteComplianceCacheTests`: factory initial-state, two-sequential-call version-increment-by-exactly-1-per-call with no rejection, full-replace-not-merge on both non-empty and empty `missingDocuments`, and the cast-and-mutate defensive-encapsulation boundary check. (`rm -rf obj bin` was run before build/test per the documented obj-collision race.)
@@ -252,7 +252,7 @@
   - `apps/execution/src/Application/Serialization/ExecutionJsonSerialization.cs` (new, beyond ticket's literal list — see Notes)
   - `apps/execution/src/Application/Serialization/ValueObjectJsonConverters.cs` (new, beyond ticket's literal list — see Notes)
   - `apps/execution/src/Program.cs` (modified — additive `ConfigureHttpJsonOptions` registration)
-  - `tests/Execution/Subjects/SubjectResponseTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectResponseTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state (008 + 009 + 011 together).
 - **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 11 of these are `SubjectResponseTests`. (`rm -rf obj bin` run before build/test per the documented obj-collision race; see this batch's closing note below.)
@@ -281,7 +281,7 @@
   - `apps/execution/src/Application/Compliance/EtmfCompletenessWebhookPayload.cs` (new — payload + validator)
   - `apps/execution/src/Application/Compliance/SiteActivationRequest.cs` (new — no validator, per design)
   - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `FluentValidation` `PackageReference`, CPM-versioned centrally)
-  - `tests/Execution/Subjects/RequestValidatorTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/RequestValidatorTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state.
 - **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state — 29 of these are `RequestValidatorTests` (22 test methods / 29 theory-row cases). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -305,9 +305,9 @@
   - `apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs` (new)
   - `apps/execution/src/Infrastructure/Persistence/Configurations/ClinicalSubjectConfiguration.cs` (new)
   - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `ProjectReference` to `Cadence.Database.csproj`; required EF Core/Npgsql `PackageReference`s were already present from earlier scaffolding)
-  - `tests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests.csproj` (added `Microsoft.EntityFrameworkCore.Sqlite` `PackageReference` — see Notes)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (added `Microsoft.EntityFrameworkCore.Sqlite` `PackageReference` — see Notes)
   - `Directory.Packages.props` (added matching `PackageVersion` for CPM)
-  - `tests/Execution/Persistence/ClinicalSubjectConfigurationTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/ClinicalSubjectConfigurationTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked testable Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch A merged branch state; `Cadence.Apps.Gateway` and `Cadence.Apps.Designer` confirmed still building cleanly (neither's code was touched).
 - **Tests Executed:** 429 passed, 0 failed on the final Batch A merged branch state — 13 of these are `ClinicalSubjectConfigurationTests`. (`rm -rf obj bin` run before build/test per the documented obj-collision race — this batch hit it on all three agents' independent worktrees plus the orchestrating session's own integration builds; workaround remains reliable, but the recurrence rate across four independent environments suggests the underlying MSBuild incremental-build interaction between `dotnet build` and a subsequent `dotnet test` against these two custom-output-path test projects deserves a real root-cause fix at some point — logged as a follow-up, not blocking, and deliberately not attempted here to avoid touching shared test infrastructure mid-batch without a properly isolated investigation.)
@@ -335,8 +335,8 @@
   - `apps/execution/src/Infrastructure/Security/HttpCurrentAuditContextAccessor.cs` (new)
   - `apps/execution/src/Infrastructure/Security/SystemAuditContextAccessor.cs` (new)
   - `apps/execution/src/Infrastructure/Persistence/EfAuditLogWriter.cs` (new)
-  - `tests/Execution/Security/CurrentAuditContextAccessorTests.cs` (new)
-  - `tests/Execution/Persistence/EfAuditLogWriterTests.cs` (new, beyond the ticket's literal Target Files list — see Notes)
+  - `tests/Cadence.UnitTests/Execution/Security/CurrentAuditContextAccessorTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/EfAuditLogWriterTests.cs` (new, beyond the ticket's literal Target Files list — see Notes)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state (all four tickets present together).
 - **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 21 of these are this ticket's own (14 `CurrentAuditContextAccessorTests`, 7 `EfAuditLogWriterTests`). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -362,8 +362,8 @@
   - `apps/execution/src/Infrastructure/Persistence/Configurations/SubjectConsentConfiguration.cs` (new)
   - `apps/execution/src/Infrastructure/Persistence/Configurations/SiteComplianceCacheConfiguration.cs` (new)
   - `apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs` (modified — added `DbSet<SubjectConsent> SubjectConsents`, `DbSet<SiteComplianceCache> SiteComplianceCaches`, and their `ApplyConfiguration` calls only)
-  - `tests/Execution/Persistence/SubjectConsentConfigurationTests.cs` (new)
-  - `tests/Execution/Persistence/SiteComplianceCacheConfigurationTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/SubjectConsentConfigurationTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/SiteComplianceCacheConfigurationTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state.
 - **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 13 of these are this ticket's own (5 `SubjectConsentConfigurationTests`, 8 `SiteComplianceCacheConfigurationTests`). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -387,7 +387,7 @@
   - `apps/execution/src/Domain/Subjects/DomainErrorHttpMapping.cs` (new)
   - `apps/execution/src/Domain/Subjects/DomainErrorExtensions.cs` (new)
   - `apps/execution/src/Program.cs` (modified — additive `AddProblemDetails`/`CustomizeProblemDetails` registration and `UseExceptionHandler()`)
-  - `tests/Execution/Subjects/DomainErrorHttpMappingTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/DomainErrorHttpMappingTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state.
 - **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 14 of these are `DomainErrorHttpMappingTests` (full `[Theory]` coverage of all 7 `SubjectErrors` factories, dedicated 422/423 override highlights, and the global-safety-net vs. untouched-generic-500 boundary). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -411,8 +411,8 @@
 - **Target Files Modified:**
   - `apps/execution/src/Endpoints/Filters/ChangeReasonHeaderFilter.cs` (new)
   - `apps/execution/src/Endpoints/Filters/ValidationFilter.cs` (new — generic `ValidationFilter<TRequest>`)
-  - `tests/Execution/Endpoints/ChangeReasonHeaderFilterTests.cs` (new)
-  - `tests/Execution/Endpoints/ValidationFilterTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Endpoints/ChangeReasonHeaderFilterTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Endpoints/ValidationFilterTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch B merged branch state (all four tickets present together).
 - **Tests Executed:** 488 passed, 0 failed on the final Batch B merged branch state — 11 of these are this ticket's own (4 `ChangeReasonHeaderFilterTests`, 7 `ValidationFilterTests`). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -465,7 +465,7 @@
   - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `Polly` `PackageReference`, already CPM-versioned)
   - `apps/execution/src/Infrastructure/Persistence/Configurations/ClinicalSubjectConfiguration.cs`, `SubjectConsentConfiguration.cs`, `SiteComplianceCacheConfiguration.cs` (modified — `_version`: `.IsRowVersion()` → `.IsConcurrencyToken()`, see Notes)
   - `apps/execution/src/Program.cs` (modified — registers the shared `ResiliencePipeline` singleton only; no `AddDbContext`/repository DI registration, deliberately deferred to `MIG-SUBJ-024`)
-  - `tests/Execution/Persistence/SubjectRepositoryTests.cs`, `ConsentRepositoryTests.cs`, `SiteComplianceRepositoryTests.cs`, `ConcurrencyTokenIncrementInterceptorTests.cs`, `ExecutionRepositoryBaseTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/SubjectRepositoryTests.cs`, `ConsentRepositoryTests.cs`, `SiteComplianceRepositoryTests.cs`, `ConcurrencyTokenIncrementInterceptorTests.cs`, `ExecutionRepositoryBaseTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch C merged branch state; the `.csproj`'s two independent `PackageReference` additions (this ticket's `Polly`, `MIG-SUBJ-014`'s `Microsoft.EntityFrameworkCore.Design`) merged automatically with no manual intervention.
 - **Tests Executed:** 517 passed, 0 failed on the final Batch C merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 29 of these are this ticket's own. The implementing agent additionally verified the two timing-sensitive tests (the 8-way concurrent-enrollment test and the interceptor/retry tests) stable across 5 consecutive clean runs with no flakiness. (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -491,11 +491,11 @@
 - **Target Files Modified:**
   - `apps/execution/src/Application/Subjects/ISubjectApplicationService.cs`, `SubjectApplicationService.cs` (new)
   - `apps/execution/src/Domain/Ports/IConsentRepository.cs`, `Infrastructure/Persistence/Repositories/ConsentRepository.cs` (modified — added `GetAsync`/`GetOtherRequiringReconsentAsync`, see Notes)
-  - `tests/Execution/Fakes/InMemorySubjectRepository.cs`, `InMemoryConsentRepository.cs`, `InMemorySiteComplianceRepository.cs` (new — see Notes on location)
-  - `tests/Execution/Subjects/SubjectApplicationServiceCreateTests.cs`, `SubjectApplicationServiceConsentTests.cs` (new)
-  - `tests/Execution/Persistence/ConsentRepositoryTests.cs` (modified — coverage for the two new repository methods)
+  - `tests/Cadence.TestSupport/Execution/Fakes/InMemorySubjectRepository.cs`, `InMemoryConsentRepository.cs`, `InMemorySiteComplianceRepository.cs` (new — see Notes on location)
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceCreateTests.cs`, `SubjectApplicationServiceConsentTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/ConsentRepositoryTests.cs` (modified — coverage for the two new repository methods)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
-  - **Post-merge fix (orchestrator, commit `80376e8`):** `tests/Execution/Fakes/InMemorySiteComplianceRepository.cs` — added the `AddAsync` implementation `MIG-SUBJ-020`'s sibling worktree had added to `ISiteComplianceRepository` after this ticket's own worktree forked.
+  - **Post-merge fix (orchestrator, commit `80376e8`):** `tests/Cadence.TestSupport/Execution/Fakes/InMemorySiteComplianceRepository.cs` — added the `AddAsync` implementation `MIG-SUBJ-020`'s sibling worktree had added to `ISiteComplianceRepository` after this ticket's own worktree forked.
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — failed once on first merge (`CS0535`, `InMemorySiteComplianceRepository` missing `AddAsync`), fixed by the orchestrator, re-verified 0/0 on the final Batch D merged branch state (all three tickets present together).
 - **Tests Executed:** 557 passed, 0 failed on the final Batch D merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 18 of these are this ticket's own (6 `SubjectApplicationServiceCreateTests`, 9 `SubjectApplicationServiceConsentTests`, 3 new `ConsentRepositoryTests`). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch D merged branch state).
@@ -503,7 +503,7 @@
 - **Notes:**
   - **Real, confirmed gap in `IConsentRepository` (not a design choice): extended it with `GetAsync` and `GetOtherRequiringReconsentAsync`.** The port as merged by `MIG-SUBJ-013` only exposed `ExistsAsync`/`AddAsync`/`SaveChangesAsync` — no way to fetch an existing `SubjectConsent` to call `.MergeResubmission()` on, or to enumerate other rows for Rule 3's cascade. Confirmed against the legacy Python (`consent_repo.get_subject_consent`, `.list_subject_consents`) as a real gap, not an imagined one. Implemented in the EF adapter with SQLite-backed tests.
   - **5-stub-methods compile constraint resolved via `NotImplementedException` stubs** for `AdvanceStateAsync`/`UpdateDemographicsAsync`/`DeleteDemographicsAsync`/`GetDetailAsync`/`EvaluateAndTransitionScreeningAsync`, each commented as owned by `MIG-SUBJ-019`. The unused `ISiteComplianceRepository compliance` primary-constructor parameter (required by the design's DI shape but genuinely unused until `MIG-SUBJ-019`'s `AdvanceStateAsync` needs it) would otherwise trip `CS9113` under `TreatWarningsAsErrors`; resolved with an explicit `_ = compliance;` discard in that stub, with a comment.
-  - **Test-fake location diverges from the ticket's literal `packages/testing/src` suggestion — necessary, not optional.** `Cadence.Testing` implementing an execution-slice port requires a project reference to `Cadence.Apps.Execution`, which reintroduces a real `Microsoft.EntityFrameworkCore.Relational` assembly-version conflict (10.0.4 transitive via `Npgsql.EntityFrameworkCore.PostgreSQL` vs. the centrally-pinned 10.0.11) as a build **warning**, unacceptable under this repo's 0-warnings gate. Relocated to `tests/Execution/Fakes/` (namespace `Cadence.UnitTests.Execution.Fakes`) instead, where both test projects already reference `Cadence.Apps.Execution` with EF Core packages pinned explicitly. Still reusable by `MIG-SUBJ-019`/`021`/`026` (all compiled into the same `tests/` tree) — flagging here since those tickets' own text still says `packages/testing/src`.
+  - **Test-fake location diverges from the ticket's literal `packages/testing/src` suggestion — necessary, not optional.** `Cadence.Testing` implementing an execution-slice port requires a project reference to `Cadence.Apps.Execution`, which reintroduces a real `Microsoft.EntityFrameworkCore.Relational` assembly-version conflict (10.0.4 transitive via `Npgsql.EntityFrameworkCore.PostgreSQL` vs. the centrally-pinned 10.0.11) as a build **warning**, unacceptable under this repo's 0-warnings gate. Relocated to `tests/Cadence.TestSupport/Execution/Fakes/` (namespace `Cadence.UnitTests.Execution.Fakes`) instead, where both test projects already reference `Cadence.Apps.Execution` with EF Core packages pinned explicitly. Still reusable by `MIG-SUBJ-019`/`021`/`026` (all compiled into the same `tests/` tree) — flagging here since those tickets' own text still says `packages/testing/src`.
   - Audit `changeReason`/`userId` for `CreateAsync`/`RecordConsentAsync` sourced from `ICurrentAuditContextAccessor` (`MIG-SUBJ-017`'s unified default), not per-endpoint hardcoded fallback strings — consistent with that ticket's already-decided unification of the legacy's two inconsistent fallback idioms, not a new decision here.
   - Deliberately left out of scope: the legacy router's `require_site_mutation_authorization`/`PRD-SYS-121` RBAC check — absent from this slice's design doc and ticket text for `CreateAsync`, appears to be a separate authorization concern outside `PRD-SUB-001`.
 - **Git Commit Message Recommendation:**
@@ -518,8 +518,8 @@
 - **Target Files Modified:**
   - `apps/execution/src/Application/Compliance/ISiteComplianceApplicationService.cs`, `SiteComplianceApplicationService.cs` (new)
   - `apps/execution/src/Domain/Ports/ISiteComplianceRepository.cs`, `Infrastructure/Persistence/Repositories/SiteComplianceRepository.cs` (modified — added `AddAsync`, removed `.AsNoTracking()` from `GetAsync`, see Notes)
-  - `tests/Execution/Compliance/SiteComplianceApplicationServiceTests.cs` (new)
-  - `tests/Execution/Persistence/SiteComplianceRepositoryTests.cs` (modified — 2 regression tests for the repository change)
+  - `tests/Cadence.UnitTests/Execution/Compliance/SiteComplianceApplicationServiceTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Persistence/SiteComplianceRepositoryTests.cs` (modified — 2 regression tests for the repository change)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch D merged branch state.
 - **Tests Executed:** 557 passed, 0 failed on the final Batch D merged branch state — 13 of these are this ticket's own (11 `SiteComplianceApplicationServiceTests`, 2 added to `SiteComplianceRepositoryTests`). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -544,10 +544,10 @@
   - `apps/execution/src/Infrastructure/Persistence/Migrations/20260905230921_AddMassTransitOutbox.cs` + `.Designer.cs`, `ExecutionDbContextModelSnapshot.cs` (new/modified — follow-up migration for the outbox tables, see Notes)
   - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `MassTransit`/`MassTransit.EntityFrameworkCore` `PackageReference`s, already CPM-versioned)
   - `apps/execution/src/Program.cs` (modified — `AddMassTransit`, EF outbox, consumer, `SystemAuditContextAccessor` scoped-per-consume registration; in-memory bus transport, see Notes)
-  - `tests/Cadence.UnitTests.csproj` (modified — test-harness package reference for `MassTransit.Testing`)
-  - `tests/Execution/Consumers/EConsentCompletedConsumerTests.cs` (new)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (modified — test-harness package reference for `MassTransit.Testing`)
+  - `tests/Cadence.UnitTests/Execution/Consumers/EConsentCompletedConsumerTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
-  - **Post-merge fix (orchestrator, commit `5c265df`):** the local `FakeConsentRepository` inside `tests/Execution/Consumers/EConsentCompletedConsumerTests.cs` — added `GetAsync`/`GetOtherRequiringReconsentAsync` (the two methods `MIG-SUBJ-018`'s sibling worktree had added to `IConsentRepository` after this ticket's own worktree forked). The consumer itself never calls either method (only `ExistsAsync`/`AddAsync`/`SaveChangesAsync`), so this was a compile-completeness fix only, with no behavioral effect on this ticket's own tests.
+  - **Post-merge fix (orchestrator, commit `5c265df`):** the local `FakeConsentRepository` inside `tests/Cadence.UnitTests/Execution/Consumers/EConsentCompletedConsumerTests.cs` — added `GetAsync`/`GetOtherRequiringReconsentAsync` (the two methods `MIG-SUBJ-018`'s sibling worktree had added to `IConsentRepository` after this ticket's own worktree forked). The consumer itself never calls either method (only `ExistsAsync`/`AddAsync`/`SaveChangesAsync`), so this was a compile-completeness fix only, with no behavioral effect on this ticket's own tests.
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — failed once on first merge (`CS0535` ×2, the local `FakeConsentRepository` missing the two new interface members), fixed by the orchestrator, re-verified 0/0 on the final Batch D merged branch state (all three tickets present together).
 - **Tests Executed:** 557 passed, 0 failed on the final Batch D merged branch state — 9 of these are this ticket's own (happy-path enrollment, shared-code-path boundary check, 4 malformed-event `[Theory]` cases, redelivery idempotency, independent consent-cache backfill, error-propagation). (`rm -rf obj bin` run before build/test per the documented obj-collision race; this ticket's own implementing agent independently reproduced the race firsthand and confirmed it isn't boilerplate.)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final Batch D merged branch state; one intermediate non-`--verify` `dotnet format` pass was needed first to fix the raw EF-codegen migration file's block-scoped namespace style, matching `MIG-SUBJ-014`'s own precedent).
@@ -567,7 +567,7 @@
 - **Status:** VERIFIED & COMPLETED
 - **Scope Note:** First ticket of Batch E. Frontier recomputation after Batch D found `MIG-SUBJ-019` (needs `013`+`018`, both done) and `MIG-SUBJ-027` (needs `004`/`005`/`015`/`016`/`021`, all done) dependency-satisfied and file-disjoint, so both were dispatched together. Both agents independently hit the same session-wide API rate limit mid-task; this ticket's worktree had real salvageable partial progress (its one new test file already written) and was resumed via a follow-up message. Unlike Batches C/D, this ticket's own scope was a coverage audit rather than new interfaces, so it introduced no post-merge integration gap.
 - **Target Files Modified:**
-  - `tests/Execution/Persistence/GxPAuditInterceptorMerkleChainIntegrationTests.cs` (new — the only new file; see Notes for why the other 5 checklist items needed none)
+  - `tests/Cadence.UnitTests/Execution/Persistence/GxPAuditInterceptorMerkleChainIntegrationTests.cs` (new — the only new file; see Notes for why the other 5 checklist items needed none)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch E merged branch state.
 - **Tests Executed:** 561 passed, 0 failed at the point this ticket alone was verified (557 baseline + 4 new); the slice's tests rose to 603 once `MIG-SUBJ-019` merged on top. (`rm -rf obj bin` run before build/test per the documented obj-collision race — this ticket's own implementing agent independently reproduced the race a second time, this time triggered by `dotnet format` immediately preceding `dotnet build` without an intervening clean, confirming the race isn't specific to any one command ordering.)
@@ -588,7 +588,7 @@
 - **Scope Note:** Implemented in parallel with `MIG-SUBJ-027` as Batch E — see that entry above for the batching rationale and rate-limit note. The largest single ticket in the backlog by raise-site density (16 of 25 raise sites). Continues `apps/execution/src/Application/Subjects/SubjectApplicationService.cs` (`MIG-SUBJ-018`), replacing its 5 `NotImplementedException` stubs with full implementations. Landing this, together with `MIG-SUBJ-022` (already `[COMPLETED]`), leaves only `MIG-SUBJ-023` blocked on nothing else in the ready frontier — it becomes the sole next candidate.
 - **Target Files Modified:**
   - `apps/execution/src/Application/Subjects/SubjectApplicationService.cs` (modified — 5 method implementations, a new shared private `TransitionSubjectAsync` helper, one new optional constructor parameter with a default value so `MIG-SUBJ-018`'s existing 7-argument test call sites keep compiling unmodified)
-  - `tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs`, `SubjectApplicationServiceDemographicsTests.cs`, `SubjectApplicationServiceDetailTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceStateTests.cs`, `SubjectApplicationServiceDemographicsTests.cs`, `SubjectApplicationServiceDetailTests.cs` (new)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final Batch E merged branch state (both `019`+`027` present together, no conflict since `027` never touched `SubjectApplicationService.cs` or its tests).
 - **Tests Executed:** 603 passed, 0 failed on the final Batch E merged branch state (`dotnet test Cadence.sln --configuration Release`, both `Cadence.UnitTests` and `Cadence.ArchitectureTests`) — 42 of these are this ticket's own (20 state, 15 demographics, 7 detail). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -614,13 +614,13 @@
 - **Scope Note:** Dispatched alone, per this ticket's own metadata ("Parallelizable With: None — integrates the full application-service surface"). Ready as soon as `MIG-SUBJ-010`/`018`/`019`/`022` were all `[COMPLETED]`. This is the first ticket to exercise a genuine end-to-end HTTP request/response cycle against this service (via `WebApplicationFactory<Program>`), which surfaced a real, previously-undetected production bug (see Notes) that the orchestrator fixed immediately after integration, before it could compound across `MIG-SUBJ-024`'s endpoints or `MIG-SUBJ-025`/`026`'s fixture-replay suites. Landing this unblocks `MIG-SUBJ-024`.
 - **Target Files Modified:**
   - `apps/execution/src/Endpoints/SubjectEndpoints.cs` (new — `MapSubjectEndpoints`, all 6 routes)
-  - `tests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` (new)
   - `apps/execution/src/Program.cs` (modified — added only `public partial class Program { protected Program() {} }`, the standard ASP.NET Core idiom every `WebApplicationFactory<Program>` test needs since top-level-statement `Program` is `internal` by default; no composition-root wiring, that's `MIG-SUBJ-024`'s job, confirmed by reading that ticket's own Target Files)
   - `Directory.Packages.props` (added `Microsoft.AspNetCore.Mvc.Testing` 10.0.11)
-  - `tests/Cadence.UnitTests.csproj` (added that package reference plus `<InterceptorsNamespaces>`, needed because `Microsoft.AspNetCore.OpenApi`'s XML-comment source generator flows in transitively via the `Cadence.Apps.Execution` project reference)
-  - `tests/Cadence.ArchitectureTests.csproj` (added a `<Compile Remove>` for the new routing-test file — that project shares the default compile glob under `tests/` but lacks `Microsoft.AspNetCore.Mvc.Testing` and references both `Cadence.Apps.Execution` and `Cadence.Apps.Designer`, making `Program` ambiguous there; no prior file had ever referenced `Program`, so this had never surfaced)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (added that package reference plus `<InterceptorsNamespaces>`, needed because `Microsoft.AspNetCore.OpenApi`'s XML-comment source generator flows in transitively via the `Cadence.Apps.Execution` project reference)
+  - `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (added a `<Compile Remove>` for the new routing-test file — that project shares the default compile glob under `tests/` but lacks `Microsoft.AspNetCore.Mvc.Testing` and references both `Cadence.Apps.Execution` and `Cadence.Apps.Designer`, making `Program` ambiguous there; no prior file had ever referenced `Program`, so this had never surfaced)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
-  - **Post-merge fix (orchestrator, commit `9a9a789`):** `apps/execution/src/Application/Serialization/ExecutionJsonSerialization.cs`, `tests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` — see Notes.
+  - **Post-merge fix (orchestrator, commit `9a9a789`):** `apps/execution/src/Application/Serialization/ExecutionJsonSerialization.cs`, `tests/Cadence.UnitTests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` — see Notes.
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state, including after the orchestrator's follow-up JSON-policy fix.
 - **Tests Executed:** 632 passed (`Cadence.UnitTests`), 603 passed (`Cadence.ArchitectureTests`), 0 failed in either — 29 of `Cadence.UnitTests`' total are this ticket's own `SubjectEndpointsRoutingTests`. `Cadence.ArchitectureTests` is unaffected by design (the new test file is `<Compile Remove>`d there, see Target Files). Numbers unchanged after the orchestrator's JSON-policy fix, confirming it didn't regress anything. (`rm -rf obj bin` run before build/test per the documented obj-collision race, reproduced once more during this ticket.)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes, both after the initial merge and after the follow-up fix.
@@ -644,8 +644,8 @@
   - `apps/execution/src/Program.cs` (modified — final composition-root wiring: every remaining DI registration from `MIG-SUBJ-011` through `MIG-SUBJ-022`, `MapSubjectEndpoints()`/`MapSiteComplianceEndpoints()` replacing the placeholder route)
   - `apps/execution/src/Endpoints/SiteComplianceEndpoints.cs` (new — the 3 site-compliance routes)
   - `apps/execution/src/Cadence.Apps.Execution.csproj` (added `FluentValidation.DependencyInjectionExtensions` `PackageReference`, already CPM-versioned)
-  - `tests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs` (new — routing/filter tests plus `ExecutionProgramStartupTests`, the dedicated startup smoke test booting the real `Program.cs`)
-  - `tests/Cadence.ArchitectureTests.csproj` (added a `<Compile Remove>` for the new test file — same `WebApplicationFactory<Program>`-ambiguity reason `MIG-SUBJ-023` already established an exclusion for)
+  - `tests/Cadence.UnitTests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs` (new — routing/filter tests plus `ExecutionProgramStartupTests`, the dedicated startup smoke test booting the real `Program.cs`)
+  - `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (added a `<Compile Remove>` for the new test file — same `WebApplicationFactory<Program>`-ambiguity reason `MIG-SUBJ-023` already established an exclusion for)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified on the final merged branch state.
 - **Tests Executed:** `Cadence.UnitTests` 648 passed / 0 failed (baseline 632 + 16 new); `Cadence.ArchitectureTests` 603 passed / 0 failed (unchanged — no new architecture sentinels needed). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
@@ -671,16 +671,16 @@
 - **Target Files Modified:**
   - `packages/testing/src/GoldenMaster/GoldenMasterScenario.cs`, `GoldenMasterFixtureLoader.cs`, `GoldenMasterAssert.cs` (new — the last also defines `GoldenMasterAssertionException`)
   - `packages/testing/src/Cadence.Testing.csproj` (added `Microsoft.EntityFrameworkCore` + `Microsoft.Extensions.DependencyInjection.Abstractions` package references — deliberately _not_ `Npgsql.EntityFrameworkCore.PostgreSQL` or a `Cadence.Apps.Execution` project reference, see Notes)
-  - `tests/Execution/ExecutionApiFactory.cs` (new)
-  - `tests/Execution/GoldenMaster/GoldenMasterFixtureLoaderTests.cs` (new — 21 tests across 3 test classes)
-  - `tests/Cadence.ArchitectureTests.csproj` (two more `<Compile Remove>` exclusions, same ambiguous-`Program`-reference pattern `MIG-SUBJ-023`/`024` already established)
+  - `tests/Cadence.UnitTests/Execution/ExecutionApiFactory.cs` (new)
+  - `tests/Cadence.UnitTests/Execution/GoldenMaster/GoldenMasterFixtureLoaderTests.cs` (new — 21 tests across 3 test classes)
+  - `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (two more `<Compile Remove>` exclusions, same ambiguous-`Program`-reference pattern `MIG-SUBJ-023`/`024` already established)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked Acceptance Criteria with inline findings notes)
 - **Build Output:** 0 Errors, **0 Warnings** (`dotnet build Cadence.sln --configuration Release`) — the 0-warnings result is itself the confirmation that the EF-version-conflict risk in `packages/testing` was successfully avoided, re-verified on the final merged branch state.
 - **Tests Executed:** `Cadence.UnitTests` 669 passed / 0 failed (baseline 648 + 21 new); `Cadence.ArchitectureTests` 603 passed / 0 failed (unchanged by design). (`rm -rf obj bin` run before build/test per the documented obj-collision race.)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes (re-verified on the final merged branch state).
 - **Golden Master Parity:** This ticket _is_ the parity-verification infrastructure — full scenario replay remains `MIG-SUBJ-026`'s job, but this ticket's own tests validate the harness against the real fixture files (not just hand-constructed ones), catching two real discrepancies between the ticket's prose and actual fixture content (see Notes).
 - **Notes:**
-  - **`packages/testing` reusability vs. `ExecutionDbContext` concreteness, resolved and improved on the orchestrator's suggestion:** `DbStateMatches<TDbContext>`/`AuditLogContains<TDbContext>` are generic over a plain `where TDbContext : DbContext` constraint — verified in isolation that `Cadence.Testing.csproj` referencing only the base `Microsoft.EntityFrameworkCore` package (never `Npgsql.EntityFrameworkCore.PostgreSQL` or `Cadence.Apps.Execution.csproj`) builds with 0 warnings, since the base package has no dependency on `Microsoft.EntityFrameworkCore.Relational` at all — the specific transitive-version fight `MIG-SUBJ-018` hit (via Npgsql's own Relational dependency) structurally cannot recur through this path. **`AuditLogContains` ended up needing no query delegate at all** — `AuditLogEntry` is itself a shared-kernel type (`Cadence.Core.Domain.Audit`, already referenced by `Cadence.Testing`), so that assertion is genuinely, fully generic with zero slice-specific surface. `DbStateMatches` takes a caller-supplied `Func<TDbContext, CancellationToken, Task<JsonElement>>` query delegate, since domain entity shape is inherently slice-specific and can't be made generic — the shared package supplies DI-scope resolution, sentinel-aware comparison, and scenario-ID-attributed error wrapping; `ExecutionApiFactory` and its call sites under `tests/Execution/` supply the concrete `ExecutionDbContext` type argument and query logic.
+  - **`packages/testing` reusability vs. `ExecutionDbContext` concreteness, resolved and improved on the orchestrator's suggestion:** `DbStateMatches<TDbContext>`/`AuditLogContains<TDbContext>` are generic over a plain `where TDbContext : DbContext` constraint — verified in isolation that `Cadence.Testing.csproj` referencing only the base `Microsoft.EntityFrameworkCore` package (never `Npgsql.EntityFrameworkCore.PostgreSQL` or `Cadence.Apps.Execution.csproj`) builds with 0 warnings, since the base package has no dependency on `Microsoft.EntityFrameworkCore.Relational` at all — the specific transitive-version fight `MIG-SUBJ-018` hit (via Npgsql's own Relational dependency) structurally cannot recur through this path. **`AuditLogContains` ended up needing no query delegate at all** — `AuditLogEntry` is itself a shared-kernel type (`Cadence.Core.Domain.Audit`, already referenced by `Cadence.Testing`), so that assertion is genuinely, fully generic with zero slice-specific surface. `DbStateMatches` takes a caller-supplied `Func<TDbContext, CancellationToken, Task<JsonElement>>` query delegate, since domain entity shape is inherently slice-specific and can't be made generic — the shared package supplies DI-scope resolution, sentinel-aware comparison, and scenario-ID-attributed error wrapping; `ExecutionApiFactory` and its call sites under `tests/Cadence.UnitTests/Execution/` supply the concrete `ExecutionDbContext` type argument and query logic.
   - **Real, load-bearing bug found only by running against the actual fixture files, not the ticket's prose summary:** a symmetric "orphan on either side throws" fail-fast check (the natural first reading of the ticket text) spuriously fails **both** real fixture pairings, because `output_expected_nominal.json` is one shared 30-entry file legitimately paired against both `input_valid_nominal.json` (19 `SCN-*` ids) and `input_valid_edge_cases.json` (11 `EDGE-*` ids) — each input file "lacks" the other's ids in that shared output by design, not by omission. Fixed `GoldenMasterFixtureLoader` to fail fast **only** when an _input_ scenario has no output counterpart (the actual "silently excluded from replay" danger the AC is protecting against); an output-only extra is simply not replayable for that particular input file and is dropped, not an error. Documented at length in the loader's own XML doc comments with a dedicated regression test locking in the asymmetry — this would have been very easy to get wrong in a way that looks correct until the real fixtures are loaded.
   - **Ticket prose vs. real fixture content, corrected:** the ticket text states `input_valid_nominal.json` has "17 `SCN-*` scenario IDs" — the real file has **19** (verified via `jq` against the actual file, not assumed). Tests assert against the verified real count.
   - **`<opaque>` vs. `<opaque-non-null>` resolved by evidence, not assumption:** every real usage across `fixtures/output_expected_*.json` uses plain `<opaque>` exclusively on fields (overwhelmingly `id`) that can never legitimately be null in a successful response — no real fixture exercises `<opaque>` tolerating null. Combined with AC #5's own explicit mandate that plain `<opaque>` reject null, both sentinels are implemented with identical non-null-enforcing behavior, documented as a finding rather than silently assumed symmetric.
@@ -696,11 +696,11 @@
 - **Status:** VERIFIED & COMPLETED (required one orchestrator-caught, independently-fixed regression before landing — see Notes)
 - **Scope Note:** Dispatched alone, per this ticket's own metadata ("Parallelizable With: None"). Ready as soon as `MIG-SUBJ-025` was `[COMPLETED]`. **This is the slice's actual acceptance test.** The implementing agent's own final report claimed 51/51 passing and full-suite 720/603 with no regressions; the orchestrating session does not take a "tests pass" claim on faith for a ticket this consequential and re-ran the full gate independently before pushing — which is exactly what caught the regression documented below. This ticket, together with its fix, is what makes `execution-subjects`' golden-master parity claim actually trustworthy rather than merely asserted.
 - **Target Files Modified:**
-  - `tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs` (new, ~1740 lines — the three `[Theory]` methods: `NominalScenario_MatchesGoldenMaster`, `EdgeCaseScenario_MatchesGoldenMaster`, `ErrorScenario_MatchesExpectedStatusAndDetail`)
+  - `tests/Cadence.UnitTests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs` (new, ~1740 lines — the three `[Theory]` methods: `NominalScenario_MatchesGoldenMaster`, `EdgeCaseScenario_MatchesGoldenMaster`, `ErrorScenario_MatchesExpectedStatusAndDetail`)
   - `apps/execution/src/Application/Subjects/SubjectApplicationService.cs`, `apps/execution/src/Domain/Subjects/ClinicalSubject.cs`, `apps/execution/src/Infrastructure/Persistence/Configurations/ClinicalSubjectConfiguration.cs` (modified — three real production bugs found and fixed by the replay itself, see Notes)
-  - `tests/Cadence.ArchitectureTests.csproj` (one more `<Compile Remove>` exclusion, same established pattern)
+  - `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (one more `<Compile Remove>` exclusion, same established pattern)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, corrected the stale scenario counts, checked Acceptance Criteria)
-  - **Post-merge fix (separate agent dispatch, commit `3c03cd1`):** `tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs` only — see Notes.
+  - **Post-merge fix (separate agent dispatch, commit `3c03cd1`):** `tests/Cadence.UnitTests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs` only — see Notes.
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`) — re-verified by the orchestrator on the fully-merged, fixed branch state, independent of the implementing agents' own reports.
 - **Tests Executed:** `SubjectGoldenMasterTests` verified **51/51 passing across 3 independent, consecutive, from-scratch-rebuild runs** by the orchestrator (not merely once) — 19 `NominalScenario` + 11 `EdgeCaseScenario` + 21 `ErrorScenario`. Full suite: `Cadence.UnitTests` 720/720 passed (baseline 669 + 51 new); `Cadence.ArchitectureTests` 603/603 passed (unchanged). (`rm -rf obj bin` run before every single one of these invocations per the documented obj-collision race.)
 - **Formatting:** `dotnet format Cadence.sln --verify-no-changes` — 0 changes, re-verified by the orchestrator after the fix landed.
@@ -725,11 +725,11 @@
 - **Status:** VERIFIED & COMPLETED
 - **Scope Note:** Final remaining ticket (28/28) for the `execution-subjects` slice. Implements the cross-cutting architecture sentinel enforcing Clean Architecture boundary purity on `Cadence.Apps.Execution.Domain` (zero references to `Microsoft.AspNetCore.*` or `MassTransit`), and stress-tests concurrent enrollment index assignment across 20 parallel requests for `SubjectApplicationService.CreateAsync` and `EConsentCompletedConsumer.Consume` against PostgreSQL and resilient in-memory fallback.
 - **Target Files Modified:**
-  - `tests/ArchitectureSentinelTests.cs` (extended with `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` sentinel tagged with `[GxPRequirement("PRD-SYS-053")]` and XML doc comment `/// @req:PRD-SYS-053`)
-  - `tests/Execution/Integration/ExecutionPostgresFixture.cs` (new — Testcontainers.PostgreSql fixture with active UNIX socket probing for graceful Docker fallback and automatic migration execution)
-  - `tests/Execution/Integration/EnrollmentIndexConcurrencyTests.cs` (new — 4 concurrency tests verifying race-free sequential index allocation `{0, ..., 19}` under load, multi-study independence, and exception propagation)
-  - `tests/Cadence.ArchitectureTests.csproj` (added `<Compile Remove="Execution/Integration/**" />`, forward-slash paths, and `DefaultItemExcludes` protection)
-  - `tests/Cadence.UnitTests.csproj` (added `Testcontainers.PostgreSql` and `Npgsql.EntityFrameworkCore.PostgreSQL`, forward-slash paths, and `DefaultItemExcludes` protection)
+  - `tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs` (extended with `ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit` sentinel tagged with `[GxPRequirement("PRD-SYS-053")]` and XML doc comment `/// @req:PRD-SYS-053`)
+  - `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (new — Testcontainers.PostgreSql fixture with active UNIX socket probing for graceful Docker fallback and automatic migration execution)
+  - `tests/Cadence.IntegrationTests/Execution/EnrollmentIndexConcurrencyTests.cs` (new — 4 concurrency tests verifying race-free sequential index allocation `{0, ..., 19}` under load, multi-study independence, and exception propagation)
+  - `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (added `<Compile Remove="Execution/Integration/**" />`, forward-slash paths, and `DefaultItemExcludes` protection)
+  - `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (added `Testcontainers.PostgreSql` and `Npgsql.EntityFrameworkCore.PostgreSQL`, forward-slash paths, and `DefaultItemExcludes` protection)
   - `Directory.Packages.props` (pinned `SSH.NET` to `2026.0.0` to resolve transitive NuGet advisory GHSA-q939-rpr3-3284 under `TreatWarningsAsErrors`)
   - `docs/migration/slices/execution-subjects/03_tickets.md` (marked `[COMPLETED]`, checked all 7 Acceptance Criteria)
 - **Build Output:** 0 Errors, 0 Warnings (`dotnet build Cadence.sln --configuration Release`)

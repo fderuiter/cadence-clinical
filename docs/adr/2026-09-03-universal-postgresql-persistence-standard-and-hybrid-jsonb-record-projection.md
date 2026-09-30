@@ -71,4 +71,4 @@ Under 21 CFR Part 11 and ICH GCP E6(R2) (`PRD-SYS-053`), every entity mutation r
 
 - **Documentation & Vocabulary:** Updated `CONTEXT.md` with `Universal PostgreSQL Persistence Standard` and `Hybrid Strongly-Typed JSONB Record Projection`.
 - **Database Layer:** Standardized on `packages/database/src/Cadence.Database.csproj` with PostgreSQL provider.
-- **Test Verification:** Verified via `tests/Cadence.ArchitectureTests.csproj` and `tests/Cadence.UnitTests.csproj` under `@req:PRD-SYS-053`.
+- **Test Verification:** Verified via `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` and `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` under `@req:PRD-SYS-053`.

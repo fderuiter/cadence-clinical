@@ -128,11 +128,11 @@ current GA/patch versions on nuget.org (`Microsoft.AspNetCore.OpenApi`,
 `Microsoft.OpenApi` CVE flagged by NU1903 (the GA `AspNetCore.OpenApi`
 pulls a non-vulnerable transitive version). `ArchUnitNET.xUnit` was
 corrected to the real package ID, `TngTech.ArchUnitNET.xUnit` at `0.13.4`,
-in both `Directory.Packages.props` and `tests/Cadence.ArchitectureTests.csproj`.
+in both `Directory.Packages.props` and `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 The now-surfaced SonarAnalyzer/compiler violations were fixed in place
 (`packages/database/src/GxPAuditInterceptor.cs`; `apps/gateway`,
-`apps/execution`, `apps/designer` `Program.cs`; `tests/ArchitectureSentinelTests.cs`,
-`tests/SecurityAndDomainTests.cs`) with no behavior change — nested
+`apps/execution`, `apps/designer` `Program.cs`; `tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs`,
+`tests/Cadence.UnitTests/SecurityAndDomainTests.cs`) with no behavior change — nested
 conditions merged, `app.Run()` → `await app.RunAsync()`, and doc comments
 relocated above the method they document.
 
@@ -161,10 +161,10 @@ relocated above the method they document.
 - **Affected files:** `scripts/setup_wizard.sh`, `scripts/setup_wizard.ps1`
   (new); `scripts/setup_dotnet_env.sh`, `scripts/setup_dotnet_env.ps1`,
   `packages/cli/src/Program.cs`, `Directory.Packages.props`,
-  `tests/Cadence.ArchitectureTests.csproj`,
+  `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`,
   `packages/database/src/GxPAuditInterceptor.cs`,
   `apps/{gateway,execution,designer}/src/Program.cs`,
-  `tests/ArchitectureSentinelTests.cs`, `tests/SecurityAndDomainTests.cs`,
+  `tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs`, `tests/Cadence.UnitTests/SecurityAndDomainTests.cs`,
   `scripts/validate_path_patterns.py`, `Makefile`,
   `.devcontainer/devcontainer.json`, `.claude/hooks/session-start.sh`,
   `pyproject.toml`, `CONTRIBUTING.md`, `README.md`, `.vscode/tasks.json`

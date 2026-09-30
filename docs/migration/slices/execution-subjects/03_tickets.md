@@ -1,11 +1,11 @@
 # Migration Backlog: EXECUTION-SUBJECTS
 
 **Slice Code:** `SUBJ` · **Bounded Context:** `Cadence.Apps.Execution` · **Target Project:** `apps/execution/src/Cadence.Apps.Execution.csproj`
-**Test Projects:** `tests/Cadence.UnitTests.csproj` (unit + golden-master + integration), `tests/Cadence.ArchitectureTests.csproj` (ArchUnitNET sentinels)
+**Test Projects:** `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` (unit + golden-master + integration), `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (ArchUnitNET sentinels)
 
 > **Source of truth:** `02_technical_design.md` (supersedes the pre-remediation `02_architecture.md` draft and the original, now-replaced version of this file). Grounded against `01_spec.md` (behavioral spec, 25/25 raise sites, SCN-001…010), `00_phase1_validation_report.md` §0 (the Phase 2 validation gate for this slice — **PHASE 2 UNBLOCKED**, all 5 gates PASS; this slice has no separately-named `00_phase2_validation_report.md`, the §0 re-audit addendum in the Phase 1 report serves that role), and `fixtures/*.json` (47 scenarios: 17 `SCN-*`, 11 `EDGE-*`, 21 `INV-*` scenario IDs joined across `input_valid_nominal.json` / `input_valid_edge_cases.json` / `input_invalid_validation_errors.json` / `output_expected_nominal.json` / `output_expected_errors.json`).
 >
-> **Verified against current repo state, not assumed:** `Cadence.Core.Domain.AggregateRoot<TId>` (`packages/engine_core/src/AggregateRoot.cs`), `Result<T>`/`DomainError` (`packages/engine_core/src/Result.cs`), `IGxPAuditable` (`packages/engine_core/src/IGxPAuditable.cs`), `AuditLogEntry` (`packages/engine_core/src/Audit/AuditLogEntry.cs`), and `GxPAuditInterceptor` (`packages/database/src/GxPAuditInterceptor.cs`) all already exist — and the interceptor **does** today pattern-match only `AggregateRoot<string>` exactly as `02_technical_design.md` §4.4 describes, confirming that gap is real, not speculative. `apps/execution/src/` currently contains only `Program.cs` (a placeholder health-check + empty `/subjects` list route) and the `.csproj` — this slice's domain, application, persistence, and endpoint code does not exist yet; every ticket below is new work, not a refactor. `tests/Cadence.UnitTests.csproj` does **not** yet reference `apps/execution/src/Cadence.Apps.Execution.csproj` or `packages/database/src/Cadence.Database.csproj` — MIG-SUBJ-001 adds both references so every later ticket's tests can compile. `tests/Cadence.ArchitectureTests.csproj` already references `Cadence.Apps.Execution` — no wiring needed there.
+> **Verified against current repo state, not assumed:** `Cadence.Core.Domain.AggregateRoot<TId>` (`packages/engine_core/src/AggregateRoot.cs`), `Result<T>`/`DomainError` (`packages/engine_core/src/Result.cs`), `IGxPAuditable` (`packages/engine_core/src/IGxPAuditable.cs`), `AuditLogEntry` (`packages/engine_core/src/Audit/AuditLogEntry.cs`), and `GxPAuditInterceptor` (`packages/database/src/GxPAuditInterceptor.cs`) all already exist — and the interceptor **does** today pattern-match only `AggregateRoot<string>` exactly as `02_technical_design.md` §4.4 describes, confirming that gap is real, not speculative. `apps/execution/src/` currently contains only `Program.cs` (a placeholder health-check + empty `/subjects` list route) and the `.csproj` — this slice's domain, application, persistence, and endpoint code does not exist yet; every ticket below is new work, not a refactor. `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` does **not** yet reference `apps/execution/src/Cadence.Apps.Execution.csproj` or `packages/database/src/Cadence.Database.csproj` — MIG-SUBJ-001 adds both references so every later ticket's tests can compile. `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` already references `Cadence.Apps.Execution` — no wiring needed there.
 
 ---
 
@@ -159,8 +159,8 @@ graph TD
   apps/execution/src/Domain/Subjects/SubjectCode.cs
   apps/execution/src/Domain/Subjects/StudyCode.cs
   apps/execution/src/Domain/Subjects/SiteCode.cs
-  tests/Cadence.UnitTests.csproj (add <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" /> and <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" /> — neither reference exists yet and every later test ticket in this slice needs both)
-  tests/Execution/Subjects/ValueObjectTests.cs
+  tests/Cadence.UnitTests/Cadence.UnitTests.csproj (add <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" /> and <ProjectReference Include="..\packages\database\src\Cadence.Database.csproj" /> — neither reference exists yet and every later test ticket in this slice needs both)
+  tests/Cadence.UnitTests/Execution/Subjects/ValueObjectTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -187,7 +187,7 @@ Exactly per `02_technical_design.md` §2.1: `SubjectId`/`SubjectConsentId` as `r
 
 #### Verification & Test Requirements
 
-`ValueObjectTests` — `[Theory]`/`[InlineData]` covering empty/whitespace/255-char/256-char boundaries for each of the three string value objects; equality tests for the two ID structs; confirms `tests/Cadence.UnitTests.csproj` builds after the `ProjectReference` additions (`dotnet build tests/Cadence.UnitTests.csproj`).
+`ValueObjectTests` — `[Theory]`/`[InlineData]` covering empty/whitespace/255-char/256-char boundaries for each of the three string value objects; equality tests for the two ID structs; confirms `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` builds after the `ProjectReference` additions (`dotnet build tests/Cadence.UnitTests/Cadence.UnitTests.csproj`).
 
 ---
 
@@ -202,7 +202,7 @@ Exactly per `02_technical_design.md` §2.1: `SubjectId`/`SubjectConsentId` as `r
   apps/execution/src/Domain/Subjects/SubjectState.cs
   apps/execution/src/Domain/Subjects/SubjectStateCodec.cs
   apps/execution/src/Domain/Subjects/SubjectTransitionGraph.cs
-  tests/Execution/Subjects/SubjectTransitionGraphTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectTransitionGraphTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -242,7 +242,7 @@ Port the 9-state enum, the `UPPER_SNAKE_CASE` string codec (`normalize_state`'s 
 - **Target Files (Create/Modify):**
   ```text
   apps/execution/src/Domain/Subjects/SubjectErrors.cs
-  tests/Execution/Subjects/SubjectErrorsTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectErrorsTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -280,7 +280,7 @@ Per `02_technical_design.md` §3.4, using the existing `Cadence.Core.Domain.Doma
 - **Target Files (Create/Modify):**
   ```text
   apps/execution/src/Domain/Subjects/ClinicalSubject.cs
-  tests/Execution/Subjects/ClinicalSubjectTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/ClinicalSubjectTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -324,7 +324,7 @@ Exactly per `02_technical_design.md` §2.3: `sealed class ClinicalSubject : Aggr
   ```text
   apps/execution/src/Domain/Subjects/SubjectConsent.cs
   apps/execution/src/Domain/Subjects/ProtocolVersionRef.cs
-  tests/Execution/Subjects/SubjectConsentTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectConsentTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -369,7 +369,7 @@ Per `02_technical_design.md` §2.4: `ProtocolVersionRef(StudyCode StudyCode, str
 - **Target Files (Create/Modify):**
   ```text
   apps/execution/src/Domain/Compliance/SiteComplianceCache.cs
-  tests/Execution/Compliance/SiteComplianceCacheTests.cs
+  tests/Cadence.UnitTests/Execution/Compliance/SiteComplianceCacheTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -411,7 +411,7 @@ Per `02_technical_design.md` §2.5: `SiteComplianceCache : AggregateRoot<Guid>` 
   packages/engine_core/src/AggregateRootBase.cs (new)
   packages/engine_core/src/AggregateRoot.cs (modify: AggregateRoot<TId> : AggregateRootBase, remove the four now-inherited properties from the generic class body)
   packages/database/src/GxPAuditInterceptor.cs (modify: pattern-match AggregateRootBase instead of AggregateRoot<string>; append Merkle-chained AuditLogEntry writes)
-  tests/Execution/Persistence/GxPAuditInterceptorMerkleChainTests.cs
+  tests/Cadence.UnitTests/Execution/Persistence/GxPAuditInterceptorMerkleChainTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -456,7 +456,7 @@ Introduce `public abstract class AggregateRootBase : IGxPAuditable` in a new fil
   apps/execution/src/Application/Compliance/ComplianceStatusResponse.cs
   apps/execution/src/Application/OperationEnvelopeResponse.cs
   apps/execution/src/Program.cs (register the shared snake_case JsonNamingPolicy once, if not already present from another slice)
-  tests/Execution/Subjects/SubjectResponseTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectResponseTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -502,7 +502,7 @@ Per `02_technical_design.md` §2.6: `SubjectResponse(SubjectId, SubjectCode, Stu
   apps/execution/src/Application/Subjects/SubjectDemographicsUpdateRequest.cs
   apps/execution/src/Application/Compliance/EtmfCompletenessWebhookPayload.cs (+ EtmfCompletenessWebhookPayloadValidator)
   apps/execution/src/Application/Compliance/SiteActivationRequest.cs
-  tests/Execution/Subjects/RequestValidatorTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/RequestValidatorTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -546,7 +546,7 @@ Per `02_technical_design.md` §2.7: `SubjectCreateRequest(string SubjectId, stri
   apps/execution/src/Domain/Subjects/DomainErrorHttpMapping.cs
   apps/execution/src/Domain/Subjects/DomainErrorExtensions.cs (ToProblemResult())
   apps/execution/src/Program.cs (register IProblemDetailsService.CustomizeProblemDetails)
-  tests/Execution/Subjects/DomainErrorHttpMappingTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/DomainErrorHttpMappingTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -589,7 +589,7 @@ Per `02_technical_design.md` §3.4's table: default `ErrorType` → status mappi
   apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs
   apps/execution/src/Infrastructure/Persistence/Configurations/ClinicalSubjectConfiguration.cs
   apps/execution/src/Cadence.Apps.Execution.csproj (add Npgsql.EntityFrameworkCore.PostgreSQL, Microsoft.EntityFrameworkCore package references and a ProjectReference to packages/database/src/Cadence.Database.csproj if not already present)
-  tests/Execution/Persistence/ClinicalSubjectConfigurationTests.cs
+  tests/Cadence.UnitTests/Execution/Persistence/ClinicalSubjectConfigurationTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -631,8 +631,8 @@ Per `02_technical_design.md` §4.1: `ExecutionDbContext` registers `GxPAuditInte
   apps/execution/src/Infrastructure/Persistence/Configurations/SubjectConsentConfiguration.cs
   apps/execution/src/Infrastructure/Persistence/Configurations/SiteComplianceCacheConfiguration.cs
   apps/execution/src/Infrastructure/Persistence/ExecutionDbContext.cs (add the two DbSet<T> properties and ApplyConfiguration calls)
-  tests/Execution/Persistence/SubjectConsentConfigurationTests.cs
-  tests/Execution/Persistence/SiteComplianceCacheConfigurationTests.cs
+  tests/Cadence.UnitTests/Execution/Persistence/SubjectConsentConfigurationTests.cs
+  tests/Cadence.UnitTests/Execution/Persistence/SiteComplianceCacheConfigurationTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -679,7 +679,7 @@ Per `02_technical_design.md` §4.1/§4.3: `SubjectConsentConfiguration` maps `Id
   apps/execution/src/Infrastructure/Persistence/Repositories/ConsentRepository.cs
   apps/execution/src/Infrastructure/Persistence/Repositories/SiteComplianceRepository.cs
   apps/execution/src/Program.cs (register resilience pipeline for SaveChangesAsync)
-  tests/Execution/Persistence/SubjectRepositoryTests.cs
+  tests/Cadence.UnitTests/Execution/Persistence/SubjectRepositoryTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -761,7 +761,7 @@ Manual `dotnet ef database update`/`migrations remove`/re-add cycle against a lo
   apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs
   apps/execution/src/Infrastructure/Security/DemographicsEncryptionOptions.cs
   apps/execution/src/Infrastructure/Security/DemographicsDecryptionFailedException.cs
-  tests/Execution/Security/AesGcmDemographicsEncryptionServiceTests.cs
+  tests/Cadence.UnitTests/Execution/Security/AesGcmDemographicsEncryptionServiceTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -805,7 +805,7 @@ Per `02_technical_design.md` §5.1: `IDemographicsEncryptionService.Encrypt(IRea
   apps/execution/src/Infrastructure/Security/DemographicsNormalizationService.cs
   apps/execution/src/Application/Abstractions/IClock.cs
   apps/execution/src/Infrastructure/SystemClock.cs
-  tests/Execution/Security/DemographicsNormalizationServiceTests.cs
+  tests/Cadence.UnitTests/Execution/Security/DemographicsNormalizationServiceTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -851,7 +851,7 @@ Rule 7's gender-normalization table, age-calculation algorithm (with its deliber
   apps/execution/src/Infrastructure/Security/SystemAuditContextAccessor.cs
   apps/execution/src/Application/Abstractions/IAuditLogWriter.cs
   apps/execution/src/Infrastructure/Persistence/EfAuditLogWriter.cs
-  tests/Execution/Security/CurrentAuditContextAccessorTests.cs
+  tests/Cadence.UnitTests/Execution/Security/CurrentAuditContextAccessorTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -893,8 +893,8 @@ Per `02_technical_design.md` §4.4: `ICurrentAuditContextAccessor { string UserI
   ```text
   apps/execution/src/Application/Subjects/ISubjectApplicationService.cs
   apps/execution/src/Application/Subjects/SubjectApplicationService.cs (partial: CreateAsync, RecordConsentAsync only — remaining methods are MIG-SUBJ-019)
-  tests/Execution/Subjects/SubjectApplicationServiceCreateTests.cs
-  tests/Execution/Subjects/SubjectApplicationServiceConsentTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceCreateTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceConsentTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -935,9 +935,9 @@ Per `02_technical_design.md` §3.1/§3.3: `ISubjectApplicationService` declares 
 - **Target Files (Create/Modify):**
   ```text
   apps/execution/src/Application/Subjects/SubjectApplicationService.cs (continuation: AdvanceStateAsync, UpdateDemographicsAsync, DeleteDemographicsAsync, GetDetailAsync, EvaluateAndTransitionScreeningAsync)
-  tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs
-  tests/Execution/Subjects/SubjectApplicationServiceDemographicsTests.cs
-  tests/Execution/Subjects/SubjectApplicationServiceDetailTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceStateTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceDemographicsTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectApplicationServiceDetailTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -981,7 +981,7 @@ Per `02_technical_design.md` §3.2 (the representative `AdvanceStateAsync` imple
   ```text
   apps/execution/src/Application/Compliance/ISiteComplianceApplicationService.cs
   apps/execution/src/Application/Compliance/SiteComplianceApplicationService.cs
-  tests/Execution/Compliance/SiteComplianceApplicationServiceTests.cs
+  tests/Cadence.UnitTests/Execution/Compliance/SiteComplianceApplicationServiceTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1024,7 +1024,7 @@ The eTMF webhook upsert, the site-activation gate-check endpoint's business logi
   apps/execution/src/Infrastructure/Consumers/EConsentCompletedEvent.cs
   apps/execution/src/Infrastructure/Consumers/EConsentCompletedConsumer.cs
   apps/execution/src/Program.cs (register AddMassTransit, AddEntityFrameworkOutbox<ExecutionDbContext>(), the consumer, and SystemAuditContextAccessor's scoped-per-consume registration)
-  tests/Execution/Consumers/EConsentCompletedConsumerTests.cs
+  tests/Cadence.UnitTests/Execution/Consumers/EConsentCompletedConsumerTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1066,8 +1066,8 @@ Per `02_technical_design.md` §5.2 (implementation given near-verbatim in the de
   ```text
   apps/execution/src/Endpoints/Filters/ChangeReasonHeaderFilter.cs
   apps/execution/src/Endpoints/Filters/ValidationFilter.cs (generic ValidationFilter<TRequest>, verified not to already exist in the shared kernel — this is new, reusable infrastructure for this slice, not yet present anywhere in packages/)
-  tests/Execution/Endpoints/ChangeReasonHeaderFilterTests.cs
-  tests/Execution/Endpoints/ValidationFilterTests.cs
+  tests/Cadence.UnitTests/Execution/Endpoints/ChangeReasonHeaderFilterTests.cs
+  tests/Cadence.UnitTests/Execution/Endpoints/ValidationFilterTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1107,7 +1107,7 @@ Two small, generic `IEndpointFilter` implementations consumed by MIG-SUBJ-023/02
 - **Target Files (Create/Modify):**
   ```text
   apps/execution/src/Endpoints/SubjectEndpoints.cs
-  tests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs
+  tests/Cadence.UnitTests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1149,7 +1149,7 @@ Per `02_technical_design.md` §3.3, verbatim route shapes: `POST /api/v1/executi
   ```text
   apps/execution/src/Endpoints/SiteComplianceEndpoints.cs
   apps/execution/src/Program.cs (final wiring: DI registrations for every service/repository/accessor from MIG-SUBJ-011 through MIG-SUBJ-022, MapSubjectEndpoints(), MapSiteComplianceEndpoints(), AddProblemDetails/CustomizeProblemDetails, MassTransit outbox)
-  tests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs
+  tests/Cadence.UnitTests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1193,8 +1193,8 @@ Per `02_technical_design.md` §3.3: `POST /api/v1/execution/webhooks/etmf` → `
   packages/testing/src/GoldenMaster/GoldenMasterScenario.cs
   packages/testing/src/GoldenMaster/GoldenMasterFixtureLoader.cs
   packages/testing/src/GoldenMaster/GoldenMasterAssert.cs
-  tests/Execution/ExecutionApiFactory.cs
-  tests/Execution/GoldenMaster/GoldenMasterFixtureLoaderTests.cs
+  tests/Cadence.UnitTests/Execution/ExecutionApiFactory.cs
+  tests/Cadence.UnitTests/Execution/GoldenMaster/GoldenMasterFixtureLoaderTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1234,7 +1234,7 @@ Per `02_technical_design.md` §6.1: `GoldenMasterFixtureLoader.LoadScenarios(inp
 - **Parallelizable With:** None
 - **Target Files (Create/Modify):**
   ```text
-  tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs
+  tests/Cadence.UnitTests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1278,12 +1278,12 @@ This ticket **is** the verification requirement. `dotnet test --filter "FullyQua
 - **Parallelizable With:** MIG-SUBJ-026 (different test files, no shared state)
 - **Target Files (Create/Modify):**
   ```text
-  tests/Execution/Subjects/SubjectTransitionGraphFullMatrixTests.cs (if not already fully covered by MIG-SUBJ-002 — this ticket's job is to confirm/extend, not duplicate)
-  tests/Execution/Security/CalculateAgeParityTests.cs
-  tests/Execution/Security/NormalizeGenderParityTests.cs
-  tests/Execution/Consumers/EConsentCompletedConsumerIdempotencyTests.cs (if MIG-SUBJ-021's own ticket coverage is judged sufficient at implementation time, this file may be a no-op/merge into that ticket's test file rather than a true duplicate)
-  tests/Execution/Subjects/SubjectConsentMergePrecedenceTests.cs (if not already fully covered by MIG-SUBJ-005)
-  tests/Execution/Persistence/GxPAuditInterceptorMerkleChainIntegrationTests.cs
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectTransitionGraphFullMatrixTests.cs (if not already fully covered by MIG-SUBJ-002 — this ticket's job is to confirm/extend, not duplicate)
+  tests/Cadence.UnitTests/Execution/Security/CalculateAgeParityTests.cs
+  tests/Cadence.UnitTests/Execution/Security/NormalizeGenderParityTests.cs
+  tests/Cadence.UnitTests/Execution/Consumers/EConsentCompletedConsumerIdempotencyTests.cs (if MIG-SUBJ-021's own ticket coverage is judged sufficient at implementation time, this file may be a no-op/merge into that ticket's test file rather than a true duplicate)
+  tests/Cadence.UnitTests/Execution/Subjects/SubjectConsentMergePrecedenceTests.cs (if not already fully covered by MIG-SUBJ-005)
+  tests/Cadence.UnitTests/Execution/Persistence/GxPAuditInterceptorMerkleChainIntegrationTests.cs
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1328,9 +1328,9 @@ A short written coverage-audit note (in the PR description, not a new doc file) 
 - **Parallelizable With:** MIG-SUBJ-025, MIG-SUBJ-026, MIG-SUBJ-027 (distinct test projects/concerns, though in practice runs after 024 like the other Testing-layer tickets)
 - **Target Files (Create/Modify):**
   ```text
-  tests/Execution/Integration/EnrollmentIndexConcurrencyTests.cs
-  tests/Execution/Integration/ExecutionPostgresFixture.cs (Testcontainers.PostgreSql fixture, migrations applied once per collection, transaction-per-test rollback)
-  tests/ArchitectureSentinelTests.cs (extend the existing file with one new rule)
+  tests/Cadence.IntegrationTests/Execution/EnrollmentIndexConcurrencyTests.cs
+  tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs (Testcontainers.PostgreSql fixture, migrations applied once per collection, transaction-per-test rollback)
+  tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs (extend the existing file with one new rule)
   ```
 - **Legacy Python Source Being Replaced:**
   ```text
@@ -1343,7 +1343,7 @@ The one scenario fixture-replay cannot exercise (concurrent-load, not sequential
 
 #### Technical Implementation Details
 
-`ExecutionPostgresFixture`: one `Testcontainers.PostgreSql` container per test collection (`[CollectionDefinition]`), migrations (MIG-SUBJ-014's output) applied once at fixture startup, each test class runs inside a transaction rolled back on disposal for isolation — per `02_technical_design.md` §6.3. `EnrollmentIndexConcurrencyTests`: fires N (e.g. 20) concurrent `CreateAsync` calls for the same study via `Task.WhenAll`, asserting the resulting `enrollment_index` set is exactly `{0, 1, ..., N-1}` — no duplicates, no gaps. This is the direct regression test for the race `01_spec.md` flags twice (once for `SubjectLifecycleService.enroll_subject`, once for `consent_subscriber.py`) — run it against **both** entry points (`SubjectApplicationService.CreateAsync` directly, and a second variant firing concurrent `EConsentCompletedEvent`s through the consumer) since both share the same locked repository method (MIG-SUBJ-013/021) and both must independently prove race-free under load, not just one representative path. **Architecture sentinel:** extend `tests/ArchitectureSentinelTests.cs` with one new `[Fact]` verifying `Cadence.Apps.Execution.Domain` (this slice's `Domain.Subjects`/`Domain.Compliance`/`Domain.Ports` namespaces specifically) has zero references to `Microsoft.AspNetCore.*` or `MassTransit` — per `02_technical_design.md` §1.1's explicit "this design adds one rule" callout; use the existing file's `GetReferencedAssemblies()` pattern (already proven for the `EntityFrameworkCore`/`AspNetCore`/`Npgsql` checks) rather than introducing a second architecture-testing approach (e.g. actual `TngTech.ArchUnitNET` fluent rules) unless the existing assembly-reference-inspection pattern proves insufficient to scope the check to this slice's `Domain` namespace specifically (the existing test checks the whole `Cadence.Core.Domain` assembly; this slice's domain code lives inside the `Cadence.Apps.Execution` assembly instead, so the check must be namespace-scoped via reflection over types in `Cadence.Apps.Execution.Domain.*`, not assembly-scoped).
+`ExecutionPostgresFixture`: one `Testcontainers.PostgreSql` container per test collection (`[CollectionDefinition]`), migrations (MIG-SUBJ-014's output) applied once at fixture startup, each test class runs inside a transaction rolled back on disposal for isolation — per `02_technical_design.md` §6.3. `EnrollmentIndexConcurrencyTests`: fires N (e.g. 20) concurrent `CreateAsync` calls for the same study via `Task.WhenAll`, asserting the resulting `enrollment_index` set is exactly `{0, 1, ..., N-1}` — no duplicates, no gaps. This is the direct regression test for the race `01_spec.md` flags twice (once for `SubjectLifecycleService.enroll_subject`, once for `consent_subscriber.py`) — run it against **both** entry points (`SubjectApplicationService.CreateAsync` directly, and a second variant firing concurrent `EConsentCompletedEvent`s through the consumer) since both share the same locked repository method (MIG-SUBJ-013/021) and both must independently prove race-free under load, not just one representative path. **Architecture sentinel:** extend `tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs` with one new `[Fact]` verifying `Cadence.Apps.Execution.Domain` (this slice's `Domain.Subjects`/`Domain.Compliance`/`Domain.Ports` namespaces specifically) has zero references to `Microsoft.AspNetCore.*` or `MassTransit` — per `02_technical_design.md` §1.1's explicit "this design adds one rule" callout; use the existing file's `GetReferencedAssemblies()` pattern (already proven for the `EntityFrameworkCore`/`AspNetCore`/`Npgsql` checks) rather than introducing a second architecture-testing approach (e.g. actual `TngTech.ArchUnitNET` fluent rules) unless the existing assembly-reference-inspection pattern proves insufficient to scope the check to this slice's `Domain` namespace specifically (the existing test checks the whole `Cadence.Core.Domain` assembly; this slice's domain code lives inside the `Cadence.Apps.Execution` assembly instead, so the check must be namespace-scoped via reflection over types in `Cadence.Apps.Execution.Domain.*`, not assembly-scoped).
 
 #### Acceptance Criteria
 
@@ -1357,7 +1357,7 @@ The one scenario fixture-replay cannot exercise (concurrent-load, not sequential
 
 #### Verification & Test Requirements
 
-`dotnet test --filter "FullyQualifiedName~EnrollmentIndexConcurrencyTests"` against a live Testcontainers-backed Postgres instance (with resilient in-memory fallback when Docker daemon is dormant); `dotnet test tests/Cadence.ArchitectureTests.csproj` including the new sentinel rule; both integrated into the same CI gate that runs MIG-SUBJ-026's golden-master suite before this slice is considered mergeable.
+`dotnet test --filter "FullyQualifiedName~EnrollmentIndexConcurrencyTests"` against a live Testcontainers-backed Postgres instance (with resilient in-memory fallback when Docker daemon is dormant); `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` including the new sentinel rule; both integrated into the same CI gate that runs MIG-SUBJ-026's golden-master suite before this slice is considered mergeable.
 
 ---
 
