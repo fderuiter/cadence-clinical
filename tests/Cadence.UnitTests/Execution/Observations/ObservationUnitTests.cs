@@ -13,6 +13,7 @@ using Cadence.Core.Domain;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -26,11 +27,6 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// </summary>
 public sealed class ObservationUnitTests
 {
-    private sealed class FakeAuditContextAccessor(string userId = "test-user", string reason = "test-reason") : ICurrentAuditContextAccessor
-    {
-        public string UserId => userId;
-        public string ChangeReason => reason;
-    }
 
     /// <summary>
     /// Validates that creating a clinical observation sets initial properties, version index, and SDV unverified status.
@@ -226,7 +222,7 @@ public sealed class ObservationUnitTests
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor();
 
         var service = new ObservationApplicationService(
             repo,
