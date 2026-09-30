@@ -10,8 +10,8 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Core.Domain;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -26,11 +26,6 @@ namespace Cadence.UnitTests.Execution.Observations;
 /// </summary>
 public sealed class ObservationUnitTests
 {
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
-
     private sealed class FakeAuditContextAccessor(string userId = "test-user", string reason = "test-reason") : ICurrentAuditContextAccessor
     {
         public string UserId => userId;
@@ -47,7 +42,7 @@ public sealed class ObservationUnitTests
         var subjectId = new SubjectCode("SUBJ-001");
         var domain = new DomainCode("VS");
         var testCode = new TestCode("SYSBP");
-        var now = DateTime.UtcNow;
+        var now = FakeClock.DefaultStart.UtcDateTime;
 
         var result = ClinicalObservation.Create(
             studyId: studyId,
@@ -88,9 +83,9 @@ public sealed class ObservationUnitTests
             testCode: new TestCode("SYSBP"),
             testName: "Systolic Blood Pressure",
             value: 120.0,
-            observationDate: DateTime.UtcNow).Value!;
+            observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        var verifyTime = DateTime.UtcNow;
+        var verifyTime = FakeClock.DefaultStart.UtcDateTime;
         var result = obs.VerifySdv("cra_user_01", verifyTime);
 
         result.IsSuccess.Should().BeTrue();
@@ -112,10 +107,10 @@ public sealed class ObservationUnitTests
             testCode: new TestCode("SYSBP"),
             testName: "Systolic Blood Pressure",
             value: 120.0,
-            observationDate: DateTime.UtcNow).Value!;
+            observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        obs.VerifySdv("cra_user_01", DateTime.UtcNow);
-        var secondResult = obs.VerifySdv("cra_user_02", DateTime.UtcNow);
+        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart.UtcDateTime);
+        var secondResult = obs.VerifySdv("cra_user_02", FakeClock.DefaultStart.UtcDateTime);
 
         secondResult.IsFailure.Should().BeTrue();
         secondResult.Error!.Code.Should().Be("OBSERVATION_ALREADY_VERIFIED");
@@ -134,9 +129,9 @@ public sealed class ObservationUnitTests
             testCode: new TestCode("SYSBP"),
             testName: "Systolic Blood Pressure",
             value: 120.0,
-            observationDate: DateTime.UtcNow).Value!;
+            observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        obs.VerifySdv("cra_user_01", DateTime.UtcNow);
+        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart.UtcDateTime);
         var flagResult = obs.FlagSdv("Source document legibility issue");
 
         flagResult.IsSuccess.Should().BeTrue();
@@ -230,7 +225,7 @@ public sealed class ObservationUnitTests
         var ucum = new UcumNormalizationService();
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var service = new ObservationApplicationService(
@@ -248,7 +243,7 @@ public sealed class ObservationUnitTests
             Domain: "VS",
             TestCode: "TEMP",
             TestName: "Body Temperature",
-            ObservationDate: DateTime.UtcNow,
+            ObservationDate: FakeClock.DefaultStart.UtcDateTime,
             Value: 98.6,
             Unit: "degF");
 

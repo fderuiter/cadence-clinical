@@ -36,13 +36,13 @@ public class ClockTests
     {
         // Arrange
         IClock clock = SystemClock.Instance;
-        var before = DateTimeOffset.UtcNow;
+        var before = TimeProvider.System.GetUtcNow();
 
         // Act
         var now = clock.UtcNow;
 
         // Assert
-        var after = DateTimeOffset.UtcNow;
+        var after = TimeProvider.System.GetUtcNow();
         now.Offset.Should().Be(TimeSpan.Zero);
         now.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }

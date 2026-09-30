@@ -12,9 +12,9 @@ using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -32,11 +32,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// </summary>
 public sealed class ObservationAndFormEndpointsTests
 {
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
-
     private sealed class FakeAuditContextAccessor(string userId = "test_cra_user", string reason = "GxP Audit Reason") : ICurrentAuditContextAccessor
     {
         public string UserId => userId;
@@ -59,7 +54,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
         var svc = new ObservationApplicationService(repo, subjectRepo, ucum, labRange, editChecks, clock, audit);
 
@@ -69,7 +64,7 @@ public sealed class ObservationAndFormEndpointsTests
             Domain: "VS",
             TestCode: "SYSBP",
             TestName: "Systolic Blood Pressure",
-            ObservationDate: DateTime.UtcNow,
+            ObservationDate: FakeClock.DefaultStart.UtcDateTime,
             Value: 120.0,
             Unit: "mmHg");
 
@@ -93,7 +88,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var labRange = new LabRangeService();
         var editChecks = new AstEditCheckEngine();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var svc = new ObservationApplicationService(repo, subjectRepo, ucum, labRange, editChecks, clock, audit);
@@ -104,7 +99,7 @@ public sealed class ObservationAndFormEndpointsTests
             Domain: "VS",
             TestCode: "SYSBP",
             TestName: "Systolic Blood Pressure",
-            ObservationDate: DateTime.UtcNow,
+            ObservationDate: FakeClock.DefaultStart.UtcDateTime,
             Value: 120.0), CancellationToken.None);
 
         var obsId = createRes.Value!.Id;
@@ -152,7 +147,7 @@ public sealed class ObservationAndFormEndpointsTests
     public async Task CreateQuery_Handler_ReturnsCreatedResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
@@ -178,7 +173,7 @@ public sealed class ObservationAndFormEndpointsTests
     public async Task CloseQuery_Handler_WithUnauthorizedRole_ReturnsForbiddenProblemResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
@@ -211,7 +206,7 @@ public sealed class ObservationAndFormEndpointsTests
     public async Task CloseQuery_Handler_WithCraRole_ReturnsOkResult()
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var svc = new ClinicalQueryApplicationService(repo, audit, clock);
@@ -265,7 +260,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
@@ -305,7 +300,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerId: "user-01",
             SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
@@ -341,7 +336,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload)));
         await formRepo.AddAsync(form, CancellationToken.None);
 

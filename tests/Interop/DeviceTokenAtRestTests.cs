@@ -9,6 +9,7 @@ using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Persistence;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -82,7 +83,7 @@ public sealed class DeviceTokenAtRestTests : IDisposable
                 StudyId = "STUDY-1",
                 SubjectId = "SUBJ-101",
                 DeviceType = "CGM",
-                SummaryDate = DateTime.UtcNow.Date,
+                SummaryDate = FakeClock.DefaultStart.UtcDateTime.Date,
                 Sha256Hash = new string('b', 64),
                 DeviceTokenHash = tokenHash,
             });

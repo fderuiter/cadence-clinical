@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Gateway.Signatures;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -336,7 +337,7 @@ public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixt
                 Issuer = Issuer,
                 Subject = new ClaimsIdentity([new Claim("sub", subject), new Claim("preferred_username", username)]),
                 Claims = new Dictionary<string, object> { ["realm_access"] = new Dictionary<string, object> { ["roles"] = roles } },
-                Expires = DateTime.UtcNow.AddMinutes(5),
+                Expires = SystemClock.Instance.UtcNow.UtcDateTime.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(SigningKey, SecurityAlgorithms.HmacSha256),
             });
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

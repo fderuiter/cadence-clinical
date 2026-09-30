@@ -5,6 +5,7 @@ using System.Text;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -57,7 +58,7 @@ public sealed class FormSubmissionGoldenMasterTests
             SignerId: "pi-user-smith",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I approve the accuracy and completeness of this form.",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: hash);
 
         var approveRes = form.Approve(manifest);

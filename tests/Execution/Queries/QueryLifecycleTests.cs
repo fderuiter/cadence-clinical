@@ -7,8 +7,8 @@ using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -23,11 +23,6 @@ namespace Cadence.UnitTests.Execution.Queries;
 /// </summary>
 public sealed class QueryLifecycleTests
 {
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
-
     private sealed class FakeAuditContextAccessor(string userId = "cra-user-01", string reason = "Query management") : ICurrentAuditContextAccessor
     {
         public string UserId => userId;
@@ -75,7 +70,7 @@ public sealed class QueryLifecycleTests
         query.Responder.Should().Be("investigator-01");
 
         // 2. Close
-        var closeTime = DateTime.UtcNow;
+        var closeTime = FakeClock.DefaultStart.UtcDateTime;
         var closeRes = query.Close("cra-01", closeTime);
         closeRes.IsSuccess.Should().BeTrue();
         query.Status.Should().Be(QueryStatus.Closed);
@@ -93,7 +88,7 @@ public sealed class QueryLifecycleTests
         query.Status.Should().Be(QueryStatus.Answered);
 
         // 5. Final Close
-        query.Close("cra-01", DateTime.UtcNow).IsSuccess.Should().BeTrue();
+        query.Close("cra-01", FakeClock.DefaultStart.UtcDateTime).IsSuccess.Should().BeTrue();
         query.Status.Should().Be(QueryStatus.Closed);
     }
 
@@ -126,7 +121,7 @@ public sealed class QueryLifecycleTests
     public async Task ApplicationService_PreventsDuplicateActiveQueryOnSameCoordinates()
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var service = new ClinicalQueryApplicationService(repo, audit, clock);
@@ -155,7 +150,7 @@ public sealed class QueryLifecycleTests
     public async Task ApplicationService_Close_ValidatesCraOrDmRole()
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
         var audit = new FakeAuditContextAccessor();
 
         var service = new ClinicalQueryApplicationService(repo, audit, clock);
@@ -235,7 +230,7 @@ public sealed class QueryLifecycleTests
     public async Task ApplicationService_CloseReopenCancel_WithoutRole_AreDenied(string? role)
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var service = new ClinicalQueryApplicationService(repo, new FakeAuditContextAccessor(), new FakeClock(DateTimeOffset.UtcNow));
+        var service = new ClinicalQueryApplicationService(repo, new FakeAuditContextAccessor(), new FakeClock());
 
         var query = ClinicalQuery.Raise(
             studyId: new StudyCode("STUDY-001"),

@@ -10,6 +10,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Serialization;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -27,7 +28,7 @@ public class KernelIdentifierTests
     public void IdentifiersMustGenerateValidUuidV7()
     {
         // Arrange & Act
-        var baseTime = DateTimeOffset.UtcNow;
+        var baseTime = FakeClock.DefaultStart;
         var tenantId1 = TenantId.FromGuid(Guid.CreateVersion7(baseTime));
         var tenantId2 = TenantId.FromGuid(Guid.CreateVersion7(baseTime.AddSeconds(1)));
         var generatedId = TenantId.New();
@@ -198,7 +199,7 @@ public class KernelIdentifierTests
         var obsId = ObservationId.New();
         var attestationId = AttestationId.New();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = FakeClock.DefaultStart;
         var period = TemporalPeriod.CreateCurrent(now, now);
 
         // Act

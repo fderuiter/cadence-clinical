@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 
@@ -38,7 +39,7 @@ public class SignatureTokenTests
     [GxPRequirement("SRS-SYS-005")]
     public void Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime()
     {
-        var issuedAt = DateTimeOffset.UtcNow;
+        var issuedAt = SystemClock.Instance.UtcNow;
 
         var first = Read(Issue("pi-01", ["Site Investigator"], issuedAt));
         var second = Read(Issue("pi-01", ["Site Investigator"], issuedAt));
@@ -126,7 +127,7 @@ public class SignatureTokenTests
     [GxPRequirement("SRS-SYS-005")]
     public void Verify_ExpiredToken_IsRejected()
     {
-        string token = Issue("pi-01", ["Site Investigator"], DateTimeOffset.UtcNow.AddSeconds(-70));
+        string token = Issue("pi-01", ["Site Investigator"], SystemClock.Instance.UtcNow.AddSeconds(-70));
 
         Action verify = () => new SigTokenVerifier().VerifyAndConsumeSigToken(token, "pi-01", Binding, Secret);
 
@@ -160,7 +161,7 @@ public class SignatureTokenTests
     [GxPRequirement("SRS-SYS-005")]
     public void Verify_TokensOutsideTheV3Contract_AreRejected()
     {
-        var now = DateTime.UtcNow;
+        var now = SystemClock.Instance.UtcNow.UtcDateTime;
         var verifier = new SigTokenVerifier();
 
         verifier.Invoking(v => v.VerifyAndConsumeSigToken(Build(now, now.AddSeconds(60), version: null), "pi-01", Binding, Secret))
@@ -173,7 +174,7 @@ public class SignatureTokenTests
     }
 
     private static string Issue(string subject, IReadOnlyList<string> roles, DateTimeOffset? issuedAt = null) =>
-        SigTokenIssuer.Issue(new SigTokenGrant(subject, subject, roles, Action, SemanticAction), issuedAt ?? DateTimeOffset.UtcNow, Secret);
+        SigTokenIssuer.Issue(new SigTokenGrant(subject, subject, roles, Action, SemanticAction), issuedAt ?? SystemClock.Instance.UtcNow, Secret);
 
     private static string Build(DateTime issuedAt, DateTime expires, string? version = "v3", string role = "investigator")
     {
