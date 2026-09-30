@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -2085,6 +2085,119 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930043230_ParticipantsAndEnrollments', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE TABLE kernel.lineage_edges (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        from_kind character varying(48) NOT NULL,
+        from_id uuid NOT NULL,
+        from_version bigint NOT NULL,
+        to_kind character varying(48) NOT NULL,
+        to_id uuid NOT NULL,
+        to_version bigint NOT NULL,
+        kind character varying(32) NOT NULL,
+        activity_id uuid NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        valid_from timestamp with time zone,
+        CONSTRAINT "PK_lineage_edges" PRIMARY KEY (id),
+        CONSTRAINT "FK_lineage_edges_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE TABLE kernel.lineage_nodes (
+        tenant_id uuid NOT NULL,
+        kind character varying(48) NOT NULL,
+        node_id uuid NOT NULL,
+        version bigint NOT NULL,
+        derived boolean NOT NULL,
+        activity_id uuid NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_lineage_nodes" PRIMARY KEY (tenant_id, node_id, kind, version),
+        CONSTRAINT "FK_lineage_nodes_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE UNIQUE INDEX "IX_lineage_edges_tenant_id_from_id_from_kind_from_version_to_i~" ON kernel.lineage_edges (tenant_id, from_id, from_kind, from_version, to_id, to_kind, to_version, kind);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE INDEX "IX_lineage_edges_tenant_id_to_id_to_kind_to_version" ON kernel.lineage_edges (tenant_id, to_id, to_kind, to_version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE INDEX "IX_lineage_nodes_tenant_id_derived" ON kernel.lineage_nodes (tenant_id, derived);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    ALTER TABLE "kernel"."lineage_nodes" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."lineage_nodes" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."lineage_nodes"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    ALTER TABLE "kernel"."lineage_edges" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."lineage_edges" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."lineage_edges"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE TRIGGER "trg_lineage_nodes_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."lineage_nodes"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_lineage_nodes_no_truncate" BEFORE TRUNCATE ON "kernel"."lineage_nodes"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    CREATE TRIGGER "trg_lineage_edges_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."lineage_edges"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_lineage_edges_no_truncate" BEFORE TRUNCATE ON "kernel"."lineage_edges"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930045723_LineageStore', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

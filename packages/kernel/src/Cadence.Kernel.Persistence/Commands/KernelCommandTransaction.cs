@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 
@@ -28,6 +30,7 @@ internal enum CommitStage
 {
     StateStamped,
     ProvenanceStaged,
+    LineageStaged,
     EventsStaged,
     AuditAppended,
     IdempotencyStaged,
@@ -45,8 +48,9 @@ internal sealed class KernelUnitOfWorkFactory(KernelTenantDbContextFactory conte
 }
 
 /// <summary>
-/// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1) and events, then writes state,
-/// provenance, events, the audit link, outbox rows and the idempotency record in one PostgreSQL transaction (K-TX-2).
+/// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1), its declared lineage inputs and its
+/// events, then writes state, provenance, lineage, events, the audit link, outbox rows and the idempotency record in
+/// one PostgreSQL transaction (K-TX-2, K-LIN-2).
 /// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelCommandTransaction(
@@ -57,6 +61,7 @@ internal sealed class KernelCommandTransaction(
     private const string DecisionDeniedEvent = "DecisionDenied";
 
     private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
+    private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
 
@@ -150,6 +155,25 @@ internal sealed class KernelCommandTransaction(
         _events.Add((domainEvent, occurredValid));
     }
 
+    public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (input.Version is null)
+        {
+            throw new ArgumentException($"K-LIN: lineage inputs name a version; '{input}' does not.", nameof(input));
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown lineage edge kind.");
+        }
+
+        if (!_inputs.Contains((input, kind, validFrom)))
+        {
+            _inputs.Add((input, kind, validFrom));
+        }
+    }
+
     public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
         db.IdempotencyRecords.AsNoTracking()
             .Where(r => r.TenantId == Command.TenantId && r.IdempotencyKey == Command.IdempotencyKey)
@@ -160,13 +184,17 @@ internal sealed class KernelCommandTransaction(
     {
         using var writes = db.PermitPipelineWrites();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        ChangedAggregate? aggregate = null;
         try
         {
-            var aggregate = StampAggregate();
+            aggregate = StampAggregate();
             Fault(CommitStage.StateStamped);
 
             AddProvenance("Committed", aggregate);
             Fault(CommitStage.ProvenanceStaged);
+
+            StageLineage(aggregate);
+            Fault(CommitStage.LineageStaged);
 
             foreach (var (domainEvent, occurredValid) in _events)
             {
@@ -205,10 +233,25 @@ internal sealed class KernelCommandTransaction(
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } unique)
         {
             await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
-            return string.Equals(unique.TableName, "idempotency_records", StringComparison.Ordinal)
-                ? CommitOutcome.IdempotencyRace
-                : CommitOutcome.UniqueConflict;
+            return UniqueViolationOutcome(unique.TableName, aggregate);
         }
+    }
+
+    /// <summary>
+    /// Classifies a unique violation. Two commands that update the same aggregate version both write its next lineage
+    /// node, and PostgreSQL may report that duplicate before the row-version check, so on an update a lineage duplicate
+    /// is the same concurrency conflict.
+    /// </summary>
+    private static CommitOutcome UniqueViolationOutcome(string? table, ChangedAggregate? aggregate)
+    {
+        if (string.Equals(table, "idempotency_records", StringComparison.Ordinal))
+        {
+            return CommitOutcome.IdempotencyRace;
+        }
+
+        return aggregate?.Action == "Updated" && table is "lineage_nodes" or "lineage_edges"
+            ? CommitOutcome.ConcurrencyConflict
+            : CommitOutcome.UniqueConflict;
     }
 
     public async Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken)
@@ -325,7 +368,8 @@ internal sealed class KernelCommandTransaction(
         var subject = entry.Metadata.FindPrimaryKey()?.Properties is [var key] && entry.Property(key.Name).CurrentValue is IEntityId id
             ? NodeRef.For(id, aggregate.VersionIndex)
             : null;
-        return new ChangedAggregate(entry.Metadata.ClrType.Name, KeyText(entry), aggregate.VersionIndex, action, changes, subject);
+        var derived = entry.Metadata.ClrType.IsDefined(typeof(DerivedObjectAttribute), inherit: false);
+        return new ChangedAggregate(entry.Metadata.ClrType.Name, KeyText(entry), aggregate.VersionIndex, action, changes, subject, derived);
     }
 
     private static SortedDictionary<string, object?> Snapshot(EntityEntry entry, bool modifiedOnly, bool original)
@@ -369,6 +413,73 @@ internal sealed class KernelCommandTransaction(
             CorrelationId = execution.Metadata.CorrelationId,
             CausationId = execution.Metadata.CausationId,
         });
+
+    /// <summary>
+    /// Records the written object version as a lineage node and its inbound edges (spec §9.6, K-LIN-2): the inputs the
+    /// handler declared, plus <see cref="LineageEdgeKind.Supersedes"/> from the previous version on an update. A
+    /// derived object without an inbound edge, or inputs without an object to attach them to, is a handler defect and
+    /// aborts the commit (K-LIN-1).
+    /// </summary>
+    private void StageLineage(ChangedAggregate? aggregate)
+    {
+        if (aggregate?.Subject is not { Version: { } version } subject || aggregate.Action == "Deleted")
+        {
+            if (_inputs.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"K-LIN-2: {execution.CommandType} declared lineage inputs but wrote no object version to attach them to.");
+            }
+
+            return;
+        }
+
+        if (_inputs.Exists(i => i.Input.Unversioned() == subject.Unversioned() && i.Input.Version >= version))
+        {
+            throw new InvalidOperationException(
+                $"K-LIN: {execution.CommandType} declared {subject} as an input of itself or of an earlier version.");
+        }
+
+        var inbound = new List<(NodeRef From, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)>(_inputs);
+        if (aggregate.Action == "Updated")
+        {
+            inbound.Add((subject.AtVersion(version - 1), LineageEdgeKind.Supersedes, null));
+        }
+
+        if (aggregate.Derived && inbound.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"K-LIN-1: {execution.CommandType} wrote derived object {subject} without declaring its inputs.");
+        }
+
+        db.LineageNodes.Add(new LineageNodeRecord
+        {
+            TenantId = Command.TenantId,
+            Kind = subject.Kind,
+            NodeId = subject.Id,
+            Version = version,
+            Derived = aggregate.Derived,
+            ActivityId = execution.ActivityId,
+            RecordedAt = execution.RecordedAt,
+        });
+        foreach (var (from, kind, validFrom) in inbound)
+        {
+            db.LineageEdges.Add(new LineageEdgeRecord
+            {
+                Id = Guid.CreateVersion7(),
+                TenantId = Command.TenantId,
+                FromKind = from.Kind,
+                FromId = from.Id,
+                FromVersion = from.Version!.Value,
+                ToKind = subject.Kind,
+                ToId = subject.Id,
+                ToVersion = version,
+                Kind = kind,
+                ActivityId = execution.ActivityId,
+                RecordedAt = execution.RecordedAt,
+                ValidFrom = validFrom,
+            });
+        }
+    }
 
     private void AddEvent(string type, int schemaVersion, JsonElement payload, DateTimeOffset? occurredValid, NodeRef? subject = null)
     {
@@ -461,7 +572,7 @@ internal sealed class KernelCommandTransaction(
 
     private static string Serialize(object value) => JsonSerializer.Serialize(value, KernelCommandPipelineJson.Options);
 
-    private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes, NodeRef? Subject);
+    private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes, NodeRef? Subject, bool Derived);
 }
 
 /// <summary>JSON options shared by kernel persistence for event payloads, envelopes and audit change sets.</summary>

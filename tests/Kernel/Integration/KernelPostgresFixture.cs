@@ -12,12 +12,15 @@ using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Rules;
@@ -77,6 +80,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The authorizer the pipeline consults; permits everything unless a test sets a policy.</summary>
     public TestAuthorizer Authorizer { get; } = new();
 
+    /// <summary>Decides which lineage nodes a reader sees; shows everything unless a test masks nodes.</summary>
+    public TestNodeVisibility Visibility { get; } = new();
+
     /// <summary>Records what the outbox relay delivers; a test can make it fail.</summary>
     public TestEventPublisher Publisher { get; } = new();
 
@@ -113,6 +119,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<IClock>(Clock)
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
+            .AddSingleton<INodeVisibility>(Visibility)
             .AddSingleton<IKernelEventPublisher>(Publisher)
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddSingleton<KernelOutboxRelay>()
@@ -141,6 +148,11 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The Concept Registry read port, as applications get it.</summary>
     public IConceptRegistry ConceptRegistry => Scope().GetRequiredService<IConceptRegistry>();
+
+    /// <summary>The lineage read port, as applications get it.</summary>
+    public IKernelLineage Lineage => Scope().GetRequiredService<IKernelLineage>();
+
+    internal KernelLineageOrphanCheck LineageOrphanCheck => Scope().GetRequiredService<KernelLineageOrphanCheck>();
 
     internal KernelAuditChainVerifier AuditChainVerifier => Scope().GetRequiredService<KernelAuditChainVerifier>();
 
@@ -278,5 +290,32 @@ public sealed class TestEventPublisher : IKernelEventPublisher
         _delivered.Clear();
         Fail = null;
         Delay = TimeSpan.Zero;
+    }
+}
+
+/// <summary>
+/// An <see cref="INodeVisibility"/> tests can set: every node is visible unless it (or its object, for an unversioned
+/// entry) is in <see cref="Masked"/>. Records the nodes each call was asked about.
+/// </summary>
+public sealed class TestNodeVisibility : INodeVisibility
+{
+    public ConcurrentDictionary<NodeRef, MaskReason> Masked { get; } = new();
+
+    public ConcurrentBag<IReadOnlyCollection<NodeRef>> Calls { get; } = [];
+
+    public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant, Actor reader, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        Calls.Add(nodes);
+        var result = new Dictionary<NodeRef, MaskReason>();
+        foreach (var node in nodes)
+        {
+            if (Masked.TryGetValue(node, out var reason) || Masked.TryGetValue(node.Unversioned(), out reason))
+            {
+                result[node] = reason;
+            }
+        }
+
+        return ValueTask.FromResult<IReadOnlyDictionary<NodeRef, MaskReason>>(result);
     }
 }

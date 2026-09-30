@@ -7,6 +7,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Lineage;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -73,6 +74,10 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    public DbSet<LineageNodeRecord> LineageNodes => Set<LineageNodeRecord>();
+
+    public DbSet<LineageEdgeRecord> LineageEdges => Set<LineageEdgeRecord>();
 
     private int _permittedWriters;
 

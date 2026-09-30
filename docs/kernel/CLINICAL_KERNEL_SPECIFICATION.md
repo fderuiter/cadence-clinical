@@ -812,6 +812,24 @@ analysis → TLF → submission artifact`.
   corrections, queries, audit trail, SDV/SDR, monitoring findings, SDTM mapping, ADaM derivation and analysis
   lineage, as one evidence dossier.
 
+Implemented by ADR-2471 (#4815, #4840):
+
+- **Nodes and edges.** Nodes are pinned NodeRefs (§3.4). `kernel.lineage_nodes` and `kernel.lineage_edges` are
+  insert-only and tenant-scoped.
+- **Writing.** A handler declares inputs with `IKernelUnitOfWork.LinkInput`, and the pipeline writes them in the
+  command transaction. It also adds `supersedes` from the previous version on every update. It refuses to commit a
+  `[DerivedObject]` aggregate without an input (K-LIN-1, K-LIN-2), and an hourly check reports stored orphans.
+- **Reading.** `IKernelLineage` implements the read contract below and the evidence dossier. Objects the reader may
+  not see come back masked, never omitted, so a trace keeps its length:
+
+```
+Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nodes[], edges[], truncated }
+node = { handle, kind, ref | null, mask: null | NotPermitted | Blinded | IdentityVault, distance }
+```
+
+- **Masking elsewhere.** `MaskReason` and `INodeVisibility` are the masking contract for every kernel read that can
+  reach blinded or identity-layer content.
+
 ---
 
 ## 10. Quality Engine
@@ -1062,7 +1080,7 @@ kernel, is merged into another, or is retired.
 | K006 | Identity vault | Separate schema and key hierarchy, same deployment; layered identity | ADR-2253 |
 | K007 | Neo4j for designer | Dropped for v1; protocol lifecycle in PostgreSQL | ADR-2245, ADR-2452 |
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
-| K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
+| K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways; masked, never dropped, reads | ADR-2255, ADR-2471 |
 | K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
 | K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
 | K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |

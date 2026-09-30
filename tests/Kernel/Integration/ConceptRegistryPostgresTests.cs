@@ -203,15 +203,20 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
     }
 
     /// <summary>Loads the CDISC CT fixture into a tenant, for tests (here and in the pipeline tests) that need rows.</summary>
-    internal static async Task SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
+    internal static async Task<KnowledgeSeed> SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
     {
         var tests = new ConceptRegistryPostgresTests(fixture);
         var tenant = await tests.NewTenantAsync(ct);
         var ctSystem = await tests.RegisterAsync(tenant, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
         var version = (await tests.LoadCdiscCtAsync(tenant, ctSystem, ct)).Value;
         var concept = await tests.DefineAsync(tenant, ConceptOrigin.Sponsor, null, "Sitting position", ct);
-        (await tests.MapAsync(tenant, concept, new Coding(version, "C62122"), confirmed: true, ct)).IsSuccess.Should().BeTrue();
+        var mapping = await tests.MapAsync(tenant, concept, new Coding(version, "C62122"), confirmed: false, ct);
+        mapping.IsSuccess.Should().BeTrue(mapping.Error?.Message);
+        return new KnowledgeSeed(tenant, version, concept, mapping.Value);
     }
+
+    /// <summary>What <see cref="SeedAsync"/> wrote: a tenant, a CT version, a concept and a proposed mapping.</summary>
+    internal sealed record KnowledgeSeed(TenantId Tenant, CodeSystemVersionId CodeSystemVersion, ConceptRef Concept, ConceptMappingId Mapping);
 
     private async Task<TenantId> NewTenantAsync(CancellationToken ct)
     {

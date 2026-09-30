@@ -7,6 +7,8 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -142,7 +144,9 @@ internal sealed class DeprecateConceptHandler : ICommandHandler<DeprecateConcept
 
 /// <summary>
 /// Handles <see cref="MapConcept"/>. The concept version and the code are read through the registry: both are
-/// immutable once written, so reading them outside the command's aggregate does not weaken K-TX-1.
+/// immutable once written, so reading them outside the command's aggregate does not weaken K-TX-1. The mapping is
+/// defined by the concept version and the code-system version (spec §9.6). A concept that is not deprecated has
+/// revised exactly as often as it has changed, so its revision number is also its version index.
 /// </summary>
 internal sealed class MapConceptHandler(IConceptRegistry registry) : ICommandHandler<MapConcept, ConceptMappingId>
 {
@@ -179,6 +183,8 @@ internal sealed class MapConceptHandler(IConceptRegistry registry) : ICommandHan
 
         var mapping = created.Value!;
         context.Work.Add(mapping);
+        context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Version), LineageEdgeKind.DefinedBy);
+        context.Work.LinkInput(NodeRef.For(command.Target.CodeSystemVersionId, 1), LineageEdgeKind.DefinedBy);
         context.Work.Raise(new ConceptMapped(command.TenantId, mapping.Id, mapping.Concept, mapping.Target, mapping.Relation, mapping.Status));
         return CommandResult<ConceptMappingId>.Success(mapping.Id);
     }
