@@ -120,27 +120,64 @@ hides one the reader may see (UX-6).
   in place: a change is a new version, released with an attestation and pinned through an audited profile revision.
   Every Pulse number therefore names the definition that produced it.
 
-### 4.6 Not in this slice
+### 4.6 Population sources and the study Pulse
 
-- Population sources (enrollments, findings, observations, sites) and the service that loads a study's pinned sets,
-  reads the sources with the reader's authority and masks contributors through `INodeVisibility`. They come with
-  the kernel read endpoint for the Pulse.
+- A **population source** (`IIndicatorPopulationSource`, in `Cadence.Kernel.Abstractions`) reads one named
+  population for a study at an as-of: each record is an object (`NodeRef`) and the variables indicator rules read,
+  as text. A source knows what exists, never who may see it.
+- The kernel registers two sources (`KernelPopulations`, documented in [INDICATORS.md](../kernel/INDICATORS.md)):
+  - `enrollments`: enrollments with the status valid at the as-of, as Cadence recorded it then (K-TIME-2);
+  - `validation_findings`: findings with their derived status, as currently known (findings have no bitemporal
+    history, so the as-of does not change which are read).
+- Applications register sources for their own objects the same way. A new metric over an existing population is
+  data in a set; a new population is a registered source.
+- `StudyIndicators` (in `Cadence.Rules`) loads the sets a study pinned, reads every population an effective indicator
+  counts, applies §4.7 and evaluates. It never writes. The caller checks that the reader may read the study first.
+- A pinned indicator whose population has no source is refused (`K.Indicators.PopulationUnknown`), not reported as
+  zero. A population larger than one evaluation reads (10,000 records) is refused
+  (`K.Indicators.PopulationTooLarge`) rather than miscounted.
+
+### 4.7 Counting within the reader's visible scope
+
+A count over objects the reader may not see can reveal them: an enrollment count that includes another site's
+participants, or a count of randomized participants by arm for a blinded reader (K-AUTH-4). Showing the full value
+with masked contributors would still leak the number. So:
+
+- `StudyIndicators` asks `INodeVisibility` once per evaluation about every record's object and **leaves out the
+  records the reader may not see before counting**. They are not in the numerator, the denominator or the
+  contributors.
+- The result then says the value is **partial** and gives the distinct `MaskReason`s (not permitted, blinded,
+  identity layer). It never says how many records were left out: a hidden count leaks the same number.
+- Two readers with different grants can therefore see different values for the same indicator. Each value is
+  reproducible from its input hash, which covers only the records that reader was shown.
+- A study-wide value for oversight (an unblinded QTL review) is computed for a reader whose grants cover the whole
+  study, not by widening what another reader sees.
+
+### 4.8 Not in this slice
+
+- The kernel read endpoint for the Pulse and the Canvas wiring.
+- Sources for observations and sites.
 - Breach `Signal`s and `IndicatorBreached` events (spec §10.4) and time series.
 
 ## 5. Consequences & Trade-offs
 
 - **Positive:** a Pulse number is reproducible from its definition version and inputs, explainable down to objects,
   and governed like any other rule. KRIs and QTLs for RBQM use the same machinery.
-- **Negative:** the caller must provide complete populations; a missing population is an error, not a zero.
-- **Mitigation Strategy:** the population sources are kernel components registered by name, so the service in the
-  next slice can check that every population a pinned set names has a source.
+- **Negative:** a missing population is an error, not a zero, and readers with different grants see different values
+  for the same indicator.
+- **Mitigation Strategy:** population sources are registered by name, so `StudyIndicators` checks that every
+  population a pinned set names has a source. A value computed over a partial population says so, with the reasons.
 
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/kernel`:
-  - `Cadence.Kernel.Abstractions`: `LibraryItemKind.IndicatorSet`.
+  - `Cadence.Kernel.Abstractions`: `LibraryItemKind.IndicatorSet`; `IIndicatorPopulationSource` and
+    `KernelPopulations`.
+  - `Cadence.Kernel.Persistence/Indicators`: the `enrollments` and `validation_findings` sources, registered by
+    `AddKernelPersistence()` and `AddKernelValidationPersistence()`.
   - `Cadence.Rules/Indicators`: `Indicator`, `IndicatorSet`, `IndicatorSetJson`, `IndicatorSetLoader`,
-    `IndicatorSetContentValidator`, `IndicatorEvaluator` and the result types, registered by `AddCadenceRules()`.
+    `IndicatorSetContentValidator`, `IndicatorEvaluator`, `StudyIndicators` and the result types, registered by
+    `AddCadenceRules()`.
   - `Cadence.Rules/Packs/RulePackJson`: its property readers become internal so both formats read text, enums and
     effective periods the same way.
   - No migration.
@@ -157,4 +194,9 @@ hides one the reader may see (UX-6).
     - a released, pinned set computes KRIs and flags a breached QTL (PRD-CTMS-007);
     - a draft does not load;
     - rule packs and indicator sets load separately from the same pins;
-    - invalid content is refused when drafted.
+    - invalid content is refused when drafted;
+    - a study's Pulse reads live enrollments and findings at an as-of and leaves out an enrollment the reader may
+      not see, reporting the value as partial (PRD-CTMS-007).
+  - `StudyIndicatorsTests`: sources are read once at the as-of; hidden records are left out of values and
+    contributors and reported only by reason; a population with no source or too many records is refused; a study
+    with no pinned sets reads nothing.

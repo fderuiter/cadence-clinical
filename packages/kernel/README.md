@@ -609,6 +609,17 @@ clock and stores nothing.
 - `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1 is the reference start, day -1 the
   day before, and a day-0 timing is day 1.
 
+## Indicators and the study Pulse (ADR-2488)
+
+Pulse metrics, attention rules, KRIs and QTLs are versioned indicators in released, study-pinned `IndicatorSet`
+library items, evaluated in `Cadence.Rules` ([docs/kernel/INDICATORS.md](../../docs/kernel/INDICATORS.md)).
+
+- A population is read by an `IIndicatorPopulationSource` (`Cadence.Kernel.Indicators`) registered under its name.
+  `AddKernelPersistence` registers `enrollments` (status at the as-of, K-TIME-2) and
+  `AddKernelValidationPersistence` registers `validation_findings`. Applications register their own the same way.
+- `StudyIndicators` (`Cadence.Rules`) reads a study's populations and leaves out the records the reader may not see
+  (`INodeVisibility`) before counting; such a value is marked partial with the mask reasons and no hidden count.
+
 ## Migrations
 
 ```bash

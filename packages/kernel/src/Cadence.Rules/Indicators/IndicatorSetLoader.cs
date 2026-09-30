@@ -29,6 +29,14 @@ public static class IndicatorErrors
     /// <summary>The stored content does not read as an indicator set.</summary>
     public static readonly KernelError SetInvalid =
         new("K.Indicators.SetInvalid", 422, "The indicator set content is not valid.");
+
+    /// <summary>A pinned indicator counts a population no registered source provides.</summary>
+    public static readonly KernelError PopulationUnknown =
+        new("K.Indicators.PopulationUnknown", 422, "An indicator counts a population that no source provides.");
+
+    /// <summary>A population has more records than one evaluation reads, so its values would be wrong.</summary>
+    public static readonly KernelError PopulationTooLarge =
+        new("K.Indicators.PopulationTooLarge", 422, "A population is too large to count in one evaluation.");
 }
 
 /// <summary>A loaded indicator set, or why it could not be loaded.</summary>

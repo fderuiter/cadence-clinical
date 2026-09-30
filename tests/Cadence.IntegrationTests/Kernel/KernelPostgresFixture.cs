@@ -205,6 +205,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The indicator evaluator, as a host resolves it (ADR-2488).</summary>
     public IndicatorEvaluator Indicators => Scope().GetRequiredService<IndicatorEvaluator>();
 
+    /// <summary>The study Pulse service, resolved from a fresh scope.</summary>
+    public StudyIndicators StudyIndicators => Scope().GetRequiredService<StudyIndicators>();
+
     /// <summary>The validation runner, resolved from a fresh scope as a request would get one.</summary>
     public ValidationRunner Validation => Scope().GetRequiredService<ValidationRunner>();
 

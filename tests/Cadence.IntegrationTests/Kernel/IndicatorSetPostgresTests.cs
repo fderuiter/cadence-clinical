@@ -7,9 +7,12 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
+using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
@@ -89,6 +92,50 @@ public sealed class IndicatorSetPostgresTests(KernelPostgresFixture fixture) : I
         qtl.Explanation.Producer.Should().Be("quality.indicator/qtl.open_error_findings@1");
     }
 
+    /// <summary>
+    /// A study's Pulse reads its live enrollments and validation findings from the kernel sources at an as-of and
+    /// counts only what the reader may see: an enrollment at a site hidden from the reader is neither counted nor listed,
+    /// and the value says it is partial without saying how many were left out (ADR-2488 §4.7).
+    /// @req:PRD-CTMS-007
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-CTMS-007")]
+    public async Task StudyPulse_ReadsLiveKernelPopulationsAndCountsOnlyWhatTheReaderMaySee()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var graph = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
+        var tenant = graph.Tenant.Id;
+        var (set, _, sdtmig) = await PinSampleSetAndPackAsync(tenant, graph.Study.Id, ct);
+
+        var enrolled = await ScreenAsync(tenant, graph.StudySite.Id, EnrollmentStatus.Enrolled, ct);
+        await ScreenAsync(tenant, graph.StudySite.Id, EnrollmentStatus.ScreenFailed, ct);
+        await ScreenAsync(tenant, graph.StudySite.Id, null, ct);
+        await ScreenAsync(tenant, graph.StudySite.Id, null, ct);
+        var hidden = await ScreenAsync(tenant, graph.StudySite.Id, EnrollmentStatus.Enrolled, ct);
+        fixture.Visibility.Masked[NodeRef.For(hidden)] = MaskReason.NotPermitted;
+        await ValidateAsync(tenant, graph.Study.Id, sdtmig, ct);
+        var asOf = fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+
+        var result = await fixture.StudyIndicators.EvaluateAsync(tenant, Actor.Person("monitor@cadence.test"), graph.Study.Id, asOf, ct);
+
+        result.Error.Should().BeNull();
+        var values = result.Value!.Indicators;
+        values.Select(v => (v.Result.Indicator.IndicatorId, v.Result.Value, v.Result.Breached, v.Partial)).Should().Equal(
+            ("pulse.enrolled", 1m, false, true),
+            ("pulse.screen_failure_rate", 25m, false, true),
+            ("qtl.open_error_findings", 1m, true, false));
+        values[0].Result.Indicator.SetId.Should().Be(set);
+        values[0].Result.Contributors.Should().Equal(NodeRef.For(enrolled));
+        values[0].HiddenReasons.Should().Equal(MaskReason.NotPermitted);
+        values[2].Result.Contributors.Should().ContainSingle().Which.Kind.Should().Be(NodeKinds.ValidationFinding);
+
+        var before = await fixture.StudyIndicators.EvaluateAsync(
+            tenant, Actor.Person("monitor@cadence.test"), graph.Study.Id, fixture.Clock.UtcNow.AddYears(-1), ct);
+        before.Value!.Indicators[0].Result.Population.Should().Be(0, "no enrollment had a status a year earlier");
+    }
+
     /// <summary>Drafting runs the indicator set validator, so invalid content is refused before it can be approved.</summary>
     [Fact]
     public async Task IndicatorSet_InvalidContent_IsRefusedWhenDrafted()
@@ -106,6 +153,56 @@ public sealed class IndicatorSetPostgresTests(KernelPostgresFixture fixture) : I
         result.Error.Message.Should().Contain("a set has between 1 and");
         (await fixture.IndicatorSets.LoadAsync(graph.Tenant.Id, LibraryItemId.New(), ct)).Error!.Code.Should().Be(IndicatorErrors.SetUnknown.Code);
     }
+
+    private async Task<(LibraryItemId Set, LibraryItemId Pack, StandardVersionId Sdtmig)> PinSampleSetAndPackAsync(
+        TenantId tenant, StudyId study, CancellationToken ct)
+    {
+        var set = await DraftAsync(tenant, LibraryItemKind.IndicatorSet, SetKey, IndicatorSetJson.ToJson(SampleIndicatorSets.Pulse()), ct);
+        await ApproveAsync(tenant, set, ct);
+        var pack = await DraftAsync(tenant, LibraryItemKind.RulePack, "sample-rules", RulePackJson.ToJson(SampleRulePacks.Sample()), ct);
+        await ApproveAsync(tenant, pack, ct);
+        var sdtmig = await ApprovedStandardAsync(tenant, ct);
+        (await SendAsync(new DeclareStudyStandards(
+            tenant, study, StudyStandardsProfileId.New(), [sdtmig], [], [set.Id, pack.Id], Key(), Reason), ct)).Error.Should().BeNull();
+        return (set.Id, pack.Id, sdtmig);
+    }
+
+    /// <summary>Screens a new participant at the study site and, when <paramref name="to"/> is given, moves them there.</summary>
+    private async Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, EnrollmentStatus? to, CancellationToken ct)
+    {
+        var participant = (await SendAsync(new RegisterParticipant(tenant, ParticipantId.New(), Key(), "Consented"), ct)).Value;
+        var screened = await SendAsync(new ScreenParticipant(
+            tenant, EnrollmentId.New(), participant, studySite, SubjectCode.From($"SUBJ-{Guid.NewGuid():N}"[..13]), Tick(), Key(), "Screening visit"), ct);
+        screened.Error.Should().BeNull();
+        var enrollment = screened.Value!.EnrollmentId;
+        if (to is { } status)
+        {
+            (await SendAsync(new ChangeEnrollmentStatus(tenant, enrollment, status, Tick(), Key(), $"Moved to {status}"), ct)).Error.Should().BeNull();
+        }
+
+        return enrollment;
+    }
+
+    /// <summary>Validates one vitals record the sample pack flags with an Error finding.</summary>
+    private async Task ValidateAsync(TenantId tenant, StudyId study, StandardVersionId sdtmig, CancellationToken ct)
+    {
+        Tick();
+        var vitals = new RuleRecord("VITALS", "row-1", new Dictionary<string, RuleValue>(StringComparer.Ordinal)
+        {
+            ["SYS"] = RuleValue.FromNumber(90m),
+            ["DIA"] = RuleValue.FromNumber(100m),
+        });
+        var request = new ValidationRequest(tenant, study, ValidationStage.Standardization, new DateOnly(2026, 9, 30), [vitals], Key(), Reason)
+        {
+            Standard = "SDTMIG",
+            StandardVersion = "3.4",
+            Inputs = [NodeRef.For(sdtmig, 2)],
+            Datasets = ["VITALS"],
+        };
+        (await fixture.Validation.RunAsync(request, ct)).Error.Should().BeNull();
+    }
+
+    private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     private async Task<StandardVersionId> ApprovedStandardAsync(TenantId tenant, CancellationToken ct)
     {

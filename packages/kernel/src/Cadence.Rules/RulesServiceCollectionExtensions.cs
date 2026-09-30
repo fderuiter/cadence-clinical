@@ -16,7 +16,8 @@ public static class RulesServiceCollectionExtensions
     /// the <see cref="RulePackLoader"/> (needs an <see cref="IStandardsRegistry"/>, from
     /// <c>AddKernelStandardsPersistence()</c>), the rule pack content validator that <c>DraftLibraryItem</c> runs, and the
     /// <see cref="ValidationRunner"/> (needs the kernel's <c>IKernelCommandSender</c> and <c>IClock</c>), and the indicator
-    /// set loader, content validator and <see cref="IndicatorEvaluator"/> (ADR-2488).
+    /// set loader, content validator, <see cref="IndicatorEvaluator"/> and the scoped <see cref="StudyIndicators"/>, which
+    /// needs the host's <c>INodeVisibility</c> and the population sources kernel persistence registers (ADR-2488).
     /// </summary>
     public static IServiceCollection AddCadenceRules(this IServiceCollection services)
     {
@@ -26,6 +27,7 @@ public static class RulesServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, RulePackContentValidator>());
         services.TryAddSingleton<IndicatorSetLoader>();
         services.TryAddSingleton<IndicatorEvaluator>();
+        services.TryAddScoped<StudyIndicators>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, IndicatorSetContentValidator>());
         return services;
     }
