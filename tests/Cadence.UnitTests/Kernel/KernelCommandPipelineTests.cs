@@ -374,6 +374,14 @@ public sealed partial class KernelCommandPipelineTests
         {
         }
 
+        public void IncludePart(NodeRef part, bool newVersion)
+        {
+        }
+
+        public void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind)
+        {
+        }
+
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

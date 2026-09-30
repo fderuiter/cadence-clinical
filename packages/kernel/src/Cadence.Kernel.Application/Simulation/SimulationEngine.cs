@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
@@ -52,13 +53,16 @@ public interface ISimulationInputs
     /// <summary>
     /// What depends on any version of <paramref name="baseVersion"/> at <paramref name="asOf"/>, through the kernel's one
     /// dependents read, without walking through <paramref name="candidate"/> (a stored fork depends on its parent).
-    /// Objects <paramref name="reader"/> may not see are counted and masked.
+    /// From the base version the read enters only the design elements in <paramref name="impactedElements"/>
+    /// (<see cref="ProtocolElementImpact"/>, ADR-2474). Objects <paramref name="reader"/> may not see are
+    /// counted and masked.
     /// </summary>
     Task<DependentsReport> DependentsAsync(
         TenantId tenant,
         Actor reader,
         ProtocolVersionId baseVersion,
         ProtocolVersionId? candidate,
+        IReadOnlySet<NodeRef> impactedElements,
         SimulationAsOf asOf,
         CancellationToken cancellationToken);
 }
@@ -92,7 +96,7 @@ public sealed class SimulationEngine(
     private const int MaxReportedProblems = 10;
 
     /// <summary>The engine version recorded when a result carries dependents.</summary>
-    public static readonly EngineVersion DependentsEngine = new("lineage.dependents", "1");
+    public static readonly EngineVersion DependentsEngine = new("lineage.dependents", "2");
 
     public async Task<CommandResult<SimulationResult>> SimulateAsync(
         TenantId tenant, SimulationRequest request, CancellationToken cancellationToken)
@@ -171,7 +175,8 @@ public sealed class SimulationEngine(
             masked = [];
             if (diff.Count > 0 && baseVersion is not null)
             {
-                dependents = await inputs.DependentsAsync(tenant, actor, baseVersion.Id, candidate.Id, asOf, cancellationToken)
+                var impacted = ProtocolElementImpact.Impacted(baseVersion.StudyId, diff);
+                dependents = await inputs.DependentsAsync(tenant, actor, baseVersion.Id, candidate.Id, impacted, asOf, cancellationToken)
                     .ConfigureAwait(false);
                 engines.Add(DependentsEngine);
             }

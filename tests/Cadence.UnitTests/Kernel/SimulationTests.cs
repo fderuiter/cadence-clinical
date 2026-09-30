@@ -117,7 +117,7 @@ public sealed class SimulationTests
 
     /// <summary>
     /// A draft identical to its approved parent gives an empty result (K-SIM-2), and a draft that renames an arm
-    /// reports that arm, with the study as scope and both versions pinned.
+    /// reports that arm, with the study as scope and both versions pinned, and reads the dependents of that arm only.
     /// </summary>
     [Fact]
     public async Task Simulate_StoredDraftAgainstItsParent()
@@ -145,7 +145,9 @@ public sealed class SimulationTests
         changed.EngineVersions.Should().Equal(SimulationEngine.DependentsEngine, SimulationEngine.ScheduleEngine, ProtocolStructuralDiff.Engine);
         changed.AsOf.Should().Be(new SimulationAsOf(Now, Now));
         changed.Dependents!.Total.Should().Be(1);
-        inputs.DependentsAsked.Should().Equal((parent.Id, (ProtocolVersionId?)renamed.Id, new SimulationAsOf(Now, Now)));
+        var asked = inputs.DependentsAsked.Should().ContainSingle().Subject;
+        (asked.Base, asked.Candidate, asked.AsOf).Should().Be((parent.Id, (ProtocolVersionId?)renamed.Id, new SimulationAsOf(Now, Now)));
+        asked.Impacted.Should().BeEquivalentTo([NodeRef.For(ProtocolElementId.For(Study, "arm.A"))], "the walk enters only the renamed arm (ADR-2474)");
     }
 
     /// <summary>
@@ -362,15 +364,21 @@ public sealed class SimulationTests
 
         public void Replace(ProtocolVersionSnapshot version) => _versions[version.Id] = version;
 
-        public List<(ProtocolVersionId Base, ProtocolVersionId? Candidate, SimulationAsOf AsOf)> DependentsAsked { get; } = [];
+        public List<(ProtocolVersionId Base, ProtocolVersionId? Candidate, IReadOnlySet<NodeRef> Impacted, SimulationAsOf AsOf)> DependentsAsked { get; } = [];
 
         public Task<ProtocolVersionSnapshot?> FindProtocolVersionAsync(TenantId tenant, ProtocolVersionId id, CancellationToken cancellationToken) =>
             Task.FromResult(_versions.GetValueOrDefault(id));
 
         public Task<DependentsReport> DependentsAsync(
-            TenantId tenant, Actor reader, ProtocolVersionId baseVersion, ProtocolVersionId? candidate, SimulationAsOf asOf, CancellationToken cancellationToken)
+            TenantId tenant,
+            Actor reader,
+            ProtocolVersionId baseVersion,
+            ProtocolVersionId? candidate,
+            IReadOnlySet<NodeRef> impactedElements,
+            SimulationAsOf asOf,
+            CancellationToken cancellationToken)
         {
-            DependentsAsked.Add((baseVersion, candidate, asOf));
+            DependentsAsked.Add((baseVersion, candidate, impactedElements, asOf));
             var dependent = NodeRef.For(Study, 1);
             return Task.FromResult(new DependentsReport(
                 NodeRef.For(baseVersion).ToString(), LineageQuery.DefaultDepth, asOf.ValidAt, asOf.KnownAt,

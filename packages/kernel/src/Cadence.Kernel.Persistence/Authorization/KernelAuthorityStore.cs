@@ -8,6 +8,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 
@@ -123,6 +124,11 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     .Where(v => v.TenantId == tenant && v.Id == versionId).Select(v => (StudyId?)v.StudyId)
                     .SingleOrDefaultAsync(ct).ConfigureAwait(false);
                 return versionStudy is { } study ? await StudyPathAsync(db, tenant, study, country: null, ct).ConfigureAwait(false) : null;
+
+            case NodeKinds.ProtocolElement:
+                // An element belongs to the study of the protocol versions that govern it (ADR-2474).
+                var governing = await ProtocolElementOwner.GoverningVersionAsync(db, tenant, id, ct).ConfigureAwait(false);
+                return governing is { } governingVersion ? await PathAsync(db, tenant, NodeKinds.ProtocolVersion, governingVersion.Value, ct).ConfigureAwait(false) : null;
 
             case NodeKinds.Artifact:
                 var artifactId = ArtifactId.FromGuid(id);

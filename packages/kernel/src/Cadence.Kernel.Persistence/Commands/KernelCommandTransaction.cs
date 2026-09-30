@@ -62,6 +62,8 @@ internal sealed class KernelCommandTransaction(
 
     private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
     private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
+    private readonly Dictionary<NodeRef, bool> _parts = [];
+    private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
     private AuthorizationDecision? _permit;
@@ -172,6 +174,47 @@ internal sealed class KernelCommandTransaction(
         if (!_inputs.Contains((input, kind, validFrom)))
         {
             _inputs.Add((input, kind, validFrom));
+        }
+    }
+
+    public void IncludePart(NodeRef part, bool newVersion)
+    {
+        ArgumentNullException.ThrowIfNull(part);
+        if (part.Version is null)
+        {
+            throw new ArgumentException($"K-LIN: parts name a version; '{part}' does not.", nameof(part));
+        }
+
+        if (_parts.TryGetValue(part, out var declared) && declared != newVersion)
+        {
+            throw new InvalidOperationException($"K-LIN: {part} is declared both as a new version and as an existing one.");
+        }
+
+        _parts[part] = newVersion;
+    }
+
+    public void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
+        if (from.Version is null || to.Version is null)
+        {
+            throw new ArgumentException($"K-LIN: lineage edges join versions; '{from}' → '{to}' does not.", nameof(from));
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown lineage edge kind.");
+        }
+
+        if (from == to)
+        {
+            throw new ArgumentException($"K-LIN: {from} cannot depend on itself.", nameof(to));
+        }
+
+        if (!_partEdges.Contains((from, to, kind)))
+        {
+            _partEdges.Add((from, to, kind));
         }
     }
 
@@ -439,10 +482,10 @@ internal sealed class KernelCommandTransaction(
     {
         if (aggregate?.Subject is not { Version: { } version } subject || aggregate.Action == "Deleted")
         {
-            if (_inputs.Count > 0)
+            if (_inputs.Count > 0 || _parts.Count > 0 || _partEdges.Count > 0)
             {
                 throw new InvalidOperationException(
-                    $"K-LIN-2: {execution.CommandType} declared lineage inputs but wrote no object version to attach them to.");
+                    $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
             }
 
             return;
@@ -478,23 +521,70 @@ internal sealed class KernelCommandTransaction(
         });
         foreach (var (from, kind, validFrom) in inbound)
         {
-            db.LineageEdges.Add(new LineageEdgeRecord
+            AddEdge(from, subject.AtVersion(version), kind, validFrom);
+        }
+
+        StageParts(subject.AtVersion(version));
+    }
+
+    /// <summary>
+    /// Writes the parts of the subject version (ADR-2474): a node for each new part version, the edge from the subject to
+    /// every part, and the declared edges between parts, each of which must touch a new part.
+    /// </summary>
+    private void StageParts(NodeRef subject)
+    {
+        foreach (var (part, newVersion) in _parts)
+        {
+            if (part.Unversioned() == subject.Unversioned())
             {
-                Id = Guid.CreateVersion7(),
-                TenantId = Command.TenantId,
-                FromKind = from.Kind,
-                FromId = from.Id,
-                FromVersion = from.Version!.Value,
-                ToKind = subject.Kind,
-                ToId = subject.Id,
-                ToVersion = version,
-                Kind = kind,
-                ActivityId = execution.ActivityId,
-                RecordedAt = execution.RecordedAt,
-                ValidFrom = validFrom,
-            });
+                throw new InvalidOperationException($"K-LIN: {execution.CommandType} declared {part} as a part of itself.");
+            }
+
+            if (newVersion)
+            {
+                db.LineageNodes.Add(new LineageNodeRecord
+                {
+                    TenantId = Command.TenantId,
+                    Kind = part.Kind,
+                    NodeId = part.Id,
+                    Version = part.Version!.Value,
+                    Derived = false,
+                    ActivityId = execution.ActivityId,
+                    RecordedAt = execution.RecordedAt,
+                });
+            }
+
+            AddEdge(subject, part, LineageEdgeKind.GovernedBy, null);
+        }
+
+        foreach (var (from, to, kind) in _partEdges)
+        {
+            if (!_parts.GetValueOrDefault(from) && !_parts.GetValueOrDefault(to))
+            {
+                throw new InvalidOperationException(
+                    $"K-LIN-2: {execution.CommandType} declared the edge {from} → {to}, but neither is a part it writes.");
+            }
+
+            AddEdge(from, to, kind, null);
         }
     }
+
+    private void AddEdge(NodeRef from, NodeRef to, LineageEdgeKind kind, DateTimeOffset? validFrom) =>
+        db.LineageEdges.Add(new LineageEdgeRecord
+        {
+            Id = Guid.CreateVersion7(),
+            TenantId = Command.TenantId,
+            FromKind = from.Kind,
+            FromId = from.Id,
+            FromVersion = from.Version!.Value,
+            ToKind = to.Kind,
+            ToId = to.Id,
+            ToVersion = to.Version!.Value,
+            Kind = kind,
+            ActivityId = execution.ActivityId,
+            RecordedAt = execution.RecordedAt,
+            ValidFrom = validFrom,
+        });
 
     private void AddEvent(string type, int schemaVersion, JsonElement payload, DateTimeOffset? occurredValid, NodeRef? subject = null)
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -193,7 +194,8 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 
 /// <summary>
 /// Handles <see cref="ApproveProtocolVersion"/>: the named attestation must mean <c>Approved</c> and sign this
-/// version's content hash (spec §6.2, 21 CFR 11.70).
+/// version's content hash (spec §6.2, 21 CFR 11.70). The approval also writes the design's elements as lineage parts
+/// of the approved version (ADR-2474), so amendment impact can start from the elements an amendment changes.
 /// </summary>
 internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
 {
@@ -217,9 +219,38 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         }
 
         version.Approve(command.AttestationId);
+        var plan = ProtocolElementLineage.Plan(version.StudyId, await ChainAsync(version, context, cancellationToken).ConfigureAwait(false));
+        foreach (var part in plan.Parts)
+        {
+            context.Work.IncludePart(part.Node, part.NewVersion);
+        }
+
+        foreach (var edge in plan.Edges)
+        {
+            context.Work.LinkPart(edge.From, edge.To, edge.Kind);
+        }
+
         context.Work.Raise(new ProtocolVersionApproved(
             version.TenantId, version.StudyId, version.Id, version.Number, version.ContentHash!, command.AttestationId));
         return ProtocolVersionStates.Of(version);
+    }
+
+    /// <summary>The version and its ancestors, first version first, as (number, content).</summary>
+    private static async Task<IReadOnlyList<(int Number, string Content)>> ChainAsync(
+        ProtocolVersion version, ICommandContext context, CancellationToken cancellationToken)
+    {
+        var chain = new List<(int Number, string Content)> { (version.Number, version.Content) };
+        var parentId = version.ParentVersionId;
+        while (parentId is { } id)
+        {
+            var parent = await context.Work.ReadAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Protocol version {id} names a parent the tenant does not have.");
+            chain.Add((parent.Number, parent.Content));
+            parentId = parent.ParentVersionId;
+        }
+
+        chain.Reverse();
+        return chain;
     }
 }
 

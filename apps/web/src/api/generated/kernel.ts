@@ -265,6 +265,7 @@ export interface components {
       parent: string;
       impacted_elements: string[];
       dependents: components["schemas"]["Kernel_KernelDependentsResponse"];
+      changed_elements: components["schemas"]["Kernel_KernelElementChangeResponse"][];
     };
     Kernel_KernelChildResponse: {
       node: components["schemas"]["Kernel_KernelNodeResponse"];
@@ -308,6 +309,12 @@ export interface components {
       /** Format: int32 */
       total: number | string;
       truncated: boolean;
+    };
+    Kernel_KernelElementChangeResponse: {
+      element_id: string;
+      instance_type: null | string;
+      change: string;
+      properties: string[];
     };
     Kernel_KernelExplanationResponse: {
       subject: null | string;

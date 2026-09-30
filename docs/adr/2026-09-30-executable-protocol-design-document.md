@@ -144,8 +144,8 @@ Findings inform and never block. They become Quality `ValidationFinding`s once #
 - The USDM v4 adapter in `packages/ddf`. The import landed in ADR-2473; export back to USDM is still to come. The
   DDF compiler takes USDM JSON only; its `Compile(ProtocolVersion)` overload is removed because the content is no
   longer USDM.
-- Protocol elements as lineage nodes (`protocol-element:<version>/<id>`), so amendment impact narrows to the objects
-  that reference a changed element (ADR-2471 §4.5).
+- Protocol elements as lineage nodes, so amendment impact narrows to the objects that reference a changed element
+  (ADR-2471 §4.5). Landed in ADR-2474, with one node per study and element id instead of one per version.
 - Eligibility evaluation over Observations with the rule expression language (ADR-2461).
 - The K-PROT-2 gate: an amendment cannot be approved until its impact report is attested as reviewed.
 

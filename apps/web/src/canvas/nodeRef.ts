@@ -38,6 +38,7 @@ export const NODE_KINDS = [
   "work_queue_definition",
   "validation_run",
   "validation_finding",
+  "protocol_element",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

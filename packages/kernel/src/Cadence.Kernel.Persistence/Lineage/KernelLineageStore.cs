@@ -133,14 +133,21 @@ internal sealed class KernelLineageStore(
     }
 
     public Task<DependentsReport> DependentsAsync(TenantId tenant, Actor reader, DependentsQuery query, CancellationToken cancellationToken = default) =>
-        DependentsAsync(tenant, reader, query, excluded: FrozenSet<NodeRef>.Empty, cancellationToken);
+        DependentsAsync(tenant, reader, query, excluded: FrozenSet<NodeRef>.Empty, followFromStart: null, cancellationToken);
 
     /// <summary>
     /// Dependents of <see cref="DependentsQuery.Node"/>, not walking through any version of an object in
-    /// <paramref name="excluded"/>: those objects and whatever is reachable only through them are left out.
+    /// <paramref name="excluded"/>: those objects and whatever is reachable only through them are left out. When
+    /// <paramref name="followFromStart"/> is set, an edge leaving the start object is followed only when it returns true
+    /// for the edge's downstream object; edges further on are all followed.
     /// </summary>
     internal async Task<DependentsReport> DependentsAsync(
-        TenantId tenant, Actor reader, DependentsQuery query, IReadOnlySet<NodeRef> excluded, CancellationToken cancellationToken)
+        TenantId tenant,
+        Actor reader,
+        DependentsQuery query,
+        IReadOnlySet<NodeRef> excluded,
+        Func<NodeRef, bool>? followFromStart,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(query);
@@ -155,7 +162,7 @@ internal sealed class KernelLineageStore(
         }
 
         var start = query.Node.Unversioned();
-        var reached = Reach(walk, excluded);
+        var reached = Reach(walk, excluded, followFromStart);
         var masks = await MaskAsync(tenant, reader, [walk], cancellationToken).ConfigureAwait(false);
         var handles = new HandleBook(masks);
         var startHandle = StartHandle(query.Node, walk, handles);
@@ -183,10 +190,12 @@ internal sealed class KernelLineageStore(
 
     /// <summary>
     /// Every node a forward walk reaches from its start without passing through an excluded object, with its fewest
-    /// edges from the start and the index of the first edge that reached it.
+    /// edges from the start and the index of the first edge that reached it. Edges leaving the start object are followed
+    /// only when <paramref name="followFromStart"/> (when set) accepts their downstream object.
     /// </summary>
-    private static Dictionary<NodeRef, (int Distance, int Order)> Reach(Walk walk, IReadOnlySet<NodeRef> excluded)
+    private static Dictionary<NodeRef, (int Distance, int Order)> Reach(Walk walk, IReadOnlySet<NodeRef> excluded, Func<NodeRef, bool>? followFromStart)
     {
+        var start = walk.Query.Node.Unversioned();
         var outgoing = walk.Rows
             .Select((row, index) => (row, index))
             .ToLookup(pair => pair.row.From);
@@ -203,7 +212,8 @@ internal sealed class KernelLineageStore(
             var distance = reached[node].Distance;
             foreach (var (row, index) in outgoing[node])
             {
-                if (excluded.Contains(row.To.Unversioned()) || reached.ContainsKey(row.To))
+                if (excluded.Contains(row.To.Unversioned()) || reached.ContainsKey(row.To)
+                    || (followFromStart is not null && node.Unversioned() == start && !followFromStart(row.To)))
                 {
                     continue;
                 }

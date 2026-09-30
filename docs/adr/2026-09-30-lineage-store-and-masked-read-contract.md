@@ -152,8 +152,8 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
   amendment's declared impacted elements.
   - Other open amendments of the same parent are listed, because they are open proposals on the same content.
   - `ForkProtocolVersion` records the fork as `DerivedFrom` the parent version it copies.
-  - Until protocol elements are nodes of their own (#4808), the parent version is the unit that changes. Impact then
-    narrows to the objects that reference a changed element.
+  - Protocol elements are nodes of their own (ADR-2474): the walk follows only the elements the amendment changes or
+    removes, and the report lists the elements actually changed.
 
 ## 5. Consequences & Trade-offs
 

@@ -141,6 +141,21 @@ public interface IKernelUnitOfWork
     /// <param name="kind">How the aggregate depends on it.</param>
     /// <param name="validFrom">When the dependency takes effect in valid time; null when it always holds.</param>
     void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null);
+
+    /// <summary>
+    /// Declares <paramref name="part"/> as part of the aggregate version this command writes, such as an element of a
+    /// protocol version's design (ADR-2474). The pipeline writes the edge <c>aggregate → part</c> as
+    /// <see cref="LineageEdgeKind.GovernedBy"/>, and, when <paramref name="newVersion"/> is true, the part's own lineage
+    /// node, which must not exist yet. <paramref name="part"/> must name a version.
+    /// </summary>
+    void IncludePart(NodeRef part, bool newVersion);
+
+    /// <summary>
+    /// Declares the edge <paramref name="from"/> → <paramref name="to"/> between object versions, at least one of which is
+    /// a part this command writes as a new version (<see cref="IncludePart"/>). It is written in the command's transaction
+    /// with the part (K-LIN-2).
+    /// </summary>
+    void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind);
 }
 
 /// <summary>Creates one unit of work per command. Implemented by kernel persistence.</summary>

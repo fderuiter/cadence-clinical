@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
@@ -16,7 +18,9 @@ namespace Cadence.Kernel.Persistence.Lineage;
 
 /// <summary>
 /// Amendment impact (K-PROT-2) as one caller of the dependents read (Canvas D2): the dependents of every version of
-/// the parent, walked without passing through the amended fork itself.
+/// the parent, walked without passing through the amended fork itself. From the parent, the walk enters only the design
+/// elements (ADR-2474) the amendment changes or removes; an element it leaves alone is not impacted unless it depends on
+/// one that changed.
 /// </summary>
 internal sealed class KernelAmendmentImpact(KernelTenantDbContextFactory contexts, KernelLineageStore lineage) : IAmendmentImpact
 {
@@ -32,11 +36,20 @@ internal sealed class KernelAmendmentImpact(KernelTenantDbContextFactory context
         ArgumentNullException.ThrowIfNull(reader);
 
         ProtocolVersion? version;
+        string? parentContent = null;
         await using (var db = contexts.Create(tenant))
         {
             version = await db.ProtocolVersions.AsNoTracking()
                 .SingleOrDefaultAsync(v => v.Id == amended, cancellationToken)
                 .ConfigureAwait(false);
+            if (version?.ParentVersionId is { } parentId)
+            {
+                parentContent = await db.ProtocolVersions.AsNoTracking()
+                    .Where(v => v.Id == parentId)
+                    .Select(v => v.Content)
+                    .SingleOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
 
         if (version is null)
@@ -49,12 +62,20 @@ internal sealed class KernelAmendmentImpact(KernelTenantDbContextFactory context
             throw new InvalidOperationException($"Protocol version {version.Number} is a first version and amends nothing.");
         }
 
+        var diff = ProtocolStructuralDiff.Compare(
+            parentContent ?? throw new InvalidOperationException($"Protocol version {version.Number} names a parent the tenant does not have."),
+            version.Content);
+        var changes = diff.IsSuccess
+            ? diff.Value!.Where(c => c.ElementId != ProtocolStructuralDiff.RootId).ToList()
+            : throw new InvalidOperationException($"Protocol version {version.Number} cannot be compared with its parent: {diff.Error!.Message}");
+
         var dependents = await lineage.DependentsAsync(
             tenant,
             reader,
             new DependentsQuery(NodeRef.For(parent), depth, ValidAt: validAt, KnownAt: knownAt),
             excluded: new HashSet<NodeRef> { NodeRef.For(amended) },
+            followFromStart: ProtocolElementImpact.FollowFromBase(ProtocolElementImpact.Impacted(version.StudyId, changes)),
             cancellationToken).ConfigureAwait(false);
-        return new AmendmentImpact(amended, parent, amendment.ImpactedElements, dependents);
+        return new AmendmentImpact(amended, parent, amendment.ImpactedElements, dependents, changes);
     }
 }
