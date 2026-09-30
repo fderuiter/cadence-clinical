@@ -705,6 +705,8 @@ A composite automated quality assurance protocol enforcing: (1) DOM state transi
 
 A versioned, cloud-synchronized execution payload containing modular video recordings, an interactive HTML verification report, structured test telemetry, and SHA-256 cryptographic checksums uploaded to a designated Google Drive destination via headless service account authentication.
 
+> Retired by ADR-2505. Recording evidence and its SHA-256 run manifest are stored through the platform's object storage port.
+
 ### Demonstration-Paced E2E Recording
 
 An automated browser test execution mode that introduces human-perceptible pacing, smooth cursor simulation, and interaction highlighting during Playwright golden path runs to generate high-clarity video walkthroughs suitable for stakeholder demonstration, validation, and training.

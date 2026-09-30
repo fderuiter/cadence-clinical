@@ -11,12 +11,12 @@ Object storage with integrity hashes and presigned URLs: an S3 and MinIO store, 
 - `StorageServiceCollectionExtensions.cs`: `AddCadenceStorage(configuration, environment)` registers `IStoragePort<byte[]>` from the `Storage` section (`Provider` = `s3`, `minio`, `filesystem` or, in Development only, `memory`) and fails at startup on a missing bucket or absolute root path, a half-set access key pair or an unknown provider; `FileSystemStorageOptions`; `S3StorageOptions`; `CreateClient` and `CreateConfig`. Settings: [docs/ENVIRONMENT_VARIABLES.md](../../docs/ENVIRONMENT_VARIABLES.md#object-storage).
 - `BlobStore.cs`: `InMemoryBlobStore` (its presigned URLs are placeholders, so it is for tests and Development only).
 - `DocumentModels.cs`: `DocumentMetadata`, `StorageLocation`.
-- The project references `Google.Apis.Drive.v3`, but no Google Drive adapter exists in C# yet.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `gdrive.py`, with its `__init__.py` files and `pyproject.toml`. `adapters/`, `factory.py`, `local_store.py` and `s3_store.py` are ported and tested and wait only for a maintainer to approve their deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- There is no Google Drive store: recording evidence goes through `IStoragePort<byte[]>` like any other file ([ADR-2505](../../docs/adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md)).
+- Python reference sources remain until a maintainer approves their deletion: `adapters/`, `factory.py`, `local_store.py` and `s3_store.py` are ported and tested, and `gdrive.py` is not carried forward (ADR-2505). They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
-Packages: `AWSSDK.S3`, `Google.Apis.Drive.v3` (unused), `Microsoft.Extensions.Configuration.Binder`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Hosting.Abstractions`.
+Packages: `AWSSDK.S3`, `Microsoft.Extensions.Configuration.Binder`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Hosting.Abstractions`.
 
 ## Referenced by
 
