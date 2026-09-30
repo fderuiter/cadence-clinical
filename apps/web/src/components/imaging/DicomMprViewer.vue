@@ -107,6 +107,9 @@
             @mousedown="startPanOrMeasure($event, 'AXIAL')"
             @mousemove="onCanvasMouseMove($event, 'AXIAL')"
             @mouseup="stopPanOrMeasure"
+            @touchstart.prevent="startPanOrMeasure($event, 'AXIAL')"
+            @touchmove.prevent="onCanvasMouseMove($event, 'AXIAL')"
+            @touchend.prevent="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'AXIAL')"
           />
         </div>
@@ -143,6 +146,9 @@
             @mousedown="startPanOrMeasure($event, 'SAGITTAL')"
             @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
             @mouseup="stopPanOrMeasure"
+            @touchstart.prevent="startPanOrMeasure($event, 'SAGITTAL')"
+            @touchmove.prevent="onCanvasMouseMove($event, 'SAGITTAL')"
+            @touchend.prevent="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'SAGITTAL')"
           />
         </div>
@@ -179,6 +185,9 @@
             @mousedown="startPanOrMeasure($event, 'CORONAL')"
             @mousemove="onCanvasMouseMove($event, 'CORONAL')"
             @mouseup="stopPanOrMeasure"
+            @touchstart.prevent="startPanOrMeasure($event, 'CORONAL')"
+            @touchmove.prevent="onCanvasMouseMove($event, 'CORONAL')"
+            @touchend.prevent="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'CORONAL')"
           />
         </div>
@@ -290,11 +299,36 @@ function onWheelScroll(event, plane) {
   }
 }
 
+function getCanvasCoordinates(event, canvas) {
+  if (!canvas) return { x: 0, y: 0 };
+  const rect = canvas.getBoundingClientRect();
+
+  let clientX = event.clientX;
+  let clientY = event.clientY;
+
+  if (event.touches && event.touches.length > 0) {
+    clientX = event.touches[0].clientX;
+    clientY = event.touches[0].clientY;
+  } else if (event.changedTouches && event.changedTouches.length > 0) {
+    clientX = event.changedTouches[0].clientX;
+    clientY = event.changedTouches[0].clientY;
+  }
+
+  const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+  const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+
+  const x = (clientX - rect.left) * scaleX;
+  const y = (clientY - rect.top) * scaleY;
+
+  return {
+    x: Math.max(0, Math.min(canvas.width, x)),
+    y: Math.max(0, Math.min(canvas.height, y)),
+  };
+}
+
 function startPanOrMeasure(event, plane) {
   const canvas = event.target;
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  const { x, y } = getCanvasCoordinates(event, canvas);
 
   isDrawing.value = true;
   drawStart.value = { x, y, plane };
@@ -311,9 +345,7 @@ function startPanOrMeasure(event, plane) {
 function onCanvasMouseMove(event, plane) {
   if (!isDrawing.value) return;
   const canvas = event.target;
-  const rect = canvas.getBoundingClientRect();
-  const currentX = event.clientX - rect.left;
-  const currentY = event.clientY - rect.top;
+  const { x: currentX, y: currentY } = getCanvasCoordinates(event, canvas);
 
   if (props.activeTool === "POINTER") {
     if (plane === "AXIAL") {
@@ -335,9 +367,7 @@ function stopPanOrMeasure(event) {
 
   if (drawStart.value && props.activeTool.startsWith("CALIPER_")) {
     const canvas = event.target;
-    const rect = canvas.getBoundingClientRect();
-    const endX = event.clientX - rect.left;
-    const endY = event.clientY - rect.top;
+    const { x: endX, y: endY } = getCanvasCoordinates(event, canvas);
 
     const dx = endX - drawStart.value.x;
     const dy = endY - drawStart.value.y;
@@ -669,5 +699,67 @@ onUnmounted(() => {
   width: 100%;
   accent-color: #0284c7;
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .mpr-toolbar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .toolbar-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .toolbar-select,
+  .toolbar-btn {
+    flex: 1 1 auto;
+    min-height: 36px;
+  }
+
+  .viewports-grid {
+    grid-template-columns: 1fr !important;
+    padding: 6px;
+    gap: 8px;
+  }
+
+  .viewport-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .viewport-header {
+    padding: 6px 8px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .plane-badge {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .canvas-wrapper {
+    padding: 4px;
+  }
+
+  .mpr-canvas {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .slice-slider-box {
+    padding: 8px;
+    min-height: 44px;
+  }
+
+  .slice-slider {
+    width: 100%;
+    height: 28px;
+    box-sizing: border-box;
+  }
 }
 </style>
