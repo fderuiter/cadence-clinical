@@ -44,6 +44,49 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Workspace library dependencies
+          if (id.includes("/packages/ui/") || id.includes("packages/ui/")) {
+            return "workspace-ui";
+          }
+          if (
+            id.includes("/packages/usdm-schemas/") ||
+            id.includes("packages/usdm-schemas/")
+          ) {
+            return "workspace-usdm";
+          }
+          if (id.includes("/packages/") || id.includes("packages/")) {
+            return "workspace-packages";
+          }
+
+          // Core application stores
+          if (id.includes("/src/stores/") || id.includes("src/stores/")) {
+            if (id.includes("stores/clinical") || id.includes("/clinical.")) {
+              return "store-clinical";
+            }
+            if (id.includes("stores/etmf") || id.includes("/etmf.")) {
+              return "store-etmf";
+            }
+            const match = id.match(/src\/stores\/([^/.]+)/);
+            if (match && match[1]) {
+              const name = match[1]
+                .replace(/([a-z])([A-Z])/g, "$1-$2")
+                .toLowerCase();
+              return `store-${name}`;
+            }
+            return "store-core";
+          }
+
+          // Shared API clients and HTTP services
+          if (
+            id.includes("/src/api/") ||
+            id.includes("src/api/") ||
+            id.includes("/src/services/") ||
+            id.includes("src/services/")
+          ) {
+            return "api-services";
+          }
+
+          // Third-party vendor packages
           if (id.includes("node_modules")) {
             if (
               id.includes("vue") ||
