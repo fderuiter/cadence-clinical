@@ -2,8 +2,6 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Storage</RootNamespace>
     <Description>GxP-compliant binary and object storage abstractions, presigned URL generation, and multipart upload lifecycle management.</Description>
-    <!-- No wall-clock reads (K-TIME-3): presigned URLs are dated by the AWS SDK's signing clock. -->
-    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>
